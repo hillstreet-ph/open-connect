@@ -1,0 +1,42 @@
+name: Deploy to Railway
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy to Railway
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          railway up --detach --service open-connect --environment production
+
+      - name: Set Environment Variables
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          railway variables set DATABASE_URL="${{ secrets.DATABASE_URL }}"
+          railway variables set WEBUI_SECRET_KEY="${{ secrets.WEBUI_SECRET_KEY }}"
+          railway variables set ENV="prod"
+          railway variables set PORT="8080"
+          railway variables set DOCKER="true"
+          railway variables set ANON_KEY="${{ secrets.SUPABASE_ANON_KEY }}"
+          railway variables set SERVICE_ROLE_KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
+
+      - name: Get deployment URL
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          sleep 10
+          DEPLOYMENT_URL=$(railway domain list --json 2>/dev/null | grep -o '"https://[^"]*"' | head -1 || echo "Deployment pending")
+          echo "Deployment URL: $DEPLOYMENT_URL"
