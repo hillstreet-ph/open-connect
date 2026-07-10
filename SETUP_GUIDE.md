@@ -64,6 +64,26 @@ Open Connect is pre-configured with these free OpenRouter models:
 
 ---
 
+## ✨ Features Enabled
+
+| Feature | Status | Description |
+|---------|--------|-------------|
+| Web Search | ✅ | Search the web from chat |
+| Code Execution | ✅ | Run Python code in chat |
+| Code Interpreter | ✅ | Advanced code execution with pyodide |
+| Memories | ✅ | Persistent user memories |
+| Notes | ✅ | Take notes |
+| Automations | ✅ | Workflow automations |
+| Message Rating | ✅ | Rate AI responses |
+| API Keys | ✅ | Generate API keys for external use |
+| User Signups | ✅ | Allow new user registrations |
+| Hybrid Search | ✅ | Combined vector + keyword search |
+| Direct Connections | ✅ | Connect to external model APIs |
+| Model Caching | ✅ | Cache model lists |
+| Speech-to-Text | ✅ | Whisper for voice input |
+
+---
+
 ## ⚙️ Environment Variables
 
 | Variable | Description | Status |
@@ -77,6 +97,25 @@ Open Connect is pre-configured with these free OpenRouter models:
 | `ENV` | Environment | ✅ Set to prod |
 | `PORT` | Application port | ✅ Set to 8080 |
 | `DOCKER` | Docker mode | ✅ Enabled |
+| `DATABASE_URL` | Supabase PostgreSQL | ✅ Configured |
+| `SUPABASE_URL` | Supabase project URL | ✅ Configured |
+| `SUPABASE_ANON_KEY` | Supabase anon key | ✅ Configured |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role | ✅ Configured |
+| `QDRANT_URL` | Qdrant vector DB URL | ✅ Configured |
+| `QDRANT_API_KEY` | Qdrant API key | ✅ Configured |
+
+### Database & Vector Store
+
+**Supabase PostgreSQL** - Used for:
+- User data storage
+- Chat history
+- Application metadata
+- Knowledge base documents
+
+**Qdrant Vector Database** - Used for:
+- Semantic search embeddings
+- Knowledge base vector storage
+- Retrieval-augmented generation (RAG)
 
 ---
 
