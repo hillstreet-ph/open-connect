@@ -216,7 +216,7 @@ COPY --chown=$UID:$GID ./scripts/integrations/install-integrations.sh /app/scrip
 
 # Copy warmed model caches from the python-deps stage so runtime startup
 # does not re-download embeddings / Whisper / tokenizer assets on every boot.
-COPY --from=python-deps --chown=$UID:$GID /app/backend/data/cache /app/backend/data/cache
+COPY --from=python-deps --chown=$UID:$GID /app/backend/data /app/backend/data
 
 # ============================================================
 # Plugin Installation
