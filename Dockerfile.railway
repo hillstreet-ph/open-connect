@@ -309,7 +309,7 @@ RUN mkdir -p /app/backend/data && \
 EXPOSE 8080
 
 # Health check
-HEALTHCHECK CMD curl --silent --fail http://localhost:${PORT:-8080}/health | jq -ne 'input.status == true' || exit 1
+HEALTHCHECK CMD curl --silent --fail http://localhost:${PORT:-8080}/ready | jq -ne 'input.status == true' || exit 1
 
 # Permission hardening
 RUN if [ "$USE_PERMISSION_HARDENING" = "true" ]; then \
