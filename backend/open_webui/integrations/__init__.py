@@ -86,5 +86,13 @@ def init_integrations():
     # Initialize skill manager
     get_skill_manager()
     
-    # Initialize agent hub
-    get_agent_hub()
+    # Initialize agent hub and load the repository manifests
+    agent_hub = get_agent_hub()
+    agent_hub.load_connector_manifest()
+    agent_hub.load_default_agents()
+
+    return {
+        "mcp_server": get_mcp_server(),
+        "skill_manager": get_skill_manager(),
+        "agent_hub": agent_hub,
+    }

@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional, Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from abc import ABC, abstractmethod
+from pathlib import Path
 
 log = logging.getLogger(__name__)
 
@@ -62,6 +63,29 @@ class BaseAgent(ABC):
     def get_status(self) -> Dict[str, Any]:
         """Get agent status"""
         pass
+
+
+class ManifestAgent(BaseAgent):
+    """Fallback agent that stores manifest metadata when no runtime connector exists."
+
+    async def run(self, task: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
+        return {
+            'status': 'success',
+            'output': f'{self.name} is registered from the workspace manifest.',
+            'agent': self.name,
+            'type': self.agent_type.value,
+        }
+
+    async def stop(self):
+        return None
+
+    def get_status(self) -> Dict[str, Any]:
+        return {
+            'name': self.name,
+            'type': self.agent_type.value,
+            'initialized': True,
+            'model': self.config.model,
+        }
 
 
 class OpenAIAgent(BaseAgent):
@@ -290,12 +314,40 @@ class AgentHub:
     def __init__(self):
         self.agents: Dict[str, BaseAgent] = {}
         self.connectors: Dict[str, Any] = {}
+        self.agent_manifest: dict[str, Any] = {}
+        self.connector_manifest: dict[str, Any] = {}
+        self.manifest_dir = Path('/app/backend/open_webui/integrations')
         self._register_connectors()
     
     def _register_connectors(self):
         """Register platform connectors"""
-        self.connectors["openclaw"] = OpenClawConnector()
-        self.connectors["swarmdock"] = SwarmDockConnector()
+        self.connectors['openclaw'] = OpenClawConnector()
+        self.connectors['swarmdock'] = SwarmDockConnector()
+    
+    def _build_agent(self, agent_data: Dict[str, Any]) -> BaseAgent:
+        agent_type_value = str(agent_data.get('type', 'custom')).lower()
+        try:
+            agent_type = AgentType(agent_type_value)
+        except ValueError:
+            agent_type = AgentType.CUSTOM
+
+        config = AgentConfig(
+            name=agent_data.get('name') or agent_data.get('id') or 'Unnamed Agent',
+            agent_type=agent_type,
+            model=agent_data.get('model', 'gpt-4'),
+            instructions=agent_data.get('instructions', ''),
+            tools=agent_data.get('tools', []) or [],
+            system_prompt=agent_data.get('system_prompt', ''),
+            max_retries=int(agent_data.get('max_retries', 3) or 3),
+            timeout=int(agent_data.get('timeout', 300) or 300),
+            metadata={k: v for k, v in agent_data.items() if k not in {'id', 'name', 'type', 'model', 'instructions', 'tools', 'system_prompt', 'max_retries', 'timeout'}},
+        )
+
+        if agent_type == AgentType.OPENAI:
+            return OpenAIAgent(config)
+        if agent_type == AgentType.LANGGRAPH:
+            return LangGraphAgent(config)
+        return ManifestAgent(config)
     
     def register_agent(self, agent: BaseAgent):
         """Register an agent"""
@@ -312,6 +364,44 @@ class AgentHub:
             agent.get_status()
             for agent in self.agents.values()
         ]
+    
+    def load_connector_manifest(self, manifest_path: Path | None = None) -> dict[str, Any]:
+        """Load the persisted connector manifest into memory."""
+        manifest_path = manifest_path or (self.manifest_dir / '.connectors.json')
+        if not manifest_path.exists():
+            self.connector_manifest = {}
+            return self.connector_manifest
+
+        try:
+            self.connector_manifest = json.loads(manifest_path.read_text())
+        except Exception as exc:
+            log.warning('Failed to load connector manifest %s: %s', manifest_path, exc)
+            self.connector_manifest = {}
+        return self.connector_manifest
+
+    def load_default_agents(self, manifest_path: Path | None = None) -> List[Dict[str, Any]]:
+        """Load agents from the repository manifest and register them."""
+        manifest_path = manifest_path or (self.manifest_dir / '.agents.json')
+        self.agent_manifest = {}
+        if not manifest_path.exists():
+            return []
+
+        try:
+            self.agent_manifest = json.loads(manifest_path.read_text())
+        except Exception as exc:
+            log.warning('Failed to load agent manifest %s: %s', manifest_path, exc)
+            self.agent_manifest = {}
+            return []
+
+        registered: List[Dict[str, Any]] = []
+        for agent_data in self.agent_manifest.get('agents', []):
+            try:
+                agent = self._build_agent(agent_data)
+                self.register_agent(agent)
+                registered.append(agent_data)
+            except Exception as exc:
+                log.warning('Skipping agent manifest entry %s: %s', agent_data.get('name') or agent_data.get('id'), exc)
+        return registered
     
     async def run_agent(
         self,

@@ -16,9 +16,14 @@ Use this file as the first-stop handoff for future agents working on `OrgHide/op
 - Railway boots through `railway-start.sh`, which restores local/Supabase backups before delegating to `backend/start.sh`.
 - `backend/start.sh` normalizes `LOG_LEVEL` before passing it to Uvicorn so `INFO` does not crash startup.
 - `Dockerfile.railway` now bootstraps integrations from `scripts/integrations/install-integrations.sh` during image build.
+- Startup was previously blocked by `install_tool_and_function_dependencies()` in `backend/open_webui/main.py`; a `backend/sitecustomize.py` shim now backgrounds that call so Railway can reach `/ready` before long dependency/model downloads finish.
+- `backend/sitecustomize.py` now wraps the Open WebUI FastAPI lifespan so `init_integrations()` runs on startup and `bootstrap_workspace_resources()` re-seeds skills, tools, and functions in the background after deploy.
+- `backend/open_webui/integrations/agents/framework.py` now loads the repository's `.agents.json` and `.connectors.json` manifests into the runtime agent hub.
+- `.env.example` now documents the Redis Cloud variables (`REDIS_URL`, `WEBSOCKET_REDIS_URL`, and related flags) instead of hardcoding any secret values.
 - Backup/restore scripts include workspace resources in addition to the database and user data.
 - The canonical backup target remains Supabase Storage bucket `open-connect-backups` with `backups/` prefix.
 - Release notes use semantic versioning in `CHANGELOG.md`.
+- Railway deployment `68094d02-6a30-4eed-a410-0f0121b20025` succeeded with the startup-relaxation fix.
 
 ## What future agents should check first
 
