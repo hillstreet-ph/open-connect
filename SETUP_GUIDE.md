@@ -44,7 +44,7 @@ Open Connect is a powerful, self-hosted AI platform built on Open WebUI, deploye
 | Memories | ✅ Enabled | Persistent user memories |
 | Notes | ✅ Enabled | Take notes |
 | Automations | ✅ Enabled | Workflow automations |
-| Message Rating | ✅ Enabled | Rate AI responses |
+| Message Rating | ✅ Enabled | Rate AI responses to improve conversation quality |
 | API Keys | ✅ Enabled | Generate API keys for external use |
 | User Signups | ✅ Enabled | Allow new user registrations |
 | Folders | ✅ Enabled | Organize chats and files |
@@ -81,6 +81,22 @@ Open Connect is pre-configured with these free OpenRouter models:
 | Groq | ✅ Configured | Fast inference |
 | Supabase | ✅ Configured | External knowledge sources |
 | Google Vertex AI | ✅ Configured | GCP AI services |
+| Gemini API | ✅ Supported | Google AI Studio / Gemini chat models |
+| LangSmith / LangChain | ✅ Supported | Tracing and workspace observability |
+
+### Google Gemini / Vertex AI
+Use these environment variables when connecting Google models:
+- `GEMINI_API_KEY` or `GOOGLE_API_KEY` for Google AI Studio / Gemini API
+- `GOOGLE_APPLICATION_CREDENTIALS_JSON` or `GOOGLE_APPLICATION_CREDENTIALS` for Vertex AI service-account auth
+- `GOOGLE_CLOUD_PROJECT` and `GOOGLE_CLOUD_LOCATION` for Vertex projects
+
+### LangSmith / LangChain Workspace
+Use these environment variables when enabling tracing:
+- `LANGSMITH_API_KEY`
+- `LANGSMITH_PROJECT`
+- `LANGSMITH_ENDPOINT`
+- `LANGSMITH_TRACING=true`
+- `LANGCHAIN_TRACING_V2=true`
 
 ---
 
@@ -112,6 +128,15 @@ Open Connect is pre-configured with these free OpenRouter models:
 | `DEFAULT_MODELS` | Pre-selected models | ✅ Configured |
 | `OPENAI_API_KEY` | OpenRouter API key | ✅ Configured |
 | `OPENAI_API_BASE_URL` | OpenRouter endpoint | ✅ Configured |
+| `GEMINI_API_KEY` | Gemini API key | ✅ Supported |
+| `GOOGLE_API_KEY` | Gemini API alias | ✅ Supported |
+| `GOOGLE_CLOUD_PROJECT` | Vertex AI project ID | ✅ Supported |
+| `GOOGLE_CLOUD_LOCATION` | Vertex AI region | ✅ Supported |
+| `GOOGLE_APPLICATION_CREDENTIALS_JSON` | GCP credentials | ✅ Supported |
+| `LANGSMITH_API_KEY` | LangSmith workspace key | ✅ Supported |
+| `LANGSMITH_PROJECT` | LangSmith project name | ✅ Supported |
+| `LANGSMITH_TRACING` | LangSmith tracing toggle | ✅ Supported |
+| `LANGCHAIN_TRACING_V2` | LangChain tracing toggle | ✅ Supported |
 | `HUGGINGFACE_TOKEN` | Hugging Face token | ✅ Configured |
 | `GROQ_API_KEY` | Groq API key | ✅ Configured |
 | `SUPABASE_URL` | Supabase project URL | ✅ Configured |
@@ -188,7 +213,7 @@ Data is persisted in Railway volumes. To backup:
 
 ### Health Check Failures
 1. Check health: `https://open-connect-production.up.railway.app/health`
-2. Increase timeout in Railway settings (current: 300s)
+2. Increase timeout in Railway settings if startup is slow (current repo default: 900s)
 3. Check logs in Railway dashboard
 
 ### Model Connection Issues
