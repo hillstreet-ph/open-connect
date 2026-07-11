@@ -139,6 +139,8 @@ Use these environment variables when enabling tracing:
 | `LANGSMITH_TRACING` | LangSmith tracing toggle | ✅ Supported |
 | `LANGCHAIN_TRACING_V2` | LangChain tracing toggle | ✅ Supported |
 | `HUGGINGFACE_TOKEN` | Hugging Face token | ✅ Configured |
+| `HF_TOKEN` | Hugging Face Hub token alias | ✅ Supported |
+| `USER_AGENT` | User-Agent for outbound web/model requests | ✅ Supported |
 | `GROQ_API_KEY` | Groq API key | ✅ Configured |
 | `SUPABASE_URL` | Supabase project URL | ✅ Configured |
 | `SUPABASE_ANON_KEY` | Supabase anon key | ✅ Configured |
