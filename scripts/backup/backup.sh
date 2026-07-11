@@ -155,15 +155,39 @@ if [ -d "${DATA_DIR}/notes" ]; then
     log "   ✓ Notes backed up"
 fi
 
-# ── Backup 9: Models configuration ────────────────────────────────────────────
-log "9. Backing up models configuration..."
+# ── Backup 9: Workspace resources (skills, plugins, pipelines, agent manifests) ──
+log "9. Backing up workspace resources..."
+if [ -d "${BACKEND_DIR}/open_webui/plugins" ]; then
+    mkdir -p "${BACKUP_PATH}/workspace_resources"
+    cp -r "${BACKEND_DIR}/open_webui/plugins" "${BACKUP_PATH}/workspace_resources/"
+    log "   ✓ Plugins backed up"
+fi
+if [ -d "${BACKEND_DIR}/open_webui/skills" ]; then
+    mkdir -p "${BACKUP_PATH}/workspace_resources"
+    cp -r "${BACKEND_DIR}/open_webui/skills" "${BACKUP_PATH}/workspace_resources/"
+    log "   ✓ Skills backed up"
+fi
+if [ -d "${BACKEND_DIR}/open_webui/pipelines" ]; then
+    mkdir -p "${BACKUP_PATH}/workspace_resources"
+    cp -r "${BACKEND_DIR}/open_webui/pipelines" "${BACKUP_PATH}/workspace_resources/"
+    log "   ✓ Pipelines backed up"
+fi
+if [ -f "${BACKEND_DIR}/open_webui/integrations/.agents.json" ] || [ -f "${BACKEND_DIR}/open_webui/integrations/.connectors.json" ]; then
+    mkdir -p "${BACKUP_PATH}/workspace_resources/integrations"
+    [ -f "${BACKEND_DIR}/open_webui/integrations/.agents.json" ] && cp "${BACKEND_DIR}/open_webui/integrations/.agents.json" "${BACKUP_PATH}/workspace_resources/integrations/.agents.json"
+    [ -f "${BACKEND_DIR}/open_webui/integrations/.connectors.json" ] && cp "${BACKEND_DIR}/open_webui/integrations/.connectors.json" "${BACKUP_PATH}/workspace_resources/integrations/.connectors.json"
+    log "   ✓ Integration manifests backed up"
+fi
+
+# ── Backup 10: Models configuration ────────────────────────────────────────────
+log "10. Backing up models configuration..."
 if [ -f "${DATA_DIR}/models.json" ]; then
     cp "${DATA_DIR}/models.json" "${BACKUP_PATH}/models.json"
     log "   ✓ Models configuration backed up"
 fi
 
-# ── Backup 10: Metadata ────────────────────────────────────────────────────────
-log "10. Creating backup metadata..."
+# ── Backup 11: Metadata ────────────────────────────────────────────────────────
+log "11. Creating backup metadata..."
 cat > "${BACKUP_PATH}/metadata.json" << EOF
 {
     "backup_date": "${TIMESTAMP}",
@@ -183,6 +207,7 @@ cat > "${BACKUP_PATH}/metadata.json" << EOF
         "config": true,
         "memories": true,
         "notes": true,
+        "workspace_resources": true,
         "models": true
     },
     "backup_size": {
@@ -197,7 +222,7 @@ log "   ✓ Metadata created"
 
 # ── Create archive ─────────────────────────────────────────────────────────────
 log ""
-log "11. Creating archive..."
+log "12. Creating archive..."
 cd "${BACKUP_DIR}"
 tar -czf "${BACKUP_NAME}.tar.gz" "${BACKUP_NAME}"
 ARCHIVE_SIZE=$(du -h "${BACKUP_NAME}.tar.gz" | cut -f1)
@@ -211,7 +236,7 @@ ln -sfn "${BACKUP_NAME}.tar.gz" "${BACKUP_DIR}/latest-backup.tar.gz"
 # ── Upload to Supabase (if configured) ─────────────────────────────────────────
 if [ -n "${SUPABASE_PROJECT_REF}" ] && [ -n "${SUPABASE_ACCESS_TOKEN}" ]; then
     log ""
-    log "12. Uploading to Supabase Storage..."
+    log "13. Uploading to Supabase Storage..."
     
     # Create bucket if it doesn't exist
     curl -s -X POST \
@@ -239,7 +264,7 @@ fi
 
 # ── Cleanup old backups ─────────────────────────────────────────────────────────
 log ""
-log "13. Cleaning up old backups..."
+log "14. Cleaning up old backups..."
 
 # Remove by count
 ls -t "${BACKUP_DIR}"/open-connect_backup_*.tar.gz 2>/dev/null | tail -n +$((RETENTION_COUNT + 1)) | xargs -r rm -f
@@ -252,7 +277,7 @@ log "   ✓ Cleanup complete. ${REMAINING} backups remaining"
 
 # ── Verify backup integrity ────────────────────────────────────────────────────
 log ""
-log "14. Verifying backup integrity..."
+log "15. Verifying backup integrity..."
 if tar -tzf "${BACKUP_DIR}/${BACKUP_NAME}.tar.gz" > /dev/null 2>&1; then
     log "    ✓ Backup verified successfully"
 else
@@ -264,21 +289,23 @@ fi
 log ""
 log "=============================================="
 if [ $BACKUP_STATUS -eq 0 ]; then
-    log "Backup completed successfully!"
+    log_success "Backup completed successfully!"
 else
-    log "Backup completed with warnings"
+    log_error "Backup completed with warnings"
 fi
 log "=============================================="
-log "Archive: ${BACKUP_DIR}/${BACKUP_NAME}.tar.gz"
+log "Archive: ${BACKUP_NAME}.tar.gz"
 log "Size: ${ARCHIVE_SIZE}"
+log "Location: ${BACKUP_DIR}"
 log "Latest: ${BACKUP_DIR}/latest.tar.gz"
 log ""
 
-# Output for monitoring/alerting
+# Output for monitoring
 echo "BACKUP_STATUS=${BACKUP_STATUS}"
 echo "BACKUP_FILE=${BACKUP_NAME}.tar.gz"
-echo "BACKUP_PATH=${BACKUP_DIR}/${BACKUP_NAME}.tar.gz"
 echo "BACKUP_SIZE=${ARCHIVE_SIZE}"
+
+echo "BACKUP_PATH=${BACKUP_DIR}/${BACKUP_NAME}.tar.gz"
 echo "TIMESTAMP=${TIMESTAMP}"
 
 exit $BACKUP_STATUS
