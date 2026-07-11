@@ -212,6 +212,7 @@ COPY --chown=$UID:$GID --from=build /app/package.json /app/package.json
 
 # Copy backend files (copy BEFORE plugin installation for proper layering)
 COPY --chown=$UID:$GID ./backend /app/backend
+COPY --chown=$UID:$GID ./scripts/integrations/install-integrations.sh /app/scripts/integrations/install-integrations.sh
 
 # ============================================================
 # Plugin Installation
@@ -286,6 +287,12 @@ RUN echo "==========================================" && \
     \
     # Cleanup
     rm -rf /tmp/plugins-* 2>/dev/null || true
+
+# ============================================================
+# Default workspace bootstrap
+# ============================================================
+RUN chmod +x /app/scripts/integrations/install-integrations.sh && \
+    /app/scripts/integrations/install-integrations.sh
 
 # Ensure proper permissions
 RUN chown -R $UID:$GID /app 2>/dev/null || true
