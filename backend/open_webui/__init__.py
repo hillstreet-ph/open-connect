@@ -34,10 +34,12 @@ def _patch_open_connect_bootstrap() -> None:
                         from open_webui.integrations import init_integrations
                         from open_webui.utils.workspace_bootstrap import bootstrap_workspace_resources
 
+                        log.info('Open Connect startup bootstrap hook running')
                         init_integrations()
                         if not getattr(app.state, '_open_connect_workspace_bootstrap_started', False):
                             app.state._open_connect_workspace_bootstrap_started = True
                             app.state.workspace_bootstrap_task = asyncio.create_task(bootstrap_workspace_resources())
+                            log.info('Open Connect workspace bootstrap task scheduled')
                     except Exception as exc:
                         log.warning('Open Connect workspace bootstrap setup failed: %s', exc)
 
@@ -48,6 +50,7 @@ def _patch_open_connect_bootstrap() -> None:
                         task.cancel()
 
             kwargs['lifespan'] = wrapped_lifespan
+            log.info('Open Connect startup bootstrap hook applied')
 
         return original_init(self, *args, **kwargs)
 
