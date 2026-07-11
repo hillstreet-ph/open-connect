@@ -122,8 +122,32 @@ log "7. Backing up memories and notes..."
 [ -d "${RAILWAY_VOLUME_MOUNT_DIR}/notes" ] && cp -r "${RAILWAY_VOLUME_MOUNT_DIR}/notes" "${BACKUP_PATH}/" 2>/dev/null || true
 log "   ✓ Memories and notes backed up"
 
-# ── Backup 8: Metadata ─────────────────────────────────────────────────────────
-log "8. Creating backup metadata..."
+# ── Backup 8: Workspace resources (skills, plugins, pipelines, agent manifests) ──
+log "8. Backing up workspace resources..."
+if [ -d "${BACKEND_DIR}/open_webui/plugins" ]; then
+    mkdir -p "${BACKUP_PATH}/workspace_resources"
+    cp -r "${BACKEND_DIR}/open_webui/plugins" "${BACKUP_PATH}/workspace_resources/"
+    log "   ✓ Plugins backed up"
+fi
+if [ -d "${BACKEND_DIR}/open_webui/skills" ]; then
+    mkdir -p "${BACKUP_PATH}/workspace_resources"
+    cp -r "${BACKEND_DIR}/open_webui/skills" "${BACKUP_PATH}/workspace_resources/"
+    log "   ✓ Skills backed up"
+fi
+if [ -d "${BACKEND_DIR}/open_webui/pipelines" ]; then
+    mkdir -p "${BACKUP_PATH}/workspace_resources"
+    cp -r "${BACKEND_DIR}/open_webui/pipelines" "${BACKUP_PATH}/workspace_resources/"
+    log "   ✓ Pipelines backed up"
+fi
+if [ -f "${BACKEND_DIR}/open_webui/integrations/.agents.json" ] || [ -f "${BACKEND_DIR}/open_webui/integrations/.connectors.json" ]; then
+    mkdir -p "${BACKUP_PATH}/workspace_resources/integrations"
+    [ -f "${BACKEND_DIR}/open_webui/integrations/.agents.json" ] && cp "${BACKEND_DIR}/open_webui/integrations/.agents.json" "${BACKUP_PATH}/workspace_resources/integrations/.agents.json"
+    [ -f "${BACKEND_DIR}/open_webui/integrations/.connectors.json" ] && cp "${BACKEND_DIR}/open_webui/integrations/.connectors.json" "${BACKUP_PATH}/workspace_resources/integrations/.connectors.json"
+    log "   ✓ Integration manifests backed up"
+fi
+
+# ── Backup 9: Metadata ─────────────────────────────────────────────────────────
+log "9. Creating backup metadata..."
 cat > "${BACKUP_PATH}/metadata.json" << EOF
 {
     "backup_date": "${TIMESTAMP}",
@@ -141,7 +165,8 @@ cat > "${BACKUP_PATH}/metadata.json" << EOF
         "secret_key": true,
         "config": true,
         "memories": true,
-        "notes": true
+        "notes": true,
+        "workspace_resources": true
     }
 }
 EOF
@@ -149,7 +174,7 @@ log "   ✓ Metadata created"
 
 # ── Create archive ─────────────────────────────────────────────────────────────
 log ""
-log "9. Creating archive..."
+log "10. Creating archive..."
 cd "${BACKUP_DEST}"
 tar -czf "${BACKUP_NAME}.tar.gz" -C "${BACKUP_DEST}" "${BACKUP_NAME}"
 ARCHIVE_SIZE=$(du -h "${BACKUP_NAME}.tar.gz" | cut -f1)
@@ -164,7 +189,7 @@ log_success "   Archive created: ${ARCHIVE_SIZE}"
 # ── Upload to Supabase (if configured) ────────────────────────────────────────
 if [ -n "${SUPABASE_PROJECT_REF}" ] && [ -n "${SUPABASE_ACCESS_TOKEN}" ]; then
     log ""
-    log "10. Uploading to Supabase Storage..."
+    log "11. Uploading to Supabase Storage..."
     
     # Create bucket if it doesn't exist
     curl -s -X POST \
@@ -227,5 +252,7 @@ log ""
 echo "BACKUP_STATUS=${BACKUP_STATUS}"
 echo "BACKUP_FILE=${BACKUP_NAME}.tar.gz"
 echo "BACKUP_SIZE=${ARCHIVE_SIZE}"
+echo "BACKUP_PATH=${BACKUP_DEST}/${BACKUP_NAME}.tar.gz"
+echo "TIMESTAMP=${TIMESTAMP}"
 
 exit $BACKUP_STATUS
