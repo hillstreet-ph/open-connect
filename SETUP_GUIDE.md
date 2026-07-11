@@ -133,6 +133,7 @@ Use these environment variables when enabling tracing:
 | `GOOGLE_CLOUD_PROJECT` | Vertex AI project ID | ✅ Supported |
 | `GOOGLE_CLOUD_LOCATION` | Vertex AI region | ✅ Supported |
 | `GOOGLE_APPLICATION_CREDENTIALS_JSON` | GCP credentials | ✅ Supported |
+| `GOOGLE_APPLICATION_CREDENTIALS` | GCP credential file path | ✅ Supported |
 | `LANGSMITH_API_KEY` | LangSmith workspace key | ✅ Supported |
 | `LANGSMITH_PROJECT` | LangSmith project name | ✅ Supported |
 | `LANGSMITH_TRACING` | LangSmith tracing toggle | ✅ Supported |
@@ -141,7 +142,7 @@ Use these environment variables when enabling tracing:
 | `GROQ_API_KEY` | Groq API key | ✅ Configured |
 | `SUPABASE_URL` | Supabase project URL | ✅ Configured |
 | `SUPABASE_ANON_KEY` | Supabase anon key | ✅ Configured |
-| `GOOGLE_APPLICATION_CREDENTIALS_JSON` | GCP credentials | ✅ Configured |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key | ✅ Configured |
 
 ---
 
