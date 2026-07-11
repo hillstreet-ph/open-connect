@@ -11,8 +11,8 @@ healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
-# Use Railway-optimized startup script
-startCommand = "bash /app/backend/railway-start.sh"
+# Use the standard backend startup script that already handles PORT/health checks safely
+startCommand = "bash /app/backend/start.sh"
 
 [settings]
 private = false
