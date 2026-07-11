@@ -180,10 +180,16 @@ RUN if [ "$USE_CUDA" = "true" ]; then \
 # ============================================================
 FROM base AS ollama-install
 
-RUN if [ "$USE_OLLAMA" = "true" ]; then \
-    date +%s > /tmp/ollama_build_hash && \
-    curl -fsSL https://ollama.com/install.sh | sh && \
-    rm -rf /var/lib/apt/lists/*; \
+RUN set -eux; \
+    mkdir -p /usr/local/bin /usr/local/lib/ollama; \
+    if [ "$USE_OLLAMA" = "true" ]; then \
+      date +%s > /tmp/ollama_build_hash && \
+      curl -fsSL https://ollama.com/install.sh | sh && \
+      rm -rf /var/lib/apt/lists/*; \
+    else \
+      printf '#!/bin/sh\necho "ollama is not enabled in this Railway build" >&2\nexit 1\n' > /usr/local/bin/ollama; \
+      chmod +x /usr/local/bin/ollama; \
+      touch /usr/local/lib/ollama/.keep; \
     fi
 
 # ============================================================
