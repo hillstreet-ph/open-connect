@@ -87,23 +87,28 @@ declare -A SKILL_REPOS=(
 install_python_package() {
     local package="$1"
     local extras="${2:-}"
-    
+    local install_status=0
+
     if pip show "$package" &>/dev/null; then
         log_info "  ✓ $package already installed"
         return 0
     fi
-    
+
     log_info "  Installing $package..."
     if [[ -n "$extras" ]]; then
-        pip install "$package[$extras]" --quiet 2>/dev/null || pip install "$package[$extras]"
+        if ! pip install "$package[$extras]" --quiet 2>/dev/null; then
+            pip install "$package[$extras]" || install_status=$?
+        fi
     else
-        pip install "$package" --quiet 2>/dev/null || pip install "$package"
+        if ! pip install "$package" --quiet 2>/dev/null; then
+            pip install "$package" || install_status=$?
+        fi
     fi
-    
-    if [[ $? -eq 0 ]]; then
+
+    if [[ $install_status -eq 0 ]]; then
         log_success "  ✓ $package installed"
     else
-        log_warn "  ⚠ $package installation failed"
+        log_warn "  ⚠ $package installation failed; continuing with the remaining integrations"
     fi
 }
 
