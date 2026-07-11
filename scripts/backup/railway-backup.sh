@@ -17,6 +17,7 @@ BACKUP_PATH="${BACKUP_DEST}/${BACKUP_NAME}"
 SUPABASE_PROJECT_REF="${SUPABASE_PROJECT_REF:-}"
 SUPABASE_ACCESS_TOKEN="${SUPABASE_ACCESS_TOKEN:-}"
 SUPABASE_BUCKET="${SUPABASE_BUCKET:-open-connect-backups}"
+BACKUP_PREFIX="${BACKUP_PREFIX:-backups}"
 
 # Logging
 log() {
@@ -180,7 +181,7 @@ if [ -n "${SUPABASE_PROJECT_REF}" ] && [ -n "${SUPABASE_ACCESS_TOKEN}" ]; then
         -H "Content-Type: application/octet-stream" \
         -H "x-upsert: true" \
         --data-binary @"${BACKUP_NAME}.tar.gz" \
-        "railway/${BACKUP_NAME}.tar.gz" 2>/dev/null)
+        "${BACKUP_PREFIX}/${BACKUP_NAME}.tar.gz" 2>/dev/null)
     
     if echo "${UPLOAD_RESPONSE}" | grep -q '"error"'; then
         log_error "Failed to upload to Supabase"
