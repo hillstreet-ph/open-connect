@@ -17,8 +17,8 @@ This guide covers the complete deployment of Open Connect to Railway with:
 | `railway-start.sh` | Production startup script with backup restore |
 | `Dockerfile.railway` | Railway-optimized Dockerfile with plugins |
 | `scripts/install-plugins.sh` | Plugin installation script |
-| `.github/workflows/deploy-railway.yml` | Main deployment workflow |
-| `.github/workflows/deploy-railway-full.yml` | Comprehensive deployment workflow |
+| `.github/workflows/deploy-railway.yml` | Manual fallback deploy workflow |
+| `.github/workflows/deploy-railway-full.yml` | Canonical production deploy workflow |
 | `.github/workflows/backup-railway.yml` | Backup & restore workflow |
 | `AGENTS.md` | Knowledge base for AI agents |
 
@@ -112,6 +112,12 @@ Backups run automatically:
 - Weekly on Sunday at 2 AM
 - Before every deployment
 
+Restore flow on new deployments:
+1. Railway starts `railway-start.sh`
+2. The script restores the latest local package if present
+3. If no local package exists, it restores from Supabase Storage
+4. The app then launches via `backend/start.sh`
+
 ### Manual Backup
 
 ```bash
@@ -159,14 +165,14 @@ The `Dockerfile.railway` automatically installs these plugins:
 
 ## Startup Script Features
 
-The `railway-start.sh` includes:
+The `railway-start.sh` bootstrap includes:
 
-1. **Data Directory Setup** - Creates necessary directories
-2. **Backup Restoration** - Restores from `/tmp/restore` on startup
-3. **Secret Key Management** - Generates/loads JWT secret
-4. **Database Verification** - Checks integrity
-5. **Health Monitoring** - Background process checks every 30s
-6. **Graceful Shutdown** - Handles SIGTERM/SIGINT
+1. **Backup Restoration** - Restores the latest local or Supabase backup on startup when needed
+2. **Startup Handoff** - Delegates to `backend/start.sh` for secret key setup, database checks, and server launch
+3. **Secret Key Management** - Generates/loads JWT secret in the backend startup path
+4. **Database Verification** - Checks integrity in the backend startup path
+5. **Health Monitoring** - `/health` remains the Railway health check endpoint
+6. **Graceful Shutdown** - Handled by the backend startup script
 
 ## Environment Variables
 
@@ -177,7 +183,11 @@ The `railway-start.sh` includes:
 | `DOCKER` | true | Docker mode |
 | `UVICORN_WORKERS` | 1 | Worker count |
 | `LOG_LEVEL` | info | Log level |
-| `ENABLE_BACKUP_RESTORE_ON_STARTUP` | true | Auto-restore |
+| `ENABLE_BACKUP_RESTORE_ON_STARTUP` | true | Auto-restore from local/Supabase backup on startup |
+| `SUPABASE_PROJECT_REF` | — | Supabase project reference for remote restore |
+| `SUPABASE_ACCESS_TOKEN` | — | Supabase token for backup upload/restore |
+| `SUPABASE_BUCKET` | open-connect-backups | Supabase Storage bucket for backups |
+| `BACKUP_PREFIX` | backups | Supabase object prefix for backup archives |
 | `HEALTH_CHECK_INTERVAL` | 30 | Health check interval (seconds) |
 | `RETENTION_DAYS` | 14 | Backup retention |
 
