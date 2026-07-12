@@ -16,6 +16,7 @@ log = logging.getLogger(__name__)
 
 WORKSPACE_PLUGINS_DIR = Path('/app/backend/open_webui/plugins')
 WORKSPACE_PIPELINES_DIR = Path('/app/backend/open_webui/pipelines')
+PUBLIC_READ_GRANT = {'principal_type': 'user', 'principal_id': '*', 'permission': 'read'}
 
 
 async def _wait_for_workspace_owner(poll_interval: int = 10) -> Any:
@@ -59,7 +60,7 @@ async def _sync_skills(owner_id: str) -> int:
             'content': content,
             'meta': SkillMeta(tags=skill.tags or []).model_dump(),
             'is_active': skill.enabled,
-            'access_grants': [],
+            'access_grants': [PUBLIC_READ_GRANT],
         }
 
         if existing is None:
@@ -164,12 +165,13 @@ async def _sync_tools(owner_id: str) -> int:
             'content': content,
             'meta': tool_meta.model_dump(),
             'specs': specs,
+            'access_grants': [PUBLIC_READ_GRANT],
         }
 
         if existing is None:
             created = await Tools.insert_new_tool(
                 owner_id,
-                ToolForm(id=tool_id, name=tool_name, content=content, meta=tool_meta, access_grants=[]),
+                ToolForm(id=tool_id, name=tool_name, content=content, meta=tool_meta, access_grants=[PUBLIC_READ_GRANT]),
                 specs,
             )
             if created:
