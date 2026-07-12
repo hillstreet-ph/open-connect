@@ -2,13 +2,16 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from pathlib import Path
 from typing import Any
 
+from open_webui.models.auths import Auths
 from open_webui.models.functions import Functions, FunctionForm, FunctionMeta
 from open_webui.models.skills import Skills, SkillForm, SkillMeta
 from open_webui.models.tools import Tools, ToolForm, ToolMeta
 from open_webui.models.users import Users
+from open_webui.utils.auth import get_password_hash
 from open_webui.utils.plugin import load_function_module_by_id, load_tool_module_by_id, replace_imports
 from open_webui.utils.tools import get_tool_specs
 
@@ -17,30 +20,79 @@ log = logging.getLogger(__name__)
 WORKSPACE_PLUGINS_DIR = Path('/app/backend/open_webui/plugins')
 WORKSPACE_PIPELINES_DIR = Path('/app/backend/open_webui/pipelines')
 PUBLIC_READ_GRANT = {'principal_type': 'user', 'principal_id': '*', 'permission': 'read'}
+LEGACY_BOOTSTRAP_OWNER_EMAIL = 'open-connect-bootstrap@open-connect.local'
+BOOTSTRAP_OWNER_NAME = os.getenv('OPEN_CONNECT_BOOTSTRAP_OWNER_NAME', 'Open Connect')
+BOOTSTRAP_OWNER_EMAIL = os.getenv('OPEN_CONNECT_BOOTSTRAP_OWNER_EMAIL', LEGACY_BOOTSTRAP_OWNER_EMAIL)
+BOOTSTRAP_OWNER_PASSWORD = os.getenv('OPEN_CONNECT_BOOTSTRAP_OWNER_PASSWORD')
 
 
 async def _wait_for_workspace_owner(poll_interval: int = 10) -> Any:
-    """Return an existing workspace owner or create a bootstrap admin user."""
+    """Return the configured workspace owner or fall back to the first user."""
+    try:
+        configured_owner = await Users.get_user_by_email(BOOTSTRAP_OWNER_EMAIL)
+        if configured_owner:
+            if BOOTSTRAP_OWNER_PASSWORD:
+                updated = await Auths.ensure_user_credentials_by_id(
+                    configured_owner.id,
+                    email=BOOTSTRAP_OWNER_EMAIL,
+                    password=BOOTSTRAP_OWNER_PASSWORD,
+                    name=BOOTSTRAP_OWNER_NAME,
+                    role='admin',
+                )
+                if updated:
+                    return updated
+            return configured_owner
+    except Exception as exc:
+        log.debug('Workspace bootstrap is checking the configured owner: %s', exc)
+
+    if BOOTSTRAP_OWNER_PASSWORD:
+        try:
+            legacy_owner = await Users.get_user_by_email(LEGACY_BOOTSTRAP_OWNER_EMAIL)
+            if legacy_owner:
+                updated = await Auths.ensure_user_credentials_by_id(
+                    legacy_owner.id,
+                    email=BOOTSTRAP_OWNER_EMAIL,
+                    password=BOOTSTRAP_OWNER_PASSWORD,
+                    name=BOOTSTRAP_OWNER_NAME,
+                    role='admin',
+                )
+                if updated:
+                    return updated
+        except Exception as exc:
+            log.debug('Workspace bootstrap is checking the legacy owner account: %s', exc)
+
     try:
         owner = await Users.get_first_user()
         if owner:
+            if BOOTSTRAP_OWNER_PASSWORD and owner.email == LEGACY_BOOTSTRAP_OWNER_EMAIL:
+                updated = await Auths.ensure_user_credentials_by_id(
+                    owner.id,
+                    email=BOOTSTRAP_OWNER_EMAIL,
+                    password=BOOTSTRAP_OWNER_PASSWORD,
+                    name=BOOTSTRAP_OWNER_NAME,
+                    role='admin',
+                )
+                if updated:
+                    return updated
             return owner
     except Exception as exc:
         log.debug('Workspace bootstrap is waiting for the first user: %s', exc)
 
-    log.info('No workspace user found; creating a bootstrap owner for workspace seeding...')
-    try:
-        bootstrap_owner = await Users.insert_new_user(
-            id='open-connect-bootstrap',
-            name='Open Connect',
-            email='open-connect-bootstrap@open-connect.local',
-            role='admin',
-        )
-        if bootstrap_owner:
-            return bootstrap_owner
-    except Exception as exc:
-        log.warning('Failed to create bootstrap owner: %s', exc)
+    if BOOTSTRAP_OWNER_PASSWORD:
+        log.info('No workspace user found; creating the configured bootstrap owner...')
+        try:
+            bootstrap_owner = await Auths.insert_new_auth(
+                email=BOOTSTRAP_OWNER_EMAIL,
+                password=await get_password_hash(BOOTSTRAP_OWNER_PASSWORD),
+                name=BOOTSTRAP_OWNER_NAME,
+                role='admin',
+            )
+            if bootstrap_owner:
+                return bootstrap_owner
+        except Exception as exc:
+            log.warning('Failed to create configured bootstrap owner: %s', exc)
 
+    log.info('No configured bootstrap password found; waiting for the first workspace user before bootstrapping skills and functions...')
     while True:
         try:
             owner = await Users.get_first_user()
@@ -48,7 +100,6 @@ async def _wait_for_workspace_owner(poll_interval: int = 10) -> Any:
                 return owner
         except Exception as exc:
             log.debug('Workspace bootstrap is waiting for the first user: %s', exc)
-        log.info('Waiting for the first workspace user before bootstrapping skills and functions...')
         await asyncio.sleep(poll_interval)
 
 
