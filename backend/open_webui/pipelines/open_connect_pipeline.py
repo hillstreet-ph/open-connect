@@ -1,6 +1,10 @@
 """
-Open Connect Pipeline
-Forwards Open WebUI chat requests to the Open Connect backend.
+id: open_connect_pipeline
+name: Open Connect Pipeline
+description: Forwards Open WebUI chat requests to the Open Connect backend.
+category: integration
+source: local
+version: 1.0.0
 """
 
 from __future__ import annotations
