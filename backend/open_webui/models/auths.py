@@ -222,6 +222,43 @@ class AuthsTable:
             await session.commit()
             return True
 
+    async def ensure_user_credentials_by_id(
+        self,
+        user_id: str,
+        email: str,
+        password: str,
+        name: str | None = None,
+        role: str | None = None,
+        db: AsyncSession | None = None,
+    ) -> UserModel | None:
+        """Create or refresh the auth credential row for an existing user."""
+        from open_webui.utils.auth import get_password_hash
+
+        hashed_password = await get_password_hash(password)
+        async with get_async_db_context(db) as session:
+            user = await session.get(User, user_id)
+            if user is None:
+                return None
+
+            auth_row = await session.get(Auth, user_id)
+            if auth_row is None:
+                auth_row = Auth(id=user_id, email=email, password=hashed_password, active=True)
+                session.add(auth_row)
+            else:
+                auth_row.email = email
+                auth_row.password = hashed_password
+                auth_row.active = True
+
+            user.email = email
+            if name is not None:
+                user.name = name
+            if role is not None:
+                user.role = role
+
+            await session.commit()
+            await session.refresh(user)
+            return UserModel.model_validate(user)
+
     async def delete_auth_by_id(
         self,
         id: str,
