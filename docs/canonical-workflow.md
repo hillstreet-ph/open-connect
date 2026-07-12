@@ -26,6 +26,8 @@ That workflow is responsible for:
 
 Other workflows in `.github/workflows/` are still present for backup, release, or legacy deployment support. They should be treated as secondary unless a release or recovery task explicitly calls for them.
 
+This workflow does **not** describe a separate Redis worker, background queue, or self-healing daemon. The current runtime rehydrates workspace resources during startup and keeps Railway as the live execution environment.
+
 ## Why this matters
 
 When there are too many overlapping deployment paths, the workspace can appear to reset to zero or create duplicates.
