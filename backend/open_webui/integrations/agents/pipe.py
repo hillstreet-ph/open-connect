@@ -87,7 +87,7 @@ class OpenAIPipe(Pipe):
         self,
         body: Dict[str, Any],
         __user__: Dict[str, Any] = None,
-        __AI__(...) = None,
+        __AI__: Any = None,
         __context__: Dict[str, Any] = None
     ) -> str:
         """
@@ -155,7 +155,7 @@ class AgentPipe(Pipe):
         self,
         body: Dict[str, Any],
         __user__: Dict[str, Any] = None,
-        __AI__(...) = None,
+        __AI__: Any = None,
         __context__: Dict[str, Any] = None
     ) -> str:
         """Process request through agent"""
@@ -244,7 +244,7 @@ class MCPPipe(Pipe):
         self,
         body: Dict[str, Any],
         __user__: Dict[str, Any] = None,
-        __AI__(...) = None,
+        __AI__: Any = None,
         __context__: Dict[str, Any] = None
     ) -> str:
         """Process request through MCP"""
