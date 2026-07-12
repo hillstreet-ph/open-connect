@@ -35,6 +35,10 @@ A fresh Supabase project will often show no users at all. That is expected until
 
 See [docs/supabase-auth.md](./supabase-auth.md) for the canonical auth/setup flow.
 
+## What is not part of the current documented architecture?
+
+The repository does **not** currently document a separate `open-connect-worker`, Redis job queue, `health_monitor.py`, `agent_vault`, `autonomous_memories`, MultiOn integration, or an OpenHands-style autonomous loop. If you see older notes describing those pieces, treat them as future-state ideas rather than the current production setup.
+
 ## Why deployments should not reset to zero
 
 Deploys should *re-hydrate* the workspace instead of recreating it from scratch.

@@ -4,7 +4,11 @@ Use semantic versioning for Open Connect releases:
 
 - `vMAJOR.MINOR.PATCH` for tags
 - Keep `CHANGELOG.md` updated before cutting a release
-- Tag only after the PR is merged and Railway health has been verified
+- Tag only after the PR is merged and Railway health has been verified on the canonical workflow
+- Use the deployment docs as the operational reference:
+  - `docs/deployment-map.md`
+  - `docs/canonical-workflow.md`
+  - `docs/supabase-auth.md`
 - Use release notes to summarize:
   - startup/health fixes
   - backup/restore changes
