@@ -19,6 +19,8 @@
 | Integration loading | `backend/open_webui/integrations/__init__.py` | Loads manifests and connectors |
 | GitHub automation | `.github/workflows/autonomous_deployment.yml` | Supabase + Railway bootstrap pipeline |
 | Supabase bootstrap script | `scripts/bootstrap_supabase.sh` | CLI-based database/function bootstrap |
+| Supabase auth reference | `docs/supabase-auth.md` | First-admin and OAuth setup notes |
+| Workflow reference | `docs/canonical-workflow.md` | Canonical automation workflow and legacy workflow guidance |
 
 ## What should be stored where?
 
@@ -26,6 +28,12 @@
 - **Railway variables / secrets**: runtime values needed by the service.
 - **Supabase Vault**: persistent bootstrap owner secrets and other sensitive values.
 - **Repository files**: only non-secret defaults, startup code, and manifests.
+
+## Authentication and first-admin bootstrap
+
+A fresh Supabase project will often show no users at all. That is expected until the first signup or the bootstrap owner is created.
+
+See [docs/supabase-auth.md](./supabase-auth.md) for the canonical auth/setup flow.
 
 ## Why deployments should not reset to zero
 
@@ -58,7 +66,9 @@ If you are trying to understand the project quickly, read in this order:
 
 1. `README.md`
 2. `docs/deployment-map.md`
-3. `.openhands/microagents/repo.md`
-4. `railway.toml`
-5. `scripts/bootstrap_supabase.sh`
-6. `.github/workflows/autonomous_deployment.yml`
+3. `docs/supabase-auth.md`
+4. `docs/canonical-workflow.md`
+5. `.openhands/microagents/repo.md`
+6. `railway.toml`
+7. `scripts/bootstrap_supabase.sh`
+8. `.github/workflows/autonomous_deployment.yml`
