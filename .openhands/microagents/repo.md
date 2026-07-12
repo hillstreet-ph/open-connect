@@ -17,6 +17,8 @@ Use this file as the first-stop handoff for future agents working on `OrgHide/op
 - **Database / auth / vault:** Supabase
 - **Automation entrypoint:** `.github/workflows/autonomous_deployment.yml`
 - **Supabase CLI bootstrap:** `scripts/bootstrap_supabase.sh`
+- **Supabase auth notes:** `docs/supabase-auth.md`
+- **Workflow notes:** `docs/canonical-workflow.md`
 - **Human reference:** `docs/deployment-map.md`
 
 ## Current implementation facts
