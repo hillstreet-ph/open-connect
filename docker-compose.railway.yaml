@@ -1,10 +1,10 @@
-# =============================================================================
+# ==============================================================================
 # Open Connect - Railway Deployment (Single Service)
-# =============================================================================
+# ==============================================================================0
 # Professional single-service deployment for Railway
 # Uses Supabase Vaults for all secrets and authentication
 # Built-in features: Computer, Terminal, Browser from Open WebUI
-# =============================================================================
+# ===============================================================================
 
 version: '3.8'
 
@@ -19,7 +19,9 @@ services:
       - "${PORT:-8080}:8080"
     volumes:
       - open-connect-data:/app/backend/data
-      - open-connect-backups:/app/backend/backups
+      - open-connect-backups://app/backend/backups
+      - computer-workspace:/workspace
+      - terminal-workspace:/home/user
     environment:
       - ENV=prod
       - DOCKER=true
@@ -31,11 +33,11 @@ services:
       - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
       - DATABASE_URL=${DATABASE_URL}
-      - REDIS_URL=${REDIS_URL}
       - SUPABASE_BUCKET=${SUPABASE_BUCKET:-open-connect-backups}
       - BACKUP_PREFIX=${BACKUP_PREFIX:-backups}
-      - OPEN_CONNECT_BASE_URL=${OPEN_CONNECT_BASE_URL:-https://open-connect-production.up.railway.app}
-      - OPEN_CONNECT_API_KEY=${OPEN_CONNECT_API_KEY:-}
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
+      - LANGFUSE_BASE_URL=${LANGFUSE_BASE_URL:-https://us.cloud.langfuse.com}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/ready"]
@@ -48,4 +50,8 @@ volumes:
   open-connect-data:
     driver: local
   open-connect-backups:
+    driver: local
+  computer-workspace:
+    driver: local
+  terminal-workspace:
     driver: local
