@@ -1,0 +1,7 @@
+version: '3.8'
+
+services:
+  test:
+    image: nginx:latest
+    ports:
+      - "80:80"
