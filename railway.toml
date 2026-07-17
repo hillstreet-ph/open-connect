@@ -1,3 +1,10 @@
+# =============================================================================
+# Open Connect - Railway Configuration (Single Service)
+# =============================================================================
+# Professional deployment with Supabase Vaults integration
+# All secrets are managed via Railway Variables (Supabase Vaults)
+# =============================================================================
+
 [railway]
 template = "docker-compose"
 builder = "docker-compose"
@@ -23,8 +30,8 @@ timeout = 20
 retries = 20
 
 [railway.resources]
-cpu = "4"
-memory = "8Gi"
+cpu = "2"
+memory = "4Gi"
 
 [railway.cron]
 enabled = true
@@ -37,23 +44,15 @@ PORT = "8080"
 UVICORN_WORKERS = "1"
 LOG_LEVEL = "info"
 ENABLE_BACKUP_RESTORE_ON_STARTUP = "true"
+SUPABASE_URL = ""
+SUPABASE_ANON_KEY = ""
+SUPABASE_SERVICE_ROLE_KEY = ""
+DATABASE_URL = ""
+REDIS_URL = ""
 SUPABASE_BUCKET = "open-connect-backups"
 BACKUP_PREFIX = "backups"
 OPEN_CONNECT_BASE_URL = "https://open-connect-production.up.railway.app"
 OPEN_CONNECT_API_KEY = ""
-SUPABASE_URL = ""
-SUPABASE_ANON_KEY = ""
-SUPABASE_SERVICE_ROLE_KEY = ""
-REDIS_URL = ""
-DATABASE_URL = ""
-CPTR_SETUP_TOKEN = ""
-CPTR_URL = "http://open-webui-computer:8000"
-OPEN_TERMINAL_API_KEY = ""
-OPEN_TERMINAL_URL = "http://open-terminal:8000"
-OLLAMA_HOST = "0.0.0.0"
-OLLAMA_PORT = "11434"
-OLLAMA_BASE_URL = "http://ollama:11434"
-OLLAMA_API_KEY = ""
 
 [railway.persistentDisk]
 enabled = true
@@ -61,12 +60,4 @@ mountPath = "/app/backend/data"
 sizeGb = 4
 
 [railway.persistentVolumes]
-computer-data = { enabled = true, mountPath = "/data", sizeGb = 2 }
-computer-workspace = { enabled = true, mountPath = "/workspace", sizeGb = 2 }
-terminal-data = { enabled = true, mountPath = "/home/user", sizeGb = 2 }
-terminal-workspace = { enabled = true, mountPath = "/workspace", sizeGb = 2 }
-ollama-models = { enabled = true, mountPath = "/root/.ollama", sizeGb = 20 }
-
-[railway.network]
-enabled = true
-internalPorts = [8000, 8001, 8002, 11434]
+open-connect-backups = { enabled = true, mountPath = "/app/backend/backups", sizeGb = 4 }
