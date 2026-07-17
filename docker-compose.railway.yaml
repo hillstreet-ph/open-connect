@@ -1,0 +1,157 @@
+# =============================================================================
+# Open Connect - Railway Deployment with Open WebUI Computer & Open Terminal
+# =============================================================================
+# This compose file extends the main Open Connect deployment to include:
+# - Open WebUI Computer (cptr): Your computer in a browser tab
+# - Open Terminal: AI-driven terminal environment
+#
+# Usage with Railway:
+#   - Railway will automatically detect and deploy these services
+#   - Services will be available on their respective ports
+#   - Data is persisted using Railway's persistent volumes
+# =============================================================================
+
+version: '3.8'
+
+services:
+  # ===========================================================================
+  # Open Connect Main Application (existing)
+  # ===========================================================================
+  open-connect:
+    image: ghcr.io/org-hide/open-connect:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.railway
+    container_name: open-connect
+    ports:
+      - "${PORT:-8080}:8080"
+    volumes:
+      - open-connect-data:/app/backend/data
+      - open-connect-backups:/app/backend/backups
+    environment:
+      - ENV=prod
+      - DOCKER=true
+      - PORT=8080
+      - UVICORN_WORKERS=1
+      - LOG_LEVEL=info
+      - ENABLE_BACKUP_RESTORE_ON_STARTUP=true
+      - OPEN_CONNECT_BASE_URL=${OPEN_CONNECT_BASE_URL:-https://open-connect-production.up.railway.app}
+      - OPEN_CONNECT_API_KEY=${OPEN_CONNECT_API_KEY:-}
+      - SUPABASE_URL=${SUPABASE_URL:-}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-}
+      - DATABASE_URL=${DATABASE_URL:-}
+      - REDIS_URL=${REDIS_URL:-}
+      - SUPABASE_BUCKET=${SUPABASE_BUCKET:-open-connect-backups}
+      - BACKUP_PREFIX=${BACKUP_PREFIX:-backups}
+      # Computer and Open Terminal integration
+      - CPTR_URL=http://open-webui-computer:8000
+      - OPEN_TERMINAL_URL=http://open-terminal:8000
+      - OPEN_TERMINAL_API_KEY=${OPEN_TERMINAL_API_KEY:-}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - railway-network
+
+  # ===========================================================================
+  # Open WebUI Computer (cptr)
+  # Your computer in a browser tab with files, terminal, git, editor, and AI
+  # ===========================================================================
+  open-webui-computer:
+    image: ghcr.io/open-webui/computer:latest
+    container_name: open-webui-computer
+    ports:
+      - "8001:8000"
+    volumes:
+      # Persistent data for Computer (database, config, uploads)
+      - computer-data:/data
+      # Workspace directory - can be customized
+      - computer-workspace:/workspace
+    environment:
+      - CPTR_DATA_DIR=/data
+      - CPTR_HOST=0.0.0.0
+      - CPTR_PORT=8000
+      - CPTR_HEADLESS=true
+      # Optional: Set a default workspace
+      - CPTR_DEFAULT_WORKSPACE=/workspace
+      # Security: Generate a token for initial setup
+      - CPTR_SETUP_TOKEN=${CPTR_SETUP_TOKEN:-}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - railway-network
+    depends_on:
+      - open-connect
+
+  # ===========================================================================
+  # Open Terminal
+  # AI-driven terminal environment for code execution and automation
+  # ===========================================================================
+  open-terminal:
+    image: ghcr.io/open-webui/open-terminal:latest
+    container_name: open-terminal
+    ports:
+      - "8002:8000"
+    volumes:
+      # Persistent home directory for Open Terminal
+      - terminal-data:/home/user
+      # Optional: Mount additional workspace directories
+      - terminal-workspace:/workspace
+    environment:
+      - OPEN_TERMINAL_API_KEY=${OPEN_TERMINAL_API_KEY:-}
+      - OPEN_TERMINAL_HOST=0.0.0.0
+      - OPEN_TERMINAL_PORT=8000
+      # Optional: Set working directory
+      - OPEN_TERMINAL_CWD=/workspace
+      # Optional: Enable multi-user mode
+      - OPEN_TERMINAL_MULTI_USER=false
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - railway-network
+    depends_on:
+      - open-connect
+
+# ===========================================================================
+# Networks
+# ===========================================================================
+networks:
+  railway-network:
+    driver: bridge
+
+# ===========================================================================
+# Volumes
+# ===========================================================================
+volumes:
+  # Open Connect data
+  open-connect-data:
+    driver: local
+  open-connect-backups:
+    driver: local
+  
+  # Open WebUI Computer data
+  computer-data:
+    driver: local
+  computer-workspace:
+    driver: local
+  
+  # Open Terminal data
+  terminal-data:
+    driver: local
+  terminal-workspace:
+    driver: local

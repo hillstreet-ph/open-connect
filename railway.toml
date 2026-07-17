@@ -1,18 +1,31 @@
+# =============================================================================
+# Open Connect - Railway Deployment Configuration
+# =============================================================================
+# Multi-service deployment including:
+# - Open Connect (main application)
+# - Open WebUI Computer (cptr)
+# - Open Terminal
+#
+# Railway will automatically detect and deploy all services from docker-compose.railway.yaml
+# =============================================================================
+
 [railway]
-template = "dockerfile"
-builder = "dockerfile"
+template = "docker-compose"
+builder = "docker-compose"
 
 [build]
-# Use the Railway-optimized Dockerfile with pre-installed plugins
-dockerfilePath = "Dockerfile.railway"
+# Use the Railway-optimized docker-compose file
+composeFile = "docker-compose.railway.yaml"
 
 [deploy]
+# Health check for the main Open Connect service
 healthcheckPath = "/ready"
 healthcheckTimeout = 900
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
-# Use the Railway bootstrap script that restores backups before starting the app
-startCommand = "bash /app/backend/railway-start.sh"
+
+# Start command - the compose file handles all services
+startCommand = "docker compose -f docker-compose.railway.yaml up -d"
 
 [settings]
 private = false
@@ -27,16 +40,17 @@ retries = 20
 
 # Resource configuration for stability
 [railway.resources]
-cpu = "1"
-memory = "2Gi"
+cpu = "2"
+memory = "4Gi"
 
 # Cron jobs for scheduled tasks
 [railway.cron]
 enabled = true
 timezone = "UTC"
 
-# Environment variables (will be overridden by GitHub Actions)
+# Environment variables (will be overridden by GitHub Actions and Railway UI)
 [railway.variables]
+# Main Open Connect settings
 ENV = "prod"
 DOCKER = "true"
 PORT = "8080"
@@ -53,8 +67,28 @@ REDIS_URL = ""
 DATABASE_URL = ""
 SUPABASE_SERVICE_ROLE_KEY = ""
 
-# Data persistence
+# Open WebUI Computer settings
+CPTR_SETUP_TOKEN = ""
+CPTR_URL = "http://open-webui-computer:8000"
+
+# Open Terminal settings
+OPEN_TERMINAL_API_KEY = ""
+OPEN_TERMINAL_URL = "http://open-terminal:8000"
+
+# Data persistence for all services
 [railway.persistentDisk]
 enabled = true
 mountPath = "/app/backend/data"
-sizeGb = 2
+sizeGb = 4
+
+# Additional persistent volumes for Computer and Terminal
+[railway.persistentVolumes]
+computer-data = { enabled = true, mountPath = "/data", sizeGb = 2 }
+computer-workspace = { enabled = true, mountPath = "/workspace", sizeGb = 2 }
+terminal-data = { enabled = true, mountPath = "/home/user", sizeGb = 2 }
+terminal-workspace = { enabled = true, mountPath = "/workspace", sizeGb = 2 }
+
+# Network configuration
+[railway.network]
+enabled = true
+internalPorts = [8000, 8001, 8002]
