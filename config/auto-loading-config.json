@@ -1,0 +1,20 @@
+{
+  "version": "2.0",
+  "auto_loading": {
+    "enabled": true,
+    "sources": [
+      {
+        "name": "openrouter",
+        "type": "models",
+        "url": "https://openrouter.ai/api/v1/models",
+        "enabled": true
+      },
+      {
+        "name": "skillsllm",
+        "type": "skills",
+        "url": "https://skillsllm.com/api/skills",
+        "enabled": true
+      }
+    ]
+  }
+}

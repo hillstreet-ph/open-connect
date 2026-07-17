@@ -1,0 +1,5 @@
+apiVersion: v2
+name: open-connect
+version: 1.0.0
+description: Open-Connect Helm Chart
+type: application

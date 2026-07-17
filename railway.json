@@ -1,0 +1,242 @@
+{
+  "name": "open-connect",
+  "description": "Production Open-Connect deployment with LangFuse, One Plane, Supabase, and Redis",
+  "plugins": [
+    {
+      "name": "@railway/plugin-supabase",
+      "version": "1.0.0"
+    },
+    {
+      "name": "@railway/plugin-redis",
+      "version": "1.0.0"
+    }
+  ],
+  "services": [
+    {
+      "name": "open-connect-backend",
+      "description": "Main Open-Connect backend server",
+      "builder": "NIXPACKS",
+      "buildCommand": "npm run build:backend",
+      "startCommand": "npm run start:backend",
+      "autoDeploy": true,
+      "healthcheckPath": "/health",
+      "healthcheckTimeout": 30,
+      "restartPolicyType": "ON_FAILURE",
+      "restartPolicyMaxRetries": 5,
+      "minScale": 1,
+      "maxScale": 5,
+      "cpu": 1,
+      "memory": 2,
+      "environment": {
+        "NODE_ENV": "production",
+        "PORT": "3000",
+        "ORIGIN": "https://open-connect.up.railway.app",
+        "SUPABASE_URL": "https://rxpkxtzzkvwgjtbtcctc.supabase.co",
+        "SUPABASE_ANON_KEY": "${{ secrets.SUPABASE_ANON_KEY }}",
+        "SUPABASE_SERVICE_ROLE_KEY": "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}",
+        "REDIS_URL": "redis://:${{ secrets.REDIS_PASSWORD }}@open-authentic-megasoft-40561.db.redis.io:12264",
+        "OPENROUTER_API_KEY": "${{ secrets.OPENROUTER_API_KEY }}",
+        "HUGGINGFACE_TOKEN": "${{ secrets.HUGGINGFACE_TOKEN }}",
+        "GEMINI_API_KEY": "${{ secrets.GEMINI_API_KEY }}",
+        "SESSION_SECRET": "${{ secrets.SESSION_SECRET }}",
+        "NEXTAUTH_SECRET": "${{ secrets.NEXTAUTH_SECRET }}",
+        "JWT_SECRET": "${{ secrets.JWT_SECRET }}"
+      },
+      "ports": [
+        {
+          "port": 3000,
+          "target": 3000,
+          "protocol": "http"
+        }
+      ]
+    },
+    {
+      "name": "open-connect-frontend",
+      "description": "SvelteKit frontend",
+      "builder": "NIXPACKS",
+      "buildCommand": "npm run build:frontend",
+      "startCommand": "npm run start:frontend",
+      "autoDeploy": true,
+      "healthcheckPath": "/",
+      "healthcheckTimeout": 30,
+      "restartPolicyType": "ON_FAILURE",
+      "restartPolicyMaxRetries": 5,
+      "minScale": 1,
+      "maxScale": 3,
+      "cpu": 1,
+      "memory": 1,
+      "environment": {
+        "NODE_ENV": "production",
+        "PORT": "5173",
+        "ORIGIN": "https://open-connect.up.railway.app",
+        "SUPABASE_URL": "https://rxpkxtzzkvwgjtbtcctc.supabase.co",
+        "SUPABASE_ANON_KEY": "${{ secrets.SUPABASE_ANON_KEY }}"
+      },
+      "ports": [
+        {
+          "port": 5173,
+          "target": 5173,
+          "protocol": "http"
+        }
+      ]
+    },
+    {
+      "name": "open-connect-langfuse",
+      "description": "LangFuse observability",
+      "builder": "DOCKERFILE",
+      "dockerfilePath": "Dockerfile.langfuse",
+      "startCommand": "npm run start",
+      "autoDeploy": true,
+      "healthcheckPath": "/api/health",
+      "healthcheckTimeout": 30,
+      "restartPolicyType": "ON_FAILURE",
+      "restartPolicyMaxRetries": 3,
+      "minScale": 1,
+      "maxScale": 1,
+      "cpu": 0.5,
+      "memory": 1,
+      "environment": {
+        "DATABASE_URL": "postgresql://postgres:${{ secrets.SUPABASE_PASSWORD }}@db.rxpkxtzzkvwgjtbtcctc.supabase.co:5432/postgres",
+        "NEXTAUTH_SECRET": "${{ secrets.NEXTAUTH_SECRET }}",
+        "NEXTAUTH_URL": "http://open-connect-langfuse:3000",
+        "SALT": "${{ secrets.SALT }}",
+        "ENCRYPTION_KEY": "${{ secrets.ENCRYPTION_KEY }}",
+        "NODE_ENV": "production"
+      },
+      "ports": [
+        {
+          "port": 3000,
+          "target": 3000,
+          "protocol": "http"
+        }
+      ]
+    },
+    {
+      "name": "open-connect-supabase",
+      "description": "Supabase database",
+      "builder": "DOCKERFILE",
+      "dockerfilePath": "Dockerfile.supabase",
+      "startCommand": "docker-entrypoint.sh postgres",
+      "autoDeploy": true,
+      "healthcheckPath": null,
+      "healthcheckTimeout": 30,
+      "restartPolicyType": "ON_FAILURE",
+      "restartPolicyMaxRetries": 5,
+      "minScale": 1,
+      "maxScale": 1,
+      "cpu": 1,
+      "memory": 2,
+      "environment": {
+        "POSTGRES_PASSWORD": "${{ secrets.SUPABASE_PASSWORD }}",
+        "POSTGRES_DB": "postgres",
+        "POSTGRES_USER": "postgres"
+      },
+      "ports": [
+        {
+          "port": 5432,
+          "target": 5432,
+          "protocol": "tcp"
+        }
+      ],
+      "persistentVolumeMounts": [
+        {
+          "name": "supabase-data",
+          "path": "/var/lib/postgresql/data",
+          "persistentVolumeClaim": {
+            "name": "supabase-data",
+            "storage": "10",
+            "storageClass": ""
+          }
+        }
+      ]
+    }
+  ],
+  "domains": [
+    {
+      "name": "open-connect",
+      "domain": "open-connect.up.railway.app",
+      "services": [
+        {
+          "name": "open-connect-frontend",
+          "path": "/",
+          "port": 5173
+        }
+      ]
+    },
+    {
+      "name": "langfuse",
+      "domain": "langfuse.open-connect.up.railway.app",
+      "services": [
+        {
+          "name": "open-connect-langfuse",
+          "path": "/",
+          "port": 3000
+        }
+      ]
+    }
+  ],
+  "autoScaling": {
+    "enabled": true,
+    "rules": [
+      {
+        "service": "open-connect-backend",
+        "metric": "cpu",
+        "target": 70,
+        "min": 1,
+        "max": 5
+      },
+      {
+        "service": "open-connect-backend",
+        "metric": "memory",
+        "target": 80,
+        "min": 1,
+        "max": 5
+      },
+      {
+        "service": "open-connect-frontend",
+        "metric": "cpu",
+        "target": 60,
+        "min": 1,
+        "max": 3
+      }
+    ]
+  },
+  "healthChecks": {
+    "enabled": true,
+    "interval": 60,
+    "timeout": 30,
+    "maxRetries": 3,
+    "services": [
+      {
+        "name": "open-connect-backend",
+        "path": "/health",
+        "port": 3000
+      },
+      {
+        "name": "open-connect-frontend",
+        "path": "/",
+        "port": 5173
+      },
+      {
+        "name": "open-connect-langfuse",
+        "path": "/api/health",
+        "port": 3000
+      }
+    ]
+  },
+  "autoHealing": {
+    "enabled": true,
+    "maxRestarts": 5,
+    "restartInterval": 300,
+    "services": [
+      "open-connect-backend",
+      "open-connect-frontend",
+      "open-connect-langfuse"
+    ]
+  },
+  "backup": {
+    "enabled": true,
+    "schedule": "0 2 * * *",
+    "retention": 30
+  }
+}

@@ -1,0 +1,58 @@
+name: Auto-Healing System
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'  # Every 5 minutes
+  workflow_dispatch:
+
+jobs:
+  health-check:
+    name: Health Check & Auto-Healing
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Login to Railway
+        run: railway login --token ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Select project
+        run: railway project select open-connect
+
+      - name: Check service health
+        id: health
+        run: |
+          services=("open-connect-backend" "open-connect-frontend" "open-connect-langfuse")
+          failed=()
+          
+          for service in "${services[@]}"; do
+            url="http://${service}.up.railway.app"
+            if ! curl -s -o /dev/null -w "%{http_code}" "$url" | grep -q "200"; then
+              failed+=("$service")
+              echo "::error::Service $service is unhealthy"
+            else
+              echo "::notice::Service $service is healthy"
+            fi
+          done
+          
+          if [ ${#failed[@]} -gt 0 ]; then
+            echo "failed_services=${failed[*]}" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      - name: Attempt auto-healing
+        if: failure() && steps.health.outcome == 'failure'
+        run: |
+          failed="${{ steps.health.outputs.failed_services }}"
+          for service in $failed; do
+            echo "::notice::Attempting to restart $service"
+            railway restart "$service" || echo "::error::Failed to restart $service"
+          done
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          curl -X POST ${{ secrets.SLACK_WEBHOOK }}             -H "Content-Type: application/json"             -d '{"text":"🚨 Auto-Healing Alert: Failed to restore services"}' || true

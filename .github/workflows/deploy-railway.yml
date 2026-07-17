@@ -79,23 +79,23 @@ jobs:
           HUGGINGFACE_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
         run: |
           echo "🚀 Triggering Railway deployment..."
-          
+
           # Update variables before deployment
           curl -s -X POST "https://backboard.railway.app/graphql/v2" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $RAILWAY_TOKEN" \
             -d '{
-              "query": "mutation { updateVariables(input: { serviceId: \"'$SERVICE_ID'\", environmentId: \"'$ENVIRONMENT_ID'\", variables: [{key: \"ENV\", value: \"prod\"}, {key: \"DOCKER\", value: \"true\"}, {key: \"ENABLE_BACKUP_RESTORE_ON_STARTUP\", value: \"true\"}, {key: \"SUPABASE_BUCKET\", value: \"open-connect-backups\"}, {key: \"BACKUP_PREFIX\", value: \"backups\"}, {key: \"SUPABASE_PROJECT_REF\", value: \"'"$SUPABASE_PROJECT_REF"'\"}, {key: \"SUPABASE_ACCESS_TOKEN\", value: \"'"$SUPABASE_ACCESS_TOKEN"'\"}, {key: \"DATABASE_URL\", value: \"'"$DATABASE_URL"'\"}, {key: \"WEBUI_SECRET_KEY\", value: \"'"$WEBUI_SECRET_KEY"'\"}, {key: \"SUPABASE_URL\", value: \"'"$SUPABASE_URL"'\"}, {key: \"SUPABASE_ANON_KEY\", value: \"'"$SUPABASE_ANON_KEY"'\"}, {key: \"SUPABASE_SERVICE_ROLE_KEY\", value: \"'"$SUPABASE_SERVICE_ROLE_KEY"'\"}, {key: \"OPENAI_API_KEY\", value: \"'"$OPENAI_API_KEY"'\"}, {key: \"GROQ_API_KEY\", value: \"'"$GROQ_API_KEY"'\"}, {key: \"HUGGINGFACE_TOKEN\", value: \"'"$HUGGINGFACE_TOKEN"'\"}, {key: \"BUILD_VERSION\", value: \"'${{ steps.version.outputs.version }}'\"}, {key: \"GIT_COMMIT\", value: \"'${{ github.sha }}'\"}] }) { success } }"
+              "query": "mutation { updateVariables(input: { serviceId: \"'$SERVICE_ID'\", environmentId: \"'$ENVIRONMENT_ID'\", variables: [{key: \"ENV\", value: \"prod\"}, {key: \"DOCKER\", value: \"true\"}, {key: \"ENABLE_BACKUP_RESTORE_ON_STARTUP\", value: \"true\"}, {key: \"SUPABASE_BUCKET\", value: \"open-connect-backups\"}, {key: \"BACKUP_PREFIX\", value: \"backups\"}, {key: \"SUPABASE_PROJECT_REF\", value: \"'$SUPABASE_PROJECT_REF'\"}, {key: \"SUPABASE_ACCESS_TOKEN\", value: \"'$SUPABASE_ACCESS_TOKEN'\"}, {key: \"DATABASE_URL\", value: \"'$DATABASE_URL'\"}, {key: \"WEBUI_SECRET_KEY\", value: \"'$WEBUI_SECRET_KEY'\"}, {key: \"SUPABASE_URL\", value: \"'$SUPABASE_URL'\"}, {key: \"SUPABASE_ANON_KEY\", value: \"'$SUPABASE_ANON_KEY'\"}, {key: \"SUPABASE_SERVICE_ROLE_KEY\", value: \"'$SUPABASE_SERVICE_ROLE_KEY'\"}, {key: \"OPENAI_API_KEY\", value: \"'$OPENAI_API_KEY'\"}, {key: \"GROQ_API_KEY\", value: \"'$GROQ_API_KEY'\"}, {key: \"HUGGINGFACE_TOKEN\", value: \"'$HUGGINGFACE_TOKEN'\"}, {key: \"BUILD_VERSION\", value: \"'${{ steps.version.outputs.version }}'\"}, {key: \"GIT_COMMIT\", value: \"'${{ github.sha }}'\"}] }) { success } }"
             }' | jq .
-          
+
           echo "✅ Variables updated"
-          
+
           # Trigger deployment
           curl -s -X POST "https://backboard.railway.app/graphql/v2" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $RAILWAY_TOKEN" \
             -d '{"query": "mutation { serviceInstanceDeploy(serviceId: \"'$SERVICE_ID'\", environmentId: \"'$ENVIRONMENT_ID'\", latestCommit: true) { id deploymentId } }"}' | jq .
-          
+
           echo "✅ Deployment triggered"
 
       - name: Wait for deployment
@@ -108,7 +108,7 @@ jobs:
         run: |
           echo "🔍 Checking deployment health..."
           APP_URL="${{ vars.RAILWAY_APP_URL }}"
-          
+
           for i in {1..15}; do
             if curl -sf "${APP_URL}/health" > /dev/null 2>&1; then
               echo "✅ Application is healthy!"
@@ -117,7 +117,7 @@ jobs:
             echo "⏳ Waiting for health check... ($i/15)"
             sleep 20
           done
-          
+
           echo "⚠️ Health check did not pass within timeout"
 
       - name: Post-deployment report

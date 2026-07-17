@@ -1,0 +1,107 @@
+name: Auto-Resource Loading
+
+on:
+  schedule:
+    - cron: '0 1 * * *'  # Daily at 1:00 AM UTC
+  workflow_dispatch:
+    inputs:
+      resource_type:
+        description: 'Type of resources to load'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - models
+          - skills
+          - agents
+          - tools
+      force_refresh:
+        description: 'Force refresh all resources'
+        required: false
+        default: 'false'
+
+jobs:
+  load-resources:
+    name: Load Resources
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Create auto-loaded directory
+        run: mkdir -p config/auto-loaded
+
+      - name: Load Models from OpenRouter
+        if: inputs.resource_type == 'all' || inputs.resource_type == 'models'
+        run: |
+          python3 << 'EOF'
+          import requests, json, os
+          url = "https://openrouter.ai/api/v1/models"
+          headers = {"Authorization": "Bearer ${{ secrets.OPENROUTER_API_KEY }}"}
+          try:
+            response = requests.get(url, headers=headers)
+            models = response.json().get("data", [])
+            free_models = [m for m in models if m.get("pricing", {}).get("prompt") == "0"]
+            with open('config/auto-loaded/models.json', 'w') as f:
+              json.dump({"source": "openrouter", "count": len(free_models), "models": free_models}, f, indent=2)
+            print(f"Loaded {len(free_models)} models from OpenRouter")
+          except Exception as e:
+            print(f"Failed to load OpenRouter models: {e}")
+          EOF
+
+      - name: Load Skills from SkillsLLM
+        if: inputs.resource_type == 'all' || inputs.resource_type == 'skills'
+        run: |
+          python3 << 'EOF'
+          import requests, json
+          try:
+            response = requests.get("https://skillsllm.com/api/skills")
+            skills = response.json()
+            with open('config/auto-loaded/skills_skillsllm.json', 'w') as f:
+              json.dump(skills, f, indent=2)
+            print(f"Loaded {len(skills)} skills from SkillsLLM")
+          except Exception as e:
+            print(f"Failed to load SkillsLLM: {e}")
+          EOF
+
+      - name: Generate Resource Index
+        run: |
+          python3 << 'EOF'
+          import json, hashlib, glob
+          from datetime import datetime
+          
+          index = {
+            "version": "1.0",
+            "generated_at": datetime.utcnow().isoformat(),
+            "resources": {}
+          }
+          
+          for f in glob.glob('config/auto-loaded/*.json'):
+            with open(f) as file:
+              data = json.load(file)
+              name = f.split('/')[-1].replace('.json', '')
+              index["resources"][name] = {"count": len(data) if isinstance(data, list) else data.get("count", 0)}
+          
+          with open('config/auto-loaded/index.json', 'w') as f:
+            json.dump(index, f, indent=2)
+          
+          print("Resource index generated")
+          print(json.dumps(index, indent=2))
+          EOF
+
+      - name: Commit auto-loaded resources
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add config/auto-loaded/
+          git commit -m "chore: auto-load resources [skip ci]" || echo "No changes to commit"
+          git push origin HEAD:${{ github.ref }}

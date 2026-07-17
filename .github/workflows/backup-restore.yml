@@ -1,0 +1,83 @@
+name: Backup & Restore System
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 2:00 AM UTC
+  workflow_dispatch:
+    inputs:
+      backup_type:
+        description: 'Type of backup'
+        required: true
+        default: 'full'
+        type: choice
+        options:
+          - full
+          - config
+          - database
+      restore_target:
+        description: 'Backup to restore'
+        required: false
+      restore_type:
+        description: 'Restore type'
+        required: false
+        default: 'all'
+
+jobs:
+  backup:
+    name: Create Backup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create backup directory
+        run: |
+          timestamp=$(date -u +'%Y%m%d-%H%M%S')
+          backup_dir="backups/backup-${timestamp}-${{ inputs.backup_type || 'full' }}"
+          mkdir -p "$backup_dir"
+          echo "BACKUP_DIR=$backup_dir" >> $GITHUB_ENV
+
+      - name: Backup configuration files
+        if: inputs.backup_type == 'full' || inputs.backup_type == 'config'
+        run: |
+          cp -r config/ "$BACKUP_DIR/config/" || true
+          cp railway.json "$BACKUP_DIR/" || true
+          cp .env.example "$BACKUP_DIR/" || true
+          cp -r .github/workflows/ "$BACKUP_DIR/workflows/" || true
+
+      - name: Create backup manifest
+        run: |
+          cat > "$BACKUP_DIR/manifest.json" << EOF
+          {
+            "timestamp": "$(date -u +'%Y-%m-%dT%H:%M:%SZ')",
+            "type": "${{ inputs.backup_type || 'full' }}",
+            "commit": "${{ github.sha }}"
+          }
+          EOF
+
+      - name: Upload backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: open-connect-backup-${{ github.sha }}
+          path: backups/
+          retention-days: 30
+
+  restore:
+    name: Restore from Backup
+    if: inputs.restore_target != ''
+    runs-on: ubuntu-latest
+    needs: backup
+    steps:
+      - name: Download backup
+        uses: actions/download-artifact@v4
+        with:
+          name: open-connect-backup-${{ inputs.restore_target }}
+
+      - name: Restore files
+        run: |
+          if [ -f "backups/${{ inputs.restore_target }}/config/auto-loading-config.json" ]; then
+            cp -r backups/${{ inputs.restore_target }}/config/* config/ || true
+          fi
+          if [ -f "backups/${{ inputs.restore_target }}/railway.json" ]; then
+            cp backups/${{ inputs.restore_target }}/railway.json .
+          fi
