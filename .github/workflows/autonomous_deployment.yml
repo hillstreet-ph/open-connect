@@ -36,7 +36,7 @@ jobs:
       - name: Install Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 1.191.3
 
       - name: Install Railway CLI
         run: npm install -g @railway/cli
@@ -47,32 +47,31 @@ jobs:
       - name: Bootstrap Supabase project
         run: ./scripts/bootstrap_supabase.sh
 
-      - name: Login to Railway
-        run: railway login --token 
-
       - name: Sync Railway variables
+        env:
+          OPEN_CONNECT_BASE_URL: ${{ vars.OPEN_CONNECT_BASE_URL }}
+          OPEN_CONNECT_API_KEY: ${{ secrets.OPEN_CONNECT_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
-          if [[ -n "${OPEN_CONNECT_BASE_URL:-}" ]]; then
+          if [[ -n "$OPEN_CONNECT_BASE_URL" ]]; then
             railway variables set OPEN_CONNECT_BASE_URL="$OPEN_CONNECT_BASE_URL"
           fi
-
-          if [[ -n "${OPEN_CONNECT_API_KEY:-}" ]]; then
+          if [[ -n "$OPEN_CONNECT_API_KEY" ]]; then
             railway variables set OPEN_CONNECT_API_KEY="$OPEN_CONNECT_API_KEY"
           fi
-
-          if [[ -n "${SUPABASE_URL:-}" ]]; then
+          if [[ -n "$SUPABASE_URL" ]]; then
             railway variables set SUPABASE_URL="$SUPABASE_URL"
           fi
-
-          if [[ -n "${SUPABASE_ANON_KEY:-}" ]]; then
+          if [[ -n "$SUPABASE_ANON_KEY" ]]; then
             railway variables set SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
           fi
-
-          if [[ -n "${SUPABASE_SERVICE_ROLE_KEY:-}" ]]; then
+          if [[ -n "$SUPABASE_SERVICE_ROLE_KEY" ]]; then
             railway variables set SUPABASE_SERVICE_ROLE_KEY="$SUPABASE_SERVICE_ROLE_KEY"
           fi
-
-          if [[ -n "${DATABASE_URL:-}" ]]; then
+          if [[ -n "$DATABASE_URL" ]]; then
             railway variables set DATABASE_URL="$DATABASE_URL"
           fi
 
@@ -85,7 +84,7 @@ jobs:
         run: |
           APP_URL="${OPEN_CONNECT_BASE_URL:-https://open-connect-production.up.railway.app}"
           for attempt in {1..20}; do
-            if curl -fsS "$APP_URL/ready" >/dev/null; then
+            if curl -fsSS "$APP_URL/ready" >/dev/null; then
               echo "Health check passed"
               exit 0
             fi
