@@ -21,7 +21,6 @@ env:
   DATABASE_URL: ${{ secrets.DATABASE_URL }}
   OPEN_CONNECT_BASE_URL: ${{ vars.OPEN_CONNECT_BASE_URL }}
   OPEN_CONNECT_API_KEY: ${{ secrets.OPEN_CONNECT_API_KEY }}
-  REDIS_URL: ${{ secrets.REDIS_URL }}
 
 jobs:
   bootstrap-and-deploy:
@@ -40,7 +39,7 @@ jobs:
           version: latest
 
       - name: Install Railway CLI
-        run: curl -fsSL https://railway.app/install.sh | sh
+        run: npm install -g @railway/cli
 
       - name: Make bootstrap script executable
         run: chmod +x scripts/bootstrap_supabase.sh
@@ -49,14 +48,10 @@ jobs:
         run: ./scripts/bootstrap_supabase.sh
 
       - name: Login to Railway
-        run: |
-          export PATH="$HOME/.railway/bin:$PATH"
-          echo "$RAILWAY_TOKEN" | railway login --token
+        run: railway login --token 
 
       - name: Sync Railway variables
         run: |
-          export PATH="$HOME/.railway/bin:$PATH"
-
           if [[ -n "${OPEN_CONNECT_BASE_URL:-}" ]]; then
             railway variables set OPEN_CONNECT_BASE_URL="$OPEN_CONNECT_BASE_URL"
           fi
@@ -81,13 +76,8 @@ jobs:
             railway variables set DATABASE_URL="$DATABASE_URL"
           fi
 
-          if [[ -n "${REDIS_URL:-}" ]]; then
-            railway variables set REDIS_URL="$REDIS_URL"
-          fi
-
       - name: Redeploy Railway service
         run: |
-          export PATH="$HOME/.railway/bin:$PATH"
           railway up --service open-connect --detach
           railway status || true
 
