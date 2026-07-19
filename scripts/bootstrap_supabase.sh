@@ -196,10 +196,6 @@ TS
 export SUPABASE_ACCESS_TOKEN
 supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
 supabase db push
-supabase secrets set \
-  SUPABASE_URL="$SUPABASE_URL" \
-  SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
-  SUPABASE_SERVICE_ROLE_KEY="$SUPABASE_SERVICE_ROLE_KEY"
 supabase functions deploy get_secret --project-ref "$SUPABASE_PROJECT_REF"
 supabase functions deploy add_secret --project-ref "$SUPABASE_PROJECT_REF"
 
