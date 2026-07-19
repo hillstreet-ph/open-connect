@@ -52,53 +52,53 @@ jobs:
 
       - name: Sync Railway variables
         run: |
-          # Sanitize all inputs by removing carriage returns and trimming whitespace
+          # Sanitize the project ID (removing carriage returns and whitespace)
           PROJ_ID=$(echo "${RAILWAY_PROJECT_ID}" | tr -d '\r' | xargs)
-          ENV_ID=$(echo "${RAILWAY_ENVIRONMENT_ID}" | tr -d '\r' | xargs)
-          ENV_ID="${ENV_ID:-production}"
-          SVC_ID=$(echo "${RAILWAY_SERVICE_ID}" | tr -d '\r' | xargs)
-          SVC_ID="${SVC_ID:-open-connect}"
+          
+          # The Railway CLI requires explicit environment and service NAMES, not UUIDs
+          ENV_NAME="production"
+          SVC_NAME="open-connect"
 
-          echo "Syncing variables for Project: $PROJ_ID, Environment: $ENV_ID, Service: $SVC_ID"
+          echo "Syncing variables for Project: $PROJ_ID, Environment: $ENV_NAME, Service: $SVC_NAME"
 
-          # Sync variables using sanitized values
+          # Sync variables with explicit names to prevent CLI mapping issues
           if [[ -n "${OPEN_CONNECT_BASE_URL:-}" ]]; then
-            railway variables set --project "$PROJ_ID" --environment "$ENV_ID" --service "$SVC_ID" OPEN_CONNECT_BASE_URL="$OPEN_CONNECT_BASE_URL"
+            railway variables set --project "$PROJ_ID" --environment "$ENV_NAME" --service "$SVC_NAME" OPEN_CONNECT_BASE_URL="$OPEN_CONNECT_BASE_URL"
           fi
 
           if [[ -n "${OPEN_CONNECT_API_KEY:-}" ]]; then
-            railway variables set --project "$PROJ_ID" --environment "$ENV_ID" --service "$SVC_ID" OPEN_CONNECT_API_KEY="$OPEN_CONNECT_API_KEY"
+            railway variables set --project "$PROJ_ID" --environment "$ENV_NAME" --service "$SVC_NAME" OPEN_CONNECT_API_KEY="$OPEN_CONNECT_API_KEY"
           fi
 
           if [[ -n "${SUPABASE_URL:-}" ]]; then
-            railway variables set --project "$PROJ_ID" --environment "$ENV_ID" --service "$SVC_ID" SUPABASE_URL="$SUPABASE_URL"
+            railway variables set --project "$PROJ_ID" --environment "$ENV_NAME" --service "$SVC_NAME" SUPABASE_URL="$SUPABASE_URL"
           fi
 
           if [[ -n "${SUPABASE_ANON_KEY:-}" ]]; then
-            railway variables set --project "$PROJ_ID" --environment "$ENV_ID" --service "$SVC_ID" SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+            railway variables set --project "$PROJ_ID" --environment "$ENV_NAME" --service "$SVC_NAME" SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
           fi
 
           if [[ -n "${SUPABASE_SERVICE_ROLE_KEY:-}" ]]; then
-            railway variables set --project "$PROJ_ID" --environment "$ENV_ID" --service "$SVC_ID" SUPABASE_SERVICE_ROLE_KEY="$SUPABASE_SERVICE_ROLE_KEY"
+            railway variables set --project "$PROJ_ID" --environment "$ENV_NAME" --service "$SVC_NAME" SUPABASE_SERVICE_ROLE_KEY="$SUPABASE_SERVICE_ROLE_KEY"
           fi
 
           if [[ -n "${DATABASE_URL:-}" ]]; then
-            railway variables set --project "$PROJ_ID" --environment "$ENV_ID" --service "$SVC_ID" DATABASE_URL="$DATABASE_URL"
+            railway variables set --project "$PROJ_ID" --environment "$ENV_NAME" --service "$SVC_NAME" DATABASE_URL="$DATABASE_URL"
           fi
 
       - name: Redeploy Railway service
         run: |
-          # Sanitize all inputs by removing carriage returns and trimming whitespace
+          # Sanitize the project ID (removing carriage returns and whitespace)
           PROJ_ID=$(echo "${RAILWAY_PROJECT_ID}" | tr -d '\r' | xargs)
-          ENV_ID=$(echo "${RAILWAY_ENVIRONMENT_ID}" | tr -d '\r' | xargs)
-          ENV_ID="${ENV_ID:-production}"
-          SVC_ID=$(echo "${RAILWAY_SERVICE_ID}" | tr -d '\r' | xargs)
-          SVC_ID="${SVC_ID:-open-connect}"
+          
+          # The Railway CLI requires explicit environment and service NAMES, not UUIDs
+          ENV_NAME="production"
+          SVC_NAME="open-connect"
 
-          echo "Redeploying service for Project: $PROJ_ID, Environment: $ENV_ID, Service: $SVC_ID"
+          echo "Redeploying service for Project: $PROJ_ID, Environment: $ENV_NAME, Service: $SVC_NAME"
           
           # Deploy using explicit clean and sanitized arguments to prevent CLI mapping issues
-          railway up --project "$PROJ_ID" --environment "$ENV_ID" --service "$SVC_ID" --detach
+          railway up --project "$PROJ_ID" --environment "$ENV_NAME" --service "$SVC_NAME" --detach
           railway status --project "$PROJ_ID" || true
 
       - name: Smoke test health endpoint
