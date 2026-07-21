@@ -3,7 +3,7 @@
 ## Active Roadmap
 - [ ] **Monitoring & Alerts**: Finalize setup of observability alerts via Langfuse and Railway.
 - [ ] **Backup Workflow**: Re-attempt and verify the automated backup workflow with rate limit optimizations.
-- [ ] **Documentation Centralization**: Complete the migration of core guides to the `docs/` directory.
+- [x] **Documentation Centralization**: Complete the migration of core guides to the `docs/` directory.
 
 ## Execution History
 ### July 2026
