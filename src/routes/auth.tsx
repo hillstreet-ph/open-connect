@@ -13,9 +13,10 @@ type AuthMode = "signin" | "signup" | "reset";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
-  validateSearch: (search: Record<string, unknown>) => ({
-    mode: search.mode === "signup" || search.mode === "reset" ? (search.mode as AuthMode) : undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>): { mode?: AuthMode } => {
+    const raw = search["mode"];
+    return raw === "signup" || raw === "reset" ? { mode: raw } : {};
+  },
   head: () => ({
     meta: [
       { title: "Sign in — Open-Connect" },
