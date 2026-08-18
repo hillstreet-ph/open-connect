@@ -16,6 +16,8 @@ import { Route as ConnectionsRouteImport } from './routes/connections'
 import { Route as ModelsRouteImport } from './routes/models'
 import { Route as ResourcesRouteImport } from './routes/resources'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as V1ModelsRouteImport } from './routes/v1/models'
+import { Route as V1ChatCompletionsRouteImport } from './routes/v1/chat/completions'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -51,6 +53,16 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const V1ModelsRoute = V1ModelsRouteImport.update({
+  id: '/v1/models',
+  path: '/v1/models',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1ChatCompletionsRoute = V1ChatCompletionsRouteImport.update({
+  id: '/v1/chat/completions',
+  path: '/v1/chat/completions',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -59,6 +71,8 @@ export interface FileRoutesByFullPath {
   '/models': typeof ModelsRoute
   '/resources': typeof ResourcesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/v1/models': typeof V1ModelsRoute
+  '/v1/chat/completions': typeof V1ChatCompletionsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -67,6 +81,8 @@ export interface FileRoutesByTo {
   '/models': typeof ModelsRoute
   '/resources': typeof ResourcesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/v1/models': typeof V1ModelsRoute
+  '/v1/chat/completions': typeof V1ChatCompletionsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -77,13 +93,30 @@ export interface FileRoutesById {
   '/models': typeof ModelsRoute
   '/resources': typeof ResourcesRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/v1/models': typeof V1ModelsRoute
+  '/v1/chat/completions': typeof V1ChatCompletionsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/auth' | '/connections' | '/models' | '/resources' | '/dashboard'
+    | '/'
+    | '/auth'
+    | '/connections'
+    | '/models'
+    | '/resources'
+    | '/dashboard'
+    | '/v1/models'
+    | '/v1/chat/completions'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/connections' | '/models' | '/resources' | '/dashboard'
+  to:
+    | '/'
+    | '/auth'
+    | '/connections'
+    | '/models'
+    | '/resources'
+    | '/dashboard'
+    | '/v1/models'
+    | '/v1/chat/completions'
   id:
     | '__root__'
     | '/'
@@ -93,6 +126,8 @@ export interface FileRouteTypes {
     | '/models'
     | '/resources'
     | '/_authenticated/dashboard'
+    | '/v1/models'
+    | '/v1/chat/completions'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -102,6 +137,8 @@ export interface RootRouteChildren {
   ConnectionsRoute: typeof ConnectionsRoute
   ModelsRoute: typeof ModelsRoute
   ResourcesRoute: typeof ResourcesRoute
+  V1ModelsRoute: typeof V1ModelsRoute
+  V1ChatCompletionsRoute: typeof V1ChatCompletionsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -155,6 +192,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/v1/models': {
+      id: '/v1/models'
+      path: '/v1/models'
+      fullPath: '/v1/models'
+      preLoaderRoute: typeof V1ModelsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/chat/completions': {
+      id: '/v1/chat/completions'
+      path: '/v1/chat/completions'
+      fullPath: '/v1/chat/completions'
+      preLoaderRoute: typeof V1ChatCompletionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -176,6 +227,8 @@ const rootRouteChildren: RootRouteChildren = {
   ConnectionsRoute: ConnectionsRoute,
   ModelsRoute: ModelsRoute,
   ResourcesRoute: ResourcesRoute,
+  V1ModelsRoute: V1ModelsRoute,
+  V1ChatCompletionsRoute: V1ChatCompletionsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

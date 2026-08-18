@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_keys: {
+        Row: {
+          created_at: string
+          id: string
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          name: string
+          revoked_at: string | null
+          scopes: string[]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          name: string
+          revoked_at?: string | null
+          scopes?: string[]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          name?: string
+          revoked_at?: string | null
+          scopes?: string[]
+          user_id?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string
@@ -37,6 +73,50 @@ export type Database = {
           slug?: string
         }
         Relationships: []
+      }
+      gateway_requests: {
+        Row: {
+          api_key_id: string | null
+          created_at: string
+          endpoint: string
+          id: string
+          model: string | null
+          status_code: number
+          total_tokens: number | null
+          upstream: string
+          user_id: string
+        }
+        Insert: {
+          api_key_id?: string | null
+          created_at?: string
+          endpoint: string
+          id?: string
+          model?: string | null
+          status_code: number
+          total_tokens?: number | null
+          upstream: string
+          user_id: string
+        }
+        Update: {
+          api_key_id?: string | null
+          created_at?: string
+          endpoint?: string
+          id?: string
+          model?: string | null
+          status_code?: number
+          total_tokens?: number | null
+          upstream?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gateway_requests_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -138,6 +218,78 @@ export type Database = {
             referencedColumns: ["slug"]
           },
         ]
+      }
+      toolkit_items: {
+        Row: {
+          created_at: string
+          id: string
+          position: number
+          resource_id: string
+          toolkit_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          position?: number
+          resource_id: string
+          toolkit_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          position?: number
+          resource_id?: string
+          toolkit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "toolkit_items_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "resources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "toolkit_items_toolkit_id_fkey"
+            columns: ["toolkit_id"]
+            isOneToOne: false
+            referencedRelation: "toolkits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      toolkits: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          published: boolean
+          slug: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          published?: boolean
+          slug: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          published?: boolean
+          slug?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
