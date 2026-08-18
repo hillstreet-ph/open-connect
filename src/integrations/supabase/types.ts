@@ -219,6 +219,78 @@ export type Database = {
           },
         ]
       }
+      toolkit_items: {
+        Row: {
+          created_at: string
+          id: string
+          position: number
+          resource_id: string
+          toolkit_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          position?: number
+          resource_id: string
+          toolkit_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          position?: number
+          resource_id?: string
+          toolkit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "toolkit_items_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "resources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "toolkit_items_toolkit_id_fkey"
+            columns: ["toolkit_id"]
+            isOneToOne: false
+            referencedRelation: "toolkits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      toolkits: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          published: boolean
+          slug: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          published?: boolean
+          slug: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          published?: boolean
+          slug?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
