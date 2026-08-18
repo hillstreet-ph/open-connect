@@ -64,11 +64,11 @@ export const Route = createFileRoute("/v1/models")({
         await logGatewayRequest({
           key,
           endpoint: "/v1/models",
-          statusCode: response.status,
+          statusCode: status,
           upstream: upstream.name,
         });
 
-        return json(payload, response.status);
+        return json(payload, status);
       },
     },
   },
