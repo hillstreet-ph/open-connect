@@ -1,8 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Boxes, Cpu, KeyRound, LogOut, Plug } from "lucide-react";
+import { Boxes, Cpu, LogOut, Plug } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { ApiKeysCard } from "@/components/api-keys-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -56,7 +57,6 @@ function Dashboard() {
     },
     { icon: Plug, title: "Connections", body: "No applications connected yet." },
     { icon: Cpu, title: "Models", body: "Configure providers and routing policy." },
-    { icon: KeyRound, title: "API Keys", body: "Create a scoped oc_live_ key for your agents." },
   ];
 
   return (
