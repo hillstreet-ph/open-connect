@@ -101,6 +101,7 @@ function Dashboard() {
             </CardContent>
           </Card>
         ))}
+        <ApiKeysCard />
       </div>
 
       <Card className="mt-10 bg-pillar">
