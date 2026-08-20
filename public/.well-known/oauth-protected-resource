@@ -1,0 +1,6 @@
+{
+  "resource": "https://open-connect.site/mcp",
+  "authorization_servers": ["https://open-connect.site"],
+  "bearer_methods_supported": ["header"],
+  "scopes_supported": ["mcp:connect", "models:read", "models:invoke", "resources:read"]
+}
