@@ -1,0 +1,80 @@
+name: Merger — development to main
+
+on:
+  workflow_run:
+    workflows: ["CI — Validator"]
+    types: [completed]
+    branches: [development]
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Create PR even if checks pending"
+        required: false
+        default: "false"
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+
+jobs:
+  promote:
+    name: Open or merge promotion PR
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'development')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Ensure development exists
+        run: |
+          git fetch origin development:development 2>/dev/null || git branch development origin/main
+          git push origin development 2>/dev/null || true
+
+      - name: Create or update promotion PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const base = 'main';
+            const head = 'development';
+            const title = 'chore: promote development → main';
+            const { data: prs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              head: `${context.repo.owner}:${head}`,
+              base
+            });
+            let pr = prs[0];
+            if (!pr) {
+              try {
+                const { data } = await github.rest.pulls.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title,
+                  head,
+                  base,
+                  body: 'Automated promotion. Merges when CI is green.\n\n- Validator + smoke must pass\n- Squash merge preferred'
+                });
+                pr = data;
+              } catch (e) {
+                core.warning(String(e));
+                return;
+              }
+            }
+            core.info(`PR #${pr.number}`);
+            try {
+              await github.rest.pulls.merge({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number,
+                merge_method: 'squash'
+              });
+              core.info('Merged');
+            } catch (e) {
+              core.warning('Merge deferred (checks or conflicts): ' + e.message);
+            }
