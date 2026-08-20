@@ -13,9 +13,12 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ConnectionsRouteImport } from './routes/connections'
+import { Route as ExploreRouteImport } from './routes/explore'
 import { Route as ModelsRouteImport } from './routes/models'
 import { Route as ResourcesRouteImport } from './routes/resources'
+import { Route as AuthenticatedAgentsRouteImport } from './routes/_authenticated/agents'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedToolkitsRouteImport } from './routes/_authenticated/toolkits'
 import { Route as V1ModelsRouteImport } from './routes/v1/models'
 import { Route as V1ChatCompletionsRouteImport } from './routes/v1/chat/completions'
 
@@ -38,6 +41,11 @@ const ConnectionsRoute = ConnectionsRouteImport.update({
   path: '/connections',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ExploreRoute = ExploreRouteImport.update({
+  id: '/explore',
+  path: '/explore',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ModelsRoute = ModelsRouteImport.update({
   id: '/models',
   path: '/models',
@@ -48,9 +56,19 @@ const ResourcesRoute = ResourcesRouteImport.update({
   path: '/resources',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAgentsRoute = AuthenticatedAgentsRouteImport.update({
+  id: '/agents',
+  path: '/agents',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedToolkitsRoute = AuthenticatedToolkitsRouteImport.update({
+  id: '/toolkits',
+  path: '/toolkits',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const V1ModelsRoute = V1ModelsRouteImport.update({
@@ -68,9 +86,12 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/connections': typeof ConnectionsRoute
+  '/explore': typeof ExploreRoute
   '/models': typeof ModelsRoute
   '/resources': typeof ResourcesRoute
+  '/agents': typeof AuthenticatedAgentsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/toolkits': typeof AuthenticatedToolkitsRoute
   '/v1/models': typeof V1ModelsRoute
   '/v1/chat/completions': typeof V1ChatCompletionsRoute
 }
@@ -78,9 +99,12 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/connections': typeof ConnectionsRoute
+  '/explore': typeof ExploreRoute
   '/models': typeof ModelsRoute
   '/resources': typeof ResourcesRoute
+  '/agents': typeof AuthenticatedAgentsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/toolkits': typeof AuthenticatedToolkitsRoute
   '/v1/models': typeof V1ModelsRoute
   '/v1/chat/completions': typeof V1ChatCompletionsRoute
 }
@@ -90,9 +114,12 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/connections': typeof ConnectionsRoute
+  '/explore': typeof ExploreRoute
   '/models': typeof ModelsRoute
   '/resources': typeof ResourcesRoute
+  '/_authenticated/agents': typeof AuthenticatedAgentsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/toolkits': typeof AuthenticatedToolkitsRoute
   '/v1/models': typeof V1ModelsRoute
   '/v1/chat/completions': typeof V1ChatCompletionsRoute
 }
@@ -102,9 +129,12 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/connections'
+    | '/explore'
     | '/models'
     | '/resources'
+    | '/agents'
     | '/dashboard'
+    | '/toolkits'
     | '/v1/models'
     | '/v1/chat/completions'
   fileRoutesByTo: FileRoutesByTo
@@ -112,9 +142,12 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/connections'
+    | '/explore'
     | '/models'
     | '/resources'
+    | '/agents'
     | '/dashboard'
+    | '/toolkits'
     | '/v1/models'
     | '/v1/chat/completions'
   id:
@@ -123,9 +156,12 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/connections'
+    | '/explore'
     | '/models'
     | '/resources'
+    | '/_authenticated/agents'
     | '/_authenticated/dashboard'
+    | '/_authenticated/toolkits'
     | '/v1/models'
     | '/v1/chat/completions'
   fileRoutesById: FileRoutesById
@@ -135,6 +171,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ConnectionsRoute: typeof ConnectionsRoute
+  ExploreRoute: typeof ExploreRoute
   ModelsRoute: typeof ModelsRoute
   ResourcesRoute: typeof ResourcesRoute
   V1ModelsRoute: typeof V1ModelsRoute
@@ -171,6 +208,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConnectionsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/explore': {
+      id: '/explore'
+      path: '/explore'
+      fullPath: '/explore'
+      preLoaderRoute: typeof ExploreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/models': {
       id: '/models'
       path: '/models'
@@ -185,11 +229,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResourcesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/agents': {
+      id: '/_authenticated/agents'
+      path: '/agents'
+      fullPath: '/agents'
+      preLoaderRoute: typeof AuthenticatedAgentsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/toolkits': {
+      id: '/_authenticated/toolkits'
+      path: '/toolkits'
+      fullPath: '/toolkits'
+      preLoaderRoute: typeof AuthenticatedToolkitsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/v1/models': {
@@ -210,11 +268,15 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAgentsRoute: typeof AuthenticatedAgentsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedToolkitsRoute: typeof AuthenticatedToolkitsRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAgentsRoute: AuthenticatedAgentsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedToolkitsRoute: AuthenticatedToolkitsRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -225,6 +287,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ConnectionsRoute: ConnectionsRoute,
+  ExploreRoute: ExploreRoute,
   ModelsRoute: ModelsRoute,
   ResourcesRoute: ResourcesRoute,
   V1ModelsRoute: V1ModelsRoute,
