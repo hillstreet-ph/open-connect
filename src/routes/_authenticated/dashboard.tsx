@@ -1,6 +1,6 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Boxes, Cpu, LogOut, Plug } from "lucide-react";
+import { Boxes, Cpu, KeyRound, LogOut, Plug, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ApiKeysCard } from "@/components/api-keys-card";
@@ -13,9 +13,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [
       { title: "Dashboard — Open-Connect" },
-      { name: "description", content: "Manage your Open-Connect resources, connections, models and keys." },
-      { property: "og:title", content: "Dashboard — Open-Connect" },
-      { property: "og:description", content: "Your Open-Connect control plane." },
+      { name: "description", content: "Manage resources, connections, models and keys." },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -31,14 +29,21 @@ function Dashboard() {
       const { data: userData } = await supabase.auth.getUser();
       const userId = userData.user?.id;
       if (!userId) return null;
-      const [{ data: profileRow }, { data: roles }] = await Promise.all([
-        supabase.from("profiles").select("display_name, avatar_url").eq("id", userId).maybeSingle(),
-        supabase.from("user_roles").select("role").eq("user_id", userId),
-      ]);
+      const [{ data: profileRow }, { data: roles }, { count: keyCount }, { count: connCount }, { count: toolkitCount }] =
+        await Promise.all([
+          supabase.from("profiles").select("display_name, avatar_url").eq("id", userId).maybeSingle(),
+          supabase.from("user_roles").select("role").eq("user_id", userId),
+          supabase.from("api_keys").select("id", { count: "exact", head: true }).is("revoked_at", null),
+          supabase.from("app_connections").select("id", { count: "exact", head: true }),
+          supabase.from("toolkits").select("id", { count: "exact", head: true }),
+        ]);
       return {
         email: userData.user?.email ?? "",
         displayName: profileRow?.display_name ?? "",
         roles: (roles ?? []).map((row) => row.role),
+        keys: keyCount ?? 0,
+        connections: connCount ?? 0,
+        toolkits: toolkitCount ?? 0,
       };
     },
   });
@@ -53,10 +58,31 @@ function Dashboard() {
     {
       icon: Boxes,
       title: "My Library",
-      body: "Installed skills, MCP servers and tools appear here.",
+      body: "Browse the resource registry and install skills, MCP servers and tools.",
+      to: "/resources" as const,
+      stat: null as number | null,
     },
-    { icon: Plug, title: "Connections", body: "No applications connected yet." },
-    { icon: Cpu, title: "Models", body: "Configure providers and routing policy." },
+    {
+      icon: Plug,
+      title: "Connections",
+      body: profile ? `${profile.connections} app connection(s)` : "Connect GitHub, Slack, Notion and more.",
+      to: "/connections" as const,
+      stat: profile?.connections ?? null,
+    },
+    {
+      icon: Cpu,
+      title: "Models",
+      body: "OpenAI-compatible gateway at /v1 with open-connect/* aliases.",
+      to: "/models" as const,
+      stat: null,
+    },
+    {
+      icon: Sparkles,
+      title: "Toolkits",
+      body: profile ? `${profile.toolkits} toolkit(s)` : "Bundle capabilities for agents.",
+      to: "/toolkits" as const,
+      stat: profile?.toolkits ?? null,
+    },
   ];
 
   return (
@@ -79,9 +105,14 @@ function Dashboard() {
             </div>
           )}
         </div>
-        <Button variant="outline" onClick={signOut}>
-          <LogOut className="mr-1 size-4" /> Sign out
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild variant="outline">
+            <Link to="/agents">Connect agent</Link>
+          </Button>
+          <Button variant="outline" onClick={signOut}>
+            <LogOut className="mr-1 size-4" /> Sign out
+          </Button>
+        </div>
       </div>
 
       <div className="mt-10 grid gap-4 sm:grid-cols-2">
@@ -95,9 +126,9 @@ function Dashboard() {
               <CardDescription>{panel.body}</CardDescription>
             </CardHeader>
             <CardContent>
-              <Badge variant="outline" className="text-muted-foreground">
-                Coming in the next phase
-              </Badge>
+              <Button asChild size="sm" variant="outline">
+                <Link to={panel.to}>Open</Link>
+              </Button>
             </CardContent>
           </Card>
         ))}
@@ -106,14 +137,16 @@ function Dashboard() {
 
       <Card className="mt-10 bg-pillar">
         <CardHeader>
-          <CardTitle className="text-base">Your gateway endpoints</CardTitle>
-          <CardDescription>Authenticate with a scoped Open-Connect key.</CardDescription>
+          <CardTitle className="text-base flex items-center gap-2">
+            <KeyRound className="size-4" /> Gateway endpoints
+          </CardTitle>
+          <CardDescription>Authenticate with a scoped Open-Connect key (oc_live_…).</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-2 font-mono text-xs text-primary sm:grid-cols-2">
           <span>https://open-connect.site/mcp</span>
           <span>https://open-connect.site/api/v1</span>
-          <span>https://open-connect.site/oauth</span>
           <span>https://open-connect.site/v1</span>
+          <span>https://open-connect.site/oauth</span>
         </CardContent>
       </Card>
     </div>
