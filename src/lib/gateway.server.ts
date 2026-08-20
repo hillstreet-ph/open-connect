@@ -1,30 +1,45 @@
 /**
  * Open-Connect gateway server helpers.
- *
- * Resolves the model upstream (LiteLLM when configured, Lovable AI otherwise),
- * verifies scoped Open-Connect keys and records gateway usage.
- * Server-only: never import this from client code.
  */
 import { createHash, randomBytes } from "crypto";
 
 export const KEY_PREFIX = "oc_live_";
 
 export type Upstream = {
-  name: "litellm" | "lovable-ai";
+  name: "litellm" | "openrouter" | "lovable-ai";
   baseUrl: string;
   headers: Record<string, string>;
 };
+
+export const MODEL_ALIASES: Record<string, string> = {
+  "open-connect/fast": "google/gemini-2.5-flash",
+  "open-connect/balanced": "openai/gpt-4o-mini",
+  "open-connect/reasoning": "openai/gpt-4o",
+  "open-connect/coding": "anthropic/claude-sonnet-4",
+  "open-connect/vision": "google/gemini-2.5-flash",
+};
+
+export function resolveModelId(requested: string): string {
+  return MODEL_ALIASES[requested] ?? requested;
+}
 
 export function resolveUpstream(): Upstream | null {
   const liteBase = process.env["LITELLM_BASE_URL"];
   const liteKey = process.env["LITELLM_MASTER_KEY"];
   if (liteBase && liteKey) {
+    const isOpenRouter = liteBase.includes("openrouter.ai");
     return {
-      name: "litellm",
+      name: isOpenRouter ? "openrouter" : "litellm",
       baseUrl: liteBase.replace(/\/+$/, ""),
       headers: {
         Authorization: `Bearer ${liteKey}`,
         "Content-Type": "application/json",
+        ...(isOpenRouter
+          ? {
+              "HTTP-Referer": process.env["VITE_APP_URL"] ?? "https://open-connect.site",
+              "X-Title": "Open-Connect",
+            }
+          : {}),
       },
     };
   }
@@ -61,6 +76,10 @@ export function readBearer(request: Request): string | null {
   if (!header) return null;
   const value = header.startsWith("Bearer ") ? header.slice(7) : header;
   return value.trim() || null;
+}
+
+export function hasScope(key: AuthedKey, scope: string): boolean {
+  return key.scopes.includes(scope) || key.scopes.includes("*");
 }
 
 export async function authenticateKey(request: Request): Promise<AuthedKey | null> {
