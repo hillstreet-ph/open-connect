@@ -1,12 +1,13 @@
 /**
  * Open-Connect gateway server helpers.
+ * Server-only: never import from client code.
  */
 import { createHash, randomBytes } from "crypto";
 
 export const KEY_PREFIX = "oc_live_";
 
 export type Upstream = {
-  name: "litellm" | "openrouter" | "lovable-ai";
+  name: "litellm" | "openrouter";
   baseUrl: string;
   headers: Record<string, string>;
 };
@@ -24,8 +25,13 @@ export function resolveModelId(requested: string): string {
 }
 
 export function resolveUpstream(): Upstream | null {
-  const liteBase = process.env["LITELLM_BASE_URL"];
-  const liteKey = process.env["LITELLM_MASTER_KEY"];
+  const liteBase =
+    process.env["LITELLM_BASE_URL"] || process.env["OPENROUTER_BASE_URL"] || "";
+  const liteKey =
+    process.env["LITELLM_MASTER_KEY"] ||
+    process.env["OPENROUTER_API_KEY"] ||
+    "";
+
   if (liteBase && liteKey) {
     const isOpenRouter = liteBase.includes("openrouter.ai");
     return {
@@ -40,19 +46,6 @@ export function resolveUpstream(): Upstream | null {
               "X-Title": "Open-Connect",
             }
           : {}),
-      },
-    };
-  }
-
-  const lovableKey = process.env["LOVABLE_API_KEY"];
-  if (lovableKey) {
-    return {
-      name: "lovable-ai",
-      baseUrl: "https://ai.gateway.lovable.dev/v1",
-      headers: {
-        "Lovable-API-Key": lovableKey,
-        "X-Lovable-AIG-SDK": "fetch",
-        "Content-Type": "application/json",
       },
     };
   }
