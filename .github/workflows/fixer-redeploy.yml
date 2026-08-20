@@ -1,0 +1,28 @@
+name: Fixer — force Cloudflare redeploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Why redeploy"
+        required: false
+        default: "manual heal"
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Empty commit to trigger Pages
+        run: |
+          git config user.name "open-connect-bot"
+          git config user.email "bot@open-connect.site"
+          git commit --allow-empty -m "chore(deploy): force redeploy — ${{ github.event.inputs.reason }}"
+          git push origin main
