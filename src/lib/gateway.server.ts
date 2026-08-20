@@ -25,32 +25,32 @@ export function resolveModelId(requested: string): string {
 }
 
 export function resolveUpstream(): Upstream | null {
-  const liteBase =
-    process.env["LITELLM_BASE_URL"] || process.env["OPENROUTER_BASE_URL"] || "";
   const liteKey =
     process.env["LITELLM_MASTER_KEY"] ||
     process.env["OPENROUTER_API_KEY"] ||
     "";
+  if (!liteKey) return null;
 
-  if (liteBase && liteKey) {
-    const isOpenRouter = liteBase.includes("openrouter.ai");
-    return {
-      name: isOpenRouter ? "openrouter" : "litellm",
-      baseUrl: liteBase.replace(/\/+$/, ""),
-      headers: {
-        Authorization: `Bearer ${liteKey}`,
-        "Content-Type": "application/json",
-        ...(isOpenRouter
-          ? {
-              "HTTP-Referer": process.env["VITE_APP_URL"] ?? "https://open-connect.site",
-              "X-Title": "Open-Connect",
-            }
-          : {}),
-      },
-    };
-  }
+  const liteBase =
+    process.env["LITELLM_BASE_URL"] ||
+    process.env["OPENROUTER_BASE_URL"] ||
+    "https://openrouter.ai/api/v1";
 
-  return null;
+  const isOpenRouter = liteBase.includes("openrouter.ai");
+  return {
+    name: isOpenRouter ? "openrouter" : "litellm",
+    baseUrl: liteBase.replace(/\/+$/, ""),
+    headers: {
+      Authorization: `Bearer ${liteKey}`,
+      "Content-Type": "application/json",
+      ...(isOpenRouter
+        ? {
+            "HTTP-Referer": process.env["VITE_APP_URL"] ?? "https://open-connect.site",
+            "X-Title": "Open-Connect",
+          }
+        : {}),
+    },
+  };
 }
 
 export function hashKey(rawKey: string): string {
