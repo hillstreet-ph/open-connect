@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { json, newClientId } from "@/lib/oauth.server";
+import { newClientId } from "@/lib/oauth.server";
 
-// re-export helper via local json if needed
 function ok(body: unknown, status = 201) {
   return new Response(JSON.stringify(body), {
     status,
