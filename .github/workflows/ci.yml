@@ -1,0 +1,88 @@
+name: CI — Validator
+
+on:
+  push:
+    branches: [main, development]
+  pull_request:
+    branches: [main, development]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Build & validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck / build
+        env:
+          VITE_SUPABASE_URL: https://gnqpwewbgldonarggzax.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_placeholder' }}
+          VITE_APP_URL: https://open-connect.site
+        run: bun run build
+
+      - name: Upload dist artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ github.sha }}
+          path: dist
+          retention-days: 7
+
+  smoke-production:
+    name: Production smoke (post-merge)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: validate
+    timeout-minutes: 10
+    steps:
+      - name: Wait for Cloudflare Pages
+        run: sleep 90
+
+      - name: Health
+        run: |
+          set -e
+          for i in 1 2 3 4 5; do
+            code=$(curl -sS -o /tmp/health.json -w "%{http_code}" https://open-connect.site/api/v1/health || echo 000)
+            echo "attempt $i -> $code"
+            if [ "$code" = "200" ]; then
+              cat /tmp/health.json
+              python3 -c "import json;d=json.load(open('/tmp/health.json'));assert d.get('status')=='ok'"
+              exit 0
+            fi
+            sleep 30
+          done
+          echo "Health check failed"
+          exit 1
+
+      - name: OAuth discovery
+        run: |
+          set -e
+          curl -sS https://open-connect.site/.well-known/oauth-authorization-server | python3 -c "
+          import sys,json
+          d=json.load(sys.stdin)
+          assert 'S256' in d.get('code_challenge_methods_supported',[])
+          assert d.get('authorization_endpoint')
+          print('oauth ok')
+          "
+
+      - name: Public pages
+        run: |
+          set -e
+          for p in / /auth /models /resources /connections /explore; do
+            code=$(curl -sS -o /dev/null -w "%{http_code}" "https://open-connect.site$p")
+            echo "$p $code"
+            test "$code" = "200"
+          done
