@@ -1,0 +1,75 @@
+name: Self-heal — production probe
+
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Probe surfaces
+        id: probe
+        run: |
+          set +e
+          FAIL=0
+          report=""
+          check() {
+            local name="$1" url="$2" expect="$3"
+            code=$(curl -sS -o /tmp/body -w "%{http_code}" --max-time 25 "$url")
+            report="$report\n$name HTTP $code"
+            if [ "$code" != "$expect" ]; then FAIL=1; report="$report FAIL"; fi
+          }
+          check health https://open-connect.site/api/v1/health 200
+          check oauth https://open-connect.site/.well-known/oauth-authorization-server 200
+          check home https://open-connect.site/ 200
+          check auth https://open-connect.site/auth 200
+          if [ "$FAIL" = "1" ]; then
+            echo "failed=true" >> "$GITHUB_OUTPUT"
+            echo "$report" > /tmp/report.txt
+            exit 0
+          fi
+          echo "failed=false" >> "$GITHUB_OUTPUT"
+          # validate health JSON
+          python3 -c "import json;d=json.load(open('/tmp/body'));assert d.get('status')=='ok'"
+
+      - name: Open or update incident issue
+        if: steps.probe.outputs.failed == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = (fs.existsSync('/tmp/report.txt') ? fs.readFileSync('/tmp/report.txt','utf8') : 'probe failed');
+            const title = '[self-heal] Production health failure';
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'self-heal'
+            });
+            const existing = issues.find(i => i.title === title);
+            const text = `## Automated production probe failed\n\n\
+\`\`\`\n${body}\n\`\`\`\n\n\
+**Actions**\n1. Check Cloudflare Pages latest deployment\n2. Verify Supabase project status\n3. Re-run deploy from main if edge is down\n\n_Opened by self-heal workflow._`;
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body: text
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body: text,
+                labels: ['self-heal', 'production']
+              });
+            }
