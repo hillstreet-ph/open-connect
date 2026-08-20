@@ -7,6 +7,25 @@ import {
   logGatewayRequest,
 } from "@/lib/gateway.server";
 
+const WWW_AUTH =
+  'Bearer realm="open-connect", resource_metadata="https://open-connect.site/.well-known/oauth-protected-resource"';
+
+function unauthorized(message: string) {
+  return new Response(
+    JSON.stringify({
+      error: { message, type: "open_connect_error", code: "invalid_api_key" },
+    }),
+    {
+      status: 401,
+      headers: {
+        "content-type": "application/json",
+        "www-authenticate": WWW_AUTH,
+        "access-control-allow-origin": "*",
+      },
+    },
+  );
+}
+
 async function listCatalogTools() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data } = await supabaseAdmin
@@ -55,7 +74,7 @@ export const Route = createFileRoute("/mcp")({
     handlers: {
       GET: async ({ request }) => {
         const key = await authenticateKey(request);
-        if (!key) return gatewayError("Missing or invalid Open-Connect key.", 401, "invalid_api_key");
+        if (!key) return unauthorized("Missing or invalid Open-Connect key.");
         return json({
           name: "open-connect",
           version: "1.0.0",
@@ -64,6 +83,7 @@ export const Route = createFileRoute("/mcp")({
             mcp: "https://open-connect.site/mcp",
             models: "https://open-connect.site/v1",
             api: "https://open-connect.site/api/v1",
+            oauth: "https://open-connect.site/.well-known/oauth-authorization-server",
           },
           authenticated: true,
           user_id: key.userId,
@@ -72,7 +92,7 @@ export const Route = createFileRoute("/mcp")({
       },
       POST: async ({ request }) => {
         const key = await authenticateKey(request);
-        if (!key) return gatewayError("Missing or invalid Open-Connect key.", 401, "invalid_api_key");
+        if (!key) return unauthorized("Missing or invalid Open-Connect key.");
         if (
           !hasScope(key, "mcp:connect") &&
           !hasScope(key, "models:read") &&
