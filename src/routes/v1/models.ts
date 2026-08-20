@@ -38,7 +38,7 @@ export const Route = createFileRoute("/v1/models")({
         let payload: unknown = await response.json().catch(() => ({}));
         let status = response.status;
 
-        if (!response.ok || upstream.name === "openrouter" || upstream.name === "lovable-ai") {
+        if (!response.ok || upstream.name === "openrouter") {
           const upstreamData =
             payload && typeof payload === "object" && Array.isArray((payload as { data?: unknown }).data)
               ? ((payload as { data: { id: string }[] }).data ?? [])
