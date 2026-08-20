@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -85,16 +84,20 @@ function AuthPage() {
 
   async function handleGoogle() {
     setBusy(true);
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    if (result.error) {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: `${window.location.origin}/auth` },
+      });
+      if (error) throw error;
+    } catch (error) {
       setBusy(false);
-      toast.error("Google sign-in failed");
-      return;
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Google sign-in is not enabled. Use email/password or enable Google in Supabase Auth.",
+      );
     }
-    if (result.redirected) return;
-    await navigate({ to: "/dashboard" });
   }
 
   return (
@@ -171,12 +174,12 @@ function AuthPage() {
           <div className="mt-6 space-y-2 text-center text-sm text-muted-foreground">
             {mode === "signin" ? (
               <>
-                <button className="hover:text-foreground" onClick={() => setMode("reset")}>
+                <button type="button" className="hover:text-foreground" onClick={() => setMode("reset")}>
                   Forgot password?
                 </button>
                 <p>
                   Don't have an account?{" "}
-                  <button className="text-primary hover:underline" onClick={() => setMode("signup")}>
+                  <button type="button" className="text-primary hover:underline" onClick={() => setMode("signup")}>
                     Create account
                   </button>
                 </p>
@@ -184,7 +187,7 @@ function AuthPage() {
             ) : (
               <p>
                 Already have an account?{" "}
-                <button className="text-primary hover:underline" onClick={() => setMode("signin")}>
+                <button type="button" className="text-primary hover:underline" onClick={() => setMode("signin")}>
                   Sign in
                 </button>
               </p>
