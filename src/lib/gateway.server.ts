@@ -12,12 +12,13 @@ export type Upstream = {
   headers: Record<string, string>;
 };
 
+/** Aliases prefer OpenAI/Anthropic routes that work on OpenRouter without Google Cloud billing. */
 export const MODEL_ALIASES: Record<string, string> = {
-  "open-connect/fast": "google/gemini-2.5-flash",
+  "open-connect/fast": "openai/gpt-4o-mini",
   "open-connect/balanced": "openai/gpt-4o-mini",
   "open-connect/reasoning": "openai/gpt-4o",
-  "open-connect/coding": "anthropic/claude-sonnet-4",
-  "open-connect/vision": "google/gemini-2.5-flash",
+  "open-connect/coding": "openai/gpt-4o",
+  "open-connect/vision": "openai/gpt-4o",
 };
 
 export function resolveModelId(requested: string): string {
