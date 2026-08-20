@@ -18,7 +18,6 @@ async function getServerEntry(): Promise<ServerEntry> {
   return serverEntryPromise;
 }
 
-/** Cloudflare Pages binds secrets on the Worker `env` object, not always on process.env. */
 function injectCloudflareEnv(env: unknown) {
   if (!env || typeof env !== "object") return;
   const record = env as Record<string, unknown>;
@@ -29,6 +28,88 @@ function injectCloudflareEnv(env: unknown) {
       }
     }
   }
+}
+
+const ISSUER = "https://open-connect.site";
+
+function oauthAuthorizationServerMetadata() {
+  return {
+    issuer: ISSUER,
+    authorization_endpoint: `${ISSUER}/oauth/authorize`,
+    token_endpoint: `${ISSUER}/oauth/token`,
+    registration_endpoint: `${ISSUER}/oauth/register`,
+    response_types_supported: ["code"],
+    grant_types_supported: ["authorization_code", "refresh_token"],
+    // ChatGPT requires exact field + S256
+    code_challenge_methods_supported: ["S256"],
+    token_endpoint_auth_methods_supported: ["none", "client_secret_post"],
+    scopes_supported: [
+      "mcp:connect",
+      "models:read",
+      "models:invoke",
+      "resources:read",
+      "openid",
+    ],
+    service_documentation: `${ISSUER}/models`,
+  };
+}
+
+function oauthProtectedResourceMetadata(resource: string) {
+  return {
+    resource,
+    authorization_servers: [ISSUER],
+    bearer_methods_supported: ["header"],
+    scopes_supported: ["mcp:connect", "models:read", "models:invoke", "resources:read"],
+    resource_documentation: `${ISSUER}/models`,
+  };
+}
+
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "access-control-allow-origin": "*",
+      "cache-control": "no-store",
+    },
+  });
+}
+
+/** Handle OAuth discovery before the SPA so ChatGPT always gets JSON + S256. */
+function handleWellKnown(request: Request): Response | null {
+  const url = new URL(request.url);
+  const path = url.pathname.replace(/\/+$/, "") || "/";
+
+  if (request.method === "OPTIONS" && path.startsWith("/.well-known")) {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        "access-control-allow-origin": "*",
+        "access-control-allow-methods": "GET, OPTIONS",
+        "access-control-allow-headers": "Content-Type, Authorization",
+      },
+    });
+  }
+
+  if (request.method !== "GET" && request.method !== "HEAD") return null;
+
+  if (
+    path === "/.well-known/oauth-authorization-server" ||
+    path === "/.well-known/openid-configuration" ||
+    path === "/.well-known/oauth-authorization-server/mcp"
+  ) {
+    return jsonResponse(oauthAuthorizationServerMetadata());
+  }
+
+  if (
+    path === "/.well-known/oauth-protected-resource" ||
+    path === "/.well-known/oauth-protected-resource/mcp"
+  ) {
+    const resource = url.searchParams.get("resource") || `${ISSUER}/mcp`;
+    return jsonResponse(oauthProtectedResourceMetadata(resource));
+  }
+
+  return null;
 }
 
 async function normalizeCatastrophicSsrResponse(response: Response): Promise<Response> {
@@ -59,6 +140,10 @@ export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
       injectCloudflareEnv(env);
+
+      const wellKnown = handleWellKnown(request);
+      if (wellKnown) return wellKnown;
+
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);
