@@ -2,20 +2,19 @@ import { createFileRoute } from "@tanstack/react-router";
 import {
   authenticateKey,
   gatewayError,
+  hasScope,
   json,
   logGatewayRequest,
+  MODEL_ALIASES,
   resolveUpstream,
 } from "@/lib/gateway.server";
 
-// Stable Open-Connect aliases exposed when the managed model upstream does not
-// publish its own catalog endpoint.
 const MANAGED_CATALOG = [
-  "google/gemini-3.7-flash",
-  "google/gemini-3.5-flash",
-  "google/gemini-3.1-pro-preview",
-  "google/gemini-2.5-pro",
+  ...Object.keys(MODEL_ALIASES),
   "google/gemini-2.5-flash",
-  "openai/gpt-5",
+  "openai/gpt-4o-mini",
+  "openai/gpt-4o",
+  "anthropic/claude-sonnet-4",
 ];
 
 export const Route = createFileRoute("/v1/models")({
@@ -26,7 +25,7 @@ export const Route = createFileRoute("/v1/models")({
         if (!key) {
           return gatewayError("Missing or invalid Open-Connect key.", 401, "invalid_api_key");
         }
-        if (!key.scopes.includes("models:read")) {
+        if (!hasScope(key, "models:read") && !hasScope(key, "models:invoke")) {
           return gatewayError("Key is missing the models:read scope.", 403, "insufficient_scope");
         }
 
@@ -39,26 +38,21 @@ export const Route = createFileRoute("/v1/models")({
         let payload: unknown = await response.json().catch(() => ({}));
         let status = response.status;
 
-        if (!response.ok) {
-          if (upstream.name === "lovable-ai") {
-            status = 200;
-            payload = {
-              object: "list",
-              data: MANAGED_CATALOG.map((id) => ({
-                id,
-                object: "model",
-                owned_by: "open-connect",
-              })),
-            };
-          } else {
-            await logGatewayRequest({
-              key,
-              endpoint: "/v1/models",
-              statusCode: response.status,
-              upstream: upstream.name,
-            });
-            return json(payload, response.status);
-          }
+        if (!response.ok || upstream.name === "openrouter" || upstream.name === "lovable-ai") {
+          const upstreamData =
+            payload && typeof payload === "object" && Array.isArray((payload as { data?: unknown }).data)
+              ? ((payload as { data: { id: string }[] }).data ?? [])
+              : [];
+          const ids = new Set<string>([...MANAGED_CATALOG, ...upstreamData.map((m) => m.id)]);
+          status = 200;
+          payload = {
+            object: "list",
+            data: [...ids].map((id) => ({
+              id,
+              object: "model",
+              owned_by: id.startsWith("open-connect/") ? "open-connect" : "upstream",
+            })),
+          };
         }
 
         await logGatewayRequest({
