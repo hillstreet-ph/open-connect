@@ -12,7 +12,8 @@ function json(body: unknown) {
   });
 }
 
-export const Route = createFileRoute("/well-known/oauth-authorization-server")({
+// Path must be /.well-known/... for ChatGPT / MCP discovery
+export const Route = createFileRoute("/.well-known/oauth-authorization-server" as any)({
   server: {
     handlers: {
       GET: async () => json(oauthMetadata()),
