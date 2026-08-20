@@ -18,8 +18,19 @@ async function getServerEntry(): Promise<ServerEntry> {
   return serverEntryPromise;
 }
 
-// h3 swallows in-handler throws into a normal 500 Response with body
-// {"unhandled":true,"message":"HTTPError"} — try/catch alone never fires for those.
+/** Cloudflare Pages binds secrets on the Worker `env` object, not always on process.env. */
+function injectCloudflareEnv(env: unknown) {
+  if (!env || typeof env !== "object") return;
+  const record = env as Record<string, unknown>;
+  for (const [key, value] of Object.entries(record)) {
+    if (typeof value === "string" && value.length > 0) {
+      if (!process.env[key]) {
+        process.env[key] = value;
+      }
+    }
+  }
+}
+
 async function normalizeCatastrophicSsrResponse(response: Response): Promise<Response> {
   if (response.status < 500) return response;
   const contentType = response.headers.get("content-type") ?? "";
@@ -47,6 +58,7 @@ function isH3SwallowedErrorBody(body: string): boolean {
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      injectCloudflareEnv(env);
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);
