@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_connections: {
+        Row: {
+          api_key_id: string | null
+          created_at: string
+          id: string
+          last_checked_at: string | null
+          mcp_url: string
+          name: string
+          state: string
+          toolkit_id: string | null
+          transport: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          api_key_id?: string | null
+          created_at?: string
+          id?: string
+          last_checked_at?: string | null
+          mcp_url: string
+          name: string
+          state?: string
+          toolkit_id?: string | null
+          transport?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          api_key_id?: string | null
+          created_at?: string
+          id?: string
+          last_checked_at?: string | null
+          mcp_url?: string
+          name?: string
+          state?: string
+          toolkit_id?: string | null
+          transport?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_connections_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_connections_toolkit_id_fkey"
+            columns: ["toolkit_id"]
+            isOneToOne: false
+            referencedRelation: "toolkits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       api_keys: {
         Row: {
           created_at: string
