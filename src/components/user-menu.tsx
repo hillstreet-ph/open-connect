@@ -1,9 +1,11 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, KeyRound, LayoutDashboard, LogOut, Plug, Settings } from "lucide-react";
+import { ChevronDown, KeyRound, LayoutDashboard, LogOut, Plug, Settings, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useRoles } from "@/hooks/use-roles";
+import { roleLabel } from "@/lib/rbac";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -52,15 +54,19 @@ function useProfile() {
   return { user, loading, displayName, email, avatarUrl };
 }
 
-/** Sign out → Supabase session end → /auth */
 async function performSignOut(navigate: ReturnType<typeof useNavigate>) {
   await supabase.auth.signOut();
   toast.success("Signed out");
   await navigate({ to: "/auth" });
 }
 
-/** Account only: Dashboard · API Keys · Settings · Sign out */
-function AccountMenuItems({ onSignOut }: { onSignOut: () => void }) {
+function AccountMenuItems({
+  onSignOut,
+  showAdmin,
+}: {
+  onSignOut: () => void;
+  showAdmin: boolean;
+}) {
   return (
     <>
       <DropdownMenuItem asChild>
@@ -81,6 +87,14 @@ function AccountMenuItems({ onSignOut }: { onSignOut: () => void }) {
           Settings
         </Link>
       </DropdownMenuItem>
+      {showAdmin ? (
+        <DropdownMenuItem asChild>
+          <Link to="/admin" className="cursor-pointer">
+            <Shield className="mr-2 size-4" />
+            Admin
+          </Link>
+        </DropdownMenuItem>
+      ) : null}
       <DropdownMenuSeparator />
       <DropdownMenuItem
         className="cursor-pointer text-destructive focus:text-destructive"
@@ -96,7 +110,6 @@ function AccountMenuItems({ onSignOut }: { onSignOut: () => void }) {
   );
 }
 
-/** Branding only — always navigates home. Not an account menu. */
 export function BrandLogo() {
   return (
     <Link to="/" className="flex items-center gap-2" aria-label="Open-Connect home">
@@ -108,14 +121,13 @@ export function BrandLogo() {
   );
 }
 
-/** @deprecated use BrandLogo — kept so older imports do not break */
 export function BrandLogoMenu() {
   return <BrandLogo />;
 }
 
-/** Single account control: [ MK ▾ ] top-right */
 export function UserMenu() {
   const { user, loading, displayName, email, avatarUrl } = useProfile();
+  const { isAdmin, primary } = useRoles();
   const navigate = useNavigate();
 
   if (loading) return null;
@@ -165,11 +177,15 @@ export function UserMenu() {
             <div className="flex min-w-0 flex-col gap-0.5">
               <span className="truncate text-sm font-medium leading-none">{displayName}</span>
               <span className="truncate text-xs leading-none text-muted-foreground">{email}</span>
+              <span className="text-[10px] uppercase tracking-wide text-primary">{roleLabel(primary)}</span>
             </div>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <AccountMenuItems onSignOut={() => void performSignOut(navigate)} />
+        <AccountMenuItems
+          showAdmin={isAdmin}
+          onSignOut={() => void performSignOut(navigate)}
+        />
       </DropdownMenuContent>
     </DropdownMenu>
   );
