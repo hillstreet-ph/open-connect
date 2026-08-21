@@ -17,7 +17,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { Toaster } from "@/components/ui/sonner";
 import { useAuth } from "@/hooks/use-auth";
 
-const APP_PREFIXES = ["/dashboard", "/settings", "/agents", "/toolkits"];
+const APP_PREFIXES = ["/dashboard", "/settings", "/api-keys", "/agents", "/toolkits"];
 
 function NotFoundComponent() {
   return (
