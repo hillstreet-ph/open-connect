@@ -1,6 +1,13 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { KeyRound, LayoutDashboard, LogOut, Settings, User } from "lucide-react";
+import {
+  KeyRound,
+  LayoutDashboard,
+  LogOut,
+  Plug,
+  Settings,
+  User,
+} from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -22,11 +29,9 @@ function initials(name: string, email: string) {
   return base.slice(0, 2).toUpperCase();
 }
 
-export function UserMenu() {
+function useProfile() {
   const { user, loading } = useAuth();
-  const navigate = useNavigate();
-
-  const { data: profile } = useQuery({
+  const profileQuery = useQuery({
     queryKey: ["header-profile", user?.id],
     enabled: Boolean(user?.id),
     queryFn: async () => {
@@ -39,6 +44,119 @@ export function UserMenu() {
       return data;
     },
   });
+
+  const displayName =
+    profileQuery.data?.display_name ||
+    (user?.user_metadata?.display_name as string | undefined) ||
+    user?.email?.split("@")[0] ||
+    "Account";
+  const email = user?.email ?? "";
+  const avatarUrl =
+    profileQuery.data?.avatar_url ??
+    (user?.user_metadata?.avatar_url as string | undefined) ??
+    "";
+
+  return { user, loading, displayName, email, avatarUrl };
+}
+
+async function performSignOut(navigate: ReturnType<typeof useNavigate>) {
+  await supabase.auth.signOut();
+  toast.success("Signed out");
+  await navigate({ to: "/" });
+}
+
+/** Logo mark — when signed in, opens account menu (Profile / Settings / Sign out). */
+export function BrandLogoMenu() {
+  const { user, loading, displayName, email, avatarUrl } = useProfile();
+  const navigate = useNavigate();
+
+  const mark = (
+    <span className="flex size-8 items-center justify-center rounded-lg bg-primary/15 text-primary shadow-glow">
+      <Plug className="size-4" />
+    </span>
+  );
+
+  if (loading || !user) {
+    return (
+      <Link to="/" className="flex items-center gap-2" aria-label="Open-Connect home">
+        {mark}
+        <span className="font-display text-base font-semibold tracking-tight">Open-Connect</span>
+      </Link>
+    );
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="flex items-center gap-2 rounded-md outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label="Open account menu"
+        >
+          {mark}
+          <span className="font-display text-base font-semibold tracking-tight">Open-Connect</span>
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-60">
+        <DropdownMenuLabel className="font-normal">
+          <div className="flex items-center gap-3">
+            <Avatar className="size-9 border border-border/70">
+              {avatarUrl ? <AvatarImage src={avatarUrl} alt={displayName} /> : null}
+              <AvatarFallback className="bg-primary/15 text-xs font-semibold text-primary">
+                {initials(displayName, email)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex flex-col gap-0.5">
+              <span className="truncate text-sm font-medium leading-none">{displayName}</span>
+              <span className="truncate text-xs leading-none text-muted-foreground">{email}</span>
+            </div>
+          </div>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link to="/dashboard" className="cursor-pointer">
+            <LayoutDashboard className="mr-2 size-4" />
+            Dashboard
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link to="/settings" className="cursor-pointer">
+            <User className="mr-2 size-4" />
+            Profile
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link to="/settings" className="cursor-pointer">
+            <Settings className="mr-2 size-4" />
+            Settings
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link to="/agents" className="cursor-pointer">
+            <KeyRound className="mr-2 size-4" />
+            API & agents
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          className="cursor-pointer text-destructive focus:text-destructive"
+          onSelect={(e) => {
+            e.preventDefault();
+            void performSignOut(navigate);
+          }}
+        >
+          <LogOut className="mr-2 size-4" />
+          Log out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+/** Avatar menu in the top-right (signed-in only). */
+export function UserMenu() {
+  const { user, loading, displayName, email, avatarUrl } = useProfile();
+  const navigate = useNavigate();
 
   if (loading) return null;
 
@@ -55,20 +173,6 @@ export function UserMenu() {
         </Button>
       </div>
     );
-  }
-
-  const displayName =
-    profile?.['display_name'] ||
-    (user.user_metadata?.['display_name'] as string | undefined) ||
-    user.email?.split("@")[0] ||
-    "Account";
-  const email = user.email ?? "";
-  const avatarUrl = profile?.['avatar_url'] ?? (user.user_metadata?.['avatar_url'] as string | undefined) ?? "";
-
-  async function signOut() {
-    await supabase.auth.signOut();
-    toast.success("Signed out");
-    await navigate({ to: "/" });
   }
 
   return (
@@ -120,20 +224,15 @@ export function UserMenu() {
           className="cursor-pointer text-destructive focus:text-destructive"
           onSelect={(e) => {
             e.preventDefault();
-            void signOut();
+            void performSignOut(navigate);
           }}
         >
           <LogOut className="mr-2 size-4" />
-          Sign out
+          Log out
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
-}
-
-/** Compact avatar-only control for tight layouts */
-export function UserMenuIcon() {
-  return <UserMenu />;
 }
 
 export function ProfileAvatarBadge({
@@ -152,7 +251,6 @@ export function ProfileAvatarBadge({
       <AvatarFallback className="bg-primary/15 text-sm font-semibold text-primary">
         {initials(name || "", email || "")}
       </AvatarFallback>
-      {!avatarUrl && !name && !email ? <User className="size-4" /> : null}
     </Avatar>
   );
 }
