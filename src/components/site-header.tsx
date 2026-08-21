@@ -4,16 +4,17 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { BrandLogo, UserMenu } from "@/components/user-menu";
 import { useAuth } from "@/hooks/use-auth";
+import { isAppPath } from "@/lib/shell";
 import { cn } from "@/lib/utils";
 
-/** Marketing / product navigation — not account controls */
-const marketingNav = [
+/** Public homepage / marketing — product discovery only */
+const publicNav = [
   { to: "/resources" as const, label: "Resources" },
   { to: "/connections" as const, label: "Connections" },
   { to: "/models" as const, label: "Models" },
 ];
 
-/** App workspace navigation — account items stay in avatar menu only */
+/** Signed-in product workspace — no account items here (avatar menu owns those) */
 const appNav = [
   { to: "/dashboard" as const, label: "Dashboard" },
   { to: "/agents" as const, label: "Agents" },
@@ -23,32 +24,30 @@ const appNav = [
   { to: "/models" as const, label: "Models" },
 ];
 
-const APP_PREFIXES = ["/dashboard", "/settings", "/api-keys", "/agents", "/toolkits"];
-
-function useAppShell() {
+export function SiteHeader() {
   const { user, loading } = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const onAppRoute = APP_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
-  const isAppShell = Boolean(user) && onAppRoute;
-  return { user, loading, isAppShell };
-}
-
-export function SiteHeader() {
-  const { user, loading, isAppShell } = useAppShell();
+  const inApp = Boolean(user) && isAppPath(pathname);
   const [open, setOpen] = useState(false);
-  const nav = isAppShell ? appNav : marketingNav;
+  const nav = inApp ? appNav : publicNav;
 
   return (
     <header
       className={cn(
         "sticky top-0 z-50 border-b backdrop-blur-xl",
-        isAppShell ? "border-border/80 bg-background/95" : "border-border/70 bg-background/85",
+        inApp ? "border-border bg-background/98" : "border-border/70 bg-background/85",
       )}
     >
+      {inApp ? (
+        <div className="border-b border-primary/20 bg-primary/5 px-4 py-1 text-center text-[11px] font-medium tracking-wide text-primary">
+          App workspace · signed in
+        </div>
+      ) : null}
+
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4">
         <BrandLogo />
 
-        <nav className="hidden items-center gap-1 md:flex">
+        <nav className="hidden items-center gap-1 md:flex" aria-label={inApp ? "App" : "Site"}>
           {nav.map((item) => (
             <Link
               key={item.to}
@@ -62,11 +61,11 @@ export function SiteHeader() {
         </nav>
 
         <div className="hidden items-center gap-2 md:flex">
-          {loading ? null : isAppShell ? (
+          {loading ? null : inApp ? (
             <UserMenu />
           ) : user ? (
             <>
-              <Button asChild size="sm" variant="outline">
+              <Button asChild size="sm">
                 <Link to="/dashboard">Open dashboard</Link>
               </Button>
               <UserMenu />
@@ -82,7 +81,7 @@ export function SiteHeader() {
             variant="ghost"
             size="icon"
             aria-label="Toggle navigation"
-            onClick={() => setOpen((value) => !value)}
+            onClick={() => setOpen((v) => !v)}
           >
             <Menu className="size-5" />
           </Button>
@@ -110,7 +109,7 @@ export function SiteHeader() {
             >
               Sign in
             </Link>
-          ) : !isAppShell ? (
+          ) : !inApp ? (
             <Link
               to="/dashboard"
               onClick={() => setOpen(false)}
