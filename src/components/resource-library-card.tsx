@@ -15,13 +15,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const TYPES = ["skill", "mcp", "tool", "plugin", "agent", "prompt", "guide"] as const;
@@ -45,7 +38,18 @@ export function ResourceLibraryCard() {
   const [confidence, setConfidence] = useState<string>("");
   const [busy, setBusy] = useState(false);
 
-  const mine = useQuery({ queryKey: ["my-resources"], queryFn: () => listFn({}) });
+  const mine = useQuery({
+    queryKey: ["my-resources"],
+    queryFn: async () => {
+      try {
+        return await listFn({});
+      } catch (e) {
+        console.warn("[my-resources]", e);
+        return [];
+      }
+    },
+    retry: false,
+  });
 
   async function onPickFile(next: File | null) {
     setFile(next);
@@ -186,19 +190,19 @@ export function ResourceLibraryCard() {
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="My skill" />
           </div>
           <div className="space-y-2">
-            <Label>Type</Label>
-            <Select value={resourceType} onValueChange={setResourceType}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {TYPES.map((t) => (
-                  <SelectItem key={t} value={t}>
-                    {t}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label htmlFor="resource-type">Type</Label>
+            <select
+              id="resource-type"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              value={resourceType}
+              onChange={(e) => setResourceType(e.target.value)}
+            >
+              {TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="space-y-2 sm:col-span-2">
             <Label>Slug</Label>
