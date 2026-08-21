@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Boxes, KeyRound, Plug, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ProfileAvatarBadge } from "@/components/user-menu";
+import { ResourceLibraryCard } from "@/components/resource-library-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,7 +12,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [
       { title: "Dashboard — Open-Connect" },
-      { name: "description", content: "Workspace overview for resources, connections and keys." },
+      { name: "description", content: "Workspace overview and package uploads." },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -127,14 +128,24 @@ function Dashboard() {
         ))}
       </div>
 
+      <h2 className="mt-12 text-sm font-medium uppercase tracking-wide text-muted-foreground">
+        Resource packages
+      </h2>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Upload is available only while signed in. Published packages appear on the public Resources
+        catalog with a Download button for signed-in users.
+      </p>
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <ResourceLibraryCard />
+      </div>
+
       <Card className="mt-10 bg-pillar">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <KeyRound className="size-4" /> Agent endpoints
           </CardTitle>
           <CardDescription>
-            Use a scoped <code className="font-mono">oc_live_</code> key from API Keys. Manage keys
-            from the account menu — they are never embedded in the browser as service credentials.
+            Use a scoped <code className="font-mono">oc_live_</code> key from API Keys.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-2 font-mono text-xs text-primary sm:grid-cols-2">
