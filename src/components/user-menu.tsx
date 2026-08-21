@@ -1,13 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import {
-  KeyRound,
-  LayoutDashboard,
-  LogOut,
-  Plug,
-  Settings,
-  User,
-} from "lucide-react";
+import { ChevronDown, KeyRound, LayoutDashboard, LogOut, Plug, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -62,10 +55,50 @@ function useProfile() {
 async function performSignOut(navigate: ReturnType<typeof useNavigate>) {
   await supabase.auth.signOut();
   toast.success("Signed out");
-  await navigate({ to: "/" });
+  await navigate({ to: "/auth" });
 }
 
-/** Logo mark — when signed in, opens account menu (Profile / Settings / Sign out). */
+function AccountMenuItems({
+  onSignOut,
+}: {
+  onSignOut: () => void;
+}) {
+  return (
+    <>
+      <DropdownMenuItem asChild>
+        <Link to="/dashboard" className="cursor-pointer">
+          <LayoutDashboard className="mr-2 size-4" />
+          Dashboard
+        </Link>
+      </DropdownMenuItem>
+      <DropdownMenuItem asChild>
+        <Link to="/api-keys" className="cursor-pointer">
+          <KeyRound className="mr-2 size-4" />
+          API Keys
+        </Link>
+      </DropdownMenuItem>
+      <DropdownMenuItem asChild>
+        <Link to="/settings" className="cursor-pointer">
+          <Settings className="mr-2 size-4" />
+          Settings
+        </Link>
+      </DropdownMenuItem>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem
+        className="cursor-pointer text-destructive focus:text-destructive"
+        onSelect={(e) => {
+          e.preventDefault();
+          onSignOut();
+        }}
+      >
+        <LogOut className="mr-2 size-4" />
+        Sign out
+      </DropdownMenuItem>
+    </>
+  );
+}
+
+/** Brand mark: home when signed out; same 4-item account menu when signed in. */
 export function BrandLogoMenu() {
   const { user, loading, displayName, email, avatarUrl } = useProfile();
   const navigate = useNavigate();
@@ -91,13 +124,13 @@ export function BrandLogoMenu() {
         <button
           type="button"
           className="flex items-center gap-2 rounded-md outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-          aria-label="Open account menu"
+          aria-label="Account menu"
         >
           {mark}
           <span className="font-display text-base font-semibold tracking-tight">Open-Connect</span>
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-60">
+      <DropdownMenuContent align="start" className="w-64">
         <DropdownMenuLabel className="font-normal">
           <div className="flex items-center gap-3">
             <Avatar className="size-9 border border-border/70">
@@ -113,47 +146,13 @@ export function BrandLogoMenu() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link to="/dashboard" className="cursor-pointer">
-            <LayoutDashboard className="mr-2 size-4" />
-            Dashboard
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link to="/settings" className="cursor-pointer">
-            <User className="mr-2 size-4" />
-            Profile
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link to="/settings" className="cursor-pointer">
-            <Settings className="mr-2 size-4" />
-            Settings
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link to="/agents" className="cursor-pointer">
-            <KeyRound className="mr-2 size-4" />
-            API & agents
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          className="cursor-pointer text-destructive focus:text-destructive"
-          onSelect={(e) => {
-            e.preventDefault();
-            void performSignOut(navigate);
-          }}
-        >
-          <LogOut className="mr-2 size-4" />
-          Log out
-        </DropdownMenuItem>
+        <AccountMenuItems onSignOut={() => void performSignOut(navigate)} />
       </DropdownMenuContent>
     </DropdownMenu>
   );
 }
 
-/** Avatar menu in the top-right (signed-in only). */
+/** Top-right avatar dropdown — exactly Dashboard · API Keys · Settings · Sign out. */
 export function UserMenu() {
   const { user, loading, displayName, email, avatarUrl } = useProfile();
   const navigate = useNavigate();
@@ -181,7 +180,7 @@ export function UserMenu() {
         <Button
           variant="ghost"
           size="sm"
-          className="relative h-9 gap-2 rounded-full px-1.5 pr-2"
+          className="relative h-9 gap-1.5 rounded-full px-1.5 pr-2"
           aria-label="Account menu"
         >
           <Avatar className="size-8 border border-border/70">
@@ -190,46 +189,26 @@ export function UserMenu() {
               {initials(displayName, email)}
             </AvatarFallback>
           </Avatar>
-          <span className="hidden max-w-[7rem] truncate text-sm font-medium sm:inline">{displayName}</span>
+          <ChevronDown className="size-3.5 text-muted-foreground" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align="end" className="w-64">
         <DropdownMenuLabel className="font-normal">
-          <div className="flex flex-col gap-0.5">
-            <span className="text-sm font-medium leading-none">{displayName}</span>
-            <span className="text-xs leading-none text-muted-foreground">{email}</span>
+          <div className="flex items-center gap-3">
+            <Avatar className="size-9 border border-border/70">
+              {avatarUrl ? <AvatarImage src={avatarUrl} alt={displayName} /> : null}
+              <AvatarFallback className="bg-primary/15 text-xs font-semibold text-primary">
+                {initials(displayName, email)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex flex-col gap-0.5">
+              <span className="truncate text-sm font-medium leading-none">{displayName}</span>
+              <span className="truncate text-xs leading-none text-muted-foreground">{email}</span>
+            </div>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link to="/dashboard" className="cursor-pointer">
-            <LayoutDashboard className="mr-2 size-4" />
-            Dashboard
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link to="/settings" className="cursor-pointer">
-            <Settings className="mr-2 size-4" />
-            Settings
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link to="/agents" className="cursor-pointer">
-            <KeyRound className="mr-2 size-4" />
-            API & agents
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          className="cursor-pointer text-destructive focus:text-destructive"
-          onSelect={(e) => {
-            e.preventDefault();
-            void performSignOut(navigate);
-          }}
-        >
-          <LogOut className="mr-2 size-4" />
-          Log out
-        </DropdownMenuItem>
+        <AccountMenuItems onSignOut={() => void performSignOut(navigate)} />
       </DropdownMenuContent>
     </DropdownMenu>
   );
