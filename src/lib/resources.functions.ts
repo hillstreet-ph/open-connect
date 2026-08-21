@@ -122,9 +122,7 @@ export const getResourceDownloadUrl = createServerFn({ method: "POST" })
 
     const { data: signed, error: signError } = await context.supabase.storage
       .from(BUCKET)
-      .createSignedUrl(resource.package_path, 3600, {
-        download: resource.package_filename || undefined,
-      });
+      .createSignedUrl(resource.package_path, 3600);
 
     if (signError || !signed?.signedUrl) {
       throw new Error(signError?.message ?? "Could not sign download URL");
