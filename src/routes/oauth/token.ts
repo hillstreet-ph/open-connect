@@ -5,6 +5,7 @@ import {
   parseAuthCode,
   verifyPkce,
 } from "@/lib/oauth.server";
+import { certificateBoundCnf, gateMtls } from "@/lib/mtls.server";
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -30,6 +31,23 @@ export const Route = createFileRoute("/oauth/token")({
           },
         }),
       POST: async ({ request }) => {
+        // Cloudflare API Shield mTLS (optional by default — does not break PKCE public clients)
+        const mtlsGate = gateMtls(request);
+        if (!mtlsGate.ok) {
+          return json(
+            {
+              error: mtlsGate.error,
+              error_description: mtlsGate.error_description,
+              mtls: {
+                mode: mtlsGate.mtls.mode,
+                presented: mtlsGate.mtls.presented,
+                verified: mtlsGate.mtls.verified,
+              },
+            },
+            mtlsGate.status,
+          );
+        }
+
         const contentType = request.headers.get("content-type") ?? "";
         let params: Record<string, string> = {};
         if (contentType.includes("application/json")) {
@@ -54,16 +72,18 @@ export const Route = createFileRoute("/oauth/token")({
           if (!refresh?.startsWith("oc_live_")) {
             return json({ error: "invalid_grant" }, 400);
           }
-          return json({
+          const body: Record<string, unknown> = {
             access_token: refresh,
             token_type: "Bearer",
             expires_in: 86400 * 365,
             refresh_token: refresh,
             scope: "mcp:connect models:read models:invoke resources:read",
-          });
+          };
+          const cnf = certificateBoundCnf(mtlsGate.mtls.fingerprintSha256);
+          if (cnf) body["cnf"] = cnf;
+          return json(body);
         }
 
-        // OAuth 2.1 authorization_code: PKCE S256 + exact redirect_uri required
         const code = params["code"];
         const verifier = params["code_verifier"];
         const redirectUri = params["redirect_uri"];
@@ -117,7 +137,6 @@ export const Route = createFileRoute("/oauth/token")({
           );
         }
 
-        // OAuth 2.1: exact string match of redirect_uri from the authorization request
         if (redirectUri !== payload.redirect_uri) {
           return json(
             { error: "invalid_grant", error_description: "redirect_uri mismatch" },
@@ -135,13 +154,25 @@ export const Route = createFileRoute("/oauth/token")({
           );
         }
 
-        return json({
+        const tokenBody: Record<string, unknown> = {
           access_token: payload.key,
           token_type: "Bearer",
           expires_in: 86400 * 365,
           refresh_token: payload.key,
           scope: payload.scope ?? "mcp:connect models:read models:invoke resources:read",
-        });
+        };
+
+        // RFC 8705: when a verified client cert was used, advertise binding metadata
+        const cnf = certificateBoundCnf(mtlsGate.mtls.fingerprintSha256);
+        if (cnf) {
+          tokenBody["cnf"] = cnf;
+          tokenBody["mtls"] = {
+            bound: true,
+            subject_dn: mtlsGate.mtls.subjectDn,
+          };
+        }
+
+        return json(tokenBody);
       },
     },
   },
