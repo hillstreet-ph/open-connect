@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { getResourceDownloadUrl } from "@/lib/resources.functions";
+import { resourceCategories } from "@/lib/nav";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,17 +29,6 @@ export const Route = createFileRoute("/resources")({
   }),
   component: ResourcesPage,
 });
-
-const filters = [
-  { value: "all", label: "All" },
-  { value: "skill", label: "Skills" },
-  { value: "mcp", label: "MCP" },
-  { value: "tool", label: "Tools" },
-  { value: "plugin", label: "Plugins" },
-  { value: "agent", label: "Agents" },
-  { value: "prompt", label: "Prompts" },
-  { value: "guide", label: "Guides" },
-] as const;
 
 function ResourcesPage() {
   const { user } = useAuth();
@@ -85,98 +75,97 @@ function ResourcesPage() {
     });
   }, [data, query, type]);
 
+  const counts = useMemo(() => {
+    const map: Record<string, number> = { all: data?.length ?? 0 };
+    for (const item of data ?? []) {
+      map[item.resource_type] = (map[item.resource_type] ?? 0) + 1;
+    }
+    return map;
+  }, [data]);
+
   return (
-    <div className="mx-auto max-w-6xl px-4 py-16">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <Badge variant="outline" className="mb-3 border-primary/40 text-primary">
-            Marketplace
+    <div className="mx-auto max-w-6xl px-4 py-10 sm:py-16">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <Badge variant="outline" className="mb-2 border-primary/40 text-primary">
+            Catalog · Resources
           </Badge>
-          <h1 className="text-3xl font-semibold sm:text-4xl">Agent resources</h1>
-          <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
-            Public marketplace of skills, MCP servers, tools, plugins, agents, prompts and guides.
-            Download packages when signed in. Upload only from the app dashboard after login.
+          <h1 className="text-2xl font-semibold sm:text-4xl">Marketplace</h1>
+          <p className="mt-2 max-w-xl text-sm text-muted-foreground">
+            Skills, MCP, tools, plugins, agents, prompts, guides. Download when signed in; upload from
+            the dashboard.
           </p>
         </div>
         {user ? (
-          <Button asChild>
+          <Button asChild className="w-full shrink-0 sm:w-auto">
             <Link to="/dashboard">
               <Upload className="mr-2 size-4" />
-              Upload package
+              Upload
             </Link>
           </Button>
         ) : (
-          <Button asChild variant="outline">
-            <Link to="/auth">
-              <Upload className="mr-2 size-4" />
-              Sign in to upload
-            </Link>
+          <Button asChild variant="outline" className="w-full shrink-0 sm:w-auto">
+            <Link to="/auth">Sign in to upload</Link>
           </Button>
         )}
       </div>
 
-      <div className="mt-8 flex flex-col gap-4">
+      <div className="mt-8 space-y-3">
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search marketplace…"
+            placeholder="Search…"
             className="pl-9"
             aria-label="Search marketplace"
           />
         </div>
-        <div className="flex flex-wrap gap-2">
-          {filters.map((filter) => (
+        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
+          {resourceCategories.map((filter) => (
             <button
               key={filter.value}
               type="button"
               onClick={() => setType(filter.value)}
               className={cn(
-                "rounded-full border border-border/70 px-3 py-1.5 text-xs transition-colors",
+                "shrink-0 rounded-full border px-3 py-1.5 text-xs transition-colors",
                 type === filter.value
                   ? "border-primary/50 bg-primary/15 text-primary"
-                  : "text-muted-foreground hover:text-foreground",
+                  : "border-border/70 text-muted-foreground hover:text-foreground",
               )}
             >
               {filter.label}
+              {counts[filter.value] != null ? (
+                <span className="ml-1 opacity-60">{counts[filter.value]}</span>
+              ) : null}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {isLoading
           ? Array.from({ length: 6 }).map((_, index) => (
-              <Skeleton key={index} className="h-40 rounded-xl" />
+              <Skeleton key={index} className="h-36 rounded-xl" />
             ))
           : results.map((item) => (
               <Card key={item.id} className="shadow-panel">
-                <CardHeader>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="secondary" className="uppercase">
+                <CardHeader className="p-4 pb-2">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Badge variant="secondary" className="text-[10px] uppercase">
                       {item.resource_type}
                     </Badge>
                     {item.verified ? (
-                      <Badge variant="outline" className="border-accent/50 text-accent">
+                      <Badge variant="outline" className="border-accent/50 text-[10px] text-accent">
                         Verified
                       </Badge>
                     ) : null}
-                    {item.package_path ? (
-                      <Badge variant="outline" className="text-xs">
-                        Package
-                      </Badge>
-                    ) : null}
                   </div>
-                  <CardTitle className="mt-3 text-base">{item.name}</CardTitle>
-                  <CardDescription>{item.description}</CardDescription>
+                  <CardTitle className="mt-2 text-base leading-snug">{item.name}</CardTitle>
+                  <CardDescription className="line-clamp-2">{item.description}</CardDescription>
                 </CardHeader>
-                <CardContent className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-                  <div className="flex flex-wrap gap-x-3 gap-y-1">
-                    <span className="font-mono">v{item.version}</span>
-                    <span>{item.license}</span>
-                    {item.category_slug ? <span>{item.category_slug}</span> : null}
-                  </div>
+                <CardContent className="flex flex-wrap items-center justify-between gap-2 p-4 pt-0 text-xs text-muted-foreground">
+                  <span className="font-mono">v{item.version}</span>
                   {item.package_path ? (
                     user ? (
                       <Button
@@ -190,11 +179,11 @@ function ResourcesPage() {
                       </Button>
                     ) : (
                       <Button asChild size="sm" variant="outline">
-                        <Link to="/auth">Sign in to download</Link>
+                        <Link to="/auth">Sign in</Link>
                       </Button>
                     )
                   ) : (
-                    <span className="text-muted-foreground">Catalog entry</span>
+                    <span>Catalog</span>
                   )}
                 </CardContent>
               </Card>
@@ -202,9 +191,7 @@ function ResourcesPage() {
       </div>
 
       {!isLoading && results.length === 0 ? (
-        <p className="mt-12 text-center text-sm text-muted-foreground">
-          No resources match that search yet.
-        </p>
+        <p className="mt-12 text-center text-sm text-muted-foreground">No matches in this category.</p>
       ) : null}
     </div>
   );
