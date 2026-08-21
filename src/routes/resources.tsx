@@ -17,13 +17,13 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/resources")({
   head: () => ({
     meta: [
-      { title: "Agent Resources — Open-Connect" },
+      { title: "Marketplace — Open-Connect" },
       {
         name: "description",
         content:
-          "Browse skills, MCP servers, tools, plugins, agents, prompts and guides. Download packages when signed in.",
+          "Marketplace for skills, MCP servers, tools, plugins, agents, prompts and guides.",
       },
-      { property: "og:title", content: "Agent Resources — Open-Connect" },
+      { property: "og:title", content: "Marketplace — Open-Connect" },
     ],
   }),
   component: ResourcesPage,
@@ -89,11 +89,13 @@ function ResourcesPage() {
     <div className="mx-auto max-w-6xl px-4 py-16">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold sm:text-4xl">Agent Resources</h1>
+          <Badge variant="outline" className="mb-3 border-primary/40 text-primary">
+            Marketplace
+          </Badge>
+          <h1 className="text-3xl font-semibold sm:text-4xl">Agent resources</h1>
           <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
-            Public catalog of skills, MCP servers, tools, plugins, agents, prompts and guides.
-            Download is available on each package when you are signed in. Upload is only available
-            inside the app dashboard after login.
+            Public marketplace of skills, MCP servers, tools, plugins, agents, prompts and guides.
+            Download packages when signed in. Upload only from the app dashboard after login.
           </p>
         </div>
         {user ? (
@@ -119,9 +121,9 @@ function ResourcesPage() {
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search skills, agents, plugins…"
+            placeholder="Search marketplace…"
             className="pl-9"
-            aria-label="Search resources"
+            aria-label="Search marketplace"
           />
         </div>
         <div className="flex flex-wrap gap-2">
