@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { Menu, Plug } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { UserMenu } from "@/components/user-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 
@@ -39,33 +40,20 @@ export function SiteHeader() {
         </nav>
 
         <div className="hidden items-center gap-2 md:flex">
-          {loading ? null : user ? (
-            <Button asChild size="sm">
-              <Link to="/dashboard">Dashboard</Link>
-            </Button>
-          ) : (
-            <>
-              <Button asChild variant="ghost" size="sm">
-                <Link to="/auth">Sign in</Link>
-              </Button>
-              <Button asChild size="sm">
-                <Link to="/auth" search={{ mode: "signup" }}>
-                  Get started
-                </Link>
-              </Button>
-            </>
-          )}
+          {loading ? null : <UserMenu />}
         </div>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          className="md:hidden"
-          aria-label="Toggle navigation"
-          onClick={() => setOpen((value) => !value)}
-        >
-          <Menu className="size-5" />
-        </Button>
+        <div className="flex items-center gap-1 md:hidden">
+          {!loading && user ? <UserMenu /> : null}
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Toggle navigation"
+            onClick={() => setOpen((value) => !value)}
+          >
+            <Menu className="size-5" />
+          </Button>
+        </div>
       </div>
 
       <div className={cn("border-t border-border/70 md:hidden", open ? "block" : "hidden")}>
@@ -81,13 +69,32 @@ export function SiteHeader() {
               {item.label}
             </Link>
           ))}
-          <Link
-            to={user ? "/dashboard" : "/auth"}
-            onClick={() => setOpen(false)}
-            className="rounded-md px-2 py-2 text-sm font-medium text-primary"
-          >
-            {user ? "Dashboard" : "Sign in"}
-          </Link>
+          {user ? (
+            <>
+              <Link
+                to="/dashboard"
+                onClick={() => setOpen(false)}
+                className="rounded-md px-2 py-2 text-sm font-medium text-primary"
+              >
+                Dashboard
+              </Link>
+              <Link
+                to="/settings"
+                onClick={() => setOpen(false)}
+                className="rounded-md px-2 py-2 text-sm text-muted-foreground hover:text-foreground"
+              >
+                Settings
+              </Link>
+            </>
+          ) : (
+            <Link
+              to="/auth"
+              onClick={() => setOpen(false)}
+              className="rounded-md px-2 py-2 text-sm font-medium text-primary"
+            >
+              Sign in
+            </Link>
+          )}
         </nav>
       </div>
     </header>
