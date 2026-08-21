@@ -236,8 +236,10 @@ export function ResourceLibraryCard() {
                       <Badge variant="secondary" className="mr-2 uppercase">
                         {r.resource_type}
                       </Badge>
-                      {r.package_filename ?? r.slug}
-                      {r.package_size ? ` · ${(r.package_size / 1024).toFixed(1)} KB` : ""}
+                      {r.package_filename || r.slug || "untitled"}
+                      {typeof r.package_size === "number" && r.package_size > 0
+                        ? ` · ${formatBytes(r.package_size)}`
+                        : ""}
                     </p>
                   </div>
                   <div className="flex gap-1">
