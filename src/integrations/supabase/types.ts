@@ -107,6 +107,51 @@ export type Database = {
         }
         Relationships: []
       }
+      app_connections: {
+        Row: {
+          created_at: string
+          credential_reference: string | null
+          display_name: string
+          id: string
+          last_used_at: string | null
+          metadata: Json
+          provider: string
+          provider_account_id: string | null
+          scopes: string[]
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credential_reference?: string | null
+          display_name: string
+          id?: string
+          last_used_at?: string | null
+          metadata?: Json
+          provider: string
+          provider_account_id?: string | null
+          scopes?: string[]
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credential_reference?: string | null
+          display_name?: string
+          id?: string
+          last_used_at?: string | null
+          metadata?: Json
+          provider?: string
+          provider_account_id?: string | null
+          scopes?: string[]
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string
@@ -211,6 +256,11 @@ export type Database = {
           installation_type: string | null
           license: string | null
           name: string
+          owner_id: string | null
+          package_filename: string | null
+          package_mime: string | null
+          package_path: string | null
+          package_size: number | null
           published: boolean
           repository_url: string | null
           resource_type: Database["public"]["Enums"]["resource_type"]
@@ -233,6 +283,11 @@ export type Database = {
           installation_type?: string | null
           license?: string | null
           name: string
+          owner_id?: string | null
+          package_filename?: string | null
+          package_mime?: string | null
+          package_path?: string | null
+          package_size?: number | null
           published?: boolean
           repository_url?: string | null
           resource_type: Database["public"]["Enums"]["resource_type"]
@@ -255,6 +310,11 @@ export type Database = {
           installation_type?: string | null
           license?: string | null
           name?: string
+          owner_id?: string | null
+          package_filename?: string | null
+          package_mime?: string | null
+          package_path?: string | null
+          package_size?: number | null
           published?: boolean
           repository_url?: string | null
           resource_type?: Database["public"]["Enums"]["resource_type"]

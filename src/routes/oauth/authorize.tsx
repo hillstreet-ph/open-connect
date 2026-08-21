@@ -5,15 +5,15 @@ import { hashKey, KEY_PREFIX } from "@/lib/gateway.server";
 export const Route = createFileRoute("/oauth/authorize")({
   ssr: true,
   validateSearch: (search: Record<string, unknown>) => ({
-    response_type: typeof search.response_type === "string" ? search.response_type : undefined,
-    client_id: typeof search.client_id === "string" ? search.client_id : undefined,
-    redirect_uri: typeof search.redirect_uri === "string" ? search.redirect_uri : undefined,
-    state: typeof search.state === "string" ? search.state : undefined,
-    scope: typeof search.scope === "string" ? search.scope : undefined,
-    code_challenge: typeof search.code_challenge === "string" ? search.code_challenge : undefined,
+    response_type: typeof search['response_type'] === "string" ? search['response_type'] : undefined,
+    client_id: typeof search['client_id'] === "string" ? search['client_id'] : undefined,
+    redirect_uri: typeof search['redirect_uri'] === "string" ? search['redirect_uri'] : undefined,
+    state: typeof search['state'] === "string" ? search['state'] : undefined,
+    scope: typeof search['scope'] === "string" ? search['scope'] : undefined,
+    code_challenge: typeof search['code_challenge'] === "string" ? search['code_challenge'] : undefined,
     code_challenge_method:
-      typeof search.code_challenge_method === "string" ? search.code_challenge_method : undefined,
-    error: typeof search.error === "string" ? search.error : undefined,
+      typeof search['code_challenge_method'] === "string" ? search['code_challenge_method'] : undefined,
+    error: typeof search['error'] === "string" ? search['error'] : undefined,
   }),
   server: {
     handlers: {
@@ -73,13 +73,13 @@ export const Route = createFileRoute("/oauth/authorize")({
 
 function AuthorizePage() {
   const search = Route.useSearch();
-  const redirectUri = search.redirect_uri ?? "";
-  const clientId = search.client_id ?? "mcp-client";
-  const state = search.state ?? "";
-  const scope = search.scope ?? "mcp:connect models:read models:invoke resources:read";
-  const codeChallenge = search.code_challenge ?? "";
-  const codeChallengeMethod = search.code_challenge_method ?? "S256";
-  const error = search.error;
+  const redirectUri = search['redirect_uri'] ?? "";
+  const clientId = search['client_id'] ?? "mcp-client";
+  const state = search['state'] ?? "";
+  const scope = search['scope'] ?? "mcp:connect models:read models:invoke resources:read";
+  const codeChallenge = search['code_challenge'] ?? "";
+  const codeChallengeMethod = search['code_challenge_method'] ?? "S256";
+  const error = search['error'];
 
   return (
     <div className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center px-4 py-12">

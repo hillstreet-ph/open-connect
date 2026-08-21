@@ -39,13 +39,13 @@ export const Route = createFileRoute("/oauth/token")({
           }
         }
 
-        const grant = params.grant_type;
+        const grant = params['grant_type'];
         if (grant !== "authorization_code" && grant !== "refresh_token") {
           return json({ error: "unsupported_grant_type" }, 400);
         }
 
         if (grant === "refresh_token") {
-          const refresh = params.refresh_token;
+          const refresh = params['refresh_token'];
           if (!refresh?.startsWith("oc_live_")) {
             return json({ error: "invalid_grant" }, 400);
           }
@@ -58,9 +58,9 @@ export const Route = createFileRoute("/oauth/token")({
           });
         }
 
-        const code = params.code;
-        const verifier = params.code_verifier;
-        const redirectUri = params.redirect_uri;
+        const code = params['code'];
+        const verifier = params['code_verifier'];
+        const redirectUri = params['redirect_uri'];
         if (!code || !verifier) {
           return json({ error: "invalid_request", error_description: "code and code_verifier required" }, 400);
         }
