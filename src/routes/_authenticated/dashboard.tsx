@@ -1,10 +1,10 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Boxes, Cpu, KeyRound, LogOut, Plug, Sparkles } from "lucide-react";
-import { toast } from "sonner";
+import { Boxes, Cpu, KeyRound, Plug, Settings, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ApiKeysCard } from "@/components/api-keys-card";
 import { ResourceLibraryCard } from "@/components/resource-library-card";
+import { ProfileAvatarBadge } from "@/components/user-menu";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,8 +22,6 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 });
 
 function Dashboard() {
-  const navigate = useNavigate();
-
   const { data: profile, isLoading } = useQuery({
     queryKey: ["profile-dashboard"],
     queryFn: async () => {
@@ -51,6 +49,7 @@ function Dashboard() {
       return {
         email: userData.user?.email ?? "",
         displayName: profileRow?.display_name ?? "",
+        avatarUrl: profileRow?.avatar_url ?? null,
         roles: (roles ?? []).map((row) => row.role),
         keys: keyCount ?? 0,
         connections: connCount ?? 0,
@@ -59,12 +58,6 @@ function Dashboard() {
       };
     },
   });
-
-  async function signOut() {
-    await supabase.auth.signOut();
-    toast.success("Signed out");
-    await navigate({ to: "/" });
-  }
 
   const planes = [
     {
@@ -106,34 +99,45 @@ function Dashboard() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-14">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold">
-            {isLoading ? "Overview" : `Welcome${profile?.displayName ? `, ${profile.displayName}` : ""}`}
-          </h1>
-          {isLoading ? (
-            <Skeleton className="mt-3 h-4 w-56" />
-          ) : (
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-              <span>{profile?.email}</span>
-              {profile?.roles.map((role) => (
-                <Badge key={role} variant="secondary">
-                  {role}
-                </Badge>
-              ))}
-              <Badge variant="outline">{profile?.keys ?? 0} live key(s)</Badge>
-            </div>
-          )}
-          <p className="mt-3 max-w-xl text-sm text-muted-foreground">
-            One platform for all AI needs — resources, connections and models behind a single account and{" "}
-            <code className="text-primary">oc_live_</code> key.
-          </p>
+        <div className="flex min-w-0 items-start gap-4">
+          {!isLoading && profile ? (
+            <ProfileAvatarBadge
+              name={profile.displayName}
+              email={profile.email}
+              avatarUrl={profile.avatarUrl}
+            />
+          ) : null}
+          <div className="min-w-0">
+            <h1 className="text-3xl font-semibold">
+              {isLoading ? "Overview" : `Welcome${profile?.displayName ? `, ${profile.displayName}` : ""}`}
+            </h1>
+            {isLoading ? (
+              <Skeleton className="mt-3 h-4 w-56" />
+            ) : (
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                <span className="truncate">{profile?.email}</span>
+                {profile?.roles.map((role) => (
+                  <Badge key={role} variant="secondary">
+                    {role}
+                  </Badge>
+                ))}
+                <Badge variant="outline">{profile?.keys ?? 0} live key(s)</Badge>
+              </div>
+            )}
+            <p className="mt-3 max-w-xl text-sm text-muted-foreground">
+              One platform for all AI needs — resources, connections and models behind a single account and{" "}
+              <code className="text-primary">oc_live_</code> key.
+            </p>
+          </div>
         </div>
         <div className="flex gap-2">
           <Button asChild variant="outline">
             <Link to="/agents">Connect agent</Link>
           </Button>
-          <Button variant="outline" onClick={signOut}>
-            <LogOut className="mr-1 size-4" /> Sign out
+          <Button asChild variant="outline">
+            <Link to="/settings">
+              <Settings className="mr-1 size-4" /> Settings
+            </Link>
           </Button>
         </div>
       </div>
