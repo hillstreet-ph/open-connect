@@ -63,6 +63,7 @@ export const Route = createFileRoute("/oauth/token")({
           });
         }
 
+        // OAuth 2.1 authorization_code: PKCE S256 + exact redirect_uri required
         const code = params["code"];
         const verifier = params["code_verifier"];
         const redirectUri = params["redirect_uri"];
@@ -71,7 +72,17 @@ export const Route = createFileRoute("/oauth/token")({
           return json(
             {
               error: "invalid_request",
-              error_description: "code and code_verifier required (PKCE S256)",
+              error_description: "code and code_verifier required (OAuth 2.1 PKCE S256)",
+            },
+            400,
+          );
+        }
+
+        if (!redirectUri) {
+          return json(
+            {
+              error: "invalid_request",
+              error_description: "redirect_uri is required and must match the authorization request",
             },
             400,
           );
@@ -106,7 +117,8 @@ export const Route = createFileRoute("/oauth/token")({
           );
         }
 
-        if (redirectUri && payload.redirect_uri && redirectUri !== payload.redirect_uri) {
+        // OAuth 2.1: exact string match of redirect_uri from the authorization request
+        if (redirectUri !== payload.redirect_uri) {
           return json(
             { error: "invalid_grant", error_description: "redirect_uri mismatch" },
             400,
