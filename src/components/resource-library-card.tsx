@@ -21,6 +21,13 @@ const TYPES = ["skill", "mcp", "tool", "plugin", "agent", "prompt", "guide"] as 
 const BUCKET = "resource-packages";
 const MAX_BYTES = 50 * 1024 * 1024;
 
+function formatBytes(n: number) {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/** Upload / manage packages — only rendered inside authenticated routes. */
 export function ResourceLibraryCard() {
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -89,7 +96,7 @@ export function ResourceLibraryCard() {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
-        toast.error("Sign in required");
+        toast.error("Sign in required to upload");
         return;
       }
 
@@ -160,10 +167,10 @@ export function ResourceLibraryCard() {
         <span className="flex size-9 items-center justify-center rounded-lg bg-primary/15 text-primary">
           <Upload className="size-4" />
         </span>
-        <CardTitle className="mt-3 text-base">Resource library — upload & download</CardTitle>
+        <CardTitle className="mt-3 text-base">Upload packages</CardTitle>
         <CardDescription>
-          Drop a <code className="font-mono">.zip</code>, skill markdown, MCP config, agent pack, or prompt.
-          Type is auto-detected; agents can pull packages via download links.
+          Sign-in required. Drop a <code className="font-mono">.zip</code>, skill, MCP config, agent,
+          plugin, tool, or prompt. Type is auto-detected.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -179,7 +186,7 @@ export function ResourceLibraryCard() {
             />
             {file ? (
               <p className="text-xs text-muted-foreground">
-                {file.name} · {(file.size / 1024).toFixed(1)} KB
+                {file.name} · {formatBytes(file.size)}
                 {confidence ? ` · detected ${resourceType} (${confidence})` : ""}
                 {signals.length ? ` · ${signals.join(", ")}` : ""}
               </p>
@@ -249,6 +256,7 @@ export function ResourceLibraryCard() {
                         variant="outline"
                         onClick={() => downloadMutation.mutate(r.id)}
                         disabled={downloadMutation.isPending}
+                        aria-label="Download"
                       >
                         <Download className="size-3.5" />
                       </Button>
@@ -258,6 +266,7 @@ export function ResourceLibraryCard() {
                       variant="ghost"
                       onClick={() => deleteMutation.mutate(r.id)}
                       disabled={deleteMutation.isPending}
+                      aria-label="Delete"
                     >
                       <Trash2 className="size-3.5" />
                     </Button>
