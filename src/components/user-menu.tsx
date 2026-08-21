@@ -58,12 +58,12 @@ export function UserMenu() {
   }
 
   const displayName =
-    profile?.display_name ||
+    profile?.['display_name'] ||
     (user.user_metadata?.display_name as string | undefined) ||
     user.email?.split("@")[0] ||
     "Account";
   const email = user.email ?? "";
-  const avatarUrl = profile?.avatar_url ?? (user.user_metadata?.avatar_url as string | undefined) ?? "";
+  const avatarUrl = profile?.['avatar_url'] ?? (user.user_metadata?.avatar_url as string | undefined) ?? "";
 
   async function signOut() {
     await supabase.auth.signOut();

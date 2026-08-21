@@ -261,7 +261,7 @@ export const Route = createFileRoute("/mcp")({
             });
           } else if (name === "list_resources") {
             const catalog = await getCatalog();
-            const typeFilter = typeof args.type === "string" ? args.type : null;
+            const typeFilter = typeof args['type'] === "string" ? args['type'] : null;
             const data = [...catalog.bySlug.values()]
               .filter((r) => !typeFilter || r.resource_type === typeFilter)
               .map((r) => ({
@@ -292,7 +292,7 @@ export const Route = createFileRoute("/mcp")({
             });
           } else if (name?.startsWith("resource_")) {
             const match = await findResourceByToolName(name);
-            const action = typeof args.action === "string" ? args.action : "info";
+            const action = typeof args['action'] === "string" ? args['action'] : "info";
 
             if (!match) {
               result = textResult({ status: "not_found", tool: name });

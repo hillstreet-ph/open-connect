@@ -43,10 +43,10 @@ function SettingsPage() {
         userId: user.id,
         email: user.email ?? "",
         displayName:
-          profile?.display_name ||
+          profile?.['display_name'] ||
           (user.user_metadata?.display_name as string | undefined) ||
           "",
-        avatarUrl: profile?.avatar_url || (user.user_metadata?.avatar_url as string | undefined) || "",
+        avatarUrl: profile?.['avatar_url'] || (user.user_metadata?.avatar_url as string | undefined) || "",
       };
     },
   });
