@@ -14,19 +14,19 @@ const marketingNav = [
 
 const appNav = [
   { to: "/dashboard" as const, label: "Dashboard" },
+  { to: "/api-keys" as const, label: "API Keys" },
   { to: "/resources" as const, label: "Resources" },
   { to: "/connections" as const, label: "Connections" },
   { to: "/models" as const, label: "Models" },
   { to: "/settings" as const, label: "Settings" },
 ];
 
-const APP_PREFIXES = ["/dashboard", "/settings", "/agents", "/toolkits"];
+const APP_PREFIXES = ["/dashboard", "/settings", "/api-keys", "/agents", "/toolkits"];
 
 function useAppShell() {
   const { user, loading } = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const onAppRoute = APP_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
-  /** Signed-in users get the app chrome; marketing pages stay public-facing until they enter the app. */
   const isAppShell = Boolean(user) && onAppRoute;
   return { user, loading, isAppShell, pathname };
 }
@@ -46,7 +46,6 @@ export function SiteHeader() {
       )}
     >
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4">
-        {/* Logo: home when signed out; account dropdown when signed in */}
         <BrandLogoMenu />
 
         <nav className="hidden items-center gap-1 md:flex">
