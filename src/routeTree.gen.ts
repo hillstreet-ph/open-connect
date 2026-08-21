@@ -18,6 +18,7 @@ import { Route as McpRouteImport } from './routes/mcp'
 import { Route as ModelsRouteImport } from './routes/models'
 import { Route as ResourcesRouteImport } from './routes/resources'
 import { Route as AuthenticatedAgentsRouteImport } from './routes/_authenticated/agents'
+import { Route as AuthenticatedApiKeysRouteImport } from './routes/_authenticated/api-keys'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedToolkitsRouteImport } from './routes/_authenticated/toolkits'
@@ -71,6 +72,11 @@ const ResourcesRoute = ResourcesRouteImport.update({
 const AuthenticatedAgentsRoute = AuthenticatedAgentsRouteImport.update({
   id: '/agents',
   path: '/agents',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedApiKeysRoute = AuthenticatedApiKeysRouteImport.update({
+  id: '/api-keys',
+  path: '/api-keys',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
@@ -133,6 +139,7 @@ export interface FileRoutesByFullPath {
   '/models': typeof ModelsRoute
   '/resources': typeof ResourcesRoute
   '/agents': typeof AuthenticatedAgentsRoute
+  '/api-keys': typeof AuthenticatedApiKeysRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/toolkits': typeof AuthenticatedToolkitsRoute
@@ -153,6 +160,7 @@ export interface FileRoutesByTo {
   '/models': typeof ModelsRoute
   '/resources': typeof ResourcesRoute
   '/agents': typeof AuthenticatedAgentsRoute
+  '/api-keys': typeof AuthenticatedApiKeysRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/toolkits': typeof AuthenticatedToolkitsRoute
@@ -175,6 +183,7 @@ export interface FileRoutesById {
   '/models': typeof ModelsRoute
   '/resources': typeof ResourcesRoute
   '/_authenticated/agents': typeof AuthenticatedAgentsRoute
+  '/_authenticated/api-keys': typeof AuthenticatedApiKeysRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/toolkits': typeof AuthenticatedToolkitsRoute
@@ -197,6 +206,7 @@ export interface FileRouteTypes {
     | '/models'
     | '/resources'
     | '/agents'
+    | '/api-keys'
     | '/dashboard'
     | '/settings'
     | '/toolkits'
@@ -217,6 +227,7 @@ export interface FileRouteTypes {
     | '/models'
     | '/resources'
     | '/agents'
+    | '/api-keys'
     | '/dashboard'
     | '/settings'
     | '/toolkits'
@@ -238,6 +249,7 @@ export interface FileRouteTypes {
     | '/models'
     | '/resources'
     | '/_authenticated/agents'
+    | '/_authenticated/api-keys'
     | '/_authenticated/dashboard'
     | '/_authenticated/settings'
     | '/_authenticated/toolkits'
@@ -333,6 +345,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAgentsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/api-keys': {
+      id: '/_authenticated/api-keys'
+      path: '/api-keys'
+      fullPath: '/api-keys'
+      preLoaderRoute: typeof AuthenticatedApiKeysRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -408,6 +427,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAgentsRoute: typeof AuthenticatedAgentsRoute
+  AuthenticatedApiKeysRoute: typeof AuthenticatedApiKeysRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedToolkitsRoute: typeof AuthenticatedToolkitsRoute
@@ -415,6 +435,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAgentsRoute: AuthenticatedAgentsRoute,
+  AuthenticatedApiKeysRoute: AuthenticatedApiKeysRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedToolkitsRoute: AuthenticatedToolkitsRoute,
