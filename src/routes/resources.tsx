@@ -1,10 +1,15 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { Download, Search, Upload } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
+import { getResourceDownloadUrl } from "@/lib/resources.functions";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -16,13 +21,9 @@ export const Route = createFileRoute("/resources")({
       {
         name: "description",
         content:
-          "Browse skills, MCP servers, tools, plugins, agents, prompts and guides in the Open-Connect resource registry.",
+          "Browse and download skills, MCP servers, tools, plugins, agents, prompts and guides.",
       },
       { property: "og:title", content: "Agent Resources — Open-Connect" },
-      {
-        property: "og:description",
-        content: "One normalized registry for every AI agent resource, searchable in one place.",
-      },
     ],
   }),
   component: ResourcesPage,
@@ -40,8 +41,10 @@ const filters = [
 ] as const;
 
 function ResourcesPage() {
+  const { user } = useAuth();
   const [type, setType] = useState<string>("all");
   const [query, setQuery] = useState("");
+  const downloadFn = useServerFn(getResourceDownloadUrl);
 
   const { data, isLoading } = useQuery({
     queryKey: ["resources"],
@@ -49,7 +52,7 @@ function ResourcesPage() {
       const { data, error } = await supabase
         .from("resources")
         .select(
-          "id, slug, name, description, resource_type, category_slug, author, version, license, verified, featured, supported_clients",
+          "id, slug, name, description, resource_type, category_slug, author, version, license, verified, featured, supported_clients, package_path, package_filename, package_size",
         )
         .eq("published", true)
         .order("featured", { ascending: false })
@@ -57,6 +60,20 @@ function ResourcesPage() {
       if (error) throw error;
       return data;
     },
+  });
+
+  const downloadMutation = useMutation({
+    mutationFn: (id: string) => downloadFn({ data: { id } }),
+    onSuccess: (result) => {
+      window.open(result.url, "_blank", "noopener,noreferrer");
+      toast.success("Download started");
+    },
+    onError: (e) =>
+      toast.error(
+        e instanceof Error
+          ? e.message
+          : "Sign in required to download packages",
+      ),
   });
 
   const results = useMemo(() => {
@@ -74,10 +91,21 @@ function ResourcesPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-16">
-      <h1 className="text-3xl font-semibold sm:text-4xl">Agent Resources</h1>
-      <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
-        Skills, MCP servers, tools, plugins, agents, prompts and guides — one registry, one search.
-      </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold sm:text-4xl">Agent Resources</h1>
+          <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
+            Skills, MCP servers, tools, plugins, agents, prompts and guides — browse, download packages, or
+            upload your own from the dashboard.
+          </p>
+        </div>
+        <Button asChild variant="outline">
+          <Link to={user ? "/dashboard" : "/auth"}>
+            <Upload className="mr-2 size-4" />
+            {user ? "Upload package" : "Sign in to upload"}
+          </Link>
+        </Button>
+      </div>
 
       <div className="mt-8 flex flex-col gap-4">
         <div className="relative max-w-md">
@@ -125,14 +153,38 @@ function ResourcesPage() {
                         Verified
                       </Badge>
                     ) : null}
+                    {item.package_path ? (
+                      <Badge variant="outline" className="text-xs">
+                        Package
+                      </Badge>
+                    ) : null}
                   </div>
                   <CardTitle className="mt-3 text-base">{item.name}</CardTitle>
                   <CardDescription>{item.description}</CardDescription>
                 </CardHeader>
-                <CardContent className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                  <span className="font-mono">v{item.version}</span>
-                  <span>{item.license}</span>
-                  {item.category_slug ? <span>{item.category_slug}</span> : null}
+                <CardContent className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                  <div className="flex flex-wrap gap-x-3 gap-y-1">
+                    <span className="font-mono">v{item.version}</span>
+                    <span>{item.license}</span>
+                    {item.category_slug ? <span>{item.category_slug}</span> : null}
+                  </div>
+                  {item.package_path ? (
+                    user ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => downloadMutation.mutate(item.id)}
+                        disabled={downloadMutation.isPending}
+                      >
+                        <Download className="mr-1 size-3.5" />
+                        Download
+                      </Button>
+                    ) : (
+                      <Button asChild size="sm" variant="outline">
+                        <Link to="/auth">Sign in to download</Link>
+                      </Button>
+                    )
+                  ) : null}
                 </CardContent>
               </Card>
             ))}
