@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as ConnectionsRouteImport } from './routes/connections'
 import { Route as ExploreRouteImport } from './routes/explore'
 import { Route as McpRouteImport } from './routes/mcp'
@@ -42,6 +43,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConnectionsRoute = ConnectionsRouteImport.update({
@@ -133,6 +139,7 @@ const V1ChatCompletionsRoute = V1ChatCompletionsRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/login': typeof LoginRoute
   '/connections': typeof ConnectionsRoute
   '/explore': typeof ExploreRoute
   '/mcp': typeof McpRoute
@@ -154,6 +161,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/login': typeof LoginRoute
   '/connections': typeof ConnectionsRoute
   '/explore': typeof ExploreRoute
   '/mcp': typeof McpRoute
@@ -177,6 +185,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/login': typeof LoginRoute
   '/connections': typeof ConnectionsRoute
   '/explore': typeof ExploreRoute
   '/mcp': typeof McpRoute
@@ -200,6 +209,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/login'
     | '/connections'
     | '/explore'
     | '/mcp'
@@ -221,6 +231,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/login'
     | '/connections'
     | '/explore'
     | '/mcp'
@@ -243,6 +254,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/login'
     | '/connections'
     | '/explore'
     | '/mcp'
@@ -266,6 +278,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  LoginRoute: typeof LoginRoute
   ConnectionsRoute: typeof ConnectionsRoute
   ExploreRoute: typeof ExploreRoute
   McpRoute: typeof McpRoute
@@ -301,6 +314,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/connections': {
@@ -448,6 +468,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  LoginRoute: LoginRoute,
   ConnectionsRoute: ConnectionsRoute,
   ExploreRoute: ExploreRoute,
   McpRoute: McpRoute,
