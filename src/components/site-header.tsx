@@ -2,23 +2,25 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { Menu } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { BrandLogoMenu, UserMenu } from "@/components/user-menu";
+import { BrandLogo, UserMenu } from "@/components/user-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 
+/** Marketing / product navigation — not account controls */
 const marketingNav = [
   { to: "/resources" as const, label: "Resources" },
   { to: "/connections" as const, label: "Connections" },
   { to: "/models" as const, label: "Models" },
 ];
 
+/** App workspace navigation — account items stay in avatar menu only */
 const appNav = [
   { to: "/dashboard" as const, label: "Dashboard" },
-  { to: "/api-keys" as const, label: "API Keys" },
+  { to: "/agents" as const, label: "Agents" },
+  { to: "/toolkits" as const, label: "Toolkits" },
   { to: "/resources" as const, label: "Resources" },
   { to: "/connections" as const, label: "Connections" },
   { to: "/models" as const, label: "Models" },
-  { to: "/settings" as const, label: "Settings" },
 ];
 
 const APP_PREFIXES = ["/dashboard", "/settings", "/api-keys", "/agents", "/toolkits"];
@@ -28,7 +30,7 @@ function useAppShell() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const onAppRoute = APP_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
   const isAppShell = Boolean(user) && onAppRoute;
-  return { user, loading, isAppShell, pathname };
+  return { user, loading, isAppShell };
 }
 
 export function SiteHeader() {
@@ -40,13 +42,11 @@ export function SiteHeader() {
     <header
       className={cn(
         "sticky top-0 z-50 border-b backdrop-blur-xl",
-        isAppShell
-          ? "border-border/80 bg-background/95"
-          : "border-border/70 bg-background/85",
+        isAppShell ? "border-border/80 bg-background/95" : "border-border/70 bg-background/85",
       )}
     >
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4">
-        <BrandLogoMenu />
+        <BrandLogo />
 
         <nav className="hidden items-center gap-1 md:flex">
           {nav.map((item) => (
@@ -77,7 +77,7 @@ export function SiteHeader() {
         </div>
 
         <div className="flex items-center gap-1 md:hidden">
-          {!loading && user ? <UserMenu /> : null}
+          {!loading ? <UserMenu /> : null}
           <Button
             variant="ghost"
             size="icon"
