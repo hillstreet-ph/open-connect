@@ -5,10 +5,74 @@ import {
   hasScope,
   json,
   logGatewayRequest,
+  type AuthedKey,
 } from "@/lib/gateway.server";
 
 const WWW_AUTH =
   'Bearer realm="open-connect", resource_metadata="https://open-connect.site/.well-known/oauth-protected-resource"';
+
+const CATALOG_TTL_MS = 45_000;
+const MODEL_ALIASES = [
+  { id: "open-connect/fast", upstream: "openai/gpt-4o-mini" },
+  { id: "open-connect/balanced", upstream: "openai/gpt-4o-mini" },
+  { id: "open-connect/reasoning", upstream: "openai/gpt-4o" },
+  { id: "open-connect/coding", upstream: "openai/gpt-4o" },
+  { id: "open-connect/vision", upstream: "openai/gpt-4o" },
+] as const;
+
+type ResourceRow = {
+  slug: string;
+  name: string;
+  description: string | null;
+  resource_type: string;
+  installation_type: string | null;
+};
+
+type McpTool = {
+  name: string;
+  description: string;
+  inputSchema: Record<string, unknown>;
+};
+
+/** Isolate-level cache (Cloudflare warm isolates reuse this). */
+let catalogCache: {
+  at: number;
+  tools: McpTool[];
+  bySlug: Map<string, ResourceRow>;
+  byToolName: Map<string, ResourceRow>;
+  count: number;
+} | null = null;
+
+const PLATFORM_TOOLS: McpTool[] = [
+  {
+    name: "open_connect_status",
+    description: "Gateway status: resources, connections, models",
+    inputSchema: { type: "object", properties: {} },
+  },
+  {
+    name: "list_resources",
+    description: "List published resources (skills, MCP, tools, plugins, agents, prompts)",
+    inputSchema: {
+      type: "object",
+      properties: {
+        type: {
+          type: "string",
+          description: "Filter: skill | mcp | tool | plugin | agent | prompt | guide",
+        },
+      },
+    },
+  },
+  {
+    name: "list_connections",
+    description: "List connected apps (capability grants only)",
+    inputSchema: { type: "object", properties: {} },
+  },
+  {
+    name: "list_models",
+    description: "List open-connect model aliases on /v1",
+    inputSchema: { type: "object", properties: {} },
+  },
+];
 
 function unauthorized(message: string) {
   return new Response(
@@ -26,63 +90,88 @@ function unauthorized(message: string) {
   );
 }
 
+/** Compact JSON (no pretty-print) — smaller responses, faster serialize. */
 function textResult(payload: unknown) {
   return {
-    content: [{ type: "text", text: JSON.stringify(payload, null, 2) }],
+    content: [{ type: "text" as const, text: JSON.stringify(payload) }],
   };
 }
 
-async function listCatalogTools() {
+function toolNameFromSlug(slug: string) {
+  return `resource_${slug.replace(/[^a-z0-9_]/gi, "_").toLowerCase()}`;
+}
+
+async function getCatalog(force = false) {
+  const now = Date.now();
+  if (!force && catalogCache && now - catalogCache.at < CATALOG_TTL_MS) {
+    return catalogCache;
+  }
+
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data } = await supabaseAdmin
     .from("resources")
-    .select("id, slug, name, description, resource_type, installation_type, installation_config, source_url, repository_url")
+    .select("slug, name, description, resource_type, installation_type")
     .eq("published", true)
     .order("featured", { ascending: false })
     .limit(100);
 
-  const tools = [
-    {
-      name: "open_connect_status",
-      description: "Return Open-Connect gateway status for this key (resources + connections + models)",
-      inputSchema: { type: "object", properties: {} },
-    },
-    {
-      name: "list_resources",
-      description: "List published Open-Connect resources (skills, MCP, tools, plugins, agents, prompts)",
-      inputSchema: {
-        type: "object",
-        properties: {
-          type: {
-            type: "string",
-            description: "Optional filter: skill | mcp | tool | plugin | agent | prompt | guide",
-          },
-        },
-      },
-    },
-    {
-      name: "list_connections",
-      description: "List the authenticated user's connected apps (capability grants, never secrets)",
-      inputSchema: { type: "object", properties: {} },
-    },
-    {
-      name: "list_models",
-      description: "List open-connect model aliases available on /v1",
-      inputSchema: { type: "object", properties: {} },
-    },
-    ...(data ?? []).map((r) => ({
-      name: `resource_${r.slug.replace(/[^a-z0-9_]/gi, "_").toLowerCase()}`,
-      description: `[${r.resource_type}] ${r.name}${r.description ? ` — ${r.description}` : ""}`,
+  const rows = (data ?? []) as ResourceRow[];
+  const bySlug = new Map<string, ResourceRow>();
+  const byToolName = new Map<string, ResourceRow>();
+  const resourceTools: McpTool[] = [];
+
+  for (const r of rows) {
+    bySlug.set(r.slug, r);
+    const tn = toolNameFromSlug(r.slug);
+    byToolName.set(tn, r);
+    resourceTools.push({
+      name: tn,
+      description: `[${r.resource_type}] ${r.name}${r.description ? ` — ${r.description.slice(0, 160)}` : ""}`,
       inputSchema: {
         type: "object",
         properties: {
           action: { type: "string", description: "info | invoke" },
         },
       },
-    })),
-  ];
+    });
+  }
 
-  return { tools, rows: data ?? [] };
+  catalogCache = {
+    at: now,
+    tools: [...PLATFORM_TOOLS, ...resourceTools],
+    bySlug,
+    byToolName,
+    count: rows.length,
+  };
+  return catalogCache;
+}
+
+async function findResourceByToolName(toolName: string): Promise<ResourceRow | null> {
+  const catalog = await getCatalog();
+  const hit = catalog.byToolName.get(toolName);
+  if (hit) return hit;
+
+  // Fallback: direct DB by normalized slug (cache miss / race)
+  const raw = toolName.replace(/^resource_/, "");
+  const slugHyphen = raw.replace(/_/g, "-");
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await supabaseAdmin
+    .from("resources")
+    .select("slug, name, description, resource_type, installation_type")
+    .eq("published", true)
+    .or(`slug.eq.${slugHyphen},slug.eq.${raw}`)
+    .limit(1)
+    .maybeSingle();
+  return (data as ResourceRow | null) ?? null;
+}
+
+function fireLog(key: AuthedKey, statusCode: number) {
+  void logGatewayRequest({
+    key,
+    endpoint: "/mcp",
+    statusCode,
+    upstream: "open-connect",
+  });
 }
 
 export const Route = createFileRoute("/mcp")({
@@ -93,7 +182,7 @@ export const Route = createFileRoute("/mcp")({
         if (!key) return unauthorized("Missing or invalid Open-Connect key.");
         return json({
           name: "open-connect",
-          version: "1.0.0",
+          version: "1.0.1",
           protocol: "mcp",
           planes: ["resources", "connections", "models"],
           endpoints: {
@@ -123,14 +212,13 @@ export const Route = createFileRoute("/mcp")({
           jsonrpc?: string;
           id?: string | number;
           method?: string;
-          params?: Record<string, unknown>;
+          params?: { name?: string; arguments?: Record<string, unknown> };
         } | null;
 
         if (!body?.method) {
           return gatewayError("JSON-RPC method required.", 400, "invalid_request");
         }
 
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         let result: unknown = { ok: true };
 
         if (body.method === "initialize") {
@@ -139,108 +227,85 @@ export const Route = createFileRoute("/mcp")({
             capabilities: { tools: {} },
             serverInfo: {
               name: "open-connect",
-              version: "1.0.0",
+              version: "1.0.1",
               planes: ["resources", "connections", "models"],
             },
           };
         } else if (body.method === "tools/list") {
-          const { tools } = await listCatalogTools();
-          result = { tools };
+          const catalog = await getCatalog();
+          result = { tools: catalog.tools };
         } else if (body.method === "tools/call") {
-          const name = (body.params as { name?: string; arguments?: Record<string, unknown> } | undefined)
-            ?.name;
-          const args =
-            (body.params as { arguments?: Record<string, unknown> } | undefined)?.arguments ?? {};
+          const name = body.params?.name;
+          const args = body.params?.arguments ?? {};
 
           if (name === "open_connect_status") {
-            const [{ count: resources }, { count: connections }] = await Promise.all([
-              supabaseAdmin
-                .from("resources")
-                .select("id", { count: "exact", head: true })
-                .eq("published", true),
-              supabaseAdmin
-                .from("app_connections")
-                .select("id", { count: "exact", head: true })
-                .eq("user_id", key.userId)
-                .eq("status", "connected"),
-            ]);
+            const catalog = await getCatalog();
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const { count: connections } = await supabaseAdmin
+              .from("app_connections")
+              .select("id", { count: "exact", head: true })
+              .eq("user_id", key.userId)
+              .eq("status", "connected");
             result = textResult({
               gateway: "open-connect.site",
               planes: {
-                resources: { published: resources ?? 0 },
+                resources: { published: catalog.count },
                 connections: { connected: connections ?? 0 },
                 models: {
                   endpoint: "https://open-connect.site/v1",
-                  aliases: [
-                    "open-connect/fast",
-                    "open-connect/balanced",
-                    "open-connect/reasoning",
-                    "open-connect/coding",
-                    "open-connect/vision",
-                  ],
+                  aliases: MODEL_ALIASES.map((a) => a.id),
                 },
               },
               scopes: key.scopes,
               user_id: key.userId,
             });
           } else if (name === "list_resources") {
-            const { rows } = await listCatalogTools();
+            const catalog = await getCatalog();
             const typeFilter = typeof args.type === "string" ? args.type : null;
-            const filtered = typeFilter
-              ? rows.filter((r) => r.resource_type === typeFilter)
-              : rows;
-            result = textResult({
-              data: filtered.map((r) => ({
+            const data = [...catalog.bySlug.values()]
+              .filter((r) => !typeFilter || r.resource_type === typeFilter)
+              .map((r) => ({
                 slug: r.slug,
                 name: r.name,
                 type: r.resource_type,
                 description: r.description,
-              })),
-              count: filtered.length,
-            });
+              }));
+            result = textResult({ data, count: data.length });
           } else if (name === "list_connections") {
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
             const { data: conns } = await supabaseAdmin
               .from("app_connections")
-              .select("provider, display_name, status, scopes, last_used_at")
+              .select("provider, display_name, status, scopes")
               .eq("user_id", key.userId)
-              .order("created_at", { ascending: false });
+              .eq("status", "connected")
+              .order("created_at", { ascending: false })
+              .limit(50);
             result = textResult({
               data: conns ?? [],
-              note: "Capability grants only — provider secrets never leave the server.",
+              note: "Capability grants only",
             });
           } else if (name === "list_models") {
             result = textResult({
               endpoint: "https://open-connect.site/v1",
-              aliases: [
-                { id: "open-connect/fast", upstream: "openai/gpt-4o-mini" },
-                { id: "open-connect/balanced", upstream: "openai/gpt-4o-mini" },
-                { id: "open-connect/reasoning", upstream: "openai/gpt-4o" },
-                { id: "open-connect/coding", upstream: "openai/gpt-4o" },
-                { id: "open-connect/vision", upstream: "openai/gpt-4o" },
-              ],
-              auth: "Authorization: Bearer oc_live_…",
+              aliases: MODEL_ALIASES,
+              auth: "Bearer oc_live_…",
             });
           } else if (name?.startsWith("resource_")) {
-            const { rows } = await listCatalogTools();
-            const raw = name.replace(/^resource_/, "");
-            const match =
-              rows.find((r) => r.slug === raw.replace(/_/g, "-")) ||
-              rows.find((r) => r.slug.replace(/-/g, "_") === raw) ||
-              rows.find((r) => r.slug.replace(/[^a-z0-9]/gi, "_").toLowerCase() === raw.toLowerCase());
-
+            const match = await findResourceByToolName(name);
             const action = typeof args.action === "string" ? args.action : "info";
 
             if (!match) {
               result = textResult({ status: "not_found", tool: name });
             } else if (action === "invoke") {
-              // Resolve related connection capability if provider-named resource
-              const providerGuess = match.slug.split("-")[0]?.toLowerCase();
+              const providerGuess = match.slug.split("-")[0]?.toLowerCase() ?? "";
+              const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
               const { data: conn } = await supabaseAdmin
                 .from("app_connections")
                 .select("provider, display_name, status, scopes")
                 .eq("user_id", key.userId)
                 .eq("status", "connected")
                 .ilike("provider", `%${providerGuess}%`)
+                .limit(1)
                 .maybeSingle();
 
               result = textResult({
@@ -263,18 +328,16 @@ export const Route = createFileRoute("/mcp")({
                 execution: {
                   mode: conn ? "connection_backed" : "registry_only",
                   message: conn
-                    ? `Capability grant for ${conn.display_name} is active. Provider credentials stay server-side.`
-                    : "No matching app connection. Connect the app under /connections, then re-invoke.",
-                  next: conn
-                    ? null
-                    : "https://open-connect.site/connections",
+                    ? `Capability grant for ${conn.display_name} is active.`
+                    : "No matching app connection. Connect at /connections then re-invoke.",
+                  next: conn ? null : "https://open-connect.site/connections",
                 },
               });
             } else {
               result = textResult({
                 status: "available",
                 resource: match,
-                note: "Use action=invoke to resolve against your Connections plane.",
+                note: "Use action=invoke to resolve Connections plane.",
               });
             }
           } else {
@@ -286,13 +349,7 @@ export const Route = createFileRoute("/mcp")({
           result = { error: `Method not implemented: ${body.method}` };
         }
 
-        await logGatewayRequest({
-          key,
-          endpoint: "/mcp",
-          statusCode: 200,
-          upstream: "open-connect",
-        });
-
+        fireLog(key, 200);
         return json({ jsonrpc: "2.0", id: body.id ?? null, result });
       },
     },
