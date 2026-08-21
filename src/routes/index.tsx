@@ -3,6 +3,7 @@ import { ArrowRight, Boxes, Cpu, KeyRound, Plug, Shield, Sparkles } from "lucide
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -53,6 +54,9 @@ const interfaces = [
 ];
 
 function Home() {
+  const { user, loading } = useAuth();
+  const signedIn = Boolean(user);
+
   return (
     <div>
       <section className="relative overflow-hidden bg-hero">
@@ -69,14 +73,29 @@ function Home() {
             gateway — one account, one key, one MCP URL.
           </p>
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-            <Button asChild size="lg">
-              <Link to="/auth" search={{ mode: "signup" }}>
-                Get started <ArrowRight className="ml-1 size-4" />
-              </Link>
-            </Button>
-            <Button asChild size="lg" variant="outline">
-              <Link to="/resources">Explore resources</Link>
-            </Button>
+            {loading ? null : signedIn ? (
+              <>
+                <Button asChild size="lg">
+                  <Link to="/dashboard">
+                    Open dashboard <ArrowRight className="ml-1 size-4" />
+                  </Link>
+                </Button>
+                <Button asChild size="lg" variant="outline">
+                  <Link to="/resources">Explore resources</Link>
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button asChild size="lg">
+                  <Link to="/auth" search={{ mode: "signup" }}>
+                    Get started <ArrowRight className="ml-1 size-4" />
+                  </Link>
+                </Button>
+                <Button asChild size="lg" variant="outline">
+                  <Link to="/resources">Explore resources</Link>
+                </Button>
+              </>
+            )}
           </div>
 
           <div className="mx-auto mt-16 grid max-w-3xl gap-3 sm:grid-cols-2">
@@ -153,15 +172,22 @@ function Home() {
       </section>
 
       <section className="mx-auto max-w-4xl px-4 py-20 text-center">
-        <h2 className="text-2xl font-semibold sm:text-3xl">Ready to connect an agent?</h2>
+        <h2 className="text-2xl font-semibold sm:text-3xl">
+          {signedIn ? "Continue in your workspace" : "Ready to connect an agent?"}
+        </h2>
         <p className="mt-3 text-sm text-muted-foreground">
-          Create your Open-Connect account, then wire ChatGPT, Claude, Hermes or any MCP client to
-          your gateway.
+          {signedIn
+            ? "Manage keys, resources and connections from the dashboard."
+            : "Create your Open-Connect account, then wire ChatGPT, Claude, Hermes or any MCP client to your gateway."}
         </p>
         <Button asChild size="lg" className="mt-7">
-          <Link to="/auth" search={{ mode: "signup" }}>
-            Create account
-          </Link>
+          {signedIn ? (
+            <Link to="/dashboard">Open dashboard</Link>
+          ) : (
+            <Link to="/auth" search={{ mode: "signup" }}>
+              Create account
+            </Link>
+          )}
         </Button>
       </section>
     </div>
