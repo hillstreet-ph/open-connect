@@ -52,14 +52,14 @@ function useProfile() {
   return { user, loading, displayName, email, avatarUrl };
 }
 
-/** End session and land on /login (redirects to sign-in UI). */
+/** Sign out → Supabase session end → /auth */
 async function performSignOut(navigate: ReturnType<typeof useNavigate>) {
   await supabase.auth.signOut();
   toast.success("Signed out");
-  await navigate({ to: "/login" });
+  await navigate({ to: "/auth" });
 }
 
-/** Exactly four actions: Dashboard · API Keys · Settings · Sign out */
+/** Account only: Dashboard · API Keys · Settings · Sign out */
 function AccountMenuItems({ onSignOut }: { onSignOut: () => void }) {
   return (
     <>
@@ -96,67 +96,24 @@ function AccountMenuItems({ onSignOut }: { onSignOut: () => void }) {
   );
 }
 
-function AccountHeader({ displayName, email, avatarUrl }: { displayName: string; email: string; avatarUrl: string }) {
+/** Branding only — always navigates home. Not an account menu. */
+export function BrandLogo() {
   return (
-    <DropdownMenuLabel className="font-normal">
-      <div className="flex items-center gap-3">
-        <Avatar className="size-9 border border-border/70">
-          {avatarUrl ? <AvatarImage src={avatarUrl} alt={displayName} /> : null}
-          <AvatarFallback className="bg-primary/15 text-xs font-semibold text-primary">
-            {initials(displayName, email)}
-          </AvatarFallback>
-        </Avatar>
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <span className="truncate text-sm font-medium leading-none">{displayName}</span>
-          <span className="truncate text-xs leading-none text-muted-foreground">{email}</span>
-        </div>
-      </div>
-    </DropdownMenuLabel>
+    <Link to="/" className="flex items-center gap-2" aria-label="Open-Connect home">
+      <span className="flex size-8 items-center justify-center rounded-lg bg-primary/15 text-primary shadow-glow">
+        <Plug className="size-4" />
+      </span>
+      <span className="font-display text-base font-semibold tracking-tight">Open-Connect</span>
+    </Link>
   );
 }
 
-/** Logo: home when signed out; same 4-item menu when signed in. */
+/** @deprecated use BrandLogo — kept so older imports do not break */
 export function BrandLogoMenu() {
-  const { user, loading, displayName, email, avatarUrl } = useProfile();
-  const navigate = useNavigate();
-
-  const mark = (
-    <span className="flex size-8 items-center justify-center rounded-lg bg-primary/15 text-primary shadow-glow">
-      <Plug className="size-4" />
-    </span>
-  );
-
-  if (loading || !user) {
-    return (
-      <Link to="/" className="flex items-center gap-2" aria-label="Open-Connect home">
-        {mark}
-        <span className="font-display text-base font-semibold tracking-tight">Open-Connect</span>
-      </Link>
-    );
-  }
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          className="flex items-center gap-2 rounded-md outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-          aria-label="Account menu"
-        >
-          {mark}
-          <span className="font-display text-base font-semibold tracking-tight">Open-Connect</span>
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-64">
-        <AccountHeader displayName={displayName} email={email} avatarUrl={avatarUrl} />
-        <DropdownMenuSeparator />
-        <AccountMenuItems onSignOut={() => void performSignOut(navigate)} />
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
+  return <BrandLogo />;
 }
 
-/** Top-right [ MK ▾ ] avatar menu */
+/** Single account control: [ MK ▾ ] top-right */
 export function UserMenu() {
   const { user, loading, displayName, email, avatarUrl } = useProfile();
   const navigate = useNavigate();
@@ -167,10 +124,10 @@ export function UserMenu() {
     return (
       <div className="flex items-center gap-2">
         <Button asChild variant="ghost" size="sm">
-          <Link to="/login">Sign in</Link>
+          <Link to="/auth">Sign in</Link>
         </Button>
         <Button asChild size="sm">
-          <Link to="/login" search={{ mode: "signup" }}>
+          <Link to="/auth" search={{ mode: "signup" }}>
             Get started
           </Link>
         </Button>
@@ -184,20 +141,33 @@ export function UserMenu() {
         <Button
           variant="ghost"
           size="sm"
-          className="relative h-9 gap-1.5 rounded-full px-1.5 pr-2"
+          className="relative h-10 gap-1.5 rounded-full px-1.5 pr-2"
           aria-label="Account menu"
         >
-          <Avatar className="size-8 border border-border/70">
+          <Avatar className="size-9 border border-border/70">
             {avatarUrl ? <AvatarImage src={avatarUrl} alt={displayName} /> : null}
             <AvatarFallback className="bg-primary/15 text-xs font-semibold text-primary">
               {initials(displayName, email)}
             </AvatarFallback>
           </Avatar>
-          <ChevronDown className="size-3.5 text-muted-foreground" />
+          <ChevronDown className="hidden size-3.5 text-muted-foreground sm:block" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64">
-        <AccountHeader displayName={displayName} email={email} avatarUrl={avatarUrl} />
+        <DropdownMenuLabel className="font-normal">
+          <div className="flex items-center gap-3">
+            <Avatar className="size-9 border border-border/70">
+              {avatarUrl ? <AvatarImage src={avatarUrl} alt={displayName} /> : null}
+              <AvatarFallback className="bg-primary/15 text-xs font-semibold text-primary">
+                {initials(displayName, email)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <span className="truncate text-sm font-medium leading-none">{displayName}</span>
+              <span className="truncate text-xs leading-none text-muted-foreground">{email}</span>
+            </div>
+          </div>
+        </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <AccountMenuItems onSignOut={() => void performSignOut(navigate)} />
       </DropdownMenuContent>
