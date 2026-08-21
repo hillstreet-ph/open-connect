@@ -4,6 +4,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
@@ -14,6 +15,9 @@ import { reportError } from "../lib/error-reporting";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { Toaster } from "@/components/ui/sonner";
+import { useAuth } from "@/hooks/use-auth";
+
+const APP_PREFIXES = ["/dashboard", "/settings", "/agents", "/toolkits"];
 
 function NotFoundComponent() {
   return (
@@ -137,6 +141,10 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const { user } = useAuth();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const onAppRoute = APP_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  const showMarketingFooter = !(user && onAppRoute);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -145,9 +153,20 @@ function RootComponent() {
         <main className="flex-1">
           <Outlet />
         </main>
-        <SiteFooter />
+        {showMarketingFooter ? <SiteFooter /> : <AppFooter />}
       </div>
       <Toaster />
     </QueryClientProvider>
+  );
+}
+
+function AppFooter() {
+  return (
+    <footer className="border-t border-border/70 px-4 py-4 text-center text-xs text-muted-foreground">
+      Open-Connect · App workspace · {" "}
+      <a href="/" className="hover:text-foreground">
+        Marketing site
+      </a>
+    </footer>
   );
 }
