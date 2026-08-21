@@ -17,12 +17,14 @@ export type DetectResult = {
 };
 
 function slugify(input: string): string {
-  return input
-    .toLowerCase()
-    .replace(/\.[a-z0-9]+$/i, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 80) || "resource";
+  return (
+    input
+      .toLowerCase()
+      .replace(/\.[a-z0-9]+$/i, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 80) || "resource"
+  );
 }
 
 function titleFromFilename(filename: string): string {
@@ -52,14 +54,17 @@ export function detectResourceMeta(input: {
     signals.push("skill pattern");
   } else if (
     /mcp|model[-_]?context/.test(filename) ||
-    text.includes("mcpServers") ||
+    text.includes("mcpservers") ||
     text.includes("@modelcontextprotocol") ||
     text.includes("tools/list")
   ) {
     resource_type = "mcp";
     confidence = "high";
     signals.push("mcp pattern");
-  } else if (/plugin|chatgpt.*plugin|openapi\.json/.test(filename) || text.includes("""api"": {") && text.includes("plugin")) {
+  } else if (
+    /plugin|chatgpt.*plugin|openapi\.json/.test(filename) ||
+    (text.includes("openapi") && text.includes("plugin"))
+  ) {
     resource_type = "plugin";
     confidence = "medium";
     signals.push("plugin pattern");
@@ -87,7 +92,6 @@ export function detectResourceMeta(input: {
     signals.push("default → skill");
   }
 
-  // Extract description from markdown first paragraph
   let description = "";
   const md = input.contentText ?? "";
   const para = md
