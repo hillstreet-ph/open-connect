@@ -13,7 +13,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [
       { title: "Dashboard — Open-Connect" },
-      { name: "description", content: "Manage resources, connections, models and keys." },
+      { name: "description", content: "Resources, connections and models in one place." },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -24,19 +24,29 @@ function Dashboard() {
   const navigate = useNavigate();
 
   const { data: profile, isLoading } = useQuery({
-    queryKey: ["profile"],
+    queryKey: ["profile-dashboard"],
     queryFn: async () => {
       const { data: userData } = await supabase.auth.getUser();
       const userId = userData.user?.id;
       if (!userId) return null;
-      const [{ data: profileRow }, { data: roles }, { count: keyCount }, { count: connCount }, { count: toolkitCount }] =
-        await Promise.all([
-          supabase.from("profiles").select("display_name, avatar_url").eq("id", userId).maybeSingle(),
-          supabase.from("user_roles").select("role").eq("user_id", userId),
-          supabase.from("api_keys").select("id", { count: "exact", head: true }).is("revoked_at", null),
-          supabase.from("app_connections").select("id", { count: "exact", head: true }),
-          supabase.from("toolkits").select("id", { count: "exact", head: true }),
-        ]);
+      const [
+        { data: profileRow },
+        { data: roles },
+        { count: keyCount },
+        { count: connCount },
+        { count: toolkitCount },
+        { count: resourceCount },
+      ] = await Promise.all([
+        supabase.from("profiles").select("display_name, avatar_url").eq("id", userId).maybeSingle(),
+        supabase.from("user_roles").select("role").eq("user_id", userId),
+        supabase.from("api_keys").select("id", { count: "exact", head: true }).is("revoked_at", null),
+        supabase
+          .from("app_connections")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "connected"),
+        supabase.from("toolkits").select("id", { count: "exact", head: true }),
+        supabase.from("resources").select("id", { count: "exact", head: true }).eq("published", true),
+      ]);
       return {
         email: userData.user?.email ?? "",
         displayName: profileRow?.display_name ?? "",
@@ -44,6 +54,7 @@ function Dashboard() {
         keys: keyCount ?? 0,
         connections: connCount ?? 0,
         toolkits: toolkitCount ?? 0,
+        resources: resourceCount ?? 0,
       };
     },
   });
@@ -54,34 +65,40 @@ function Dashboard() {
     await navigate({ to: "/" });
   }
 
-  const panels = [
+  const planes = [
     {
       icon: Boxes,
-      title: "My Library",
-      body: "Browse the resource registry and install skills, MCP servers and tools.",
+      title: "1 · Resources",
+      body: profile
+        ? `${profile.resources} published skills, MCP servers, tools & agents`
+        : "Agent & skills library",
       to: "/resources" as const,
-      stat: null as number | null,
+      cta: "Browse library",
     },
     {
       icon: Plug,
-      title: "Connections",
-      body: profile ? `${profile.connections} app connection(s)` : "Connect GitHub, Slack, Notion and more.",
+      title: "2 · Connections",
+      body: profile
+        ? `${profile.connections} app(s) connected — capability grants only`
+        : "Pipedream-style app connections",
       to: "/connections" as const,
-      stat: profile?.connections ?? null,
+      cta: "Manage apps",
     },
     {
       icon: Cpu,
-      title: "Models",
-      body: "OpenAI-compatible gateway at /v1 with open-connect/* aliases.",
+      title: "3 · Models",
+      body: "Single gateway /v1 · open-connect/* aliases · OpenRouter upstream",
       to: "/models" as const,
-      stat: null,
+      cta: "View models",
     },
     {
       icon: Sparkles,
-      title: "Toolkits",
-      body: profile ? `${profile.toolkits} toolkit(s)` : "Bundle capabilities for agents.",
+      title: "Toolkits & agents",
+      body: profile
+        ? `${profile.toolkits} toolkit(s) · connect ChatGPT, Claude, Hermes`
+        : "Bundle capabilities for agents",
       to: "/toolkits" as const,
-      stat: profile?.toolkits ?? null,
+      cta: "Open toolkits",
     },
   ];
 
@@ -102,8 +119,13 @@ function Dashboard() {
                   {role}
                 </Badge>
               ))}
+              <Badge variant="outline">{profile?.keys ?? 0} live key(s)</Badge>
             </div>
           )}
+          <p className="mt-3 max-w-xl text-sm text-muted-foreground">
+            One platform for all AI needs — resources, connections and models behind a single account and{" "}
+            <code className="text-primary">oc_live_</code> key.
+          </p>
         </div>
         <div className="flex gap-2">
           <Button asChild variant="outline">
@@ -116,7 +138,7 @@ function Dashboard() {
       </div>
 
       <div className="mt-10 grid gap-4 sm:grid-cols-2">
-        {panels.map((panel) => (
+        {planes.map((panel) => (
           <Card key={panel.title} className="shadow-panel">
             <CardHeader>
               <span className="flex size-9 items-center justify-center rounded-lg bg-primary/15 text-primary">
@@ -127,7 +149,7 @@ function Dashboard() {
             </CardHeader>
             <CardContent>
               <Button asChild size="sm" variant="outline">
-                <Link to={panel.to}>Open</Link>
+                <Link to={panel.to}>{panel.cta}</Link>
               </Button>
             </CardContent>
           </Card>
@@ -138,15 +160,18 @@ function Dashboard() {
       <Card className="mt-10 bg-pillar">
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
-            <KeyRound className="size-4" /> Gateway endpoints
+            <KeyRound className="size-4" /> Agent endpoints
           </CardTitle>
-          <CardDescription>Authenticate with a scoped Open-Connect key (oc_live_…).</CardDescription>
+          <CardDescription>
+            Authenticate with a scoped Open-Connect key. New keys include MCP, resources, connections and
+            models scopes.
+          </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-2 font-mono text-xs text-primary sm:grid-cols-2">
-          <span>https://open-connect.site/mcp</span>
-          <span>https://open-connect.site/api/v1</span>
-          <span>https://open-connect.site/v1</span>
-          <span>https://open-connect.site/oauth</span>
+          <span>MCP · https://open-connect.site/mcp</span>
+          <span>Models · https://open-connect.site/v1</span>
+          <span>API · https://open-connect.site/api/v1</span>
+          <span>OAuth · https://open-connect.site/oauth</span>
         </CardContent>
       </Card>
     </div>
