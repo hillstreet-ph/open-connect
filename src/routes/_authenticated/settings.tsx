@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Save, Trash2, Upload } from "lucide-react";
+import { KeyRound, Loader2, Save, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ProfileAvatarBadge } from "@/components/user-menu";
@@ -15,7 +15,7 @@ export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
     meta: [
       { title: "Settings — Open-Connect" },
-      { name: "description", content: "Update your profile photo and display name." },
+      { name: "description", content: "Profile photo, display name, and password." },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -32,6 +32,9 @@ function SettingsPage() {
   const [displayName, setDisplayName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const { data, isLoading } = useQuery({
     queryKey: ["settings-profile"],
@@ -127,15 +130,40 @@ function SettingsPage() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not save"),
   });
 
+  const passwordMutation = useMutation({
+    mutationFn: async () => {
+      if (!data?.email) throw new Error("No email on account");
+      if (newPassword.length < 8) throw new Error("New password must be at least 8 characters");
+      if (newPassword !== confirmPassword) throw new Error("New passwords do not match");
+      if (!currentPassword) throw new Error("Enter your current password");
+
+      const { error: verifyError } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: currentPassword,
+      });
+      if (verifyError) throw new Error("Current password is incorrect");
+
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Password updated");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not update password"),
+  });
+
   return (
     <div className="mx-auto max-w-2xl px-4 py-14">
       <h1 className="text-3xl font-semibold">Settings</h1>
-      <p className="mt-2 text-sm text-muted-foreground">Profile photo and display name.</p>
+      <p className="mt-2 text-sm text-muted-foreground">Profile and account security.</p>
 
       <Card className="mt-8 shadow-panel">
         <CardHeader>
           <CardTitle className="text-base">Profile</CardTitle>
-          <CardDescription>Shown in the account menu and on your dashboard.</CardDescription>
+          <CardDescription>Photo and display name shown in the account menu.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {isLoading || !data ? (
@@ -199,6 +227,62 @@ function SettingsPage() {
               </Button>
             </>
           )}
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6 shadow-panel">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <KeyRound className="size-4" /> Change password
+          </CardTitle>
+          <CardDescription>
+            For email/password accounts. OAuth-only users should change password with their provider.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="current-password">Current password</Label>
+            <Input
+              id="current-password"
+              type="password"
+              autoComplete="current-password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="new-password">New password</Label>
+            <Input
+              id="new-password"
+              type="password"
+              autoComplete="new-password"
+              minLength={8}
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirm-password">Confirm new password</Label>
+            <Input
+              id="confirm-password"
+              type="password"
+              autoComplete="new-password"
+              minLength={8}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+            />
+          </div>
+          <Button
+            onClick={() => passwordMutation.mutate()}
+            disabled={passwordMutation.isPending || !currentPassword || !newPassword}
+          >
+            {passwordMutation.isPending ? (
+              <Loader2 className="mr-2 size-4 animate-spin" />
+            ) : (
+              <KeyRound className="mr-2 size-4" />
+            )}
+            Update password
+          </Button>
         </CardContent>
       </Card>
     </div>
