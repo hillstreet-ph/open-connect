@@ -7,21 +7,22 @@ import { useAuth } from "@/hooks/use-auth";
 import { isAppPath } from "@/lib/shell";
 import { cn } from "@/lib/utils";
 
-/** Public homepage / marketing — product discovery only */
 const publicNav = [
-  { to: "/resources" as const, label: "Resources" },
+  { to: "/resources" as const, label: "Marketplace" },
   { to: "/connections" as const, label: "Connections" },
   { to: "/models" as const, label: "Models" },
+  { to: "/integrations" as const, label: "Integrations" },
 ];
 
-/** Signed-in product workspace — no account items here (avatar menu owns those) */
 const appNav = [
   { to: "/dashboard" as const, label: "Dashboard" },
   { to: "/agents" as const, label: "Agents" },
   { to: "/toolkits" as const, label: "Toolkits" },
-  { to: "/resources" as const, label: "Resources" },
+  { to: "/resources" as const, label: "Marketplace" },
   { to: "/connections" as const, label: "Connections" },
   { to: "/models" as const, label: "Models" },
+  { to: "/secrets" as const, label: "Secrets" },
+  { to: "/integrations" as const, label: "Integrations" },
 ];
 
 export function SiteHeader() {
@@ -47,12 +48,12 @@ export function SiteHeader() {
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4">
         <BrandLogo />
 
-        <nav className="hidden items-center gap-1 md:flex" aria-label={inApp ? "App" : "Site"}>
+        <nav className="hidden items-center gap-1 lg:flex" aria-label={inApp ? "App" : "Site"}>
           {nav.map((item) => (
             <Link
               key={item.to}
               to={item.to}
-              className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              className="rounded-md px-2.5 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
               activeProps={{ className: "text-foreground font-medium" }}
             >
               {item.label}
