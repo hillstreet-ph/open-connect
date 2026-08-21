@@ -14,12 +14,19 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ConnectionsRouteImport } from './routes/connections'
 import { Route as ExploreRouteImport } from './routes/explore'
+import { Route as McpRouteImport } from './routes/mcp'
 import { Route as ModelsRouteImport } from './routes/models'
 import { Route as ResourcesRouteImport } from './routes/resources'
 import { Route as AuthenticatedAgentsRouteImport } from './routes/_authenticated/agents'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedToolkitsRouteImport } from './routes/_authenticated/toolkits'
+import { Route as OauthAuthorizeRouteImport } from './routes/oauth/authorize'
+import { Route as OauthRegisterRouteImport } from './routes/oauth/register'
+import { Route as OauthTokenRouteImport } from './routes/oauth/token'
 import { Route as V1ModelsRouteImport } from './routes/v1/models'
+import { Route as ApiV1HealthRouteImport } from './routes/api/v1/health'
+import { Route as ApiV1ResourcesRouteImport } from './routes/api/v1/resources'
 import { Route as V1ChatCompletionsRouteImport } from './routes/v1/chat/completions'
 
 const IndexRoute = IndexRouteImport.update({
@@ -46,6 +53,11 @@ const ExploreRoute = ExploreRouteImport.update({
   path: '/explore',
   getParentRoute: () => rootRouteImport,
 } as any)
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ModelsRoute = ModelsRouteImport.update({
   id: '/models',
   path: '/models',
@@ -66,14 +78,44 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedToolkitsRoute = AuthenticatedToolkitsRouteImport.update({
   id: '/toolkits',
   path: '/toolkits',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const OauthAuthorizeRoute = OauthAuthorizeRouteImport.update({
+  id: '/oauth/authorize',
+  path: '/oauth/authorize',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OauthRegisterRoute = OauthRegisterRouteImport.update({
+  id: '/oauth/register',
+  path: '/oauth/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OauthTokenRoute = OauthTokenRouteImport.update({
+  id: '/oauth/token',
+  path: '/oauth/token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const V1ModelsRoute = V1ModelsRouteImport.update({
   id: '/v1/models',
   path: '/v1/models',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1HealthRoute = ApiV1HealthRouteImport.update({
+  id: '/api/v1/health',
+  path: '/api/v1/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1ResourcesRoute = ApiV1ResourcesRouteImport.update({
+  id: '/api/v1/resources',
+  path: '/api/v1/resources',
   getParentRoute: () => rootRouteImport,
 } as any)
 const V1ChatCompletionsRoute = V1ChatCompletionsRouteImport.update({
@@ -87,12 +129,19 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/connections': typeof ConnectionsRoute
   '/explore': typeof ExploreRoute
+  '/mcp': typeof McpRoute
   '/models': typeof ModelsRoute
   '/resources': typeof ResourcesRoute
   '/agents': typeof AuthenticatedAgentsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/settings': typeof AuthenticatedSettingsRoute
   '/toolkits': typeof AuthenticatedToolkitsRoute
+  '/oauth/authorize': typeof OauthAuthorizeRoute
+  '/oauth/register': typeof OauthRegisterRoute
+  '/oauth/token': typeof OauthTokenRoute
   '/v1/models': typeof V1ModelsRoute
+  '/api/v1/health': typeof ApiV1HealthRoute
+  '/api/v1/resources': typeof ApiV1ResourcesRoute
   '/v1/chat/completions': typeof V1ChatCompletionsRoute
 }
 export interface FileRoutesByTo {
@@ -100,12 +149,19 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/connections': typeof ConnectionsRoute
   '/explore': typeof ExploreRoute
+  '/mcp': typeof McpRoute
   '/models': typeof ModelsRoute
   '/resources': typeof ResourcesRoute
   '/agents': typeof AuthenticatedAgentsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/settings': typeof AuthenticatedSettingsRoute
   '/toolkits': typeof AuthenticatedToolkitsRoute
+  '/oauth/authorize': typeof OauthAuthorizeRoute
+  '/oauth/register': typeof OauthRegisterRoute
+  '/oauth/token': typeof OauthTokenRoute
   '/v1/models': typeof V1ModelsRoute
+  '/api/v1/health': typeof ApiV1HealthRoute
+  '/api/v1/resources': typeof ApiV1ResourcesRoute
   '/v1/chat/completions': typeof V1ChatCompletionsRoute
 }
 export interface FileRoutesById {
@@ -115,12 +171,19 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/connections': typeof ConnectionsRoute
   '/explore': typeof ExploreRoute
+  '/mcp': typeof McpRoute
   '/models': typeof ModelsRoute
   '/resources': typeof ResourcesRoute
   '/_authenticated/agents': typeof AuthenticatedAgentsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/toolkits': typeof AuthenticatedToolkitsRoute
+  '/oauth/authorize': typeof OauthAuthorizeRoute
+  '/oauth/register': typeof OauthRegisterRoute
+  '/oauth/token': typeof OauthTokenRoute
   '/v1/models': typeof V1ModelsRoute
+  '/api/v1/health': typeof ApiV1HealthRoute
+  '/api/v1/resources': typeof ApiV1ResourcesRoute
   '/v1/chat/completions': typeof V1ChatCompletionsRoute
 }
 export interface FileRouteTypes {
@@ -130,12 +193,19 @@ export interface FileRouteTypes {
     | '/auth'
     | '/connections'
     | '/explore'
+    | '/mcp'
     | '/models'
     | '/resources'
     | '/agents'
     | '/dashboard'
+    | '/settings'
     | '/toolkits'
+    | '/oauth/authorize'
+    | '/oauth/register'
+    | '/oauth/token'
     | '/v1/models'
+    | '/api/v1/health'
+    | '/api/v1/resources'
     | '/v1/chat/completions'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -143,12 +213,19 @@ export interface FileRouteTypes {
     | '/auth'
     | '/connections'
     | '/explore'
+    | '/mcp'
     | '/models'
     | '/resources'
     | '/agents'
     | '/dashboard'
+    | '/settings'
     | '/toolkits'
+    | '/oauth/authorize'
+    | '/oauth/register'
+    | '/oauth/token'
     | '/v1/models'
+    | '/api/v1/health'
+    | '/api/v1/resources'
     | '/v1/chat/completions'
   id:
     | '__root__'
@@ -157,12 +234,19 @@ export interface FileRouteTypes {
     | '/auth'
     | '/connections'
     | '/explore'
+    | '/mcp'
     | '/models'
     | '/resources'
     | '/_authenticated/agents'
     | '/_authenticated/dashboard'
+    | '/_authenticated/settings'
     | '/_authenticated/toolkits'
+    | '/oauth/authorize'
+    | '/oauth/register'
+    | '/oauth/token'
     | '/v1/models'
+    | '/api/v1/health'
+    | '/api/v1/resources'
     | '/v1/chat/completions'
   fileRoutesById: FileRoutesById
 }
@@ -172,9 +256,15 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   ConnectionsRoute: typeof ConnectionsRoute
   ExploreRoute: typeof ExploreRoute
+  McpRoute: typeof McpRoute
   ModelsRoute: typeof ModelsRoute
   ResourcesRoute: typeof ResourcesRoute
+  OauthAuthorizeRoute: typeof OauthAuthorizeRoute
+  OauthRegisterRoute: typeof OauthRegisterRoute
+  OauthTokenRoute: typeof OauthTokenRoute
   V1ModelsRoute: typeof V1ModelsRoute
+  ApiV1HealthRoute: typeof ApiV1HealthRoute
+  ApiV1ResourcesRoute: typeof ApiV1ResourcesRoute
   V1ChatCompletionsRoute: typeof V1ChatCompletionsRoute
 }
 
@@ -215,6 +305,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ExploreRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/models': {
       id: '/models'
       path: '/models'
@@ -243,6 +340,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/toolkits': {
       id: '/_authenticated/toolkits'
       path: '/toolkits'
@@ -250,11 +354,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedToolkitsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/oauth/authorize': {
+      id: '/oauth/authorize'
+      path: '/oauth/authorize'
+      fullPath: '/oauth/authorize'
+      preLoaderRoute: typeof OauthAuthorizeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/oauth/register': {
+      id: '/oauth/register'
+      path: '/oauth/register'
+      fullPath: '/oauth/register'
+      preLoaderRoute: typeof OauthRegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/oauth/token': {
+      id: '/oauth/token'
+      path: '/oauth/token'
+      fullPath: '/oauth/token'
+      preLoaderRoute: typeof OauthTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/v1/models': {
       id: '/v1/models'
       path: '/v1/models'
       fullPath: '/v1/models'
       preLoaderRoute: typeof V1ModelsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/health': {
+      id: '/api/v1/health'
+      path: '/api/v1/health'
+      fullPath: '/api/v1/health'
+      preLoaderRoute: typeof ApiV1HealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/resources': {
+      id: '/api/v1/resources'
+      path: '/api/v1/resources'
+      fullPath: '/api/v1/resources'
+      preLoaderRoute: typeof ApiV1ResourcesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/v1/chat/completions': {
@@ -270,12 +409,14 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAgentsRoute: typeof AuthenticatedAgentsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedToolkitsRoute: typeof AuthenticatedToolkitsRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAgentsRoute: AuthenticatedAgentsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedToolkitsRoute: AuthenticatedToolkitsRoute,
 }
 
@@ -288,9 +429,15 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   ConnectionsRoute: ConnectionsRoute,
   ExploreRoute: ExploreRoute,
+  McpRoute: McpRoute,
   ModelsRoute: ModelsRoute,
   ResourcesRoute: ResourcesRoute,
+  OauthAuthorizeRoute: OauthAuthorizeRoute,
+  OauthRegisterRoute: OauthRegisterRoute,
+  OauthTokenRoute: OauthTokenRoute,
   V1ModelsRoute: V1ModelsRoute,
+  ApiV1HealthRoute: ApiV1HealthRoute,
+  ApiV1ResourcesRoute: ApiV1ResourcesRoute,
   V1ChatCompletionsRoute: V1ChatCompletionsRoute,
 }
 export const routeTree = rootRouteImport
