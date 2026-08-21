@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Save, Upload } from "lucide-react";
+import { Loader2, Save, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ProfileAvatarBadge } from "@/components/user-menu";
@@ -24,6 +24,7 @@ export const Route = createFileRoute("/_authenticated/settings")({
 
 const AVATAR_BUCKET = "avatars";
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
+const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 function SettingsPage() {
   const queryClient = useQueryClient();
@@ -64,8 +65,8 @@ function SettingsPage() {
 
   async function onPickPhoto(file: File | null) {
     if (!file || !data?.userId) return;
-    if (!file.type.startsWith("image/")) {
-      toast.error("Choose an image file");
+    if (!ALLOWED_TYPES.has(file.type)) {
+      toast.error("Use JPEG, PNG, or WebP");
       return;
     }
     if (file.size > MAX_AVATAR_BYTES) {
@@ -75,7 +76,7 @@ function SettingsPage() {
 
     setUploading(true);
     try {
-      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
       const path = `${data.userId}/avatar.${ext}`;
       const { error: upError } = await supabase.storage.from(AVATAR_BUCKET).upload(path, file, {
         contentType: file.type,
@@ -84,8 +85,7 @@ function SettingsPage() {
       if (upError) throw upError;
 
       const { data: pub } = supabase.storage.from(AVATAR_BUCKET).getPublicUrl(path);
-      const url = `${pub.publicUrl}?t=${Date.now()}`;
-      setAvatarUrl(url);
+      setAvatarUrl(`${pub.publicUrl}?t=${Date.now()}`);
       toast.success("Photo uploaded — click Save changes");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Upload failed");
@@ -93,6 +93,11 @@ function SettingsPage() {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
     }
+  }
+
+  function removePhoto() {
+    setAvatarUrl("");
+    toast.message("Photo cleared — click Save changes to apply");
   }
 
   const saveMutation = useMutation({
@@ -109,7 +114,7 @@ function SettingsPage() {
       await supabase.auth.updateUser({
         data: {
           display_name: displayName.trim() || undefined,
-          avatar_url: avatarUrl.trim() || undefined,
+          avatar_url: avatarUrl.trim() || null,
         },
       });
     },
@@ -145,7 +150,7 @@ function SettingsPage() {
                     <input
                       ref={fileRef}
                       type="file"
-                      accept="image/png,image/jpeg,image/webp,image/gif"
+                      accept="image/png,image/jpeg,image/webp"
                       className="hidden"
                       onChange={(e) => void onPickPhoto(e.target.files?.[0] ?? null)}
                     />
@@ -161,8 +166,14 @@ function SettingsPage() {
                       ) : (
                         <Upload className="mr-2 size-4" />
                       )}
-                      Upload photo
+                      {avatarUrl ? "Change photo" : "Upload photo"}
                     </Button>
+                    {avatarUrl ? (
+                      <Button type="button" variant="ghost" size="sm" onClick={removePhoto}>
+                        <Trash2 className="mr-2 size-4" />
+                        Remove photo
+                      </Button>
+                    ) : null}
                   </div>
                 </div>
               </div>
