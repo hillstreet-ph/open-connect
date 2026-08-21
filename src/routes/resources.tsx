@@ -21,7 +21,7 @@ export const Route = createFileRoute("/resources")({
       {
         name: "description",
         content:
-          "Browse and download skills, MCP servers, tools, plugins, agents, prompts and guides.",
+          "Browse skills, MCP servers, tools, plugins, agents, prompts and guides. Download packages when signed in.",
       },
       { property: "og:title", content: "Agent Resources — Open-Connect" },
     ],
@@ -69,11 +69,7 @@ function ResourcesPage() {
       toast.success("Download started");
     },
     onError: (e) =>
-      toast.error(
-        e instanceof Error
-          ? e.message
-          : "Sign in required to download packages",
-      ),
+      toast.error(e instanceof Error ? e.message : "Sign in required to download packages"),
   });
 
   const results = useMemo(() => {
@@ -95,16 +91,26 @@ function ResourcesPage() {
         <div>
           <h1 className="text-3xl font-semibold sm:text-4xl">Agent Resources</h1>
           <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
-            Skills, MCP servers, tools, plugins, agents, prompts and guides — browse, download packages, or
-            upload your own from the dashboard.
+            Public catalog of skills, MCP servers, tools, plugins, agents, prompts and guides.
+            Download is available on each package when you are signed in. Upload is only available
+            inside the app dashboard after login.
           </p>
         </div>
-        <Button asChild variant="outline">
-          <Link to={user ? "/dashboard" : "/auth"}>
-            <Upload className="mr-2 size-4" />
-            {user ? "Upload package" : "Sign in to upload"}
-          </Link>
-        </Button>
+        {user ? (
+          <Button asChild>
+            <Link to="/dashboard">
+              <Upload className="mr-2 size-4" />
+              Upload package
+            </Link>
+          </Button>
+        ) : (
+          <Button asChild variant="outline">
+            <Link to="/auth">
+              <Upload className="mr-2 size-4" />
+              Sign in to upload
+            </Link>
+          </Button>
+        )}
       </div>
 
       <div className="mt-8 flex flex-col gap-4">
@@ -113,7 +119,7 @@ function ResourcesPage() {
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search resources…"
+            placeholder="Search skills, agents, plugins…"
             className="pl-9"
             aria-label="Search resources"
           />
@@ -122,6 +128,7 @@ function ResourcesPage() {
           {filters.map((filter) => (
             <button
               key={filter.value}
+              type="button"
               onClick={() => setType(filter.value)}
               className={cn(
                 "rounded-full border border-border/70 px-3 py-1.5 text-xs transition-colors",
@@ -144,7 +151,7 @@ function ResourcesPage() {
           : results.map((item) => (
               <Card key={item.id} className="shadow-panel">
                 <CardHeader>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Badge variant="secondary" className="uppercase">
                       {item.resource_type}
                     </Badge>
@@ -184,7 +191,9 @@ function ResourcesPage() {
                         <Link to="/auth">Sign in to download</Link>
                       </Button>
                     )
-                  ) : null}
+                  ) : (
+                    <span className="text-muted-foreground">Catalog entry</span>
+                  )}
                 </CardContent>
               </Card>
             ))}
