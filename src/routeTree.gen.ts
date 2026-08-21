@@ -18,6 +18,7 @@ import { Route as ModelsRouteImport } from './routes/models'
 import { Route as ResourcesRouteImport } from './routes/resources'
 import { Route as AuthenticatedAgentsRouteImport } from './routes/_authenticated/agents'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedToolkitsRouteImport } from './routes/_authenticated/toolkits'
 import { Route as V1ModelsRouteImport } from './routes/v1/models'
 import { Route as V1ChatCompletionsRouteImport } from './routes/v1/chat/completions'
@@ -66,6 +67,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedToolkitsRoute = AuthenticatedToolkitsRouteImport.update({
   id: '/toolkits',
   path: '/toolkits',
@@ -91,6 +97,7 @@ export interface FileRoutesByFullPath {
   '/resources': typeof ResourcesRoute
   '/agents': typeof AuthenticatedAgentsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/settings': typeof AuthenticatedSettingsRoute
   '/toolkits': typeof AuthenticatedToolkitsRoute
   '/v1/models': typeof V1ModelsRoute
   '/v1/chat/completions': typeof V1ChatCompletionsRoute
@@ -104,6 +111,7 @@ export interface FileRoutesByTo {
   '/resources': typeof ResourcesRoute
   '/agents': typeof AuthenticatedAgentsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/settings': typeof AuthenticatedSettingsRoute
   '/toolkits': typeof AuthenticatedToolkitsRoute
   '/v1/models': typeof V1ModelsRoute
   '/v1/chat/completions': typeof V1ChatCompletionsRoute
@@ -119,6 +127,7 @@ export interface FileRoutesById {
   '/resources': typeof ResourcesRoute
   '/_authenticated/agents': typeof AuthenticatedAgentsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/toolkits': typeof AuthenticatedToolkitsRoute
   '/v1/models': typeof V1ModelsRoute
   '/v1/chat/completions': typeof V1ChatCompletionsRoute
@@ -134,6 +143,7 @@ export interface FileRouteTypes {
     | '/resources'
     | '/agents'
     | '/dashboard'
+    | '/settings'
     | '/toolkits'
     | '/v1/models'
     | '/v1/chat/completions'
@@ -147,6 +157,7 @@ export interface FileRouteTypes {
     | '/resources'
     | '/agents'
     | '/dashboard'
+    | '/settings'
     | '/toolkits'
     | '/v1/models'
     | '/v1/chat/completions'
@@ -161,6 +172,7 @@ export interface FileRouteTypes {
     | '/resources'
     | '/_authenticated/agents'
     | '/_authenticated/dashboard'
+    | '/_authenticated/settings'
     | '/_authenticated/toolkits'
     | '/v1/models'
     | '/v1/chat/completions'
@@ -243,6 +255,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/toolkits': {
       id: '/_authenticated/toolkits'
       path: '/toolkits'
@@ -270,12 +289,14 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAgentsRoute: typeof AuthenticatedAgentsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedToolkitsRoute: typeof AuthenticatedToolkitsRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAgentsRoute: AuthenticatedAgentsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedToolkitsRoute: AuthenticatedToolkitsRoute,
 }
 
