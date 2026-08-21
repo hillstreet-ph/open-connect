@@ -6,44 +6,56 @@ export function SiteFooter() {
 
   return (
     <footer className="border-t border-border/70 bg-surface/40">
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:grid-cols-2 lg:grid-cols-4">
-        <div>
+      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="sm:col-span-2 lg:col-span-1">
           <p className="font-display text-sm font-semibold">Open-Connect</p>
           <p className="mt-2 text-sm text-muted-foreground">
-            One account, one key, one gateway for agent resources, app connections and AI models.
+            Resources · Connections · Models — one account, one key, one gateway.
           </p>
         </div>
+
         <div>
-          <p className="text-sm font-medium">Platform</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Discover
+          </p>
           <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
             <li>
               <Link to="/resources" className="hover:text-foreground">
-                Agent resources
+                Marketplace
               </Link>
             </li>
             <li>
               <Link to="/connections" className="hover:text-foreground">
-                Connect apps
+                Connections
               </Link>
             </li>
             <li>
               <Link to="/models" className="hover:text-foreground">
-                AI models
+                Models
               </Link>
             </li>
           </ul>
         </div>
+
         <div>
-          <p className="text-sm font-medium">Interfaces</p>
-          <ul className="mt-3 space-y-2 font-mono text-xs text-muted-foreground">
-            <li>/mcp</li>
-            <li>/api/v1</li>
-            <li>/oauth</li>
-            <li>/v1</li>
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Connect
+          </p>
+          <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+            <li>
+              <Link to="/integrations" className="hover:text-foreground">
+                Integrations
+              </Link>
+            </li>
+            <li className="font-mono text-xs">/mcp</li>
+            <li className="font-mono text-xs">/v1 · /api/v1 · /oauth</li>
           </ul>
         </div>
+
         <div>
-          <p className="text-sm font-medium">Account</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Account
+          </p>
           <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
             {user ? (
               <>
@@ -53,23 +65,35 @@ export function SiteFooter() {
                   </Link>
                 </li>
                 <li>
+                  <Link to="/api-keys" className="hover:text-foreground">
+                    API Keys
+                  </Link>
+                </li>
+                <li>
                   <Link to="/settings" className="hover:text-foreground">
                     Settings
                   </Link>
                 </li>
               </>
             ) : (
-              <li>
-                <Link to="/auth" className="hover:text-foreground">
-                  Sign in
-                </Link>
-              </li>
+              <>
+                <li>
+                  <Link to="/auth" className="hover:text-foreground">
+                    Sign in
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/auth" search={{ mode: "signup" }} className="hover:text-foreground">
+                    Create account
+                  </Link>
+                </li>
+              </>
             )}
           </ul>
         </div>
       </div>
-      <div className="border-t border-border/70 px-4 py-6 text-center text-xs text-muted-foreground">
-        © {new Date().getFullYear()} Open-Connect · open-connect.site · Owned & operated independently
+      <div className="border-t border-border/70 px-4 py-5 text-center text-xs text-muted-foreground">
+        © {new Date().getFullYear()} Open-Connect · open-connect.site
       </div>
     </footer>
   );
