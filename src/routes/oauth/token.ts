@@ -1,5 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { parseAuthCode, verifyPkce } from "@/lib/oauth.server";
+import {
+  isValidCodeVerifier,
+  isValidPkceMethod,
+  parseAuthCode,
+  verifyPkce,
+} from "@/lib/oauth.server";
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -39,13 +44,13 @@ export const Route = createFileRoute("/oauth/token")({
           }
         }
 
-        const grant = params['grant_type'];
+        const grant = params["grant_type"];
         if (grant !== "authorization_code" && grant !== "refresh_token") {
           return json({ error: "unsupported_grant_type" }, 400);
         }
 
         if (grant === "refresh_token") {
-          const refresh = params['refresh_token'];
+          const refresh = params["refresh_token"];
           if (!refresh?.startsWith("oc_live_")) {
             return json({ error: "invalid_grant" }, 400);
           }
@@ -58,22 +63,64 @@ export const Route = createFileRoute("/oauth/token")({
           });
         }
 
-        const code = params['code'];
-        const verifier = params['code_verifier'];
-        const redirectUri = params['redirect_uri'];
+        const code = params["code"];
+        const verifier = params["code_verifier"];
+        const redirectUri = params["redirect_uri"];
+
         if (!code || !verifier) {
-          return json({ error: "invalid_request", error_description: "code and code_verifier required" }, 400);
+          return json(
+            {
+              error: "invalid_request",
+              error_description: "code and code_verifier required (PKCE S256)",
+            },
+            400,
+          );
+        }
+
+        if (!isValidCodeVerifier(verifier)) {
+          return json(
+            {
+              error: "invalid_request",
+              error_description:
+                "code_verifier must be 43–128 unreserved characters (RFC 7636)",
+            },
+            400,
+          );
         }
 
         const payload = parseAuthCode(code);
         if (!payload) {
-          return json({ error: "invalid_grant", error_description: "Invalid or expired code" }, 400);
+          return json(
+            { error: "invalid_grant", error_description: "Invalid or expired code" },
+            400,
+          );
         }
+
+        if (!isValidPkceMethod(payload.code_challenge_method)) {
+          return json(
+            {
+              error: "invalid_grant",
+              error_description: "Authorization code was not issued with PKCE S256",
+            },
+            400,
+          );
+        }
+
         if (redirectUri && payload.redirect_uri && redirectUri !== payload.redirect_uri) {
-          return json({ error: "invalid_grant", error_description: "redirect_uri mismatch" }, 400);
+          return json(
+            { error: "invalid_grant", error_description: "redirect_uri mismatch" },
+            400,
+          );
         }
-        if (!verifyPkce(verifier, payload.code_challenge, payload.code_challenge_method || "S256")) {
-          return json({ error: "invalid_grant", error_description: "PKCE verification failed" }, 400);
+
+        if (!verifyPkce(verifier, payload.code_challenge, payload.code_challenge_method)) {
+          return json(
+            {
+              error: "invalid_grant",
+              error_description: "PKCE S256 verification failed",
+            },
+            400,
+          );
         }
 
         return json({
