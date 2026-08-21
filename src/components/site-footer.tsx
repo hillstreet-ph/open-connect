@@ -1,6 +1,9 @@
 import { Link } from "@tanstack/react-router";
+import { useAuth } from "@/hooks/use-auth";
 
 export function SiteFooter() {
+  const { user } = useAuth();
+
   return (
     <footer className="border-t border-border/70 bg-surface/40">
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:grid-cols-2 lg:grid-cols-4">
@@ -42,21 +45,31 @@ export function SiteFooter() {
         <div>
           <p className="text-sm font-medium">Account</p>
           <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-            <li>
-              <Link to="/auth" className="hover:text-foreground">
-                Sign in
-              </Link>
-            </li>
-            <li>
-              <Link to="/dashboard" className="hover:text-foreground">
-                Dashboard
-              </Link>
-            </li>
+            {user ? (
+              <>
+                <li>
+                  <Link to="/dashboard" className="hover:text-foreground">
+                    Dashboard
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/settings" className="hover:text-foreground">
+                    Settings
+                  </Link>
+                </li>
+              </>
+            ) : (
+              <li>
+                <Link to="/auth" className="hover:text-foreground">
+                  Sign in
+                </Link>
+              </li>
+            )}
           </ul>
         </div>
       </div>
       <div className="border-t border-border/70 px-4 py-6 text-center text-xs text-muted-foreground">
-        © {new Date().getFullYear()} Open-Connect. Unified AI agent integration platform.
+        © {new Date().getFullYear()} Open-Connect · open-connect.site · Owned & operated independently
       </div>
     </footer>
   );
