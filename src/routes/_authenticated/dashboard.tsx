@@ -4,6 +4,7 @@ import { Boxes, Cpu, KeyRound, LogOut, Plug, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ApiKeysCard } from "@/components/api-keys-card";
+import { ResourceLibraryCard } from "@/components/resource-library-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -155,6 +156,7 @@ function Dashboard() {
           </Card>
         ))}
         <ApiKeysCard />
+        <ResourceLibraryCard />
       </div>
 
       <Card className="mt-10 bg-pillar">
