@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { json, resolveUpstream } from "@/lib/gateway.server";
+import { kvHealth } from "@/lib/kv.server";
 
 function present(name: string): boolean {
   const v = process.env[name];
@@ -11,6 +12,7 @@ export const Route = createFileRoute("/api/v1/health")({
     handlers: {
       GET: async () => {
         const upstream = resolveUpstream();
+        const kv = await kvHealth();
         return json({
           status: "ok",
           service: "open-connect",
@@ -22,6 +24,11 @@ export const Route = createFileRoute("/api/v1/health")({
             oauth: "/oauth",
           },
           model_upstream: upstream?.name ?? null,
+          kv: {
+            binding: "OC_KV",
+            bound: kv.bound,
+            writable: kv.writable,
+          },
           env: {
             SUPABASE_URL: present("SUPABASE_URL"),
             SUPABASE_PUBLISHABLE_KEY: present("SUPABASE_PUBLISHABLE_KEY"),
