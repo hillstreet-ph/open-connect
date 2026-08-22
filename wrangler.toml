@@ -1,0 +1,26 @@
+# Open-Connect — Cloudflare Pages
+# Project: open-connect-app
+# Production branch: main → https://open-connect.site
+#
+# Dashboard (Workers & Pages → open-connect-app → Settings → Builds):
+#   Framework preset: None / Vite
+#   Build command:    npm run build
+#   Build output dir: dist
+#   Root directory:   / (empty)
+#   Production branch: main
+#   Node version:     22 (or 20)
+#
+# Secrets (Production env — encrypted):
+#   SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, SUPABASE_SERVICE_ROLE_KEY
+#   LITELLM_BASE_URL, LITELLM_MASTER_KEY
+# Optional:
+#   OAUTH_SIGNING_SECRET, OAUTH_MTLS_MODE=optional
+
+name = "open-connect-app"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-08-01"
+compatibility_flags = [ "nodejs_compat" ]
+
+[vars]
+# Non-secret defaults only. Secrets must be set in the Cloudflare dashboard.
+OAUTH_MTLS_MODE = "optional"
