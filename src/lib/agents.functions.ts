@@ -46,13 +46,19 @@ export const connectAgent = createServerFn({ method: "POST" })
         name: `${data.name} (agent)`,
         key_prefix: key.prefix,
         key_hash: key.hash,
-        scopes: ["models:read", "models:invoke", "mcp:call"],
+        scopes: [
+          "mcp:connect",
+          "resources:read",
+          "connections:read",
+          "connections:invoke",
+          "models:read",
+          "models:invoke",
+        ],
       })
       .select("id")
       .single();
     if (keyError) throw new Error(keyError.message);
 
-    // Probe the MCP endpoint so the wizard reports a real state.
     let state = "ready";
     try {
       const probe = await fetch(mcpUrl, {
