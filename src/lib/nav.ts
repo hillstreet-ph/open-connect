@@ -1,5 +1,6 @@
 /**
  * Site structure — public marketing vs signed-in workspace.
+ * Public: LobeHub-style discovery. Workspace: Studio, orgs, roles.
  */
 
 export type NavLink = {
@@ -16,20 +17,21 @@ export type NavCategory = {
 
 export const publicCategories: NavCategory[] = [
   {
-    id: "discover",
-    label: "Discover",
+    id: "products",
+    label: "Products",
     items: [
-      { to: "/resources", label: "Marketplace", description: "Skills, tools, agents, prompts" },
-      { to: "/connections", label: "Connections", description: "Apps and OAuth capabilities" },
-      { to: "/models", label: "Models", description: "Multi-provider AI gateway" },
+      { to: "/resources", label: "Marketplace", description: "Agents, MCP, skills" },
+      { to: "/connections", label: "Connections", description: "Slack, GitHub, apps" },
+      { to: "/models", label: "Models", description: "OpenAI-compatible /v1" },
+      { to: "/integrations", label: "Open WebUI & clients", description: "ChatGPT, Claude, Grok" },
     ],
   },
   {
-    id: "connect",
-    label: "Connect",
+    id: "workspace",
+    label: "Workspace",
     items: [
-      { to: "/integrations", label: "Integrations", description: "ChatGPT, Claude, Grok, Open WebUI" },
-      { to: "/auth", label: "Sign in", description: "Login to download and manage" },
+      { to: "/auth", label: "Sign in", description: "Open your hub" },
+      { to: "/dashboard", label: "Dashboard", description: "After login" },
     ],
   },
 ];
@@ -39,30 +41,30 @@ export const appCategories: NavCategory[] = [
     id: "workspace",
     label: "Workspace",
     items: [
-      { to: "/dashboard", label: "Dashboard", description: "Overview, uploads, role" },
-      { to: "/studio", label: "Studio", description: "Create agents, skills, MCP" },
+      { to: "/dashboard", label: "Dashboard", description: "Hub overview" },
+      { to: "/studio", label: "Studio", description: "Create agents & skills" },
       { to: "/orgs", label: "Organizations", description: "Orgs and projects" },
       { to: "/agents", label: "Agents", description: "MCP agents and keys" },
-      { to: "/guides", label: "Guides", description: "Setup and how-to docs" },
+      { to: "/guides", label: "Professional setup", description: "E2E guides" },
     ],
   },
   {
     id: "catalog",
     label: "Catalog",
     items: [
-      { to: "/resources", label: "Marketplace", description: "Download skills and packages" },
+      { to: "/resources", label: "Marketplace", description: "Download skills" },
       { to: "/connections", label: "Connections", description: "Link apps" },
       { to: "/models", label: "Models", description: "Gateway models" },
-      { to: "/toolkits", label: "Toolkits", description: "Bundled capabilities" },
+      { to: "/toolkits", label: "Toolkits", description: "Developer+" },
     ],
   },
   {
     id: "security",
     label: "Security",
     items: [
-      { to: "/api-keys", label: "API Keys", description: "Scoped oc_live_ keys" },
+      { to: "/api-keys", label: "API Keys", description: "oc_live_ scopes" },
       { to: "/secrets", label: "Secrets", description: "Credential vault" },
-      { to: "/settings", label: "Settings", description: "Profile, password, role" },
+      { to: "/settings", label: "Settings", description: "Role & profile" },
     ],
   },
 ];
@@ -82,7 +84,7 @@ export function flatAppNav(): NavLink[] {
     { to: "/studio", label: "Studio" },
     { to: "/orgs", label: "Orgs" },
     { to: "/resources", label: "Marketplace" },
-    { to: "/connections", label: "Connections" },
+    { to: "/guides", label: "Setup" },
   ];
 }
 
