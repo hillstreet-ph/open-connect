@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
+import { BrandLogo } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,19 +12,23 @@ export const Route = createFileRoute("/models")({
       {
         name: "description",
         content:
-          "Access multiple AI providers through one OpenAI-compatible gateway with stable model aliases, routing and fallbacks.",
-      },
-      { property: "og:title", content: "AI Models — Open-Connect" },
-      {
-        property: "og:description",
-        content: "One base URL, one key, many providers — with routing, fallbacks and usage.",
+          "Access multiple AI providers through one OpenAI-compatible gateway with stable model aliases.",
       },
     ],
   }),
   component: ModelsPage,
 });
 
-const providers = ["OpenAI", "Anthropic", "Google", "Azure", "OpenRouter", "Groq", "Ollama"];
+const providers = [
+  { id: "openai", name: "OpenAI" },
+  { id: "anthropic", name: "Anthropic" },
+  { id: "google", name: "Google" },
+  { id: "azure", name: "Azure" },
+  { id: "openrouter", name: "OpenRouter" },
+  { id: "groq", name: "Groq" },
+  { id: "ollama", name: "Ollama" },
+  { id: "xai", name: "xAI / Grok" },
+];
 
 const aliases = [
   { alias: "open-connect/fast", body: "Low latency, low cost. High-volume classification and chat." },
@@ -38,8 +43,8 @@ function ModelsPage() {
     <div className="mx-auto max-w-6xl px-4 py-16">
       <h1 className="text-3xl font-semibold sm:text-4xl">AI Models</h1>
       <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
-        One OpenAI-compatible endpoint in front of many providers. Change infrastructure without
-        reconfiguring a single connected agent.
+        Connect any provider behind one OpenAI-compatible endpoint. Change infrastructure without
+        reconfiguring agents.
       </p>
 
       <Card className="mt-10 shadow-panel">
@@ -70,22 +75,30 @@ function ModelsPage() {
       </div>
 
       <h2 className="mt-14 text-xl font-semibold">Providers</h2>
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="mt-4 flex flex-wrap gap-3">
         {providers.map((provider) => (
-          <Badge key={provider} variant="secondary">
-            {provider}
-          </Badge>
+          <div
+            key={provider.id}
+            className="flex items-center gap-2 rounded-full border border-border/70 bg-card px-3 py-1.5"
+          >
+            <BrandLogo provider={provider.id} name={provider.name} size="sm" />
+            <span className="text-sm">{provider.name}</span>
+          </div>
         ))}
       </div>
       <p className="mt-3 text-xs text-muted-foreground">
-        Only providers you configure are exposed to your keys.
+        Upstream today: OpenRouter (health: model_upstream). Only configured providers are exposed to
+        your keys.
       </p>
 
-      <div className="mt-12">
+      <div className="mt-12 flex flex-wrap gap-2">
         <Button asChild>
           <Link to="/auth" search={{ mode: "signup" }}>
             Get a model key <ArrowRight className="ml-1 size-4" />
           </Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link to="/studio">Create in Studio</Link>
         </Button>
       </div>
     </div>
