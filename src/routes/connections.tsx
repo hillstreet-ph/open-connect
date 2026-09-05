@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { connectApp, disconnectApp, listAppConnections, listConnectionCatalog } from "@/lib/connections.functions";
 import { useAuth } from "@/hooks/use-auth";
 import { connectionCategories } from "@/lib/nav";
+import { BrandLogo } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -95,7 +96,8 @@ function ConnectionsPage() {
       </Badge>
       <h1 className="text-2xl font-semibold sm:text-4xl">Connect apps</h1>
       <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-        One connect per app. Open-Connect holds the capability; agents never see provider secrets.
+        Official app marks. One connect per app — Open-Connect holds the capability; agents never see
+        provider secrets.
       </p>
 
       <div className="mt-8 space-y-3">
@@ -133,12 +135,15 @@ function ConnectionsPage() {
           </h2>
           <div className="grid gap-2 sm:grid-cols-2">
             {mine.data?.map((c) => (
-              <Card key={c.id} className="flex flex-row items-center justify-between p-4">
-                <div>
-                  <p className="font-medium">{c.display_name}</p>
-                  <Badge variant="outline" className="mt-1 text-xs">
-                    {c.status}
-                  </Badge>
+              <Card key={c.id} className="flex flex-row items-center justify-between gap-3 p-4">
+                <div className="flex min-w-0 items-center gap-3">
+                  <BrandLogo provider={c.provider} name={c.display_name} size="sm" />
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{c.display_name}</p>
+                    <Badge variant="outline" className="mt-1 text-xs">
+                      {c.status}
+                    </Badge>
+                  </div>
                 </div>
                 <Button size="sm" variant="ghost" onClick={() => disconnectMutation.mutate(c.id)}>
                   Disconnect
@@ -160,9 +165,12 @@ function ConnectionsPage() {
                 const connected = connectedProviders.has(app.provider);
                 return (
                   <Card key={app.provider} className="flex flex-row items-center justify-between gap-3 p-4">
-                    <div className="min-w-0">
-                      <p className="truncate font-semibold">{app.display_name}</p>
-                      <p className="text-xs text-muted-foreground">{app.category}</p>
+                    <div className="flex min-w-0 items-center gap-3">
+                      <BrandLogo provider={app.provider} name={app.display_name} />
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold">{app.display_name}</p>
+                        <p className="text-xs text-muted-foreground">{app.category}</p>
+                      </div>
                     </div>
                     {!user ? (
                       <Button asChild size="sm" variant="outline" className="shrink-0">
