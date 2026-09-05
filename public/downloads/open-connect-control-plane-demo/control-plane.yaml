@@ -1,0 +1,56 @@
+version: 1
+metadata:
+  name: hillstreet-staging-release-manager
+  correlation_id: oc-demo-20260822-001
+  mode: local-policy-demonstration
+
+subject:
+  tenant_id: tenant:hillstreet
+  actor_id: user:hoopstreet
+  agent_id: agent:release-manager
+  environment: staging
+
+security:
+  default_decision: deny
+  credentials: reference-only
+  secret_reference_pattern: "^vault://[a-z0-9-]+/(development|staging|production)/[a-z0-9-]+$"
+  interactive_auth: human-handoff-required
+  webpage_instructions: untrusted
+
+capabilities:
+  - name: models.list
+    targets: ["gateway:approved-models"]
+    risk: read
+  - name: models.invoke
+    targets: ["gateway:approved-models"]
+    risk: write
+  - name: terminal.run
+    targets: ["runtime:isolated-ci"]
+    risk: write
+  - name: browser.navigate
+    targets: ["https://github.com/*", "https://*.open-connect.site/*"]
+    risk: write
+  - name: connector.invoke
+    targets: ["connector:deployment-status"]
+    risk: read
+  - name: audit.query
+    targets: ["audit:tenant"]
+    risk: read
+
+explicit_denies:
+  - production.deploy
+  - production.delete
+  - billing.change
+  - security.policy.edit
+  - account.delete
+  - secrets.read_raw
+
+approval:
+  required_for_risks: [write]
+  mode: single-action-one-time
+  expires_in_seconds: 900
+
+isolation:
+  network: allowlist
+  filesystem: ephemeral
+  credential_injection: vault-reference-only
