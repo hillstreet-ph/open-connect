@@ -13,6 +13,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { ProfileAvatarBadge } from "@/components/user-menu";
 import { ResourceLibraryCard } from "@/components/resource-library-card";
+import { useRoles } from "@/hooks/use-roles";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -21,7 +23,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [
       { title: "Dashboard — Open-Connect" },
-      { name: "description", content: "Workspace overview and package uploads." },
+      { name: "description", content: "Workspace overview, uploads, and account role." },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -34,13 +36,13 @@ const quickLinks = [
     items: [
       { to: "/api-keys" as const, icon: KeyRound, title: "API Keys", body: "Create oc_live_ keys for agents" },
       { to: "/agents" as const, icon: Bot, title: "Agents", body: "Connect MCP clients" },
-      { to: "/integrations" as const, icon: BookOpen, title: "Integrations", body: "ChatGPT, Grok, Telegram" },
+      { to: "/guides" as const, icon: BookOpen, title: "Guides", body: "Setup docs for MCP and OAuth" },
     ],
   },
   {
     category: "Catalog",
     items: [
-      { to: "/resources" as const, icon: Boxes, title: "Marketplace", body: "Skills, tools, plugins" },
+      { to: "/resources" as const, icon: Boxes, title: "Marketplace", body: "Download skills and packages" },
       { to: "/connections" as const, icon: Plug, title: "Connections", body: "Link apps" },
       { to: "/models" as const, icon: Sparkles, title: "Models", body: "Multi-provider gateway" },
     ],
@@ -50,12 +52,13 @@ const quickLinks = [
     items: [
       { to: "/secrets" as const, icon: Lock, title: "Secrets", body: "Credential vault" },
       { to: "/toolkits" as const, icon: Layers, title: "Toolkits", body: "Bundle capabilities" },
-      { to: "/settings" as const, icon: KeyRound, title: "Settings", body: "Profile and password" },
+      { to: "/settings" as const, icon: KeyRound, title: "Settings", body: "Profile, password, role" },
     ],
   },
 ];
 
 function Dashboard() {
+  const { primary, loading: rolesLoading } = useRoles();
   const { data: profile, isLoading } = useQuery({
     queryKey: ["profile-dashboard"],
     queryFn: async () => {
@@ -110,11 +113,18 @@ function Dashboard() {
           <Skeleton className="size-10 shrink-0 rounded-full" />
         )}
         <div className="min-w-0">
-          <h1 className="text-2xl font-semibold sm:text-3xl">
-            {isLoading
-              ? "Dashboard"
-              : `Welcome${profile?.displayName ? `, ${profile.displayName}` : ""}`}
-          </h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl font-semibold sm:text-3xl">
+              {isLoading
+                ? "Dashboard"
+                : `Welcome${profile?.displayName ? `, ${profile.displayName}` : ""}`}
+            </h1>
+            {!rolesLoading ? (
+              <Badge variant="secondary" className="text-[10px] uppercase">
+                {primary}
+              </Badge>
+            ) : null}
+          </div>
           {isLoading ? (
             <Skeleton className="mt-2 h-4 w-40" />
           ) : (
@@ -171,7 +181,7 @@ function Dashboard() {
         Upload packages
       </h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        Publish skills, tools, and agents to the marketplace. Downloads require sign-in.
+        Publish skills, tools, and agents to the marketplace. Only signed-in users can download.
       </p>
       <div className="mt-4 max-w-xl">
         <ResourceLibraryCard />
@@ -192,9 +202,12 @@ function Dashboard() {
           <span>API · https://open-connect.site/api/v1</span>
           <span>OAuth · https://open-connect.site/oauth</span>
         </CardContent>
-        <CardContent className="px-4 pb-4 sm:px-6">
+        <CardContent className="flex flex-wrap gap-2 px-4 pb-4 sm:px-6">
           <Button asChild size="sm" variant="outline">
             <Link to="/api-keys">Manage API Keys</Link>
+          </Button>
+          <Button asChild size="sm" variant="outline">
+            <Link to="/guides">Setup guides</Link>
           </Button>
         </CardContent>
       </Card>

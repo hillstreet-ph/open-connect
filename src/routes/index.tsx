@@ -12,7 +12,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "One gateway for agent resources, app connections and AI models. One account, one API key, one MCP URL.",
+          "Public marketplace and one gateway for agents. Sign in to download packages, manage keys, and use the dashboard.",
       },
       { property: "og:title", content: "Open-Connect — Connect your AI to everything" },
     ],
@@ -25,7 +25,7 @@ const pillars = [
     icon: Boxes,
     category: "Resources",
     title: "Marketplace",
-    body: "Skills, MCP servers, tools, plugins, agents, prompts and guides — browse and download.",
+    body: "Browse skills, MCP, tools, plugins, agents and prompts. Sign in to download packages.",
     to: "/resources" as const,
   },
   {
@@ -67,7 +67,7 @@ function Home() {
             <span className="text-gradient">Connect your AI to everything.</span>
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-sm text-muted-foreground sm:text-base">
-            One account, one key, one MCP URL — for ChatGPT, Claude, Grok, Hermes and custom agents.
+            Public site for discovery. Client workspace for downloads, uploads, keys, and agents.
           </p>
           <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
             {loading ? null : signedIn ? (
@@ -85,11 +85,14 @@ function Home() {
               <>
                 <Button asChild size="lg" className="w-full sm:w-auto">
                   <Link to="/auth" search={{ mode: "signup" }}>
-                    Get started <ArrowRight className="ml-1 size-4" />
+                    Create account <ArrowRight className="ml-1 size-4" />
                   </Link>
                 </Button>
                 <Button asChild size="lg" variant="outline" className="w-full sm:w-auto">
-                  <Link to="/resources">Explore marketplace</Link>
+                  <Link to="/auth">Sign in</Link>
+                </Button>
+                <Button asChild size="lg" variant="ghost" className="w-full sm:w-auto">
+                  <Link to="/resources">Browse marketplace</Link>
                 </Button>
               </>
             )}
@@ -115,9 +118,9 @@ function Home() {
         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Discover
         </p>
-        <h2 className="mt-1 text-xl font-semibold sm:text-3xl">Three categories, one platform</h2>
+        <h2 className="mt-1 text-xl font-semibold sm:text-3xl">Public catalog, private workspace</h2>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Everything your agents need — organized simply.
+          Browse freely. Sign in to download packages, upload, manage keys, secrets, and roles.
         </p>
         <div className="mt-8 grid gap-4 sm:grid-cols-2 md:grid-cols-3">
           {pillars.map((pillar) => (
@@ -155,8 +158,8 @@ function Home() {
             },
             {
               icon: Shield,
-              title: "Secrets stay server-side",
-              body: "Agents get capability — never raw provider tokens.",
+              title: "Login to download",
+              body: "Marketplace packages require an account. Guides live in the dashboard.",
             },
             {
               icon: Sparkles,
@@ -175,12 +178,12 @@ function Home() {
 
       <section className="mx-auto max-w-4xl px-4 py-14 text-center sm:py-20">
         <h2 className="text-xl font-semibold sm:text-3xl">
-          {signedIn ? "Continue in your workspace" : "Ready to connect an agent?"}
+          {signedIn ? "Continue in your workspace" : "Ready to download and connect?"}
         </h2>
         <p className="mt-2 text-sm text-muted-foreground">
           {signedIn
-            ? "Keys, agents, and packages live in the dashboard."
-            : "Create an account, mint a key, point MCP at open-connect.site/mcp."}
+            ? "Dashboard, guides, uploads, keys, and agents are in the signed-in workspace."
+            : "Create an account to download skills and agents, then mint a key for MCP."}
         </p>
         <Button asChild size="lg" className="mt-6 w-full sm:w-auto">
           {signedIn ? (
@@ -193,7 +196,7 @@ function Home() {
         </Button>
         <p className="mt-4">
           <Link to="/integrations" className="text-sm text-primary hover:underline">
-            Setup guides for ChatGPT, Grok, Telegram →
+            Integrations overview →
           </Link>
         </p>
       </section>

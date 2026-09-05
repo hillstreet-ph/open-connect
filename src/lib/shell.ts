@@ -7,6 +7,7 @@ export const APP_ROUTE_PREFIXES = [
   "/toolkits",
   "/admin",
   "/secrets",
+  "/guides",
 ] as const;
 
 /** True when pathname is inside the signed-in product workspace. */
