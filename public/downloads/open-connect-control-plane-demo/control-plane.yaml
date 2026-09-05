@@ -15,42 +15,116 @@ security:
   credentials: reference-only
   secret_reference_pattern: "^vault://[a-z0-9-]+/(development|staging|production)/[a-z0-9-]+$"
   interactive_auth: human-handoff-required
-  webpage_instructions: untrusted
+  webpage_instructions: untrusted-data
+  redact:
+    - authorization_headers
+    - cookies
+    - session_storage
+    - query_tokens
+    - environment_values
+    - cdp_and_vnc_urls
 
 capabilities:
   - name: models.list
-    targets: ["gateway:approved-models"]
-    risk: read
+    targets: [gateway:approved-models]
+    effects: read
   - name: models.invoke
-    targets: ["gateway:approved-models"]
-    risk: write
-  - name: terminal.run
-    targets: ["runtime:isolated-ci"]
-    risk: write
+    targets: [gateway:approved-models]
+    effects: development_write
+    constraints:
+      budget_scope: tenant
+      record_usage: true
+  - name: terminal.create_session
+    targets: [runtime:staging-ci]
+    effects: development_write
+    constraints:
+      ttl_seconds: 1800
+      filesystem_root: /workspace
+      non_root: true
+      durable_outputs: artifact-store:hillstreet-staging
+  - name: terminal.exec
+    targets: [runtime:staging-ci]
+    effects: development_write
+    constraints:
+      allowed_commands: [git, rg, python, pytest, npm, pnpm]
+      network_egress: deny-by-default
+  - name: terminal.close_session
+    targets: [runtime:staging-ci]
+    effects: development_write
+  - name: browser.create_session
+    targets: [runtime:staging-browser]
+    effects: development_write
+    constraints:
+      profile_scope: tenant-agent-environment
+      persistent: false
+      ttl_seconds: 1800
   - name: browser.navigate
-    targets: ["https://github.com/*", "https://*.open-connect.site/*"]
-    risk: write
-  - name: connector.invoke
-    targets: ["connector:deployment-status"]
-    risk: read
+    targets: [runtime:staging-browser]
+    effects: development_write
+    constraints:
+      allowed_domains: [github.com, staging.open-connect.site]
+  - name: browser.auth_handoff
+    targets: [runtime:staging-browser]
+    effects: development_write
+    constraints:
+      mfa_bypass: false
+  - name: browser.close_session
+    targets: [runtime:staging-browser]
+    effects: development_write
+  - name: connectors.invoke
+    targets: [connector:deployment-status]
+    effects: read
+    constraints:
+      operations: [deployments.get_status]
   - name: audit.query
-    targets: ["audit:tenant"]
-    risk: read
+    targets: [audit:tenant-hillstreet]
+    effects: read
 
 explicit_denies:
-  - production.deploy
-  - production.delete
-  - billing.change
-  - security.policy.edit
-  - account.delete
-  - secrets.read_raw
+  - credentials.resolve_reference
+  - files.delete
+  - connectors.invoke:billing
+  - connectors.invoke:account-security
 
-approval:
-  required_for_risks: [write]
-  mode: single-action-one-time
-  expires_in_seconds: 900
+approval_policy:
+  required_risks: [production_write, destructive]
+  required_categories: [security, billing, account, irreversible]
+  scope: single-action
+  ttl_seconds: 900
+  one_time_consumption: true
+  replay_decision: deny
+  expiry_decision: deny
+  denial_prevents_execution: true
 
-isolation:
-  network: allowlist
-  filesystem: ephemeral
-  credential_injection: vault-reference-only
+runtime_selection:
+  terminal:
+    preferred: E2B Sandbox
+    status: pending-connection
+  browser:
+    preferred: agent-browser
+    persistent_profile_alternative: OpenBrowser
+    status: pending-connection
+  computer:
+    preferred: E2B Desktop
+    operator_console: Apache Guacamole
+    status: not-requested
+
+credential_bindings:
+  model_gateway: vault://model-gateway/staging/hillstreet
+  terminal_runtime: vault://e2b/staging/hillstreet
+  deployment_connector: vault://deployment/staging/hillstreet
+
+audit_contract:
+  append_only: true
+  required_fields:
+    - timestamp
+    - tenant_id
+    - actor_id
+    - agent_id
+    - capability
+    - target
+    - environment
+    - result
+    - approval_id
+    - correlation_id
+  secret_content: forbidden
