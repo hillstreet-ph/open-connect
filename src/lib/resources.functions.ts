@@ -3,6 +3,47 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const BUCKET = "resource-packages";
 
+function skillManifest(resource: {
+  name: string;
+  slug: string;
+  description: string | null;
+  resource_type: string;
+  version: string | null;
+  author?: string | null;
+  installation_config?: unknown;
+}) {
+  const config =
+    resource.installation_config && typeof resource.installation_config === "object"
+      ? JSON.stringify(resource.installation_config, null, 2)
+      : "";
+  return `# ${resource.name}
+
+**Slug:** \`${resource.slug}\`  
+**Type:** ${resource.resource_type}  
+**Version:** ${resource.version ?? "1.0.0"}  
+**Author:** ${resource.author ?? "open-connect"}
+
+## Description
+
+${resource.description ?? "Open-Connect marketplace package."}
+
+## Platform
+
+- Domain: https://open-connect.site
+- MCP: https://open-connect.site/mcp
+- Models: https://open-connect.site/v1
+- Stack: GitHub + Cloudflare + Supabase only (no Vercel)
+
+## Install
+
+1. Sign in at https://open-connect.site/auth
+2. Download from Marketplace (login required)
+3. Or use MCP tools/list with an \`oc_live_\` API key
+
+${config ? `## Installation config\n\n\`\`\`json\n${config}\n\`\`\`\n` : ""}
+`;
+}
+
 export const listMyResources = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -102,6 +143,7 @@ export const registerResourcePackage = createServerFn({ method: "POST" })
     return inserted;
   });
 
+/** Storage package URL when present; otherwise skill/catalog markdown for logged-in clients. */
 export const getResourceDownloadUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { id: string }) => ({ id: input?.id ?? "" }))
@@ -110,28 +152,66 @@ export const getResourceDownloadUrl = createServerFn({ method: "POST" })
 
     const { data: resource, error } = await context.supabase
       .from("resources")
-      .select("id, name, package_path, package_filename, owner_id, published")
+      .select(
+        "id, name, slug, description, resource_type, version, author, package_path, package_filename, owner_id, published, installation_config",
+      )
       .eq("id", data.id)
       .maybeSingle();
 
     if (error) throw new Error(error.message);
-    if (!resource?.package_path) throw new Error("No package attached");
+    if (!resource) throw new Error("Not found");
     if (!resource.published && resource.owner_id !== context.userId) {
       throw new Error("Not allowed");
     }
 
-    const { data: signed, error: signError } = await context.supabase.storage
-      .from(BUCKET)
-      .createSignedUrl(resource.package_path, 3600);
+    if (resource.package_path) {
+      const { data: signed, error: signError } = await context.supabase.storage
+        .from(BUCKET)
+        .createSignedUrl(resource.package_path, 3600);
 
-    if (signError || !signed?.signedUrl) {
-      throw new Error(signError?.message ?? "Could not sign download URL");
+      if (signError || !signed?.signedUrl) {
+        throw new Error(signError?.message ?? "Could not sign download URL");
+      }
+
+      return {
+        kind: "url" as const,
+        url: signed.signedUrl,
+        filename: resource.package_filename ?? `${resource.slug}.zip`,
+        expires_in: 3600,
+      };
     }
 
+    const markdown = skillManifest(resource);
+    const filename = `${resource.slug || resource.name}.md`;
     return {
-      url: signed.signedUrl,
-      filename: resource.package_filename ?? resource.name,
-      expires_in: 3600,
+      kind: "markdown" as const,
+      content: markdown,
+      filename,
+      mime: "text/markdown;charset=utf-8",
+    };
+  });
+
+/** View package metadata / manifest (login required). */
+export const getResourceView = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { id: string }) => ({ id: input?.id ?? "" }))
+  .handler(async ({ data, context }) => {
+    if (!data.id) throw new Error("id required");
+    const { data: resource, error } = await context.supabase
+      .from("resources")
+      .select(
+        "id, slug, name, description, resource_type, version, author, license, verified, featured, supported_clients, package_path, package_filename, package_size, installation_config, published, owner_id",
+      )
+      .eq("id", data.id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!resource) throw new Error("Not found");
+    if (!resource.published && resource.owner_id !== context.userId) {
+      throw new Error("Not allowed");
+    }
+    return {
+      ...resource,
+      manifest: skillManifest(resource),
     };
   });
 
