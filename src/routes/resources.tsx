@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
-import { Download, Search, Upload } from "lucide-react";
+import { Download, Lock, Search, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -22,13 +22,16 @@ export const Route = createFileRoute("/resources")({
       {
         name: "description",
         content:
-          "Marketplace for skills, MCP servers, tools, plugins, agents, prompts and guides.",
+          "Marketplace for skills, MCP servers, tools, plugins, agents and prompts. Sign in to download.",
       },
       { property: "og:title", content: "Marketplace — Open-Connect" },
     ],
   }),
   component: ResourcesPage,
 });
+
+/** Package types shown in marketplace (guides live under /guides after login). */
+const PACKAGE_TYPES = new Set(["skill", "mcp", "tool", "plugin", "agent", "prompt", "app", "model"]);
 
 function ResourcesPage() {
   const { user } = useAuth();
@@ -37,7 +40,7 @@ function ResourcesPage() {
   const downloadFn = useServerFn(getResourceDownloadUrl);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["resources"],
+    queryKey: ["resources-marketplace"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("resources")
@@ -48,7 +51,7 @@ function ResourcesPage() {
         .order("featured", { ascending: false })
         .order("name");
       if (error) throw error;
-      return data;
+      return (data ?? []).filter((item) => PACKAGE_TYPES.has(item.resource_type));
     },
   });
 
@@ -88,27 +91,46 @@ function ResourcesPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <Badge variant="outline" className="mb-2 border-primary/40 text-primary">
-            Catalog · Resources
+            Public catalog · Packages
           </Badge>
           <h1 className="text-2xl font-semibold sm:text-4xl">Marketplace</h1>
           <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-            Skills, MCP, tools, plugins, agents, prompts, guides. Download when signed in; upload from
-            the dashboard.
+            Browse skills, MCP, tools, plugins, agents, and prompts.{" "}
+            <strong className="font-medium text-foreground">Sign in required</strong> to download or
+            upload. Setup guides are in the workspace after login.
           </p>
         </div>
         {user ? (
-          <Button asChild className="w-full shrink-0 sm:w-auto">
-            <Link to="/dashboard">
-              <Upload className="mr-2 size-4" />
-              Upload
-            </Link>
-          </Button>
+          <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row">
+            <Button asChild className="w-full sm:w-auto">
+              <Link to="/dashboard">
+                <Upload className="mr-2 size-4" />
+                Upload
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="w-full sm:w-auto">
+              <Link to="/guides">Guides</Link>
+            </Button>
+          </div>
         ) : (
           <Button asChild variant="outline" className="w-full shrink-0 sm:w-auto">
-            <Link to="/auth">Sign in to upload</Link>
+            <Link to="/auth">
+              <Lock className="mr-2 size-4" />
+              Sign in to download
+            </Link>
           </Button>
         )}
       </div>
+
+      {!user ? (
+        <div className="mt-6 flex items-start gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2.5 text-sm text-muted-foreground">
+          <Lock className="mt-0.5 size-4 shrink-0" />
+          <span>
+            You can browse the catalog while logged out. Sign in to download agents, skills, MCP
+            packages, and more.
+          </span>
+        </div>
+      ) : null}
 
       <div className="mt-8 space-y-3">
         <div className="relative max-w-md">
@@ -116,7 +138,7 @@ function ResourcesPage() {
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search…"
+            placeholder="Search packages…"
             className="pl-9"
             aria-label="Search marketplace"
           />
@@ -179,11 +201,18 @@ function ResourcesPage() {
                       </Button>
                     ) : (
                       <Button asChild size="sm" variant="outline">
-                        <Link to="/auth">Sign in</Link>
+                        <Link to="/auth">
+                          <Lock className="mr-1 size-3.5" />
+                          Sign in
+                        </Link>
                       </Button>
                     )
-                  ) : (
+                  ) : user ? (
                     <span>Catalog</span>
+                  ) : (
+                    <Button asChild size="sm" variant="ghost">
+                      <Link to="/auth">Sign in</Link>
+                    </Button>
                   )}
                 </CardContent>
               </Card>
