@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Bot, KeyRound, Link2, MessageCircle, Plug, Sparkles } from "lucide-react";
+import { KeyRound, Link2 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { BrandLogo } from "@/components/brand-logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +13,7 @@ export const Route = createFileRoute("/integrations")({
       {
         name: "description",
         content:
-          "Connect ChatGPT plugins, Grok, Telegram, Claude, Hermes via MCP, OAuth, API keys or tokens.",
+          "Connect ChatGPT, Claude, Grok, Open WebUI, Hermes via MCP, OAuth, API keys or tokens.",
       },
     ],
   }),
@@ -21,40 +22,52 @@ export const Route = createFileRoute("/integrations")({
 
 const clients = [
   {
-    icon: Sparkles,
-    name: "ChatGPT / OpenAI plugins",
-    body: "Point Custom GPT or Actions at the Open-Connect OAuth and API endpoints with an oc_live_ key.",
-    endpoints: ["OAuth · /oauth", "API · /api/v1", "Models · /v1"],
+    provider: "chatgpt",
+    name: "ChatGPT / OpenAI",
+    body: "Custom GPT, Actions, or plugins → OAuth + /v1 with an oc_live_ key.",
+    endpoints: ["OAuth · /oauth", "Models · /v1", "API · /api/v1"],
   },
   {
-    icon: Bot,
-    name: "Grok / xAI connectors",
-    body: "Use the OpenAI-compatible /v1 gateway or MCP URL with a scoped Open-Connect key.",
+    provider: "claude",
+    name: "Claude / Anthropic",
+    body: "Claude Desktop or API clients via MCP URL + scoped key.",
+    endpoints: ["MCP · /mcp", "Models · /v1"],
+  },
+  {
+    provider: "grok",
+    name: "Grok / xAI",
+    body: "OpenAI-compatible /v1 gateway or MCP for Grok connectors.",
     endpoints: ["Models · /v1", "MCP · /mcp"],
   },
   {
-    icon: MessageCircle,
-    name: "Telegram bots",
-    body: "Store the bot token in Secrets (scope: agents / connections), then attach via Agents or Connections.",
-    endpoints: ["Secrets vault", "Connections · telegram"],
+    provider: "openwebui",
+    name: "Open WebUI",
+    body: "Set OpenAI base URL to https://open-connect.site/v1 and paste oc_live_ key.",
+    endpoints: ["Base URL · /v1", "API key · oc_live_…"],
   },
   {
-    icon: Plug,
-    name: "MCP clients",
-    body: "Claude Desktop, Cursor, Hermes and any MCP client: one URL + one key.",
+    provider: "hermes",
+    name: "Hermes Agent",
+    body: "Point Hermes MCP config at Open-Connect with Bearer auth.",
     endpoints: ["https://open-connect.site/mcp"],
   },
   {
-    icon: KeyRound,
-    name: "API key / bearer token",
-    body: "Create scoped oc_live_ keys under API Keys. Never embed service-role credentials in clients.",
-    endpoints: ["Authorization: Bearer oc_live_…"],
+    provider: "cursor",
+    name: "Cursor / MCP IDEs",
+    body: "Any MCP-capable IDE: one URL, one key, tools/list from the catalog.",
+    endpoints: ["MCP · /mcp"],
   },
   {
-    icon: Link2,
-    name: "OAuth apps",
-    body: "Register agents against discovery metadata and PKCE authorize/token endpoints.",
-    endpoints: ["/.well-known/oauth-authorization-server", "/oauth/authorize", "/oauth/token"],
+    provider: "telegram",
+    name: "Telegram bots",
+    body: "Store bot token in Secrets, then attach via Agents or Connections.",
+    endpoints: ["Secrets vault", "Connections · telegram"],
+  },
+  {
+    provider: "openai",
+    name: "API key / bearer",
+    body: "Scoped oc_live_ keys — never embed service-role credentials in clients.",
+    endpoints: ["Authorization: Bearer oc_live_…"],
   },
 ];
 
@@ -64,25 +77,25 @@ function IntegrationsPage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-16">
       <Badge variant="outline" className="border-primary/40 text-primary">
-        Connect any agent
+        Professional setup · AI clients
       </Badge>
       <h1 className="mt-4 text-3xl font-semibold sm:text-4xl">Integrations</h1>
       <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
-        One platform endpoint for ChatGPT plugins, Grok, Telegram, Claude, Hermes and custom agents.
-        Authenticate with API key, OAuth, MCP, or a stored secret from the vault.
+        Connect ChatGPT, Claude, Grok, Open WebUI, Hermes, Cursor, and custom agents. One MCP URL,
+        one model gateway, one key.
       </p>
 
       <div className="mt-6 flex flex-wrap gap-2">
         {user ? (
           <>
             <Button asChild>
+              <Link to="/studio">Open Studio</Link>
+            </Button>
+            <Button asChild variant="outline">
               <Link to="/agents">Connect agent</Link>
             </Button>
             <Button asChild variant="outline">
               <Link to="/api-keys">API Keys</Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link to="/secrets">Secrets vault</Link>
             </Button>
             <Button asChild variant="outline">
               <Link to="/connections">App connections</Link>
@@ -99,9 +112,7 @@ function IntegrationsPage() {
         {clients.map((c) => (
           <Card key={c.name} className="shadow-panel">
             <CardHeader>
-              <span className="flex size-9 items-center justify-center rounded-lg bg-primary/15 text-primary">
-                <c.icon className="size-4" />
-              </span>
+              <BrandLogo provider={c.provider} name={c.name} size="lg" />
               <CardTitle className="mt-3 text-base">{c.name}</CardTitle>
               <CardDescription>{c.body}</CardDescription>
             </CardHeader>
@@ -114,10 +125,36 @@ function IntegrationsPage() {
         ))}
       </div>
 
+      <div className="mt-10 grid gap-4 md:grid-cols-2">
+        <Card className="shadow-panel">
+          <CardHeader>
+            <KeyRound className="size-4 text-primary" />
+            <CardTitle className="mt-2 text-base">OAuth apps</CardTitle>
+            <CardDescription>PKCE S256 for ChatGPT and OAuth MCP clients.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-1 font-mono text-xs text-primary">
+            <p>/.well-known/oauth-authorization-server</p>
+            <p>/oauth/authorize · /oauth/token</p>
+          </CardContent>
+        </Card>
+        <Card className="shadow-panel">
+          <CardHeader>
+            <Link2 className="size-4 text-primary" />
+            <CardTitle className="mt-2 text-base">Stack logos</CardTitle>
+            <CardDescription>Infrastructure you already use with Open-Connect.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-2">
+            {["github", "supabase", "cloudflare", "google", "openai"].map((p) => (
+              <BrandLogo key={p} provider={p} />
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+
       <Card className="mt-12 bg-pillar">
         <CardHeader>
           <CardTitle className="text-base">Quick MCP config</CardTitle>
-          <CardDescription>Use after creating an API key in the app workspace.</CardDescription>
+          <CardDescription>Use after creating an API key in the workspace.</CardDescription>
         </CardHeader>
         <CardContent>
           <pre className="overflow-x-auto rounded-lg border border-border bg-background/80 p-4 text-xs">{`{
