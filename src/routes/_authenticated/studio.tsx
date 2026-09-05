@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Bot,
   Boxes,
+  Building2,
   FileCode,
   MessageSquareText,
   Plug,
@@ -10,6 +11,8 @@ import {
   Wrench,
 } from "lucide-react";
 import { ResourceLibraryCard } from "@/components/resource-library-card";
+import { useRoles } from "@/hooks/use-roles";
+import { roleLabel } from "@/lib/rbac";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -85,16 +88,40 @@ const createActions = [
 ];
 
 function StudioPage() {
+  const { primary, can } = useRoles();
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:py-14">
-      <Badge variant="outline" className="mb-2 border-primary/40 text-primary">
-        Workspace · Studio
-      </Badge>
-      <h1 className="text-2xl font-semibold sm:text-3xl">Create</h1>
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant="outline" className="border-primary/40 text-primary">
+          Workspace · Studio hub
+        </Badge>
+        <Badge variant="secondary" className="uppercase">
+          {roleLabel(primary)}
+        </Badge>
+      </div>
+      <h1 className="mt-2 text-2xl font-semibold sm:text-3xl">Create</h1>
       <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-        Build agents, skills, prompts, plugins, custom MCP, and connectors. Then connect ChatGPT,
-        Claude, Grok, Open WebUI, Hermes, and any OpenAI-compatible client.
+        Build agents, skills, prompts, plugins, custom MCP, and connectors. Assign work to an{" "}
+        <Link to="/orgs" className="text-primary underline-offset-2 hover:underline">
+          organization / project
+        </Link>
+        , then wire ChatGPT, Claude, Grok, Open WebUI, or Hermes.
       </p>
+
+      <div className="mt-6 flex flex-wrap gap-2">
+        <Button asChild size="sm" variant="outline">
+          <Link to="/orgs">
+            <Building2 className="mr-1 size-3.5" /> Organizations
+          </Link>
+        </Button>
+        <Button asChild size="sm" variant="outline">
+          <Link to="/guides">Professional setup</Link>
+        </Button>
+        <Button asChild size="sm" variant="outline">
+          <Link to="/dashboard">Dashboard hub</Link>
+        </Button>
+      </div>
 
       <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {createActions.map((item) => (
@@ -121,15 +148,26 @@ function StudioPage() {
         ))}
       </div>
 
-      <h2 id="upload" className="mt-12 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Upload package
-      </h2>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Skills, MCP, tools, plugins, agents, prompts — auto-detected type, then publish to marketplace.
-      </p>
-      <div className="mt-4 max-w-2xl">
-        <ResourceLibraryCard />
-      </div>
+      {can("upload_resources") ? (
+        <>
+          <h2
+            id="upload"
+            className="mt-12 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+          >
+            Upload package
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Skills, MCP, tools, plugins, agents, prompts — auto-detected type, then publish.
+          </p>
+          <div className="mt-4 max-w-2xl">
+            <ResourceLibraryCard />
+          </div>
+        </>
+      ) : (
+        <p className="mt-10 text-sm text-muted-foreground">
+          Your role cannot upload packages. Contact an admin to raise permissions.
+        </p>
+      )}
 
       <Card className="mt-10 bg-pillar">
         <CardHeader className="p-5">
@@ -143,7 +181,7 @@ function StudioPage() {
             <Link to="/api-keys">API Keys</Link>
           </Button>
           <Button asChild size="sm" variant="outline">
-            <Link to="/guides">Setup guides</Link>
+            <Link to="/guides">Professional setup</Link>
           </Button>
           <Button asChild size="sm" variant="outline">
             <Link to="/integrations">Client integrations</Link>

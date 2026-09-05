@@ -15,10 +15,14 @@ export const ALL_ROLES: AppRole[] = ["user", "developer", "publisher", "admin", 
 
 export type Capability =
   | "dashboard"
+  | "studio"
+  | "orgs"
+  | "guides"
   | "api_keys"
   | "connections"
   | "download_resources"
   | "upload_resources"
+  | "secrets"
   | "manage_toolkits"
   | "publish_resources"
   | "verify_resources"
@@ -28,16 +32,69 @@ export type Capability =
 /** Minimum role required for each capability */
 export const CAPABILITY_MIN_ROLE: Record<Capability, AppRole> = {
   dashboard: "user",
+  studio: "user",
+  orgs: "user",
+  guides: "user",
   api_keys: "user",
   connections: "user",
   download_resources: "user",
   upload_resources: "user",
+  secrets: "user",
   manage_toolkits: "developer",
   publish_resources: "publisher",
   verify_resources: "admin",
   manage_roles: "admin",
   admin_panel: "admin",
 };
+
+/** Human-readable role matrix for workspace UI */
+export const ROLE_SCOPE_MATRIX: {
+  role: AppRole;
+  summary: string;
+  can: string[];
+}[] = [
+  {
+    role: "user",
+    summary: "Client workspace — download, upload own packages, keys, agents, orgs",
+    can: [
+      "Dashboard · Studio · Organizations",
+      "Download / view marketplace skills",
+      "Upload packages (own)",
+      "API keys · Agents · Connections · Secrets",
+      "Guides & professional E2E setup",
+    ],
+  },
+  {
+    role: "developer",
+    summary: "Everything user has, plus toolkits",
+    can: ["Manage toolkits", "Bundle capabilities for agents"],
+  },
+  {
+    role: "publisher",
+    summary: "Marketplace publishing controls",
+    can: ["Publish resources to catalog", "Featured package workflow"],
+  },
+  {
+    role: "admin",
+    summary: "Verify packages and manage roles",
+    can: ["Verify resources", "Manage roles", "Admin panel"],
+  },
+  {
+    role: "owner",
+    summary: "Full platform control",
+    can: ["All admin capabilities", "Owner supersedes every role"],
+  },
+];
+
+/** Agent / API key scopes (oc_live_ keys) */
+export const KEY_SCOPE_DOCS: { scope: string; meaning: string }[] = [
+  { scope: "mcp:connect", meaning: "Call MCP tools/list and tools/call at /mcp" },
+  { scope: "resources:read", meaning: "Read marketplace catalog via MCP/API" },
+  { scope: "connections:read", meaning: "List your app capability grants" },
+  { scope: "connections:invoke", meaning: "Invoke connected app capabilities server-side" },
+  { scope: "models:read", meaning: "List models and probe /v1" },
+  { scope: "models:invoke", meaning: "POST /v1/chat/completions" },
+];
 
 export function highestRole(roles: AppRole[]): AppRole {
   if (!roles.length) return "user";
