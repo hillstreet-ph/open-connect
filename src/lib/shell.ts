@@ -8,6 +8,8 @@ export const APP_ROUTE_PREFIXES = [
   "/admin",
   "/secrets",
   "/guides",
+  "/studio",
+  "/orgs",
 ] as const;
 
 /** True when pathname is inside the signed-in product workspace. */
