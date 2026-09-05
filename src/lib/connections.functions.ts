@@ -5,13 +5,13 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
  * Connection catalog — professional app plane.
  * Connect records a capability grant (credential_reference) server-side.
  * Agents never receive provider tokens; they present oc_live_ keys only.
- * Real provider OAuth client IDs can be wired later without changing this UX.
  */
 const CATALOG = [
   { provider: "github", display_name: "GitHub", category: "Development", scopes: ["repo", "read:user", "workflow"], oauth: true },
   { provider: "gitlab", display_name: "GitLab", category: "Development", scopes: ["api", "read_user"], oauth: true },
   { provider: "linear", display_name: "Linear", category: "Development", scopes: ["read", "write"], oauth: true },
   { provider: "jira", display_name: "Jira", category: "Development", scopes: ["read:jira-work", "write:jira-work"], oauth: true },
+  { provider: "cursor", display_name: "Cursor", category: "Development", scopes: ["mcp"], oauth: false },
   { provider: "telegram", display_name: "Telegram", category: "Communication", scopes: ["bot"], oauth: false },
   { provider: "slack", display_name: "Slack", category: "Communication", scopes: ["chat:write", "channels:read", "users:read"], oauth: true },
   { provider: "discord", display_name: "Discord", category: "Communication", scopes: ["bot", "applications.commands"], oauth: true },
@@ -20,6 +20,7 @@ const CATALOG = [
   { provider: "claude", display_name: "Claude / Anthropic", category: "AI", scopes: ["models", "mcp"], oauth: true },
   { provider: "grok", display_name: "Grok / xAI", category: "AI", scopes: ["models"], oauth: true },
   { provider: "hermes", display_name: "Hermes Agent", category: "AI", scopes: ["mcp"], oauth: false },
+  { provider: "openwebui", display_name: "Open WebUI", category: "AI", scopes: ["models"], oauth: false },
   { provider: "openai", display_name: "OpenAI API", category: "AI", scopes: ["models"], oauth: false },
   { provider: "openrouter", display_name: "OpenRouter", category: "AI", scopes: ["models"], oauth: false },
   { provider: "google_drive", display_name: "Google Drive", category: "Productivity", scopes: ["drive.readonly", "drive.file"], oauth: true },
