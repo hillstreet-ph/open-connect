@@ -1,0 +1,15 @@
+interface:
+  display_name: cloudflare browser
+  short_description: Control headless Chrome via Cloudflare Browser Rendering CDP
+    WebSocket. Use for screenshots, page navigation, scraping, and video capture when
+    browser automation is needed in a Cloudflare Workers environment. Requires CDP_SECRET
+    env var and cdpUrl configured in browser.profiles.
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true
