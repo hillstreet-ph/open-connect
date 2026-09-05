@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { KeyRound, Link2 } from "lucide-react";
+import { Globe, KeyRound, Link2, Monitor, Terminal } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { BrandLogo } from "@/components/brand-logo";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,7 @@ export const Route = createFileRoute("/integrations")({
       {
         name: "description",
         content:
-          "Connect ChatGPT, Claude, Grok, Open WebUI, Hermes via MCP, OAuth, API keys or tokens.",
+          "Grok, MultiOn, Open WebUI, Claude, ChatGPT — MCP, OAuth, autonomous browser, cloud computer.",
       },
     ],
   }),
@@ -21,6 +21,12 @@ export const Route = createFileRoute("/integrations")({
 });
 
 const clients = [
+  {
+    provider: "grok",
+    name: "Grok / xAI",
+    body: "Primary reasoning client. OpenAI-compatible /v1 + MCP tools (browser skills, MultiOn).",
+    endpoints: ["Models · /v1", "MCP · /mcp", "Skills · multion / browser"],
+  },
   {
     provider: "chatgpt",
     name: "ChatGPT / OpenAI",
@@ -34,16 +40,16 @@ const clients = [
     endpoints: ["MCP · /mcp", "Models · /v1"],
   },
   {
-    provider: "grok",
-    name: "Grok / xAI",
-    body: "OpenAI-compatible /v1 gateway or MCP for Grok connectors.",
-    endpoints: ["Models · /v1", "MCP · /mcp"],
-  },
-  {
     provider: "openwebui",
     name: "Open WebUI",
     body: "Set OpenAI base URL to https://open-connect.site/v1 and paste oc_live_ key.",
     endpoints: ["Base URL · /v1", "API key · oc_live_…"],
+  },
+  {
+    provider: "cloudflare",
+    name: "MultiOn + Browser",
+    body: "Autonomous web agents (MultiOn) + Cloudflare Browser Rendering CDP + agent-browser CLI.",
+    endpoints: ["docs.multion.ai", "Skills · marketplace", "Secrets · multion_api_key"],
   },
   {
     provider: "hermes",
@@ -58,16 +64,34 @@ const clients = [
     endpoints: ["MCP · /mcp"],
   },
   {
-    provider: "telegram",
-    name: "Telegram bots",
-    body: "Store bot token in Secrets, then attach via Agents or Connections.",
-    endpoints: ["Secrets vault", "Connections · telegram"],
-  },
-  {
     provider: "openai",
     name: "API key / bearer",
     body: "Scoped oc_live_ keys — never embed service-role credentials in clients.",
     endpoints: ["Authorization: Bearer oc_live_…"],
+  },
+];
+
+const autonomy = [
+  {
+    icon: Globe,
+    title: "MultiOn (cloud / local browser)",
+    body: "Natural-language browse sessions. Remote headless or local Chrome extension. API key in Secrets as multion_api_key.",
+    link: "https://docs.multion.ai/welcome",
+    skill: "multion-autonomous",
+  },
+  {
+    icon: Monitor,
+    title: "Cloudflare Browser (CDP)",
+    body: "Headless Chrome on Cloudflare Browser Rendering — screenshots, navigate, scrape, video via WebSocket CDP.",
+    link: "/resources",
+    skill: "cloudflare-browser",
+  },
+  {
+    icon: Terminal,
+    title: "Agent Browser CLI",
+    body: "Deterministic CLI automation: snapshot refs, click, fill, annotate — for agent verification loops.",
+    link: "/resources",
+    skill: "agent-browser",
   },
 ];
 
@@ -77,12 +101,13 @@ function IntegrationsPage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-16">
       <Badge variant="outline" className="border-primary/40 text-primary">
-        Professional setup · AI clients
+        Professional setup · AI clients · autonomy
       </Badge>
       <h1 className="mt-4 text-3xl font-semibold sm:text-4xl">Integrations</h1>
       <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
-        Connect ChatGPT, Claude, Grok, Open WebUI, Hermes, Cursor, and custom agents. One MCP URL,
-        one model gateway, one key.
+        Connect <strong className="text-foreground">Grok</strong>, ChatGPT, Claude, Open WebUI, and
+        autonomous <strong className="text-foreground">browser / cloud computer</strong> control via
+        MultiOn and Cloudflare. One MCP URL, one model gateway, one key.
       </p>
 
       <div className="mt-6 flex flex-wrap gap-2">
@@ -92,13 +117,13 @@ function IntegrationsPage() {
               <Link to="/studio">Open Studio</Link>
             </Button>
             <Button asChild variant="outline">
-              <Link to="/agents">Connect agent</Link>
+              <Link to="/resources">Browser skills</Link>
             </Button>
             <Button asChild variant="outline">
               <Link to="/api-keys">API Keys</Link>
             </Button>
             <Button asChild variant="outline">
-              <Link to="/connections">App connections</Link>
+              <Link to="/secrets">Secrets</Link>
             </Button>
           </>
         ) : (
@@ -108,7 +133,37 @@ function IntegrationsPage() {
         )}
       </div>
 
-      <div className="mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <h2 className="mt-14 text-lg font-semibold">Autonomous browser & compute</h2>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Motor-cortex style control: MultiOn for natural language, Cloudflare CDP for edge headless,
+        agent-browser for CLI precision.
+      </p>
+      <div className="mt-6 grid gap-4 md:grid-cols-3">
+        {autonomy.map((a) => (
+          <Card key={a.title} className="shadow-panel">
+            <CardHeader>
+              <a.icon className="size-5 text-primary" />
+              <CardTitle className="mt-2 text-base">{a.title}</CardTitle>
+              <CardDescription>{a.body}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2 text-xs">
+              <p className="font-mono text-primary">skill · {a.skill}</p>
+              {a.link.startsWith("http") ? (
+                <a href={a.link} className="text-primary hover:underline" target="_blank" rel="noreferrer">
+                  Docs →
+                </a>
+              ) : (
+                <Link to={a.link} className="text-primary hover:underline">
+                  Marketplace →
+                </Link>
+              )}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <h2 className="mt-14 text-lg font-semibold">AI clients</h2>
+      <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {clients.map((c) => (
           <Card key={c.name} className="shadow-panel">
             <CardHeader>
@@ -144,7 +199,7 @@ function IntegrationsPage() {
             <CardDescription>Infrastructure you already use with Open-Connect.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2">
-            {["github", "supabase", "cloudflare", "google", "openai"].map((p) => (
+            {["github", "supabase", "cloudflare", "google", "openai", "grok"].map((p) => (
               <BrandLogo key={p} provider={p} />
             ))}
           </CardContent>
@@ -153,10 +208,13 @@ function IntegrationsPage() {
 
       <Card className="mt-12 bg-pillar">
         <CardHeader>
-          <CardTitle className="text-base">Quick MCP config</CardTitle>
-          <CardDescription>Use after creating an API key in the workspace.</CardDescription>
+          <CardTitle className="text-base">Grok + MultiOn quick config</CardTitle>
+          <CardDescription>
+            After login: create oc_live_ key, store MULTION_API_KEY in Secrets, download browser
+            skills from Marketplace.
+          </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
           <pre className="overflow-x-auto rounded-lg border border-border bg-background/80 p-4 text-xs">{`{
   "mcpServers": {
     "open-connect": {
@@ -167,6 +225,10 @@ function IntegrationsPage() {
     }
   }
 }`}</pre>
+          <pre className="overflow-x-auto rounded-lg border border-border bg-background/80 p-4 text-xs">{`// MultiOn browse (store key in Open-Connect Secrets)
+import { MultiOnClient } from "multion";
+const multion = new MultiOnClient({ apiKey: process.env.MULTION_API_KEY });
+await multion.browse({ cmd: "…", url: "https://…" });`}</pre>
         </CardContent>
       </Card>
     </div>
