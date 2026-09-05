@@ -1,5 +1,5 @@
 /**
- * Lightweight OAuth 2.1 helpers for MCP clients (ChatGPT, Claude, etc.).
+ * Lightweight OAuth 2.1 helpers for MCP clients (ChatGPT, Claude, Grok, etc.).
  * Access tokens are Open-Connect API keys (oc_live_…).
  *
  * PKCE: S256 only (RFC 7636). "plain" is rejected.
@@ -12,13 +12,22 @@ const CODE_TTL_MS = 10 * 60 * 1000;
 /** Only S256 is advertised and accepted. */
 export const PKCE_METHOD_S256 = "S256" as const;
 
-/** RFC 7636 §4.1: unreserved characters, length 43–128. */
-const VERIFIER_RE = /^[A-Za-z0-9\-._~]{43,128}$/;
+/** Full autonomous scopes advertised to AI clients */
+export const OAUTH_SCOPES_SUPPORTED = [
+  "openid",
+  "mcp:connect",
+  "resources:read",
+  "resources:write",
+  "connections:read",
+  "connections:invoke",
+  "models:read",
+  "models:invoke",
+  "tools:invoke",
+  "secrets:read",
+  "agents:invoke",
+] as const;
 
-/**
- * SHA-256 digests as base64url without padding are always 43 characters.
- * Accept 43–128 to tolerate clients that send padded or alternate encodings we normalize.
- */
+const VERIFIER_RE = /^[A-Za-z0-9\-._~]{43,128}$/;
 const CHALLENGE_RE = /^[A-Za-z0-9\-_]{43,128}$/;
 
 function signingKey(): string {
@@ -39,7 +48,6 @@ function sign(payload: string): string {
   return createHmac("sha256", signingKey()).update(payload).digest("base64url");
 }
 
-/** Strip optional base64 padding and normalize to base64url alphabet. */
 export function normalizeBase64Url(value: string): string {
   return value.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
@@ -57,10 +65,6 @@ export function isValidPkceMethod(method: string | undefined | null): boolean {
   return (method ?? "").toUpperCase() === PKCE_METHOD_S256;
 }
 
-/**
- * RFC 7636 §4.2 / §4.6 — code_challenge = BASE64URL(SHA256(code_verifier)).
- * Constant-time comparison of digests.
- */
 export function verifyPkceS256(verifier: string, challenge: string): boolean {
   if (!isValidCodeVerifier(verifier)) return false;
   if (!isValidCodeChallenge(challenge)) return false;
@@ -78,10 +82,6 @@ export function verifyPkceS256(verifier: string, challenge: string): boolean {
   }
 }
 
-/**
- * Public verifier used by token endpoint.
- * Accepts only S256; "plain" and unknown methods fail.
- */
 export function verifyPkce(verifier: string, challenge: string, method: string): boolean {
   if (!isValidPkceMethod(method)) return false;
   return verifyPkceS256(verifier, challenge);
@@ -96,7 +96,6 @@ export type PkceValidationResult =
   | { ok: true; code_challenge: string; code_challenge_method: typeof PKCE_METHOD_S256 }
   | { ok: false; error: string; error_description: string };
 
-/** Validate authorize-time PKCE parameters (required for all public clients). */
 export function validateAuthorizePkce(input: PkceAuthorizeInput): PkceValidationResult {
   const method = (input.code_challenge_method ?? "").trim();
   const challenge = (input.code_challenge ?? "").trim();
@@ -196,14 +195,8 @@ export function oauthMetadata() {
     grant_types_supported: ["authorization_code", "refresh_token"],
     code_challenge_methods_supported: [PKCE_METHOD_S256],
     token_endpoint_auth_methods_supported: ["none", "client_secret_post"],
-    scopes_supported: [
-      "mcp:connect",
-      "models:read",
-      "models:invoke",
-      "resources:read",
-      "openid",
-    ],
-    service_documentation: `${ISSUER}/models`,
+    scopes_supported: [...OAUTH_SCOPES_SUPPORTED],
+    service_documentation: `${ISSUER}/integrations`,
   };
 }
 
@@ -212,8 +205,8 @@ export function protectedResourceMetadata(resource = `${ISSUER}/mcp`) {
     resource,
     authorization_servers: [ISSUER],
     bearer_methods_supported: ["header"],
-    scopes_supported: ["mcp:connect", "models:read", "models:invoke", "resources:read"],
-    resource_documentation: `${ISSUER}/models`,
+    scopes_supported: [...OAUTH_SCOPES_SUPPORTED],
+    resource_documentation: `${ISSUER}/integrations`,
   };
 }
 
