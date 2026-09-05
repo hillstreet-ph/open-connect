@@ -1,15 +1,17 @@
-// @lovable.dev/vite-tanstack-config already includes the following — do NOT add them manually
-// or the app will break with duplicate plugins:
-//   - TanStack devtools (dev-only, first), tanstackStart, viteReact, tailwindcss, tsConfigPaths,
-//     nitro (build-only using cloudflare as a default target), VITE_* env injection, @ path alias,
-//     React/TanStack dedupe, error logger plugins, and sandbox detection (port/host/strictPort).
-// You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
+/**
+ * Open-Connect build config.
+ * Uses the TanStack Start + Vite toolkit that shipped with the original scaffold
+ * (package name still references lovable.dev for plugin compatibility only).
+ * Product identity, auth, deploy, and domains are fully owned by Open-Connect.
+ *
+ * That package already wires: tanstackStart, viteReact, tailwindcss, tsConfigPaths,
+ * nitro/cloudflare target, VITE_* injection, @ path alias. Do not duplicate those plugins.
+ */
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 export default defineConfig({
   tanstackStart: {
-    // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
-    // nitro/vite builds from this
+    // Custom SSR entry with OAuth well-known + error page handling.
     server: { entry: "server" },
   },
 });

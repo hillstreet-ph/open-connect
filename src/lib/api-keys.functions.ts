@@ -1,6 +1,16 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+/** Full product surface for agent + dashboard keys */
+export const DEFAULT_KEY_SCOPES = [
+  "mcp:connect",
+  "resources:read",
+  "connections:read",
+  "connections:invoke",
+  "models:read",
+  "models:invoke",
+] as const;
+
 export const listApiKeys = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -23,9 +33,10 @@ export const createApiKey = createServerFn({ method: "POST" })
       name: data.name,
       key_prefix: key.prefix,
       key_hash: key.hash,
+      scopes: [...DEFAULT_KEY_SCOPES],
     });
     if (error) throw new Error(error.message);
-    return { key: key.raw };
+    return { key: key.raw, scopes: [...DEFAULT_KEY_SCOPES] };
   });
 
 export const revokeApiKey = createServerFn({ method: "POST" })

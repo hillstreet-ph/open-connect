@@ -1,0 +1,30 @@
+# Open-Connect — Cloudflare Pages
+# Project: open-connect-app
+# Production branch: main → https://open-connect.site
+#
+# Build (Dashboard → Settings → Builds):
+#   Build command:    npm run build
+#   Build output dir: dist
+#   Production branch: main
+#
+# KV setup:
+#   1. Dashboard → Workers & Pages → KV → Create namespace "open-connect-kv"
+#   2. Copy namespace ID below (replace PLACEHOLDER)
+#   3. Or: Settings → Bindings → Add → KV namespace → Variable name OC_KV
+#   4. Redeploy after binding
+
+name = "open-connect-app"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-08-01"
+compatibility_flags = [ "nodejs_compat" ]
+
+[vars]
+OAUTH_MTLS_MODE = "optional"
+
+# Workers KV — edge cache / OAuth one-time codes / rate limits
+# Replace id after creating the namespace in Cloudflare dashboard.
+[[kv_namespaces]]
+binding = "OC_KV"
+id = "REPLACE_WITH_OPEN_CONNECT_KV_NAMESPACE_ID"
+# preview_id is optional for local `wrangler pages dev`
+# preview_id = "REPLACE_WITH_PREVIEW_KV_NAMESPACE_ID"

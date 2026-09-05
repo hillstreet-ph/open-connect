@@ -1,0 +1,32 @@
+version: 1
+cases:
+  - id: allow-model-list-staging
+    request: {tenant_id: "tenant:hillstreet", actor_id: "user:hoopstreet", agent_id: "agent:release-manager", environment: staging, capability: models.list, target: "gateway:approved-models", risk: read}
+    expected: allow
+  - id: allow-model-invoke-staging
+    request: {tenant_id: "tenant:hillstreet", actor_id: "user:hoopstreet", agent_id: "agent:release-manager", environment: staging, capability: models.invoke, target: "gateway:approved-models", risk: development_write}
+    expected: allow
+  - id: allow-bounded-terminal
+    request: {tenant_id: "tenant:hillstreet", actor_id: "user:hoopstreet", agent_id: "agent:release-manager", environment: staging, capability: terminal.exec, target: "runtime:staging-ci", risk: development_write, command: pytest}
+    expected: allow
+  - id: deny-unlisted-terminal-command
+    request: {tenant_id: "tenant:hillstreet", actor_id: "user:hoopstreet", agent_id: "agent:release-manager", environment: staging, capability: terminal.exec, target: "runtime:staging-ci", risk: development_write, command: curl}
+    expected: deny
+  - id: allow-browser-domain
+    request: {tenant_id: "tenant:hillstreet", actor_id: "user:hoopstreet", agent_id: "agent:release-manager", environment: staging, capability: browser.navigate, target: "runtime:staging-browser", risk: development_write, domain: staging.open-connect.site}
+    expected: allow
+  - id: deny-browser-domain
+    request: {tenant_id: "tenant:hillstreet", actor_id: "user:hoopstreet", agent_id: "agent:release-manager", environment: staging, capability: browser.navigate, target: "runtime:staging-browser", risk: development_write, domain: example.net}
+    expected: deny
+  - id: deny-agent-secret-resolution
+    request: {tenant_id: "tenant:hillstreet", actor_id: "user:hoopstreet", agent_id: "agent:release-manager", environment: staging, capability: credentials.resolve_reference, target: "vault://model-gateway/staging/hillstreet", risk: read}
+    expected: deny
+  - id: deny-cross-tenant
+    request: {tenant_id: "tenant:other", actor_id: "user:hoopstreet", agent_id: "agent:release-manager", environment: staging, capability: models.list, target: "gateway:approved-models", risk: read}
+    expected: deny
+  - id: require-production-approval
+    request: {tenant_id: "tenant:hillstreet", actor_id: "user:hoopstreet", agent_id: "agent:release-manager", environment: production, capability: connectors.invoke, target: "connector:production-deploy", risk: production_write}
+    expected: approval_required
+  - id: require-destructive-approval
+    request: {tenant_id: "tenant:hillstreet", actor_id: "user:hoopstreet", agent_id: "agent:release-manager", environment: staging, capability: files.delete, target: "artifact-store:hillstreet-staging", risk: destructive}
+    expected: approval_required

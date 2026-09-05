@@ -2,6 +2,7 @@ import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
+import { getMtlsMode, mtlsMetadataFields } from "./lib/mtls.server";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -33,6 +34,7 @@ function injectCloudflareEnv(env: unknown) {
 const ISSUER = "https://open-connect.site";
 
 function oauthAuthorizationServerMetadata() {
+  const mtlsEnabled = getMtlsMode() !== "off";
   return {
     issuer: ISSUER,
     authorization_endpoint: `${ISSUER}/oauth/authorize`,
@@ -40,9 +42,8 @@ function oauthAuthorizationServerMetadata() {
     registration_endpoint: `${ISSUER}/oauth/register`,
     response_types_supported: ["code"],
     grant_types_supported: ["authorization_code", "refresh_token"],
-    // ChatGPT requires exact field + S256
     code_challenge_methods_supported: ["S256"],
-    token_endpoint_auth_methods_supported: ["none", "client_secret_post"],
+    ...mtlsMetadataFields(mtlsEnabled),
     scopes_supported: [
       "mcp:connect",
       "models:read",
