@@ -5,14 +5,15 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Open-Connect — Claude-inspired design system
- * Warm stone canvas, soft coral primary, generous radius, calm type.
- * Light-first with refined dark mode. Mobile-first spacing.
+ * Open-Connect design system.
+ * Dark-first "gateway" aesthetic: deep slate canvas, signal-cyan primary,
+ * warm amber accent for verified/featured states. All colors are oklch tokens.
+ * Workspace shell follows Claude Design ops mockup structure (sidebar + matrix).
  */
 
 @theme inline {
-  --font-display: "Source Serif 4", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
   --radius-sm: calc(var(--radius) - 4px);
@@ -61,111 +62,60 @@
 }
 
 :root {
-  --radius: 1rem;
+  --radius: 0.75rem;
 
-  /* Warm stone / paper — Claude-like light */
-  --background: oklch(0.975 0.008 85);
-  --foreground: oklch(0.28 0.02 55);
-  --surface: oklch(0.99 0.005 85);
-  --surface-foreground: oklch(0.28 0.02 55);
-  --card: oklch(0.995 0.004 85);
-  --card-foreground: oklch(0.28 0.02 55);
-  --popover: oklch(0.995 0.004 85);
-  --popover-foreground: oklch(0.28 0.02 55);
+  --background: oklch(0.16 0.021 250);
+  --foreground: oklch(0.96 0.006 240);
+  --surface: oklch(0.21 0.024 250);
+  --surface-foreground: oklch(0.96 0.006 240);
+  --card: oklch(0.2 0.023 250);
+  --card-foreground: oklch(0.96 0.006 240);
+  --popover: oklch(0.21 0.024 250);
+  --popover-foreground: oklch(0.96 0.006 240);
 
-  /* Soft coral primary (Anthropic-adjacent) */
-  --primary: oklch(0.62 0.14 45);
-  --primary-foreground: oklch(0.99 0.005 85);
-  --secondary: oklch(0.94 0.012 85);
-  --secondary-foreground: oklch(0.32 0.02 55);
-  --muted: oklch(0.945 0.01 85);
-  --muted-foreground: oklch(0.5 0.02 60);
-  --accent: oklch(0.94 0.025 75);
-  --accent-foreground: oklch(0.32 0.03 45);
-  --destructive: oklch(0.55 0.2 25);
-  --destructive-foreground: oklch(0.99 0.005 85);
+  --primary: oklch(0.79 0.135 190);
+  --primary-foreground: oklch(0.18 0.03 220);
+  --secondary: oklch(0.27 0.028 250);
+  --secondary-foreground: oklch(0.94 0.008 240);
+  --muted: oklch(0.25 0.024 250);
+  --muted-foreground: oklch(0.7 0.02 245);
+  --accent: oklch(0.82 0.15 78);
+  --accent-foreground: oklch(0.2 0.03 250);
+  --destructive: oklch(0.63 0.2 22);
+  --destructive-foreground: oklch(0.97 0.01 240);
 
-  --border: oklch(0.9 0.012 80);
-  --input: oklch(0.9 0.012 80);
-  --ring: oklch(0.62 0.14 45);
+  --border: oklch(0.32 0.025 250);
+  --input: oklch(0.3 0.025 250);
+  --ring: oklch(0.79 0.135 190);
 
-  --chart-1: oklch(0.62 0.14 45);
-  --chart-2: oklch(0.55 0.08 200);
-  --chart-3: oklch(0.65 0.1 140);
-  --chart-4: oklch(0.7 0.1 80);
-  --chart-5: oklch(0.5 0.08 280);
+  --chart-1: oklch(0.79 0.135 190);
+  --chart-2: oklch(0.82 0.15 78);
+  --chart-3: oklch(0.7 0.13 155);
+  --chart-4: oklch(0.68 0.12 230);
+  --chart-5: oklch(0.75 0.14 40);
 
-  --sidebar: oklch(0.97 0.008 85);
-  --sidebar-foreground: oklch(0.28 0.02 55);
-  --sidebar-primary: oklch(0.62 0.14 45);
-  --sidebar-primary-foreground: oklch(0.99 0.005 85);
-  --sidebar-accent: oklch(0.94 0.015 75);
-  --sidebar-accent-foreground: oklch(0.32 0.02 55);
-  --sidebar-border: oklch(0.9 0.012 80);
-  --sidebar-ring: oklch(0.62 0.14 45);
+  --sidebar: oklch(0.14 0.022 250);
+  --sidebar-foreground: oklch(0.94 0.008 240);
+  --sidebar-primary: oklch(0.79 0.135 190);
+  --sidebar-primary-foreground: oklch(0.18 0.03 220);
+  --sidebar-accent: oklch(0.24 0.026 250);
+  --sidebar-accent-foreground: oklch(0.96 0.008 240);
+  --sidebar-border: oklch(0.28 0.025 250);
+  --sidebar-ring: oklch(0.79 0.135 190);
 
   --gradient-hero: radial-gradient(
-      90% 70% at 50% -10%,
-      oklch(0.85 0.06 55 / 0.55) 0%,
-      transparent 55%
+      120% 100% at 50% -20%,
+      oklch(0.36 0.09 195 / 0.55) 0%,
+      transparent 60%
     ),
-    linear-gradient(180deg, oklch(0.985 0.01 85) 0%, oklch(0.975 0.008 85) 100%);
+    linear-gradient(180deg, oklch(0.18 0.024 250) 0%, oklch(0.16 0.021 250) 100%);
   --gradient-pillar: linear-gradient(
-    160deg,
-    oklch(0.62 0.14 45 / 0.08) 0%,
-    oklch(0.94 0.02 75 / 0.4) 100%
+    145deg,
+    oklch(0.79 0.135 190 / 0.14) 0%,
+    oklch(0.82 0.15 78 / 0.06) 100%
   );
-  --shadow-glow: 0 1px 2px oklch(0.4 0.02 55 / 0.06), 0 12px 40px -16px oklch(0.5 0.06 45 / 0.25);
-  --shadow-panel: 0 1px 2px oklch(0.4 0.02 55 / 0.04), 0 16px 48px -24px oklch(0.35 0.02 55 / 0.18);
-}
-
-.dark {
-  --background: oklch(0.2 0.015 55);
-  --foreground: oklch(0.95 0.01 85);
-  --surface: oklch(0.24 0.016 55);
-  --surface-foreground: oklch(0.95 0.01 85);
-  --card: oklch(0.23 0.016 55);
-  --card-foreground: oklch(0.95 0.01 85);
-  --popover: oklch(0.24 0.016 55);
-  --popover-foreground: oklch(0.95 0.01 85);
-
-  --primary: oklch(0.72 0.12 50);
-  --primary-foreground: oklch(0.2 0.02 55);
-  --secondary: oklch(0.28 0.018 55);
-  --secondary-foreground: oklch(0.94 0.01 85);
-  --muted: oklch(0.27 0.016 55);
-  --muted-foreground: oklch(0.72 0.02 70);
-  --accent: oklch(0.3 0.03 55);
-  --accent-foreground: oklch(0.95 0.01 85);
-  --destructive: oklch(0.6 0.18 25);
-  --destructive-foreground: oklch(0.98 0.01 85);
-
-  --border: oklch(0.32 0.018 55);
-  --input: oklch(0.32 0.018 55);
-  --ring: oklch(0.72 0.12 50);
-
-  --sidebar: oklch(0.22 0.015 55);
-  --sidebar-foreground: oklch(0.94 0.01 85);
-  --sidebar-primary: oklch(0.72 0.12 50);
-  --sidebar-primary-foreground: oklch(0.2 0.02 55);
-  --sidebar-accent: oklch(0.28 0.02 55);
-  --sidebar-accent-foreground: oklch(0.94 0.01 85);
-  --sidebar-border: oklch(0.32 0.018 55);
-  --sidebar-ring: oklch(0.72 0.12 50);
-
-  --gradient-hero: radial-gradient(
-      90% 70% at 50% -10%,
-      oklch(0.4 0.06 45 / 0.35) 0%,
-      transparent 55%
-    ),
-    linear-gradient(180deg, oklch(0.22 0.016 55) 0%, oklch(0.2 0.015 55) 100%);
-  --gradient-pillar: linear-gradient(
-    160deg,
-    oklch(0.72 0.12 50 / 0.12) 0%,
-    oklch(0.3 0.03 55 / 0.4) 100%
-  );
-  --shadow-glow: 0 0 0 1px oklch(0.72 0.12 50 / 0.15), 0 18px 50px -20px oklch(0.1 0.02 55 / 0.7);
-  --shadow-panel: 0 24px 60px -32px oklch(0.1 0.02 55 / 0.85);
+  --shadow-glow: 0 0 0 1px oklch(0.79 0.135 190 / 0.25), 0 18px 60px -20px oklch(0.79 0.135 190 / 0.35);
+  --shadow-panel: 0 24px 60px -32px oklch(0.1 0.02 250 / 0.9);
 }
 
 @layer base {
@@ -173,19 +123,11 @@
     border-color: var(--color-border);
   }
 
-  html {
-    scroll-behavior: smooth;
-    -webkit-tap-highlight-color: transparent;
-  }
-
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
-    font-feature-settings: "ss01" on, "cv11" on;
     -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    text-rendering: optimizeLegibility;
   }
 
   h1,
@@ -193,17 +135,7 @@
   h3,
   h4 {
     font-family: var(--font-display);
-    letter-spacing: -0.025em;
-    font-weight: 560;
-  }
-
-  /* Comfortable mobile touch targets */
-  @media (max-width: 640px) {
-    button,
-    a[role="button"],
-    .btn {
-      min-height: 2.75rem;
-    }
+    letter-spacing: -0.02em;
   }
 }
 
@@ -225,9 +157,10 @@
 
 @utility text-gradient {
   background-image: linear-gradient(
-    105deg,
-    var(--color-foreground) 0%,
-    var(--color-primary) 70%
+    100deg,
+    var(--color-foreground) 10%,
+    var(--color-primary) 55%,
+    var(--color-accent) 100%
   );
   background-clip: text;
   color: transparent;
@@ -235,17 +168,11 @@
 
 @utility grid-lines {
   background-image:
-    linear-gradient(to right, oklch(0.55 0.04 55 / 0.06) 1px, transparent 1px),
-    linear-gradient(to bottom, oklch(0.55 0.04 55 / 0.06) 1px, transparent 1px);
-  background-size: 48px 48px;
+    linear-gradient(to right, oklch(0.79 0.135 190 / 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, oklch(0.79 0.135 190 / 0.07) 1px, transparent 1px);
+  background-size: 64px 64px;
 }
 
-/* Safe-area padding for notched phones */
 @utility pb-safe {
-  padding-bottom: max(1rem, env(safe-area-inset-bottom));
-}
-
-@utility px-safe {
-  padding-left: max(1rem, env(safe-area-inset-left));
-  padding-right: max(1rem, env(safe-area-inset-right));
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
 }
