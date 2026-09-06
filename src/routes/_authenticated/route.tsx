@@ -41,7 +41,7 @@ function AuthenticatedShell() {
                 {title}
               </p>
               <p className="hidden text-[11px] text-muted-foreground sm:block">
-                Capability matrix · scoped keys · org workspace
+                Projects · tasks · schedule · automations
               </p>
             </div>
             <div className="hidden items-center gap-2 md:flex">
@@ -79,6 +79,10 @@ function pageTitle(pathname: string): string {
     "/dashboard": "Hub overview",
     "/studio": "Studio",
     "/orgs": "Organizations",
+    "/projects": "Projects",
+    "/tasks": "Tasks",
+    "/schedule": "Schedule",
+    "/automations": "Automations",
     "/agents": "AI agents",
     "/resources": "Marketplace",
     "/models": "Models",
