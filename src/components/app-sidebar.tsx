@@ -3,16 +3,20 @@ import {
   Bot,
   Boxes,
   Building2,
+  CalendarClock,
   Database,
   FileCode,
+  FolderKanban,
   HardDrive,
   KeyRound,
   LayoutDashboard,
+  ListTodo,
   Lock,
   Plug,
   Settings,
   Shield,
   Sparkles,
+  Workflow,
   Wrench,
 } from "lucide-react";
 import {
@@ -40,6 +44,13 @@ const PLATFORM: Item[] = [
   { to: "/dashboard", label: "Hub", icon: LayoutDashboard },
   { to: "/studio", label: "Studio", icon: Sparkles },
   { to: "/orgs", label: "Organizations", icon: Building2 },
+];
+
+const OPERATIONS: Item[] = [
+  { to: "/projects", label: "Projects", icon: FolderKanban },
+  { to: "/tasks", label: "Tasks", icon: ListTodo },
+  { to: "/schedule", label: "Schedule", icon: CalendarClock },
+  { to: "/automations", label: "Automations", icon: Workflow },
 ];
 
 const CATALOG: Item[] = [
@@ -121,6 +132,7 @@ export function AppSidebar() {
 
       <SidebarContent className="px-1 py-2">
         <NavGroup label="Platform" items={PLATFORM} pathname={pathname} />
+        <NavGroup label="Operations" items={OPERATIONS} pathname={pathname} />
         <NavGroup label="Catalog" items={CATALOG} pathname={pathname} />
         <NavGroup label="Connect" items={CONNECT} pathname={pathname} />
         <NavGroup label="Data" items={DATA} pathname={pathname} />
