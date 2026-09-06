@@ -15,7 +15,11 @@ export const Route = createFileRoute("/_authenticated/projects")({
   head: () => ({
     meta: [
       { title: "Projects — Open-Connect" },
-      { name: "description", content: "Operational projects for agents, tasks, and automations." },
+      {
+        name: "description",
+        content:
+          "Create organizations and projects — isolate agents, skills, plugins, OAuth, and vaults per workspace.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -31,6 +35,7 @@ function ProjectsPage() {
 
   const [orgName, setOrgName] = useState("");
   const [projectName, setProjectName] = useState("");
+  const [projectDesc, setProjectDesc] = useState("");
   const [orgId, setOrgId] = useState("");
 
   const orgs = useQuery({ queryKey: ["organizations"], queryFn: () => listOrgs({}) });
@@ -48,10 +53,18 @@ function ProjectsPage() {
   });
 
   const projectMutation = useMutation({
-    mutationFn: () => createProj({ data: { organizationId: orgId, name: projectName } }),
+    mutationFn: () =>
+      createProj({
+        data: {
+          organizationId: orgId,
+          name: projectName,
+          description: projectDesc || undefined,
+        },
+      }),
     onSuccess: () => {
-      toast.success("Project created");
+      toast.success("Project created — open it to attach catalog & OAuth");
       setProjectName("");
+      setProjectDesc("");
       void qc.invalidateQueries({ queryKey: ["projects"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not create project"),
@@ -64,21 +77,32 @@ function ProjectsPage() {
           <Badge variant="outline" className="mb-2 border-primary/40 text-primary">
             Operations · Projects
           </Badge>
-          <h1 className="font-display text-xl font-semibold tracking-tight sm:text-2xl">Projects</h1>
+          <h1 className="font-display text-xl font-semibold tracking-tight sm:text-2xl">
+            Organizations & projects
+          </h1>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Scope tasks, schedules, and automations under an organization project.
+            Separate workspaces (e.g. Development, Business). Each project gets its own agents,
+            skills, plugins, prompts, OAuth/MCP accounts, and vault credentials.
           </p>
         </div>
-        <Button asChild variant="outline" size="sm">
-          <Link to="/orgs">Organizations</Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link to="/orgs">Organizations</Link>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link to="/resources">Marketplace</Link>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link to="/studio">Studio</Link>
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="shadow-panel">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">New organization</CardTitle>
-            <CardDescription>Required before the first project.</CardDescription>
+            <CardDescription>Top-level workspace — you become owner.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="space-y-2">
@@ -103,7 +127,7 @@ function ProjectsPage() {
         <Card className="shadow-panel">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">New project</CardTitle>
-            <CardDescription>Belongs to one organization.</CardDescription>
+            <CardDescription>e.g. Development · Business · Client X</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="space-y-2">
@@ -128,7 +152,16 @@ function ProjectsPage() {
                 id="proj-name"
                 value={projectName}
                 onChange={(e) => setProjectName(e.target.value)}
-                placeholder="Agent rollout"
+                placeholder="Development"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="proj-desc">Description (optional)</Label>
+              <Input
+                id="proj-desc"
+                value={projectDesc}
+                onChange={(e) => setProjectDesc(e.target.value)}
+                placeholder="Dev agents, sandbox OAuth, test vault"
               />
             </div>
             <Button
@@ -161,12 +194,17 @@ function ProjectsPage() {
                   {(p as { organizations?: { name?: string } }).organizations?.name ?? "Org"} ·{" "}
                   <span className="font-mono">{p.slug}</span>
                 </p>
+                {p.description ? (
+                  <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{p.description}</p>
+                ) : null}
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <Button asChild size="sm" variant="outline">
-                    <Link to="/tasks">Tasks</Link>
+                  <Button asChild size="sm">
+                    <Link to="/projects/$projectId" params={{ projectId: p.id }}>
+                      Open workspace
+                    </Link>
                   </Button>
                   <Button asChild size="sm" variant="outline">
-                    <Link to="/automations">Automations</Link>
+                    <Link to="/resources">Add catalog</Link>
                   </Button>
                 </div>
               </Card>
