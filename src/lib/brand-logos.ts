@@ -1,7 +1,6 @@
 /**
  * Official brand marks via Simple Icons (https://simpleicons.org).
  * Used for connections, models, and AI client integrations.
- * SVG icons are the public brand assets maintained for each product mark.
  */
 const SI = "https://cdn.jsdelivr.net/npm/simple-icons@v13/icons";
 
@@ -35,9 +34,14 @@ export type BrandKey =
   | "cursor"
   | "azure"
   | "groq"
-  | "ollama";
+  | "ollama"
+  | "mistral"
+  | "pipedream"
+  | "composio"
+  | "onepassword"
+  | "litellm"
+  | "multion";
 
-/** Map internal provider id → Simple Icons slug */
 const ICON_SLUG: Record<string, string> = {
   github: "github",
   gitlab: "gitlab",
@@ -70,9 +74,15 @@ const ICON_SLUG: Record<string, string> = {
   azure: "microsoftazure",
   groq: "groq",
   ollama: "ollama",
+  mistral: "mistral",
+  pipedream: "pipedream",
+  composio: "python",
+  onepassword: "1password",
+  "1password": "1password",
+  litellm: "openai",
+  multion: "googlechrome",
 };
 
-/** Brand hex colors (Simple Icons defaults) for tinted backgrounds */
 export const BRAND_COLOR: Record<string, string> = {
   github: "#181717",
   gitlab: "#FC6D26",
@@ -103,6 +113,12 @@ export const BRAND_COLOR: Record<string, string> = {
   azure: "#0078D4",
   groq: "#F55036",
   ollama: "#000000",
+  mistral: "#FF7000",
+  pipedream: "#39C57D",
+  composio: "#6366F1",
+  onepassword: "#0095FF",
+  litellm: "#0EA5E9",
+  multion: "#4285F4",
 };
 
 export function brandLogoUrl(provider: string): string {
