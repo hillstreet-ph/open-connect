@@ -61,7 +61,7 @@ export const listProjects = createServerFn({ method: "GET" })
     return rows ?? [];
   });
 
-/** Projects the current user can access via project_members (or org owner/admin). */
+/** Projects the current user can access via project_members. */
 export const listMyProjectMemberships = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -100,22 +100,18 @@ export const createProject = createServerFn({ method: "POST" })
       .single();
     if (error) throw new Error(error.message);
 
-    // Creator becomes project Manager
     await context.supabase.from("project_members").insert({
       project_id: project.id,
       user_id: context.userId,
       role: "manager",
     });
 
-    // Claude-style environments per project
-    await context.supabase.from("environments").insert(
-      ["development", "staging", "production"].map((name) => ({
-        project_id: project.id,
-        organization_id: data.organizationId,
-        name,
-        slug: name,
-      })),
-    );
+    // Claude-style environments (schema: project_id, name, slug, is_default)
+    await context.supabase.from("environments").insert([
+      { project_id: project.id, name: "Development", slug: "development", is_default: true },
+      { project_id: project.id, name: "Staging", slug: "staging", is_default: false },
+      { project_id: project.id, name: "Production", slug: "production", is_default: false },
+    ]);
 
     return project;
   });
