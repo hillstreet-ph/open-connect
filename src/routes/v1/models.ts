@@ -26,7 +26,7 @@ export const Route = createFileRoute("/v1/models")({
           return gatewayError("Model gateway is not configured.", 503, "upstream_unavailable");
         }
 
-        const { ids, upstreams } = await fetchMergedModelCatalog();
+        const { ids, upstreams, providers } = await fetchMergedModelCatalog();
 
         const payload = {
           object: "list",
@@ -40,6 +40,7 @@ export const Route = createFileRoute("/v1/models")({
                 : "upstream",
           })),
           upstreams,
+          providers,
           count: ids.length,
         };
 
@@ -47,7 +48,7 @@ export const Route = createFileRoute("/v1/models")({
           key,
           endpoint: "/v1/models",
           statusCode: 200,
-          upstream: upstreams.join("+"),
+          upstream: upstreams.join("+") || primary.name,
         });
 
         return json(payload, 200);
