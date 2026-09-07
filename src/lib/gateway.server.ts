@@ -2,12 +2,16 @@
  * Open-Connect gateway server helpers.
  * Server-only: never import from client code.
  *
- * Production model plane:
- * - OpenRouter (preferred catalog + multi-provider models)
- * - LiteLLM-compatible proxy (optional second upstream)
- * Env (Pages secrets — never commit):
- *   OPENROUTER_API_KEY / OPENROUTER_BASE_URL
- *   LITELLM_MASTER_KEY / LITELLM_BASE_URL
+ * Production model plane (single client-facing gateway):
+ *   Client → https://open-connect.site/v1 + oc_live_ key
+ *         → OpenRouter (multi-provider: OpenAI, Claude, Gemini, …)
+ *         → optional self-hosted LiteLLM if LITELLM_BASE_URL is not openrouter.ai
+ *
+ * Env (Cloudflare Pages secrets — never commit):
+ *   LITELLM_BASE_URL   e.g. https://openrouter.ai/api/v1
+ *   LITELLM_MASTER_KEY OpenRouter sk-or-v1-… (or LiteLLM master key)
+ *   OPENROUTER_API_KEY optional explicit OpenRouter key
+ *   OPENROUTER_BASE_URL optional override
  */
 import { createHash, randomBytes } from "crypto";
 
@@ -21,12 +25,7 @@ export type Upstream = {
   headers: Record<string, string>;
 };
 
-/**
- * Logical aliases → OpenRouter model ids (openai / anthropic / google / meta / …).
- * Clients may also pass raw OpenRouter ids (e.g. anthropic/claude-sonnet-4).
- */
 export const MODEL_ALIASES: Record<string, string> = {
-  // Open Connect virtual
   "open-connect/fast": "openai/gpt-4o-mini",
   "open-connect/balanced": "openai/gpt-4o-mini",
   "open-connect/reasoning": "openai/gpt-4o",
@@ -35,7 +34,6 @@ export const MODEL_ALIASES: Record<string, string> = {
   "open-connect/claude": "anthropic/claude-sonnet-4",
   "open-connect/gemini": "google/gemini-2.5-flash",
 
-  // Short convenience aliases
   fast: "openai/gpt-4o-mini",
   balanced: "openai/gpt-4o-mini",
   reasoning: "openai/gpt-4o",
@@ -43,19 +41,17 @@ export const MODEL_ALIASES: Record<string, string> = {
   vision: "openai/gpt-4o",
   embedding: "openai/text-embedding-3-small",
 
-  // OpenAI family
   "gpt-4o": "openai/gpt-4o",
   "gpt-4o-mini": "openai/gpt-4o-mini",
   "gpt-4.1": "openai/gpt-4.1",
   "gpt-4.1-mini": "openai/gpt-4.1-mini",
   "gpt-4.1-nano": "openai/gpt-4.1-nano",
-  "o1": "openai/o1",
+  o1: "openai/o1",
   "o1-mini": "openai/o1-mini",
   "o3-mini": "openai/o3-mini",
   "openai/gpt-4o": "openai/gpt-4o",
   "openai/gpt-4o-mini": "openai/gpt-4o-mini",
 
-  // Anthropic / Claude
   "claude-sonnet": "anthropic/claude-sonnet-4",
   "claude-sonnet-4": "anthropic/claude-sonnet-4",
   "claude-3.5-sonnet": "anthropic/claude-3.5-sonnet",
@@ -64,21 +60,18 @@ export const MODEL_ALIASES: Record<string, string> = {
   "anthropic/claude-sonnet-4": "anthropic/claude-sonnet-4",
   "anthropic/claude-3.5-sonnet": "anthropic/claude-3.5-sonnet",
 
-  // Google
   "gemini-2.5-flash": "google/gemini-2.5-flash",
   "gemini-2.5-pro": "google/gemini-2.5-pro",
   "gemini-flash": "google/gemini-2.5-flash",
   "google/gemini-2.5-flash": "google/gemini-2.5-flash",
   "google/gemini-2.5-pro": "google/gemini-2.5-pro",
 
-  // Meta / DeepSeek / Mistral / xAI (via OpenRouter)
   "llama-3.3-70b": "meta-llama/llama-3.3-70b-instruct",
   "deepseek-chat": "deepseek/deepseek-chat",
   "mistral-large": "mistralai/mistral-large",
   "grok-2": "x-ai/grok-2-1212",
 };
 
-/** Always advertised even if upstream catalog is slow/empty. */
 export const MANAGED_MODEL_IDS: string[] = [
   ...Object.keys(MODEL_ALIASES),
   ...Object.values(MODEL_ALIASES),
@@ -110,40 +103,46 @@ function stripTrailingSlash(url: string): string {
   return url.replace(/\/+$/, "");
 }
 
+function isOpenRouterBase(url: string): boolean {
+  return !url || url.includes("openrouter.ai");
+}
+
 /**
- * Resolve all configured upstreams.
- * OpenRouter is preferred when its key is set; LiteLLM is included when its base/key differs.
- * Legacy: LITELLM_* pointing at openrouter.ai still works (single upstream).
+ * Resolve upstreams for catalog + chat.
+ * Production default: LITELLM_* → OpenRouter (one credential, all providers).
  */
 export function resolveUpstreams(): Upstream[] {
   const list: Upstream[] = [];
   const seen = new Set<string>();
-
   const appUrl = process.env["VITE_APP_URL"] ?? "https://open-connect.site";
 
-  const openRouterKey =
-    process.env["OPENROUTER_API_KEY"] ||
-    (process.env["LITELLM_BASE_URL"]?.includes("openrouter.ai")
-      ? process.env["LITELLM_MASTER_KEY"]
-      : "") ||
-    "";
-  const openRouterBase = stripTrailingSlash(
-    process.env["OPENROUTER_BASE_URL"] ||
-      (process.env["LITELLM_BASE_URL"]?.includes("openrouter.ai")
-        ? process.env["LITELLM_BASE_URL"]
-        : "") ||
-      "https://openrouter.ai/api/v1",
+  const liteBaseRaw = process.env["LITELLM_BASE_URL"] || "";
+  const liteKey = process.env["LITELLM_MASTER_KEY"] || "";
+  const explicitOrKey = process.env["OPENROUTER_API_KEY"] || "";
+  const explicitOrBase = process.env["OPENROUTER_BASE_URL"] || "";
+
+  // --- OpenRouter (multi-provider) ---
+  const orKey =
+    explicitOrKey ||
+    (isOpenRouterBase(liteBaseRaw) && liteKey ? liteKey : "") ||
+    (!liteBaseRaw && liteKey ? liteKey : "");
+
+  const orBase = stripTrailingSlash(
+    explicitOrBase ||
+      (isOpenRouterBase(liteBaseRaw) && liteBaseRaw
+        ? liteBaseRaw
+        : "https://openrouter.ai/api/v1"),
   );
 
-  if (openRouterKey) {
-    const key = `openrouter:${openRouterBase}`;
-    if (!seen.has(key)) {
-      seen.add(key);
+  if (orKey) {
+    const id = `openrouter:${orBase}`;
+    if (!seen.has(id)) {
+      seen.add(id);
       list.push({
         name: "openrouter",
-        baseUrl: openRouterBase,
+        baseUrl: orBase,
         headers: {
-          Authorization: `Bearer ${openRouterKey}`,
+          Authorization: `Bearer ${orKey}`,
           "Content-Type": "application/json",
           "HTTP-Referer": appUrl,
           "X-Title": "Open-Connect",
@@ -152,13 +151,12 @@ export function resolveUpstreams(): Upstream[] {
     }
   }
 
-  const liteKey = process.env["LITELLM_MASTER_KEY"] || "";
-  const liteBaseRaw = process.env["LITELLM_BASE_URL"] || "";
-  if (liteKey && liteBaseRaw && !liteBaseRaw.includes("openrouter.ai")) {
+  // --- Self-hosted LiteLLM proxy (optional) ---
+  if (liteKey && liteBaseRaw && !isOpenRouterBase(liteBaseRaw)) {
     const liteBase = stripTrailingSlash(liteBaseRaw);
-    const key = `litellm:${liteBase}`;
-    if (!seen.has(key)) {
-      seen.add(key);
+    const id = `litellm:${liteBase}`;
+    if (!seen.has(id)) {
+      seen.add(id);
       list.push({
         name: "litellm",
         baseUrl: liteBase,
@@ -170,27 +168,11 @@ export function resolveUpstreams(): Upstream[] {
     }
   }
 
-  // Final fallback: LITELLM_MASTER_KEY alone against OpenRouter default
-  if (list.length === 0 && process.env["LITELLM_MASTER_KEY"]) {
-    list.push({
-      name: "openrouter",
-      baseUrl: "https://openrouter.ai/api/v1",
-      headers: {
-        Authorization: `Bearer ${process.env["LITELLM_MASTER_KEY"]}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": appUrl,
-        "X-Title": "Open-Connect",
-      },
-    });
-  }
-
   return list;
 }
 
-/** Primary upstream (OpenRouter first when available). */
 export function resolveUpstream(): Upstream | null {
-  const all = resolveUpstreams();
-  return all[0] ?? null;
+  return resolveUpstreams()[0] ?? null;
 }
 
 export function hashKey(rawKey: string): string {
@@ -225,9 +207,7 @@ export async function authenticateKey(request: Request): Promise<AuthedKey | nul
   const digest = hashKey(raw);
   const now = Date.now();
   const cached = authCache.get(digest);
-  if (cached && now - cached.at < AUTH_TTL_MS) {
-    return cached.key;
-  }
+  if (cached && now - cached.at < AUTH_TTL_MS) return cached.key;
 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data } = await supabaseAdmin
@@ -281,7 +261,7 @@ export async function logGatewayRequest(entry: {
       total_tokens: entry.totalTokens ?? null,
     });
   } catch {
-    // never fail the request on audit log errors
+    // ignore audit failures
   }
 }
 
@@ -296,14 +276,16 @@ export function gatewayError(message: string, status: number, code: string): Res
   return json({ error: { message, type: "open_connect_error", code } }, status);
 }
 
-/** Fetch and merge model ids from all upstreams + managed catalog. */
+/** Full catalog: managed aliases + every model from connected upstream credentials. */
 export async function fetchMergedModelCatalog(): Promise<{
   ids: string[];
   upstreams: string[];
+  providers: string[];
 }> {
   const upstreams = resolveUpstreams();
   const ids = new Set<string>(MANAGED_MODEL_IDS);
   const names: string[] = [];
+  const providers = new Set<string>();
 
   await Promise.all(
     upstreams.map(async (u) => {
@@ -311,7 +293,7 @@ export async function fetchMergedModelCatalog(): Promise<{
       try {
         const response = await fetch(`${u.baseUrl}/models`, {
           headers: u.headers,
-          signal: AbortSignal.timeout(12_000),
+          signal: AbortSignal.timeout(15_000),
         });
         if (!response.ok) return;
         const payload = (await response.json().catch(() => null)) as {
@@ -320,13 +302,21 @@ export async function fetchMergedModelCatalog(): Promise<{
         const data = payload?.data;
         if (!Array.isArray(data)) return;
         for (const m of data) {
-          if (m && typeof m.id === "string" && m.id.length > 0) ids.add(m.id);
+          if (m && typeof m.id === "string" && m.id.length > 0) {
+            ids.add(m.id);
+            const slash = m.id.indexOf("/");
+            if (slash > 0) providers.add(m.id.slice(0, slash));
+          }
         }
       } catch {
-        // keep managed catalog if upstream fails
+        // keep managed list
       }
     }),
   );
 
-  return { ids: [...ids].sort(), upstreams: names };
+  return {
+    ids: [...ids].sort(),
+    upstreams: names,
+    providers: [...providers].sort(),
+  };
 }
