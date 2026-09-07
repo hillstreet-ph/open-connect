@@ -5,6 +5,7 @@ import {
   Building2,
   CalendarClock,
   FolderKanban,
+  HardDrive,
   KeyRound,
   LayoutDashboard,
   ListTodo,
@@ -39,41 +40,64 @@ import { cn } from "@/lib/utils";
 
 type Item = { to: string; label: string; icon: React.ComponentType<{ className?: string }> };
 
-/** Member Workspace — default surface for every signed-in human */
-const MEMBER_WORKSPACE: Item[] = [
+/**
+ * Primary IA (locked):
+ * Dashboard → Projects → Work → Build → Marketplace → Connections →
+ * AI Gateway → Developer → Files → Settings
+ *
+ * Organization is a switcher, not a daily top-level work item.
+ * Admin / Owner consoles appear only for privileged roles.
+ */
+
+const PRIMARY: Item[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/projects", label: "Projects", icon: FolderKanban },
-  { to: "/resources", label: "Marketplace", icon: Boxes },
-  { to: "/studio", label: "Studio", icon: Sparkles },
-  { to: "/agents", label: "Agents", icon: Bot },
-  { to: "/models", label: "Models", icon: Sparkles },
-  { to: "/toolkits", label: "Toolkits", icon: Wrench },
-  { to: "/integrations", label: "Integrations", icon: Plug },
-  { to: "/connections", label: "Connections", icon: Plug },
-  { to: "/api-keys", label: "My API keys", icon: KeyRound },
-  { to: "/guides", label: "Guides", icon: FileCode },
-  { to: "/settings", label: "Settings", icon: Settings },
 ];
 
-/** Admin Console — org Admin / Owner (platform admin+) */
-const ADMIN_CONSOLE: Item[] = [
-  { to: "/orgs", label: "Organization", icon: Building2 },
-  { to: "/projects", label: "Projects & access", icon: FolderKanban },
-  { to: "/roles", label: "Roles & scopes", icon: Shield },
-  { to: "/resources", label: "Resource registry", icon: Boxes },
-  { to: "/secrets", label: "Vault metadata", icon: Lock },
-  { to: "/tasks", label: "Operations · tasks", icon: ListTodo },
-  { to: "/schedule", label: "Scheduled", icon: CalendarClock },
+const WORK: Item[] = [
+  { to: "/tasks", label: "Tasks", icon: ListTodo },
   { to: "/automations", label: "Automations", icon: Workflow },
+  { to: "/schedule", label: "Schedules", icon: CalendarClock },
+];
+
+const BUILD: Item[] = [
+  { to: "/studio", label: "Studio", icon: Sparkles },
+  { to: "/agents", label: "Agents", icon: Bot },
+  { to: "/toolkits", label: "Toolkits", icon: Wrench },
+];
+
+const DISCOVER: Item[] = [
+  { to: "/resources", label: "Marketplace", icon: Boxes },
+];
+
+const CONNECT: Item[] = [
+  { to: "/connections", label: "Connections", icon: Plug },
+  { to: "/integrations", label: "Integrations", icon: Plug },
   { to: "/models", label: "AI Gateway", icon: Sparkles },
 ];
 
-/** Owner Console — ownership / governance (platform owner) */
+const DEVELOPER: Item[] = [
+  { to: "/api-keys", label: "API & MCP", icon: KeyRound },
+  { to: "/guides", label: "Guides", icon: FileCode },
+];
+
+const ACCOUNT: Item[] = [
+  { to: "/settings", label: "Settings", icon: Settings },
+];
+
+/** Admin Console — not everyday Member navigation */
+const ADMIN_CONSOLE: Item[] = [
+  { to: "/orgs", label: "Organization", icon: Building2 },
+  { to: "/roles", label: "Roles & scopes", icon: Shield },
+  { to: "/secrets", label: "Vault metadata", icon: Lock },
+  { to: "/resources", label: "Resource registry", icon: HardDrive },
+];
+
+/** Owner Console — governance only */
 const OWNER_CONSOLE: Item[] = [
-  { to: "/roles", label: "Ownership & policies", icon: Shield },
   { to: "/orgs", label: "Org governance", icon: Building2 },
+  { to: "/roles", label: "Ownership & policies", icon: Shield },
   { to: "/secrets", label: "Credential governance", icon: Lock },
-  { to: "/settings", label: "Global security", icon: Settings },
 ];
 
 function NavGroup({ label, items, pathname }: { label: string; items: Item[]; pathname: string }) {
@@ -127,17 +151,30 @@ export function AppSidebar() {
           </span>
           <span className="min-w-0 group-data-[collapsible=icon]:hidden">
             <span className="block truncate font-display text-sm font-semibold tracking-tight">
-              Open-Connect
+              Open Connect
             </span>
-            <span className="block text-[10px] uppercase tracking-wider text-muted-foreground">
-              {showOwner ? "Owner · Admin · Member" : showAdmin ? "Admin · Member" : "Member workspace"}
+            <span className="block truncate text-[10px] text-muted-foreground">
+              HillStreet · Workspace
             </span>
           </span>
+        </Link>
+        {/* Org/workspace switcher entry — full switcher UI later */}
+        <Link
+          to="/orgs"
+          className="mt-1 hidden rounded-md border border-sidebar-border/80 px-2 py-1.5 text-[11px] text-muted-foreground hover:bg-sidebar-accent group-data-[collapsible=icon]:hidden sm:block"
+        >
+          Switch org / workspace
         </Link>
       </SidebarHeader>
 
       <SidebarContent className="px-1 py-2">
-        <NavGroup label="Member Workspace" items={MEMBER_WORKSPACE} pathname={pathname} />
+        <NavGroup label="" items={PRIMARY} pathname={pathname} />
+        <NavGroup label="Work" items={WORK} pathname={pathname} />
+        <NavGroup label="Build" items={BUILD} pathname={pathname} />
+        <NavGroup label="Discover" items={DISCOVER} pathname={pathname} />
+        <NavGroup label="Connect" items={CONNECT} pathname={pathname} />
+        <NavGroup label="Developer" items={DEVELOPER} pathname={pathname} />
+        <NavGroup label="" items={ACCOUNT} pathname={pathname} />
         {showAdmin ? (
           <NavGroup label="Admin Console" items={ADMIN_CONSOLE} pathname={pathname} />
         ) : null}
