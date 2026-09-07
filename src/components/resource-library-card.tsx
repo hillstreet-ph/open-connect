@@ -27,7 +27,19 @@ function formatBytes(n: number) {
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-/** Upload / manage packages — only rendered inside authenticated routes. */
+async function detectFromFile(file: File) {
+  let contentText = "";
+  if (!isArchiveFilename(file.name) && file.size < 512_000) {
+    try {
+      contentText = await file.text();
+    } catch {
+      /* binary */
+    }
+  }
+  return detectResourceMeta({ filename: file.name, contentText });
+}
+
+/** Upload / manage packages — bulk auto-detect into catalog types. */
 export function ResourceLibraryCard() {
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -44,6 +56,7 @@ export function ResourceLibraryCard() {
   const [signals, setSignals] = useState<string[]>([]);
   const [confidence, setConfidence] = useState<string>("");
   const [busy, setBusy] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState<string>("");
 
   const mine = useQuery({
     queryKey: ["my-resources"],
@@ -61,70 +74,60 @@ export function ResourceLibraryCard() {
   async function onPickFile(next: File | null) {
     setFile(next);
     if (!next) return;
+    const meta = await detectFromFile(next);
+    setName(meta.name);
+    setSlug(meta.slug);
+    setDescription(meta.description);
+    setResourceType(meta.resource_type);
+    setSignals(meta.signals);
+    setConfidence(meta.confidence);
+  }
 
-    let contentText = "";
-    if (!isArchiveFilename(next.name) && next.size < 512_000) {
-      try {
-        contentText = await next.text();
-      } catch {
-        contentText = "";
-      }
-    }
+  async function uploadOne(
+    fileObj: File,
+    override?: { name: string; slug: string; description: string; resource_type: string },
+  ) {
+    if (fileObj.size > MAX_BYTES) throw new Error(`${fileObj.name} exceeds 50MB`);
+    const meta = override ?? (await detectFromFile(fileObj));
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) throw new Error("Not signed in");
 
-    const detected = detectResourceMeta({ filename: next.name, contentText });
-    setName(detected.name);
-    setSlug(detected.slug);
-    setDescription(detected.description);
-    setResourceType(detected.resource_type);
-    setSignals(detected.signals);
-    setConfidence(detected.confidence);
+    const path = `${user.id}/${Date.now()}-${meta.slug}-${fileObj.name}`;
+    const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, fileObj, {
+      upsert: false,
+      contentType: fileObj.type || "application/octet-stream",
+    });
+    if (upErr) throw new Error(upErr.message);
+
+    await registerFn({
+      data: {
+        name: meta.name,
+        slug: `${meta.slug}-${Date.now().toString(36).slice(-4)}`,
+        description: meta.description,
+        resource_type: meta.resource_type as (typeof TYPES)[number],
+        package_path: path,
+        package_filename: fileObj.name,
+        package_size: fileObj.size,
+        package_mime: fileObj.type || "application/octet-stream",
+        published: true,
+        version: "1.0.0",
+      },
+    });
   }
 
   async function uploadAndRegister() {
-    if (!file) {
-      toast.error("Choose a file first");
-      return;
-    }
-    if (file.size > MAX_BYTES) {
-      toast.error("Max package size is 50 MB");
-      return;
-    }
-
+    if (!file) return;
     setBusy(true);
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error("Sign in required to upload");
-        return;
-      }
-
-      const safeName = file.name.replace(/[^a-zA-Z0-9._-]+/g, "_");
-      const path = `${user.id}/${Date.now()}-${safeName}`;
-
-      const { error: upError } = await supabase.storage.from(BUCKET).upload(path, file, {
-        contentType: file.type || "application/octet-stream",
-        upsert: false,
+      await uploadOne(file, {
+        name: name || file.name,
+        slug: slug || "resource",
+        description: description || "",
+        resource_type: resourceType,
       });
-      if (upError) throw upError;
-
-      await registerFn({
-        data: {
-          name: name || file.name,
-          slug: slug || "resource",
-          description,
-          resource_type: resourceType,
-          package_path: path,
-          package_filename: file.name,
-          package_size: file.size,
-          package_mime: file.type || "application/octet-stream",
-          published: true,
-          version: "1.0.0",
-        },
-      });
-
-      toast.success("Resource uploaded and published");
+      toast.success("Published to catalog");
       setFile(null);
       setName("");
       setSlug("");
@@ -133,8 +136,6 @@ export function ResourceLibraryCard() {
       setConfidence("");
       if (fileRef.current) fileRef.current.value = "";
       void queryClient.invalidateQueries({ queryKey: ["my-resources"] });
-      void queryClient.invalidateQueries({ queryKey: ["resources"] });
-      void queryClient.invalidateQueries({ queryKey: ["profile-dashboard"] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Upload failed");
     } finally {
@@ -142,11 +143,43 @@ export function ResourceLibraryCard() {
     }
   }
 
+  async function bulkUpload(files: FileList | File[]) {
+    const list = Array.from(files);
+    if (list.length === 0) return;
+    setBusy(true);
+    let ok = 0;
+    let fail = 0;
+    for (let i = 0; i < list.length; i++) {
+      const f = list[i]!;
+      setBulkProgress(`${i + 1}/${list.length} · ${f.name}`);
+      try {
+        await uploadOne(f);
+        ok += 1;
+      } catch (e) {
+        fail += 1;
+        console.warn("[bulk]", f.name, e);
+      }
+    }
+    setBulkProgress("");
+    setBusy(false);
+    toast.success(`Bulk done · ${ok} published${fail ? ` · ${fail} failed` : ""}`);
+    void queryClient.invalidateQueries({ queryKey: ["my-resources"] });
+    if (fileRef.current) fileRef.current.value = "";
+  }
+
   const downloadMutation = useMutation({
     mutationFn: (id: string) => downloadFn({ data: { id } }),
-    onSuccess: (result) => {
-      window.open(result.url, "_blank", "noopener,noreferrer");
-      toast.success("Download started");
+    onSuccess: (res) => {
+      if (res && "url" in res && res.url) window.open(res.url, "_blank");
+      else if (res && "content" in res) {
+        const blob = new Blob([String((res as { content: string }).content)], {
+          type: "text/markdown",
+        });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = (res as { filename?: string }).filename ?? "resource.md";
+        a.click();
+      }
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Download failed"),
   });
@@ -154,53 +187,57 @@ export function ResourceLibraryCard() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteFn({ data: { id } }),
     onSuccess: () => {
-      toast.success("Deleted");
+      toast.success("Removed");
       void queryClient.invalidateQueries({ queryKey: ["my-resources"] });
-      void queryClient.invalidateQueries({ queryKey: ["resources"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Delete failed"),
   });
 
   return (
-    <Card className="shadow-panel sm:col-span-2">
+    <Card className="shadow-panel" id="upload">
       <CardHeader>
-        <span className="flex size-9 items-center justify-center rounded-lg bg-primary/15 text-primary">
-          <Upload className="size-4" />
-        </span>
-        <CardTitle className="mt-3 text-base">Upload packages</CardTitle>
+        <CardTitle className="text-base">Package library</CardTitle>
         <CardDescription>
-          Sign-in required. Drop a <code className="font-mono">.zip</code>, skill, MCP config, agent,
-          plugin, tool, or prompt. Type is auto-detected.
+          Upload .zip / .md / manifests — auto-detect skill · MCP · plugin · agent · prompt and publish
+          to the catalog. Select multiple files for bulk upload.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="pkg-file">Files</Label>
+          <Input
+            id="pkg-file"
+            ref={fileRef}
+            type="file"
+            multiple
+            accept=".zip,.md,.json,.yaml,.yml,.txt,application/zip"
+            onChange={(e) => {
+              const files = e.target.files;
+              if (!files?.length) return;
+              if (files.length === 1) void onPickFile(files[0]!);
+              else void bulkUpload(files);
+            }}
+          />
+          {bulkProgress ? <p className="text-xs text-primary">{bulkProgress}</p> : null}
+          {file && !bulkProgress ? (
+            <p className="text-xs text-muted-foreground">
+              {file.name} · {formatBytes(file.size)}
+              {confidence ? ` · detect ${confidence}` : ""}
+              {signals.length ? ` · ${signals.join(", ")}` : ""}
+            </p>
+          ) : null}
+        </div>
+
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="resource-file">Package file</Label>
-            <Input
-              id="resource-file"
-              ref={fileRef}
-              type="file"
-              accept=".zip,.tgz,.tar,.gz,.md,.json,.txt,.yaml,.yml,.prompt"
-              onChange={(e) => void onPickFile(e.target.files?.[0] ?? null)}
-            />
-            {file ? (
-              <p className="text-xs text-muted-foreground">
-                {file.name} · {formatBytes(file.size)}
-                {confidence ? ` · detected ${resourceType} (${confidence})` : ""}
-                {signals.length ? ` · ${signals.join(", ")}` : ""}
-              </p>
-            ) : null}
+          <div className="space-y-2">
+            <Label htmlFor="pkg-name">Name</Label>
+            <Input id="pkg-name" value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div className="space-y-2">
-            <Label>Name</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="My skill" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="resource-type">Type</Label>
+            <Label htmlFor="pkg-type">Catalog type</Label>
             <select
-              id="resource-type"
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              id="pkg-type"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
               value={resourceType}
               onChange={(e) => setResourceType(e.target.value)}
             >
@@ -212,12 +249,21 @@ export function ResourceLibraryCard() {
             </select>
           </div>
           <div className="space-y-2 sm:col-span-2">
-            <Label>Slug</Label>
-            <Input value={slug} onChange={(e) => setSlug(e.target.value)} className="font-mono text-sm" />
+            <Label htmlFor="pkg-slug">Slug</Label>
+            <Input
+              id="pkg-slug"
+              value={slug}
+              onChange={(e) => setSlug(e.target.value)}
+              className="font-mono text-xs"
+            />
           </div>
           <div className="space-y-2 sm:col-span-2">
-            <Label>Description</Label>
-            <Input value={description} onChange={(e) => setDescription(e.target.value)} />
+            <Label htmlFor="pkg-desc">Description</Label>
+            <Input
+              id="pkg-desc"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
           </div>
         </div>
 

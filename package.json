@@ -1,6 +1,8 @@
 {
-  "name": "tanstack_start_ts",
+  "name": "open-connect",
+  "version": "1.0.0",
   "private": true,
+  "description": "Open-Connect single AI gateway — MCP, models, skills, plugins, connectors on open-connect.site",
   "sideEffects": false,
   "type": "module",
   "scripts": {

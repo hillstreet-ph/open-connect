@@ -23,11 +23,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Open-Connect — AI workspace hub for agents, MCP & skills" },
+      { title: "Open-Connect — AI workspace for agents, MCP & skills" },
       {
         name: "description",
         content:
-          "Workspace hub for Open-Connect. Connect Open WebUI, ChatGPT, Claude, Grok. Studio, orgs, marketplace, roles — GitHub + Cloudflare + Supabase.",
+          "Calm AI workspace. Connect Open WebUI, ChatGPT, Claude, Grok. Studio, orgs, marketplace — GitHub + Cloudflare + Supabase.",
       },
       { property: "og:title", content: "Open-Connect — Your team AI workspace" },
     ],
@@ -39,36 +39,36 @@ const megaFeatures = [
   {
     group: "Workspace",
     items: [
-      { icon: LayoutDashboard, title: "Studio", body: "Create agents, skills, prompts, plugins, MCP", to: "/studio" as const },
+      { icon: LayoutDashboard, title: "Studio", body: "Create agents, skills, prompts, plugins", to: "/studio" as const },
       { icon: Building2, title: "Organizations", body: "Orgs and projects for your team", to: "/orgs" as const },
-      { icon: Code2, title: "Coding agents", body: "MCP agents with scoped oc_live_ keys", to: "/agents" as const },
-      { icon: FileCode, title: "Guides", body: "Professional E2E setup docs", to: "/guides" as const },
+      { icon: Code2, title: "Coding agents", body: "MCP agents with scoped keys", to: "/agents" as const },
+      { icon: FileCode, title: "Guides", body: "Professional E2E setup", to: "/guides" as const },
     ],
   },
   {
     group: "Integration",
     items: [
-      { icon: MessageSquare, title: "Open WebUI", body: "Point base URL at /v1 with your key", to: "/integrations" as const },
-      { icon: Plug, title: "Slack · Discord · Telegram", body: "Connect chat apps to agents", to: "/connections" as const },
+      { icon: MessageSquare, title: "Open WebUI", body: "Point base URL at /v1", to: "/integrations" as const },
+      { icon: Plug, title: "Chat apps", body: "Slack · Discord · Telegram", to: "/connections" as const },
       { icon: Sparkles, title: "ChatGPT · Claude · Grok", body: "OAuth + MCP clients", to: "/integrations" as const },
       { icon: Boxes, title: "Marketplace", body: "Skills, MCP, tools, plugins", to: "/resources" as const },
     ],
   },
   {
-    group: "Core platform",
+    group: "Platform",
     items: [
-      { icon: Terminal, title: "MCP gateway", body: "https://open-connect.site/mcp", to: "/integrations" as const },
-      { icon: Sparkles, title: "Models /v1", body: "OpenAI-compatible multi-provider", to: "/models" as const },
-      { icon: Shield, title: "Role scopes", body: "user · developer · publisher · admin", to: "/dashboard" as const },
-      { icon: Wrench, title: "API keys", body: "Scoped oc_live_ keys", to: "/api-keys" as const },
+      { icon: Terminal, title: "MCP gateway", body: "open-connect.site/mcp", to: "/integrations" as const },
+      { icon: Sparkles, title: "Models /v1", body: "OpenAI-compatible", to: "/models" as const },
+      { icon: Shield, title: "Role scopes", body: "user → owner", to: "/dashboard" as const },
+      { icon: Wrench, title: "API keys", body: "Full autonomous scopes", to: "/api-keys" as const },
     ],
   },
 ];
 
 const marketStats = [
-  { label: "Agents", value: "—", hint: "Connect MCP agents", to: "/agents" as const, icon: Bot },
-  { label: "MCP", value: "/mcp", hint: "One URL for tools", to: "/integrations" as const, icon: Plug },
-  { label: "Skills", value: "40+", hint: "Marketplace packages", to: "/resources" as const, icon: Boxes },
+  { label: "Agents", value: "MCP", hint: "Connect agents", to: "/agents" as const, icon: Bot },
+  { label: "Gateway", value: "/mcp", hint: "One tools URL", to: "/integrations" as const, icon: Plug },
+  { label: "Skills", value: "40+", hint: "Marketplace", to: "/resources" as const, icon: Boxes },
 ];
 
 const plans = [
@@ -79,12 +79,11 @@ const plans = [
     cta: "Get started",
     popular: false,
     features: [
-      "Studio · create agents & skills",
-      "Marketplace browse + download (login)",
-      "Open WebUI / Claude / Grok via MCP & /v1",
+      "Studio · agents & skills",
+      "Marketplace (login to download)",
+      "Open WebUI / Claude / Grok",
       "1 organization · projects",
-      "Scoped oc_live_ API keys",
-      "Role: user",
+      "Full-scope oc_live_ keys",
     ],
   },
   {
@@ -96,25 +95,23 @@ const plans = [
     features: [
       "Everything in Free",
       "Organizations & projects",
-      "Connections catalog (GitHub, Slack…)",
-      "Secrets vault · toolkits (developer+)",
+      "Pipedream · Composio · 1Password",
+      "Secrets vault · toolkits",
       "Professional E2E guides",
-      "Full role scopes · admin when granted",
     ],
   },
   {
     name: "Open WebUI",
     price: "Bring yours",
-    period: "Rebrand to open-connect.site",
+    period: "Point at open-connect.site",
     cta: "Integration guide",
     popular: false,
     features: [
-      "Base URL → https://open-connect.site/v1",
+      "Base URL → /v1",
       "API key → oc_live_…",
-      "MCP → https://open-connect.site/mcp",
-      "Models aliases open-connect/*",
-      "Same stack as production hub",
-      "No Vercel — CF Pages edge only",
+      "MCP → /mcp",
+      "Model aliases open-connect/*",
+      "Edge on Cloudflare Pages",
     ],
   },
 ];
@@ -125,21 +122,22 @@ function Home() {
 
   return (
     <div className="bg-background">
-      <section className="border-b border-border/60 bg-card/40">
-        <div className="mx-auto hidden max-w-6xl gap-8 px-4 py-6 lg:grid lg:grid-cols-3">
+      {/* Desktop mega menu strip */}
+      <section className="hidden border-b border-border/50 bg-surface/50 lg:block">
+        <div className="mx-auto grid max-w-5xl grid-cols-3 gap-8 px-6 py-8">
           {megaFeatures.map((col) => (
             <div key={col.group}>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
                 {col.group}
               </p>
-              <ul className="mt-3 space-y-2">
+              <ul className="mt-4 space-y-1">
                 {col.items.map((item) => (
                   <li key={item.title}>
                     <Link
                       to={item.to}
-                      className="flex gap-3 rounded-lg p-2 transition-colors hover:bg-muted/50"
+                      className="flex gap-3 rounded-2xl p-2.5 transition-colors hover:bg-muted/60"
                     >
-                      <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                      <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
                         <item.icon className="size-4" />
                       </span>
                       <span>
@@ -155,26 +153,45 @@ function Home() {
         </div>
       </section>
 
-      <section className="border-b border-border/60">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-stretch gap-3 px-4 py-6">
+      {/* Mobile feature chips */}
+      <section className="border-b border-border/50 lg:hidden">
+        <div className="flex gap-2 overflow-x-auto px-4 py-3 scrollbar-none">
+          {megaFeatures.flatMap((c) => c.items).slice(0, 6).map((item) => (
+            <Link
+              key={item.title}
+              to={item.to}
+              className="flex shrink-0 items-center gap-2 rounded-full border border-border/70 bg-card px-3.5 py-2 text-xs font-medium shadow-sm"
+            >
+              <item.icon className="size-3.5 text-primary" />
+              {item.title}
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* Stats */}
+      <section className="border-b border-border/50">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-stretch gap-3 px-4 py-5 sm:px-6 sm:py-6">
           {marketStats.map((s) => (
             <Link
               key={s.label}
               to={s.to}
-              className="min-w-[8rem] flex-1 rounded-xl border border-border/70 bg-card/60 p-4 transition-colors hover:border-primary/40"
+              className="min-w-[7.5rem] flex-1 rounded-2xl border border-border/70 bg-card p-4 shadow-sm transition-all hover:border-primary/30 hover:shadow-panel"
             >
               <s.icon className="size-4 text-primary" />
-              <p className="mt-2 font-mono text-lg font-semibold tabular-nums">{s.value}</p>
+              <p className="mt-2.5 font-display text-xl font-semibold tabular-nums tracking-tight">
+                {s.value}
+              </p>
               <p className="text-sm font-medium">{s.label}</p>
               <p className="text-xs text-muted-foreground">{s.hint}</p>
             </Link>
           ))}
-          <div className="flex min-w-[10rem] flex-1 flex-col justify-center gap-2 rounded-xl border border-border/70 bg-card/40 p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Social
+          <div className="flex min-w-[9rem] flex-1 flex-col justify-center gap-2 rounded-2xl border border-border/70 bg-card/80 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              Stack
             </p>
             <div className="flex flex-wrap gap-2">
-              {["github", "discord", "slack"].map((p) => (
+              {["github", "cloudflare", "supabase"].map((p) => (
                 <BrandLogo key={p} provider={p} size="sm" />
               ))}
             </div>
@@ -182,28 +199,32 @@ function Home() {
         </div>
       </section>
 
+      {/* Hero */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-hero opacity-80" aria-hidden />
-        <div className="absolute inset-0 grid-lines opacity-40" aria-hidden />
-        <div className="relative mx-auto max-w-4xl px-4 py-16 text-center sm:py-24">
-          <Badge variant="outline" className="border-primary/40 text-primary">
-            Open-Connect · open-connect.site
+        <div className="absolute inset-0 bg-hero" aria-hidden />
+        <div className="absolute inset-0 grid-lines opacity-50" aria-hidden />
+        <div className="relative mx-auto max-w-3xl px-4 py-16 text-center sm:px-6 sm:py-24 md:py-28">
+          <Badge
+            variant="outline"
+            className="rounded-full border-primary/25 bg-card/60 px-3 py-1 text-primary shadow-sm"
+          >
+            open-connect.site
           </Badge>
-          <h1 className="mt-5 text-3xl font-semibold tracking-tight sm:text-5xl md:text-6xl">
+          <h1 className="mt-6 font-display text-[2rem] leading-[1.15] tracking-tight sm:text-5xl md:text-[3.25rem]">
             Your team just needs an{" "}
             <span className="text-gradient">Open-Connect workspace</span>
           </h1>
-          <p className="mx-auto mt-4 max-w-2xl text-sm text-muted-foreground sm:text-base">
-            Hub Studio · organizations · professional setup · role scopes. Connect{" "}
-            <strong className="text-foreground">Open WebUI</strong>, ChatGPT, Claude, Grok, and Hermes
-            through one MCP URL and one model gateway — not a pile of single-purpose tools.
+          <p className="mx-auto mt-5 max-w-xl text-[15px] leading-relaxed text-muted-foreground sm:text-base">
+            Studio, organizations, and marketplace in one calm hub. Connect{" "}
+            <strong className="font-medium text-foreground">Open WebUI</strong>, ChatGPT, Claude, and
+            Grok through a single MCP URL and model gateway.
           </p>
-          <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
+          <div className="mt-9 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
             {loading ? null : signedIn ? (
               <>
                 <Button asChild size="lg">
                   <Link to="/dashboard">
-                    Open workspace <ArrowRight className="ml-1 size-4" />
+                    Open workspace <ArrowRight className="ml-0.5 size-4" />
                   </Link>
                 </Button>
                 <Button asChild size="lg" variant="outline">
@@ -214,7 +235,7 @@ function Home() {
               <>
                 <Button asChild size="lg">
                   <Link to="/auth" search={{ mode: "signup" }}>
-                    Get started <ArrowRight className="ml-1 size-4" />
+                    Get started <ArrowRight className="ml-0.5 size-4" />
                   </Link>
                 </Button>
                 <Button asChild size="lg" variant="outline">
@@ -223,10 +244,10 @@ function Home() {
               </>
             )}
           </div>
-          <p className="mt-6 text-xs text-muted-foreground">
-            Trusted stack: GitHub · Cloudflare · Supabase · OpenRouter
+          <p className="mt-8 text-xs text-muted-foreground">
+            GitHub · Cloudflare · Supabase · OpenRouter
           </p>
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-3">
             {["github", "cloudflare", "supabase", "openai", "anthropic"].map((p) => (
               <BrandLogo key={p} provider={p} size="sm" />
             ))}
@@ -234,49 +255,67 @@ function Home() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 py-14 sm:py-20">
-        <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
-          <div>
-            <h2 className="text-2xl font-semibold sm:text-3xl">
-              One hub for your team's AI superpower
+      {/* Product story */}
+      <section className="mx-auto max-w-5xl px-4 py-14 sm:px-6 sm:py-20">
+        <div className="grid gap-10 lg:grid-cols-2 lg:items-center lg:gap-14">
+          <div className="text-left">
+            <h2 className="font-display text-2xl tracking-tight sm:text-3xl">
+              One hub for your team's AI work
             </h2>
-            <p className="mt-3 text-sm text-muted-foreground">
+            <p className="mt-4 text-[15px] leading-relaxed text-muted-foreground">
               Replace scattered keys and tools with Open-Connect: Studio to create, organizations to
               group work, marketplace to share skills, and role scopes so clients only get what they
               need.
             </p>
-            <ul className="mt-6 space-y-2 text-sm text-muted-foreground">
-              <li className="flex gap-2">
-                <Sparkles className="mt-0.5 size-4 shrink-0 text-primary" />
-                Open WebUI → base URL <code className="font-mono text-xs text-primary">/v1</code>
+            <ul className="mt-7 space-y-3 text-sm text-muted-foreground">
+              <li className="flex gap-3">
+                <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                  <Sparkles className="size-3.5 text-primary" />
+                </span>
+                <span>
+                  Open WebUI → base URL{" "}
+                  <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs text-primary">
+                    /v1
+                  </code>
+                </span>
               </li>
-              <li className="flex gap-2">
-                <Plug className="mt-0.5 size-4 shrink-0 text-primary" />
-                MCP clients → <code className="font-mono text-xs text-primary">/mcp</code> + Bearer key
+              <li className="flex gap-3">
+                <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                  <Plug className="size-3.5 text-primary" />
+                </span>
+                <span>
+                  MCP clients →{" "}
+                  <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs text-primary">
+                    /mcp
+                  </code>{" "}
+                  + Bearer key
+                </span>
               </li>
-              <li className="flex gap-2">
-                <Shield className="mt-0.5 size-4 shrink-0 text-primary" />
-                Login required to download agents & skills
+              <li className="flex gap-3">
+                <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                  <Shield className="size-3.5 text-primary" />
+                </span>
+                <span>Login required to download agents & skills</span>
               </li>
             </ul>
           </div>
-          <Card className="border-primary/30 bg-pillar shadow-panel">
-            <CardHeader>
-              <CardTitle className="text-base">Open WebUI rebrand path</CardTitle>
-              <CardDescription>
-                Point your Open WebUI instance at Open-Connect instead of a single vendor.
+          <Card className="overflow-hidden rounded-3xl border-border/70 bg-pillar shadow-panel">
+            <CardHeader className="p-6 pb-3">
+              <CardTitle className="font-display text-lg">Open WebUI path</CardTitle>
+              <CardDescription className="text-[13px] leading-relaxed">
+                Point your instance at Open-Connect instead of a single vendor.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-2 font-mono text-xs">
-              <div className="rounded-lg border border-border/70 bg-background/60 px-3 py-2">
+            <CardContent className="space-y-2.5 px-6 pb-6 font-mono text-xs">
+              <div className="rounded-2xl border border-border/70 bg-background/80 px-4 py-3">
                 <span className="text-muted-foreground">OPENAI_API_BASE=</span>
-                <span className="text-primary">https://open-connect.site/v1</span>
+                <span className="break-all text-primary">https://open-connect.site/v1</span>
               </div>
-              <div className="rounded-lg border border-border/70 bg-background/60 px-3 py-2">
+              <div className="rounded-2xl border border-border/70 bg-background/80 px-4 py-3">
                 <span className="text-muted-foreground">OPENAI_API_KEY=</span>
-                <span className="text-accent">oc_live_…</span>
+                <span className="text-primary">oc_live_…</span>
               </div>
-              <Button asChild size="sm" className="mt-2 w-full">
+              <Button asChild size="sm" className="mt-3 w-full">
                 <Link to="/integrations">Full integration guide</Link>
               </Button>
             </CardContent>
@@ -284,36 +323,41 @@ function Home() {
         </div>
       </section>
 
-      <section className="border-t border-border/60 bg-surface/30">
-        <div className="mx-auto max-w-6xl px-4 py-14 sm:py-16">
+      {/* Plans */}
+      <section className="border-t border-border/50 bg-surface/40">
+        <div className="mx-auto max-w-5xl px-4 py-14 sm:px-6 sm:py-16">
           <div className="text-center">
-            <Badge variant="secondary">Plans · workspace access</Badge>
-            <h2 className="mt-3 text-2xl font-semibold sm:text-3xl">Start free. Scale with roles.</h2>
-            <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">
-              Not a credit store — capability and role scopes on open-connect.site.
+            <Badge variant="secondary" className="rounded-full">
+              Plans
+            </Badge>
+            <h2 className="mt-4 font-display text-2xl tracking-tight sm:text-3xl">
+              Start free. Scale with roles.
+            </h2>
+            <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
+              Capability and role scopes — not a credit store.
             </p>
           </div>
-          <div className="mt-10 grid gap-4 md:grid-cols-3">
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 md:grid-cols-3">
             {plans.map((plan) => (
               <Card
                 key={plan.name}
                 className={
                   plan.popular
-                    ? "relative border-primary/50 shadow-panel ring-1 ring-primary/30"
-                    : "shadow-panel"
+                    ? "relative rounded-3xl border-primary/40 shadow-panel ring-1 ring-primary/20"
+                    : "rounded-3xl shadow-sm"
                 }
               >
                 {plan.popular ? (
-                  <span className="absolute -top-2.5 right-4 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                  <span className="absolute -top-2.5 right-4 rounded-full bg-primary px-2.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
                     Most popular
                   </span>
                 ) : null}
-                <CardHeader className="p-5">
-                  <CardTitle className="text-lg">{plan.name}</CardTitle>
-                  <p className="text-2xl font-semibold tabular-nums">{plan.price}</p>
+                <CardHeader className="p-6 pb-2">
+                  <CardTitle className="font-display text-lg">{plan.name}</CardTitle>
+                  <p className="font-display text-2xl tracking-tight">{plan.price}</p>
                   <CardDescription>{plan.period}</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4 px-5 pb-5">
+                <CardContent className="space-y-4 px-6 pb-6">
                   <Button asChild className="w-full" variant={plan.popular ? "default" : "outline"}>
                     <Link
                       to={
@@ -327,7 +371,7 @@ function Home() {
                       {plan.cta}
                     </Link>
                   </Button>
-                  <ul className="space-y-2 text-xs text-muted-foreground">
+                  <ul className="space-y-2.5 text-xs leading-snug text-muted-foreground">
                     {plan.features.map((f) => (
                       <li key={f} className="flex gap-2">
                         <span className="text-primary">✓</span>
@@ -342,14 +386,15 @@ function Home() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-3xl px-4 py-14 text-center sm:py-16">
-        <h2 className="text-xl font-semibold sm:text-2xl">
-          {signedIn ? "Continue in Studio" : "Ready for your Open-Connect workspace?"}
+      {/* CTA */}
+      <section className="mx-auto max-w-2xl px-4 py-16 text-center sm:px-6 sm:py-20">
+        <h2 className="font-display text-xl tracking-tight sm:text-2xl">
+          {signedIn ? "Continue in Studio" : "Ready for your workspace?"}
         </h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Hub Studio · organizations · professional setup · role scopes — on open-connect.site.
+        <p className="mt-3 text-sm text-muted-foreground">
+          Hub Studio · organizations · professional setup — on open-connect.site.
         </p>
-        <div className="mt-6 flex flex-wrap justify-center gap-2">
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
           <Button asChild size="lg">
             <Link to={signedIn ? "/studio" : "/auth"}>
               {signedIn ? "Open Studio" : "Create account"}

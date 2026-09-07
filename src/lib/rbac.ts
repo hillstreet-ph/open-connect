@@ -55,12 +55,13 @@ export const ROLE_SCOPE_MATRIX: {
 }[] = [
   {
     role: "user",
-    summary: "Client workspace — download, upload own packages, keys, agents, orgs",
+    summary: "Client workspace — download, upload, keys, agents, orgs, full API surface",
     can: [
       "Dashboard · Studio · Organizations",
       "Download / view marketplace skills",
       "Upload packages (own)",
-      "API keys · Agents · Connections · Secrets",
+      "API keys (full autonomous scopes)",
+      "Agents · Connections · Secrets",
       "Guides & professional E2E setup",
     ],
   },
@@ -86,14 +87,19 @@ export const ROLE_SCOPE_MATRIX: {
   },
 ];
 
-/** Agent / API key scopes (oc_live_ keys) */
+/** Agent / API key scopes (oc_live_ keys) — auto-granted on create */
 export const KEY_SCOPE_DOCS: { scope: string; meaning: string }[] = [
+  { scope: "openid", meaning: "OIDC identity for OAuth MCP clients" },
   { scope: "mcp:connect", meaning: "Call MCP tools/list and tools/call at /mcp" },
   { scope: "resources:read", meaning: "Read marketplace catalog via MCP/API" },
-  { scope: "connections:read", meaning: "List your app capability grants" },
-  { scope: "connections:invoke", meaning: "Invoke connected app capabilities server-side" },
+  { scope: "resources:write", meaning: "Upload / manage own packages" },
+  { scope: "connections:read", meaning: "List app capability grants" },
+  { scope: "connections:invoke", meaning: "Invoke Pipedream / Composio / connected apps server-side" },
   { scope: "models:read", meaning: "List models and probe /v1" },
-  { scope: "models:invoke", meaning: "POST /v1/chat/completions" },
+  { scope: "models:invoke", meaning: "POST /v1/chat/completions (LiteLLM / OpenRouter)" },
+  { scope: "tools:invoke", meaning: "Run tools, browser skills, MultiOn orchestration" },
+  { scope: "secrets:read", meaning: "Resolve vault references for agents (server-side only)" },
+  { scope: "agents:invoke", meaning: "Run agent sessions and toolkits" },
 ];
 
 export function highestRole(roles: AppRole[]): AppRole {

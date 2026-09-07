@@ -1,0 +1,12 @@
+interface:
+  display_name: Agent Browser
+  short_description: Browser automation CLI for AI agents
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

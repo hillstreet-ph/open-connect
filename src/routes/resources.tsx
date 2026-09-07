@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { AddToProjectButton } from "@/components/add-to-project";
 
 export const Route = createFileRoute("/resources")({
   head: () => ({
@@ -22,7 +23,7 @@ export const Route = createFileRoute("/resources")({
       {
         name: "description",
         content:
-          "Marketplace for skills, MCP servers, tools, plugins, agents and prompts. Sign in to download or view.",
+          "Marketplace for skills, MCP servers, tools, plugins, agents and prompts. Sign in to download or add to a project.",
       },
       { property: "og:title", content: "Marketplace — Open-Connect" },
     ],
@@ -127,9 +128,8 @@ function ResourcesPage() {
           </Badge>
           <h1 className="text-2xl font-semibold sm:text-4xl">Marketplace</h1>
           <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-            Browse skills, MCP, tools, plugins, agents, and prompts.{" "}
-            <strong className="font-medium text-foreground">Sign in required</strong> to view or
-            download. Includes inspect-analyze-e2e and other E2E skills.
+            Browse skills, MCP, tools, plugins, agents, and prompts. Sign in to download or{" "}
+            <strong className="font-medium text-foreground">add to a project workspace</strong>.
           </p>
         </div>
         {user ? (
@@ -141,7 +141,7 @@ function ResourcesPage() {
               </Link>
             </Button>
             <Button asChild variant="outline" className="w-full sm:w-auto">
-              <Link to="/guides">Guides</Link>
+              <Link to="/projects">Projects</Link>
             </Button>
           </div>
         ) : (
@@ -158,8 +158,7 @@ function ResourcesPage() {
         <div className="mt-6 flex items-start gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2.5 text-sm text-muted-foreground">
           <Lock className="mt-0.5 size-4 shrink-0" />
           <span>
-            Browse freely while logged out. Sign in to view and download skills (including E2E
-            skills).
+            Browse freely while logged out. Sign in to view, download, or add packages to a project.
           </span>
         </div>
       ) : null}
@@ -221,25 +220,28 @@ function ResourcesPage() {
                 <CardContent className="flex flex-wrap items-center justify-between gap-2 p-4 pt-0 text-xs text-muted-foreground">
                   <span className="font-mono">v{item.version}</span>
                   {user ? (
-                    <div className="flex gap-1">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => viewMutation.mutate(item.id)}
-                        disabled={viewMutation.isPending}
-                      >
-                        <Eye className="mr-1 size-3.5" />
-                        View
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => downloadMutation.mutate(item.id)}
-                        disabled={downloadMutation.isPending}
-                      >
-                        <Download className="mr-1 size-3.5" />
-                        Download
-                      </Button>
+                    <div className="flex flex-col items-end gap-1">
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => viewMutation.mutate(item.id)}
+                          disabled={viewMutation.isPending}
+                        >
+                          <Eye className="mr-1 size-3.5" />
+                          View
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => downloadMutation.mutate(item.id)}
+                          disabled={downloadMutation.isPending}
+                        >
+                          <Download className="mr-1 size-3.5" />
+                          Download
+                        </Button>
+                      </div>
+                      <AddToProjectButton resourceId={item.id} />
                     </div>
                   ) : (
                     <Button asChild size="sm" variant="outline">

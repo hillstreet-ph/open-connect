@@ -1,14 +1,23 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-/** Full product surface for agent + dashboard keys */
+/**
+ * Full autonomous surface for oc_live_ keys.
+ * New keys auto-grant all product scopes so ChatGPT / Claude / Grok / Open WebUI
+ * / Pipedream / Composio agents work without manual scope picking.
+ */
 export const DEFAULT_KEY_SCOPES = [
+  "openid",
   "mcp:connect",
   "resources:read",
+  "resources:write",
   "connections:read",
   "connections:invoke",
   "models:read",
   "models:invoke",
+  "tools:invoke",
+  "secrets:read",
+  "agents:invoke",
 ] as const;
 
 export const listApiKeys = createServerFn({ method: "GET" })
@@ -24,7 +33,9 @@ export const listApiKeys = createServerFn({ method: "GET" })
 
 export const createApiKey = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { name?: string }) => ({ name: (input?.name ?? "").trim() || "Default key" }))
+  .inputValidator((input: { name?: string }) => ({
+    name: (input?.name ?? "").trim() || "Default key",
+  }))
   .handler(async ({ data, context }) => {
     const { generateKey } = await import("./gateway.server");
     const key = generateKey();

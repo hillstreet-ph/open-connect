@@ -88,7 +88,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { title: "Open-Connect — Unified AI agent integration platform" },
       {
         name: "description",
@@ -96,6 +96,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "Agent resources, secure app connections and a multi-provider AI model gateway behind one account, key and MCP URL.",
       },
       { name: "author", content: "Open-Connect" },
+      { name: "theme-color", content: "#141b24" },
       { property: "og:title", content: "Open-Connect — Unified AI agent integration platform" },
       {
         property: "og:description",
@@ -143,25 +144,15 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="flex min-h-screen flex-col">
-        <SiteHeader />
+      <div className="flex min-h-dvh flex-col">
+        {/* Marketing chrome only outside ops workspace */}
+        {inApp ? null : <SiteHeader />}
         <main className={inApp ? "flex-1 bg-background" : "flex-1"}>
           <Outlet />
         </main>
-        {inApp ? <AppWorkspaceFooter /> : <SiteFooter />}
+        {inApp ? null : <SiteFooter />}
       </div>
       <Toaster />
     </QueryClientProvider>
-  );
-}
-
-function AppWorkspaceFooter() {
-  return (
-    <footer className="border-t border-border px-4 py-3 text-center text-xs text-muted-foreground">
-      Open-Connect workspace ·{" "}
-      <Link to="/" className="underline-offset-2 hover:text-foreground hover:underline">
-        Public site
-      </Link>
-    </footer>
   );
 }

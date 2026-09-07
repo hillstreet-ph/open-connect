@@ -10,6 +10,11 @@ export const APP_ROUTE_PREFIXES = [
   "/guides",
   "/studio",
   "/orgs",
+  "/roles",
+  "/projects",
+  "/tasks",
+  "/schedule",
+  "/automations",
 ] as const;
 
 /** True when pathname is inside the signed-in product workspace. */

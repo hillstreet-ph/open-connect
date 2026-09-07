@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { json, resolveUpstream } from "@/lib/gateway.server";
+import { json, resolveUpstream, resolveUpstreams } from "@/lib/gateway.server";
 import { kvHealth } from "@/lib/kv.server";
 
 function present(name: string): boolean {
@@ -12,6 +12,7 @@ export const Route = createFileRoute("/api/v1/health")({
     handlers: {
       GET: async () => {
         const upstream = resolveUpstream();
+        const all = resolveUpstreams();
         const kv = await kvHealth();
         return json({
           status: "ok",
@@ -24,6 +25,7 @@ export const Route = createFileRoute("/api/v1/health")({
             oauth: "/oauth",
           },
           model_upstream: upstream?.name ?? null,
+          model_upstreams: all.map((u) => u.name),
           kv: {
             binding: "OC_KV",
             bound: kv.bound,
@@ -38,6 +40,8 @@ export const Route = createFileRoute("/api/v1/health")({
             VITE_APP_URL: present("VITE_APP_URL"),
             LITELLM_BASE_URL: present("LITELLM_BASE_URL"),
             LITELLM_MASTER_KEY: present("LITELLM_MASTER_KEY"),
+            OPENROUTER_API_KEY: present("OPENROUTER_API_KEY"),
+            OPENROUTER_BASE_URL: present("OPENROUTER_BASE_URL"),
           },
           time: new Date().toISOString(),
         });

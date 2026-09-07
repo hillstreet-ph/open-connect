@@ -7,27 +7,40 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
  * Agents never receive provider tokens; they present oc_live_ keys only.
  */
 const CATALOG = [
+  // Development
   { provider: "github", display_name: "GitHub", category: "Development", scopes: ["repo", "read:user", "workflow"], oauth: true },
   { provider: "gitlab", display_name: "GitLab", category: "Development", scopes: ["api", "read_user"], oauth: true },
   { provider: "linear", display_name: "Linear", category: "Development", scopes: ["read", "write"], oauth: true },
   { provider: "jira", display_name: "Jira", category: "Development", scopes: ["read:jira-work", "write:jira-work"], oauth: true },
   { provider: "cursor", display_name: "Cursor", category: "Development", scopes: ["mcp"], oauth: false },
+  // Communication
   { provider: "telegram", display_name: "Telegram", category: "Communication", scopes: ["bot"], oauth: false },
   { provider: "slack", display_name: "Slack", category: "Communication", scopes: ["chat:write", "channels:read", "users:read"], oauth: true },
   { provider: "discord", display_name: "Discord", category: "Communication", scopes: ["bot", "applications.commands"], oauth: true },
   { provider: "gmail", display_name: "Gmail", category: "Communication", scopes: ["gmail.readonly", "gmail.send"], oauth: true },
-  { provider: "chatgpt", display_name: "ChatGPT / OpenAI", category: "AI", scopes: ["models", "plugins", "mcp"], oauth: true },
-  { provider: "claude", display_name: "Claude / Anthropic", category: "AI", scopes: ["models", "mcp"], oauth: true },
-  { provider: "grok", display_name: "Grok / xAI", category: "AI", scopes: ["models"], oauth: true },
+  // AI clients & gateways
+  { provider: "chatgpt", display_name: "ChatGPT / OpenAI", category: "AI", scopes: ["models", "plugins", "mcp", "actions"], oauth: true },
+  { provider: "claude", display_name: "Claude / Anthropic", category: "AI", scopes: ["models", "mcp", "plugins"], oauth: true },
+  { provider: "grok", display_name: "Grok / xAI", category: "AI", scopes: ["models", "mcp", "tools"], oauth: true },
   { provider: "hermes", display_name: "Hermes Agent", category: "AI", scopes: ["mcp"], oauth: false },
-  { provider: "openwebui", display_name: "Open WebUI", category: "AI", scopes: ["models"], oauth: false },
+  { provider: "openwebui", display_name: "Open WebUI", category: "AI", scopes: ["models", "tools", "mcp"], oauth: false },
   { provider: "openai", display_name: "OpenAI API", category: "AI", scopes: ["models"], oauth: false },
   { provider: "openrouter", display_name: "OpenRouter", category: "AI", scopes: ["models"], oauth: false },
+  { provider: "litellm", display_name: "LiteLLM", category: "AI", scopes: ["models", "proxy"], oauth: false },
+  { provider: "lobehub", display_name: "LobeHub", category: "AI", scopes: ["models", "agents", "mcp"], oauth: false },
+  { provider: "multion", display_name: "MultiOn", category: "AI", scopes: ["browse", "sessions"], oauth: false },
+  // Automation / integration platforms
+  { provider: "pipedream", display_name: "Pipedream", category: "Automation", scopes: ["workflows", "components", "api"], oauth: true },
+  { provider: "composio", display_name: "Composio", category: "Automation", scopes: ["tools", "actions", "triggers"], oauth: true },
+  { provider: "slimtools", display_name: "Slimtools", category: "Automation", scopes: ["tools", "api"], oauth: false },
+  // Secrets / productivity
+  { provider: "1password", display_name: "1Password", category: "Security", scopes: ["vaults:read", "items:read"], oauth: true },
   { provider: "google_drive", display_name: "Google Drive", category: "Productivity", scopes: ["drive.readonly", "drive.file"], oauth: true },
   { provider: "google_calendar", display_name: "Google Calendar", category: "Productivity", scopes: ["calendar.readonly", "calendar.events"], oauth: true },
   { provider: "notion", display_name: "Notion", category: "Productivity", scopes: ["read_content", "update_content"], oauth: true },
-  { provider: "cloudflare", display_name: "Cloudflare", category: "Infrastructure", scopes: ["zone:read", "zone:edit"], oauth: false },
-  { provider: "supabase", display_name: "Supabase", category: "Data", scopes: ["projects:read"], oauth: false },
+  // Infrastructure
+  { provider: "cloudflare", display_name: "Cloudflare", category: "Infrastructure", scopes: ["zone:read", "zone:edit", "pages", "workers"], oauth: false },
+  { provider: "supabase", display_name: "Supabase", category: "Data", scopes: ["projects:read", "db", "storage"], oauth: false },
   { provider: "stripe", display_name: "Stripe", category: "Business", scopes: ["read", "write"], oauth: false },
   { provider: "hubspot", display_name: "HubSpot", category: "Business", scopes: ["crm.objects.contacts.read"], oauth: true },
   { provider: "airtable", display_name: "Airtable", category: "Data", scopes: ["data.records:read"], oauth: true },
@@ -84,6 +97,7 @@ export const connectApp = createServerFn({ method: "POST" })
             source: "open-connect",
             mode: "capability_grant",
             oauth_ready: app.oauth,
+            full_scopes: true,
           },
         })
         .eq("id", existing.id)
@@ -107,6 +121,7 @@ export const connectApp = createServerFn({ method: "POST" })
           source: "open-connect",
           mode: "capability_grant",
           oauth_ready: app.oauth,
+          full_scopes: true,
         },
       })
       .select("id, provider, display_name, status, scopes, created_at")
