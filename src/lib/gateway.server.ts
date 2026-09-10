@@ -25,7 +25,45 @@ export type Upstream = {
   headers: Record<string, string>;
 };
 
+/** OpenRouter :free models — rotate for open-connect/free-rotate */
+export const FREE_MODEL_POOL: string[] = [
+  "openrouter/free",
+  "google/gemma-4-31b-it:free",
+  "google/gemma-4-26b-a4b-it:free",
+  "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+  "nvidia/nemotron-3-super-120b-a12b:free",
+  "nvidia/nemotron-3.5-lightning:free",
+  "liquid/lfm-2.5-2.6b:free",
+  "thinkingmachines/inkling:free",
+  "thinkingmachines/inkling-small:free",
+  "poolside/laguna-s-2.1:free",
+  "poolside/laguna-xs-2.1:free",
+  "cohere/north-mini-code:free",
+  "nex-agi/nex-n2.5-mini:free",
+  "nex-agi/nex-n2.5-pro:free",
+  "inclusionai/ling-3.0-flash-sante:free",
+  "inclusionai/ling-3.0-flash-fin:free",
+];
+
+let freeRotateIdx = 0;
+
+/** Prefer OpenRouter official free auto-router; else round-robin pool. */
+export function nextFreeModel(preferAutoRouter = true): string {
+  if (preferAutoRouter) return "openrouter/free";
+  const pool = FREE_MODEL_POOL.filter((id) => id !== "openrouter/free");
+  if (!pool.length) return "openrouter/free";
+  const id = pool[freeRotateIdx % pool.length]!;
+  freeRotateIdx += 1;
+  return id;
+}
+
 export const MODEL_ALIASES: Record<string, string> = {
+  // Free tier (OpenRouter)
+  "open-connect/free": "openrouter/free",
+  "open-connect/auto-free": "openrouter/free",
+  free: "openrouter/free",
+  "openrouter/free": "openrouter/free",
+
   // --- Open-Connect virtual (stable for agents) ---
   "open-connect/fast": "openai/gpt-4o-mini",
   "open-connect/cheap": "openai/gpt-4o-mini",
@@ -101,11 +139,34 @@ export const MODEL_ALIASES: Record<string, string> = {
 };
 
 export const MANAGED_MODEL_IDS: string[] = Array.from(
-  new Set([...Object.keys(MODEL_ALIASES), ...Object.values(MODEL_ALIASES)]),
+  new Set([
+    ...Object.keys(MODEL_ALIASES),
+    ...Object.values(MODEL_ALIASES),
+    ...FREE_MODEL_POOL,
+  ]),
 );
 
 export function resolveModelId(requested: string): string {
-  return MODEL_ALIASES[requested] ?? requested;
+  const key = (requested || "").trim();
+  if (!key) return nextFreeModel(true);
+
+  if (
+    key === "open-connect/rotate-free" ||
+    key === "open-connect/free-rotate" ||
+    key === "free-rotate"
+  ) {
+    return nextFreeModel(false);
+  }
+
+  if (key === "open-connect/free" || key === "free" || key === "open-connect/auto-free") {
+    return "openrouter/free";
+  }
+
+  if (key.endsWith(":free") || key === "openrouter/free") {
+    return key;
+  }
+
+  return MODEL_ALIASES[key] ?? key;
 }
 
 function stripTrailingSlash(url: string): string {
