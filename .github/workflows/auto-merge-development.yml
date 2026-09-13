@@ -40,7 +40,7 @@ jobs:
           git push origin development 2>/dev/null || true
 
       - name: Create or update promotion PR (no auto-merge)
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const base = 'main';
