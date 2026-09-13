@@ -100,7 +100,8 @@ function AuthPage() {
         await navigate({ to: "/dashboard" });
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Something went wrong");
+      const msg = error instanceof Error ? error.message : "Something went wrong";
+      toast.error(msg);
     } finally {
       setBusy(false);
     }
@@ -111,16 +112,21 @@ function AuthPage() {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
-        options: { redirectTo: `${window.location.origin}/auth` },
+        options: {
+          redirectTo: `${window.location.origin}/auth`,
+          skipBrowserRedirect: false,
+        },
       });
       if (error) throw error;
+      // Browser navigates to provider; keep busy until redirect
     } catch (error) {
       setBusy(false);
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : `${provider} sign-in failed. Use email/password or check Auth providers.`,
-      );
+      const raw = error instanceof Error ? error.message : String(error);
+      const hint =
+        /provider is not enabled|Unsupported provider|validation_failed/i.test(raw)
+          ? ` ${provider === "github" ? "GitHub" : "Google"} is not enabled in Supabase Auth → Providers. Use email/password or enable the provider (see docs/OWNER_AND_AUTH.md).`
+          : "";
+      toast.error(`${raw}${hint}`);
     }
   }
 
@@ -191,7 +197,9 @@ function AuthPage() {
                   minLength={8}
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  autoComplete={mode === "signup" || mode === "update_password" ? "new-password" : "current-password"}
+                  autoComplete={
+                    mode === "signup" || mode === "update_password" ? "new-password" : "current-password"
+                  }
                 />
               </div>
             ) : null}
@@ -246,6 +254,9 @@ function AuthPage() {
                   Continue with Google
                 </Button>
               </div>
+              <p className="pt-1 text-center text-[11px] text-muted-foreground">
+                GitHub/Google require the provider enabled in Supabase Auth. Email always works.
+              </p>
             </>
           ) : null}
 

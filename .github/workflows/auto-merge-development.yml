@@ -17,9 +17,13 @@ permissions:
   pull-requests: write
   checks: read
 
+# Policy: open/update promotion PR only.
+# Do NOT auto-merge to main — branch protection requires "Build & validate".
+# Human or explicit merge after required checks.
+
 jobs:
   promote:
-    name: Open or merge promotion PR
+    name: Open promotion PR
     if: >
       github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'development')
@@ -35,13 +39,23 @@ jobs:
           git fetch origin development:development 2>/dev/null || git branch development origin/main
           git push origin development 2>/dev/null || true
 
-      - name: Create or update promotion PR
+      - name: Create or update promotion PR (no auto-merge)
         uses: actions/github-script@v7
         with:
           script: |
             const base = 'main';
             const head = 'development';
             const title = 'chore: promote development → main';
+            const body = [
+              '## Promotion PR',
+              '',
+              'Automated open from `development` after CI — Validator succeeds.',
+              '',
+              '**Does not auto-merge.** Merge only after required check **Build & validate** is green.',
+              '',
+              '- Prefer squash merge',
+              '- See docs/audits/ci-workflow-diff.md',
+            ].join('\n');
             const { data: prs } = await github.rest.pulls.list({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -58,23 +72,24 @@ jobs:
                   title,
                   head,
                   base,
-                  body: 'Automated promotion. Merges when CI is green.\n\n- Validator + smoke must pass\n- Squash merge preferred'
+                  body
                 });
                 pr = data;
+                core.info(`Created PR #${pr.number}`);
               } catch (e) {
                 core.warning(String(e));
                 return;
               }
-            }
-            core.info(`PR #${pr.number}`);
-            try {
-              await github.rest.pulls.merge({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: pr.number,
-                merge_method: 'squash'
-              });
-              core.info('Merged');
-            } catch (e) {
-              core.warning('Merge deferred (checks or conflicts): ' + e.message);
+            } else {
+              core.info(`Existing PR #${pr.number}`);
+              try {
+                await github.rest.pulls.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: pr.number,
+                  body
+                });
+              } catch (e) {
+                core.warning('Could not update PR body: ' + e.message);
+              }
             }
