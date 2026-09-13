@@ -1,0 +1,293 @@
+{
+  "schema_version": "1.0.0",
+  "registry_id": "open-connect-app-toolkits",
+  "environments": [
+    "development",
+    "staging",
+    "production"
+  ],
+  "execution_policy": {
+    "default_mode": "read_only",
+    "credential_transport": "opaque_reference_only",
+    "production_approval_required": true,
+    "destructive_approval_required": true,
+    "branch_flow": [
+      "feature/*",
+      "development",
+      "staging",
+      "main"
+    ],
+    "max_autorepair_attempts": 3,
+    "audit_fields": [
+      "actor",
+      "agent",
+      "capability",
+      "target",
+      "environment",
+      "approval_id",
+      "correlation_id",
+      "result",
+      "timestamp",
+      "evidence"
+    ]
+  },
+  "agent": {
+    "id": "app_ops_ai",
+    "planner": "ceo_dev_ai",
+    "executor": "open_system",
+    "reviewer": "qa_security_ai",
+    "prompt": "prompts/app-ops-agent.md",
+    "production_mode": "approval_required"
+  },
+  "apps": [
+    {
+      "id": "github",
+      "status": "connected_read_write",
+      "icon": "🐙",
+      "sdk": [
+        "GitHub REST",
+        "GitHub GraphQL",
+        "Octokit"
+      ],
+      "adk_adapter": "github_toolkit",
+      "mcp": "github",
+      "capabilities": [
+        "repository.read",
+        "branch.create",
+        "file.write_branch",
+        "issue.manage",
+        "pull_request.manage",
+        "workflow.inspect",
+        "workflow.rerun"
+      ],
+      "health_check": "repository and workflow read",
+      "secret_refs": [
+        "credential://github/app-installation"
+      ],
+      "approval": [
+        "merge.main",
+        "release",
+        "secret.write"
+      ]
+    },
+    {
+      "id": "notion",
+      "status": "connected_read_write",
+      "icon": "🗂️",
+      "sdk": [
+        "Notion API",
+        "Notion SDK",
+        "ntn CLI"
+      ],
+      "adk_adapter": "notion_toolkit",
+      "mcp": "notion",
+      "capabilities": [
+        "workspace.search",
+        "page.read",
+        "page.create",
+        "page.update",
+        "database.read",
+        "database.update"
+      ],
+      "health_check": "fetch self and canonical registry",
+      "secret_refs": [
+        "credential://notion/kobeplay"
+      ],
+      "approval": [
+        "archive",
+        "permission.change",
+        "sensitive.move"
+      ]
+    },
+    {
+      "id": "supabase",
+      "status": "connected_control_plane",
+      "icon": "⚡",
+      "sdk": [
+        "supabase-js",
+        "Supabase CLI",
+        "PostgREST"
+      ],
+      "adk_adapter": "supabase_toolkit",
+      "mcp": "supabase",
+      "capabilities": [
+        "project.inspect",
+        "schema.inspect",
+        "migration.plan",
+        "types.generate",
+        "advisor.inspect",
+        "edge.inspect",
+        "branch.manage"
+      ],
+      "health_check": "projects and advisors read",
+      "secret_refs": [
+        "credential://supabase/open-connect"
+      ],
+      "approval": [
+        "migration.production",
+        "rls.write",
+        "project.pause_restore",
+        "branch.merge",
+        "service_role.use"
+      ]
+    },
+    {
+      "id": "cloudflare",
+      "status": "connected_control_plane",
+      "icon": "☁️",
+      "sdk": [
+        "Cloudflare API",
+        "Wrangler"
+      ],
+      "adk_adapter": "cloudflare_toolkit",
+      "mcp": "cloudflare",
+      "capabilities": [
+        "account.inspect",
+        "zone.inspect",
+        "pages.inspect",
+        "workers.inspect",
+        "deployment.inspect",
+        "logs.inspect",
+        "dns.inspect"
+      ],
+      "health_check": "account zone and deployment read",
+      "secret_refs": [
+        "credential://cloudflare/open-connect"
+      ],
+      "approval": [
+        "dns.write",
+        "production.deploy",
+        "waf.write",
+        "certificate.write",
+        "cache.purge"
+      ]
+    },
+    {
+      "id": "sentry",
+      "status": "needs_connection",
+      "icon": "🛡️",
+      "sdk": [
+        "Sentry SDK",
+        "Sentry API",
+        "sentry-cli"
+      ],
+      "adk_adapter": "sentry_toolkit",
+      "mcp": "connector_required",
+      "capabilities": [
+        "organization.inspect",
+        "project.inspect",
+        "issue.inspect",
+        "release.create",
+        "deploy.record",
+        "sourcemap.upload"
+      ],
+      "health_check": "organization project and issue read",
+      "secret_refs": [
+        "credential://sentry/hillstreet"
+      ],
+      "approval": [
+        "issue.bulk_write",
+        "release.write"
+      ]
+    },
+    {
+      "id": "dockerhub",
+      "status": "needs_connection",
+      "icon": "🐳",
+      "sdk": [
+        "Docker Engine API",
+        "Docker Hub API",
+        "Buildx"
+      ],
+      "adk_adapter": "dockerhub_toolkit",
+      "mcp": "connector_required",
+      "capabilities": [
+        "repository.inspect",
+        "image.build",
+        "image.scan",
+        "candidate.push",
+        "tag.promote",
+        "digest.verify"
+      ],
+      "health_check": "repository tag and digest read",
+      "secret_refs": [
+        "credential://dockerhub/hillstreet"
+      ],
+      "approval": [
+        "production.promote",
+        "visibility.write",
+        "image.delete"
+      ]
+    },
+    {
+      "id": "hetzner",
+      "aliases": [
+        "zetzner"
+      ],
+      "status": "needs_connection",
+      "icon": "🖥️",
+      "sdk": [
+        "Hetzner Cloud API",
+        "hcloud CLI",
+        "Terraform Provider"
+      ],
+      "adk_adapter": "hetzner_toolkit",
+      "mcp": "connector_required",
+      "capabilities": [
+        "server.inspect",
+        "network.inspect",
+        "firewall.inspect",
+        "snapshot.inspect",
+        "staging.provision"
+      ],
+      "health_check": "project and server inventory read",
+      "secret_refs": [
+        "credential://hetzner/hillstreet"
+      ],
+      "approval": [
+        "server.write",
+        "firewall.write",
+        "network.write",
+        "ssh_key.write",
+        "production.rebuild"
+      ]
+    }
+  ],
+  "triggers": [
+    {
+      "event": "notion.task.approved",
+      "action": "github.issue.upsert",
+      "idempotency_key": "notion_page_id"
+    },
+    {
+      "event": "github.issue.ready",
+      "action": "branch.claim",
+      "idempotency_key": "repo_issue_agent"
+    },
+    {
+      "event": "github.pull_request.opened",
+      "action": "ci_security_review",
+      "idempotency_key": "repo_pr_head_sha"
+    },
+    {
+      "event": "github.workflow.failed",
+      "action": "bounded_repair",
+      "idempotency_key": "workflow_run_id"
+    },
+    {
+      "event": "github.pull_request.approved_green",
+      "action": "environment_gate",
+      "idempotency_key": "repo_pr_head_sha"
+    },
+    {
+      "event": "deployment.completed",
+      "action": "verify_sync_notion",
+      "idempotency_key": "provider_deployment_id"
+    },
+    {
+      "event": "sentry.regression",
+      "action": "incident.upsert",
+      "idempotency_key": "sentry_issue_release"
+    }
+  ]
+}
