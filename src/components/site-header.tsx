@@ -88,7 +88,6 @@ export function SiteHeader() {
                   Get started
                 </Link>
               </Button>
-              <UserMenu />
             </>
           )}
           <Button
