@@ -35,6 +35,8 @@ User -> Cloudflare -> Zeabur service -> Supabase
                          +-> Sentry
 ```
 
+> **Exception:** open-connect uses Cloudflare Pages for its public frontend at `open-connect.site`. The Zeabur service for open-connect runs only the backend API. Other repositories follow the standard Zeabur-proxied request path above.
+
 Release path:
 
 ```text
@@ -247,6 +249,8 @@ Only `PRODUCTION_VERIFIED` means completion.
 
 Cloudflare owns public DNS, TLS and edge controls.
 
+open-connect uses **Cloudflare Pages** for its frontend deployment at `open-connect.site`. For this repository, Cloudflare serves static assets directly while backend API traffic routes through the Zeabur service. All other repositories use the standard Cloudflare-proxied path to Zeabur.
+
 Before changing DNS, record:
 
 - record type and name
@@ -279,7 +283,7 @@ Configured and verified:
 - Supabase security and performance advisors show no current findings.
 - Repository-to-backend assignments are documented.
 - Credential records were consolidated without retaining the exposed Supabase, Docker Hub or Zeabur token values.
-- A monitor checks open-connect PR #54.
+- A monitor checks open-connect PR #54. CI checks are now passing; the PR is pending merge and deployment verification.
 
 Blocking production activation:
 
