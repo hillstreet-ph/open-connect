@@ -1,9 +1,31 @@
 -- Canonical shared RBAC for GitHub OAuth identities.
 -- Passwords and OAuth client secrets must remain in provider secret stores.
 
+-- P1 fix: Create the shared schema before referencing it.
+create schema if not exists platform_shared;
+
+-- P1 fix: Create project_registry (referenced by sync trigger but was missing).
+create table if not exists platform_shared.project_registry (
+  project_key text primary key,
+  display_name text not null,
+  enabled boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+-- Seed the four HillStreet projects.
+insert into platform_shared.project_registry (project_key, display_name, enabled)
+values
+  ('open_connect', 'Open Connect', true),
+  ('open_box',     'Open Box',     true),
+  ('open_teleset', 'Open Teleset', true),
+  ('open_system',  'Open System',  true)
+on conflict (project_key) do update set
+  display_name = excluded.display_name,
+  enabled = excluded.enabled;
+
 create table if not exists platform_shared.account_roles (
   user_id uuid primary key references auth.users(id) on delete cascade,
-  email text not null,
+  email text,
   github_login text,
   role text not null check (role in ('owner','admin','user')),
   approved boolean not null default false,
@@ -11,19 +33,27 @@ create table if not exists platform_shared.account_roles (
   updated_at timestamptz not null default now()
 );
 
+-- P2 fix: Use partial unique index so null/empty emails don't collide.
 create unique index if not exists account_roles_email_lower_idx
-  on platform_shared.account_roles (lower(email));
+  on platform_shared.account_roles (lower(email))
+  where email is not null and email <> '';
 
 create table if not exists platform_shared.project_access (
   user_id uuid not null references auth.users(id) on delete cascade,
-  project_key text not null,
+  project_key text not null references platform_shared.project_registry(project_key) on delete cascade,
   role text not null check (role in ('owner','admin','user')),
   created_at timestamptz not null default now(),
   primary key (user_id, project_key)
 );
 
+alter table platform_shared.project_registry enable row level security;
 alter table platform_shared.account_roles enable row level security;
 alter table platform_shared.project_access enable row level security;
+
+-- Project registry is readable by authenticated, writable only by service_role.
+drop policy if exists "project_registry_read" on platform_shared.project_registry;
+create policy "project_registry_read" on platform_shared.project_registry
+for select to authenticated using (true);
 
 create or replace function platform_shared.current_app_role()
 returns text language sql stable security definer set search_path = ''
@@ -48,7 +78,8 @@ create or replace function platform_shared.sync_authorized_identity()
 returns trigger language plpgsql security definer set search_path = ''
 as $$
 declare
-  normalized_email text := lower(coalesce(new.email, ''));
+  -- P2 fix: Preserve null emails instead of coalescing to empty string.
+  normalized_email text := lower(nullif(trim(coalesce(new.email, '')), ''));
   assigned_role text;
   is_approved boolean := false;
   gh_login text := coalesce(
@@ -56,7 +87,26 @@ declare
     new.raw_user_meta_data ->> 'preferred_username',
     new.raw_user_meta_data ->> 'login'
   );
+  auth_provider text := coalesce(
+    new.raw_app_meta_data ->> 'provider',
+    ''
+  );
 begin
+  -- P2 fix: Only approve GitHub-authenticated identities from the allowlist.
+  -- Email/password or other providers are stored but not auto-approved.
+  if auth_provider <> 'github' and normalized_email is not null then
+    -- Non-GitHub provider: store identity, deny auto-approval.
+    insert into platform_shared.account_roles
+      (user_id, email, github_login, role, approved, updated_at)
+    values
+      (new.id, normalized_email, gh_login, 'user', false, now())
+    on conflict (user_id) do update set
+      email = excluded.email,
+      github_login = excluded.github_login,
+      updated_at = now();
+    return new;
+  end if;
+
   assigned_role := case normalized_email
     when 'tanauancharles1@gmail.com' then 'owner'
     when 'kairocasino8@gmail.com' then 'admin'
@@ -81,6 +131,7 @@ begin
     approved = excluded.approved,
     updated_at = now();
 
+  -- Rebuild project access for this user.
   delete from platform_shared.project_access where user_id = new.id;
 
   if is_approved then
@@ -99,25 +150,64 @@ revoke all on function platform_shared.sync_authorized_identity() from public;
 
 drop trigger if exists sync_authorized_identity_trigger on auth.users;
 create trigger sync_authorized_identity_trigger
-after insert or update of email, raw_user_meta_data on auth.users
+after insert or update of email, raw_user_meta_data, raw_app_meta_data on auth.users
 for each row execute function platform_shared.sync_authorized_identity();
 
+-- P2 fix: Reconcile project_access when project_registry changes.
+create or replace function platform_shared.reconcile_project_access()
+returns trigger language plpgsql security definer set search_path = ''
+as $$
+begin
+  if tg_op = 'INSERT' and new.enabled = true then
+    insert into platform_shared.project_access (user_id, project_key, role)
+    select ar.user_id, new.project_key, ar.role
+    from platform_shared.account_roles ar
+    where ar.approved = true
+    on conflict (user_id, project_key) do update set role = excluded.role;
+  elsif tg_op = 'UPDATE' then
+    if old.enabled = true and new.enabled = false then
+      delete from platform_shared.project_access where project_key = new.project_key;
+    elsif old.enabled = false and new.enabled = true then
+      insert into platform_shared.project_access (user_id, project_key, role)
+      select ar.user_id, new.project_key, ar.role
+      from platform_shared.account_roles ar
+      where ar.approved = true
+      on conflict (user_id, project_key) do update set role = excluded.role;
+    end if;
+  elsif tg_op = 'DELETE' then
+    delete from platform_shared.project_access where project_key = old.project_key;
+  end if;
+  return coalesce(new, old);
+end;
+$$;
+
+revoke all on function platform_shared.reconcile_project_access() from public;
+
+drop trigger if exists reconcile_project_access_trigger on platform_shared.project_registry;
+create trigger reconcile_project_access_trigger
+after insert or update or delete on platform_shared.project_registry
+for each row execute function platform_shared.reconcile_project_access();
+
+-- P1 fix: Disable the legacy owner-seed trigger (replaced by this RBAC).
+drop trigger if exists on_auth_user_created_seed_owner on auth.users;
+
+-- Backfill existing users.
 insert into platform_shared.account_roles
   (user_id, email, github_login, role, approved, updated_at)
 select
   u.id,
-  lower(coalesce(u.email, '')),
+  lower(nullif(trim(coalesce(u.email, '')), '')),
   coalesce(
     u.raw_user_meta_data ->> 'user_name',
     u.raw_user_meta_data ->> 'preferred_username',
     u.raw_user_meta_data ->> 'login'
   ),
-  case lower(coalesce(u.email, ''))
+  case lower(nullif(trim(coalesce(u.email, '')), ''))
     when 'tanauancharles1@gmail.com' then 'owner'
     when 'kairocasino8@gmail.com' then 'admin'
     else 'user'
   end,
-  lower(coalesce(u.email, '')) in (
+  lower(nullif(trim(coalesce(u.email, '')), '')) in (
     'tanauancharles1@gmail.com',
     'kairocasino8@gmail.com',
     'huxleysee@gmail.com'
@@ -138,5 +228,7 @@ cross join platform_shared.project_registry pr
 where ar.approved = true and pr.enabled = true
 on conflict (user_id, project_key) do update set role = excluded.role;
 
-grant usage on schema platform_shared to authenticated;
-grant select on platform_shared.account_roles, platform_shared.project_access to authenticated;
+-- P2 fix: Grant service_role full access for backend administration.
+grant usage on schema platform_shared to authenticated, service_role;
+grant select on platform_shared.account_roles, platform_shared.project_access, platform_shared.project_registry to authenticated;
+grant all on platform_shared.account_roles, platform_shared.project_access, platform_shared.project_registry to service_role;
