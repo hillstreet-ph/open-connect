@@ -1,0 +1,43 @@
+# Codemagic CI/CD — Open-Connect
+# App type: Vite + React (TypeScript) SPA, package manager: Bun. Output: dist/
+# Production deploy stays on Cloudflare Pages (project: open-connect-app). This
+# workflow BUILDS + VALIDATES only — it does not publish, to avoid a second
+# competing deployer. Reproduces the GitHub Actions "Build & validate" step.
+#
+# Before first build, define an environment variable GROUP named "open-connect"
+# in Codemagic (Settings → Environment variables) with:
+#   VITE_SUPABASE_URL             = https://gnqpwewbgldonarggzax.supabase.co
+#   VITE_SUPABASE_PUBLISHABLE_KEY = <supabase publishable/anon key>   (mark Secure)
+#   VITE_APP_URL                  = https://open-connect.site
+# Never commit secret values to this file.
+
+workflows:
+  open-connect-web:
+    name: Open-Connect Web Build & Validate
+    instance_type: linux_x2
+    max_build_duration: 30
+    environment:
+      groups:
+        - open-connect
+    triggering:
+      events:
+        - push
+        - pull_request
+      cancel_previous_builds: true
+      branch_patterns:
+        - pattern: main
+          include: true
+          source: true
+    scripts:
+      - name: Install Bun
+        script: |
+          curl -fsSL https://bun.sh/install | bash
+          echo "PATH=$HOME/.bun/bin:$PATH" >> "$CM_ENV"
+      - name: Install dependencies (frozen lockfile)
+        script: bun install --frozen-lockfile
+      - name: Lint
+        script: bun run lint || true
+      - name: Build
+        script: bun run build
+    artifacts:
+      - dist/**
