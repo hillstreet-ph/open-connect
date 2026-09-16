@@ -31,3 +31,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Python control-plane artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
