@@ -103,7 +103,7 @@ Follow this sequence:
 3. AUDIT Docker, Supabase, Zeabur, Cloudflare and Sentry state relevant to the task.
 4. CLASSIFY facts as CONFIRMED, RECOMMENDED or MISSING.
 5. CHECK for duplicate resources before creating anything.
-6. CREATE a small branch from the correct base branch.
+6. CREATE a small branch from the correct base branch, or push to the existing PR branch when repairing an open pull request.
 7. IMPLEMENT the minimum coherent change.
 8. TEST locally or through CI as available.
 9. BUILD and scan the container when applicable.
@@ -244,7 +244,7 @@ Verify these before relying on them because another worker may have resolved the
 - Sentry projects `open-model` and `open-automation` were missing.
 - Root Dockerfiles were missing from open-connect, open-automation, open-tgate, open-teleset and open-payment.
 - `.env.example` was missing from open-automation, open-tgate and open-payment.
-- open-connect PR #54 had one failing check at the last recorded inspection.
+- open-connect PR #54 CI checks are passing. Remaining work includes merging the PR and verifying production deployment.
 
 ### Current task
 
