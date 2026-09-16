@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="OC_", env_file=".env", extra="ignore")
 
     environment: str = "staging"
+    allow_production: bool = False
     public_base_url: AnyHttpUrl
     oidc_issuer: AnyHttpUrl
     oidc_audience: str = "authenticated"
@@ -21,8 +22,10 @@ class Settings(BaseSettings):
     session_ttl_seconds: int = Field(default=1800, ge=60, le=14400)
 
     def assert_safe(self) -> None:
-        if self.environment == "production":
-            raise RuntimeError("Production startup requires an explicit deployment override")
+        if self.environment == "production" and not self.allow_production:
+            raise RuntimeError(
+                "Production startup requires OC_ALLOW_PRODUCTION=true in the deployment secret store"
+            )
         refs = [
             self.e2b_credential_ref,
             self.openbrowser_credential_ref,
