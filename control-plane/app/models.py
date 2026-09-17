@@ -68,3 +68,21 @@ class AuditEvent(BaseModel):
     result: str
     approval_id: UUID | None = None
     evidence: dict[str, Any] = Field(default_factory=dict)
+
+
+class AgentProvider(BaseModel):
+    id: str
+    display_name: str
+    adapter: Literal["api", "mcp", "openai-compatible", "local-runtime"]
+    status: Literal["ready", "authorization_required", "endpoint_required", "disabled"]
+    credential_ref: str | None = None
+    capabilities: list[str] = Field(default_factory=list)
+
+
+class CollaborationTask(BaseModel):
+    goal: str = Field(min_length=1, max_length=8000)
+    project: str
+    preferred_agents: list[str] = Field(default_factory=list)
+    environment: Literal["development", "staging", "production"] = "development"
+    schedule: str | None = None
+    context_refs: list[str] = Field(default_factory=list)

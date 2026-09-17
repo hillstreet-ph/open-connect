@@ -1,0 +1,27 @@
+{
+  "name": "open-connect-agentkit",
+  "version": "1.0.0",
+  "commander": "open-connect",
+  "skill": "skills/open-connect-agent/SKILL.md",
+  "registry": "config/agent-collaboration.registry.json",
+  "entrypoints": {
+    "api": "/api/v1/collaborations/plan",
+    "agents": "/api/v1/agents",
+    "mcp": "https://open-connect.site/mcp"
+  },
+  "capabilities": [
+    "agent.discovery",
+    "task.plan",
+    "task.route",
+    "task.schedule",
+    "workflow.resume",
+    "memory.retrieve",
+    "memory.record",
+    "review.request",
+    "approval.request",
+    "audit.read"
+  ],
+  "clients": ["chatgpt", "claude", "grok", "mistral", "kimi", "manus", "hermes"],
+  "credential_policy": "opaque-reference-only",
+  "production_policy": "human-approval-required"
+}
