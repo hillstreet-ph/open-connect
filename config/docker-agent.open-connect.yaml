@@ -1,0 +1,33 @@
+mcps:
+  open_connect:
+    remote:
+      url: https://open-connect.site/mcp
+      transport_type: streamable
+      headers:
+        Authorization: "Bearer ${env.OPEN_CONNECT_MCP_TOKEN}"
+  tinyfish:
+    remote:
+      url: https://agent.tinyfish.ai/mcp
+      transport_type: streamable
+
+agents:
+  root:
+    model: openai/gpt-5
+    description: Open-Connect governed development agent
+    instruction: |
+      Use Open-Connect as the capability and policy plane. Prefer read-only tools,
+      never reveal credentials, and request approval for protected production work.
+    skills: true
+    toolsets:
+      - type: filesystem
+      - type: mcp
+        ref: open_connect
+        defer: true
+      - type: mcp
+        ref: tinyfish
+        tools: ["search", "fetch"]
+        defer: true
+      - type: mcp
+        ref: docker:github-official
+        tools: ["list_issues", "get_issue", "get_pull_request"]
+        defer: true

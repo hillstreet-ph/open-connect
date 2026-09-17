@@ -9,7 +9,10 @@ from .models import (
     Actor,
     AgentProvider,
     AuditEvent,
+    BrowserAction,
+    BrowserActionResult,
     CollaborationTask,
+    Risk,
     Session,
     SessionCreate,
     SessionState,
@@ -153,6 +156,7 @@ async def create_session(
         state=SessionState.READY,
         created_at=now,
         expires_at=now + timedelta(seconds=settings.session_ttl_seconds),
+        profile_ref=request.profile_ref,
         provider_handle=result.handle,
     )
     sessions[session.session_id] = session
@@ -163,6 +167,46 @@ async def create_session(
         approval_id=UUID(approval_id) if approval_id else None, evidence=result.evidence,
     ))
     return session
+
+
+@app.post("/api/v1/sessions/{session_id}/actions", response_model=BrowserActionResult)
+async def execute_browser_action(
+    session_id: UUID,
+    request: BrowserAction,
+    actor: Annotated[Actor, Depends(current_actor)],
+    approval_id: Annotated[str | None, Header(alias="X-Approval-ID")] = None,
+    correlation_id: Annotated[UUID | None, Header(alias="X-Correlation-ID")] = None,
+) -> BrowserActionResult:
+    session = sessions.get(session_id)
+    if not session or session.tenant_id != actor.tenant_id:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if session.actor_id != actor.actor_id and not ({"operator", "owner"} & actor.roles):
+        raise HTTPException(status_code=403, detail="Session is owned by another actor")
+    if session.state != SessionState.READY:
+        raise HTTPException(status_code=409, detail="Session is not ready")
+    now = datetime.now(UTC)
+    if now >= session.expires_at:
+        session.state = SessionState.CLOSED
+        raise HTTPException(status_code=410, detail="Session expired")
+    if session.capability not in {"browser", "computer"} or not session.provider_handle:
+        raise HTTPException(status_code=422, detail="Session does not support browser actions")
+
+    risk = Risk.PRODUCTION_WRITE if request.protected else Risk.DEVELOPMENT_WRITE
+    authorize(actor, f"browser.{request.action}", settings.environment, risk, approval_id)
+    try:
+        result = await providers(settings)[session.provider].act(session.provider_handle, request)
+    except ProviderUnavailable as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    audit_events.append(AuditEvent(
+        correlation_id=correlation_id or uuid4(), timestamp=now,
+        tenant_id=actor.tenant_id, actor_id=actor.actor_id, agent_id=actor.agent_id,
+        capability=f"browser.{request.action}", target=str(request.url or request.element_ref or "session"),
+        environment=settings.environment, result=result.status,
+        approval_id=UUID(approval_id) if approval_id else None,
+        evidence={"provider": session.provider, "session_id": str(session_id)},
+    ))
+    return result
 
 
 @app.delete("/api/v1/sessions/{session_id}", response_model=Session)

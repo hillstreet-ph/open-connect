@@ -36,7 +36,7 @@ Optional:
 ### 2. `supabase/config.toml`
 
 ```toml
-project_id = "gnqpwewbgldonarggzax"
+project_id = "huadtiuuoiriqrjpjxhr"
 
 [functions.health]
 verify_jwt = false

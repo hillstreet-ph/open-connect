@@ -14,10 +14,17 @@ Use the configured `zeabur` MCP connection for project, service, deployment, dom
 5. Prefer immutable Docker digests and verify runtime logs, ports, TLS, and health after changes.
 6. Report `PRODUCTION_VERIFIED` only after functional endpoint checks pass.
 
-Open-System mapping:
+Canonical Open-Connect gateway:
+
+- MCP: `https://open-connect.site/mcp`
+- API: `https://open-connect.site/api/v1`
+- OAuth issuer: `https://open-connect.site`
+
+Open-System managed execution target (Hermes Agent fork):
 
 - Dashboard: `open-system.space` on port `9119`
 - API: `api.open-system.space` on port `8642`
-- MCP: `mcp.open-system.space/mcp`
+
+Do not advertise an Open-System hostname as the Open-Connect MCP gateway. Open-Connect owns connectors, resources, skills, toolkits, MCP registration, prompts, and agent-control metadata; Open-System executes authorized work delegated by that control plane.
 
 Never store `ZEABUR_TOKEN` or `MCP_BRIDGE_TOKEN` in this skill.
