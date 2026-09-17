@@ -51,7 +51,7 @@
       "environment_scope": ["development", "staging", "production"],
       "provider_validation": "valid",
       "broker_status": "mcp_registration_pending",
-      "mcp_endpoint": "https://mcp.open-system.space/mcp",
+      "mcp_endpoint": "https://open-connect.site/mcp",
       "secret_storage": ["proton-pass:open-credentials", "zeabur-runtime"],
       "rules": [
         "use an independent MCP bridge token for clients",
