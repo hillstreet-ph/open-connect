@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0.0",
+  "registry_id": "open-connect-shared-provider-connections",
+  "purpose": "Canonical non-secret mapping for shared Docker Hub and Zeabur access. Secret values are resolved only by the Open-Connect credential broker.",
+  "projects": [
+    "open-kobeplay",
+    "open-system",
+    "open-connect",
+    "open-tgate",
+    "open-hub",
+    "open-teleset",
+    "open-model",
+    "open-payment",
+    "open-box",
+    "open-automation"
+  ],
+  "connections": [
+    {
+      "id": "dockerhub-hillstreet",
+      "provider": "dockerhub",
+      "credential_ref": "credential://dockerhub/hillstreet",
+      "account": "hillstreet",
+      "consumers": ["github-actions", "open-connect", "zeabur"],
+      "capabilities": ["repository.read", "image.pull", "image.push", "digest.read"],
+      "project_scope": "all",
+      "environment_scope": ["development", "staging", "production"],
+      "provider_validation": "valid",
+      "broker_status": "connection_pending",
+      "secret_storage": ["proton-pass:open-credentials", "github-actions", "zeabur-runtime"],
+      "rules": [
+        "never expose the PAT to agents or application logs",
+        "never bake the PAT into an image",
+        "promote production by immutable digest"
+      ]
+    },
+    {
+      "id": "zeabur-kobeplay",
+      "provider": "zeabur",
+      "credential_ref": "credential://zeabur/kobeplay",
+      "account": "kairocasino8",
+      "consumers": ["open-connect", "chatgpt-mcp", "composio", "pipedream", "slimtools"],
+      "capabilities": ["project.read", "service.manage", "deployment.manage", "domain.manage", "variable.manage", "logs.read"],
+      "project_scope": "all",
+      "environment_scope": ["development", "staging", "production"],
+      "provider_validation": "valid",
+      "broker_status": "mcp_registration_pending",
+      "mcp_endpoint": "https://mcp.open-system.space/mcp",
+      "secret_storage": ["proton-pass:open-credentials", "zeabur-runtime"],
+      "rules": [
+        "use an independent MCP bridge token for clients",
+        "never expose the Zeabur account token to MCP clients",
+        "inspect before mutation and preserve production volumes"
+      ]
+    }
+  ],
+  "access_policy": {
+    "credential_transport": "opaque_reference_only",
+    "default_access": "read",
+    "production_mutations_require_gate": true,
+    "destructive_actions_require_explicit_approval": true,
+    "audit_required": true
+  }
+}
