@@ -100,6 +100,7 @@ export const KEY_SCOPE_DOCS: { scope: string; meaning: string }[] = [
   { scope: "tools:invoke", meaning: "Run tools, browser skills, MultiOn orchestration" },
   { scope: "secrets:read", meaning: "Resolve vault references for agents (server-side only)" },
   { scope: "agents:invoke", meaning: "Run agent sessions and toolkits" },
+  { scope: "control:write", meaning: "Run owner/admin autonomous control operations with policy gates" },
 ];
 
 export function highestRole(roles: AppRole[]): AppRole {
