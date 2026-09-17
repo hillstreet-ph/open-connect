@@ -43,7 +43,7 @@ const CATALOG = [
   { provider: "supabase", display_name: "Supabase", category: "Data", scopes: ["projects:read", "db", "storage"], oauth: false },
   { provider: "stripe", display_name: "Stripe", category: "Business", scopes: ["read", "write"], oauth: false },
   { provider: "hubspot", display_name: "HubSpot", category: "Business", scopes: ["crm.objects.contacts.read"], oauth: true },
-  { provider: "airtable", display_name: "Airtable", category: "Data", scopes: ["data.records:read"], oauth: true },
+  { provider: "airtable", display_name: "Airtable", category: "Data", scopes: ["data.records:read", "data.records:write", "schema.bases:read", "schema.bases:write", "webhook:manage"], oauth: true },
 ] as const;
 
 export const listConnectionCatalog = createServerFn({ method: "GET" }).handler(async () => {
