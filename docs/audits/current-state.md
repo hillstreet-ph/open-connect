@@ -1,6 +1,6 @@
 # Open Connect — Current State Inventory
 
-**Date:** 2026-09-07  
+**Date:** 2026-09-17  
 **Domain:** https://open-connect.site  
 **Repo:** hillstreet-ph/open-connect · default branch `main`  
 **Version:** 1.0.0 (`package.json` / `VERSION`)  
@@ -24,13 +24,13 @@
 |-------|----------------|----------------|
 | Source | GitHub hillstreet-ph/open-connect | **KEEP** |
 | Edge | Cloudflare Pages `open-connect-app` + domain open-connect.site | **KEEP** |
-| Data/Auth | Supabase `gnqpwewbgldonarggzax` | **KEEP** |
+| Data/Auth | Supabase `open-platform` (`huadtiuuoiriqrjpjxhr`), schema `open_connect` | **MIGRATE / VERIFY** |
 | Models | `/v1` → OpenRouter (LiteLLM-compatible aliases) | **KEEP** / extend |
-| Optional runtime | Zeabur (metadata connections only) | **KEEP** optional |
+| Server runtime | Zeabur backend services only | **KEEP** |
 | Observability | Sentry connection metadata | **PARTIAL** |
 | Containers | No Dockerfile on app | **CREATE** only if worker image needed |
 
-**Not** production edge: Vercel, Railway (preview only if approved).
+**Runtime policy:** Zeabur is the only approved server runtime. Cloudflare Pages remains the Open-Connect public frontend edge.
 
 ## Surfaces (routes)
 
