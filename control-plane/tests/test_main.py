@@ -25,3 +25,16 @@ def test_capabilities_remain_authenticated() -> None:
     response = client.get("/api/v1/capabilities")
 
     assert response.status_code == 401
+
+
+def test_agent_registry_remains_authenticated() -> None:
+    response = client.get("/api/v1/agents")
+    assert response.status_code == 401
+
+
+def test_collaboration_planning_remains_authenticated() -> None:
+    response = client.post(
+        "/api/v1/collaborations/plan",
+        json={"goal": "test", "project": "open-connect"},
+    )
+    assert response.status_code == 401
