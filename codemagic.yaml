@@ -6,7 +6,7 @@
 #
 # Before first build, define an environment variable GROUP named "open-connect"
 # in Codemagic (Settings → Environment variables) with:
-#   VITE_SUPABASE_URL             = https://gnqpwewbgldonarggzax.supabase.co
+#   VITE_SUPABASE_URL             = https://huadtiuuoiriqrjpjxhr.supabase.co
 #   VITE_SUPABASE_PUBLISHABLE_KEY = <supabase publishable/anon key>   (mark Secure)
 #   VITE_APP_URL                  = https://open-connect.site
 # Never commit secret values to this file.

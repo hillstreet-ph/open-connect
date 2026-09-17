@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     e2b_credential_ref: str | None = None
     openbrowser_url: AnyHttpUrl | None = None
     openbrowser_credential_ref: str | None = None
+    browser_worker_url: AnyHttpUrl | None = None
+    browser_worker_credential_ref: str | None = None
+    browser_profile_store_ref: str | None = None
     guacamole_url: AnyHttpUrl | None = None
     guacamole_credential_ref: str | None = None
     model_gateway_url: AnyHttpUrl | None = None
@@ -29,6 +32,8 @@ class Settings(BaseSettings):
         refs = [
             self.e2b_credential_ref,
             self.openbrowser_credential_ref,
+            self.browser_worker_credential_ref,
+            self.browser_profile_store_ref,
             self.guacamole_credential_ref,
             self.model_gateway_credential_ref,
         ]

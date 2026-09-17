@@ -34,7 +34,7 @@ Set under **Settings → Environment variables → Production**:
 
 | Name | Type | Notes |
 |------|------|--------|
-| `SUPABASE_URL` | Plain | `https://gnqpwewbgldonarggzax.supabase.co` |
+| `SUPABASE_URL` | Plain | `https://huadtiuuoiriqrjpjxhr.supabase.co` |
 | `SUPABASE_PUBLISHABLE_KEY` | Plain | anon / publishable key |
 | `SUPABASE_SERVICE_ROLE_KEY` | **Secret** | never expose to client |
 | `LITELLM_BASE_URL` | Plain | model gateway base URL |
