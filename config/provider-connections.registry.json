@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "registry_id": "open-connect-shared-provider-connections",
-  "purpose": "Canonical non-secret mapping for shared Docker Hub and Zeabur access. Secret values are resolved only by the Open-Connect credential broker.",
+  "purpose": "Canonical non-secret mapping for shared provider access. Secret values are resolved only by the Open-Connect credential broker.",
   "projects": [
     "open-kobeplay",
     "open-system",
@@ -39,7 +39,14 @@
       "credential_ref": "credential://zeabur/kobeplay",
       "account": "kairocasino8",
       "consumers": ["open-connect", "chatgpt-mcp", "composio", "pipedream", "slimtools"],
-      "capabilities": ["project.read", "service.manage", "deployment.manage", "domain.manage", "variable.manage", "logs.read"],
+      "capabilities": [
+        "project.read",
+        "service.manage",
+        "deployment.manage",
+        "domain.manage",
+        "variable.manage",
+        "logs.read"
+      ],
       "project_scope": "all",
       "environment_scope": ["development", "staging", "production"],
       "provider_validation": "valid",
@@ -50,6 +57,39 @@
         "use an independent MCP bridge token for clients",
         "never expose the Zeabur account token to MCP clients",
         "inspect before mutation and preserve production volumes"
+      ]
+    },
+    {
+      "id": "airtable-kobeplay",
+      "provider": "airtable",
+      "credential_ref": "credential://airtable/kobeplay",
+      "account": "Kobeplay Organization",
+      "consumers": [
+        "open-connect",
+        "chatgpt-mcp",
+        "open-system",
+        "composio",
+        "pipedream",
+        "slimtools"
+      ],
+      "capabilities": [
+        "workspace.read",
+        "base.read",
+        "schema.read",
+        "records.read",
+        "records.write",
+        "interfaces.manage",
+        "automations.draft"
+      ],
+      "project_scope": "all",
+      "environment_scope": ["development", "staging", "production"],
+      "provider_validation": "valid",
+      "broker_status": "oauth_connected",
+      "secret_storage": ["open-secret:airtable/kobeplay"],
+      "rules": [
+        "prefer the installed OAuth plugin for user-scoped actions",
+        "resolve PAT credentials only inside the server-side broker",
+        "require approval for deletion, publishing, permissions, and secret changes"
       ]
     }
   ],
