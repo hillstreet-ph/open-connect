@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./types";
 
 /** Production defaults so the SPA never boots blank if Cloudflare omit VITE_ at build. */
-const PROD_SUPABASE_URL = "https://gnqpwewbgldonarggzax.supabase.co";
+const PROD_SUPABASE_URL = "https://huadtiuuoiriqrjpjxhr.supabase.co";
 const PROD_SUPABASE_PUBLISHABLE_KEY =
   "sb_publishable_jF4uhaC2ClDPaBCvin9Z6A_c0R4Glx0";
 
