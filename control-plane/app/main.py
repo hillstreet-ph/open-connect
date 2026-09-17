@@ -23,6 +23,12 @@ sessions: dict[UUID, Session] = {}
 audit_events: list[AuditEvent] = []
 
 
+@app.get("/")
+async def readiness() -> dict[str, str]:
+    """Serve the provider startup probe without exposing protected state."""
+    return {"status": "ok", "service": "open-connect-control"}
+
+
 @app.get("/healthz")
 async def healthz() -> dict[str, str]:
     return {"status": "ok", "environment": settings.environment}
