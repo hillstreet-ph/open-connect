@@ -3,8 +3,7 @@ import type { Database } from "./types";
 
 /** Production defaults so the SPA never boots blank if Cloudflare omit VITE_ at build. */
 const PROD_SUPABASE_URL = "https://huadtiuuoiriqrjpjxhr.supabase.co";
-const PROD_SUPABASE_PUBLISHABLE_KEY =
-  "sb_publishable_jeB9NRim_LnKQVHQDeqR1w_qcZlY0BR";
+const PROD_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_jeB9NRim_LnKQVHQDeqR1w_qcZlY0BR";
 
 function isNewSupabaseApiKey(value: string): boolean {
   return value.startsWith("sb_publishable_") || value.startsWith("sb_secret_");
@@ -20,7 +19,10 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
       new Headers(init.headers).forEach((value, key) => headers.set(key, value));
     }
 
-    if (isNewSupabaseApiKey(supabaseKey) && headers.get("Authorization") === `Bearer ${supabaseKey}`) {
+    if (
+      isNewSupabaseApiKey(supabaseKey) &&
+      headers.get("Authorization") === `Bearer ${supabaseKey}`
+    ) {
       headers.delete("Authorization");
     }
 
@@ -34,20 +36,34 @@ function readEnv(name: string): string {
     typeof import.meta !== "undefined" && import.meta.env
       ? (import.meta.env[name] as string | undefined)
       : undefined;
-  const fromProcess =
-    typeof process !== "undefined" && process.env ? process.env[name] : undefined;
+  const fromProcess = typeof process !== "undefined" && process.env ? process.env[name] : undefined;
   return (fromVite || fromProcess || "").trim();
 }
 
+function validSupabaseUrl(value: string): boolean {
+  try {
+    return new URL(value).hostname.endsWith(".supabase.co");
+  } catch {
+    return false;
+  }
+}
+
+function validPublishableKey(value: string): boolean {
+  return (
+    (value.startsWith("sb_publishable_") || value.startsWith("eyJ")) &&
+    !value.toLowerCase().includes("placeholder") &&
+    !value.toLowerCase().includes("replace_me")
+  );
+}
+
 function createSupabaseClient() {
-  const SUPABASE_URL =
-    readEnv("VITE_SUPABASE_URL") ||
-    readEnv("SUPABASE_URL") ||
-    PROD_SUPABASE_URL;
-  const SUPABASE_PUBLISHABLE_KEY =
-    readEnv("VITE_SUPABASE_PUBLISHABLE_KEY") ||
-    readEnv("SUPABASE_PUBLISHABLE_KEY") ||
-    PROD_SUPABASE_PUBLISHABLE_KEY;
+  const configuredUrl = readEnv("VITE_SUPABASE_URL") || readEnv("SUPABASE_URL");
+  const configuredPublishableKey =
+    readEnv("VITE_SUPABASE_PUBLISHABLE_KEY") || readEnv("SUPABASE_PUBLISHABLE_KEY");
+  const SUPABASE_URL = validSupabaseUrl(configuredUrl) ? configuredUrl : PROD_SUPABASE_URL;
+  const SUPABASE_PUBLISHABLE_KEY = validPublishableKey(configuredPublishableKey)
+    ? configuredPublishableKey
+    : PROD_SUPABASE_PUBLISHABLE_KEY;
 
   if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
     const message =
