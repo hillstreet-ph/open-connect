@@ -5,7 +5,15 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from .auth import current_actor
 from .config import Settings, get_settings
-from .models import Actor, AuditEvent, Session, SessionCreate, SessionState
+from .models import (
+    Actor,
+    AgentProvider,
+    AuditEvent,
+    CollaborationTask,
+    Session,
+    SessionCreate,
+    SessionState,
+)
 from .policy import authorize
 from .providers import ProviderUnavailable, providers
 
@@ -21,6 +29,44 @@ app.add_middleware(
 
 sessions: dict[UUID, Session] = {}
 audit_events: list[AuditEvent] = []
+
+AGENT_PROVIDERS = [
+    AgentProvider(
+        id="chatgpt", display_name="ChatGPT", adapter="api",
+        status="authorization_required", credential_ref="vault://models/chatgpt",
+        capabilities=["reasoning", "coding", "tools"],
+    ),
+    AgentProvider(
+        id="claude", display_name="Claude Code / Cowork", adapter="api",
+        status="authorization_required", credential_ref="vault://models/claude",
+        capabilities=["reasoning", "coding"],
+    ),
+    AgentProvider(
+        id="grok", display_name="Grok", adapter="api",
+        status="authorization_required", credential_ref="vault://models/grok",
+        capabilities=["reasoning", "research"],
+    ),
+    AgentProvider(
+        id="mistral", display_name="Mistral", adapter="openai-compatible",
+        status="authorization_required", credential_ref="vault://models/mistral",
+        capabilities=["reasoning", "coding"],
+    ),
+    AgentProvider(
+        id="kimi", display_name="Kimi", adapter="openai-compatible",
+        status="authorization_required", credential_ref="vault://models/kimi",
+        capabilities=["reasoning", "long-context"],
+    ),
+    AgentProvider(
+        id="manus", display_name="Manus", adapter="api",
+        status="endpoint_required", credential_ref="vault://agents/manus",
+        capabilities=["browser", "workflow"],
+    ),
+    AgentProvider(
+        id="hermes", display_name="Hermes / Open-System", adapter="local-runtime",
+        status="endpoint_required", credential_ref="vault://agents/hermes",
+        capabilities=["planning", "routing", "workers", "review"],
+    ),
+]
 
 
 @app.get("/")
@@ -41,6 +87,41 @@ async def capabilities(actor: Annotated[Actor, Depends(current_actor)]) -> dict:
         available, reason = await provider.available()
         discovered[name] = {"available": available, "reason": reason}
     return {"environment": settings.environment, "actor": actor.actor_id, "providers": discovered}
+
+
+@app.get("/api/v1/agents", response_model=list[AgentProvider])
+async def agent_registry(actor: Annotated[Actor, Depends(current_actor)]) -> list[AgentProvider]:
+    """Return non-secret provider metadata for the authenticated workspace."""
+    return AGENT_PROVIDERS
+
+
+@app.post("/api/v1/collaborations/plan")
+async def plan_collaboration(
+    request: CollaborationTask,
+    actor: Annotated[Actor, Depends(current_actor)],
+) -> dict:
+    """Create a deterministic, auditable plan without executing provider actions."""
+    selected = request.preferred_agents or ["chatgpt", "claude", "hermes"]
+    known = {provider.id for provider in AGENT_PROVIDERS}
+    unknown = sorted(set(selected) - known)
+    if unknown:
+        raise HTTPException(status_code=422, detail={"unknown_agents": unknown})
+    return {
+        "goal": request.goal,
+        "project": request.project,
+        "environment": request.environment,
+        "schedule": request.schedule,
+        "context_refs": request.context_refs,
+        "workflow": [
+            {"stage": "plan", "agent": selected[0]},
+            {"stage": "implement", "agents": selected},
+            {"stage": "review", "agent": "hermes" if "hermes" in selected else selected[-1]},
+            {"stage": "verify", "agent": selected[0]},
+        ],
+        "execution_state": "planned",
+        "approval_required_before_production": request.environment == "production",
+        "actor": actor.actor_id,
+    }
 
 
 @app.post("/api/v1/sessions", response_model=Session)
