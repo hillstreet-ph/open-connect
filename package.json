@@ -12,7 +12,7 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "test:control": "node --experimental-strip-types --test src/lib/autonomous-control.test.ts",
+    "test:control": "node --experimental-strip-types --test src/lib/autonomous-control.test.ts src/lib/autonomous-mcp-contract.test.ts",
     "test:navigation": "node --experimental-strip-types --test src/lib/navigation.test.ts",
     "test:credentials": "node --test scripts/credential-broker.test.mjs scripts/capability-router.test.mjs scripts/credential-storage.test.mjs",
     "test": "npm run test:control && npm run test:navigation && npm run test:credentials",

@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  buildAdaptivePlan,
   buildControlPlan,
+  buildLearningRecord,
   classifyRisk,
   isOpaqueCredentialReference,
+  rankCapabilities,
   redactEvidence,
 } from "./autonomous-control.ts";
 
@@ -32,5 +35,42 @@ describe("autonomous control policy", () => {
       token: "[REDACTED]",
       nested: { apiKey: "[REDACTED]", ok: true },
     });
+  });
+
+  it("ranks the smallest relevant capability set", () => {
+    const ranked = rankCapabilities("scrape a website with the TinyFish browser agent", [
+      {
+        slug: "tinyfish-agent-browser",
+        name: "TinyFish Agent Browser",
+        description: "Cloud browser agent for website extraction",
+        resourceType: "tool",
+      },
+      {
+        slug: "github",
+        name: "GitHub",
+        description: "Repository automation",
+        resourceType: "app",
+      },
+    ]);
+    assert.equal(ranked[0]?.slug, "tinyfish-agent-browser");
+    assert.equal(ranked.length, 1);
+  });
+
+  it("creates a non-executable draft when no capability matches", () => {
+    const plan = buildAdaptivePlan("translate a satellite telemetry format", "development", []);
+    assert.equal(plan.missingCapability, true);
+    assert.equal(plan.fallback?.state, "draft");
+    assert.equal(plan.fallback?.executable, false);
+  });
+
+  it("turns outcomes into redacted reusable memory", () => {
+    const record = buildLearningRecord({
+      goal: "verify deployment",
+      status: "failed",
+      summary: "Health check timed out",
+      evidence: { token: "do-not-store", status: 504 },
+    });
+    assert.equal(record.importance, 4);
+    assert.deepEqual(record.evidence, { token: "[REDACTED]", status: 504 });
   });
 });

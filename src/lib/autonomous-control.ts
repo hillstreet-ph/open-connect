@@ -10,6 +10,19 @@ export type ControlPlanStep = {
   approvalRequired: boolean;
 };
 
+export type CapabilityCandidate = {
+  slug: string;
+  name: string;
+  description?: string | null;
+  resourceType: string;
+  installationType?: string | null;
+};
+
+export type RankedCapability = CapabilityCandidate & {
+  score: number;
+  matchedTerms: string[];
+};
+
 const PROTECTED_PATTERNS = [
   /delete|destroy|purge|revoke|rotate/i,
   /credential|secret|password|token/i,
@@ -67,6 +80,85 @@ export function buildControlPlan(goal: string, environment = "production") {
     steps,
     approvalRequired: steps.some((step) => step.approvalRequired),
     maxRepairAttempts: 3,
+  };
+}
+
+function terms(value: string): string[] {
+  return [
+    ...new Set(
+      value
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, " ")
+        .split(" ")
+        .filter((term) => term.length > 2),
+    ),
+  ];
+}
+
+export function rankCapabilities(
+  goal: string,
+  candidates: CapabilityCandidate[],
+  limit = 5,
+): RankedCapability[] {
+  const goalTerms = terms(goal);
+  return candidates
+    .map((candidate) => {
+      const nameTerms = new Set(terms(`${candidate.slug} ${candidate.name}`));
+      const descriptionTerms = new Set(terms(candidate.description ?? ""));
+      const matchedTerms = goalTerms.filter(
+        (term) => nameTerms.has(term) || descriptionTerms.has(term),
+      );
+      const score = matchedTerms.reduce((total, term) => total + (nameTerms.has(term) ? 3 : 1), 0);
+      return { ...candidate, score, matchedTerms };
+    })
+    .filter((candidate) => candidate.score > 0)
+    .sort((a, b) => b.score - a.score || a.slug.localeCompare(b.slug))
+    .slice(0, Math.min(10, Math.max(1, limit)));
+}
+
+export function buildAdaptivePlan(
+  goal: string,
+  environment: string,
+  candidates: CapabilityCandidate[],
+) {
+  const base = buildControlPlan(goal, environment);
+  const capabilities = rankCapabilities(goal, candidates);
+  const missingCapability = capabilities.length === 0;
+  return {
+    ...base,
+    capabilities,
+    missingCapability,
+    fallback: missingCapability
+      ? {
+          action: "create_capability_draft",
+          state: "draft",
+          executable: false,
+          reason: "No approved catalog capability matched the goal.",
+        }
+      : null,
+    learning: {
+      captureOutcome: true,
+      writeMemory: true,
+      promoteToKnowledgeAfterSuccesses: 3,
+      automaticCodeMutation: false,
+    },
+  };
+}
+
+export function buildLearningRecord(input: {
+  goal: string;
+  status: "succeeded" | "failed" | "blocked";
+  summary: string;
+  capabilitySlugs?: string[];
+  evidence?: unknown;
+}) {
+  return {
+    title: `Agent outcome: ${input.goal}`.slice(0, 200),
+    content: input.summary.trim().slice(0, 50_000),
+    memoryType: input.status === "succeeded" ? "summary" : "decision",
+    importance: input.status === "succeeded" ? 3 : 4,
+    tags: ["autonomous-agent", input.status, ...(input.capabilitySlugs ?? [])].slice(0, 20),
+    evidence: redactEvidence(input.evidence ?? {}),
   };
 }
 

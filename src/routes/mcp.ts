@@ -8,8 +8,10 @@ import {
   type AuthedKey,
 } from "@/lib/gateway.server";
 import {
-  buildControlPlan,
+  buildAdaptivePlan,
+  buildLearningRecord,
   isOpaqueCredentialReference,
+  rankCapabilities,
   redactEvidence,
 } from "@/lib/autonomous-control";
 
@@ -145,6 +147,73 @@ const PLATFORM_TOOLS: McpTool[] = [
       destructiveHint: false,
       idempotentHint: false,
       openWorldHint: true,
+    },
+  },
+  {
+    name: "recommend_toolchain",
+    description:
+      "Find the smallest approved plugin, skill, tool, app, or MCP bundle matching a goal.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        goal: { type: "string" },
+        limit: { type: "integer", minimum: 1, maximum: 10 },
+      },
+      required: ["goal"],
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  },
+  {
+    name: "resolve_capability",
+    description:
+      "Resolve one requested capability to approved catalog resources and report whether a draft is needed.",
+    inputSchema: {
+      type: "object",
+      properties: { capability: { type: "string" } },
+      required: ["capability"],
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  },
+  {
+    name: "create_capability_draft",
+    description:
+      "Create a non-executable capability specification when no approved tool exists. It never installs code automatically.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        capability: { type: "string" },
+        goal: { type: "string" },
+        environment: { type: "string", enum: ["development", "staging", "production"] },
+      },
+      required: ["capability", "goal"],
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: false,
+    },
+  },
+  {
+    name: "record_run_outcome",
+    description:
+      "Record a verified autonomous-run outcome, save redacted working memory, and promote repeated successes to knowledge.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        correlation_id: { type: "string" },
+        status: { type: "string", enum: ["succeeded", "failed", "blocked"] },
+        summary: { type: "string" },
+        capability_slugs: { type: "array", items: { type: "string" } },
+        evidence: { type: "object" },
+      },
+      required: ["correlation_id", "status", "summary"],
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: false,
     },
   },
   {
@@ -490,24 +559,64 @@ export const Route = createFileRoute("/mcp")({
                 credential_reference: connection["credential_reference"] ? "configured" : "missing",
               })),
             });
+          } else if (name === "recommend_toolchain" || name === "resolve_capability") {
+            const goal = String(
+              name === "resolve_capability" ? args["capability"] : args["goal"],
+            ).trim();
+            const limit = name === "resolve_capability" ? 5 : Number(args["limit"] ?? 5);
+            const catalog = await getCatalog();
+            const matches = rankCapabilities(
+              goal,
+              [...catalog.bySlug.values()].map((item) => ({
+                slug: item.slug,
+                name: item.name,
+                description: item.description,
+                resourceType: item.resource_type,
+                installationType: item.installation_type,
+              })),
+              limit,
+            );
+            result = textResult({
+              goal,
+              matches,
+              missing_capability: matches.length === 0,
+              next_action: matches.length ? "install_or_invoke" : "create_capability_draft",
+              values_exposed: false,
+            });
           } else if (name === "plan_goal") {
+            const catalog = await getCatalog();
             result = textResult(
-              buildControlPlan(
+              buildAdaptivePlan(
                 String(args["goal"] ?? ""),
                 String(args["environment"] ?? "production"),
+                [...catalog.bySlug.values()].map((item) => ({
+                  slug: item.slug,
+                  name: item.name,
+                  description: item.description,
+                  resourceType: item.resource_type,
+                  installationType: item.installation_type,
+                })),
               ),
             );
           } else if (name === "execute_plan") {
             await requireControlWrite(key);
-            const plan = buildControlPlan(
+            const catalog = await getCatalog();
+            const plan = buildAdaptivePlan(
               String(args["goal"] ?? ""),
               String(args["environment"] ?? "production"),
+              [...catalog.bySlug.values()].map((item) => ({
+                slug: item.slug,
+                name: item.name,
+                description: item.description,
+                resourceType: item.resource_type,
+                installationType: item.installation_type,
+              })),
             );
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
             // Generated Supabase types lag new migrations until the next type-generation job.
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const controlDb = supabaseAdmin as any;
-            const state = plan.approvalRequired ? "approval_required" : "succeeded";
+            const state = plan.approvalRequired ? "approval_required" : "planned";
             await controlDb.from("autonomous_runs").upsert({
               id: plan.id,
               user_id: key.userId,
@@ -515,10 +624,45 @@ export const Route = createFileRoute("/mcp")({
               environment: plan.environment,
               state,
               plan: redactEvidence(plan),
-              evidence: { verified: !plan.approvalRequired },
-              rollback: { available: !plan.approvalRequired },
+              evidence: {
+                verified: false,
+                capability_count: plan.capabilities.length,
+                values_exposed: false,
+              },
+              rollback: { available: true },
               correlation_id: plan.id,
             });
+            await controlDb.from("autonomous_run_events").insert({
+              user_id: key.userId,
+              run_id: plan.id,
+              event_type: "planned",
+              summary: plan.missingCapability
+                ? "No approved capability matched; a draft specification was created."
+                : `Selected ${plan.capabilities.length} approved capability candidate(s).`,
+              capability_slugs: plan.capabilities.map((capability) => capability.slug),
+              evidence: { values_exposed: false },
+            });
+            if (plan.missingCapability) {
+              await controlDb.from("capability_requests").insert({
+                user_id: key.userId,
+                source_run_id: plan.id,
+                requested_capability: plan.goal.slice(0, 240),
+                goal: plan.goal,
+                state: "draft",
+                specification: {
+                  generated_by: "open-connect",
+                  executable: false,
+                  required_contract: [
+                    "input_schema",
+                    "output_schema",
+                    "credential_reference",
+                    "health_check",
+                    "approval_policy",
+                    "tests",
+                  ],
+                },
+              });
+            }
             if (plan.approvalRequired) {
               await controlDb.from("control_approvals").insert({
                 tenant_id: key.userId,
@@ -537,7 +681,130 @@ export const Route = createFileRoute("/mcp")({
               plan,
               autonomous_steps_executed: plan.approvalRequired
                 ? ["discover"]
-                : plan.steps.map((step) => step.id),
+                : ["discover", "plan"],
+            });
+          } else if (name === "create_capability_draft") {
+            await requireControlWrite(key);
+            const capability = String(args["capability"] ?? "")
+              .trim()
+              .slice(0, 240);
+            const goal = String(args["goal"] ?? "")
+              .trim()
+              .slice(0, 4_000);
+            if (!capability || !goal) throw new Error("Capability and goal are required.");
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            // Generated Supabase types lag new migrations until the next type-generation job.
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const controlDb = supabaseAdmin as any;
+            const { data, error } = await controlDb
+              .from("capability_requests")
+              .insert({
+                user_id: key.userId,
+                requested_capability: capability,
+                goal,
+                state: "draft",
+                specification: {
+                  environment: String(args["environment"] ?? "development"),
+                  executable: false,
+                  required_contract: [
+                    "input_schema",
+                    "output_schema",
+                    "credential_reference",
+                    "health_check",
+                    "approval_policy",
+                    "tests",
+                  ],
+                },
+              })
+              .select("id,requested_capability,state,created_at")
+              .single();
+            if (error) throw new Error(error.message);
+            result = textResult({ draft: data, executable: false, values_exposed: false });
+          } else if (name === "record_run_outcome") {
+            await requireControlWrite(key);
+            const correlationId = String(args["correlation_id"] ?? "").trim();
+            const status = String(args["status"] ?? "") as "succeeded" | "failed" | "blocked";
+            const summary = String(args["summary"] ?? "")
+              .trim()
+              .slice(0, 50_000);
+            const capabilitySlugs = Array.isArray(args["capability_slugs"])
+              ? args["capability_slugs"]
+                  .filter((value): value is string => typeof value === "string")
+                  .slice(0, 20)
+              : [];
+            if (!correlationId || !["succeeded", "failed", "blocked"].includes(status) || !summary)
+              throw new Error("Valid correlation id, status, and summary are required.");
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            // Generated Supabase types lag new migrations until the next type-generation job.
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const controlDb = supabaseAdmin as any;
+            const { data: run } = await controlDb
+              .from("autonomous_runs")
+              .select("id,goal")
+              .eq("correlation_id", correlationId)
+              .eq("user_id", key.userId)
+              .single();
+            if (!run) throw new Error("Autonomous run not found.");
+            const learning = buildLearningRecord({
+              goal: run.goal,
+              status,
+              summary,
+              capabilitySlugs,
+              evidence: args["evidence"],
+            });
+            await controlDb.from("autonomous_run_events").insert({
+              user_id: key.userId,
+              run_id: run.id,
+              event_type: status === "succeeded" ? "learned" : status,
+              summary: learning.content,
+              capability_slugs: capabilitySlugs,
+              evidence: learning.evidence,
+            });
+            await controlDb.from("memory_records").insert({
+              user_id: key.userId,
+              title: learning.title,
+              content: learning.content,
+              memory_type: learning.memoryType,
+              importance: learning.importance,
+              tags: learning.tags,
+              metadata: { run_id: run.id, evidence: learning.evidence },
+            });
+            let knowledgePromoted = false;
+            if (status === "succeeded" && capabilitySlugs.length) {
+              const { count } = await controlDb
+                .from("autonomous_run_events")
+                .select("id", { count: "exact", head: true })
+                .eq("user_id", key.userId)
+                .eq("event_type", "learned")
+                .contains("capability_slugs", capabilitySlugs);
+              if (count === 3) {
+                await controlDb.from("knowledge_items").insert({
+                  user_id: key.userId,
+                  title: `Proven procedure: ${capabilitySlugs.join(", ")}`.slice(0, 240),
+                  content: learning.content,
+                  source_type: "api",
+                  status: "ready",
+                  tags: ["verified-procedure", ...capabilitySlugs].slice(0, 20),
+                  metadata: { promoted_from_run: run.id, verified_successes: 3 },
+                });
+                knowledgePromoted = true;
+              }
+            }
+            await controlDb
+              .from("autonomous_runs")
+              .update({
+                state: status === "succeeded" ? "succeeded" : "failed",
+                evidence: learning.evidence,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", run.id)
+              .eq("user_id", key.userId);
+            result = textResult({
+              correlation_id: correlationId,
+              state: status,
+              memory_saved: true,
+              knowledge_promoted: knowledgePromoted,
+              values_exposed: false,
             });
           } else if (name === "install_capability") {
             await requireControlWrite(key);

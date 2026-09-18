@@ -41,6 +41,10 @@ See `credentials/resolver-adapter.md` for the adapter protocol. The Secrets UI s
 Supabase Vault after migration `20260918000000_encrypt_credential_secrets.sql`; browsers receive
 metadata only.
 
+The governed autonomous agent loop discovers tools, creates non-executable capability drafts for
+gaps, and converts verified outcomes into memory and knowledge. See
+`docs/AUTONOMOUS_AGENT_LOOP.md`.
+
 Deployment requires the four server-side `OPENAI_*` variables listed in `.env.example`. See [Campaign Studio setup, boundaries, configuration, and validation](docs/OPENAI_CAMPAIGN_STUDIO.md).
 
 Open-Connect — Master Development Blueprint
