@@ -1,6 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   Bot,
+  Brain,
   Boxes,
   CalendarClock,
   FolderKanban,
@@ -54,12 +55,11 @@ const WORK: Item[] = [
 const BUILD: Item[] = [
   { to: "/studio", label: "Studio", icon: Sparkles },
   { to: "/agents", label: "Agents", icon: Bot },
+  { to: "/memory", label: "Memory & Knowledge", icon: Brain },
   { capability: "manage_toolkits", to: "/toolkits", label: "Toolkits", icon: Wrench },
 ];
 
-const DISCOVER: Item[] = [
-  { to: "/resources", label: "Marketplace", icon: Boxes },
-];
+const DISCOVER: Item[] = [{ to: "/resources", label: "Marketplace", icon: Boxes }];
 
 const CONNECT: Item[] = [
   { to: "/connections", label: "Connections", icon: Plug },
