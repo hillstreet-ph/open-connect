@@ -24,6 +24,7 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedAgentsRouteImport } from './routes/_authenticated/agents'
 import { Route as AuthenticatedApiKeysRouteImport } from './routes/_authenticated/api-keys'
 import { Route as AuthenticatedAutomationsRouteImport } from './routes/_authenticated/automations'
+import { Route as AuthenticatedCampaignStudioRouteImport } from './routes/_authenticated/campaign-studio'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedGuidesRouteImport } from './routes/_authenticated/guides'
 import { Route as AuthenticatedOrgsRouteImport } from './routes/_authenticated/orgs'
@@ -35,6 +36,7 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedStudioRouteImport } from './routes/_authenticated/studio'
 import { Route as AuthenticatedTasksRouteImport } from './routes/_authenticated/tasks'
 import { Route as AuthenticatedToolkitsRouteImport } from './routes/_authenticated/toolkits'
+import { Route as ApiCampaignStudioRouteImport } from './routes/api/campaign-studio'
 import { Route as OauthAuthorizeRouteImport } from './routes/oauth/authorize'
 import { Route as OauthRegisterRouteImport } from './routes/oauth/register'
 import { Route as OauthTokenRouteImport } from './routes/oauth/token'
@@ -120,6 +122,12 @@ const AuthenticatedAutomationsRoute =
     path: '/automations',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedCampaignStudioRoute =
+  AuthenticatedCampaignStudioRouteImport.update({
+    id: '/campaign-studio',
+    path: '/campaign-studio',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -174,6 +182,11 @@ const AuthenticatedToolkitsRoute = AuthenticatedToolkitsRouteImport.update({
   id: '/toolkits',
   path: '/toolkits',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const ApiCampaignStudioRoute = ApiCampaignStudioRouteImport.update({
+  id: '/api/campaign-studio',
+  path: '/api/campaign-studio',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const OauthAuthorizeRoute = OauthAuthorizeRouteImport.update({
   id: '/oauth/authorize',
@@ -237,6 +250,7 @@ export interface FileRoutesByFullPath {
   '/agents': typeof AuthenticatedAgentsRoute
   '/api-keys': typeof AuthenticatedApiKeysRoute
   '/automations': typeof AuthenticatedAutomationsRoute
+  '/campaign-studio': typeof AuthenticatedCampaignStudioRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/guides': typeof AuthenticatedGuidesRoute
   '/orgs': typeof AuthenticatedOrgsRoute
@@ -248,6 +262,7 @@ export interface FileRoutesByFullPath {
   '/studio': typeof AuthenticatedStudioRoute
   '/tasks': typeof AuthenticatedTasksRoute
   '/toolkits': typeof AuthenticatedToolkitsRoute
+  '/api/campaign-studio': typeof ApiCampaignStudioRoute
   '/oauth/authorize': typeof OauthAuthorizeRoute
   '/oauth/register': typeof OauthRegisterRoute
   '/oauth/token': typeof OauthTokenRoute
@@ -273,6 +288,7 @@ export interface FileRoutesByTo {
   '/agents': typeof AuthenticatedAgentsRoute
   '/api-keys': typeof AuthenticatedApiKeysRoute
   '/automations': typeof AuthenticatedAutomationsRoute
+  '/campaign-studio': typeof AuthenticatedCampaignStudioRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/guides': typeof AuthenticatedGuidesRoute
   '/orgs': typeof AuthenticatedOrgsRoute
@@ -284,6 +300,7 @@ export interface FileRoutesByTo {
   '/studio': typeof AuthenticatedStudioRoute
   '/tasks': typeof AuthenticatedTasksRoute
   '/toolkits': typeof AuthenticatedToolkitsRoute
+  '/api/campaign-studio': typeof ApiCampaignStudioRoute
   '/oauth/authorize': typeof OauthAuthorizeRoute
   '/oauth/register': typeof OauthRegisterRoute
   '/oauth/token': typeof OauthTokenRoute
@@ -311,6 +328,7 @@ export interface FileRoutesById {
   '/_authenticated/agents': typeof AuthenticatedAgentsRoute
   '/_authenticated/api-keys': typeof AuthenticatedApiKeysRoute
   '/_authenticated/automations': typeof AuthenticatedAutomationsRoute
+  '/_authenticated/campaign-studio': typeof AuthenticatedCampaignStudioRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/guides': typeof AuthenticatedGuidesRoute
   '/_authenticated/orgs': typeof AuthenticatedOrgsRoute
@@ -322,6 +340,7 @@ export interface FileRoutesById {
   '/_authenticated/studio': typeof AuthenticatedStudioRoute
   '/_authenticated/tasks': typeof AuthenticatedTasksRoute
   '/_authenticated/toolkits': typeof AuthenticatedToolkitsRoute
+  '/api/campaign-studio': typeof ApiCampaignStudioRoute
   '/oauth/authorize': typeof OauthAuthorizeRoute
   '/oauth/register': typeof OauthRegisterRoute
   '/oauth/token': typeof OauthTokenRoute
@@ -349,6 +368,7 @@ export interface FileRouteTypes {
     | '/agents'
     | '/api-keys'
     | '/automations'
+    | '/campaign-studio'
     | '/dashboard'
     | '/guides'
     | '/orgs'
@@ -360,6 +380,7 @@ export interface FileRouteTypes {
     | '/studio'
     | '/tasks'
     | '/toolkits'
+    | '/api/campaign-studio'
     | '/oauth/authorize'
     | '/oauth/register'
     | '/oauth/token'
@@ -385,6 +406,7 @@ export interface FileRouteTypes {
     | '/agents'
     | '/api-keys'
     | '/automations'
+    | '/campaign-studio'
     | '/dashboard'
     | '/guides'
     | '/orgs'
@@ -396,6 +418,7 @@ export interface FileRouteTypes {
     | '/studio'
     | '/tasks'
     | '/toolkits'
+    | '/api/campaign-studio'
     | '/oauth/authorize'
     | '/oauth/register'
     | '/oauth/token'
@@ -422,6 +445,7 @@ export interface FileRouteTypes {
     | '/_authenticated/agents'
     | '/_authenticated/api-keys'
     | '/_authenticated/automations'
+    | '/_authenticated/campaign-studio'
     | '/_authenticated/dashboard'
     | '/_authenticated/guides'
     | '/_authenticated/orgs'
@@ -433,6 +457,7 @@ export interface FileRouteTypes {
     | '/_authenticated/studio'
     | '/_authenticated/tasks'
     | '/_authenticated/toolkits'
+    | '/api/campaign-studio'
     | '/oauth/authorize'
     | '/oauth/register'
     | '/oauth/token'
@@ -456,6 +481,7 @@ export interface RootRouteChildren {
   McpRoute: typeof McpRoute
   ModelsRoute: typeof ModelsRoute
   ResourcesRoute: typeof ResourcesRoute
+  ApiCampaignStudioRoute: typeof ApiCampaignStudioRoute
   OauthAuthorizeRoute: typeof OauthAuthorizeRoute
   OauthRegisterRoute: typeof OauthRegisterRoute
   OauthTokenRoute: typeof OauthTokenRoute
@@ -573,6 +599,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAutomationsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/campaign-studio': {
+      id: '/_authenticated/campaign-studio'
+      path: '/campaign-studio'
+      fullPath: '/campaign-studio'
+      preLoaderRoute: typeof AuthenticatedCampaignStudioRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -649,6 +682,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/toolkits'
       preLoaderRoute: typeof AuthenticatedToolkitsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/campaign-studio': {
+      id: '/api/campaign-studio'
+      path: '/api/campaign-studio'
+      fullPath: '/api/campaign-studio'
+      preLoaderRoute: typeof ApiCampaignStudioRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/oauth/authorize': {
       id: '/oauth/authorize'
@@ -734,6 +774,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAgentsRoute: typeof AuthenticatedAgentsRoute
   AuthenticatedApiKeysRoute: typeof AuthenticatedApiKeysRoute
   AuthenticatedAutomationsRoute: typeof AuthenticatedAutomationsRoute
+  AuthenticatedCampaignStudioRoute: typeof AuthenticatedCampaignStudioRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedGuidesRoute: typeof AuthenticatedGuidesRoute
   AuthenticatedOrgsRoute: typeof AuthenticatedOrgsRoute
@@ -752,6 +793,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAgentsRoute: AuthenticatedAgentsRoute,
   AuthenticatedApiKeysRoute: AuthenticatedApiKeysRoute,
   AuthenticatedAutomationsRoute: AuthenticatedAutomationsRoute,
+  AuthenticatedCampaignStudioRoute: AuthenticatedCampaignStudioRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedGuidesRoute: AuthenticatedGuidesRoute,
   AuthenticatedOrgsRoute: AuthenticatedOrgsRoute,
@@ -780,6 +822,7 @@ const rootRouteChildren: RootRouteChildren = {
   McpRoute: McpRoute,
   ModelsRoute: ModelsRoute,
   ResourcesRoute: ResourcesRoute,
+  ApiCampaignStudioRoute: ApiCampaignStudioRoute,
   OauthAuthorizeRoute: OauthAuthorizeRoute,
   OauthRegisterRoute: OauthRegisterRoute,
   OauthTokenRoute: OauthTokenRoute,

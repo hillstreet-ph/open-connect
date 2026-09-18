@@ -1,5 +1,25 @@
 # Open Connect Gateway
 
+## Campaign Studio and OpenAI Agents
+
+The authenticated `/campaign-studio` workspace turns a marketing brief into a campaign concept, three copy variants, a launch checklist, visual prompts, and a generated campaign image using the current OpenAI Responses API. OpenAI calls are server-only; the browser never receives `OPENAI_API_KEY`.
+
+```bash
+cp .env.example .env.local
+# Set OPENAI_API_KEY in .env.local
+npm install
+npm run dev
+```
+
+To create the reusable **New agent** in OpenAI project `proj_P1GhW0FJdBA5g3dpuKN8BZh8`, start an OpenAI-hosted session, and stream its events with direct `curl` API calls:
+
+```bash
+export OPENAI_API_KEY='...'
+npm run agent:start -- "Review the campaign studio and propose the next release tasks."
+```
+
+Deployment requires the four server-side `OPENAI_*` variables listed in `.env.example`. See [Campaign Studio setup, boundaries, configuration, and validation](docs/OPENAI_CAMPAIGN_STUDIO.md).
+
 Open-Connect — Master Development Blueprint
 
 

@@ -43,6 +43,11 @@ export const appCategories: NavCategory[] = [
     items: [
       { to: "/dashboard", label: "Dashboard", description: "Hub overview" },
       { to: "/studio", label: "Studio", description: "Create agents & skills" },
+      {
+        to: "/campaign-studio",
+        label: "Campaign Studio",
+        description: "Concepts, copy, and visuals",
+      },
       { to: "/memory", label: "Memory & Knowledge", description: "Reusable context and sources" },
       { to: "/orgs", label: "Organizations", description: "Orgs and projects" },
       { to: "/agents", label: "Agents", description: "MCP agents and keys" },
@@ -83,6 +88,7 @@ export function flatAppNav(): NavLink[] {
   return [
     { to: "/dashboard", label: "Dashboard" },
     { to: "/studio", label: "Studio" },
+    { to: "/campaign-studio", label: "Campaign Studio" },
     { to: "/memory", label: "Memory & Knowledge" },
     { to: "/orgs", label: "Orgs" },
     { to: "/resources", label: "Marketplace" },

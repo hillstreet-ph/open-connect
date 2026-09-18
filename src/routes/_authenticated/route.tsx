@@ -73,6 +73,7 @@ function pageTitle(pathname: string): string {
   const map: Record<string, string> = {
     "/dashboard": "Dashboard",
     "/studio": "Studio",
+    "/campaign-studio": "Campaign concept studio",
     "/orgs": "Organizations",
     "/projects": "Projects",
     "/tasks": "Tasks",
