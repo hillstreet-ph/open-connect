@@ -1,4 +1,11 @@
 -- Audited third-party resources are visible metadata only. None are executable or installable.
+insert into public.categories (slug, name, description) values
+  ('knowledge', 'Knowledge', 'Memory, retrieval, indexing, and knowledge-management resources'),
+  ('connections', 'Connections', 'External applications, messaging, and identity integrations')
+on conflict (slug) do update set
+  name = excluded.name,
+  description = excluded.description;
+
 insert into public.resources (
   slug, name, description, resource_type, category_slug, author, source,
   version, license, installation_type, installation_config, supported_clients,
