@@ -162,7 +162,7 @@ function RolesAccessPage() {
           <CardDescription>Platform, organization, and project permissions have separate scopes.</CardDescription>
         </CardHeader>
         <CardContent className="px-4 pb-4 text-sm text-muted-foreground">
-          Open the Open Connect logo or account menu for personal settings, organizations,
+          Open your user avatar menu for personal settings, organizations,
           and credentials. Admins and owners also have System administration for members
           and permissions. Owners retain their additional permissions within the same pages.
         </CardContent>

@@ -1,4 +1,4 @@
-import { createFileRoute, Link, Outlet, redirect, useRouterState } from "@tanstack/react-router";
+import { createFileRoute, Outlet, redirect, useRouterState } from "@tanstack/react-router";
 import { Search } from "lucide-react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -57,12 +57,7 @@ function AuthenticatedShell() {
                   aria-label="Search workspace"
                 />
               </div>
-              <Link
-                to="/roles"
-                className="rounded-md border border-border/70 px-2.5 py-1.5 text-[11px] text-muted-foreground hover:text-foreground"
-              >
-                Access reference
-              </Link>
+
             </div>
           </header>
           <div className="flex-1 overflow-auto">
@@ -76,7 +71,7 @@ function AuthenticatedShell() {
 
 function pageTitle(pathname: string): string {
   const map: Record<string, string> = {
-    "/dashboard": "Hub overview",
+    "/dashboard": "Dashboard",
     "/studio": "Studio",
     "/orgs": "Organizations",
     "/projects": "Projects",
