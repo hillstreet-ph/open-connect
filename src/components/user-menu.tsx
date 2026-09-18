@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, KeyRound, LayoutDashboard, LogOut, Plug, Settings, Shield } from "lucide-react";
+import { Building2, ChevronDown, FileCode, KeyRound, LayoutDashboard, Lock, LogOut, Plug, Settings, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -15,6 +15,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 
 function initials(name: string, email: string) {
@@ -55,7 +58,11 @@ function useProfile() {
 }
 
 async function performSignOut(navigate: ReturnType<typeof useNavigate>) {
-  await supabase.auth.signOut();
+  const { error } = await supabase.auth.signOut();
+  if (error) {
+    toast.error("Could not sign out. Please try again.");
+    return;
+  }
   toast.success("Signed out");
   await navigate({ to: "/auth" });
 }
@@ -87,14 +94,28 @@ function AccountMenuItems({
           Settings
         </Link>
       </DropdownMenuItem>
+      <DropdownMenuItem asChild>
+        <Link to="/orgs"><Building2 /> Organizations & workspaces</Link>
+      </DropdownMenuItem>
+      <DropdownMenuItem asChild>
+        <Link to="/secrets"><Lock /> Credentials</Link>
+      </DropdownMenuItem>
       {showAdmin ? (
-        <DropdownMenuItem asChild>
-          <Link to="/admin" className="cursor-pointer">
-            <Shield className="mr-2 size-4" />
-            Admin
-          </Link>
-        </DropdownMenuItem>
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger><Shield /> Organization settings</DropdownMenuSubTrigger>
+          <DropdownMenuSubContent>
+            <DropdownMenuItem asChild>
+              <Link to="/admin"><Shield /> Members & roles</Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/roles"><KeyRound /> Roles & permissions</Link>
+            </DropdownMenuItem>
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
       ) : null}
+      <DropdownMenuItem asChild>
+        <Link to="/guides"><FileCode /> Help & documentation</Link>
+      </DropdownMenuItem>
       <DropdownMenuSeparator />
       <DropdownMenuItem
         className="cursor-pointer text-destructive focus:text-destructive"
@@ -122,7 +143,29 @@ export function BrandLogo() {
 }
 
 export function BrandLogoMenu() {
-  return <BrandLogo />;
+  const { user } = useAuth();
+  const { isAdmin } = useRoles();
+  const navigate = useNavigate();
+  if (!user) return <BrandLogo />;
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button type="button" aria-label="Open Connect menu"
+          className="flex w-full items-center gap-2 rounded-md px-1 py-1 text-left hover:bg-sidebar-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary shadow-glow">
+            <Plug className="size-4" />
+          </span>
+          <span className="min-w-0 flex-1 truncate font-display text-sm font-semibold group-data-[collapsible=icon]:hidden">Open Connect</span>
+          <ChevronDown className="size-4 shrink-0 group-data-[collapsible=icon]:hidden" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-64 max-w-[calc(100vw-2rem)]">
+        <DropdownMenuLabel>Open Connect</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <AccountMenuItems showAdmin={isAdmin} onSignOut={() => void performSignOut(navigate)} />
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }
 
 export function UserMenu() {

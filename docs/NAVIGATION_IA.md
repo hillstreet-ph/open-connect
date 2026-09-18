@@ -29,7 +29,7 @@ Projects own tasks, schedules, automations, agents, resources, connections, mode
 | 4 | Discover | Marketplace |
 | 5 | Connect | Connections, Integrations, AI Gateway |
 | 6 | Developer | API & MCP, Guides |
-| 7 | — | Settings |
+| 7 | Logo / account menu | Settings, Organizations & workspaces, Credentials, Organization settings (privileged), Help, Sign out |
 
 Naming: use **Schedules** (noun), not “Scheduled”.
 
@@ -37,16 +37,16 @@ Naming: use **Schedules** (noun), not “Scheduled”.
 
 Skills · Plugins · Tools · Agents · Prompts · MCP · Workflows · Templates · Model configs
 
-## Privileged surfaces (role-gated)
+## Settings and administration
 
-- **Admin Console** — Organization, Roles & scopes, Vault metadata, Resource registry  
-- **Owner Console** — Org governance, Ownership & policies, Credential governance  
+The Open Connect logo opens the same accessible menu as the account avatar.
+Settings contains Profile and Security & login tabs. Only implemented settings are shown.
+Organizations & workspaces opens the existing organization management page; it does not claim to switch active tenant context.
+Credentials opens the existing scoped credential page.
 
-Members do **not** see infrastructure-heavy admin items by default.
-
-## Organization placement
-
-Organization is a **container**. Expose via top switcher (“Switch org / workspace”), not as the first permanent work item.
+Admins and owners get one Organization settings submenu: Members & roles (`/admin`) and Roles & permissions (`/roles`).
+No separate Owner Console or Admin Console appears in daily navigation. Owners retain their existing permissions within shared pages.
+Marketplace remains the single resource registry entry. Existing URLs and server authorization remain unchanged.
 
 ## Product rule
 
