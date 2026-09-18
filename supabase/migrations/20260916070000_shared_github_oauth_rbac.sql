@@ -8,19 +8,43 @@ create schema if not exists platform_shared;
 create table if not exists platform_shared.project_registry (
   project_key text primary key,
   display_name text not null,
+  repository text,
+  schema_name text,
+  environment text not null default 'production',
   enabled boolean not null default true,
   created_at timestamptz not null default now()
 );
 
+-- Older shared-registry deployments used repository/schema metadata but did
+-- not include a human-readable display name. Keep both layouts compatible.
+alter table platform_shared.project_registry
+  add column if not exists display_name text,
+  add column if not exists repository text,
+  add column if not exists schema_name text,
+  add column if not exists environment text not null default 'production';
+
+update platform_shared.project_registry
+set display_name = initcap(replace(project_key, '_', ' '))
+where display_name is null;
+
+alter table platform_shared.project_registry
+  alter column display_name set not null;
+
 -- Seed the four HillStreet projects.
-insert into platform_shared.project_registry (project_key, display_name, enabled)
+insert into platform_shared.project_registry
+  (project_key, display_name, repository, schema_name, environment, enabled)
 values
-  ('open_connect', 'Open Connect', true),
-  ('open_box',     'Open Box',     true),
-  ('open_teleset', 'Open Teleset', true),
-  ('open_system',  'Open System',  true)
+  ('open-connect',    'Open Connect',    'hillstreet-ph/open-connect',    'open_connect',    'production', true),
+  ('open-system',     'Open System',     'hillstreet-ph/open-system',     'open_system',     'production', true),
+  ('open-model',      'Open Model',      'hillstreet-ph/open-model',      'open_model',      'production', true),
+  ('open-hub',        'Open Hub',        'hillstreet-ph/open-hub',        'open_hub',        'production', true),
+  ('open-box',        'Open Box',        'hillstreet-ph/open-box',        'open_box',        'production', true),
+  ('open-automation', 'Open Automation', 'hillstreet-ph/open-automation', 'open_automation', 'production', true)
 on conflict (project_key) do update set
   display_name = excluded.display_name,
+  repository = coalesce(platform_shared.project_registry.repository, excluded.repository),
+  schema_name = coalesce(platform_shared.project_registry.schema_name, excluded.schema_name),
+  environment = coalesce(platform_shared.project_registry.environment, excluded.environment),
   enabled = excluded.enabled;
 
 create table if not exists platform_shared.account_roles (
