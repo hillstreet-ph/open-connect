@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/_authenticated/settings")({
@@ -160,7 +161,13 @@ function SettingsPage() {
       <h1 className="text-3xl font-semibold">Settings</h1>
       <p className="mt-2 text-sm text-muted-foreground">Profile and account security.</p>
 
-      <Card className="mt-8 shadow-panel">
+      <Tabs defaultValue="profile" className="mt-8">
+        <TabsList aria-label="Settings categories" className="h-auto w-full justify-start gap-2">
+          <TabsTrigger value="profile">Profile</TabsTrigger>
+          <TabsTrigger value="security">Security & login</TabsTrigger>
+        </TabsList>
+        <TabsContent value="profile">
+      <Card className="shadow-panel">
         <CardHeader>
           <CardTitle className="text-base">Profile</CardTitle>
           <CardDescription>Photo and display name shown in the account menu.</CardDescription>
@@ -230,7 +237,9 @@ function SettingsPage() {
         </CardContent>
       </Card>
 
-      <Card className="mt-6 shadow-panel">
+        </TabsContent>
+        <TabsContent value="security">
+      <Card className="shadow-panel">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <KeyRound className="size-4" /> Change password
@@ -285,6 +294,8 @@ function SettingsPage() {
           </Button>
         </CardContent>
       </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

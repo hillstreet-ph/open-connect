@@ -55,13 +55,13 @@ Vault → Credential Broker → Capability execution
 
 Clients and agents receive **capability execution**, never provider master credentials. UI shows metadata only (configured / valid / last validated).
 
-## Three surfaces (navigation target)
+## Role-aware settings navigation
 
-1. **Member Workspace** — Dashboard, Projects, Marketplace, Resources, Connections, Models, Agents, Files, Developer (my keys), Activity, Settings  
-2. **Admin Console** — Overview, Organization, Members, Projects, Environments, Access, Registry, Connections, AI Gateway, API & MCP, Vault (metadata), Operations, Usage, Audit, Security  
-3. **Owner Console** — Admin + ownership, global policies, provider governance, billing/limits  
-
-Existing routes (`/dashboard`, `/studio`, `/orgs`, `/projects`, `/roles`, `/admin`, `/api-keys`, `/secrets`, …) map into these surfaces; do not duplicate systems.
+Members use the daily workspace sidebar and the shared logo/account menu.
+Admins and owners get a single Organization settings submenu. Owner permissions
+remain within the shared pages; no duplicate Owner Console is shown.
+Existing routes and server-side permission checks are preserved. Navigation visibility
+is not an authorization boundary.
 
 ## Implementation order (mandatory)
 

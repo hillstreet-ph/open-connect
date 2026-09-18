@@ -122,7 +122,7 @@ function RolesAccessPage() {
                 <p className="mt-0.5">
                   {r === "owner" && "Root governance — ownership, global security, appoint Admins."}
                   {r === "admin" &&
-                    "Administration Console — members, projects, registry, gateway, audit. Not Owner."}
+                    "Organization settings — manage members and permitted administrative controls."}
                   {r === "member" &&
                     "Workspace only — assigned projects, marketplace, personal keys. Permission-aware UI."}
                 </p>
@@ -159,22 +159,13 @@ function RolesAccessPage() {
 
       <Card className="shadow-panel border-primary/20">
         <CardHeader className="p-4 pb-2">
-          <CardTitle className="text-sm">Three product surfaces</CardTitle>
-          <CardDescription>Member Workspace · Admin Console · Owner Console</CardDescription>
+          <CardTitle className="text-sm">Settings & administration</CardTitle>
+          <CardDescription>One shared menu with access based on your role.</CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-2 px-4 pb-4 text-xs text-muted-foreground sm:grid-cols-3">
-          <div className="rounded-lg border border-border/60 p-3">
-            <p className="font-medium text-foreground">Member Workspace</p>
-            <p className="mt-1">Projects, marketplace, resources, models, my API keys, activity.</p>
-          </div>
-          <div className="rounded-lg border border-border/60 p-3">
-            <p className="font-medium text-foreground">Admin Console</p>
-            <p className="mt-1">Members, registry, gateway, vault metadata, ops, audit — not raw secrets.</p>
-          </div>
-          <div className="rounded-lg border border-border/60 p-3">
-            <p className="font-medium text-foreground">Owner Console</p>
-            <p className="mt-1">Ownership, global policies, provider governance, billing/limits.</p>
-          </div>
+        <CardContent className="px-4 pb-4 text-sm text-muted-foreground">
+          Open the Open Connect logo or account menu for personal settings, organizations,
+          and credentials. Admins and owners also have Organization settings for members
+          and permissions. Owners retain their additional permissions within the same pages.
         </CardContent>
       </Card>
 
