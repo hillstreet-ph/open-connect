@@ -27,7 +27,8 @@ Optional: `DATABRICKS_CATALOG` (default `open_connect`) and `DATABRICKS_SCHEMA` 
 
 ## Operation
 
-`GET /api/v1/databricks` reports configuration presence without contacting the warehouse.
+`GET /api/v1/databricks` reports only configuration presence and the source-of-truth name without
+contacting the warehouse or exposing workspace identifiers.
 `POST /api/v1/databricks` requires `Authorization: Bearer <DATABRICKS_SYNC_SECRET>`, bootstraps
 the lakehouse, and upserts bounded batches from the approved Supabase allowlist.
 

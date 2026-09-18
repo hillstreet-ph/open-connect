@@ -57,9 +57,11 @@ export async function executeDatabricksStatement(
     signal: AbortSignal.timeout(35_000),
   });
   const payload = (await response.json().catch(() => ({}))) as StatementResponse;
-  if (!response.ok || payload.status?.state === "FAILED") {
+  const state = payload.status?.state;
+  if (!response.ok || (state && !["SUCCEEDED", "CLOSED"].includes(state))) {
     throw new Error(
-      payload.status?.error?.message || `Databricks SQL returned HTTP ${response.status}`,
+      payload.status?.error?.message ||
+        `Databricks SQL returned ${state ?? `HTTP ${response.status}`}`,
     );
   }
   return payload;
@@ -83,9 +85,9 @@ export async function ensureOpenConnectLakehouse() {
     `CREATE TABLE IF NOT EXISTS ${namespace}.memory_records (id STRING, user_key STRING, project_id STRING, title STRING, content STRING, memory_type STRING, importance INT, pinned BOOLEAN, tags ARRAY<STRING>, expires_at TIMESTAMP, created_at TIMESTAMP, updated_at TIMESTAMP, synced_at TIMESTAMP) USING DELTA`,
     `CREATE TABLE IF NOT EXISTS ${namespace}.knowledge_items (id STRING, user_key STRING, project_id STRING, title STRING, content STRING, source_type STRING, source_url STRING, mime_type STRING, status STRING, tags ARRAY<STRING>, created_at TIMESTAMP, updated_at TIMESTAMP, synced_at TIMESTAMP) USING DELTA`,
     `CREATE TABLE IF NOT EXISTS ${namespace}.resources (id STRING, slug STRING, name STRING, description STRING, resource_type STRING, category_slug STRING, license STRING, verified BOOLEAN, published BOOLEAN, source STRING, updated_at TIMESTAMP, synced_at TIMESTAMP) USING DELTA`,
-    `ALTER TABLE ${namespace}.memory_records SET TBLPROPERTIES ('open_connect.classification'='SENSITIVE','open_connect.retention_days'='365')`,
-    `ALTER TABLE ${namespace}.knowledge_items SET TBLPROPERTIES ('open_connect.classification'='SENSITIVE','open_connect.retention_days'='365')`,
-    `ALTER TABLE ${namespace}.resources SET TBLPROPERTIES ('open_connect.classification'='INTERNAL','open_connect.retention_days'='1825')`,
+    `ALTER TABLE ${namespace}.memory_records SET TBLPROPERTIES ('open_connect.classification'='SENSITIVE','open_connect.retention_days'='365','open_connect.source'='supabase')`,
+    `ALTER TABLE ${namespace}.knowledge_items SET TBLPROPERTIES ('open_connect.classification'='SENSITIVE','open_connect.retention_days'='365','open_connect.source'='supabase')`,
+    `ALTER TABLE ${namespace}.resources SET TBLPROPERTIES ('open_connect.classification'='INTERNAL','open_connect.retention_days'='1825','open_connect.source'='supabase')`,
   ];
   for (const statement of statements) await executeDatabricksStatement(statement);
 }
