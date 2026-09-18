@@ -29,7 +29,7 @@ Projects own tasks, schedules, automations, agents, resources, connections, mode
 | 4 | Discover | Marketplace |
 | 5 | Connect | Connections, Integrations, AI Gateway |
 | 6 | Developer | API & MCP, Guides |
-| 7 | Logo / account menu | Settings, Organizations & workspaces, Credentials, Organization settings (privileged), Help, Sign out |
+| 7 | Logo / account menu | Settings, Organizations & workspaces, Credentials, System administration (privileged), Help, Sign out |
 
 Naming: use **Schedules** (noun), not “Scheduled”.
 
@@ -44,10 +44,26 @@ Settings contains Profile and Security & login tabs. Only implemented settings a
 Organizations & workspaces opens the existing organization management page; it does not claim to switch active tenant context.
 Credentials opens the existing scoped credential page.
 
-Admins and owners get one Organization settings submenu: Members & roles (`/admin`) and Roles & permissions (`/roles`).
+Admins and owners get one System administration submenu: User roles (`/admin`) and Access reference (`/roles`).
 No separate Owner Console or Admin Console appears in daily navigation. Owners retain their existing permissions within shared pages.
 Marketplace remains the single resource registry entry. Existing URLs and server authorization remain unchanged.
 
 ## Product rule
 
 Open Connect is the gateway and control plane. Independent applications consume it; they are not absorbed into it.
+
+## Role and scope alignment
+
+| Context | Access | Placement |
+|---|---|---|
+| Personal settings | Every signed-in account | Settings: Profile; Security & login |
+| Client workspace | Member (stored as user) | Daily work, own credentials and API keys |
+| Toolkit management | Developer and higher | Build, using manage_toolkits capability |
+| System administration | Platform admin and owner | Logo/account menu: User roles; Access reference |
+| Owner role management | Platform owner only | Within the shared User roles page |
+| Organizations and projects | Existing membership policies | Organizations & workspaces; Projects |
+
+System administration manages platform roles, not tenant membership. Organization
+owner/admin/member and project manager/developer/viewer are separate contexts.
+No additional access is granted by navigation. Clients are Members, not a new database role.
+Owner-role revocation and self-admin revocation controls mirror existing server denials.

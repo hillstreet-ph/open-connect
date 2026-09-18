@@ -58,7 +58,7 @@ Clients and agents receive **capability execution**, never provider master crede
 ## Role-aware settings navigation
 
 Members use the daily workspace sidebar and the shared logo/account menu.
-Admins and owners get a single Organization settings submenu. Owner permissions
+Admins and owners get a single System administration submenu. Owner permissions
 remain within the shared pages; no duplicate Owner Console is shown.
 Existing routes and server-side permission checks are preserved. Navigation visibility
 is not an authorization boundary.
