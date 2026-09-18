@@ -23,7 +23,16 @@ jobs:
       VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_placeholder' }}
       VITE_APP_URL: https://open-connect.site
     steps:
+      - name: Create GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.OPEN_CONNECT_GITHUB_APP_ID }}
+          private-key: ${{ secrets.OPEN_CONNECT_GITHUB_APP_PRIVATE_KEY }}
+
       - uses: actions/checkout@v7
+        with:
+          token: ${{ steps.app-token.outputs.token }}
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -84,6 +93,7 @@ jobs:
         if: failure()
         uses: actions/github-script@v8
         with:
+          github-token: ${{ steps.app-token.outputs.token }}
           script: |
             const title = '[hourly-audit] Open-Connect verification failure';
             const owner = context.repo.owner;
@@ -110,6 +120,7 @@ jobs:
         if: success()
         uses: actions/github-script@v8
         with:
+          github-token: ${{ steps.app-token.outputs.token }}
           script: |
             const title = '[hourly-audit] Open-Connect verification failure';
             const owner = context.repo.owner;

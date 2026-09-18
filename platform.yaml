@@ -16,6 +16,10 @@ release:
   identifier: semver-plus-git-sha
   production_approval_required: true
   hourly_audit: .github/workflows/hourly-autonomous-audit.yml
+  github_auth: app-installation-token
+  github_app_secret_names:
+    - OPEN_CONNECT_GITHUB_APP_ID
+    - OPEN_CONNECT_GITHUB_APP_PRIVATE_KEY
 
 edge:
   provider: cloudflare-pages
