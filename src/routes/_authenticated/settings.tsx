@@ -52,9 +52,7 @@ function SettingsPage() {
         userId: user.id,
         email: user.email ?? "",
         displayName:
-          profile?.display_name ||
-          (user.user_metadata?.display_name as string | undefined) ||
-          "",
+          profile?.display_name || (user.user_metadata?.display_name as string | undefined) || "",
         avatarUrl:
           profile?.avatar_url || (user.user_metadata?.avatar_url as string | undefined) || "",
       };
@@ -245,7 +243,8 @@ function SettingsPage() {
             <KeyRound className="size-4" /> Change password
           </CardTitle>
           <CardDescription>
-            For email/password accounts. OAuth-only users should change password with their provider.
+            For email/password accounts. OAuth-only users should change password with their
+            provider.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

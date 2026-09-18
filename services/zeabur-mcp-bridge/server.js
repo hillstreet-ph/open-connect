@@ -9,20 +9,34 @@ const bridgeToken = process.env.MCP_BRIDGE_TOKEN;
 if (!process.env.ZEABUR_TOKEN) throw new Error("ZEABUR_TOKEN is required");
 if (!bridgeToken) throw new Error("MCP_BRIDGE_TOKEN is required");
 
-const gateway = spawn(process.execPath, [
-  "node_modules/supergateway/dist/index.js",
-  "--stdio", "node node_modules/@zeabur/mcp-server/dist/index.js",
-  "--outputTransport", "streamableHttp", "--stateful",
-  "--streamableHttpPath", "/mcp", "--healthEndpoint", "/healthz",
-  "--port", String(upstreamPort)
-], { env: process.env, stdio: ["ignore", "inherit", "inherit"] });
+const gateway = spawn(
+  process.execPath,
+  [
+    "node_modules/supergateway/dist/index.js",
+    "--stdio",
+    "node node_modules/@zeabur/mcp-server/dist/index.js",
+    "--outputTransport",
+    "streamableHttp",
+    "--stateful",
+    "--streamableHttpPath",
+    "/mcp",
+    "--healthEndpoint",
+    "/healthz",
+    "--port",
+    String(upstreamPort),
+  ],
+  { env: process.env, stdio: ["ignore", "inherit", "inherit"] },
+);
 
 gateway.on("exit", (code, signal) => {
   console.error(`MCP gateway exited code=${code} signal=${signal}`);
   process.exit(code ?? 1);
 });
 
-const proxy = httpProxy.createProxyServer({ target: `http://127.0.0.1:${upstreamPort}`, xfwd: true });
+const proxy = httpProxy.createProxyServer({
+  target: `http://127.0.0.1:${upstreamPort}`,
+  xfwd: true,
+});
 proxy.on("error", (error, _req, res) => {
   console.error("Proxy error", error.message);
   if (!res.headersSent) res.writeHead(502, { "content-type": "application/json" });
@@ -47,13 +61,19 @@ const server = http.createServer((req, res) => {
     return res.end(JSON.stringify({ error: "not found" }));
   }
   if (!authorized(req)) {
-    res.writeHead(401, { "content-type": "application/json", "www-authenticate": "Bearer", "cache-control": "no-store" });
+    res.writeHead(401, {
+      "content-type": "application/json",
+      "www-authenticate": "Bearer",
+      "cache-control": "no-store",
+    });
     return res.end(JSON.stringify({ error: "unauthorized" }));
   }
   proxy.web(req, res);
 });
 
-server.listen(publicPort, "0.0.0.0", () => console.log(`Authenticated Zeabur MCP bridge listening on :${publicPort}`));
+server.listen(publicPort, "0.0.0.0", () =>
+  console.log(`Authenticated Zeabur MCP bridge listening on :${publicPort}`),
+);
 
 function shutdown(signal) {
   console.log(`Received ${signal}; shutting down`);

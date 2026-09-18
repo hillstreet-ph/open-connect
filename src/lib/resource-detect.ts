@@ -1,11 +1,5 @@
 export type DetectedResourceType =
-  | "skill"
-  | "mcp"
-  | "tool"
-  | "plugin"
-  | "agent"
-  | "prompt"
-  | "guide";
+  "skill" | "mcp" | "tool" | "plugin" | "agent" | "prompt" | "guide";
 
 export type DetectResult = {
   resource_type: DetectedResourceType;
@@ -68,7 +62,10 @@ export function detectResourceMeta(input: {
     resource_type = "plugin";
     confidence = "medium";
     signals.push("plugin pattern");
-  } else if (/agent|hermes|crewai|autogen/.test(filename) || /\bagents?\b/.test(text.slice(0, 500))) {
+  } else if (
+    /agent|hermes|crewai|autogen/.test(filename) ||
+    /\bagents?\b/.test(text.slice(0, 500))
+  ) {
     resource_type = "agent";
     confidence = "medium";
     signals.push("agent pattern");
@@ -84,7 +81,11 @@ export function detectResourceMeta(input: {
     resource_type = "tool";
     confidence = "medium";
     signals.push("tool pattern");
-  } else if (filename.endsWith(".zip") || filename.endsWith(".tgz") || filename.endsWith(".tar.gz")) {
+  } else if (
+    filename.endsWith(".zip") ||
+    filename.endsWith(".tgz") ||
+    filename.endsWith(".tar.gz")
+  ) {
     resource_type = "skill";
     confidence = "low";
     signals.push("archive default → skill");

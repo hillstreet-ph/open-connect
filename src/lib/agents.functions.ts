@@ -19,7 +19,9 @@ export const listAgentConnections = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("agent_connections")
-      .select("id, name, mcp_url, transport, state, created_at, api_keys(key_prefix, name), toolkits(name)")
+      .select(
+        "id, name, mcp_url, transport, state, created_at, api_keys(key_prefix, name), toolkits(name)",
+      )
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return data ?? [];
@@ -27,7 +29,7 @@ export const listAgentConnections = createServerFn({ method: "GET" })
 
 export const connectAgent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { name: string; mcpUrl: string; toolkitId?: string | null }) => ({
+  .validator((input: { name: string; mcpUrl: string; toolkitId?: string | null }) => ({
     name: input.name.trim(),
     mcpUrl: input.mcpUrl,
     toolkitId: input.toolkitId || null,
@@ -104,7 +106,7 @@ export const connectAgent = createServerFn({ method: "POST" })
 
 export const disconnectAgent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string }) => ({ id: input.id }))
+  .validator((input: { id: string }) => ({ id: input.id }))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("agent_connections").delete().eq("id", data.id);
     if (error) throw new Error(error.message);

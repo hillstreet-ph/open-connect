@@ -15,7 +15,10 @@ export const Route = createFileRoute("/_authenticated/schedule")({
   head: () => ({
     meta: [
       { title: "Schedule — Open-Connect" },
-      { name: "description", content: "Scheduled runs for agents, jobs, and operational workflows." },
+      {
+        name: "description",
+        content: "Scheduled runs for agents, jobs, and operational workflows.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),

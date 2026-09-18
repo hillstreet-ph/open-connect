@@ -28,7 +28,8 @@ export function ApiKeysCard() {
       void queryClient.invalidateQueries({ queryKey: ["api-keys"] });
       toast.success("Key created — copy it now, it won't be shown again.");
     },
-    onError: (error) => toast.error(error instanceof Error ? error.message : "Could not create key"),
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Could not create key"),
   });
 
   const revokeMutation = useMutation({
@@ -74,7 +75,9 @@ export function ApiKeysCard() {
 
         {freshKey ? (
           <div className="rounded-lg border border-primary/40 bg-primary/5 p-3">
-            <p className="text-xs text-muted-foreground">Copy this key now — it is only shown once.</p>
+            <p className="text-xs text-muted-foreground">
+              Copy this key now — it is only shown once.
+            </p>
             <div className="mt-2 flex items-center gap-2">
               <code className="flex-1 break-all font-mono text-xs text-primary">{freshKey}</code>
               <Button
@@ -95,7 +98,10 @@ export function ApiKeysCard() {
         <ul className="space-y-2 text-sm">
           {keys.data?.length ? (
             keys.data.map((key) => (
-              <li key={key.id} className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2">
+              <li
+                key={key.id}
+                className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2"
+              >
                 <span className="min-w-0">
                   <span className="block truncate font-medium">{key.name}</span>
                   <span className="font-mono text-xs text-muted-foreground">{key.key_prefix}…</span>

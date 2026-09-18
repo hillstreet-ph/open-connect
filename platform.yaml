@@ -1,0 +1,59 @@
+version: 1
+project:
+  name: open-connect
+  repository: hillstreet-ph/open-connect
+  owner: hillstreet-ph
+  product_role: control-plane
+
+commands:
+  install: bun install --frozen-lockfile
+  lint: bun run lint
+  test: bun run test
+  build: bun run build
+
+release:
+  source_branch: main
+  identifier: semver-plus-git-sha
+  production_approval_required: true
+
+edge:
+  provider: cloudflare-pages
+  project: open-connect-app
+  domains:
+    - open-connect.site
+    - www.open-connect.site
+  health_path: /api/v1/health
+
+data:
+  provider: supabase
+  project: open-platform
+  project_ref: huadtiuuoiriqrjpjxhr
+  schema: public
+  target_schema: open_connect
+  schema_migration_status: required-before-shared-production-cutover
+  migrations: supabase/migrations
+
+runtime:
+  provider: zeabur
+  scope: backend-services-only
+  service_id: authorization-required
+  rollback: redeploy-previous-verified-digest
+
+observability:
+  provider: sentry
+  organization: hillstreet
+  project: open-connect
+
+adapters:
+  composio: authorization-required
+  slim: authorization-required
+  open_connect_plugin: local-skill-available
+
+secrets:
+  policy: provider-vault-only
+  required_names:
+    - VITE_SUPABASE_PUBLISHABLE_KEY
+    - SUPABASE_SERVICE_ROLE_KEY
+    - SENTRY_DSN
+    - SENTRY_AUTH_TOKEN
+    - ZEABUR_TOKEN

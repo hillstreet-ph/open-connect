@@ -29,7 +29,7 @@ export const listOrganizations = createServerFn({ method: "GET" })
 
 export const createOrganization = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { name: string }) => ({
+  .validator((input: { name: string }) => ({
     name: (input?.name ?? "").trim(),
   }))
   .handler(async ({ data, context }) => {
@@ -53,7 +53,7 @@ export const createOrganization = createServerFn({ method: "POST" })
 
 export const listProjects = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input?: { organizationId?: string }) => ({
+  .validator((input?: { organizationId?: string }) => ({
     organizationId: input?.organizationId ?? null,
   }))
   .handler(async ({ data, context }) => {
@@ -85,7 +85,7 @@ export const listMyProjectMemberships = createServerFn({ method: "GET" })
 /** List Claude-style environments for a project. */
 export const listProjectEnvironments = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { projectId: string }) => ({
+  .validator((input: { projectId: string }) => ({
     projectId: input.projectId,
   }))
   .handler(async ({ data, context }) => {
@@ -102,7 +102,7 @@ export const listProjectEnvironments = createServerFn({ method: "GET" })
 /** Idempotent seed of Development / Staging / Production if missing. */
 export const ensureProjectEnvironments = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { projectId: string }) => ({
+  .validator((input: { projectId: string }) => ({
     projectId: input.projectId,
   }))
   .handler(async ({ data, context }) => {
@@ -136,7 +136,7 @@ export const ensureProjectEnvironments = createServerFn({ method: "POST" })
 
 export const createProject = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { organizationId: string; name: string; description?: string }) => ({
+  .validator((input: { organizationId: string; name: string; description?: string }) => ({
     organizationId: input.organizationId,
     name: (input?.name ?? "").trim(),
     description: (input?.description ?? "").trim() || null,

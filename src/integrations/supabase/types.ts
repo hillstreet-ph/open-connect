@@ -1,592 +1,562 @@
-export type Json =
-  | string
-  | number
-  | boolean
-  | null
-  | { [key: string]: Json | undefined }
-  | Json[]
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.15"
-  }
+    PostgrestVersion: "14.15";
+  };
   public: {
     Tables: {
       agent_connections: {
         Row: {
-          api_key_id: string | null
-          created_at: string
-          id: string
-          last_checked_at: string | null
-          mcp_url: string
-          name: string
-          state: string
-          toolkit_id: string | null
-          transport: string
-          updated_at: string
-          user_id: string
-        }
+          api_key_id: string | null;
+          created_at: string;
+          id: string;
+          last_checked_at: string | null;
+          mcp_url: string;
+          name: string;
+          state: string;
+          toolkit_id: string | null;
+          transport: string;
+          updated_at: string;
+          user_id: string;
+        };
         Insert: {
-          api_key_id?: string | null
-          created_at?: string
-          id?: string
-          last_checked_at?: string | null
-          mcp_url: string
-          name: string
-          state?: string
-          toolkit_id?: string | null
-          transport?: string
-          updated_at?: string
-          user_id: string
-        }
+          api_key_id?: string | null;
+          created_at?: string;
+          id?: string;
+          last_checked_at?: string | null;
+          mcp_url: string;
+          name: string;
+          state?: string;
+          toolkit_id?: string | null;
+          transport?: string;
+          updated_at?: string;
+          user_id: string;
+        };
         Update: {
-          api_key_id?: string | null
-          created_at?: string
-          id?: string
-          last_checked_at?: string | null
-          mcp_url?: string
-          name?: string
-          state?: string
-          toolkit_id?: string | null
-          transport?: string
-          updated_at?: string
-          user_id?: string
-        }
+          api_key_id?: string | null;
+          created_at?: string;
+          id?: string;
+          last_checked_at?: string | null;
+          mcp_url?: string;
+          name?: string;
+          state?: string;
+          toolkit_id?: string | null;
+          transport?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "agent_connections_api_key_id_fkey"
-            columns: ["api_key_id"]
-            isOneToOne: false
-            referencedRelation: "api_keys"
-            referencedColumns: ["id"]
+            foreignKeyName: "agent_connections_api_key_id_fkey";
+            columns: ["api_key_id"];
+            isOneToOne: false;
+            referencedRelation: "api_keys";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "agent_connections_toolkit_id_fkey"
-            columns: ["toolkit_id"]
-            isOneToOne: false
-            referencedRelation: "toolkits"
-            referencedColumns: ["id"]
+            foreignKeyName: "agent_connections_toolkit_id_fkey";
+            columns: ["toolkit_id"];
+            isOneToOne: false;
+            referencedRelation: "toolkits";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       api_keys: {
         Row: {
-          created_at: string
-          id: string
-          key_hash: string
-          key_prefix: string
-          last_used_at: string | null
-          name: string
-          revoked_at: string | null
-          scopes: string[]
-          user_id: string
-        }
+          created_at: string;
+          id: string;
+          key_hash: string;
+          key_prefix: string;
+          last_used_at: string | null;
+          name: string;
+          revoked_at: string | null;
+          scopes: string[];
+          user_id: string;
+        };
         Insert: {
-          created_at?: string
-          id?: string
-          key_hash: string
-          key_prefix: string
-          last_used_at?: string | null
-          name: string
-          revoked_at?: string | null
-          scopes?: string[]
-          user_id: string
-        }
+          created_at?: string;
+          id?: string;
+          key_hash: string;
+          key_prefix: string;
+          last_used_at?: string | null;
+          name: string;
+          revoked_at?: string | null;
+          scopes?: string[];
+          user_id: string;
+        };
         Update: {
-          created_at?: string
-          id?: string
-          key_hash?: string
-          key_prefix?: string
-          last_used_at?: string | null
-          name?: string
-          revoked_at?: string | null
-          scopes?: string[]
-          user_id?: string
-        }
-        Relationships: []
-      }
+          created_at?: string;
+          id?: string;
+          key_hash?: string;
+          key_prefix?: string;
+          last_used_at?: string | null;
+          name?: string;
+          revoked_at?: string | null;
+          scopes?: string[];
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       app_connections: {
         Row: {
-          created_at: string
-          credential_reference: string | null
-          display_name: string
-          id: string
-          last_used_at: string | null
-          metadata: Json
-          provider: string
-          provider_account_id: string | null
-          scopes: string[]
-          status: string
-          updated_at: string
-          user_id: string
-        }
+          created_at: string;
+          credential_reference: string | null;
+          display_name: string;
+          id: string;
+          last_used_at: string | null;
+          metadata: Json;
+          provider: string;
+          provider_account_id: string | null;
+          scopes: string[];
+          status: string;
+          updated_at: string;
+          user_id: string;
+        };
         Insert: {
-          created_at?: string
-          credential_reference?: string | null
-          display_name: string
-          id?: string
-          last_used_at?: string | null
-          metadata?: Json
-          provider: string
-          provider_account_id?: string | null
-          scopes?: string[]
-          status?: string
-          updated_at?: string
-          user_id: string
-        }
+          created_at?: string;
+          credential_reference?: string | null;
+          display_name: string;
+          id?: string;
+          last_used_at?: string | null;
+          metadata?: Json;
+          provider: string;
+          provider_account_id?: string | null;
+          scopes?: string[];
+          status?: string;
+          updated_at?: string;
+          user_id: string;
+        };
         Update: {
-          created_at?: string
-          credential_reference?: string | null
-          display_name?: string
-          id?: string
-          last_used_at?: string | null
-          metadata?: Json
-          provider?: string
-          provider_account_id?: string | null
-          scopes?: string[]
-          status?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
+          created_at?: string;
+          credential_reference?: string | null;
+          display_name?: string;
+          id?: string;
+          last_used_at?: string | null;
+          metadata?: Json;
+          provider?: string;
+          provider_account_id?: string | null;
+          scopes?: string[];
+          status?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       categories: {
         Row: {
-          created_at: string
-          description: string | null
-          id: string
-          name: string
-          slug: string
-        }
+          created_at: string;
+          description: string | null;
+          id: string;
+          name: string;
+          slug: string;
+        };
         Insert: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          name: string
-          slug: string
-        }
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          name: string;
+          slug: string;
+        };
         Update: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          name?: string
-          slug?: string
-        }
-        Relationships: []
-      }
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          name?: string;
+          slug?: string;
+        };
+        Relationships: [];
+      };
       gateway_requests: {
         Row: {
-          api_key_id: string | null
-          created_at: string
-          endpoint: string
-          id: string
-          model: string | null
-          status_code: number
-          total_tokens: number | null
-          upstream: string
-          user_id: string
-        }
+          api_key_id: string | null;
+          created_at: string;
+          endpoint: string;
+          id: string;
+          model: string | null;
+          status_code: number;
+          total_tokens: number | null;
+          upstream: string;
+          user_id: string;
+        };
         Insert: {
-          api_key_id?: string | null
-          created_at?: string
-          endpoint: string
-          id?: string
-          model?: string | null
-          status_code: number
-          total_tokens?: number | null
-          upstream: string
-          user_id: string
-        }
+          api_key_id?: string | null;
+          created_at?: string;
+          endpoint: string;
+          id?: string;
+          model?: string | null;
+          status_code: number;
+          total_tokens?: number | null;
+          upstream: string;
+          user_id: string;
+        };
         Update: {
-          api_key_id?: string | null
-          created_at?: string
-          endpoint?: string
-          id?: string
-          model?: string | null
-          status_code?: number
-          total_tokens?: number | null
-          upstream?: string
-          user_id?: string
-        }
+          api_key_id?: string | null;
+          created_at?: string;
+          endpoint?: string;
+          id?: string;
+          model?: string | null;
+          status_code?: number;
+          total_tokens?: number | null;
+          upstream?: string;
+          user_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "gateway_requests_api_key_id_fkey"
-            columns: ["api_key_id"]
-            isOneToOne: false
-            referencedRelation: "api_keys"
-            referencedColumns: ["id"]
+            foreignKeyName: "gateway_requests_api_key_id_fkey";
+            columns: ["api_key_id"];
+            isOneToOne: false;
+            referencedRelation: "api_keys";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       profiles: {
         Row: {
-          avatar_url: string | null
-          created_at: string
-          display_name: string | null
-          id: string
-          updated_at: string
-        }
+          avatar_url: string | null;
+          created_at: string;
+          display_name: string | null;
+          id: string;
+          updated_at: string;
+        };
         Insert: {
-          avatar_url?: string | null
-          created_at?: string
-          display_name?: string | null
-          id: string
-          updated_at?: string
-        }
+          avatar_url?: string | null;
+          created_at?: string;
+          display_name?: string | null;
+          id: string;
+          updated_at?: string;
+        };
         Update: {
-          avatar_url?: string | null
-          created_at?: string
-          display_name?: string | null
-          id?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
+          avatar_url?: string | null;
+          created_at?: string;
+          display_name?: string | null;
+          id?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       resources: {
         Row: {
-          author: string | null
-          category_slug: string | null
-          created_at: string
-          description: string | null
-          featured: boolean
-          id: string
-          installation_config: Json
-          installation_type: string | null
-          license: string | null
-          name: string
-          owner_id: string | null
-          package_filename: string | null
-          package_mime: string | null
-          package_path: string | null
-          package_size: number | null
-          published: boolean
-          repository_url: string | null
-          resource_type: Database["public"]["Enums"]["resource_type"]
-          slug: string
-          source: string | null
-          source_url: string | null
-          supported_clients: string[]
-          updated_at: string
-          verified: boolean
-          version: string | null
-        }
+          author: string | null;
+          category_slug: string | null;
+          created_at: string;
+          description: string | null;
+          featured: boolean;
+          id: string;
+          installation_config: Json;
+          installation_type: string | null;
+          license: string | null;
+          name: string;
+          owner_id: string | null;
+          package_filename: string | null;
+          package_mime: string | null;
+          package_path: string | null;
+          package_size: number | null;
+          published: boolean;
+          repository_url: string | null;
+          resource_type: Database["public"]["Enums"]["resource_type"];
+          slug: string;
+          source: string | null;
+          source_url: string | null;
+          supported_clients: string[];
+          updated_at: string;
+          verified: boolean;
+          version: string | null;
+        };
         Insert: {
-          author?: string | null
-          category_slug?: string | null
-          created_at?: string
-          description?: string | null
-          featured?: boolean
-          id?: string
-          installation_config?: Json
-          installation_type?: string | null
-          license?: string | null
-          name: string
-          owner_id?: string | null
-          package_filename?: string | null
-          package_mime?: string | null
-          package_path?: string | null
-          package_size?: number | null
-          published?: boolean
-          repository_url?: string | null
-          resource_type: Database["public"]["Enums"]["resource_type"]
-          slug: string
-          source?: string | null
-          source_url?: string | null
-          supported_clients?: string[]
-          updated_at?: string
-          verified?: boolean
-          version?: string | null
-        }
+          author?: string | null;
+          category_slug?: string | null;
+          created_at?: string;
+          description?: string | null;
+          featured?: boolean;
+          id?: string;
+          installation_config?: Json;
+          installation_type?: string | null;
+          license?: string | null;
+          name: string;
+          owner_id?: string | null;
+          package_filename?: string | null;
+          package_mime?: string | null;
+          package_path?: string | null;
+          package_size?: number | null;
+          published?: boolean;
+          repository_url?: string | null;
+          resource_type: Database["public"]["Enums"]["resource_type"];
+          slug: string;
+          source?: string | null;
+          source_url?: string | null;
+          supported_clients?: string[];
+          updated_at?: string;
+          verified?: boolean;
+          version?: string | null;
+        };
         Update: {
-          author?: string | null
-          category_slug?: string | null
-          created_at?: string
-          description?: string | null
-          featured?: boolean
-          id?: string
-          installation_config?: Json
-          installation_type?: string | null
-          license?: string | null
-          name?: string
-          owner_id?: string | null
-          package_filename?: string | null
-          package_mime?: string | null
-          package_path?: string | null
-          package_size?: number | null
-          published?: boolean
-          repository_url?: string | null
-          resource_type?: Database["public"]["Enums"]["resource_type"]
-          slug?: string
-          source?: string | null
-          source_url?: string | null
-          supported_clients?: string[]
-          updated_at?: string
-          verified?: boolean
-          version?: string | null
-        }
+          author?: string | null;
+          category_slug?: string | null;
+          created_at?: string;
+          description?: string | null;
+          featured?: boolean;
+          id?: string;
+          installation_config?: Json;
+          installation_type?: string | null;
+          license?: string | null;
+          name?: string;
+          owner_id?: string | null;
+          package_filename?: string | null;
+          package_mime?: string | null;
+          package_path?: string | null;
+          package_size?: number | null;
+          published?: boolean;
+          repository_url?: string | null;
+          resource_type?: Database["public"]["Enums"]["resource_type"];
+          slug?: string;
+          source?: string | null;
+          source_url?: string | null;
+          supported_clients?: string[];
+          updated_at?: string;
+          verified?: boolean;
+          version?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "resources_category_slug_fkey"
-            columns: ["category_slug"]
-            isOneToOne: false
-            referencedRelation: "categories"
-            referencedColumns: ["slug"]
+            foreignKeyName: "resources_category_slug_fkey";
+            columns: ["category_slug"];
+            isOneToOne: false;
+            referencedRelation: "categories";
+            referencedColumns: ["slug"];
           },
-        ]
-      }
+        ];
+      };
       toolkit_items: {
         Row: {
-          created_at: string
-          id: string
-          position: number
-          resource_id: string
-          toolkit_id: string
-        }
+          created_at: string;
+          id: string;
+          position: number;
+          resource_id: string;
+          toolkit_id: string;
+        };
         Insert: {
-          created_at?: string
-          id?: string
-          position?: number
-          resource_id: string
-          toolkit_id: string
-        }
+          created_at?: string;
+          id?: string;
+          position?: number;
+          resource_id: string;
+          toolkit_id: string;
+        };
         Update: {
-          created_at?: string
-          id?: string
-          position?: number
-          resource_id?: string
-          toolkit_id?: string
-        }
+          created_at?: string;
+          id?: string;
+          position?: number;
+          resource_id?: string;
+          toolkit_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "toolkit_items_resource_id_fkey"
-            columns: ["resource_id"]
-            isOneToOne: false
-            referencedRelation: "resources"
-            referencedColumns: ["id"]
+            foreignKeyName: "toolkit_items_resource_id_fkey";
+            columns: ["resource_id"];
+            isOneToOne: false;
+            referencedRelation: "resources";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "toolkit_items_toolkit_id_fkey"
-            columns: ["toolkit_id"]
-            isOneToOne: false
-            referencedRelation: "toolkits"
-            referencedColumns: ["id"]
+            foreignKeyName: "toolkit_items_toolkit_id_fkey";
+            columns: ["toolkit_id"];
+            isOneToOne: false;
+            referencedRelation: "toolkits";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       toolkits: {
         Row: {
-          created_at: string
-          description: string | null
-          id: string
-          name: string
-          published: boolean
-          slug: string
-          updated_at: string
-          user_id: string
-        }
+          created_at: string;
+          description: string | null;
+          id: string;
+          name: string;
+          published: boolean;
+          slug: string;
+          updated_at: string;
+          user_id: string;
+        };
         Insert: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          name: string
-          published?: boolean
-          slug: string
-          updated_at?: string
-          user_id: string
-        }
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          name: string;
+          published?: boolean;
+          slug: string;
+          updated_at?: string;
+          user_id: string;
+        };
         Update: {
-          created_at?: string
-          description?: string | null
-          id?: string
-          name?: string
-          published?: boolean
-          slug?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          name?: string;
+          published?: boolean;
+          slug?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       user_roles: {
         Row: {
-          created_at: string
-          id: string
-          role: Database["public"]["Enums"]["app_role"]
-          user_id: string
-        }
+          created_at: string;
+          id: string;
+          role: Database["public"]["Enums"]["app_role"];
+          user_id: string;
+        };
         Insert: {
-          created_at?: string
-          id?: string
-          role?: Database["public"]["Enums"]["app_role"]
-          user_id: string
-        }
+          created_at?: string;
+          id?: string;
+          role?: Database["public"]["Enums"]["app_role"];
+          user_id: string;
+        };
         Update: {
-          created_at?: string
-          id?: string
-          role?: Database["public"]["Enums"]["app_role"]
-          user_id?: string
-        }
-        Relationships: []
-      }
-    }
+          created_at?: string;
+          id?: string;
+          role?: Database["public"]["Enums"]["app_role"];
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+    };
     Views: {
-      [_ in never]: never
-    }
+      [_ in never]: never;
+    };
     Functions: {
-      [_ in never]: never
-    }
+      [_ in never]: never;
+    };
     Enums: {
-      app_role: "user" | "developer" | "publisher" | "admin" | "owner"
+      app_role: "user" | "developer" | "publisher" | "admin" | "owner";
       resource_type:
-        | "skill"
-        | "mcp"
-        | "tool"
-        | "plugin"
-        | "agent"
-        | "prompt"
-        | "guide"
-        | "app"
-        | "model"
-    }
+        "skill" | "mcp" | "tool" | "plugin" | "agent" | "prompt" | "guide" | "app" | "model";
+    };
     CompositeTypes: {
-      [_ in never]: never
-    }
-  }
-}
+      [_ in never]: never;
+    };
+  };
+};
 
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">;
 
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">];
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
       DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
-      Row: infer R
+      Row: infer R;
     }
     ? R
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-        Row: infer R
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] & DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R;
       }
       ? R
       : never
-    : never
+    : never;
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I
+      Insert: infer I;
     }
     ? I
     : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
     ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Insert: infer I
+        Insert: infer I;
       }
       ? I
       : never
-    : never
+    : never;
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U
+      Update: infer U;
     }
     ? U
     : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
     ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Update: infer U
+        Update: infer U;
       }
       ? U
       : never
-    : never
+    : never;
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
-    | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    keyof DefaultSchema["Enums"] | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-    : never
+    : never;
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    keyof DefaultSchema["CompositeTypes"] | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never
+    : never;
 
 export const Constants = {
   public: {
     Enums: {
       app_role: ["user", "developer", "publisher", "admin", "owner"],
-      resource_type: [
-        "skill",
-        "mcp",
-        "tool",
-        "plugin",
-        "agent",
-        "prompt",
-        "guide",
-        "app",
-        "model",
-      ],
+      resource_type: ["skill", "mcp", "tool", "plugin", "agent", "prompt", "guide", "app", "model"],
     },
   },
-} as const
+} as const;

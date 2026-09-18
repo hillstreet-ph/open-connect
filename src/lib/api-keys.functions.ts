@@ -33,7 +33,7 @@ export const listApiKeys = createServerFn({ method: "GET" })
 
 export const createApiKey = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { name?: string }) => ({
+  .validator((input: { name?: string }) => ({
     name: (input?.name ?? "").trim() || "Default key",
   }))
   .handler(async ({ data, context }) => {
@@ -52,7 +52,7 @@ export const createApiKey = createServerFn({ method: "POST" })
 
 export const revokeApiKey = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string }) => ({ id: input.id }))
+  .validator((input: { id: string }) => ({ id: input.id }))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase
       .from("api_keys")

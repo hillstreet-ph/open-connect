@@ -1,11 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { hasRole, ROLE_RANK, type AppRole, ALL_ROLES } from "@/lib/rbac";
 
-async function loadRoles(
-  supabase: { from: (t: string) => any },
-  userId: string,
-): Promise<AppRole[]> {
+async function loadRoles(supabase: SupabaseClient, userId: string): Promise<AppRole[]> {
   const { data, error } = await supabase.from("user_roles").select("role").eq("user_id", userId);
   if (error) throw new Error(error.message);
   const roles = (data ?? []).map((r: { role: AppRole }) => r.role);
@@ -35,7 +33,7 @@ export const listRoleAssignments = createServerFn({ method: "GET" })
 
 export const assignRole = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { user_id: string; role: string }) => ({
+  .validator((input: { user_id: string; role: string }) => ({
     user_id: (input?.user_id ?? "").trim(),
     role: (input?.role ?? "user").trim() as AppRole,
   }))
@@ -49,16 +47,16 @@ export const assignRole = createServerFn({ method: "POST" })
     if (data.role === "owner" && !hasRole(mine, "owner")) {
       throw new Error("Only owners can assign the owner role");
     }
-    if (ROLE_RANK[data.role] > ROLE_RANK[mine.includes("owner") ? "owner" : "admin"] && !hasRole(mine, "owner")) {
+    if (
+      ROLE_RANK[data.role] > ROLE_RANK[mine.includes("owner") ? "owner" : "admin"] &&
+      !hasRole(mine, "owner")
+    ) {
       throw new Error("Cannot assign a role higher than your own");
     }
 
     const { data: row, error } = await context.supabase
       .from("user_roles")
-      .upsert(
-        { user_id: data.user_id, role: data.role },
-        { onConflict: "user_id,role" },
-      )
+      .upsert({ user_id: data.user_id, role: data.role }, { onConflict: "user_id,role" })
       .select("id, user_id, role, created_at")
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -67,7 +65,7 @@ export const assignRole = createServerFn({ method: "POST" })
 
 export const revokeRole = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { user_id: string; role: string }) => ({
+  .validator((input: { user_id: string; role: string }) => ({
     user_id: (input?.user_id ?? "").trim(),
     role: (input?.role ?? "").trim() as AppRole,
   }))

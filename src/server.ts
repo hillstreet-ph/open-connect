@@ -44,13 +44,7 @@ function oauthAuthorizationServerMetadata() {
     grant_types_supported: ["authorization_code", "refresh_token"],
     code_challenge_methods_supported: ["S256"],
     ...mtlsMetadataFields(mtlsEnabled),
-    scopes_supported: [
-      "mcp:connect",
-      "models:read",
-      "models:invoke",
-      "resources:read",
-      "openid",
-    ],
+    scopes_supported: ["mcp:connect", "models:read", "models:invoke", "resources:read", "openid"],
     service_documentation: `${ISSUER}/models`,
   };
 }

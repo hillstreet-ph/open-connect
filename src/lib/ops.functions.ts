@@ -11,7 +11,7 @@ export type ActionType = "notify" | "webhook" | "mcp" | "agent" | "pipeline";
 
 export const listTasks = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input?: { projectId?: string; status?: string }) => ({
+  .validator((input?: { projectId?: string; status?: string }) => ({
     projectId: input?.projectId ?? null,
     status: input?.status ?? null,
   }))
@@ -32,7 +32,7 @@ export const listTasks = createServerFn({ method: "GET" })
 
 export const createTask = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (input: {
       title: string;
       description?: string;
@@ -71,7 +71,7 @@ export const createTask = createServerFn({ method: "POST" })
 
 export const updateTaskStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string; status: TaskStatus }) => ({
+  .validator((input: { id: string; status: TaskStatus }) => ({
     id: input.id,
     status: input.status,
   }))
@@ -104,7 +104,7 @@ export const listSchedules = createServerFn({ method: "GET" })
 
 export const createSchedule = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (input: {
       name: string;
       description?: string;
@@ -145,7 +145,7 @@ export const createSchedule = createServerFn({ method: "POST" })
 
 export const setScheduleStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string; status: ScheduleStatus }) => ({
+  .validator((input: { id: string; status: ScheduleStatus }) => ({
     id: input.id,
     status: input.status,
   }))
@@ -178,7 +178,7 @@ export const listAutomations = createServerFn({ method: "GET" })
 
 export const createAutomation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (input: {
       name: string;
       description?: string;
@@ -217,7 +217,7 @@ export const createAutomation = createServerFn({ method: "POST" })
 
 export const toggleAutomation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string; enabled: boolean }) => ({
+  .validator((input: { id: string; enabled: boolean }) => ({
     id: input.id,
     enabled: Boolean(input.enabled),
   }))
@@ -234,7 +234,7 @@ export const toggleAutomation = createServerFn({ method: "POST" })
 
 export const runAutomation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string }) => ({ id: input.id }))
+  .validator((input: { id: string }) => ({ id: input.id }))
   .handler(async ({ data, context }) => {
     const now = new Date().toISOString();
     const { data: row, error } = await context.supabase

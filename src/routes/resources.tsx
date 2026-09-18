@@ -31,7 +31,16 @@ export const Route = createFileRoute("/resources")({
   component: ResourcesPage,
 });
 
-const PACKAGE_TYPES = new Set(["skill", "mcp", "tool", "plugin", "agent", "prompt", "app", "model"]);
+const PACKAGE_TYPES = new Set([
+  "skill",
+  "mcp",
+  "tool",
+  "plugin",
+  "agent",
+  "prompt",
+  "app",
+  "model",
+]);
 
 function triggerBlobDownload(filename: string, content: string, mime: string) {
   const blob = new Blob([content], { type: mime });
@@ -257,7 +266,9 @@ function ResourcesPage() {
       </div>
 
       {!isLoading && results.length === 0 ? (
-        <p className="mt-12 text-center text-sm text-muted-foreground">No matches in this category.</p>
+        <p className="mt-12 text-center text-sm text-muted-foreground">
+          No matches in this category.
+        </p>
       ) : null}
 
       {viewText ? (

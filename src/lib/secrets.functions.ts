@@ -30,13 +30,8 @@ export const listSecrets = createServerFn({ method: "GET" })
 
 export const createSecret = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
-    (input: {
-      name: string;
-      secret_type?: string;
-      scopes?: string[];
-      secret_value: string;
-    }) => ({
+  .validator(
+    (input: { name: string; secret_type?: string; scopes?: string[]; secret_value: string }) => ({
       name: (input?.name ?? "").trim().slice(0, 120),
       secret_type: (input?.secret_type ?? "api_key") as SecretType,
       scopes: Array.isArray(input?.scopes)
@@ -69,7 +64,7 @@ export const createSecret = createServerFn({ method: "POST" })
 
 export const deleteSecret = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string }) => ({ id: (input?.id ?? "").trim() }))
+  .validator((input: { id: string }) => ({ id: (input?.id ?? "").trim() }))
   .handler(async ({ data, context }) => {
     if (!data.id) throw new Error("id required");
     const { error } = await context.supabase

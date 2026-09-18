@@ -1,14 +1,14 @@
 # Infrastructure inventory — Open Connect
 
 **Rule:** identifiers and references only — never raw credentials.  
-**Updated:** 2026-09-07
+**Updated:** 2026-09-18
 
 ## Topology (authoritative)
 
 ```text
 GitHub          hillstreet-ph/open-connect (source, CI, tags)
 Cloudflare      Pages open-connect-app · domain open-connect.site · KV OC_KV
-Supabase        project open-connect (gnqpwewbgldonarggzax) · ap-northeast-1
+Supabase        project open-platform (huadtiuuoiriqrjpjxhr) · canonical target
 Models          LiteLLM / OpenRouter via /v1
 Runtime edge    Cloudflare Pages (primary production web)
 Zeabur          BLOCKED — connector not authorized in this workspace
@@ -22,7 +22,7 @@ Vercel          Explicitly out of scope for Open Connect
 | Source | GitHub | hillstreet-ph/open-connect | all | PRODUCTION VERIFIED |
 | Edge / DNS / TLS | Cloudflare | open-connect.site · open-connect-app | production | PRODUCTION VERIFIED |
 | KV | Cloudflare | open-connect-kv / OC_KV | production | PRODUCTION VERIFIED |
-| DB / Auth / Storage | Supabase | gnqpwewbgldonarggzax | production | PRODUCTION VERIFIED |
+| DB / Auth / Storage | Supabase | huadtiuuoiriqrjpjxhr | production | MIGRATION / ENV VALIDATION REQUIRED |
 | Model upstream | OpenRouter via LiteLLM | env LITELLM_* | production | PRODUCTION VERIFIED |
 | App connections | Pipedream / Composio (adapters) | normalized in OC | — | PARTIAL |
 | Composio GitHub | Composio account github_airily-baya | agent tools | — | ACTIVE |
@@ -35,7 +35,8 @@ Vercel          Explicitly out of scope for Open Connect
 
 | Name | Ref | Region |
 |------|-----|--------|
-| open-connect | gnqpwewbgldonarggzax | ap-northeast-1 |
+| open-connect legacy | gnqpwewbgldonarggzax | ap-northeast-1 |
+| open-platform canonical | huadtiuuoiriqrjpjxhr | verify in provider |
 | open-box | ymhiwerqyegvondndkjn | ap-northeast-1 |
 | open-tgate | ozpikxbmrxmgssvgxjdn | ap-northeast-1 |
 | open-teleset | wkewimymzbhgbkumlxmg | ap-southeast-1 |
