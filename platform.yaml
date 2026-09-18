@@ -15,6 +15,7 @@ release:
   source_branch: main
   identifier: semver-plus-git-sha
   production_approval_required: true
+  hourly_audit: .github/workflows/hourly-autonomous-audit.yml
 
 edge:
   provider: cloudflare-pages
