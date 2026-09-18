@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 export const Route = createFileRoute("/_authenticated/roles")({
   head: () => ({
     meta: [
-      { title: "Roles & access — Open-Connect" },
+      { title: "Access reference — Open-Connect" },
       {
         name: "description",
         content: "Organization, project, and machine principal roles for Open Connect.",
@@ -97,11 +97,10 @@ function RolesAccessPage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="font-display text-xl font-semibold tracking-tight sm:text-2xl">
-            Roles & access
+            Access reference
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Principal + org role + project role + environment + scope + policy — never a single global
-            super-role.
+            Review platform access alongside organization and project roles.
           </p>
         </div>
         <Badge variant="secondary" className="uppercase">
@@ -120,9 +119,9 @@ function RolesAccessPage() {
               <div key={r} className="rounded-lg border border-border/60 px-3 py-2">
                 <span className="font-medium text-foreground">{ORG_ROLE_LABEL[r]}</span>
                 <p className="mt-0.5">
-                  {r === "owner" && "Root governance — ownership, global security, appoint Admins."}
+                  {r === "owner" && "Manage organization ownership and appoint organization admins."}
                   {r === "admin" &&
-                    "Organization settings — manage members and permitted administrative controls."}
+                    "Manage members and permitted settings within the organization."}
                   {r === "member" &&
                     "Workspace only — assigned projects, marketplace, personal keys. Permission-aware UI."}
                 </p>
@@ -160,11 +159,11 @@ function RolesAccessPage() {
       <Card className="shadow-panel border-primary/20">
         <CardHeader className="p-4 pb-2">
           <CardTitle className="text-sm">Settings & administration</CardTitle>
-          <CardDescription>One shared menu with access based on your role.</CardDescription>
+          <CardDescription>Platform, organization, and project permissions have separate scopes.</CardDescription>
         </CardHeader>
         <CardContent className="px-4 pb-4 text-sm text-muted-foreground">
           Open the Open Connect logo or account menu for personal settings, organizations,
-          and credentials. Admins and owners also have Organization settings for members
+          and credentials. Admins and owners also have System administration for members
           and permissions. Owners retain their additional permissions within the same pages.
         </CardContent>
       </Card>
@@ -183,10 +182,9 @@ function RolesAccessPage() {
 
       <Card className="overflow-hidden shadow-panel">
         <CardHeader className="border-b border-border/60 p-4">
-          <CardTitle className="text-sm">Legacy platform capability matrix</CardTitle>
+          <CardTitle className="text-sm">Platform capabilities</CardTitle>
           <CardDescription>
-            app_role enum still used by route guards until cutover; product language is Member not
-            User.
+            Clients use the Member role. Platform roles do not describe membership in a specific organization or project.
           </CardDescription>
         </CardHeader>
         <div className="overflow-x-auto">
@@ -252,7 +250,7 @@ function RolesAccessPage() {
       <Card className="shadow-panel">
         <CardHeader className="p-4 pb-2">
           <CardTitle className="text-base">Platform role summaries</CardTitle>
-          <CardDescription>Legacy workspace RBAC matrix</CardDescription>
+          <CardDescription>Capabilities by platform role</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 p-4 pt-2 sm:grid-cols-2 lg:grid-cols-3">
           {ROLE_SCOPE_MATRIX.map((row) => (

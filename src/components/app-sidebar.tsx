@@ -29,11 +29,11 @@ import {
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/use-auth";
 import { useRoles } from "@/hooks/use-roles";
-import { roleLabel } from "@/lib/rbac";
+import { roleLabel, type Capability } from "@/lib/rbac";
 import { BrandLogoMenu } from "@/components/user-menu";
 import { cn } from "@/lib/utils";
 
-type Item = { to: string; label: string; icon: React.ComponentType<{ className?: string }> };
+type Item = { capability?: Capability; to: string; label: string; icon: React.ComponentType<{ className?: string }> };
 
 /**
  * Primary IA (locked):
@@ -41,7 +41,7 @@ type Item = { to: string; label: string; icon: React.ComponentType<{ className?:
  * AI Gateway → Developer. Settings live in the logo/account menu.
  *
  * Organization is a switcher, not a daily top-level work item.
- * Organization settings appear once for privileged roles in the shared menu.
+ * System administration appears once for privileged roles in the shared menu.
  */
 
 const PRIMARY: Item[] = [
@@ -58,7 +58,7 @@ const WORK: Item[] = [
 const BUILD: Item[] = [
   { to: "/studio", label: "Studio", icon: Sparkles },
   { to: "/agents", label: "Agents", icon: Bot },
-  { to: "/toolkits", label: "Toolkits", icon: Wrench },
+  { capability: "manage_toolkits", to: "/toolkits", label: "Toolkits", icon: Wrench },
 ];
 
 const DISCOVER: Item[] = [
@@ -107,7 +107,7 @@ function NavGroup({ label, items, pathname }: { label: string; items: Item[]; pa
 export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { user } = useAuth();
-  const { primary } = useRoles();
+  const { primary, can } = useRoles();
   const email = user?.email ?? "";
   const initial = (email[0] ?? "M").toUpperCase();
   return (
@@ -119,7 +119,7 @@ export function AppSidebar() {
       <SidebarContent className="px-1 py-2">
         <NavGroup label="" items={PRIMARY} pathname={pathname} />
         <NavGroup label="Work" items={WORK} pathname={pathname} />
-        <NavGroup label="Build" items={BUILD} pathname={pathname} />
+        <NavGroup label="Build" items={BUILD.filter((item) => !item.capability || can(item.capability))} pathname={pathname} />
         <NavGroup label="Discover" items={DISCOVER} pathname={pathname} />
         <NavGroup label="Connect" items={CONNECT} pathname={pathname} />
         <NavGroup label="Developer" items={DEVELOPER} pathname={pathname} />

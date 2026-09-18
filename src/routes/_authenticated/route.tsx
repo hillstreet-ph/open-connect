@@ -61,7 +61,7 @@ function AuthenticatedShell() {
                 to="/roles"
                 className="rounded-md border border-border/70 px-2.5 py-1.5 text-[11px] text-muted-foreground hover:text-foreground"
               >
-                Roles & access
+                Access reference
               </Link>
             </div>
           </header>
@@ -81,7 +81,7 @@ function pageTitle(pathname: string): string {
     "/orgs": "Organizations",
     "/projects": "Projects",
     "/tasks": "Tasks",
-    "/schedule": "Schedule",
+    "/schedule": "Schedules",
     "/automations": "Automations",
     "/agents": "AI agents",
     "/resources": "Marketplace",
@@ -90,11 +90,11 @@ function pageTitle(pathname: string): string {
     "/integrations": "Integrations",
     "/connections": "Connectors & plugins",
     "/api-keys": "API keys",
-    "/secrets": "Secrets",
-    "/roles": "Roles & access",
+    "/secrets": "Credentials",
+    "/roles": "Access reference",
     "/guides": "Professional setup",
     "/settings": "Settings",
-    "/admin": "Admin",
+    "/admin": "System administration",
   };
   if (map[pathname]) return map[pathname];
   for (const [path, title] of Object.entries(map)) {

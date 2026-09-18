@@ -102,13 +102,13 @@ function AccountMenuItems({
       </DropdownMenuItem>
       {showAdmin ? (
         <DropdownMenuSub>
-          <DropdownMenuSubTrigger><Shield /> Organization settings</DropdownMenuSubTrigger>
+          <DropdownMenuSubTrigger><Shield /> System administration</DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
             <DropdownMenuItem asChild>
-              <Link to="/admin"><Shield /> Members & roles</Link>
+              <Link to="/admin"><Shield /> User roles</Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link to="/roles"><KeyRound /> Roles & permissions</Link>
+              <Link to="/roles"><KeyRound /> Access reference</Link>
             </DropdownMenuItem>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
