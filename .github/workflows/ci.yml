@@ -18,21 +18,17 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
-
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-
       - name: Install
         run: bun install --frozen-lockfile
-
       - name: Typecheck / build
         env:
           VITE_SUPABASE_URL: https://huadtiuuoiriqrjpjxhr.supabase.co
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_placeholder' }}
           VITE_APP_URL: https://open-connect.site
         run: bun run build
-
       - name: Upload dist artifact
         if: success()
         uses: actions/upload-artifact@v7
@@ -50,7 +46,6 @@ jobs:
     steps:
       - name: Wait for Cloudflare Pages
         run: sleep 90
-
       - name: Health
         run: |
           set -e
@@ -66,7 +61,6 @@ jobs:
           done
           echo "Health check failed"
           exit 1
-
       - name: OAuth discovery
         run: |
           set -e
@@ -77,7 +71,6 @@ jobs:
           assert d.get('authorization_endpoint')
           print('oauth ok')
           "
-
       - name: Public pages
         run: |
           set -e
