@@ -8,7 +8,7 @@
       "name": "open-connect-plugin",
       "source": {
         "source": "local",
-        "path": "./plugins/open-connect-plugin"
+        "path": "./.agents/plugins/open-connect-plugin"
       },
       "policy": {
         "installation": "AVAILABLE",
