@@ -34,6 +34,37 @@ export type CampaignResult = z.infer<typeof campaignResultSchema> & {
   responseId: string;
 };
 
+export type OpenAIResponsePayload = {
+  id?: string;
+  output?: Array<{
+    type?: string;
+    result?: string;
+    revised_prompt?: string;
+    content?: Array<{ type?: string; text?: string }>;
+  }>;
+  error?: { message?: string; code?: string };
+};
+
+export function extractResponseText(payload: OpenAIResponsePayload): string | undefined {
+  for (const item of payload.output ?? []) {
+    for (const content of item.content ?? []) {
+      if (content.type === "output_text" && content.text) return content.text;
+    }
+  }
+}
+
+export function extractGeneratedImages(
+  payload: OpenAIResponsePayload,
+  prompts: string[],
+): Array<{ dataUrl: string; prompt: string }> {
+  return (payload.output ?? [])
+    .filter((item) => item.type === "image_generation_call" && item.result)
+    .map((item, index) => ({
+      dataUrl: `data:image/png;base64,${item.result}`,
+      prompt: item.revised_prompt || prompts[index] || prompts[0] || "Campaign visual",
+    }));
+}
+
 export const campaignJsonSchema = {
   type: "object",
   additionalProperties: false,

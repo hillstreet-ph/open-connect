@@ -1,6 +1,6 @@
 # OpenAI Campaign Studio
 
-Campaign Studio is a full-stack Open-Connect workspace at `/campaign-studio`. The browser sends validated brief fields to `/api/campaign-studio`; only the server reads `OPENAI_API_KEY` and calls the Responses API. The endpoint requests structured campaign copy and an image-generation tool call, then returns the validated campaign result and image data URL.
+Campaign Studio is a full-stack Open-Connect workspace at `/campaign-studio`. The authenticated browser sends validated brief fields and its Supabase bearer token to `/api/campaign-studio`; only the server reads `OPENAI_API_KEY` and calls the Responses API. The endpoint validates the user before spending model capacity, requests structured campaign copy and an image-generation tool call, then returns the validated campaign result and image data URL.
 
 ## Setup and run
 
@@ -15,7 +15,7 @@ Use an API key with access to project `proj_P1GhW0FJdBA5g3dpuKN8BZh8`. Never pla
 
 ## Agents API runner
 
-The reusable agent runner calls the HTTP API directly with `curl`, creates **New agent**, starts an OpenAI-hosted session using the returned agent ID, and streams every server-sent event to stdout.
+The reusable agent runner calls the HTTP API directly with `curl`. On its first run it creates **New agent** from `config/openai-agent.definition.json`; later runs reuse the locally saved agent ID. It starts an OpenAI-hosted session and streams every server-sent event to stdout.
 
 ```bash
 export OPENAI_API_KEY='...'
@@ -23,6 +23,8 @@ npm run agent:start -- "Audit the campaign studio and recommend the next release
 ```
 
 Requirements: Bash, `curl`, and `jq`. The returned agent ID is saved locally under `.openai/agent-id`; `.openai/` must remain git-ignored. Built-in tool calls execute in the OpenAI-hosted environment and their events are emitted in the stream. HTTP and lifecycle failures remain visible in the terminal.
+
+Set `OPENAI_AGENT_RECREATE=1` for one run when you intentionally want a replacement agent definition. The runner fails closed if a custom function requires an external result; it prints the event so an approved tool adapter can supply that result instead of pretending the turn completed.
 
 ## Configuration
 

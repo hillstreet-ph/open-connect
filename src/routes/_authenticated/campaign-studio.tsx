@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/campaign-studio")({
   head: () => ({
@@ -45,9 +46,15 @@ function CampaignStudioPage() {
     setLoading(true);
     const data = new FormData(event.currentTarget);
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error("Your session expired. Sign in again.");
       const response = await fetch("/api/campaign-studio", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           brief: data.get("brief"),
           audience: data.get("audience"),
