@@ -18,8 +18,12 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      OPEN_CONNECT_GITHUB_APP_ID: ${{ secrets.OPEN_CONNECT_GITHUB_APP_ID }}
+      OPEN_CONNECT_GITHUB_APP_PRIVATE_KEY: ${{ secrets.OPEN_CONNECT_GITHUB_APP_PRIVATE_KEY }}
     steps:
       - name: Create GitHub App token
+        if: env.OPEN_CONNECT_GITHUB_APP_ID != '' && env.OPEN_CONNECT_GITHUB_APP_PRIVATE_KEY != ''
         id: app-token
         uses: actions/create-github-app-token@v2
         with:
@@ -29,7 +33,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-          token: ${{ steps.app-token.outputs.token }}
+          token: ${{ steps.app-token.outputs.token || github.token }}
 
       - name: Create annotated tag
         run: |
@@ -46,7 +50,7 @@ jobs:
 
       - name: Create GitHub Release
         env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token || github.token }}
         run: |
           VERSION="${{ github.event.inputs.version }}"
           TAG="v${VERSION}"

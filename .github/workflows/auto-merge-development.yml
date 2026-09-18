@@ -28,8 +28,12 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'development')
     runs-on: ubuntu-latest
+    env:
+      OPEN_CONNECT_GITHUB_APP_ID: ${{ secrets.OPEN_CONNECT_GITHUB_APP_ID }}
+      OPEN_CONNECT_GITHUB_APP_PRIVATE_KEY: ${{ secrets.OPEN_CONNECT_GITHUB_APP_PRIVATE_KEY }}
     steps:
       - name: Create GitHub App token
+        if: env.OPEN_CONNECT_GITHUB_APP_ID != '' && env.OPEN_CONNECT_GITHUB_APP_PRIVATE_KEY != ''
         id: app-token
         uses: actions/create-github-app-token@v2
         with:
@@ -39,7 +43,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-          token: ${{ steps.app-token.outputs.token }}
+          token: ${{ steps.app-token.outputs.token || github.token }}
 
       - name: Ensure development exists
         run: |
@@ -49,7 +53,7 @@ jobs:
       - name: Create or update promotion PR (no auto-merge)
         uses: actions/github-script@v9
         with:
-          github-token: ${{ steps.app-token.outputs.token }}
+          github-token: ${{ steps.app-token.outputs.token || github.token }}
           script: |
             const base = 'main';
             const head = 'development';
