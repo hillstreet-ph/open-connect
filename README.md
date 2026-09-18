@@ -18,6 +18,18 @@ export OPENAI_API_KEY='...'
 npm run agent:start -- "Review the campaign studio and propose the next release tasks."
 ```
 
+`agent:start` runs through the scoped credential broker. It injects only the
+variables declared by the `openai-agent` profile and never prints their values.
+Check readiness without making a provider call:
+
+```bash
+npm run credentials:check:agent
+npm run credentials:check:deploy
+```
+
+Credential names, logical references, and provider mappings live under
+`credentials/`. Live values remain in provider vaults and runtime secret stores.
+
 Deployment requires the four server-side `OPENAI_*` variables listed in `.env.example`. See [Campaign Studio setup, boundaries, configuration, and validation](docs/OPENAI_CAMPAIGN_STUDIO.md).
 
 Open-Connect — Master Development Blueprint

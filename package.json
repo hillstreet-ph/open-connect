@@ -14,8 +14,11 @@
     "format": "prettier --write .",
     "test:control": "node --experimental-strip-types --test src/lib/autonomous-control.test.ts",
     "test:navigation": "node --experimental-strip-types --test src/lib/navigation.test.ts",
-    "test": "npm run test:control && npm run test:navigation",
-    "agent:start": "bash scripts/openai-agents-session.sh"
+    "test:credentials": "node --test scripts/credential-broker.test.mjs",
+    "test": "npm run test:control && npm run test:navigation && npm run test:credentials",
+    "credentials:check:agent": "node scripts/credential-broker.mjs check openai-agent",
+    "credentials:check:deploy": "node scripts/credential-broker.mjs check production-deploy",
+    "agent:start": "node scripts/credential-broker.mjs exec openai-agent -- bash scripts/openai-agents-session.sh"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
