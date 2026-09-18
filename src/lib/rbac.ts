@@ -127,7 +127,12 @@ export function roleLabel(role: AppRole): string {
 }
 
 /** UI mirrors existing server revoke rules; the server remains authoritative. */
-export function canRevokeRole(roles: AppRole[], actorId: string, targetId: string, targetRole: AppRole): boolean {
+export function canRevokeRole(
+  roles: AppRole[],
+  actorId: string,
+  targetId: string,
+  targetRole: AppRole,
+): boolean {
   if (!hasRole(roles, "admin")) return false;
   if (targetRole === "owner" && !hasRole(roles, "owner")) return false;
   if (actorId === targetId && targetRole === "admin" && !hasRole(roles, "owner")) return false;

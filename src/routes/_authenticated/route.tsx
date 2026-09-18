@@ -57,7 +57,6 @@ function AuthenticatedShell() {
                   aria-label="Search workspace"
                 />
               </div>
-
             </div>
           </header>
           <div className="flex-1 overflow-auto">

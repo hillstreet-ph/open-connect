@@ -33,7 +33,17 @@ type ResourceRow = {
   description: string | null;
   resource_type: string;
   installation_type: string | null;
+  installation_config: Record<string, unknown> | null;
+  verified: boolean;
 };
+
+function reviewState(resource: ResourceRow) {
+  return String(resource.installation_config?.["review_state"] ?? "approved");
+}
+
+function isExecutable(resource: ResourceRow) {
+  return resource.verified && reviewState(resource) === "approved";
+}
 
 type McpTool = {
   name: string;
@@ -312,7 +322,9 @@ async function getCatalog(force = false) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data } = await supabaseAdmin
     .from("resources")
-    .select("slug, name, description, resource_type, installation_type")
+    .select(
+      "slug, name, description, resource_type, installation_type, installation_config, verified",
+    )
     .eq("published", true)
     .order("featured", { ascending: false })
     .limit(100);
@@ -324,18 +336,20 @@ async function getCatalog(force = false) {
 
   for (const r of rows) {
     bySlug.set(r.slug, r);
-    const tn = toolNameFromSlug(r.slug);
-    byToolName.set(tn, r);
-    resourceTools.push({
-      name: tn,
-      description: `[${r.resource_type}] ${r.name}${r.description ? ` — ${r.description.slice(0, 160)}` : ""}`,
-      inputSchema: {
-        type: "object",
-        properties: {
-          action: { type: "string", description: "info | invoke" },
+    if (isExecutable(r)) {
+      const tn = toolNameFromSlug(r.slug);
+      byToolName.set(tn, r);
+      resourceTools.push({
+        name: tn,
+        description: `[${r.resource_type}] ${r.name}${r.description ? ` — ${r.description.slice(0, 160)}` : ""}`,
+        inputSchema: {
+          type: "object",
+          properties: {
+            action: { type: "string", description: "info | invoke" },
+          },
         },
-      },
-    });
+      });
+    }
   }
 
   catalogCache = {
@@ -359,7 +373,9 @@ async function findResourceByToolName(toolName: string): Promise<ResourceRow | n
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data } = await supabaseAdmin
     .from("resources")
-    .select("slug, name, description, resource_type, installation_type")
+    .select(
+      "slug, name, description, resource_type, installation_type, installation_config, verified",
+    )
     .eq("published", true)
     .or(`slug.eq.${slugHyphen},slug.eq.${raw}`)
     .limit(1)
@@ -514,6 +530,10 @@ export const Route = createFileRoute("/mcp")({
                     metadata: {
                       type: item.resource_type,
                       installation_type: item.installation_type,
+                      review_state: reviewState(item),
+                      risk: item.installation_config?.["risk"] ?? null,
+                      canonical_url: item.installation_config?.["canonical_url"] ?? null,
+                      executable: isExecutable(item),
                     },
                   }
                 : {
@@ -567,7 +587,7 @@ export const Route = createFileRoute("/mcp")({
             const catalog = await getCatalog();
             const matches = rankCapabilities(
               goal,
-              [...catalog.bySlug.values()].map((item) => ({
+              [...catalog.bySlug.values()].filter(isExecutable).map((item) => ({
                 slug: item.slug,
                 name: item.name,
                 description: item.description,
@@ -589,7 +609,7 @@ export const Route = createFileRoute("/mcp")({
               buildAdaptivePlan(
                 String(args["goal"] ?? ""),
                 String(args["environment"] ?? "production"),
-                [...catalog.bySlug.values()].map((item) => ({
+                [...catalog.bySlug.values()].filter(isExecutable).map((item) => ({
                   slug: item.slug,
                   name: item.name,
                   description: item.description,
@@ -813,6 +833,8 @@ export const Route = createFileRoute("/mcp")({
             const catalog = await getCatalog();
             const item = catalog.bySlug.get(slug);
             if (!item) throw new Error("Unknown or unpublished capability.");
+            if (!isExecutable(item))
+              throw new Error(`Capability is ${reviewState(item)} and cannot be installed.`);
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
             const { data: resource } = await supabaseAdmin
               .from("resources")
@@ -896,6 +918,10 @@ export const Route = createFileRoute("/mcp")({
                 name: r.name,
                 type: r.resource_type,
                 description: r.description,
+                review_state: reviewState(r),
+                risk: r.installation_config?.["risk"] ?? null,
+                canonical_url: r.installation_config?.["canonical_url"] ?? null,
+                executable: isExecutable(r),
               }));
             result = textResult({ data, count: data.length });
           } else if (name === "list_connections") {
@@ -923,6 +949,14 @@ export const Route = createFileRoute("/mcp")({
 
             if (!match) {
               result = textResult({ status: "not_found", tool: name });
+            } else if (action === "invoke" && !isExecutable(match)) {
+              result = textResult({
+                status: reviewState(match),
+                resource: { slug: match.slug, name: match.name, type: match.resource_type },
+                risk: match.installation_config?.["risk"] ?? null,
+                message:
+                  "Metadata-only resource cannot be invoked until review and approval are complete.",
+              });
             } else if (action === "invoke") {
               const providerGuess = match.slug.split("-")[0]?.toLowerCase() ?? "";
               const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

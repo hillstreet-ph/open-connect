@@ -13,6 +13,7 @@ const registry = JSON.parse(
 );
 const outputDir = resolve(root, process.env.MARKETPLACE_OUTPUT_DIR || "audit-results/marketplace");
 const publish = process.argv.includes("--publish");
+const allowPartial = process.argv.includes("--allow-partial");
 const githubToken = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
 
 function headers() {
@@ -69,6 +70,19 @@ const candidates = deduplicateCandidates(results).map((candidate) => ({
   ...candidate,
   fingerprint: registryFingerprint(candidate),
 }));
+
+const enabledSources = registry.sources.filter((source) => source.enabled).length;
+const minimumSources = registry.default_policy.minimum_successful_sources ?? enabledSources;
+const minimumCandidates = registry.default_policy.minimum_candidates ?? 1;
+const successfulSources = enabledSources - failures.length;
+if (
+  !allowPartial &&
+  (successfulSources < minimumSources || candidates.length < minimumCandidates)
+) {
+  throw new Error(
+    `incomplete collection: ${successfulSources}/${enabledSources} sources, ${candidates.length} candidates`,
+  );
+}
 
 await mkdir(outputDir, { recursive: true });
 await writeFile(

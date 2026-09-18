@@ -1,6 +1,16 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Building2, ChevronDown, FileCode, KeyRound, Lock, LogOut, Plug, Settings, Shield } from "lucide-react";
+import {
+  Building2,
+  ChevronDown,
+  FileCode,
+  KeyRound,
+  Lock,
+  LogOut,
+  Plug,
+  Settings,
+  Shield,
+} from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -50,9 +60,7 @@ function useProfile() {
     "Account";
   const email = user?.email ?? "";
   const avatarUrl =
-    profileQuery.data?.avatar_url ??
-    (user?.user_metadata?.avatar_url as string | undefined) ??
-    "";
+    profileQuery.data?.avatar_url ?? (user?.user_metadata?.avatar_url as string | undefined) ?? "";
 
   return { user, loading, displayName, email, avatarUrl };
 }
@@ -67,13 +75,7 @@ async function performSignOut(navigate: ReturnType<typeof useNavigate>) {
   await navigate({ to: "/auth" });
 }
 
-function AccountMenuItems({
-  onSignOut,
-  showAdmin,
-}: {
-  onSignOut: () => void;
-  showAdmin: boolean;
-}) {
+function AccountMenuItems({ onSignOut, showAdmin }: { onSignOut: () => void; showAdmin: boolean }) {
   return (
     <>
       <DropdownMenuItem asChild>
@@ -89,26 +91,38 @@ function AccountMenuItems({
         </Link>
       </DropdownMenuItem>
       <DropdownMenuItem asChild>
-        <Link to="/orgs"><Building2 /> Organizations & workspaces</Link>
+        <Link to="/orgs">
+          <Building2 /> Organizations & workspaces
+        </Link>
       </DropdownMenuItem>
       <DropdownMenuItem asChild>
-        <Link to="/secrets"><Lock /> Credentials</Link>
+        <Link to="/secrets">
+          <Lock /> Credentials
+        </Link>
       </DropdownMenuItem>
       {showAdmin ? (
         <DropdownMenuSub>
-          <DropdownMenuSubTrigger><Shield /> System administration</DropdownMenuSubTrigger>
+          <DropdownMenuSubTrigger>
+            <Shield /> System administration
+          </DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
             <DropdownMenuItem asChild>
-              <Link to="/admin"><Shield /> User roles</Link>
+              <Link to="/admin">
+                <Shield /> User roles
+              </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link to="/roles"><KeyRound /> Access reference</Link>
+              <Link to="/roles">
+                <KeyRound /> Access reference
+              </Link>
             </DropdownMenuItem>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
       ) : null}
       <DropdownMenuItem asChild>
-        <Link to="/guides"><FileCode /> Help & documentation</Link>
+        <Link to="/guides">
+          <FileCode /> Help & documentation
+        </Link>
       </DropdownMenuItem>
       <DropdownMenuSeparator />
       <DropdownMenuItem
@@ -164,7 +178,11 @@ export function UserMenu({ sidebar = false }: { sidebar?: boolean }) {
         <Button
           variant="ghost"
           size="sm"
-          className={sidebar ? "h-auto w-full justify-start gap-2 rounded-lg p-1 text-left" : "relative h-10 gap-1.5 rounded-full px-1.5 pr-2"}
+          className={
+            sidebar
+              ? "h-auto w-full justify-start gap-2 rounded-lg p-1 text-left"
+              : "relative h-10 gap-1.5 rounded-full px-1.5 pr-2"
+          }
           aria-label="Account menu"
         >
           <Avatar className="size-9 border border-border/70">
@@ -176,13 +194,19 @@ export function UserMenu({ sidebar = false }: { sidebar?: boolean }) {
           {sidebar ? (
             <span className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
               <span className="block truncate text-xs font-medium">{displayName}</span>
-              <span className="block truncate text-[10px] text-muted-foreground">{roleLabel(primary)}</span>
+              <span className="block truncate text-[10px] text-muted-foreground">
+                {roleLabel(primary)}
+              </span>
             </span>
           ) : null}
           <ChevronDown className="size-3.5 shrink-0 text-muted-foreground group-data-[collapsible=icon]:hidden" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent side={sidebar ? "top" : "bottom"} align={sidebar ? "start" : "end"} className="w-64 max-w-[calc(100vw-2rem)]">
+      <DropdownMenuContent
+        side={sidebar ? "top" : "bottom"}
+        align={sidebar ? "start" : "end"}
+        className="w-64 max-w-[calc(100vw-2rem)]"
+      >
         <DropdownMenuLabel className="font-normal">
           <div className="flex items-center gap-3">
             <Avatar className="size-9 border border-border/70">
@@ -194,15 +218,14 @@ export function UserMenu({ sidebar = false }: { sidebar?: boolean }) {
             <div className="flex min-w-0 flex-col gap-0.5">
               <span className="truncate text-sm font-medium leading-none">{displayName}</span>
               <span className="truncate text-xs leading-none text-muted-foreground">{email}</span>
-              <span className="text-[10px] uppercase tracking-wide text-primary">{roleLabel(primary)}</span>
+              <span className="text-[10px] uppercase tracking-wide text-primary">
+                {roleLabel(primary)}
+              </span>
             </div>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <AccountMenuItems
-          showAdmin={isAdmin}
-          onSignOut={() => void performSignOut(navigate)}
-        />
+        <AccountMenuItems showAdmin={isAdmin} onSignOut={() => void performSignOut(navigate)} />
       </DropdownMenuContent>
     </DropdownMenu>
   );

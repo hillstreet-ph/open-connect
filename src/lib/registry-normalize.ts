@@ -30,7 +30,16 @@ export function normalizeOpenSlug(value: string): string {
 }
 
 export function registryFingerprint(candidate: RegistryCandidate): string {
-  const input = [candidate.sourceId, candidate.externalId, canonicalizeUrl(candidate.canonicalUrl)]
+  const input = [
+    candidate.sourceId,
+    candidate.externalId,
+    canonicalizeUrl(candidate.canonicalUrl),
+    candidate.name,
+    candidate.description ?? "",
+    candidate.license ?? "",
+    candidate.updatedAt ?? "",
+    candidate.trust ?? "",
+  ]
     .join("|")
     .toLowerCase();
   let hash = 2166136261;

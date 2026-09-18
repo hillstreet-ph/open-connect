@@ -21,7 +21,9 @@ export const Route = createFileRoute("/api/v1/resources")({
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { data, error } = await supabaseAdmin
           .from("resources")
-          .select("id, slug, name, description, resource_type, category_slug, verified, featured")
+          .select(
+            "id, slug, name, description, resource_type, category_slug, verified, featured, installation_type, installation_config",
+          )
           .eq("published", true)
           .order("featured", { ascending: false })
           .order("name")

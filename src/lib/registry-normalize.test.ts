@@ -39,6 +39,25 @@ test("deduplicates canonical URLs and keeps the newest metadata", () => {
   assert.equal(registryFingerprint(rows[0]!), registryFingerprint(rows[0]!));
 });
 
+test("fingerprint changes when review-relevant metadata changes", () => {
+  const base = {
+    sourceId: "one",
+    externalId: "1",
+    name: "Tool",
+    canonicalUrl: "https://github.com/a/b",
+    license: "MIT",
+    updatedAt: "2026-01-01",
+  };
+  assert.notEqual(
+    registryFingerprint(base),
+    registryFingerprint({ ...base, license: "NOASSERTION" }),
+  );
+  assert.notEqual(
+    registryFingerprint(base),
+    registryFingerprint({ ...base, updatedAt: "2026-02-01" }),
+  );
+});
+
 test("agent team has one supervisor, open names, and no direct self delegation", () => {
   const registry = JSON.parse(readFileSync("config/open-agent-team.registry.json", "utf8")) as {
     supervisor: string;

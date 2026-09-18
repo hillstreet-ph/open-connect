@@ -7,7 +7,9 @@
     "install": false,
     "require_license": true,
     "require_security_review": true,
-    "max_items_per_run": 25
+    "max_items_per_run": 25,
+    "minimum_successful_sources": 4,
+    "minimum_candidates": 60
   },
   "sources": [
     {

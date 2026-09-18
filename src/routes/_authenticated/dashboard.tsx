@@ -1,12 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Boxes,
-  ListTodo,
-  Plug,
-  Layers,
-  LayoutDashboard,
-} from "lucide-react";
+import { Boxes, ListTodo, Plug, Layers, LayoutDashboard } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ProfileAvatarBadge } from "@/components/user-menu";
 import { ResourceLibraryCard } from "@/components/resource-library-card";
@@ -52,7 +46,6 @@ const hubBlocks = [
     body: "Organize tasks, agents, and resources around your work.",
     badge: "Work",
   },
-
 ];
 
 function Dashboard() {
@@ -75,7 +68,10 @@ function Dashboard() {
           .select("id", { count: "exact", head: true })
           .eq("status", "connected"),
         supabase.from("toolkits").select("id", { count: "exact", head: true }),
-        supabase.from("resources").select("id", { count: "exact", head: true }).eq("published", true),
+        supabase
+          .from("resources")
+          .select("id", { count: "exact", head: true })
+          .eq("published", true),
       ]);
       return {
         email: userData.user?.email ?? "",
@@ -90,10 +86,19 @@ function Dashboard() {
 
   const stats = [
     { icon: Layers, label: "Toolkits", value: profile?.toolkits ?? 0, to: "/toolkits" as const },
-    { icon: Plug, label: "Connections", value: profile?.connections ?? 0, to: "/connections" as const },
-    { icon: Boxes, label: "Marketplace", value: profile?.resources ?? 0, to: "/resources" as const },
+    {
+      icon: Plug,
+      label: "Connections",
+      value: profile?.connections ?? 0,
+      to: "/connections" as const,
+    },
+    {
+      icon: Boxes,
+      label: "Marketplace",
+      value: profile?.resources ?? 0,
+      to: "/resources" as const,
+    },
   ];
-
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:py-14">
@@ -157,26 +162,28 @@ function Dashboard() {
         Overview
       </h2>
       <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-3">
-        {stats.filter((stat) => stat.to !== "/toolkits" || can("manage_toolkits")).map((stat) => (
-          <Link key={stat.label} to={stat.to} className="block">
-            <Card className="h-full shadow-panel transition-colors hover:border-primary/40">
-              <CardHeader className="p-4 pb-3">
-                <span className="flex size-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
-                  <stat.icon className="size-3.5" />
-                </span>
-                <CardDescription className="mt-2 text-xs">{stat.label}</CardDescription>
-                <CardTitle className="text-2xl tabular-nums sm:text-3xl">
-                  {isLoading ? "—" : stat.value}
-                </CardTitle>
-              </CardHeader>
-            </Card>
-          </Link>
-        ))}
+        {stats
+          .filter((stat) => stat.to !== "/toolkits" || can("manage_toolkits"))
+          .map((stat) => (
+            <Link key={stat.label} to={stat.to} className="block">
+              <Card className="h-full shadow-panel transition-colors hover:border-primary/40">
+                <CardHeader className="p-4 pb-3">
+                  <span className="flex size-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                    <stat.icon className="size-3.5" />
+                  </span>
+                  <CardDescription className="mt-2 text-xs">{stat.label}</CardDescription>
+                  <CardTitle className="text-2xl tabular-nums sm:text-3xl">
+                    {isLoading ? "—" : stat.value}
+                  </CardTitle>
+                </CardHeader>
+              </Card>
+            </Link>
+          ))}
       </div>
 
       <p className="mt-6 text-sm text-muted-foreground">
-        Open your user menu at the bottom of the sidebar for organizations and workspaces,
-        API keys & MCP, credentials, settings, and administration available to your role.
+        Open your user menu at the bottom of the sidebar for organizations and workspaces, API keys
+        & MCP, credentials, settings, and administration available to your role.
       </p>
 
       {can("upload_resources") ? (
@@ -192,8 +199,6 @@ function Dashboard() {
           </div>
         </>
       ) : null}
-
-
     </div>
   );
 }
