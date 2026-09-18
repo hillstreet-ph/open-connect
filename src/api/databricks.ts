@@ -3,9 +3,7 @@ import { BaseEndpoint } from "./BaseEndpoint";
 
 export type DatabricksStatus = {
   configured: boolean;
-  reachable: boolean | null;
-  catalog: string | null;
-  schema: string | null;
+  sourceOfTruth: "supabase";
 };
 
 export const getDatabricksStatus = new BaseEndpoint({

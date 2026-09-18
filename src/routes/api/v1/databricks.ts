@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   databricksConfig,
@@ -13,24 +14,17 @@ function json(body: unknown, status = 200) {
 }
 
 function authorized(request: Request) {
-  const expected = process.env.DATABRICKS_SYNC_SECRET;
-  const provided = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-  return Boolean(expected && provided && expected === provided);
+  const expected = process.env.DATABRICKS_SYNC_SECRET?.trim() ?? "";
+  const provided = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? "";
+  if (!expected || expected.length !== provided.length) return false;
+  return timingSafeEqual(Buffer.from(expected), Buffer.from(provided));
 }
 
 export const Route = createFileRoute("/api/v1/databricks")({
   server: {
     handlers: {
-      GET: async () => {
-        const config = databricksConfig();
-        return json({
-          configured: config.configured,
-          // Connectivity is intentionally checked only by the authenticated sync operation.
-          reachable: null,
-          catalog: config.configured ? config.catalog : null,
-          schema: config.configured ? config.schema : null,
-        });
-      },
+      GET: async () =>
+        json({ configured: databricksConfig().configured, sourceOfTruth: "supabase" }),
       POST: async ({ request }) => {
         if (!authorized(request)) return json({ error: "Unauthorized" }, 401);
         if (!databricksConfig().configured)
@@ -44,18 +38,21 @@ export const Route = createFileRoute("/api/v1/databricks")({
             .select(
               "id,user_id,project_id,title,content,memory_type,importance,pinned,tags,expires_at,created_at,updated_at",
             )
+            .order("updated_at", { ascending: false })
             .limit(1000),
           supabaseAdmin
             .from("knowledge_items")
             .select(
               "id,user_id,project_id,title,content,source_type,source_url,mime_type,status,tags,created_at,updated_at",
             )
+            .order("updated_at", { ascending: false })
             .limit(1000),
           supabaseAdmin
             .from("resources")
             .select(
               "id,slug,name,description,resource_type,category_slug,license,verified,published,source,updated_at",
             )
+            .order("updated_at", { ascending: false })
             .limit(1000),
         ]);
         const error = memory.error || knowledge.error || resources.error;
