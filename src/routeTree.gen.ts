@@ -48,6 +48,8 @@ import { Route as ApiV1DatabricksRouteImport } from './routes/api/v1/databricks'
 import { Route as ApiV1HealthRouteImport } from './routes/api/v1/health'
 import { Route as ApiV1ResourcesRouteImport } from './routes/api/v1/resources'
 import { Route as V1ChatCompletionsRouteImport } from './routes/v1/chat/completions'
+import { Route as ApiV1ActionsReadRouteImport } from './routes/api/v1/actions.read'
+import { Route as ApiV1ActionsWriteRouteImport } from './routes/api/v1/actions.write'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -246,6 +248,16 @@ const V1ChatCompletionsRoute = V1ChatCompletionsRouteImport.update({
   path: '/v1/chat/completions',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiV1ActionsReadRoute = ApiV1ActionsReadRouteImport.update({
+  id: '/api/v1/actions/read',
+  path: '/api/v1/actions/read',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiV1ActionsWriteRoute = ApiV1ActionsWriteRouteImport.update({
+  id: '/api/v1/actions/write',
+  path: '/api/v1/actions/write',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -286,6 +298,8 @@ export interface FileRoutesByFullPath {
   '/api/v1/health': typeof ApiV1HealthRoute
   '/api/v1/resources': typeof ApiV1ResourcesRoute
   '/v1/chat/completions': typeof V1ChatCompletionsRoute
+  '/api/v1/actions/read': typeof ApiV1ActionsReadRoute
+  '/api/v1/actions/write': typeof ApiV1ActionsWriteRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -326,6 +340,8 @@ export interface FileRoutesByTo {
   '/api/v1/health': typeof ApiV1HealthRoute
   '/api/v1/resources': typeof ApiV1ResourcesRoute
   '/v1/chat/completions': typeof V1ChatCompletionsRoute
+  '/api/v1/actions/read': typeof ApiV1ActionsReadRoute
+  '/api/v1/actions/write': typeof ApiV1ActionsWriteRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -368,6 +384,8 @@ export interface FileRoutesById {
   '/api/v1/health': typeof ApiV1HealthRoute
   '/api/v1/resources': typeof ApiV1ResourcesRoute
   '/v1/chat/completions': typeof V1ChatCompletionsRoute
+  '/api/v1/actions/read': typeof ApiV1ActionsReadRoute
+  '/api/v1/actions/write': typeof ApiV1ActionsWriteRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -410,6 +428,8 @@ export interface FileRouteTypes {
     | '/api/v1/health'
     | '/api/v1/resources'
     | '/v1/chat/completions'
+    | '/api/v1/actions/read'
+    | '/api/v1/actions/write'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -450,6 +470,8 @@ export interface FileRouteTypes {
     | '/api/v1/health'
     | '/api/v1/resources'
     | '/v1/chat/completions'
+    | '/api/v1/actions/read'
+    | '/api/v1/actions/write'
   id:
     | '__root__'
     | '/'
@@ -491,6 +513,8 @@ export interface FileRouteTypes {
     | '/api/v1/health'
     | '/api/v1/resources'
     | '/v1/chat/completions'
+    | '/api/v1/actions/read'
+    | '/api/v1/actions/write'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -515,6 +539,8 @@ export interface RootRouteChildren {
   ApiV1HealthRoute: typeof ApiV1HealthRoute
   ApiV1ResourcesRoute: typeof ApiV1ResourcesRoute
   V1ChatCompletionsRoute: typeof V1ChatCompletionsRoute
+  ApiV1ActionsReadRoute: typeof ApiV1ActionsReadRoute
+  ApiV1ActionsWriteRoute: typeof ApiV1ActionsWriteRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -792,6 +818,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof V1ChatCompletionsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/v1/actions/read': {
+      id: '/api/v1/actions/read'
+      path: '/api/v1/actions/read'
+      fullPath: '/api/v1/actions/read'
+      preLoaderRoute: typeof ApiV1ActionsReadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/actions/write': {
+      id: '/api/v1/actions/write'
+      path: '/api/v1/actions/write'
+      fullPath: '/api/v1/actions/write'
+      preLoaderRoute: typeof ApiV1ActionsWriteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -873,6 +913,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiV1HealthRoute: ApiV1HealthRoute,
   ApiV1ResourcesRoute: ApiV1ResourcesRoute,
   V1ChatCompletionsRoute: V1ChatCompletionsRoute,
+  ApiV1ActionsReadRoute: ApiV1ActionsReadRoute,
+  ApiV1ActionsWriteRoute: ApiV1ActionsWriteRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
