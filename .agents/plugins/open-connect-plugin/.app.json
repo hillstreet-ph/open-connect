@@ -1,0 +1,10 @@
+{
+  "apps": {
+    "github": {
+      "id": "connector_1p_1a69035c238881919c4190932b2df699"
+    },
+    "supabase": {
+      "id": "asdk_app_69d3e5ee6a708191baa733f7b8931995"
+    }
+  }
+}

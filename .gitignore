@@ -21,6 +21,7 @@ dist-ssr
 
 .wrangler/
 .dev.vars
+.codex/migrate-to-codex-report.txt
 
 .vscode/*
 !.vscode/extensions.json
