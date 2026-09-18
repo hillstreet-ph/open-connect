@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Building2, ChevronDown, FileCode, KeyRound, LayoutDashboard, Lock, LogOut, Plug, Settings, Shield } from "lucide-react";
+import { Building2, ChevronDown, FileCode, KeyRound, Lock, LogOut, Plug, Settings, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -77,15 +77,9 @@ function AccountMenuItems({
   return (
     <>
       <DropdownMenuItem asChild>
-        <Link to="/dashboard" className="cursor-pointer">
-          <LayoutDashboard className="mr-2 size-4" />
-          Dashboard
-        </Link>
-      </DropdownMenuItem>
-      <DropdownMenuItem asChild>
         <Link to="/api-keys" className="cursor-pointer">
           <KeyRound className="mr-2 size-4" />
-          API Keys
+          API keys & MCP
         </Link>
       </DropdownMenuItem>
       <DropdownMenuItem asChild>
@@ -142,33 +136,7 @@ export function BrandLogo() {
   );
 }
 
-export function BrandLogoMenu() {
-  const { user } = useAuth();
-  const { isAdmin } = useRoles();
-  const navigate = useNavigate();
-  if (!user) return <BrandLogo />;
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button type="button" aria-label="Open Connect menu"
-          className="flex w-full items-center gap-2 rounded-md px-1 py-1 text-left hover:bg-sidebar-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary shadow-glow">
-            <Plug className="size-4" />
-          </span>
-          <span className="min-w-0 flex-1 truncate font-display text-sm font-semibold group-data-[collapsible=icon]:hidden">Open Connect</span>
-          <ChevronDown className="size-4 shrink-0 group-data-[collapsible=icon]:hidden" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-64 max-w-[calc(100vw-2rem)]">
-        <DropdownMenuLabel>Open Connect</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <AccountMenuItems showAdmin={isAdmin} onSignOut={() => void performSignOut(navigate)} />
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-export function UserMenu() {
+export function UserMenu({ sidebar = false }: { sidebar?: boolean }) {
   const { user, loading, displayName, email, avatarUrl } = useProfile();
   const { isAdmin, primary } = useRoles();
   const navigate = useNavigate();
@@ -196,7 +164,7 @@ export function UserMenu() {
         <Button
           variant="ghost"
           size="sm"
-          className="relative h-10 gap-1.5 rounded-full px-1.5 pr-2"
+          className={sidebar ? "h-auto w-full justify-start gap-2 rounded-lg p-1 text-left" : "relative h-10 gap-1.5 rounded-full px-1.5 pr-2"}
           aria-label="Account menu"
         >
           <Avatar className="size-9 border border-border/70">
@@ -205,10 +173,16 @@ export function UserMenu() {
               {initials(displayName, email)}
             </AvatarFallback>
           </Avatar>
-          <ChevronDown className="hidden size-3.5 text-muted-foreground sm:block" />
+          {sidebar ? (
+            <span className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
+              <span className="block truncate text-xs font-medium">{displayName}</span>
+              <span className="block truncate text-[10px] text-muted-foreground">{roleLabel(primary)}</span>
+            </span>
+          ) : null}
+          <ChevronDown className="size-3.5 shrink-0 text-muted-foreground group-data-[collapsible=icon]:hidden" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-64">
+      <DropdownMenuContent side={sidebar ? "top" : "bottom"} align={sidebar ? "start" : "end"} className="w-64 max-w-[calc(100vw-2rem)]">
         <DropdownMenuLabel className="font-normal">
           <div className="flex items-center gap-3">
             <Avatar className="size-9 border border-border/70">

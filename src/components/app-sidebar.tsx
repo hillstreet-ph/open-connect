@@ -4,14 +4,12 @@ import {
   Boxes,
   CalendarClock,
   FolderKanban,
-  KeyRound,
   LayoutDashboard,
   ListTodo,
   Plug,
   Sparkles,
   Workflow,
   Wrench,
-  FileCode,
 } from "lucide-react";
 import {
   Sidebar,
@@ -27,18 +25,16 @@ import {
   SidebarRail,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
-import { useAuth } from "@/hooks/use-auth";
 import { useRoles } from "@/hooks/use-roles";
-import { roleLabel, type Capability } from "@/lib/rbac";
-import { BrandLogoMenu } from "@/components/user-menu";
-import { cn } from "@/lib/utils";
+import { type Capability } from "@/lib/rbac";
+import { UserMenu } from "@/components/user-menu";
 
 type Item = { capability?: Capability; to: string; label: string; icon: React.ComponentType<{ className?: string }> };
 
 /**
  * Primary IA (locked):
  * Dashboard → Projects → Work → Build → Marketplace → Connections →
- * AI Gateway → Developer. Settings live in the logo/account menu.
+ * AI Gateway → Developer. Settings live in the user avatar menu.
  *
  * Organization is a switcher, not a daily top-level work item.
  * System administration appears once for privileged roles in the shared menu.
@@ -71,11 +67,6 @@ const CONNECT: Item[] = [
   { to: "/models", label: "AI Gateway", icon: Sparkles },
 ];
 
-const DEVELOPER: Item[] = [
-  { to: "/api-keys", label: "API & MCP", icon: KeyRound },
-  { to: "/guides", label: "Guides", icon: FileCode },
-];
-
 function NavGroup({ label, items, pathname }: { label: string; items: Item[]; pathname: string }) {
   if (!items.length) return null;
   return (
@@ -106,14 +97,14 @@ function NavGroup({ label, items, pathname }: { label: string; items: Item[]; pa
 
 export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { user } = useAuth();
-  const { primary, can } = useRoles();
-  const email = user?.email ?? "";
-  const initial = (email[0] ?? "M").toUpperCase();
+  const { can } = useRoles();
   return (
     <Sidebar collapsible="icon" className="border-sidebar-border">
       <SidebarHeader className="gap-1 border-b border-sidebar-border px-3 py-3">
-        <BrandLogoMenu />
+        <Link to="/dashboard" aria-label="Open Connect dashboard" className="flex items-center gap-2 rounded-md p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary"><Plug className="size-4" /></span>
+          <span className="truncate text-sm font-semibold group-data-[collapsible=icon]:hidden">Open Connect</span>
+        </Link>
       </SidebarHeader>
 
       <SidebarContent className="px-1 py-2">
@@ -122,27 +113,12 @@ export function AppSidebar() {
         <NavGroup label="Build" items={BUILD.filter((item) => !item.capability || can(item.capability))} pathname={pathname} />
         <NavGroup label="Discover" items={DISCOVER} pathname={pathname} />
         <NavGroup label="Connect" items={CONNECT} pathname={pathname} />
-        <NavGroup label="Developer" items={DEVELOPER} pathname={pathname} />
       </SidebarContent>
 
       <SidebarSeparator />
 
       <SidebarFooter className="border-t border-sidebar-border p-3">
-        <div className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
-          <span
-            className={cn(
-              "flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/20 text-xs font-semibold text-primary",
-            )}
-          >
-            {initial}
-          </span>
-          <div className="min-w-0 group-data-[collapsible=icon]:hidden">
-            <p className="truncate text-xs font-medium">{email || "Signed in"}</p>
-            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-              {roleLabel(primary)}
-            </p>
-          </div>
-        </div>
+        <UserMenu sidebar />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

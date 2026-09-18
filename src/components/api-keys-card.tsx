@@ -1,3 +1,4 @@
+import { McpConnectionCard } from "@/components/mcp-connection-card";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -39,6 +40,7 @@ export function ApiKeysCard() {
   });
 
   return (
+    <div className="space-y-6">
     <Card className="shadow-panel">
       <CardHeader>
         <span className="flex size-9 items-center justify-center rounded-lg bg-primary/15 text-primary">
@@ -47,7 +49,7 @@ export function ApiKeysCard() {
         <CardTitle className="mt-3 text-base">API Keys</CardTitle>
         <CardDescription>
           Scoped <code className="font-mono">oc_live_</code> keys authenticate your agents against{" "}
-          <code className="font-mono">/v1</code>.
+          <code className="font-mono">/mcp</code> and <code className="font-mono">/v1</code>.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -59,6 +61,7 @@ export function ApiKeysCard() {
           }}
         >
           <Input
+            aria-label="API key name"
             value={name}
             onChange={(event) => setName(event.target.value)}
             placeholder="Key name (e.g. local agent)"
@@ -77,9 +80,9 @@ export function ApiKeysCard() {
               <Button
                 size="sm"
                 variant="outline"
+                aria-label="Copy API key"
                 onClick={() => {
-                  void navigator.clipboard.writeText(freshKey);
-                  toast.success("Copied");
+                  void navigator.clipboard.writeText(freshKey).then(() => toast.success("Copied"), () => toast.error("Could not copy key"));
                 }}
               >
                 <Copy className="size-3.5" />
@@ -88,6 +91,7 @@ export function ApiKeysCard() {
           </div>
         ) : null}
 
+        {keys.isLoading ? <p role="status">Loading keys…</p> : keys.isError ? <p role="alert">Could not load keys. Refresh and try again.</p> : null}
         <ul className="space-y-2 text-sm">
           {keys.data?.length ? (
             keys.data.map((key) => (
@@ -113,10 +117,12 @@ export function ApiKeysCard() {
               </li>
             ))
           ) : (
-            <li className="text-muted-foreground">No keys yet.</li>
+            !keys.isLoading && !keys.isError ? <li className="text-muted-foreground">No keys yet.</li> : null
           )}
         </ul>
       </CardContent>
     </Card>
+    <McpConnectionCard key={freshKey ? "fresh" : "existing"} freshKey={freshKey} />
+    </div>
   );
 }
