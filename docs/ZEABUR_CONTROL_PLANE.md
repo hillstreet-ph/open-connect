@@ -9,26 +9,15 @@
 - Upload API: `https://api.zeabur.com/v2/upload`
 - WebSocket API: `wss://api.zeabur.com/graphql`
 
-References:
-
-- https://github.com/zeabur/agent-skills
-- https://zeabur.com/docs/en-US/developer/cli
-- https://zeabur.com/docs/en-US/server/operate
-
 ## Open-Connect binding
 
 Open-Connect exposes Zeabur through the authenticated `services/zeabur-mcp-bridge` service.
 
-Required server-side references:
+The repository currently registers `credential://zeabur/kobeplay` as the canonical Zeabur account reference. Until separate bridge references and automatic resolution are implemented and registered, operators must configure `ZEABUR_TOKEN` and `MCP_BRIDGE_TOKEN` directly as protected Zeabur service secrets. Record only their names and vault references; never place values in source, documentation, logs, or agent-visible storage.
 
-| Environment variable | Source |
-|---|---|
-| `ZEABUR_TOKEN` | `credential://zeabur/production-api` |
-| `MCP_BRIDGE_TOKEN` | `credential://open-connect/zeabur-mcp-bridge` |
+The bridge must fail closed when either protected variable is absent. The raw Zeabur token must never be returned to an agent.
 
-The raw Zeabur account token must never be returned to an agent. Open-Connect resolves the reference and injects the value into the bridge service.
-
-## Verified production mapping
+## Verified project mapping
 
 | Project | Zeabur project |
 |---|---|
@@ -37,44 +26,34 @@ The raw Zeabur account token must never be returned to an agent. Open-Connect re
 | Open-Box | `open-box` |
 | Open-Teleset | `open-teleset` |
 
-The account also contains the Wonder Mesh gateway project required by the dedicated-server environment.
-
 ## Agent installation
-
-Install every official Zeabur skill for supported agents:
 
 ```bash
 npx skills add zeabur/agent-skills --all --copy
 ```
 
-Install only Claude Code and Codex targets:
-
-```bash
-npx skills add zeabur/agent-skills \
-  --agent claude-code codex \
-  --skill '*' \
-  --copy \
-  --yes
-```
+Installation copies instructions only. It does not authorize accounts, install provider connections, or copy credentials.
 
 ## Capability policy
 
-Autonomous read operations include project/service inventory, deployments, build/runtime logs, metrics, and environment-variable names.
+Autonomous read operations include project/service inventory, deployments, logs, metrics, and environment-variable names.
 
-Bounded write operations include staging deployments, updating an approved variable, and restarting a failed service after diagnostics.
+Bounded non-production writes may include isolated staging deployments, an approved staging variable, or restarting a failed staging service after diagnostics.
 
-Project deletion, service deletion, domain cutover, volume changes, dedicated-server reboot, and production data operations require the production approval gate.
+**Every production mutation requires the production approval gate**, including deployments, variable changes, service restarts, domains, routes, volumes, scaling, and destructive actions.
 
 ## Readiness checks
 
 A ready integration requires all of the following:
 
 1. GraphQL `me` succeeds.
-2. MCP `list-projects` succeeds.
-3. The four production projects are visible.
+2. Official MCP `list-projects` succeeds.
+3. The expected production projects are visible.
 4. `zeabur-mcp-bridge` reports `RUNNING`.
-5. At least one bridge domain is active and `GET /healthz` returns HTTP 200.
-6. MCP requests require the independent bridge bearer token.
-7. Logs and audit events contain no secret values.
+5. At least one bridge domain is active.
+6. `GET /healthz` returns success and reports upstream state.
+7. An authenticated MCP initialization and safe read-only tool call succeed through the public bridge domain.
+8. Requests without the independent bridge bearer token are rejected.
+9. Logs and audit events contain no secret values.
 
-Current limitation: the bridge service is running, but its custom and generated domains are still provisioning. Do not mark the public MCP endpoint ready until its health check succeeds.
+A static HTTP 200 from the bridge process is insufficient because it does not prove upstream MCP availability. Do not mark the public endpoint ready until the authenticated end-to-end MCP probe passes.
