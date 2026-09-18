@@ -18,7 +18,7 @@ GitHub  hillstreet-ph/open-connect (main)
    │      KV: OC_KV (open-connect-kv)
    │      build: bun install --frozen-lockfile && bun run build → dist
    │
-   └─► Supabase  open-connect (gnqpwewbgldonarggzax · ap-northeast-1)
+   └─► Supabase  open-connect (huadtiuuoiriqrjpjxhr · canonical production)
           Auth · Postgres/RLS · Storage · Edge Functions · Vault
           Upstream models: LiteLLM / OpenRouter via /v1
 ```
@@ -166,7 +166,7 @@ Capabilities: dashboard, studio, download/upload, keys, connections, secrets, to
 
 ```bash
 curl -sS https://open-connect.site/api/v1/health
-curl -sS https://gnqpwewbgldonarggzax.supabase.co/functions/v1/health
+curl -sS https://huadtiuuoiriqrjpjxhr.supabase.co/functions/v1/health
 curl -sS https://open-connect.site/.well-known/oauth-authorization-server | head
 curl -sS -o /dev/null -w "%{http_code}\n" https://open-connect.site/roles
 curl -sS -o /dev/null -w "%{http_code}\n" https://open-connect.site/mcp

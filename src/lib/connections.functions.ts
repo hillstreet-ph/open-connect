@@ -3,7 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 /**
  * Connection catalog — professional app plane.
- * Connect records a capability grant (credential_reference) server-side.
+ * Connect records a pending authorization request server-side.
  * Agents never receive provider tokens; they present oc_live_ keys only.
  */
 const CATALOG = [
@@ -270,7 +270,7 @@ export const connectApp = createServerFn({ method: "POST" })
     const app = CATALOG.find((item) => item.provider === data.provider);
     if (!app) throw new Error("Unknown application");
 
-    const credentialReference = `oc_conn_${data.provider}_${context.userId.slice(0, 8)}`;
+    const authorizationMode = app.oauth ? "oauth" : "brokered_secret";
 
     const { data: existing } = await context.supabase
       .from("app_connections")
@@ -283,15 +283,16 @@ export const connectApp = createServerFn({ method: "POST" })
       const { data: updated, error } = await context.supabase
         .from("app_connections")
         .update({
-          status: "connected",
-          scopes: [...app.scopes],
-          credential_reference: credentialReference,
+          status: "pending",
+          scopes: [],
+          credential_reference: null,
           display_name: app.display_name,
           metadata: {
             source: "open-connect",
-            mode: "capability_grant",
-            oauth_ready: app.oauth,
-            full_scopes: true,
+            mode: authorizationMode,
+            authorization_required: true,
+            requested_scopes: [...app.scopes],
+            full_scopes: false,
           },
         })
         .eq("id", existing.id)
@@ -307,15 +308,16 @@ export const connectApp = createServerFn({ method: "POST" })
         user_id: context.userId,
         provider: app.provider,
         display_name: app.display_name,
-        status: "connected",
-        scopes: [...app.scopes],
-        credential_reference: credentialReference,
-        provider_account_id: context.userId,
+        status: "pending",
+        scopes: [],
+        credential_reference: null,
+        provider_account_id: null,
         metadata: {
           source: "open-connect",
-          mode: "capability_grant",
-          oauth_ready: app.oauth,
-          full_scopes: true,
+          mode: authorizationMode,
+          authorization_required: true,
+          requested_scopes: [...app.scopes],
+          full_scopes: false,
         },
       })
       .select("id, provider, display_name, status, scopes, created_at")
