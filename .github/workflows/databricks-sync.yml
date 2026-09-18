@@ -1,0 +1,42 @@
+name: Databricks governed data sync
+
+on:
+  schedule:
+    - cron: "23 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: open-connect-databricks-sync
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check configuration
+        id: configuration
+        env:
+          DATABRICKS_SYNC_SECRET: ${{ secrets.DATABRICKS_SYNC_SECRET }}
+        run: |
+          if [ -n "$DATABRICKS_SYNC_SECRET" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "Databricks sync is inactive until DATABRICKS_SYNC_SECRET is configured."
+          fi
+      - name: Synchronize governed mirror
+        if: steps.configuration.outputs.configured == 'true'
+        env:
+          DATABRICKS_SYNC_SECRET: ${{ secrets.DATABRICKS_SYNC_SECRET }}
+        run: |
+          curl --fail-with-body --silent --show-error \
+            --retry 2 --retry-all-errors \
+            --max-time 300 \
+            -X POST \
+            -H "Authorization: Bearer $DATABRICKS_SYNC_SECRET" \
+            -H "Content-Type: application/json" \
+            https://open-connect.site/api/v1/databricks
