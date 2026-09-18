@@ -4,7 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 /** Catalog items linked to a project workspace. */
 export const listProjectResources = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { projectId: string }) => ({
+  .validator((input: { projectId: string }) => ({
     projectId: input?.projectId ?? "",
   }))
   .handler(async ({ data, context }) => {
@@ -22,7 +22,7 @@ export const listProjectResources = createServerFn({ method: "GET" })
 
 export const addResourceToProject = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { projectId: string; resourceId: string; notes?: string }) => ({
+  .validator((input: { projectId: string; resourceId: string; notes?: string }) => ({
     projectId: input.projectId,
     resourceId: input.resourceId,
     notes: (input?.notes ?? "").trim() || null,
@@ -48,7 +48,7 @@ export const addResourceToProject = createServerFn({ method: "POST" })
 
 export const removeResourceFromProject = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { projectId: string; resourceId: string }) => ({
+  .validator((input: { projectId: string; resourceId: string }) => ({
     projectId: input.projectId,
     resourceId: input.resourceId,
   }))
@@ -65,7 +65,7 @@ export const removeResourceFromProject = createServerFn({ method: "POST" })
 /** OAuth / app connections scoped to a project. */
 export const listProjectConnections = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { projectId: string }) => ({ projectId: input?.projectId ?? "" }))
+  .validator((input: { projectId: string }) => ({ projectId: input?.projectId ?? "" }))
   .handler(async ({ data, context }) => {
     if (!data.projectId) throw new Error("projectId required");
     const { data: rows, error } = await context.supabase
@@ -81,7 +81,7 @@ export const listProjectConnections = createServerFn({ method: "GET" })
 
 export const addConnectionToProject = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { projectId: string; connectionId: string }) => ({
+  .validator((input: { projectId: string; connectionId: string }) => ({
     projectId: input.projectId,
     connectionId: input.connectionId,
   }))
@@ -110,7 +110,7 @@ export const addConnectionToProject = createServerFn({ method: "POST" })
 
 export const removeConnectionFromProject = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { projectId: string; connectionId: string }) => ({
+  .validator((input: { projectId: string; connectionId: string }) => ({
     projectId: input.projectId,
     connectionId: input.connectionId,
   }))
@@ -127,7 +127,7 @@ export const removeConnectionFromProject = createServerFn({ method: "POST" })
 /** Published catalog for "add to project" pickers. */
 export const listCatalogForProject = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input?: { resourceType?: string }) => ({
+  .validator((input?: { resourceType?: string }) => ({
     resourceType: input?.resourceType ?? null,
   }))
   .handler(async ({ data, context }) => {

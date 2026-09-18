@@ -50,11 +50,7 @@ export async function kvGet(key: string): Promise<string | null> {
   }
 }
 
-export async function kvPut(
-  key: string,
-  value: string,
-  ttlSeconds?: number,
-): Promise<boolean> {
+export async function kvPut(key: string, value: string, ttlSeconds?: number): Promise<boolean> {
   const kv = await getKv();
   if (!kv) return false;
   try {

@@ -18,9 +18,15 @@ export const Route = createFileRoute("/_authenticated/toolkits")({
   head: () => ({
     meta: [
       { title: "Toolkits — Open-Connect" },
-      { name: "description", content: "Bundle skills, apps, models, MCP servers and tools into a Toolkit." },
+      {
+        name: "description",
+        content: "Bundle skills, apps, models, MCP servers and tools into a Toolkit.",
+      },
       { property: "og:title", content: "Toolkits — Open-Connect" },
-      { property: "og:description", content: "One Toolkit, one key, every capability your agent needs." },
+      {
+        property: "og:description",
+        content: "One Toolkit, one key, every capability your agent needs.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -52,7 +58,8 @@ function ToolkitsPage() {
       setSelected([]);
       void queryClient.invalidateQueries({ queryKey: ["toolkits"] });
     },
-    onError: (error) => toast.error(error instanceof Error ? error.message : "Could not create toolkit"),
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Could not create toolkit"),
   });
 
   const removeMutation = useMutation({
@@ -71,8 +78,8 @@ function ToolkitsPage() {
     <div className="mx-auto max-w-6xl px-4 py-14">
       <h1 className="text-3xl font-semibold">Toolkits</h1>
       <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
-        A Toolkit is a first-class bundle of capabilities — skills, apps, models, MCP servers, tools,
-        agents and prompts — that an agent can attach with a single Open-Connect key.
+        A Toolkit is a first-class bundle of capabilities — skills, apps, models, MCP servers,
+        tools, agents and prompts — that an agent can attach with a single Open-Connect key.
       </p>
 
       <div className="mt-10 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
@@ -80,7 +87,11 @@ function ToolkitsPage() {
           <CardHeader>
             <CardDescription>Step {step} of 3</CardDescription>
             <CardTitle className="text-base">
-              {step === 1 ? "Name your Toolkit" : step === 2 ? "Pick capabilities" : "Review and create"}
+              {step === 1
+                ? "Name your Toolkit"
+                : step === 2
+                  ? "Pick capabilities"
+                  : "Review and create"}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
@@ -136,12 +147,16 @@ function ToolkitsPage() {
                         <button
                           onClick={() =>
                             setSelected((current) =>
-                              active ? current.filter((id) => id !== item.id) : [...current, item.id],
+                              active
+                                ? current.filter((id) => id !== item.id)
+                                : [...current, item.id],
                             )
                           }
                           className={cn(
                             "flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left text-sm transition-colors",
-                            active ? "border-primary/60 bg-primary/10" : "border-border hover:border-primary/40",
+                            active
+                              ? "border-primary/60 bg-primary/10"
+                              : "border-border hover:border-primary/40",
                           )}
                         >
                           <span className="min-w-0">
@@ -180,8 +195,13 @@ function ToolkitsPage() {
                   <Button variant="outline" onClick={() => setStep(2)}>
                     Back
                   </Button>
-                  <Button disabled={createMutation.isPending} onClick={() => createMutation.mutate()}>
-                    {createMutation.isPending ? <Loader2 className="mr-1 size-4 animate-spin" /> : null}
+                  <Button
+                    disabled={createMutation.isPending}
+                    onClick={() => createMutation.mutate()}
+                  >
+                    {createMutation.isPending ? (
+                      <Loader2 className="mr-1 size-4 animate-spin" />
+                    ) : null}
                     Create Toolkit
                   </Button>
                 </div>

@@ -1,0 +1,476 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { Archive, BookOpen, Brain, Loader2, Pin, PinOff, Plus, Search, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
+import { listProjects } from "@/lib/orgs.functions";
+import {
+  archiveKnowledge,
+  createKnowledge,
+  createMemory,
+  deleteMemory,
+  listKnowledge,
+  listMemories,
+  setMemoryPinned,
+  type KnowledgeSourceType,
+  type MemoryType,
+} from "@/lib/memory.functions";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+
+export const Route = createFileRoute("/_authenticated/memory")({
+  head: () => ({
+    meta: [
+      { title: "Memory & Knowledge — Open-Connect" },
+      {
+        name: "description",
+        content: "Durable memory and searchable knowledge for Open-Connect workspaces and agents.",
+      },
+      { name: "robots", content: "noindex" },
+    ],
+  }),
+  component: MemoryKnowledgePage,
+});
+
+const MEMORY_TYPES: MemoryType[] = ["fact", "preference", "decision", "instruction", "summary"];
+const SOURCE_TYPES: KnowledgeSourceType[] = [
+  "note",
+  "document",
+  "url",
+  "repository",
+  "conversation",
+  "api",
+];
+
+function ProjectSelect({
+  value,
+  onChange,
+  projects,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  projects: Array<{ id: string; name: string }>;
+}) {
+  return (
+    <select
+      className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+    >
+      <option value="">Personal / all projects</option>
+      {projects.map((project) => (
+        <option key={project.id} value={project.id}>
+          {project.name}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+function MemoryKnowledgePage() {
+  const qc = useQueryClient();
+  const listProj = useServerFn(listProjects);
+  const getMemories = useServerFn(listMemories);
+  const addMemory = useServerFn(createMemory);
+  const pinMemory = useServerFn(setMemoryPinned);
+  const removeMemory = useServerFn(deleteMemory);
+  const getKnowledge = useServerFn(listKnowledge);
+  const addKnowledge = useServerFn(createKnowledge);
+  const removeKnowledge = useServerFn(archiveKnowledge);
+
+  const [projectId, setProjectId] = useState("");
+  const [query, setQuery] = useState("");
+  const [memoryTitle, setMemoryTitle] = useState("");
+  const [memoryContent, setMemoryContent] = useState("");
+  const [memoryType, setMemoryType] = useState<MemoryType>("fact");
+  const [importance, setImportance] = useState(3);
+  const [memoryTags, setMemoryTags] = useState("");
+  const [knowledgeTitle, setKnowledgeTitle] = useState("");
+  const [knowledgeContent, setKnowledgeContent] = useState("");
+  const [sourceType, setSourceType] = useState<KnowledgeSourceType>("note");
+  const [sourceUrl, setSourceUrl] = useState("");
+  const [knowledgeTags, setKnowledgeTags] = useState("");
+
+  const projects = useQuery({ queryKey: ["projects"], queryFn: () => listProj({}) });
+  const memories = useQuery({
+    queryKey: ["memories", projectId],
+    queryFn: () => getMemories({ data: { projectId: projectId || undefined } }),
+  });
+  const knowledge = useQuery({
+    queryKey: ["knowledge", projectId, query],
+    queryFn: () =>
+      getKnowledge({ data: { projectId: projectId || undefined, query: query || undefined } }),
+  });
+  const projectOptions = useMemo(
+    () => (projects.data ?? []).map((project) => ({ id: project.id, name: project.name })),
+    [projects.data],
+  );
+
+  const memoryMutation = useMutation({
+    mutationFn: () =>
+      addMemory({
+        data: {
+          title: memoryTitle,
+          content: memoryContent,
+          memoryType,
+          importance,
+          projectId: projectId || undefined,
+          tags: memoryTags,
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Memory saved");
+      setMemoryTitle("");
+      setMemoryContent("");
+      setMemoryTags("");
+      void qc.invalidateQueries({ queryKey: ["memories"] });
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Could not save memory"),
+  });
+  const pinMutation = useMutation({
+    mutationFn: (input: { id: string; pinned: boolean }) => pinMemory({ data: input }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["memories"] }),
+  });
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => removeMemory({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Memory deleted");
+      void qc.invalidateQueries({ queryKey: ["memories"] });
+    },
+  });
+  const knowledgeMutation = useMutation({
+    mutationFn: () =>
+      addKnowledge({
+        data: {
+          title: knowledgeTitle,
+          content: knowledgeContent,
+          sourceType,
+          sourceUrl: sourceUrl || undefined,
+          projectId: projectId || undefined,
+          tags: knowledgeTags,
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Knowledge added");
+      setKnowledgeTitle("");
+      setKnowledgeContent("");
+      setSourceUrl("");
+      setKnowledgeTags("");
+      void qc.invalidateQueries({ queryKey: ["knowledge"] });
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Could not add knowledge"),
+  });
+  const archiveMutation = useMutation({
+    mutationFn: (id: string) => removeKnowledge({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Knowledge archived");
+      void qc.invalidateQueries({ queryKey: ["knowledge"] });
+    },
+  });
+
+  return (
+    <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <Badge variant="outline" className="mb-2 border-primary/40 text-primary">
+            <Brain className="mr-1 size-3" /> AI context
+          </Badge>
+          <h1 className="font-display text-xl font-semibold tracking-tight sm:text-2xl">
+            Memory & Knowledge
+          </h1>
+          <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+            Store durable preferences, decisions, instructions, summaries, documents, URLs,
+            repository notes, and reusable project context. Records are private to your
+            authenticated identity.
+          </p>
+        </div>
+        <div className="w-full sm:w-72">
+          <Label className="mb-2 block">Workspace scope</Label>
+          <ProjectSelect value={projectId} onChange={setProjectId} projects={projectOptions} />
+        </div>
+      </div>
+
+      <Tabs defaultValue="memory" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="memory">
+            <Brain className="mr-2 size-4" />
+            Memory
+          </TabsTrigger>
+          <TabsTrigger value="knowledge">
+            <BookOpen className="mr-2 size-4" />
+            Knowledge
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="memory" className="space-y-4">
+          <Card className="shadow-panel">
+            <CardHeader>
+              <CardTitle className="text-base">Add durable memory</CardTitle>
+              <CardDescription>
+                Agent-ready context with type, importance, tags, and project scope.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-3 lg:grid-cols-6">
+              <div className="space-y-2 lg:col-span-2">
+                <Label>Title</Label>
+                <Input
+                  value={memoryTitle}
+                  onChange={(e) => setMemoryTitle(e.target.value)}
+                  placeholder="Preferred deployment workflow"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Type</Label>
+                <select
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={memoryType}
+                  onChange={(e) => setMemoryType(e.target.value as MemoryType)}
+                >
+                  {MEMORY_TYPES.map((type) => (
+                    <option key={type}>{type}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label>Importance</Label>
+                <select
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={importance}
+                  onChange={(e) => setImportance(Number(e.target.value))}
+                >
+                  {[1, 2, 3, 4, 5].map((level) => (
+                    <option key={level} value={level}>
+                      {level}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2 lg:col-span-2">
+                <Label>Tags</Label>
+                <Input
+                  value={memoryTags}
+                  onChange={(e) => setMemoryTags(e.target.value)}
+                  placeholder="deployment, zeabur, production"
+                />
+              </div>
+              <div className="space-y-2 lg:col-span-6">
+                <Label>Memory</Label>
+                <Textarea
+                  rows={4}
+                  value={memoryContent}
+                  onChange={(e) => setMemoryContent(e.target.value)}
+                  placeholder="What should agents remember and reuse?"
+                />
+              </div>
+              <div className="lg:col-span-6">
+                <Button
+                  disabled={
+                    !memoryTitle.trim() || !memoryContent.trim() || memoryMutation.isPending
+                  }
+                  onClick={() => memoryMutation.mutate()}
+                >
+                  {memoryMutation.isPending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Plus className="size-4" />
+                  )}
+                  Save memory
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+          <div className="grid gap-3 lg:grid-cols-2">
+            {memories.isLoading ? (
+              <Loader2 className="size-5 animate-spin" />
+            ) : (memories.data ?? []).length === 0 ? (
+              <p className="text-sm text-muted-foreground">No memories in this scope yet.</p>
+            ) : (
+              memories.data?.map((item) => (
+                <Card key={item.id} className="p-4 shadow-panel">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium">{item.title}</p>
+                        <Badge variant="secondary">{item.memory_type}</Badge>
+                        <Badge variant="outline">importance {item.importance}</Badge>
+                      </div>
+                      <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">
+                        {item.content}
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-1">
+                        {(item.tags ?? []).map((tag: string) => (
+                          <Badge key={tag} variant="outline">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 gap-1">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        aria-label={item.pinned ? "Unpin memory" : "Pin memory"}
+                        onClick={() => pinMutation.mutate({ id: item.id, pinned: !item.pinned })}
+                      >
+                        {item.pinned ? <PinOff className="size-4" /> : <Pin className="size-4" />}
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        aria-label="Delete memory"
+                        onClick={() => deleteMutation.mutate(item.id)}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="knowledge" className="space-y-4">
+          <Card className="shadow-panel">
+            <CardHeader>
+              <CardTitle className="text-base">Add knowledge</CardTitle>
+              <CardDescription>
+                Create searchable notes now; document ingestion and embeddings can attach to the
+                same record lifecycle.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-3 lg:grid-cols-6">
+              <div className="space-y-2 lg:col-span-2">
+                <Label>Title</Label>
+                <Input
+                  value={knowledgeTitle}
+                  onChange={(e) => setKnowledgeTitle(e.target.value)}
+                  placeholder="Open-Connect deployment runbook"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Source</Label>
+                <select
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={sourceType}
+                  onChange={(e) => setSourceType(e.target.value as KnowledgeSourceType)}
+                >
+                  {SOURCE_TYPES.map((type) => (
+                    <option key={type}>{type}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2 lg:col-span-2">
+                <Label>Source URL</Label>
+                <Input
+                  value={sourceUrl}
+                  onChange={(e) => setSourceUrl(e.target.value)}
+                  placeholder="https://…"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Tags</Label>
+                <Input
+                  value={knowledgeTags}
+                  onChange={(e) => setKnowledgeTags(e.target.value)}
+                  placeholder="runbook, infra"
+                />
+              </div>
+              <div className="space-y-2 lg:col-span-6">
+                <Label>Content</Label>
+                <Textarea
+                  rows={6}
+                  value={knowledgeContent}
+                  onChange={(e) => setKnowledgeContent(e.target.value)}
+                  placeholder="Paste or write reusable knowledge…"
+                />
+              </div>
+              <div className="lg:col-span-6">
+                <Button
+                  disabled={
+                    !knowledgeTitle.trim() ||
+                    !knowledgeContent.trim() ||
+                    knowledgeMutation.isPending
+                  }
+                  onClick={() => knowledgeMutation.mutate()}
+                >
+                  {knowledgeMutation.isPending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Plus className="size-4" />
+                  )}
+                  Add knowledge
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+          <div className="relative max-w-xl">
+            <Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" />
+            <Input
+              className="pl-9"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search title and content…"
+            />
+          </div>
+          <div className="grid gap-3 lg:grid-cols-2">
+            {knowledge.isLoading ? (
+              <Loader2 className="size-5 animate-spin" />
+            ) : (knowledge.data ?? []).length === 0 ? (
+              <p className="text-sm text-muted-foreground">No knowledge found in this scope.</p>
+            ) : (
+              knowledge.data?.map((item) => (
+                <Card key={item.id} className="p-4 shadow-panel">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium">{item.title}</p>
+                        <Badge variant="secondary">{item.source_type}</Badge>
+                        <Badge variant="outline">{item.status}</Badge>
+                      </div>
+                      <p className="mt-2 line-clamp-6 whitespace-pre-wrap text-sm text-muted-foreground">
+                        {item.content}
+                      </p>
+                      {item.source_url ? (
+                        <a
+                          className="mt-2 block truncate text-xs text-primary hover:underline"
+                          href={item.source_url}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          {item.source_url}
+                        </a>
+                      ) : null}
+                      <div className="mt-3 flex flex-wrap gap-1">
+                        {(item.tags ?? []).map((tag: string) => (
+                          <Badge key={tag} variant="outline">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label="Archive knowledge"
+                      onClick={() => archiveMutation.mutate(item.id)}
+                    >
+                      <Archive className="size-4" />
+                    </Button>
+                  </div>
+                </Card>
+              ))
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}

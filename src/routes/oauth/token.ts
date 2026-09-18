@@ -102,7 +102,8 @@ export const Route = createFileRoute("/oauth/token")({
           return json(
             {
               error: "invalid_request",
-              error_description: "redirect_uri is required and must match the authorization request",
+              error_description:
+                "redirect_uri is required and must match the authorization request",
             },
             400,
           );
@@ -112,8 +113,7 @@ export const Route = createFileRoute("/oauth/token")({
           return json(
             {
               error: "invalid_request",
-              error_description:
-                "code_verifier must be 43–128 unreserved characters (RFC 7636)",
+              error_description: "code_verifier must be 43–128 unreserved characters (RFC 7636)",
             },
             400,
           );
@@ -138,10 +138,7 @@ export const Route = createFileRoute("/oauth/token")({
         }
 
         if (redirectUri !== payload.redirect_uri) {
-          return json(
-            { error: "invalid_grant", error_description: "redirect_uri mismatch" },
-            400,
-          );
+          return json({ error: "invalid_grant", error_description: "redirect_uri mismatch" }, 400);
         }
 
         if (!verifyPkce(verifier, payload.code_challenge, payload.code_challenge_method)) {

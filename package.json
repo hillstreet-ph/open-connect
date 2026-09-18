@@ -12,7 +12,18 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "test:control": "node --experimental-strip-types --test src/lib/autonomous-control.test.ts"
+    "test:control": "node --experimental-strip-types --test src/lib/autonomous-control.test.ts src/lib/autonomous-mcp-contract.test.ts",
+    "test:navigation": "node --experimental-strip-types --test src/lib/navigation.test.ts",
+    "test:credentials": "node --test scripts/credential-broker.test.mjs scripts/capability-router.test.mjs scripts/credential-storage.test.mjs",
+    "test:campaign": "node --experimental-strip-types --test src/lib/campaign-studio.test.ts",
+    "test:registry": "node --experimental-strip-types --test src/lib/registry-normalize.test.ts",
+    "test": "npm run test:control && npm run test:navigation && npm run test:credentials && npm run test:campaign && npm run test:registry",
+    "marketplace:collect": "node --experimental-strip-types scripts/collect-marketplace-resources.mjs",
+    "credentials:check:agent": "node scripts/credential-broker.mjs check openai-agent",
+    "credentials:check:deploy": "node scripts/credential-broker.mjs check production-deploy",
+    "credentials:exec:auto": "node scripts/credential-broker.mjs exec-auto --",
+    "capabilities:recommend": "node scripts/capability-router.mjs",
+    "agent:start": "node scripts/credential-broker.mjs exec openai-agent -- bash scripts/openai-agents-session.sh"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

@@ -55,11 +55,7 @@ export function AddToProjectButton({ resourceId }: { resourceId: string }) {
           </option>
         ))}
       </select>
-      <Button
-        size="sm"
-        disabled={!projectId || mut.isPending}
-        onClick={() => mut.mutate()}
-      >
+      <Button size="sm" disabled={!projectId || mut.isPending} onClick={() => mut.mutate()}>
         {mut.isPending ? <Loader2 className="size-3.5 animate-spin" /> : "Confirm"}
       </Button>
       <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>

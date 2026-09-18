@@ -94,13 +94,19 @@ export const KEY_SCOPE_DOCS: { scope: string; meaning: string }[] = [
   { scope: "resources:read", meaning: "Read marketplace catalog via MCP/API" },
   { scope: "resources:write", meaning: "Upload / manage own packages" },
   { scope: "connections:read", meaning: "List app capability grants" },
-  { scope: "connections:invoke", meaning: "Invoke Pipedream / Composio / connected apps server-side" },
+  {
+    scope: "connections:invoke",
+    meaning: "Invoke Pipedream / Composio / connected apps server-side",
+  },
   { scope: "models:read", meaning: "List models and probe /v1" },
   { scope: "models:invoke", meaning: "POST /v1/chat/completions (LiteLLM / OpenRouter)" },
   { scope: "tools:invoke", meaning: "Run tools, browser skills, MultiOn orchestration" },
   { scope: "secrets:read", meaning: "Resolve vault references for agents (server-side only)" },
   { scope: "agents:invoke", meaning: "Run agent sessions and toolkits" },
-  { scope: "control:write", meaning: "Run owner/admin autonomous control operations with policy gates" },
+  {
+    scope: "control:write",
+    meaning: "Run owner/admin autonomous control operations with policy gates",
+  },
 ];
 
 export function highestRole(roles: AppRole[]): AppRole {
@@ -121,7 +127,12 @@ export function roleLabel(role: AppRole): string {
 }
 
 /** UI mirrors existing server revoke rules; the server remains authoritative. */
-export function canRevokeRole(roles: AppRole[], actorId: string, targetId: string, targetRole: AppRole): boolean {
+export function canRevokeRole(
+  roles: AppRole[],
+  actorId: string,
+  targetId: string,
+  targetRole: AppRole,
+): boolean {
   if (!hasRole(roles, "admin")) return false;
   if (targetRole === "owner" && !hasRole(roles, "owner")) return false;
   if (actorId === targetId && targetRole === "admin" && !hasRole(roles, "owner")) return false;

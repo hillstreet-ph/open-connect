@@ -57,7 +57,6 @@ function AuthenticatedShell() {
                   aria-label="Search workspace"
                 />
               </div>
-
             </div>
           </header>
           <div className="flex-1 overflow-auto">
@@ -73,6 +72,7 @@ function pageTitle(pathname: string): string {
   const map: Record<string, string> = {
     "/dashboard": "Dashboard",
     "/studio": "Studio",
+    "/campaign-studio": "Campaign concept studio",
     "/orgs": "Organizations",
     "/projects": "Projects",
     "/tasks": "Tasks",

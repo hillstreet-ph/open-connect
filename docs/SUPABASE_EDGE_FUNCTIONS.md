@@ -1,7 +1,7 @@
 # Supabase Edge Functions — Open Connect
 
-**Project:** `gnqpwewbgldonarggzax` (open-connect)  
-**Base URL:** `https://gnqpwewbgldonarggzax.supabase.co/functions/v1/<name>`
+**Project:** `huadtiuuoiriqrjpjxhr` (open-connect)
+**Base URL:** `https://huadtiuuoiriqrjpjxhr.supabase.co/functions/v1/<name>`
 
 > Primary product edge remains **Cloudflare Pages** (`open-connect.site`).  
 > Supabase Edge Functions are **backend helpers** (vault, webhooks, probes), not the public SPA.
@@ -55,7 +55,7 @@ verify_jwt = false
 
 ```bash
 npx supabase login
-npx supabase link --project-ref gnqpwewbgldonarggzax
+npx supabase link --project-ref huadtiuuoiriqrjpjxhr
 npx supabase functions deploy health --no-verify-jwt
 npx supabase functions deploy get_secret
 npx supabase functions deploy add_secret
@@ -68,22 +68,22 @@ Source of truth for code should live under `supabase/functions/<name>/index.ts`.
 
 ```bash
 # Health (public)
-curl -sS "https://gnqpwewbgldonarggzax.supabase.co/functions/v1/health"
+curl -sS "https://huadtiuuoiriqrjpjxhr.supabase.co/functions/v1/health"
 
 # Get secret (user access token)
-curl -sS "https://gnqpwewbgldonarggzax.supabase.co/functions/v1/get_secret?service_name=openrouter" \
+curl -sS "https://huadtiuuoiriqrjpjxhr.supabase.co/functions/v1/get_secret?service_name=openrouter" \
   -H "Authorization: Bearer $USER_JWT" \
   -H "apikey: $SUPABASE_ANON_KEY"
 
 # Add secret
-curl -sS -X POST "https://gnqpwewbgldonarggzax.supabase.co/functions/v1/add_secret" \
+curl -sS -X POST "https://huadtiuuoiriqrjpjxhr.supabase.co/functions/v1/add_secret" \
   -H "Authorization: Bearer $USER_JWT" \
   -H "apikey: $SUPABASE_ANON_KEY" \
   -H "Content-Type: application/json" \
   -d '{"service_name":"demo","secret_value":"…","metadata":{}}'
 
 # Connection webhook
-curl -sS -X POST "https://gnqpwewbgldonarggzax.supabase.co/functions/v1/connection-webhook" \
+curl -sS -X POST "https://huadtiuuoiriqrjpjxhr.supabase.co/functions/v1/connection-webhook" \
   -H "Content-Type: application/json" \
   -H "x-oc-webhook-secret: $OC_WEBHOOK_SECRET" \
   -d '{"provider":"github","event":"connected","payload":{}}'

@@ -1,6 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   Bot,
+  Brain,
   Boxes,
   CalendarClock,
   FolderKanban,
@@ -29,7 +30,12 @@ import { useRoles } from "@/hooks/use-roles";
 import { type Capability } from "@/lib/rbac";
 import { UserMenu } from "@/components/user-menu";
 
-type Item = { capability?: Capability; to: string; label: string; icon: React.ComponentType<{ className?: string }> };
+type Item = {
+  capability?: Capability;
+  to: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+};
 
 /**
  * Primary IA (locked):
@@ -54,12 +60,11 @@ const WORK: Item[] = [
 const BUILD: Item[] = [
   { to: "/studio", label: "Studio", icon: Sparkles },
   { to: "/agents", label: "Agents", icon: Bot },
+  { to: "/memory", label: "Memory & Knowledge", icon: Brain },
   { capability: "manage_toolkits", to: "/toolkits", label: "Toolkits", icon: Wrench },
 ];
 
-const DISCOVER: Item[] = [
-  { to: "/resources", label: "Marketplace", icon: Boxes },
-];
+const DISCOVER: Item[] = [{ to: "/resources", label: "Marketplace", icon: Boxes }];
 
 const CONNECT: Item[] = [
   { to: "/connections", label: "Connections", icon: Plug },
@@ -101,16 +106,28 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon" className="border-sidebar-border">
       <SidebarHeader className="gap-1 border-b border-sidebar-border px-3 py-3">
-        <Link to="/dashboard" aria-label="Open Connect dashboard" className="flex items-center gap-2 rounded-md p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary"><Plug className="size-4" /></span>
-          <span className="truncate text-sm font-semibold group-data-[collapsible=icon]:hidden">Open Connect</span>
+        <Link
+          to="/dashboard"
+          aria-label="Open Connect dashboard"
+          className="flex items-center gap-2 rounded-md p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+            <Plug className="size-4" />
+          </span>
+          <span className="truncate text-sm font-semibold group-data-[collapsible=icon]:hidden">
+            Open Connect
+          </span>
         </Link>
       </SidebarHeader>
 
       <SidebarContent className="px-1 py-2">
         <NavGroup label="" items={PRIMARY} pathname={pathname} />
         <NavGroup label="Work" items={WORK} pathname={pathname} />
-        <NavGroup label="Build" items={BUILD.filter((item) => !item.capability || can(item.capability))} pathname={pathname} />
+        <NavGroup
+          label="Build"
+          items={BUILD.filter((item) => !item.capability || can(item.capability))}
+          pathname={pathname}
+        />
         <NavGroup label="Discover" items={DISCOVER} pathname={pathname} />
         <NavGroup label="Connect" items={CONNECT} pathname={pathname} />
       </SidebarContent>

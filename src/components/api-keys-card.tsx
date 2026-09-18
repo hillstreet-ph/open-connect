@@ -28,7 +28,8 @@ export function ApiKeysCard() {
       void queryClient.invalidateQueries({ queryKey: ["api-keys"] });
       toast.success("Key created — copy it now, it won't be shown again.");
     },
-    onError: (error) => toast.error(error instanceof Error ? error.message : "Could not create key"),
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Could not create key"),
   });
 
   const revokeMutation = useMutation({
@@ -41,88 +42,102 @@ export function ApiKeysCard() {
 
   return (
     <div className="space-y-6">
-    <Card className="shadow-panel">
-      <CardHeader>
-        <span className="flex size-9 items-center justify-center rounded-lg bg-primary/15 text-primary">
-          <KeyRound className="size-4" />
-        </span>
-        <CardTitle className="mt-3 text-base">API Keys</CardTitle>
-        <CardDescription>
-          Scoped <code className="font-mono">oc_live_</code> keys authenticate your agents against{" "}
-          <code className="font-mono">/mcp</code> and <code className="font-mono">/v1</code>.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <form
-          className="flex gap-2"
-          onSubmit={(event) => {
-            event.preventDefault();
-            createMutation.mutate(name);
-          }}
-        >
-          <Input
-            aria-label="API key name"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="Key name (e.g. local agent)"
-          />
-          <Button type="submit" disabled={createMutation.isPending}>
-            {createMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : null}
-            Create
-          </Button>
-        </form>
+      <Card className="shadow-panel">
+        <CardHeader>
+          <span className="flex size-9 items-center justify-center rounded-lg bg-primary/15 text-primary">
+            <KeyRound className="size-4" />
+          </span>
+          <CardTitle className="mt-3 text-base">API Keys</CardTitle>
+          <CardDescription>
+            Scoped <code className="font-mono">oc_live_</code> keys authenticate your agents against{" "}
+            <code className="font-mono">/mcp</code> and <code className="font-mono">/v1</code>.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <form
+            className="flex gap-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              createMutation.mutate(name);
+            }}
+          >
+            <Input
+              aria-label="API key name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="Key name (e.g. local agent)"
+            />
+            <Button type="submit" disabled={createMutation.isPending}>
+              {createMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : null}
+              Create
+            </Button>
+          </form>
 
-        {freshKey ? (
-          <div className="rounded-lg border border-primary/40 bg-primary/5 p-3">
-            <p className="text-xs text-muted-foreground">Copy this key now — it is only shown once.</p>
-            <div className="mt-2 flex items-center gap-2">
-              <code className="flex-1 break-all font-mono text-xs text-primary">{freshKey}</code>
-              <Button
-                size="sm"
-                variant="outline"
-                aria-label="Copy API key"
-                onClick={() => {
-                  void navigator.clipboard.writeText(freshKey).then(() => toast.success("Copied"), () => toast.error("Could not copy key"));
-                }}
-              >
-                <Copy className="size-3.5" />
-              </Button>
+          {freshKey ? (
+            <div className="rounded-lg border border-primary/40 bg-primary/5 p-3">
+              <p className="text-xs text-muted-foreground">
+                Copy this key now — it is only shown once.
+              </p>
+              <div className="mt-2 flex items-center gap-2">
+                <code className="flex-1 break-all font-mono text-xs text-primary">{freshKey}</code>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  aria-label="Copy API key"
+                  onClick={() => {
+                    void navigator.clipboard.writeText(freshKey).then(
+                      () => toast.success("Copied"),
+                      () => toast.error("Could not copy key"),
+                    );
+                  }}
+                >
+                  <Copy className="size-3.5" />
+                </Button>
+              </div>
             </div>
-          </div>
-        ) : null}
+          ) : null}
 
-        {keys.isLoading ? <p role="status">Loading keys…</p> : keys.isError ? <p role="alert">Could not load keys. Refresh and try again.</p> : null}
-        <ul className="space-y-2 text-sm">
-          {keys.data?.length ? (
-            keys.data.map((key) => (
-              <li key={key.id} className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2">
-                <span className="min-w-0">
-                  <span className="block truncate font-medium">{key.name}</span>
-                  <span className="font-mono text-xs text-muted-foreground">{key.key_prefix}…</span>
-                </span>
-                {key.revoked_at ? (
-                  <Badge variant="outline" className="text-muted-foreground">
-                    Revoked
-                  </Badge>
-                ) : (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => revokeMutation.mutate(key.id)}
-                    disabled={revokeMutation.isPending}
-                  >
-                    Revoke
-                  </Button>
-                )}
-              </li>
-            ))
-          ) : (
-            !keys.isLoading && !keys.isError ? <li className="text-muted-foreground">No keys yet.</li> : null
-          )}
-        </ul>
-      </CardContent>
-    </Card>
-    <McpConnectionCard key={freshKey ? "fresh" : "existing"} freshKey={freshKey} />
+          {keys.isLoading ? (
+            <p role="status">Loading keys…</p>
+          ) : keys.isError ? (
+            <p role="alert">Could not load keys. Refresh and try again.</p>
+          ) : null}
+          <ul className="space-y-2 text-sm">
+            {keys.data?.length ? (
+              keys.data.map((key) => (
+                <li
+                  key={key.id}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium">{key.name}</span>
+                    <span className="font-mono text-xs text-muted-foreground">
+                      {key.key_prefix}…
+                    </span>
+                  </span>
+                  {key.revoked_at ? (
+                    <Badge variant="outline" className="text-muted-foreground">
+                      Revoked
+                    </Badge>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => revokeMutation.mutate(key.id)}
+                      disabled={revokeMutation.isPending}
+                    >
+                      Revoke
+                    </Button>
+                  )}
+                </li>
+              ))
+            ) : !keys.isLoading && !keys.isError ? (
+              <li className="text-muted-foreground">No keys yet.</li>
+            ) : null}
+          </ul>
+        </CardContent>
+      </Card>
+      <McpConnectionCard key={freshKey ? "fresh" : "existing"} freshKey={freshKey} />
     </div>
   );
 }

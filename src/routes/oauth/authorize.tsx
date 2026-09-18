@@ -5,14 +5,18 @@ import { hashKey, KEY_PREFIX } from "@/lib/gateway.server";
 export const Route = createFileRoute("/oauth/authorize")({
   ssr: true,
   validateSearch: (search: Record<string, unknown>) => ({
-    response_type: typeof search["response_type"] === "string" ? search["response_type"] : undefined,
+    response_type:
+      typeof search["response_type"] === "string" ? search["response_type"] : undefined,
     client_id: typeof search["client_id"] === "string" ? search["client_id"] : undefined,
     redirect_uri: typeof search["redirect_uri"] === "string" ? search["redirect_uri"] : undefined,
     state: typeof search["state"] === "string" ? search["state"] : undefined,
     scope: typeof search["scope"] === "string" ? search["scope"] : undefined,
-    code_challenge: typeof search["code_challenge"] === "string" ? search["code_challenge"] : undefined,
+    code_challenge:
+      typeof search["code_challenge"] === "string" ? search["code_challenge"] : undefined,
     code_challenge_method:
-      typeof search["code_challenge_method"] === "string" ? search["code_challenge_method"] : undefined,
+      typeof search["code_challenge_method"] === "string"
+        ? search["code_challenge_method"]
+        : undefined,
     error: typeof search["error"] === "string" ? search["error"] : undefined,
     error_description:
       typeof search["error_description"] === "string" ? search["error_description"] : undefined,
@@ -120,22 +124,23 @@ function AuthorizePage() {
     <div className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center px-4 py-12">
       <h1 className="text-2xl font-semibold">Authorize Open-Connect</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Paste an <code className="text-primary">oc_live_…</code> API key from your dashboard. Clients
-        must use PKCE <code className="font-mono">S256</code>.
+        Paste an <code className="text-primary">oc_live_…</code> API key from your dashboard.
+        Clients must use PKCE <code className="font-mono">S256</code>.
       </p>
 
       {error ? (
         <p className="mt-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {error === "invalid_api_key"
             ? "That API key is invalid or revoked."
-            : errorDescription || "Missing or invalid OAuth / PKCE parameters. Restart from your AI client."}
+            : errorDescription ||
+              "Missing or invalid OAuth / PKCE parameters. Restart from your AI client."}
         </p>
       ) : null}
 
       {!pkcePreview.ok && !error ? (
         <p className="mt-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {pkcePreview.error_description}. Open this page from ChatGPT, Claude, or another OAuth client
-          that sends <code className="font-mono">code_challenge</code> with method S256.
+          {pkcePreview.error_description}. Open this page from ChatGPT, Claude, or another OAuth
+          client that sends <code className="font-mono">code_challenge</code> with method S256.
         </p>
       ) : null}
 

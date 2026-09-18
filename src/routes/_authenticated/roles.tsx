@@ -1,11 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ROLE_SCOPE_MATRIX, KEY_SCOPE_DOCS, roleLabel, type AppRole } from "@/lib/rbac";
-import {
-  ORG_ROLE_LABEL,
-  PROJECT_ROLE_LABEL,
-  type OrgRole,
-  type ProjectRole,
-} from "@/lib/identity";
+import { ORG_ROLE_LABEL, PROJECT_ROLE_LABEL, type OrgRole, type ProjectRole } from "@/lib/identity";
 import { useRoles } from "@/hooks/use-roles";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,19 +49,43 @@ const MATRIX: { capability: string; levels: Record<AppRole, "full" | "scoped" | 
   },
   {
     capability: "Publish resources",
-    levels: { user: "denied", developer: "denied", publisher: "full", admin: "full", owner: "full" },
+    levels: {
+      user: "denied",
+      developer: "denied",
+      publisher: "full",
+      admin: "full",
+      owner: "full",
+    },
   },
   {
     capability: "Verify resources",
-    levels: { user: "denied", developer: "denied", publisher: "denied", admin: "full", owner: "full" },
+    levels: {
+      user: "denied",
+      developer: "denied",
+      publisher: "denied",
+      admin: "full",
+      owner: "full",
+    },
   },
   {
     capability: "Manage roles",
-    levels: { user: "denied", developer: "denied", publisher: "denied", admin: "full", owner: "full" },
+    levels: {
+      user: "denied",
+      developer: "denied",
+      publisher: "denied",
+      admin: "full",
+      owner: "full",
+    },
   },
   {
     capability: "Admin panel",
-    levels: { user: "denied", developer: "denied", publisher: "denied", admin: "full", owner: "full" },
+    levels: {
+      user: "denied",
+      developer: "denied",
+      publisher: "denied",
+      admin: "full",
+      owner: "full",
+    },
   },
 ];
 
@@ -85,7 +104,10 @@ function Cell({ level }: { level: "full" | "scoped" | "denied" }) {
     );
   }
   return (
-    <span className="inline-block size-2.5 rounded-full border border-muted-foreground/40" title="denied" />
+    <span
+      className="inline-block size-2.5 rounded-full border border-muted-foreground/40"
+      title="denied"
+    />
   );
 }
 
@@ -119,7 +141,8 @@ function RolesAccessPage() {
               <div key={r} className="rounded-lg border border-border/60 px-3 py-2">
                 <span className="font-medium text-foreground">{ORG_ROLE_LABEL[r]}</span>
                 <p className="mt-0.5">
-                  {r === "owner" && "Manage organization ownership and appoint organization admins."}
+                  {r === "owner" &&
+                    "Manage organization ownership and appoint organization admins."}
                   {r === "admin" &&
                     "Manage members and permitted settings within the organization."}
                   {r === "member" &&
@@ -159,12 +182,14 @@ function RolesAccessPage() {
       <Card className="shadow-panel border-primary/20">
         <CardHeader className="p-4 pb-2">
           <CardTitle className="text-sm">Settings & administration</CardTitle>
-          <CardDescription>Platform, organization, and project permissions have separate scopes.</CardDescription>
+          <CardDescription>
+            Platform, organization, and project permissions have separate scopes.
+          </CardDescription>
         </CardHeader>
         <CardContent className="px-4 pb-4 text-sm text-muted-foreground">
-          Open your user avatar menu for personal settings, organizations,
-          and credentials. Admins and owners also have System administration for members
-          and permissions. Owners retain their additional permissions within the same pages.
+          Open your user avatar menu for personal settings, organizations, and credentials. Admins
+          and owners also have System administration for members and permissions. Owners retain
+          their additional permissions within the same pages.
         </CardContent>
       </Card>
 
@@ -184,7 +209,8 @@ function RolesAccessPage() {
         <CardHeader className="border-b border-border/60 p-4">
           <CardTitle className="text-sm">Platform capabilities</CardTitle>
           <CardDescription>
-            Clients use the Member role. Platform roles do not describe membership in a specific organization or project.
+            Clients use the Member role. Platform roles do not describe membership in a specific
+            organization or project.
           </CardDescription>
         </CardHeader>
         <div className="overflow-x-auto">
@@ -221,8 +247,9 @@ function RolesAccessPage() {
             <CardTitle className="text-sm">Machine principals</CardTitle>
           </CardHeader>
           <CardContent className="px-4 pb-4 text-xs leading-relaxed text-muted-foreground">
-            AI Client · AI Agent · Service Account · API Client · MCP Client — never human org roles.
-            Authenticate with <code className="text-primary">oc_live_</code> keys under scopes.
+            AI Client · AI Agent · Service Account · API Client · MCP Client — never human org
+            roles. Authenticate with <code className="text-primary">oc_live_</code> keys under
+            scopes.
           </CardContent>
         </Card>
         <Card className="shadow-panel">
@@ -242,7 +269,8 @@ function RolesAccessPage() {
             <CardTitle className="text-sm">Secrets rule</CardTitle>
           </CardHeader>
           <CardContent className="px-4 pb-4 text-xs leading-relaxed text-muted-foreground">
-            Vault → credential broker → capability. Clients never receive provider master credentials.
+            Vault → credential broker → capability. Clients never receive provider master
+            credentials.
           </CardContent>
         </Card>
       </div>

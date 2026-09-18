@@ -103,18 +103,16 @@
   --sidebar-border: oklch(0.28 0.025 250);
   --sidebar-ring: oklch(0.79 0.135 190);
 
-  --gradient-hero: radial-gradient(
-      120% 100% at 50% -20%,
-      oklch(0.36 0.09 195 / 0.55) 0%,
-      transparent 60%
-    ),
+  --gradient-hero:
+    radial-gradient(120% 100% at 50% -20%, oklch(0.36 0.09 195 / 0.55) 0%, transparent 60%),
     linear-gradient(180deg, oklch(0.18 0.024 250) 0%, oklch(0.16 0.021 250) 100%);
   --gradient-pillar: linear-gradient(
     145deg,
     oklch(0.79 0.135 190 / 0.14) 0%,
     oklch(0.82 0.15 78 / 0.06) 100%
   );
-  --shadow-glow: 0 0 0 1px oklch(0.79 0.135 190 / 0.25), 0 18px 60px -20px oklch(0.79 0.135 190 / 0.35);
+  --shadow-glow:
+    0 0 0 1px oklch(0.79 0.135 190 / 0.25), 0 18px 60px -20px oklch(0.79 0.135 190 / 0.35);
   --shadow-panel: 0 24px 60px -32px oklch(0.1 0.02 250 / 0.9);
 }
 
@@ -175,4 +173,111 @@
 
 @utility pb-safe {
   padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+
+@layer components {
+  .campaign-canvas {
+    background:
+      radial-gradient(circle at 92% 4%, oklch(0.78 0.13 82 / 0.08), transparent 26rem),
+      linear-gradient(oklch(0.72 0.08 195 / 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, oklch(0.72 0.08 195 / 0.035) 1px, transparent 1px),
+      oklch(0.125 0.025 250);
+    background-size:
+      auto,
+      34px 34px,
+      34px 34px,
+      auto;
+  }
+
+  .campaign-panel,
+  .campaign-empty {
+    border: 1px solid oklch(0.9 0.02 220 / 0.12);
+    border-radius: 0.35rem;
+    background: oklch(0.18 0.026 250 / 0.92);
+    box-shadow: 0 30px 80px -48px oklch(0.04 0.03 250);
+  }
+
+  .campaign-empty {
+    background:
+      linear-gradient(135deg, oklch(0.74 0.1 194 / 0.04), transparent 42%),
+      oklch(0.15 0.024 250 / 0.88);
+  }
+
+  .campaign-kicker {
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    color: oklch(0.76 0.11 192);
+  }
+
+  .campaign-chip,
+  .campaign-chip-active {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    border: 1px solid oklch(0.9 0.02 220 / 0.12);
+    border-radius: 999px;
+    padding: 0.4rem 0.7rem;
+    font-size: 0.72rem;
+    color: oklch(0.7 0.02 240);
+    transition: 160ms ease;
+  }
+
+  .campaign-chip:hover {
+    border-color: oklch(0.76 0.11 192 / 0.6);
+    color: white;
+  }
+  .campaign-chip-active {
+    border-color: oklch(0.76 0.11 192 / 0.7);
+    background: oklch(0.76 0.11 192 / 0.12);
+    color: oklch(0.9 0.07 192);
+  }
+
+  .campaign-orbit {
+    display: grid;
+    place-items: center;
+    width: 5rem;
+    height: 5rem;
+    border: 1px solid oklch(0.78 0.13 82 / 0.35);
+    border-radius: 50%;
+    box-shadow:
+      0 0 0 1rem oklch(0.78 0.13 82 / 0.035),
+      0 0 0 2rem oklch(0.76 0.11 192 / 0.02);
+  }
+
+  .campaign-shimmer {
+    border-radius: 0.3rem;
+    background: linear-gradient(
+      100deg,
+      oklch(0.22 0.025 250) 20%,
+      oklch(0.3 0.035 245) 40%,
+      oklch(0.22 0.025 250) 60%
+    );
+    background-size: 220% 100%;
+    animation: campaign-shimmer 1.7s infinite linear;
+  }
+
+  .campaign-reveal {
+    animation: campaign-reveal 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+}
+
+@keyframes campaign-shimmer {
+  to {
+    background-position-x: -220%;
+  }
+}
+@keyframes campaign-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .campaign-shimmer,
+  .campaign-reveal {
+    animation: none;
+  }
 }

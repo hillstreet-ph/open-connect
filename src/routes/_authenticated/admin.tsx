@@ -97,7 +97,8 @@ function AdminPage() {
           <CardTitle className="text-base">Assign role</CardTitle>
           <CardDescription>
             Manage platform access for members, developers, publishers, admins, and owners.
-            Organization and project memberships are managed separately. Only owners can manage the owner role.
+            Organization and project memberships are managed separately. Only owners can manage the
+            owner role.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -151,37 +152,51 @@ function AdminPage() {
           ) : assignments.isError ? (
             <div role="alert" className="space-y-2 text-sm text-destructive">
               <p>Could not load role assignments. Check your access and try again.</p>
-              <Button variant="outline" onClick={() => void assignments.refetch()}>Try again</Button>
+              <Button variant="outline" onClick={() => void assignments.refetch()}>
+                Try again
+              </Button>
             </div>
           ) : (assignments.data ?? []).length === 0 ? (
             <p className="text-sm text-muted-foreground">No role assignments found.</p>
           ) : (
             <ul className="space-y-2">
-              {(assignments.data ?? []).map((row: { id: string; user_id: string; role: string }) => (
-                <li
-                  key={row.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-3 py-2"
-                >
-                  <div className="min-w-0">
-                    <Badge variant="secondary" className="mr-2">
-                      {roleLabel(row.role as AppRole)}
-                    </Badge>
-                    <span className="font-mono text-xs text-muted-foreground">{row.user_id}</span>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() =>
-                      revokeMutation.mutate({ user_id: row.user_id, role: row.role })
-                    }
-                    disabled={revokeMutation.isPending || !user || !canRevokeRole(roles, user.id, row.user_id, row.role as AppRole)}
-                    aria-label={`Revoke ${roleLabel(row.role as AppRole)} role for ${row.user_id}`}
-                    title={row.role === "owner" && !isOwner ? "Only owners can revoke this role" : row.user_id === user?.id && row.role === "admin" && !isOwner ? "You cannot revoke your own admin role" : "Revoke role"}
+              {(assignments.data ?? []).map(
+                (row: { id: string; user_id: string; role: string }) => (
+                  <li
+                    key={row.id}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-3 py-2"
                   >
-                    <Trash2 className="size-3.5" />
-                  </Button>
-                </li>
-              ))}
+                    <div className="min-w-0">
+                      <Badge variant="secondary" className="mr-2">
+                        {roleLabel(row.role as AppRole)}
+                      </Badge>
+                      <span className="font-mono text-xs text-muted-foreground">{row.user_id}</span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() =>
+                        revokeMutation.mutate({ user_id: row.user_id, role: row.role })
+                      }
+                      disabled={
+                        revokeMutation.isPending ||
+                        !user ||
+                        !canRevokeRole(roles, user.id, row.user_id, row.role as AppRole)
+                      }
+                      aria-label={`Revoke ${roleLabel(row.role as AppRole)} role for ${row.user_id}`}
+                      title={
+                        row.role === "owner" && !isOwner
+                          ? "Only owners can revoke this role"
+                          : row.user_id === user?.id && row.role === "admin" && !isOwner
+                            ? "You cannot revoke your own admin role"
+                            : "Revoke role"
+                      }
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  </li>
+                ),
+              )}
             </ul>
           )}
         </CardContent>

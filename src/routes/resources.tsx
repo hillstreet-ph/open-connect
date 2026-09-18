@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
-import { Download, Eye, Lock, Search, Upload } from "lucide-react";
+import { Download, ExternalLink, Eye, Lock, Search, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -31,7 +31,16 @@ export const Route = createFileRoute("/resources")({
   component: ResourcesPage,
 });
 
-const PACKAGE_TYPES = new Set(["skill", "mcp", "tool", "plugin", "agent", "prompt", "app", "model"]);
+const PACKAGE_TYPES = new Set([
+  "skill",
+  "mcp",
+  "tool",
+  "plugin",
+  "agent",
+  "prompt",
+  "app",
+  "model",
+]);
 
 function triggerBlobDownload(filename: string, content: string, mime: string) {
   const blob = new Blob([content], { type: mime });
@@ -61,7 +70,7 @@ function ResourcesPage() {
       const { data, error } = await supabase
         .from("resources")
         .select(
-          "id, slug, name, description, resource_type, category_slug, author, version, license, verified, featured, supported_clients, package_path, package_filename, package_size",
+          "id, slug, name, description, resource_type, category_slug, author, version, license, verified, featured, supported_clients, package_path, package_filename, package_size, installation_type, installation_config",
         )
         .eq("published", true)
         .order("featured", { ascending: false })
@@ -201,63 +210,94 @@ function ResourcesPage() {
           ? Array.from({ length: 6 }).map((_, index) => (
               <Skeleton key={index} className="h-36 rounded-xl" />
             ))
-          : results.map((item) => (
-              <Card key={item.id} className="shadow-panel">
-                <CardHeader className="p-4 pb-2">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <Badge variant="secondary" className="text-[10px] uppercase">
-                      {item.resource_type}
-                    </Badge>
-                    {item.verified ? (
-                      <Badge variant="outline" className="border-accent/50 text-[10px] text-accent">
-                        Verified
+          : results.map((item) => {
+              const config =
+                item.installation_config && typeof item.installation_config === "object"
+                  ? (item.installation_config as Record<string, unknown>)
+                  : {};
+              const reviewState = String(config["review_state"] ?? "approved");
+              const canonicalUrl =
+                typeof config["canonical_url"] === "string" ? config["canonical_url"] : null;
+              const executable = item.verified && reviewState === "approved";
+              return (
+                <Card key={item.id} className="shadow-panel">
+                  <CardHeader className="p-4 pb-2">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Badge variant="secondary" className="text-[10px] uppercase">
+                        {item.resource_type}
                       </Badge>
-                    ) : null}
-                  </div>
-                  <CardTitle className="mt-2 text-base leading-snug">{item.name}</CardTitle>
-                  <CardDescription className="line-clamp-2">{item.description}</CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-wrap items-center justify-between gap-2 p-4 pt-0 text-xs text-muted-foreground">
-                  <span className="font-mono">v{item.version}</span>
-                  {user ? (
-                    <div className="flex flex-col items-end gap-1">
-                      <div className="flex gap-1">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => viewMutation.mutate(item.id)}
-                          disabled={viewMutation.isPending}
-                        >
-                          <Eye className="mr-1 size-3.5" />
-                          View
-                        </Button>
-                        <Button
-                          size="sm"
+                      {item.verified ? (
+                        <Badge
                           variant="outline"
-                          onClick={() => downloadMutation.mutate(item.id)}
-                          disabled={downloadMutation.isPending}
+                          className="border-accent/50 text-[10px] text-accent"
                         >
-                          <Download className="mr-1 size-3.5" />
-                          Download
-                        </Button>
-                      </div>
-                      <AddToProjectButton resourceId={item.id} />
+                          Verified
+                        </Badge>
+                      ) : null}
+                      {!executable ? (
+                        <Badge variant="outline" className="text-[10px] capitalize">
+                          {reviewState.replaceAll("_", " ")}
+                        </Badge>
+                      ) : null}
                     </div>
-                  ) : (
-                    <Button asChild size="sm" variant="outline">
-                      <Link to="/auth">
-                        <Lock className="mr-1 size-3.5" />
-                        Sign in
-                      </Link>
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+                    <CardTitle className="mt-2 text-base leading-snug">{item.name}</CardTitle>
+                    <CardDescription className="line-clamp-2">{item.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex flex-wrap items-center justify-between gap-2 p-4 pt-0 text-xs text-muted-foreground">
+                    <span className="font-mono">v{item.version}</span>
+                    {user ? (
+                      <div className="flex flex-col items-end gap-1">
+                        <div className="flex gap-1">
+                          {canonicalUrl ? (
+                            <Button asChild size="sm" variant="ghost">
+                              <a href={canonicalUrl} target="_blank" rel="noopener noreferrer">
+                                <ExternalLink className="mr-1 size-3.5" />
+                                Source
+                              </a>
+                            </Button>
+                          ) : null}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => viewMutation.mutate(item.id)}
+                            disabled={viewMutation.isPending}
+                          >
+                            <Eye className="mr-1 size-3.5" />
+                            View
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => downloadMutation.mutate(item.id)}
+                            disabled={downloadMutation.isPending}
+                            title={
+                              executable ? undefined : "Metadata only until review is approved"
+                            }
+                          >
+                            <Download className="mr-1 size-3.5" />
+                            {executable ? "Download" : "Metadata"}
+                          </Button>
+                        </div>
+                        {executable ? <AddToProjectButton resourceId={item.id} /> : null}
+                      </div>
+                    ) : (
+                      <Button asChild size="sm" variant="outline">
+                        <Link to="/auth">
+                          <Lock className="mr-1 size-3.5" />
+                          Sign in
+                        </Link>
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
       </div>
 
       {!isLoading && results.length === 0 ? (
-        <p className="mt-12 text-center text-sm text-muted-foreground">No matches in this category.</p>
+        <p className="mt-12 text-center text-sm text-muted-foreground">
+          No matches in this category.
+        </p>
       ) : null}
 
       {viewText ? (

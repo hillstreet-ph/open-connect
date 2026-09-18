@@ -83,7 +83,9 @@ function AutomationsPage() {
         <Badge variant="outline" className="mb-2 border-primary/40 text-primary">
           <Workflow className="mr-1 size-3" /> Operations · Automations
         </Badge>
-        <h1 className="font-display text-xl font-semibold tracking-tight sm:text-2xl">Automations</h1>
+        <h1 className="font-display text-xl font-semibold tracking-tight sm:text-2xl">
+          Automations
+        </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Trigger → action rules for agents, webhooks, MCP tools, and pipelines.
         </p>

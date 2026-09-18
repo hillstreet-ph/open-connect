@@ -17,7 +17,18 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      OPEN_CONNECT_GITHUB_APP_ID: ${{ secrets.OPEN_CONNECT_GITHUB_APP_ID }}
+      OPEN_CONNECT_GITHUB_APP_PRIVATE_KEY: ${{ secrets.OPEN_CONNECT_GITHUB_APP_PRIVATE_KEY }}
     steps:
+      - name: Create GitHub App token
+        if: env.OPEN_CONNECT_GITHUB_APP_ID != '' && env.OPEN_CONNECT_GITHUB_APP_PRIVATE_KEY != ''
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.OPEN_CONNECT_GITHUB_APP_ID }}
+          private-key: ${{ secrets.OPEN_CONNECT_GITHUB_APP_PRIVATE_KEY }}
+
       - name: Probe production surfaces
         id: probe
         shell: bash
@@ -72,6 +83,7 @@ jobs:
         if: steps.probe.outputs.failed == 'true'
         uses: actions/github-script@v9
         with:
+          github-token: ${{ steps.app-token.outputs.token || github.token }}
           script: |
             const fs = require('fs');
             const report = fs.existsSync('/tmp/probe-report.txt')

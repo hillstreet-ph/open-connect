@@ -86,8 +86,7 @@ function ProjectWorkspacePage() {
       toast.success("Environments ready");
       void qc.invalidateQueries({ queryKey: ["project-environments", projectId] });
     },
-    onError: (e) =>
-      toast.error(e instanceof Error ? e.message : "Could not seed environments"),
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not seed environments"),
   });
 
   const resources = useQuery({
@@ -283,11 +282,13 @@ function ProjectWorkspacePage() {
                 onChange={(e) => setPickResource(e.target.value)}
               >
                 <option value="">Select resource…</option>
-                {(catalog.data ?? []).map((r: { id: string; name?: string; resource_type?: string }) => (
-                  <option key={r.id} value={r.id}>
-                    {r.name} ({r.resource_type})
-                  </option>
-                ))}
+                {(catalog.data ?? []).map(
+                  (r: { id: string; name?: string; resource_type?: string }) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name} ({r.resource_type})
+                    </option>
+                  ),
+                )}
               </select>
             </div>
             <Button
@@ -311,34 +312,45 @@ function ProjectWorkspacePage() {
               No packages linked yet — add from the catalog or marketplace.
             </p>
           ) : (
-            resources.data?.map((row: { id: string; resources?: { id?: string; name?: string; resource_type?: string; version?: string; description?: string } | null }) => {
-              const r = row.resources;
-              return (
-                <Card key={row.id} className="p-4 shadow-panel">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="font-medium">{r?.name ?? "Resource"}</p>
-                        <Badge variant="secondary" className="text-[10px] uppercase">
-                          {r?.resource_type}
-                        </Badge>
+            resources.data?.map(
+              (row: {
+                id: string;
+                resources?: {
+                  id?: string;
+                  name?: string;
+                  resource_type?: string;
+                  version?: string;
+                  description?: string;
+                } | null;
+              }) => {
+                const r = row.resources;
+                return (
+                  <Card key={row.id} className="p-4 shadow-panel">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-medium">{r?.name ?? "Resource"}</p>
+                          <Badge variant="secondary" className="text-[10px] uppercase">
+                            {r?.resource_type}
+                          </Badge>
+                        </div>
+                        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                          {r?.description || r?.version || ""}
+                        </p>
                       </div>
-                      <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                        {r?.description || r?.version || ""}
-                      </p>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => r?.id && remResMut.mutate(r.id)}
+                        aria-label="Remove"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => r?.id && remResMut.mutate(r.id)}
-                      aria-label="Remove"
-                    >
-                      <Trash2 className="size-3.5" />
-                    </Button>
-                  </div>
-                </Card>
-              );
-            })
+                  </Card>
+                );
+              },
+            )
           )}
         </div>
       </div>
@@ -361,11 +373,13 @@ function ProjectWorkspacePage() {
                 onChange={(e) => setPickConnection(e.target.value)}
               >
                 <option value="">Select connection…</option>
-                {(myConnections.data ?? []).map((c: { id: string; display_name?: string; provider?: string }) => (
-                  <option key={c.id} value={c.id}>
-                    {c.display_name || c.provider} ({c.provider})
-                  </option>
-                ))}
+                {(myConnections.data ?? []).map(
+                  (c: { id: string; display_name?: string; provider?: string }) => (
+                    <option key={c.id} value={c.id}>
+                      {c.display_name || c.provider} ({c.provider})
+                    </option>
+                  ),
+                )}
               </select>
             </div>
             <Button
@@ -378,31 +392,43 @@ function ProjectWorkspacePage() {
           </div>
           <div className="space-y-2">
             {(connections.data ?? []).length === 0 ? (
-              <p className="text-sm text-muted-foreground">No connections scoped to this project yet.</p>
+              <p className="text-sm text-muted-foreground">
+                No connections scoped to this project yet.
+              </p>
             ) : (
-              (connections.data ?? []).map((row: { id: string; connection_id?: string; app_connections?: { display_name?: string; provider?: string; status?: string } | null }) => {
-                const c = row.app_connections;
-                return (
-                  <div
-                    key={row.id}
-                    className="flex items-center justify-between rounded-lg border border-border/80 px-3 py-2"
-                  >
-                    <div>
-                      <p className="text-sm font-medium">{c?.display_name || c?.provider}</p>
-                      <p className="text-[11px] text-muted-foreground">
-                        {c?.provider} · {c?.status}
-                      </p>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => row.connection_id && remConnMut.mutate(row.connection_id)}
+              (connections.data ?? []).map(
+                (row: {
+                  id: string;
+                  connection_id?: string;
+                  app_connections?: {
+                    display_name?: string;
+                    provider?: string;
+                    status?: string;
+                  } | null;
+                }) => {
+                  const c = row.app_connections;
+                  return (
+                    <div
+                      key={row.id}
+                      className="flex items-center justify-between rounded-lg border border-border/80 px-3 py-2"
                     >
-                      <Trash2 className="size-3.5" />
-                    </Button>
-                  </div>
-                );
-              })
+                      <div>
+                        <p className="text-sm font-medium">{c?.display_name || c?.provider}</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {c?.provider} · {c?.status}
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => row.connection_id && remConnMut.mutate(row.connection_id)}
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </div>
+                  );
+                },
+              )
             )}
           </div>
         </CardContent>

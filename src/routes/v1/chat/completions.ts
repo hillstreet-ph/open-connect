@@ -117,7 +117,11 @@ export const Route = createFileRoute("/v1/chat/completions")({
 
         return json(
           lastError?.body ?? {
-            error: { message: "All model upstreams failed", type: "open_connect_error", code: "upstream_failed" },
+            error: {
+              message: "All model upstreams failed",
+              type: "open_connect_error",
+              code: "upstream_failed",
+            },
           },
           lastError?.status ?? 502,
         );

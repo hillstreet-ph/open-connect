@@ -139,11 +139,7 @@ export const MODEL_ALIASES: Record<string, string> = {
 };
 
 export const MANAGED_MODEL_IDS: string[] = Array.from(
-  new Set([
-    ...Object.keys(MODEL_ALIASES),
-    ...Object.values(MODEL_ALIASES),
-    ...FREE_MODEL_POOL,
-  ]),
+  new Set([...Object.keys(MODEL_ALIASES), ...Object.values(MODEL_ALIASES), ...FREE_MODEL_POOL]),
 );
 
 export function resolveModelId(requested: string): string {
@@ -198,9 +194,7 @@ export function resolveUpstreams(): Upstream[] {
 
   const orBase = stripTrailingSlash(
     explicitOrBase ||
-      (isOpenRouterBase(liteBaseRaw) && liteBaseRaw
-        ? liteBaseRaw
-        : "https://openrouter.ai/api/v1"),
+      (isOpenRouterBase(liteBaseRaw) && liteBaseRaw ? liteBaseRaw : "https://openrouter.ai/api/v1"),
   );
 
   if (orKey) {

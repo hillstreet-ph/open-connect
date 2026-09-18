@@ -14,7 +14,10 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
       typeof Request !== "undefined" && input instanceof Request ? input.headers : undefined,
     );
     if (init?.headers) new Headers(init.headers).forEach((value, key) => headers.set(key, value));
-    if (isNewSupabaseApiKey(supabaseKey) && headers.get("Authorization") === `Bearer ${supabaseKey}`) {
+    if (
+      isNewSupabaseApiKey(supabaseKey) &&
+      headers.get("Authorization") === `Bearer ${supabaseKey}`
+    ) {
       headers.delete("Authorization");
     }
     headers.set("apikey", supabaseKey);
@@ -62,7 +65,8 @@ function createSupabaseClient() {
     ? configuredPublishableKey
     : PROD_SUPABASE_PUBLISHABLE_KEY;
   if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-    const message = "Missing Supabase environment variable(s): SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY";
+    const message =
+      "Missing Supabase environment variable(s): SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY";
     console.error(`[Supabase] ${message}`);
     throw new Error(message);
   }
