@@ -44,6 +44,7 @@ import { Route as OauthTokenRouteImport } from './routes/oauth/token'
 import { Route as V1IndexRouteImport } from './routes/v1/index'
 import { Route as V1ModelsRouteImport } from './routes/v1/models'
 import { Route as AuthenticatedProjectsProjectIdRouteImport } from './routes/_authenticated/projects.$projectId'
+import { Route as ApiV1DatabricksRouteImport } from './routes/api/v1/databricks'
 import { Route as ApiV1HealthRouteImport } from './routes/api/v1/health'
 import { Route as ApiV1ResourcesRouteImport } from './routes/api/v1/resources'
 import { Route as V1ChatCompletionsRouteImport } from './routes/v1/chat/completions'
@@ -225,6 +226,11 @@ const AuthenticatedProjectsProjectIdRoute =
     path: '/$projectId',
     getParentRoute: () => AuthenticatedProjectsRoute,
   } as any)
+const ApiV1DatabricksRoute = ApiV1DatabricksRouteImport.update({
+  id: '/api/v1/databricks',
+  path: '/api/v1/databricks',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiV1HealthRoute = ApiV1HealthRouteImport.update({
   id: '/api/v1/health',
   path: '/api/v1/health',
@@ -276,6 +282,7 @@ export interface FileRoutesByFullPath {
   '/v1/models': typeof V1ModelsRoute
   '/v1/': typeof V1IndexRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdRoute
+  '/api/v1/databricks': typeof ApiV1DatabricksRoute
   '/api/v1/health': typeof ApiV1HealthRoute
   '/api/v1/resources': typeof ApiV1ResourcesRoute
   '/v1/chat/completions': typeof V1ChatCompletionsRoute
@@ -315,6 +322,7 @@ export interface FileRoutesByTo {
   '/v1/models': typeof V1ModelsRoute
   '/v1': typeof V1IndexRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdRoute
+  '/api/v1/databricks': typeof ApiV1DatabricksRoute
   '/api/v1/health': typeof ApiV1HealthRoute
   '/api/v1/resources': typeof ApiV1ResourcesRoute
   '/v1/chat/completions': typeof V1ChatCompletionsRoute
@@ -356,6 +364,7 @@ export interface FileRoutesById {
   '/v1/models': typeof V1ModelsRoute
   '/v1/': typeof V1IndexRoute
   '/_authenticated/projects/$projectId': typeof AuthenticatedProjectsProjectIdRoute
+  '/api/v1/databricks': typeof ApiV1DatabricksRoute
   '/api/v1/health': typeof ApiV1HealthRoute
   '/api/v1/resources': typeof ApiV1ResourcesRoute
   '/v1/chat/completions': typeof V1ChatCompletionsRoute
@@ -397,6 +406,7 @@ export interface FileRouteTypes {
     | '/v1/models'
     | '/v1/'
     | '/projects/$projectId'
+    | '/api/v1/databricks'
     | '/api/v1/health'
     | '/api/v1/resources'
     | '/v1/chat/completions'
@@ -436,6 +446,7 @@ export interface FileRouteTypes {
     | '/v1/models'
     | '/v1'
     | '/projects/$projectId'
+    | '/api/v1/databricks'
     | '/api/v1/health'
     | '/api/v1/resources'
     | '/v1/chat/completions'
@@ -476,6 +487,7 @@ export interface FileRouteTypes {
     | '/v1/models'
     | '/v1/'
     | '/_authenticated/projects/$projectId'
+    | '/api/v1/databricks'
     | '/api/v1/health'
     | '/api/v1/resources'
     | '/v1/chat/completions'
@@ -499,6 +511,7 @@ export interface RootRouteChildren {
   OauthTokenRoute: typeof OauthTokenRoute
   V1ModelsRoute: typeof V1ModelsRoute
   V1IndexRoute: typeof V1IndexRoute
+  ApiV1DatabricksRoute: typeof ApiV1DatabricksRoute
   ApiV1HealthRoute: typeof ApiV1HealthRoute
   ApiV1ResourcesRoute: typeof ApiV1ResourcesRoute
   V1ChatCompletionsRoute: typeof V1ChatCompletionsRoute
@@ -751,6 +764,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsProjectIdRouteImport
       parentRoute: typeof AuthenticatedProjectsRoute
     }
+    '/api/v1/databricks': {
+      id: '/api/v1/databricks'
+      path: '/api/v1/databricks'
+      fullPath: '/api/v1/databricks'
+      preLoaderRoute: typeof ApiV1DatabricksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/v1/health': {
       id: '/api/v1/health'
       path: '/api/v1/health'
@@ -849,6 +869,7 @@ const rootRouteChildren: RootRouteChildren = {
   OauthTokenRoute: OauthTokenRoute,
   V1ModelsRoute: V1ModelsRoute,
   V1IndexRoute: V1IndexRoute,
+  ApiV1DatabricksRoute: ApiV1DatabricksRoute,
   ApiV1HealthRoute: ApiV1HealthRoute,
   ApiV1ResourcesRoute: ApiV1ResourcesRoute,
   V1ChatCompletionsRoute: V1ChatCompletionsRoute,

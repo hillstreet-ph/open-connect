@@ -31,6 +31,12 @@ export const Route = createFileRoute("/api/v1/health")({
             bound: kv.bound,
             writable: kv.writable,
           },
+          databricks: {
+            configured:
+              present("DATABRICKS_HOST") &&
+              present("DATABRICKS_TOKEN") &&
+              present("DATABRICKS_WAREHOUSE_ID"),
+          },
           env: {
             SUPABASE_URL: present("SUPABASE_URL"),
             SUPABASE_PUBLISHABLE_KEY: present("SUPABASE_PUBLISHABLE_KEY"),

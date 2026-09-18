@@ -37,6 +37,14 @@ data:
   target_schema: open_connect
   schema_migration_status: required-before-shared-production-cutover
   migrations: supabase/migrations
+  analytics:
+    provider: databricks
+    role: governed-memory-knowledge-and-resource-mirror
+    source_of_truth: supabase
+    catalog: open_connect
+    schema: production
+    sync_endpoint: /api/v1/databricks
+    secrets: provider-vault-only
 
 runtime:
   provider: zeabur
