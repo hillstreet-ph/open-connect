@@ -12,4 +12,7 @@ Open-Connect accepts credentials only from an authorized provider secret store o
 | `credential://zeabur/deploy`        | `ZEABUR_TOKEN`                                  | Runtime deployment             | Target project/service only    | GitHub production environment    |
 | `credential://sentry/release`       | `SENTRY_AUTH_TOKEN`                             | Release and source maps        | Project release write          | GitHub production environment    |
 
-The broker checks presence, selects the smallest profile, creates a child environment containing only the selected credential names, and reports metadata—not values. It never creates, rotates, revokes, or prints credentials.
+The broker first checks the process environment. Missing values are resolved through the single
+host-level adapter described in `resolver-adapter.md`, using the logical references above. It selects
+the smallest profile, creates a child environment containing only the selected credential names,
+and reports metadata—not values. It never creates, rotates, revokes, or prints credentials.

@@ -29,6 +29,17 @@ npm run credentials:check:deploy
 
 Credential names, logical references, and provider mappings live under
 `credentials/`. Live values remain in provider vaults and runtime secret stores.
+Configure one approved resolver path to remove per-app secret entry:
+
+```bash
+export OPEN_CONNECT_CREDENTIAL_RESOLVER=/absolute/path/to/approved-vault-adapter
+npm run capabilities:recommend -- "deploy the container to Zeabur and verify Sentry"
+npm run credentials:exec:auto -- gh pr list
+```
+
+See `credentials/resolver-adapter.md` for the adapter protocol. The Secrets UI stores new values in
+Supabase Vault after migration `20260918000000_encrypt_credential_secrets.sql`; browsers receive
+metadata only.
 
 Deployment requires the four server-side `OPENAI_*` variables listed in `.env.example`. See [Campaign Studio setup, boundaries, configuration, and validation](docs/OPENAI_CAMPAIGN_STUDIO.md).
 

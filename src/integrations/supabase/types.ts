@@ -428,7 +428,23 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      create_credential_secret: {
+        Args: {
+          p_name: string;
+          p_scopes: string[];
+          p_secret_type: string;
+          p_secret_value: string;
+        };
+        Returns: Json;
+      };
+      delete_credential_secret: {
+        Args: { p_id: string };
+        Returns: boolean;
+      };
+      list_credential_secrets: {
+        Args: Record<PropertyKey, never>;
+        Returns: Json;
+      };
     };
     Enums: {
       app_role: "user" | "developer" | "publisher" | "admin" | "owner";
