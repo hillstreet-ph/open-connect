@@ -2,6 +2,14 @@
 -- Apply when Supabase is reachable. Source packages: hillstreet-ph/open-custom-skills
 -- Binary packages should be uploaded to Storage bucket resource-packages separately.
 
+INSERT INTO public.categories (slug, name, description)
+VALUES
+  ('ai', 'AI', 'AI agents, models, prompts, and automation'),
+  ('security', 'Security', 'Credentials, identity, access, and platform security')
+ON CONFLICT (slug) DO UPDATE SET
+  name = EXCLUDED.name,
+  description = EXCLUDED.description;
+
 INSERT INTO public.resources (
   slug, name, description, resource_type, category_slug, author, source,
   source_url, verified, featured, published, version, supported_clients
