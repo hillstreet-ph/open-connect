@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Open-Connect">
+  <rect width="512" height="512" rx="112" fill="#07111d"/>
+  <path d="M144 256c0-62 50-112 112-112h64v48h-64a64 64 0 1 0 0 128h64v48h-64c-62 0-112-50-112-112Z" fill="#18c7c8"/>
+  <path d="M368 256c0 62-50 112-112 112h-64v-48h64a64 64 0 1 0 0-128h-64v-48h64c62 0 112 50 112 112Z" fill="#e7f7f7"/>
+  <circle cx="256" cy="256" r="28" fill="#18c7c8"/>
+</svg>

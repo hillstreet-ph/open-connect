@@ -1,0 +1,16 @@
+{
+  "schema_version": "v1",
+  "name_for_human": "Open-Connect",
+  "name_for_model": "open_connect",
+  "description_for_human": "Connect ChatGPT to governed tools, resources, apps, models, memory, and autonomous plans.",
+  "description_for_model": "Use Open-Connect to discover approved resources, inspect connected apps, recommend the smallest toolchain, and request governed control operations. Use read actions first. Never send raw credentials; use only opaque credential:// references. Consequential operations require explicit confirmation and remain subject to Open-Connect role, scope, approval, and production gates.",
+  "auth": { "type": "user_http", "authorization_type": "bearer" },
+  "api": {
+    "type": "openapi",
+    "url": "https://open-connect.site/openapi.json",
+    "is_user_authenticated": true
+  },
+  "logo_url": "https://open-connect.site/open-connect-logo.svg",
+  "contact_email": "kairocasino8@gmail.com",
+  "legal_info_url": "https://open-connect.site"
+}

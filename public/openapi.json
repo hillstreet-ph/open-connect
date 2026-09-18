@@ -1,0 +1,163 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Open-Connect ChatGPT Actions",
+    "description": "Governed access to Open-Connect resources, connections, models, capability planning, and owner-approved control operations.",
+    "version": "1.0.0"
+  },
+  "servers": [{ "url": "https://open-connect.site" }],
+  "paths": {
+    "/api/v1/actions/read": {
+      "post": {
+        "operationId": "readOpenConnect",
+        "summary": "Discover and inspect Open-Connect resources",
+        "description": "Run a non-consequential Open-Connect discovery, inspection, recommendation, or planning action. Call list_connections before recommending an operation that needs a provider connection.",
+        "x-openai-isConsequential": false,
+        "security": [
+          { "OAuth2": ["mcp:connect", "resources:read", "connections:read", "models:read"] },
+          { "BearerAuth": [] }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["action"],
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "enum": [
+                      "search",
+                      "fetch",
+                      "open_connect_status",
+                      "list_resources",
+                      "list_connections",
+                      "list_models",
+                      "inspect_connections",
+                      "plan_goal",
+                      "recommend_toolchain",
+                      "resolve_capability"
+                    ]
+                  },
+                  "input": {
+                    "type": "object",
+                    "description": "Arguments for the selected action, using the matching MCP tool schema.",
+                    "additionalProperties": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/ActionResult" },
+          "400": { "$ref": "#/components/responses/Error" },
+          "401": { "$ref": "#/components/responses/Error" },
+          "403": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/actions/write": {
+      "post": {
+        "operationId": "writeOpenConnect",
+        "summary": "Request an Open-Connect control operation",
+        "description": "Run a consequential owner/admin action. Open-Connect still enforces role, scope, approval, credential-reference, and production-policy checks. Never submit raw credentials.",
+        "x-openai-isConsequential": true,
+        "security": [
+          { "OAuth2": ["mcp:connect", "resources:write", "tools:invoke", "connections:invoke"] },
+          { "BearerAuth": [] }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["action"],
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "enum": [
+                      "execute_plan",
+                      "create_capability_draft",
+                      "record_run_outcome",
+                      "install_capability",
+                      "configure_connection"
+                    ]
+                  },
+                  "input": {
+                    "type": "object",
+                    "description": "Arguments for the selected action. Credential values are forbidden; configure_connection accepts only credential:// references.",
+                    "additionalProperties": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/ActionResult" },
+          "400": { "$ref": "#/components/responses/Error" },
+          "401": { "$ref": "#/components/responses/Error" },
+          "403": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "OAuth2": {
+        "type": "oauth2",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://open-connect.site/oauth/authorize",
+            "tokenUrl": "https://open-connect.site/oauth/token",
+            "scopes": {
+              "mcp:connect": "Connect to the Open-Connect gateway",
+              "resources:read": "Read published resources",
+              "resources:write": "Install approved resources",
+              "connections:read": "Inspect connection grants",
+              "connections:invoke": "Use connected provider capabilities",
+              "models:read": "Read model aliases",
+              "tools:invoke": "Invoke governed tools"
+            }
+          }
+        }
+      },
+      "BearerAuth": { "type": "http", "scheme": "bearer", "bearerFormat": "oc_live_..." }
+    },
+    "responses": {
+      "ActionResult": {
+        "description": "Governed action result",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": ["ok", "action", "mode", "result"],
+              "properties": {
+                "ok": { "type": "boolean" },
+                "action": { "type": "string" },
+                "mode": { "type": "string", "enum": ["read", "write"] },
+                "result": {}
+              }
+            }
+          }
+        }
+      },
+      "Error": {
+        "description": "Open-Connect error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": { "error": {} }
+            }
+          }
+        }
+      }
+    }
+  }
+}
