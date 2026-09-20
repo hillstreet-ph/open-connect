@@ -33,7 +33,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  IMAGE_NAME: hillstreetph/open-connect
+  IMAGE_NAME: hillstreet/open-connect
 
 jobs:
   # ── Build & test ──────────────────────────────────────────────────────────
@@ -61,10 +61,10 @@ jobs:
         run: |
           set -euo pipefail
           # Verify FastAPI app imports and uvicorn can start
-          docker run --rm -d --name oc-test -p 8080:8080 "${{ env.IMAGE_NAME }}:test" &
+          docker run --rm -d --name oc-test -p 8080:8080 "${{ env.IMAGE_NAME }}:test"
           sleep 5
           # Health check
-          curl -sf http://localhost:8080/health || curl -sf http://localhost:8080/ || echo "::warning::Health endpoint not responding (non-fatal)"
+          curl -sf http://localhost:8080/healthz
           docker stop oc-test 2>/dev/null || true
 
       - name: Run pytest (if present)
