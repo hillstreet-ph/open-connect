@@ -1,0 +1,114 @@
+-- Organization groups and auditable invitations.
+-- Existing organization membership remains the source of truth for access.
+
+create table if not exists public.organization_groups (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  name text not null check (char_length(name) between 1 and 80),
+  description text check (description is null or char_length(description) <= 500),
+  created_by uuid not null references auth.users(id) on delete restrict,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (organization_id, name)
+);
+
+create table if not exists public.organization_group_members (
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  group_id uuid not null references public.organization_groups(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  added_by uuid not null references auth.users(id) on delete restrict,
+  created_at timestamptz not null default now(),
+  primary key (group_id, user_id)
+);
+
+create table if not exists public.organization_invitations (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  email text not null,
+  role text not null default 'member' check (role in ('admin', 'member')),
+  status text not null default 'pending' check (status in ('pending', 'accepted', 'expired', 'revoked')),
+  invited_by uuid not null references auth.users(id) on delete restrict,
+  invited_user_id uuid references auth.users(id) on delete set null,
+  expires_at timestamptz not null default (now() + interval '7 days'),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (organization_id, email)
+);
+
+create index if not exists organization_groups_org_idx
+  on public.organization_groups (organization_id, name);
+create index if not exists organization_group_members_org_user_idx
+  on public.organization_group_members (organization_id, user_id);
+create index if not exists organization_invitations_org_status_idx
+  on public.organization_invitations (organization_id, status, created_at desc);
+
+alter table public.organization_groups enable row level security;
+alter table public.organization_group_members enable row level security;
+alter table public.organization_invitations enable row level security;
+
+grant select, insert, update, delete on public.organization_groups to authenticated;
+grant select, insert, update, delete on public.organization_group_members to authenticated;
+grant select, insert, update, delete on public.organization_invitations to authenticated;
+grant all on public.organization_groups, public.organization_group_members,
+  public.organization_invitations to service_role;
+
+create or replace function public.is_organization_member(target_organization_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.organization_members
+    where organization_id = target_organization_id and user_id = auth.uid()
+  );
+$$;
+
+create or replace function public.can_manage_organization(target_organization_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.organization_members
+    where organization_id = target_organization_id
+      and user_id = auth.uid()
+      and role in ('owner', 'admin')
+  );
+$$;
+
+revoke all on function public.is_organization_member(uuid) from public;
+revoke all on function public.can_manage_organization(uuid) from public;
+grant execute on function public.is_organization_member(uuid) to authenticated, service_role;
+grant execute on function public.can_manage_organization(uuid) to authenticated, service_role;
+
+drop policy if exists "Organization members view groups" on public.organization_groups;
+create policy "Organization members view groups" on public.organization_groups
+  for select to authenticated using (public.is_organization_member(organization_id));
+drop policy if exists "Organization managers manage groups" on public.organization_groups;
+create policy "Organization managers manage groups" on public.organization_groups
+  for all to authenticated using (public.can_manage_organization(organization_id))
+  with check (public.can_manage_organization(organization_id));
+
+drop policy if exists "Organization members view group membership" on public.organization_group_members;
+create policy "Organization members view group membership" on public.organization_group_members
+  for select to authenticated using (public.is_organization_member(organization_id));
+drop policy if exists "Organization managers manage group membership" on public.organization_group_members;
+create policy "Organization managers manage group membership" on public.organization_group_members
+  for all to authenticated using (public.can_manage_organization(organization_id))
+  with check (public.can_manage_organization(organization_id));
+
+drop policy if exists "Organization managers manage invitations" on public.organization_invitations;
+create policy "Organization managers manage invitations" on public.organization_invitations
+  for all to authenticated using (public.can_manage_organization(organization_id))
+  with check (public.can_manage_organization(organization_id));
+
+drop trigger if exists organization_groups_touch_updated_at on public.organization_groups;
+create trigger organization_groups_touch_updated_at before update on public.organization_groups
+  for each row execute function public.touch_updated_at();
+drop trigger if exists organization_invitations_touch_updated_at on public.organization_invitations;
+create trigger organization_invitations_touch_updated_at before update on public.organization_invitations
+  for each row execute function public.touch_updated_at();
