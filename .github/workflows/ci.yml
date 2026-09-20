@@ -33,6 +33,12 @@ jobs:
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_placeholder' }}
           VITE_APP_URL: https://open-connect.site
         run: bun run build
+      - name: Render SSR pages
+        env:
+          VITE_SUPABASE_URL: https://huadtiuuoiriqrjpjxhr.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_placeholder
+          VITE_APP_URL: https://open-connect.site
+        run: bun run test:ssr
       - name: Upload dist artifact
         if: success()
         uses: actions/upload-artifact@v7
