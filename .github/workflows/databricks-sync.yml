@@ -20,8 +20,8 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "${DATABRICKS_SYNC_SECRET:-}" ]; then
-            echo "Databricks sync is not activated; repository secret is absent."
-            exit 0
+            echo "::error title=Databricks sync inactive::DATABRICKS_SYNC_SECRET is not configured; no data was synchronized."
+            exit 1
           fi
           response_file=$(mktemp)
           code=$(curl --silent --show-error --output "$response_file" --write-out '%{http_code}' \
