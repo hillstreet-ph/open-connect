@@ -229,7 +229,7 @@ const PLATFORM_TOOLS: McpTool[] = [
   {
     name: "install_capability",
     description:
-      "Use this when idempotently installing an approved catalog capability for the current owner or admin.",
+      "Request installation of an approved capability as owner/admin. Returns unsupported until a verified provider executor is available.",
     inputSchema: {
       type: "object",
       properties: {
@@ -306,6 +306,24 @@ function unauthorized(message: string) {
 function textResult(payload: unknown) {
   return {
     content: [{ type: "text" as const, text: JSON.stringify(payload) }],
+  };
+}
+
+function executionUnavailable(operation: "invoke" | "install", resource: ResourceRow) {
+  return {
+    ...textResult({
+      status: "unsupported",
+      code: "provider_executor_unavailable",
+      operation,
+      resource: { slug: resource.slug, name: resource.name, type: resource.resource_type },
+      execution: {
+        verified: false,
+        performed: false,
+        message:
+          "No verified provider executor is configured for this capability. Catalog approval and connection metadata do not prove execution.",
+      },
+    }),
+    isError: true,
   };
 }
 
@@ -829,44 +847,12 @@ export const Route = createFileRoute("/mcp")({
           } else if (name === "install_capability") {
             await requireControlWrite(key);
             const slug = String(args["resource_id"] ?? "").trim();
-            const environment = String(args["environment"] ?? "production");
             const catalog = await getCatalog();
             const item = catalog.bySlug.get(slug);
             if (!item) throw new Error("Unknown or unpublished capability.");
             if (!isExecutable(item))
               throw new Error(`Capability is ${reviewState(item)} and cannot be installed.`);
-            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-            const { data: resource } = await supabaseAdmin
-              .from("resources")
-              .select("id")
-              .eq("slug", slug)
-              .single();
-            if (!resource?.id) throw new Error("Capability record unavailable.");
-            const correlationId = crypto.randomUUID();
-            // Generated Supabase types lag new migrations until the next type-generation job.
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const controlDb = supabaseAdmin as any;
-            const { data, error } = await controlDb
-              .from("capability_installations")
-              .upsert(
-                {
-                  user_id: key.userId,
-                  resource_id: resource.id,
-                  environment,
-                  state: "installed",
-                  configuration: { source: "chatgpt-mcp", resource_slug: slug },
-                  correlation_id: correlationId,
-                },
-                { onConflict: "user_id,resource_id,environment" },
-              )
-              .select("id,state,environment,correlation_id")
-              .single();
-            if (error) throw new Error(error.message);
-            result = textResult({
-              installation: data,
-              resource: { id: slug, name: item.name },
-              idempotent: true,
-            });
+            result = executionUnavailable("install", item);
           } else if (name === "configure_connection") {
             await requireControlWrite(key);
             const provider = String(args["provider"] ?? "")
@@ -958,47 +944,12 @@ export const Route = createFileRoute("/mcp")({
                   "Metadata-only resource cannot be invoked until review and approval are complete.",
               });
             } else if (action === "invoke") {
-              const providerGuess = match.slug.split("-")[0]?.toLowerCase() ?? "";
-              const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-              const { data: conn } = await supabaseAdmin
-                .from("app_connections")
-                .select("provider, display_name, status, scopes")
-                .eq("user_id", key.userId)
-                .eq("status", "connected")
-                .ilike("provider", `%${providerGuess}%`)
-                .limit(1)
-                .maybeSingle();
-
-              result = textResult({
-                status: "invoked",
-                resource: {
-                  slug: match.slug,
-                  name: match.name,
-                  type: match.resource_type,
-                  installation_type: match.installation_type,
-                },
-                connection: conn
-                  ? {
-                      provider: conn.provider,
-                      display_name: conn.display_name,
-                      status: conn.status,
-                      scopes: conn.scopes,
-                      mode: "capability_grant",
-                    }
-                  : null,
-                execution: {
-                  mode: conn ? "connection_backed" : "registry_only",
-                  message: conn
-                    ? `Capability grant for ${conn.display_name} is active.`
-                    : "No matching app connection. Connect at /connections then re-invoke.",
-                  next: conn ? null : "https://open-connect.site/connections",
-                },
-              });
+              result = executionUnavailable("invoke", match);
             } else {
               result = textResult({
                 status: "available",
                 resource: match,
-                note: "Use action=invoke to resolve Connections plane.",
+                note: "Catalog metadata only; provider execution is not configured.",
               });
             }
           } else {
