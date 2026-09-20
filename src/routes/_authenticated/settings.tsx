@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { KeyRound, Loader2, Save, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { profileDraftValue } from "@/lib/react-compat";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
@@ -30,8 +31,8 @@ const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 function SettingsPage() {
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
-  const [displayName, setDisplayName] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState("");
+  const [nameDraft, setNameDraft] = useState<{ userId: string; value: string } | null>(null);
+  const [avatarDraft, setAvatarDraft] = useState<{ userId: string; value: string } | null>(null);
   const [uploading, setUploading] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -59,11 +60,15 @@ function SettingsPage() {
     },
   });
 
-  useEffect(() => {
-    if (!data) return;
-    setDisplayName(data.displayName);
-    setAvatarUrl(data.avatarUrl);
-  }, [data]);
+  // Query refreshes must not overwrite an in-progress edit, and drafts belong to one user.
+  const displayName = profileDraftValue(nameDraft, data?.userId, data?.displayName ?? "");
+  const avatarUrl = profileDraftValue(avatarDraft, data?.userId, data?.avatarUrl ?? "");
+  function setDisplayName(value: string) {
+    if (data?.userId) setNameDraft({ userId: data.userId, value });
+  }
+  function setAvatarUrl(value: string) {
+    if (data?.userId) setAvatarDraft({ userId: data.userId, value });
+  }
 
   async function onPickPhoto(file: File | null) {
     if (!file || !data?.userId) return;

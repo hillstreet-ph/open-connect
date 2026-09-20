@@ -16,10 +16,12 @@ export function SiteHeader() {
   const desktopNav = inApp ? flatAppNav() : flatPublicNav();
   const mobileCategories = inApp ? appCategories : publicCategories;
 
-  // Close drawer on route change / resize to desktop
-  useEffect(() => {
+  // Reset route-local drawer state before rendering the new route.
+  const [previousPath, setPreviousPath] = useState(pathname);
+  if (previousPath !== pathname) {
+    setPreviousPath(pathname);
     setOpen(false);
-  }, [pathname]);
+  }
 
   useEffect(() => {
     const onResize = () => {
