@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "registry_id": "open-connect-marketplace-sources",
   "default_policy": {
     "ingestion_mode": "metadata_only",
@@ -7,9 +7,10 @@
     "install": false,
     "require_license": true,
     "require_security_review": true,
-    "max_items_per_run": 25,
-    "minimum_successful_sources": 4,
-    "minimum_candidates": 60
+    "max_items_per_source": 30,
+    "minimum_successful_sources": 8,
+    "minimum_candidates": 40,
+    "allowed_hosts": ["github.com"]
   },
   "sources": [
     {
@@ -18,6 +19,7 @@
       "adapter": "github_repository_search",
       "url": "https://api.github.com/search/repositories?q=org%3Alobehub+archived%3Afalse&sort=updated&order=desc",
       "catalog_url": "https://lobehub.com/mcp",
+      "categories": ["ai-engineering", "mcp"],
       "trust": "upstream_metadata",
       "enabled": true
     },
@@ -27,6 +29,7 @@
       "adapter": "github_repository_search",
       "url": "https://api.github.com/search/repositories?q=org%3Aopen-webui+archived%3Afalse&sort=updated&order=desc",
       "catalog_url": "https://openwebui.com/tools/",
+      "categories": ["ai-engineering", "tools"],
       "trust": "upstream_metadata",
       "enabled": true
     },
@@ -35,6 +38,8 @@
       "name": "OpenClaw ecosystem",
       "adapter": "github_repository_search",
       "url": "https://api.github.com/search/repositories?q=openclaw+in%3Aname%2Cdescription+archived%3Afalse&sort=updated&order=desc",
+      "catalog_url": "https://openclaw.ai/",
+      "categories": ["agents", "tools"],
       "trust": "untrusted_discovery",
       "enabled": true
     },
@@ -43,6 +48,54 @@
       "name": "SwarmClaw ecosystem",
       "adapter": "github_repository_search",
       "url": "https://api.github.com/search/repositories?q=swarmclaw+in%3Aname%2Cdescription+archived%3Afalse&sort=updated&order=desc",
+      "catalog_url": "https://www.swarmclaw.ai/docs",
+      "categories": ["agents", "orchestration"],
+      "trust": "untrusted_discovery",
+      "enabled": true
+    },
+    {
+      "id": "mcp-official-github",
+      "name": "Model Context Protocol",
+      "adapter": "github_repository_search",
+      "url": "https://api.github.com/search/repositories?q=org%3Amodelcontextprotocol+archived%3Afalse&sort=updated&order=desc",
+      "catalog_url": "https://modelcontextprotocol.io/",
+      "categories": ["mcp", "ai-engineering"],
+      "trust": "official_upstream",
+      "enabled": true
+    },
+    {
+      "id": "ai-engineering-discovery",
+      "name": "AI engineering open source",
+      "adapter": "github_repository_search",
+      "url": "https://api.github.com/search/repositories?q=topic%3Aai-engineering+archived%3Afalse+is%3Apublic&sort=stars&order=desc",
+      "categories": ["ai-engineering"],
+      "trust": "untrusted_discovery",
+      "enabled": true
+    },
+    {
+      "id": "data-engineering-discovery",
+      "name": "Data engineering open source",
+      "adapter": "github_repository_search",
+      "url": "https://api.github.com/search/repositories?q=topic%3Adata-engineering+archived%3Afalse+is%3Apublic&sort=stars&order=desc",
+      "categories": ["data-engineering"],
+      "trust": "untrusted_discovery",
+      "enabled": true
+    },
+    {
+      "id": "llmops-discovery",
+      "name": "LLMOps open source",
+      "adapter": "github_repository_search",
+      "url": "https://api.github.com/search/repositories?q=topic%3Allmops+archived%3Afalse+is%3Apublic&sort=stars&order=desc",
+      "categories": ["ai-engineering", "llmops"],
+      "trust": "untrusted_discovery",
+      "enabled": true
+    },
+    {
+      "id": "mlops-discovery",
+      "name": "MLOps open source",
+      "adapter": "github_repository_search",
+      "url": "https://api.github.com/search/repositories?q=topic%3Amlops+archived%3Afalse+is%3Apublic&sort=stars&order=desc",
+      "categories": ["ai-engineering", "mlops"],
       "trust": "untrusted_discovery",
       "enabled": true
     }
