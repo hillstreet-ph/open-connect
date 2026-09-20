@@ -1,14 +1,4 @@
-# ============================================================================
-# HillStreet Open Connect — Control Plane Docker Build & Publish
-# ============================================================================
-# New workflow — Open Connect had CI-only Docker build (no publish).
-# This adds full build → test → publish → DockerHub pipeline.
-# ============================================================================
-# Install path: .github/workflows/control-plane-docker.yml
-# Required secrets: DOCKERHUB_USERNAME, DOCKERHUB_TOKEN
-# Required environment: container-publish
-# ============================================================================
-
+# Installed from deploy/docker-workflows/open-connect-docker.yml.
 name: Control Plane Docker Build & Publish
 
 on:
@@ -21,6 +11,7 @@ on:
   pull_request:
     paths:
       - "control-plane/**"
+      - ".github/workflows/control-plane-docker.yml"
   release:
     types: [published]
   workflow_dispatch:
@@ -36,17 +27,13 @@ env:
   IMAGE_NAME: hillstreet/open-connect
 
 jobs:
-  # ── Build & test ──────────────────────────────────────────────────────────
   build:
     if: github.repository == 'hillstreet-ph/open-connect'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
       - name: Build image
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
@@ -56,29 +43,23 @@ jobs:
           tags: ${{ env.IMAGE_NAME }}:test
           cache-from: type=gha,scope=cp-docker
           cache-to: ${{ (github.event_name != 'pull_request') && 'type=gha,mode=max,scope=cp-docker' || '' }}
-
       - name: Smoke test
         run: |
           set -euo pipefail
-          # Verify FastAPI app imports and uvicorn can start
           docker run -d --name oc-test -p 8080:8080 \
             -e OC_PUBLIC_BASE_URL=https://open-connect.site \
             -e OC_OIDC_ISSUER=https://open-connect.site \
             "${{ env.IMAGE_NAME }}:test"
-          sleep 5
-          # Health check
-          curl -sf http://localhost:8080/healthz
-          docker stop oc-test 2>/dev/null || true
+          trap 'docker stop oc-test >/dev/null 2>&1 || true' EXIT
+          for attempt in 1 2 3 4 5; do
+            if curl --fail --silent --show-error http://localhost:8080/healthz; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs oc-test
+          exit 1
 
-      - name: Run pytest (if present)
-        run: |
-          set -euo pipefail
-          if [ -f control-plane/pyproject.toml ]; then
-            docker run --rm "${{ env.IMAGE_NAME }}:test" \
-              python -m pytest --tb=short -q 2>/dev/null || echo "::warning::Tests not configured yet"
-          fi
-
-  # ── Publish ───────────────────────────────────────────────────────────────
   publish:
     if: >-
       github.repository == 'hillstreet-ph/open-connect'
@@ -93,50 +74,34 @@ jobs:
     environment: container-publish
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Check Docker Hub secrets
-        id: check
+      - uses: actions/checkout@v7
+      - name: Require Docker Hub credentials
         env:
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-        run: |
-          if [ -z "$DOCKERHUB_TOKEN" ] || [ -z "$DOCKERHUB_USERNAME" ]; then
-            echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "::error::Docker Hub secrets not set"
-            exit 1
-          else
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        run: test -n "$DOCKERHUB_TOKEN" && test -n "$DOCKERHUB_USERNAME"
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
       - name: Compute tags
         id: meta
+        shell: bash
         run: |
           set -euo pipefail
-          IMAGE="${{ env.IMAGE_NAME }}"
-          SHA7=$(echo "${{ github.sha }}" | cut -c1-7)
-
+          SHA7="${GITHUB_SHA::7}"
           if [ "${{ github.event_name }}" = "release" ]; then
             TAG="${{ github.event.release.tag_name }}"
             MAJOR=$(echo "$TAG" | sed -E 's/^v?([0-9]+).*/v\1/')
             MINOR=$(echo "$TAG" | sed -E 's/^v?([0-9]+\.[0-9]+).*/v\1/')
-            echo "tags=${IMAGE}:${TAG},${IMAGE}:${MINOR},${IMAGE}:${MAJOR},${IMAGE}:latest" >> "$GITHUB_OUTPUT"
-          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "tags=${IMAGE_NAME}:${TAG},${IMAGE_NAME}:${MINOR},${IMAGE_NAME}:${MAJOR},${IMAGE_NAME}:latest" >> "$GITHUB_OUTPUT"
+          elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             TAG="${GITHUB_REF#refs/tags/}"
-            echo "tags=${IMAGE}:${TAG},${IMAGE}:latest" >> "$GITHUB_OUTPUT"
+            echo "tags=${IMAGE_NAME}:${TAG},${IMAGE_NAME}:latest" >> "$GITHUB_OUTPUT"
           else
-            echo "tags=${IMAGE}:main-${SHA7},${IMAGE}:main,${IMAGE}:latest" >> "$GITHUB_OUTPUT"
+            echo "tags=${IMAGE_NAME}:main-${SHA7},${IMAGE_NAME}:main,${IMAGE_NAME}:latest" >> "$GITHUB_OUTPUT"
           fi
-
       - name: Build and push
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
