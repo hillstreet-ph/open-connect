@@ -1,7 +1,19 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
-import { KeyRound, Loader2, Save, Trash2, Upload } from "lucide-react";
+import {
+  Bell,
+  Building2,
+  Database,
+  KeyRound,
+  Loader2,
+  Network,
+  Save,
+  ShieldCheck,
+  Trash2,
+  Upload,
+  UsersRound,
+} from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ProfileAvatarBadge } from "@/components/user-menu";
@@ -17,7 +29,7 @@ export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
     meta: [
       { title: "Settings — Open-Connect" },
-      { name: "description", content: "Profile photo, display name, and password." },
+      { name: "description", content: "Account, workspace, integrations, data, and security." },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -160,14 +172,22 @@ function SettingsPage() {
   });
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-14">
+    <div className="mx-auto max-w-5xl px-4 py-14">
       <h1 className="text-3xl font-semibold">Settings</h1>
-      <p className="mt-2 text-sm text-muted-foreground">Profile and account security.</p>
+      <p className="mt-2 text-sm text-muted-foreground">
+        Manage your account, organizations, people, connected apps, data, and platform security.
+      </p>
 
       <Tabs defaultValue="profile" className="mt-8">
-        <TabsList aria-label="Settings categories" className="h-auto w-full justify-start gap-2">
+        <TabsList
+          aria-label="Settings categories"
+          className="h-auto w-full flex-wrap justify-start gap-2"
+        >
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="security">Security & login</TabsTrigger>
+          <TabsTrigger value="workspace">Workspace</TabsTrigger>
+          <TabsTrigger value="integrations">Apps & system</TabsTrigger>
+          <TabsTrigger value="data">Data & privacy</TabsTrigger>
         </TabsList>
         <TabsContent value="profile">
           <Card className="shadow-panel">
@@ -302,7 +322,118 @@ function SettingsPage() {
             </CardContent>
           </Card>
         </TabsContent>
+        <TabsContent value="workspace">
+          <div className="grid gap-4 md:grid-cols-2">
+            <SettingsLinkCard
+              to="/orgs"
+              icon={Building2}
+              title="Organizations & workspaces"
+              description="Create workspaces, groups, invite people, and manage member roles."
+            />
+            <SettingsLinkCard
+              to="/roles"
+              icon={UsersRound}
+              title="Roles & permissions"
+              description="Review owner, admin, member, manager, developer, and viewer access."
+            />
+            <SettingsLinkCard
+              to="/projects"
+              icon={Network}
+              title="Projects & environments"
+              description="Manage project boundaries and development, staging, and production scopes."
+            />
+            <SettingsLinkCard
+              to="/admin"
+              icon={ShieldCheck}
+              title="System administration"
+              description="Owner and administrator controls for platform-wide access."
+            />
+          </div>
+        </TabsContent>
+        <TabsContent value="integrations">
+          <div className="grid gap-4 md:grid-cols-2">
+            <SettingsLinkCard
+              to="/connections"
+              icon={Network}
+              title="Connected apps"
+              description="Manage OAuth providers, apps, MCP servers, and connection health."
+            />
+            <SettingsLinkCard
+              to="/secrets"
+              icon={ShieldCheck}
+              title="Credentials & secrets"
+              description="Use brokered credential references without exposing raw secret values."
+            />
+            <SettingsLinkCard
+              to="/api-keys"
+              icon={KeyRound}
+              title="API keys & developer access"
+              description="Create scoped keys and configure Open-Connect API access."
+            />
+            <SettingsLinkCard
+              to="/automations"
+              icon={Bell}
+              title="Automations & notifications"
+              description="Review scheduled workflows, alerts, and operational actions."
+            />
+          </div>
+        </TabsContent>
+        <TabsContent value="data">
+          <div className="grid gap-4 md:grid-cols-2">
+            <SettingsLinkCard
+              to="/memory"
+              icon={Database}
+              title="Project memory"
+              description="Manage durable, private instructions and decisions scoped to projects."
+            />
+            <SettingsLinkCard
+              to="/knowledge"
+              icon={Database}
+              title="Project knowledge"
+              description="Manage documents, repositories, URLs, and reusable project sources."
+            />
+          </div>
+        </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+function SettingsLinkCard({
+  to,
+  icon: Icon,
+  title,
+  description,
+}: {
+  to:
+    | "/orgs"
+    | "/roles"
+    | "/projects"
+    | "/admin"
+    | "/connections"
+    | "/secrets"
+    | "/api-keys"
+    | "/automations"
+    | "/memory"
+    | "/knowledge";
+  icon: typeof Building2;
+  title: string;
+  description: string;
+}) {
+  return (
+    <Link
+      to={to}
+      className="block rounded-xl border bg-card p-5 shadow-panel transition-colors hover:bg-accent/40"
+    >
+      <div className="flex items-start gap-3">
+        <div className="rounded-lg bg-primary/10 p-2 text-primary">
+          <Icon className="size-4" />
+        </div>
+        <div>
+          <h2 className="font-medium">{title}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+        </div>
+      </div>
+    </Link>
   );
 }
