@@ -15,6 +15,12 @@ projects as metadata-only candidates. Discovery never downloads or executes mark
    reviewed snapshot to the Supabase review queue.
 6. Only separately approved, verified resources may become installable or public marketplace tools.
 
+Discovery never publishes to Supabase. Manual publication is restricted to `main` and the protected
+`production` environment. Catalog branch updates merge existing history and use a normal push;
+conflicts stop the run for review. The collector explicitly dispatches the existing required CI
+workflow because pushes made with `GITHUB_TOKEN` do not trigger pull-request workflows. Independent
+review is still required; the collector never approves or merges its pull request.
+
 ## Review states
 
 | State                     | Meaning                                                       |

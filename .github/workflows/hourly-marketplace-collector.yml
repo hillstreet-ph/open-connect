@@ -8,6 +8,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  actions: write
 
 concurrency:
   group: open-connect-marketplace-collector
@@ -15,10 +16,13 @@ concurrency:
 
 jobs:
   collect:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -28,13 +32,6 @@ jobs:
         run: node --experimental-strip-types scripts/collect-marketplace-resources.mjs --write-catalog
       - name: Validate generated catalog
         run: npm run test:registry && npm run marketplace:validate
-      - name: Publish reviewed candidates to Supabase
-        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          SUPABASE_URL: https://huadtiuuoiriqrjpjxhr.supabase.co
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: node --experimental-strip-types scripts/collect-marketplace-resources.mjs --publish
       - name: Create or update catalog review pull request
         if: github.ref == 'refs/heads/main'
         env:
@@ -47,15 +44,17 @@ jobs:
           branch="automation/marketplace-catalog-sync"
           git config user.name "open-connect-marketplace[bot]"
           git config user.email "open-connect-marketplace[bot]@users.noreply.github.com"
-          git switch -C "$branch"
-          git add config/marketplace-candidates.generated.json
-          git commit -m "chore(marketplace): refresh reviewed source candidates"
-          git push --force-with-lease origin "$branch"
-          gh pr view "$branch" >/dev/null 2>&1 || gh pr create \
+          bash scripts/update-marketplace-branch.sh
+          if [ -z "$(gh pr list --head "$branch" --base main --state open --json number --jq '.[0].number // empty')" ]; then
+            gh pr create \
             --base main \
             --head "$branch" \
             --title "chore(marketplace): refresh source candidates" \
             --body "Automated metadata-only catalog refresh. Every candidate remains non-installable until license and security review are complete."
+          fi
+          # GITHUB_TOKEN events do not trigger pull_request workflows.
+          # Dispatch the existing required check against the actual pushed ref.
+          gh workflow run ci.yml --ref "$branch"
       - name: Upload redacted discovery evidence
         if: always()
         uses: actions/upload-artifact@v4

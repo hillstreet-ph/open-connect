@@ -27,6 +27,8 @@ jobs:
         run: bun run lint
       - name: Unit and navigation tests
         run: bun run test
+      - name: Marketplace branch history regression tests
+        run: python3 scripts/update-marketplace-branch.test.py
       - name: Typecheck / build
         env:
           VITE_SUPABASE_URL: https://huadtiuuoiriqrjpjxhr.supabase.co
