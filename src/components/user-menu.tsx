@@ -1,16 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Building2,
-  ChevronDown,
-  FileCode,
-  KeyRound,
-  Lock,
-  LogOut,
-  Plug,
-  Settings,
-  Shield,
-} from "lucide-react";
+import { ChevronDown, FileCode, KeyRound, LogOut, Plug, Settings, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -88,16 +78,6 @@ function AccountMenuItems({ onSignOut, showAdmin }: { onSignOut: () => void; sho
         <Link to="/settings" className="cursor-pointer">
           <Settings className="mr-2 size-4" />
           Settings
-        </Link>
-      </DropdownMenuItem>
-      <DropdownMenuItem asChild>
-        <Link to="/orgs">
-          <Building2 /> Organizations & workspaces
-        </Link>
-      </DropdownMenuItem>
-      <DropdownMenuItem asChild>
-        <Link to="/secrets">
-          <Lock /> Credentials
         </Link>
       </DropdownMenuItem>
       {showAdmin ? (
