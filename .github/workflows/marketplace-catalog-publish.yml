@@ -1,0 +1,36 @@
+name: Publish approved marketplace catalog
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - config/marketplace-candidates.generated.json
+      - config/marketplace-sources.registry.json
+      - scripts/collect-marketplace-resources.mjs
+      - scripts/validate-marketplace-catalog.mjs
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: open-connect-marketplace-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate approved catalog
+        run: npm run marketplace:validate
+      - name: Publish review queue records
+        env:
+          SUPABASE_URL: https://huadtiuuoiriqrjpjxhr.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node --experimental-strip-types scripts/collect-marketplace-resources.mjs --from-catalog --publish
