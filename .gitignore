@@ -21,6 +21,8 @@ dist-ssr
 
 .wrangler/
 .dev.vars
+.codex/migrate-to-codex-report.txt
+.openai/
 
 .vscode/*
 !.vscode/extensions.json
@@ -31,3 +33,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Python control-plane artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/

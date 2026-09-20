@@ -4,7 +4,12 @@ import { useServerFn } from "@tanstack/react-start";
 import { FolderKanban, Loader2, Plus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { createOrganization, createProject, listOrganizations, listProjects } from "@/lib/orgs.functions";
+import {
+  createOrganization,
+  createProject,
+  listOrganizations,
+  listProjects,
+} from "@/lib/orgs.functions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -118,7 +123,11 @@ function ProjectsPage() {
               disabled={!orgName.trim() || orgMutation.isPending}
               onClick={() => orgMutation.mutate()}
             >
-              {orgMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
+              {orgMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Plus className="size-4" />
+              )}
               Create organization
             </Button>
           </CardContent>
@@ -185,7 +194,9 @@ function ProjectsPage() {
         </h2>
         <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {(projects.data ?? []).length === 0 ? (
-            <p className="text-sm text-muted-foreground">No projects yet — create an org, then a project.</p>
+            <p className="text-sm text-muted-foreground">
+              No projects yet — create an org, then a project.
+            </p>
           ) : (
             projects.data?.map((p) => (
               <Card key={p.id} className="p-4 shadow-panel">

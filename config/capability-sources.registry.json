@@ -1,0 +1,82 @@
+{
+  "schema_version": "1.0.0",
+  "registry_id": "open-connect-capability-sources",
+  "purpose": "Deduplicated sources for MCP servers, skills, plugins, tools, and browser agents.",
+  "deduplication": {
+    "identity_key": ["kind", "canonical_url", "canonical_name"],
+    "precedence": ["official", "verified_first_party", "verified_community", "discovery_only"],
+    "duplicate_tool_policy": "namespace_or_whitelist",
+    "duplicate_skill_policy": "retain_highest_precedence_source",
+    "install_mode": "idempotent_upsert"
+  },
+  "categories": [
+    "developer",
+    "infrastructure",
+    "browser",
+    "security",
+    "business",
+    "productivity",
+    "data",
+    "ai"
+  ],
+  "sources": [
+    {
+      "id": "docker-agent-mcp",
+      "kind": "mcp_provider",
+      "category": "infrastructure",
+      "canonical_url": "https://docs.docker.com/ai/docker-agent/tools/mcp/",
+      "trust": "official",
+      "status": "cataloged",
+      "transports": ["docker-mcp-gateway", "stdio", "streamable-http", "sse"],
+      "credential_transport": "environment_or_oauth",
+      "policy": ["whitelist_tools", "defer_large_toolsets", "namespace_collisions"]
+    },
+    {
+      "id": "docker-agent-skills",
+      "kind": "skill_provider",
+      "category": "developer",
+      "canonical_url": "https://docs.docker.com/ai/docker-agent/features/skills/",
+      "trust": "official",
+      "status": "cataloged",
+      "discovery": "SKILL.md",
+      "reuse_local_open_connect_skills": true
+    },
+    {
+      "id": "opx-coding",
+      "kind": "skill_directory",
+      "category": "developer",
+      "canonical_url": "https://www.opxskills.com/category/coding",
+      "trust": "discovery_only",
+      "status": "cataloged_not_bulk_installed",
+      "import_policy": "review_provenance_license_and_duplicate_key_before_install"
+    },
+    {
+      "id": "tinyfish",
+      "kind": "remote_mcp",
+      "category": "browser",
+      "canonical_url": "https://agent.tinyfish.ai/mcp",
+      "documentation_url": "https://docs.tinyfish.ai/for-coding-agents",
+      "trust": "official",
+      "status": "authorization_required",
+      "authentication": "oauth_preferred_or_credential://tinyfish/open-connect",
+      "capabilities": ["search", "fetch", "browser", "agent"],
+      "consumers": ["Open-Connect", "ChatGPT", "Claude", "Codex", "Open-System"]
+    },
+    {
+      "id": "toolmatch",
+      "kind": "tool_discovery_provider",
+      "category": "developer",
+      "canonical_url": null,
+      "trust": "unverified",
+      "status": "provider_endpoint_required",
+      "published": false,
+      "reason": "No official endpoint or package identity was verified from the supplied request."
+    }
+  ],
+  "credential_policy": {
+    "raw_secrets_in_registry": false,
+    "raw_secrets_in_agent_context": false,
+    "allowed_references": ["credential://", "oauth://", "profile://"],
+    "production_mutations_require_approval": true
+  }
+}

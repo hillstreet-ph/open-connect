@@ -12,7 +12,8 @@ export const Route = createFileRoute("/api/v1/resources")({
     handlers: {
       GET: async ({ request }) => {
         const key = await authenticateKey(request);
-        if (!key) return gatewayError("Missing or invalid Open-Connect key.", 401, "invalid_api_key");
+        if (!key)
+          return gatewayError("Missing or invalid Open-Connect key.", 401, "invalid_api_key");
         if (!hasScope(key, "resources:read") && !hasScope(key, "models:read")) {
           return gatewayError("Key is missing resources:read scope.", 403, "insufficient_scope");
         }
@@ -20,7 +21,9 @@ export const Route = createFileRoute("/api/v1/resources")({
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { data, error } = await supabaseAdmin
           .from("resources")
-          .select("id, slug, name, description, resource_type, category_slug, verified, featured")
+          .select(
+            "id, slug, name, description, resource_type, category_slug, verified, featured, installation_type, installation_config",
+          )
           .eq("published", true)
           .order("featured", { ascending: false })
           .order("name")

@@ -26,12 +26,19 @@ export const listToolkits = createServerFn({ method: "GET" })
 
 export const createToolkit = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { name: string; description?: string; resourceIds: string[]; published?: boolean }) => ({
-    name: input.name.trim(),
-    description: (input.description ?? "").trim(),
-    resourceIds: Array.isArray(input.resourceIds) ? input.resourceIds.slice(0, 50) : [],
-    published: Boolean(input.published),
-  }))
+  .validator(
+    (input: {
+      name: string;
+      description?: string;
+      resourceIds: string[];
+      published?: boolean;
+    }) => ({
+      name: input.name.trim(),
+      description: (input.description ?? "").trim(),
+      resourceIds: Array.isArray(input.resourceIds) ? input.resourceIds.slice(0, 50) : [],
+      published: Boolean(input.published),
+    }),
+  )
   .handler(async ({ data, context }) => {
     if (!data.name) throw new Error("A toolkit name is required");
 
@@ -64,7 +71,7 @@ export const createToolkit = createServerFn({ method: "POST" })
 
 export const deleteToolkit = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string }) => ({ id: input.id }))
+  .validator((input: { id: string }) => ({ id: input.id }))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("toolkits").delete().eq("id", data.id);
     if (error) throw new Error(error.message);

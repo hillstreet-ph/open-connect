@@ -23,7 +23,10 @@ export const Route = createFileRoute("/_authenticated/secrets")({
   head: () => ({
     meta: [
       { title: "Secrets — Open-Connect" },
-      { name: "description", content: "Scoped credential vault for API keys, tokens and bot secrets." },
+      {
+        name: "description",
+        content: "Scoped credential vault for API keys, tokens and bot secrets.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -177,7 +180,11 @@ function SecretsPage() {
             onClick={() => createMutation.mutate()}
             disabled={createMutation.isPending || !name.trim() || !value.trim()}
           >
-            {createMutation.isPending ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Lock className="mr-2 size-4" />}
+            {createMutation.isPending ? (
+              <Loader2 className="mr-2 size-4 animate-spin" />
+            ) : (
+              <Lock className="mr-2 size-4" />
+            )}
             Store secret
           </Button>
         </CardContent>

@@ -198,8 +198,8 @@ export function ResourceLibraryCard() {
       <CardHeader>
         <CardTitle className="text-base">Package library</CardTitle>
         <CardDescription>
-          Upload .zip / .md / manifests — auto-detect skill · MCP · plugin · agent · prompt and publish
-          to the catalog. Select multiple files for bulk upload.
+          Upload .zip / .md / manifests — auto-detect skill · MCP · plugin · agent · prompt and
+          publish to the catalog. Select multiple files for bulk upload.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -268,7 +268,11 @@ export function ResourceLibraryCard() {
         </div>
 
         <Button onClick={() => void uploadAndRegister()} disabled={busy || !file}>
-          {busy ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Upload className="mr-2 size-4" />}
+          {busy ? (
+            <Loader2 className="mr-2 size-4 animate-spin" />
+          ) : (
+            <Upload className="mr-2 size-4" />
+          )}
           Upload & publish
         </Button>
 

@@ -7,6 +7,13 @@ import {
   logGatewayRequest,
   type AuthedKey,
 } from "@/lib/gateway.server";
+import {
+  buildAdaptivePlan,
+  buildLearningRecord,
+  isOpaqueCredentialReference,
+  rankCapabilities,
+  redactEvidence,
+} from "@/lib/autonomous-control";
 
 const WWW_AUTH =
   'Bearer realm="open-connect", resource_metadata="https://open-connect.site/.well-known/oauth-protected-resource"';
@@ -26,13 +33,38 @@ type ResourceRow = {
   description: string | null;
   resource_type: string;
   installation_type: string | null;
+  installation_config: Record<string, unknown> | null;
+  verified: boolean;
 };
+
+function reviewState(resource: ResourceRow) {
+  return String(resource.installation_config?.["review_state"] ?? "approved");
+}
+
+function isExecutable(resource: ResourceRow) {
+  return resource.verified && reviewState(resource) === "approved";
+}
 
 type McpTool = {
   name: string;
   description: string;
   inputSchema: Record<string, unknown>;
+  annotations?: Record<string, boolean>;
+  _meta?: Record<string, unknown>;
 };
+
+const COMMAND_CENTER_URI = "ui://open-connect/command-center-v1.html";
+
+const COMMAND_CENTER_HTML = `<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>body{font:14px system-ui;margin:0;background:#08111f;color:#e5eefb}.app{padding:18px}.head{display:flex;justify-content:space-between;gap:12px;align-items:center}.badge{padding:5px 9px;border-radius:999px;background:#12315c;color:#8fd3ff}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:14px}.card{border:1px solid #24415f;border-radius:12px;padding:13px;background:#0d1b2d}.muted{color:#91a6bd}.ok{color:#6ee7a8}</style></head>
+<body><main class="app"><div class="head"><div><strong>Open-Connect Command Center</strong><div class="muted">Autonomous control with governed writes</div></div><span class="badge">owners + admins</span></div><section id="grid" class="grid"><div class="card">Waiting for Open-Connect status…</div></section></main>
+<script>
+const grid=document.getElementById('grid');
+function render(data){const d=data||{};const items=[['Gateway',d.gateway||'open-connect.site'],['Resources',d.planes?.resources?.published??'—'],['Connections',d.planes?.connections?.connected??'—'],['Policy','Protected actions gated']];grid.innerHTML=items.map(([k,v])=>'<div class="card"><div class="muted">'+k+'</div><div class="ok">'+v+'</div></div>').join('')}
+window.addEventListener('message',e=>{const m=e.data;if(m?.method==='ui/notifications/tool-result')render(m.params?.structuredContent||m.params?.content?.[0]?.text)});
+if(window.openai?.toolOutput)render(window.openai.toolOutput);
+</script></body></html>`;
 
 /** Isolate-level cache (Cloudflare warm isolates reuse this). */
 let catalogCache: {
@@ -45,9 +77,24 @@ let catalogCache: {
 
 const PLATFORM_TOOLS: McpTool[] = [
   {
+    name: "search",
+    description:
+      "Use this when searching Open-Connect projects, providers, plugins, skills, MCP servers, tools, or runs.",
+    inputSchema: { type: "object", properties: { query: { type: "string" } }, required: ["query"] },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  },
+  {
+    name: "fetch",
+    description: "Use this when retrieving one Open-Connect catalog item by its exact id or slug.",
+    inputSchema: { type: "object", properties: { id: { type: "string" } }, required: ["id"] },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  },
+  {
     name: "open_connect_status",
     description: "Gateway status: resources, connections, models",
     inputSchema: { type: "object", properties: {} },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    _meta: { "ui/resourceUri": COMMAND_CENTER_URI, "openai/outputTemplate": COMMAND_CENTER_URI },
   },
   {
     name: "list_resources",
@@ -72,7 +119,172 @@ const PLATFORM_TOOLS: McpTool[] = [
     description: "List open-connect model aliases on /v1",
     inputSchema: { type: "object", properties: {} },
   },
+  {
+    name: "inspect_connections",
+    description:
+      "Use this when validating connection health, scopes, and opaque credential bindings.",
+    inputSchema: { type: "object", properties: { provider: { type: "string" } } },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+  },
+  {
+    name: "plan_goal",
+    description:
+      "Use this when converting an operator goal into a bounded autonomous execution plan.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        goal: { type: "string" },
+        environment: { type: "string", enum: ["development", "staging", "production"] },
+      },
+      required: ["goal"],
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  },
+  {
+    name: "execute_plan",
+    description:
+      "Use this when starting an autonomous plan. Safe reversible steps run automatically; protected steps create an approval request.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        goal: { type: "string" },
+        environment: { type: "string", enum: ["development", "staging", "production"] },
+      },
+      required: ["goal"],
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
+  },
+  {
+    name: "recommend_toolchain",
+    description:
+      "Find the smallest approved plugin, skill, tool, app, or MCP bundle matching a goal.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        goal: { type: "string" },
+        limit: { type: "integer", minimum: 1, maximum: 10 },
+      },
+      required: ["goal"],
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  },
+  {
+    name: "resolve_capability",
+    description:
+      "Resolve one requested capability to approved catalog resources and report whether a draft is needed.",
+    inputSchema: {
+      type: "object",
+      properties: { capability: { type: "string" } },
+      required: ["capability"],
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  },
+  {
+    name: "create_capability_draft",
+    description:
+      "Create a non-executable capability specification when no approved tool exists. It never installs code automatically.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        capability: { type: "string" },
+        goal: { type: "string" },
+        environment: { type: "string", enum: ["development", "staging", "production"] },
+      },
+      required: ["capability", "goal"],
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: false,
+    },
+  },
+  {
+    name: "record_run_outcome",
+    description:
+      "Record a verified autonomous-run outcome, save redacted working memory, and promote repeated successes to knowledge.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        correlation_id: { type: "string" },
+        status: { type: "string", enum: ["succeeded", "failed", "blocked"] },
+        summary: { type: "string" },
+        capability_slugs: { type: "array", items: { type: "string" } },
+        evidence: { type: "object" },
+      },
+      required: ["correlation_id", "status", "summary"],
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: false,
+    },
+  },
+  {
+    name: "install_capability",
+    description:
+      "Use this when idempotently installing an approved catalog capability for the current owner or admin.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        resource_id: { type: "string" },
+        environment: { type: "string", enum: ["development", "staging", "production"] },
+      },
+      required: ["resource_id"],
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+  },
+  {
+    name: "configure_connection",
+    description:
+      "Use this when binding a provider through an opaque credential:// reference; raw secret values are rejected.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        provider: { type: "string" },
+        display_name: { type: "string" },
+        credential_ref: { type: "string" },
+        scopes: { type: "array", items: { type: "string" } },
+      },
+      required: ["provider", "credential_ref"],
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true,
+    },
+  },
 ];
+
+async function loadRoles(userId: string): Promise<string[]> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await supabaseAdmin.from("user_roles").select("role").eq("user_id", userId);
+  return (data ?? []).map((row: { role: string }) => row.role);
+}
+
+async function requireControlWrite(key: AuthedKey) {
+  const roles = await loadRoles(key.userId);
+  const authorizedRole = roles.includes("owner") || roles.includes("admin");
+  const authorizedScope =
+    hasScope(key, "control:write") ||
+    hasScope(key, "tools:invoke") ||
+    hasScope(key, "connections:invoke");
+  if (!authorizedRole || !authorizedScope)
+    throw new Error("Owner/admin role and control write scope required.");
+  return roles;
+}
 
 function unauthorized(message: string) {
   return new Response(
@@ -110,7 +322,9 @@ async function getCatalog(force = false) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data } = await supabaseAdmin
     .from("resources")
-    .select("slug, name, description, resource_type, installation_type")
+    .select(
+      "slug, name, description, resource_type, installation_type, installation_config, verified",
+    )
     .eq("published", true)
     .order("featured", { ascending: false })
     .limit(100);
@@ -122,18 +336,20 @@ async function getCatalog(force = false) {
 
   for (const r of rows) {
     bySlug.set(r.slug, r);
-    const tn = toolNameFromSlug(r.slug);
-    byToolName.set(tn, r);
-    resourceTools.push({
-      name: tn,
-      description: `[${r.resource_type}] ${r.name}${r.description ? ` — ${r.description.slice(0, 160)}` : ""}`,
-      inputSchema: {
-        type: "object",
-        properties: {
-          action: { type: "string", description: "info | invoke" },
+    if (isExecutable(r)) {
+      const tn = toolNameFromSlug(r.slug);
+      byToolName.set(tn, r);
+      resourceTools.push({
+        name: tn,
+        description: `[${r.resource_type}] ${r.name}${r.description ? ` — ${r.description.slice(0, 160)}` : ""}`,
+        inputSchema: {
+          type: "object",
+          properties: {
+            action: { type: "string", description: "info | invoke" },
+          },
         },
-      },
-    });
+      });
+    }
   }
 
   catalogCache = {
@@ -157,7 +373,9 @@ async function findResourceByToolName(toolName: string): Promise<ResourceRow | n
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data } = await supabaseAdmin
     .from("resources")
-    .select("slug, name, description, resource_type, installation_type")
+    .select(
+      "slug, name, description, resource_type, installation_type, installation_config, verified",
+    )
     .eq("published", true)
     .or(`slug.eq.${slugHyphen},slug.eq.${raw}`)
     .limit(1)
@@ -205,7 +423,11 @@ export const Route = createFileRoute("/mcp")({
           !hasScope(key, "models:invoke") &&
           !hasScope(key, "resources:read")
         ) {
-          return gatewayError("Key is missing mcp, models, or resources scope.", 403, "insufficient_scope");
+          return gatewayError(
+            "Key is missing mcp, models, or resources scope.",
+            403,
+            "insufficient_scope",
+          );
         }
 
         const body = (await request.json().catch(() => null)) as {
@@ -224,7 +446,7 @@ export const Route = createFileRoute("/mcp")({
         if (body.method === "initialize") {
           result = {
             protocolVersion: "2025-06-18",
-            capabilities: { tools: {} },
+            capabilities: { tools: {}, resources: {} },
             serverInfo: {
               name: "open-connect",
               version: "1.0.1",
@@ -234,11 +456,94 @@ export const Route = createFileRoute("/mcp")({
         } else if (body.method === "tools/list") {
           const catalog = await getCatalog();
           result = { tools: catalog.tools };
+        } else if (body.method === "resources/list") {
+          result = {
+            resources: [
+              {
+                uri: COMMAND_CENTER_URI,
+                name: "Open-Connect Command Center",
+                description: "Autonomous control status and execution view",
+                mimeType: "text/html;profile=mcp-app",
+              },
+            ],
+          };
+        } else if (body.method === "resources/read") {
+          const uri = (body.params as { uri?: string } | undefined)?.uri;
+          result =
+            uri === COMMAND_CENTER_URI
+              ? {
+                  contents: [
+                    {
+                      uri: COMMAND_CENTER_URI,
+                      mimeType: "text/html;profile=mcp-app",
+                      text: COMMAND_CENTER_HTML,
+                      _meta: {
+                        ui: {
+                          domain: "https://open-connect.site",
+                          prefersBorder: true,
+                          csp: {
+                            connectDomains: ["https://open-connect.site"],
+                            resourceDomains: [],
+                          },
+                        },
+                        "openai/widgetDescription":
+                          "Open-Connect autonomous control command center",
+                      },
+                    },
+                  ],
+                }
+              : { contents: [] };
         } else if (body.method === "tools/call") {
           const name = body.params?.name;
           const args = body.params?.arguments ?? {};
 
-          if (name === "open_connect_status") {
+          if (name === "search") {
+            const query = String(args["query"] ?? "").trim();
+            const catalog = await getCatalog();
+            const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+            const results = [...catalog.bySlug.values()]
+              .filter((item) =>
+                terms.every((term) =>
+                  `${item.slug} ${item.name} ${item.description ?? ""} ${item.resource_type}`
+                    .toLowerCase()
+                    .includes(term),
+                ),
+              )
+              .slice(0, 20)
+              .map((item) => ({
+                id: item.slug,
+                title: item.name,
+                url: `https://open-connect.site/resources/${item.slug}`,
+              }));
+            result = textResult({ results });
+          } else if (name === "fetch") {
+            const id = String(args["id"] ?? "").trim();
+            const catalog = await getCatalog();
+            const item = catalog.bySlug.get(id);
+            result = textResult(
+              item
+                ? {
+                    id: item.slug,
+                    title: item.name,
+                    text: item.description ?? "",
+                    url: `https://open-connect.site/resources/${item.slug}`,
+                    metadata: {
+                      type: item.resource_type,
+                      installation_type: item.installation_type,
+                      review_state: reviewState(item),
+                      risk: item.installation_config?.["risk"] ?? null,
+                      canonical_url: item.installation_config?.["canonical_url"] ?? null,
+                      executable: isExecutable(item),
+                    },
+                  }
+                : {
+                    id,
+                    title: "Not found",
+                    text: "No matching Open-Connect resource.",
+                    url: "https://open-connect.site/resources",
+                  },
+            );
+          } else if (name === "open_connect_status") {
             const catalog = await getCatalog();
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
             const { count: connections } = await supabaseAdmin
@@ -259,9 +564,353 @@ export const Route = createFileRoute("/mcp")({
               scopes: key.scopes,
               user_id: key.userId,
             });
+          } else if (name === "inspect_connections") {
+            const provider = String(args["provider"] ?? "").trim();
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            let query = supabaseAdmin
+              .from("app_connections")
+              .select("provider, display_name, status, scopes, credential_reference, last_used_at")
+              .eq("user_id", key.userId);
+            if (provider) query = query.eq("provider", provider);
+            const { data } = await query.order("created_at", { ascending: false }).limit(100);
+            result = textResult({
+              connections: (data ?? []).map((connection: Record<string, unknown>) => ({
+                ...connection,
+                credential_reference: connection["credential_reference"] ? "configured" : "missing",
+              })),
+            });
+          } else if (name === "recommend_toolchain" || name === "resolve_capability") {
+            const goal = String(
+              name === "resolve_capability" ? args["capability"] : args["goal"],
+            ).trim();
+            const limit = name === "resolve_capability" ? 5 : Number(args["limit"] ?? 5);
+            const catalog = await getCatalog();
+            const matches = rankCapabilities(
+              goal,
+              [...catalog.bySlug.values()].filter(isExecutable).map((item) => ({
+                slug: item.slug,
+                name: item.name,
+                description: item.description,
+                resourceType: item.resource_type,
+                installationType: item.installation_type,
+              })),
+              limit,
+            );
+            result = textResult({
+              goal,
+              matches,
+              missing_capability: matches.length === 0,
+              next_action: matches.length ? "install_or_invoke" : "create_capability_draft",
+              values_exposed: false,
+            });
+          } else if (name === "plan_goal") {
+            const catalog = await getCatalog();
+            result = textResult(
+              buildAdaptivePlan(
+                String(args["goal"] ?? ""),
+                String(args["environment"] ?? "production"),
+                [...catalog.bySlug.values()].filter(isExecutable).map((item) => ({
+                  slug: item.slug,
+                  name: item.name,
+                  description: item.description,
+                  resourceType: item.resource_type,
+                  installationType: item.installation_type,
+                })),
+              ),
+            );
+          } else if (name === "execute_plan") {
+            await requireControlWrite(key);
+            const catalog = await getCatalog();
+            const plan = buildAdaptivePlan(
+              String(args["goal"] ?? ""),
+              String(args["environment"] ?? "production"),
+              [...catalog.bySlug.values()].map((item) => ({
+                slug: item.slug,
+                name: item.name,
+                description: item.description,
+                resourceType: item.resource_type,
+                installationType: item.installation_type,
+              })),
+            );
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            // Generated Supabase types lag new migrations until the next type-generation job.
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const controlDb = supabaseAdmin as any;
+            const state = plan.approvalRequired ? "approval_required" : "planned";
+            await controlDb.from("autonomous_runs").upsert({
+              id: plan.id,
+              user_id: key.userId,
+              goal: plan.goal,
+              environment: plan.environment,
+              state,
+              plan: redactEvidence(plan),
+              evidence: {
+                verified: false,
+                capability_count: plan.capabilities.length,
+                values_exposed: false,
+              },
+              rollback: { available: true },
+              correlation_id: plan.id,
+            });
+            await controlDb.from("autonomous_run_events").insert({
+              user_id: key.userId,
+              run_id: plan.id,
+              event_type: "planned",
+              summary: plan.missingCapability
+                ? "No approved capability matched; a draft specification was created."
+                : `Selected ${plan.capabilities.length} approved capability candidate(s).`,
+              capability_slugs: plan.capabilities.map((capability) => capability.slug),
+              evidence: { values_exposed: false },
+            });
+            if (plan.missingCapability) {
+              await controlDb.from("capability_requests").insert({
+                user_id: key.userId,
+                source_run_id: plan.id,
+                requested_capability: plan.goal.slice(0, 240),
+                goal: plan.goal,
+                state: "draft",
+                specification: {
+                  generated_by: "open-connect",
+                  executable: false,
+                  required_contract: [
+                    "input_schema",
+                    "output_schema",
+                    "credential_reference",
+                    "health_check",
+                    "approval_policy",
+                    "tests",
+                  ],
+                },
+              });
+            }
+            if (plan.approvalRequired) {
+              await controlDb.from("control_approvals").insert({
+                tenant_id: key.userId,
+                requested_by: key.userId,
+                action: "execute_plan",
+                target: plan.goal,
+                environment: plan.environment,
+                risk: "protected",
+                parameters_digest: plan.id,
+                expires_at: new Date(Date.now() + 15 * 60_000).toISOString(),
+              });
+            }
+            result = textResult({
+              correlation_id: plan.id,
+              state,
+              plan,
+              autonomous_steps_executed: plan.approvalRequired
+                ? ["discover"]
+                : ["discover", "plan"],
+            });
+          } else if (name === "create_capability_draft") {
+            await requireControlWrite(key);
+            const capability = String(args["capability"] ?? "")
+              .trim()
+              .slice(0, 240);
+            const goal = String(args["goal"] ?? "")
+              .trim()
+              .slice(0, 4_000);
+            if (!capability || !goal) throw new Error("Capability and goal are required.");
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            // Generated Supabase types lag new migrations until the next type-generation job.
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const controlDb = supabaseAdmin as any;
+            const { data, error } = await controlDb
+              .from("capability_requests")
+              .insert({
+                user_id: key.userId,
+                requested_capability: capability,
+                goal,
+                state: "draft",
+                specification: {
+                  environment: String(args["environment"] ?? "development"),
+                  executable: false,
+                  required_contract: [
+                    "input_schema",
+                    "output_schema",
+                    "credential_reference",
+                    "health_check",
+                    "approval_policy",
+                    "tests",
+                  ],
+                },
+              })
+              .select("id,requested_capability,state,created_at")
+              .single();
+            if (error) throw new Error(error.message);
+            result = textResult({ draft: data, executable: false, values_exposed: false });
+          } else if (name === "record_run_outcome") {
+            await requireControlWrite(key);
+            const correlationId = String(args["correlation_id"] ?? "").trim();
+            const status = String(args["status"] ?? "") as "succeeded" | "failed" | "blocked";
+            const summary = String(args["summary"] ?? "")
+              .trim()
+              .slice(0, 50_000);
+            const capabilitySlugs = Array.isArray(args["capability_slugs"])
+              ? args["capability_slugs"]
+                  .filter((value): value is string => typeof value === "string")
+                  .slice(0, 20)
+              : [];
+            if (!correlationId || !["succeeded", "failed", "blocked"].includes(status) || !summary)
+              throw new Error("Valid correlation id, status, and summary are required.");
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            // Generated Supabase types lag new migrations until the next type-generation job.
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const controlDb = supabaseAdmin as any;
+            const { data: run } = await controlDb
+              .from("autonomous_runs")
+              .select("id,goal")
+              .eq("correlation_id", correlationId)
+              .eq("user_id", key.userId)
+              .single();
+            if (!run) throw new Error("Autonomous run not found.");
+            const learning = buildLearningRecord({
+              goal: run.goal,
+              status,
+              summary,
+              capabilitySlugs,
+              evidence: args["evidence"],
+            });
+            await controlDb.from("autonomous_run_events").insert({
+              user_id: key.userId,
+              run_id: run.id,
+              event_type: status === "succeeded" ? "learned" : status,
+              summary: learning.content,
+              capability_slugs: capabilitySlugs,
+              evidence: learning.evidence,
+            });
+            await controlDb.from("memory_records").insert({
+              user_id: key.userId,
+              title: learning.title,
+              content: learning.content,
+              memory_type: learning.memoryType,
+              importance: learning.importance,
+              tags: learning.tags,
+              metadata: { run_id: run.id, evidence: learning.evidence },
+            });
+            let knowledgePromoted = false;
+            if (status === "succeeded" && capabilitySlugs.length) {
+              const { count } = await controlDb
+                .from("autonomous_run_events")
+                .select("id", { count: "exact", head: true })
+                .eq("user_id", key.userId)
+                .eq("event_type", "learned")
+                .contains("capability_slugs", capabilitySlugs);
+              if (count === 3) {
+                await controlDb.from("knowledge_items").insert({
+                  user_id: key.userId,
+                  title: `Proven procedure: ${capabilitySlugs.join(", ")}`.slice(0, 240),
+                  content: learning.content,
+                  source_type: "api",
+                  status: "ready",
+                  tags: ["verified-procedure", ...capabilitySlugs].slice(0, 20),
+                  metadata: { promoted_from_run: run.id, verified_successes: 3 },
+                });
+                knowledgePromoted = true;
+              }
+            }
+            await controlDb
+              .from("autonomous_runs")
+              .update({
+                state: status === "succeeded" ? "succeeded" : "failed",
+                evidence: learning.evidence,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", run.id)
+              .eq("user_id", key.userId);
+            result = textResult({
+              correlation_id: correlationId,
+              state: status,
+              memory_saved: true,
+              knowledge_promoted: knowledgePromoted,
+              values_exposed: false,
+            });
+          } else if (name === "install_capability") {
+            await requireControlWrite(key);
+            const slug = String(args["resource_id"] ?? "").trim();
+            const environment = String(args["environment"] ?? "production");
+            const catalog = await getCatalog();
+            const item = catalog.bySlug.get(slug);
+            if (!item) throw new Error("Unknown or unpublished capability.");
+            if (!isExecutable(item))
+              throw new Error(`Capability is ${reviewState(item)} and cannot be installed.`);
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const { data: resource } = await supabaseAdmin
+              .from("resources")
+              .select("id")
+              .eq("slug", slug)
+              .single();
+            if (!resource?.id) throw new Error("Capability record unavailable.");
+            const correlationId = crypto.randomUUID();
+            // Generated Supabase types lag new migrations until the next type-generation job.
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const controlDb = supabaseAdmin as any;
+            const { data, error } = await controlDb
+              .from("capability_installations")
+              .upsert(
+                {
+                  user_id: key.userId,
+                  resource_id: resource.id,
+                  environment,
+                  state: "installed",
+                  configuration: { source: "chatgpt-mcp", resource_slug: slug },
+                  correlation_id: correlationId,
+                },
+                { onConflict: "user_id,resource_id,environment" },
+              )
+              .select("id,state,environment,correlation_id")
+              .single();
+            if (error) throw new Error(error.message);
+            result = textResult({
+              installation: data,
+              resource: { id: slug, name: item.name },
+              idempotent: true,
+            });
+          } else if (name === "configure_connection") {
+            await requireControlWrite(key);
+            const provider = String(args["provider"] ?? "")
+              .trim()
+              .toLowerCase();
+            const credentialRef = String(args["credential_ref"] ?? "").trim();
+            if (!provider || !isOpaqueCredentialReference(credentialRef))
+              throw new Error(
+                "Provider and valid credential:// reference required; raw secrets are rejected.",
+              );
+            const scopes = Array.isArray(args["scopes"])
+              ? args["scopes"].filter((scope): scope is string => typeof scope === "string")
+              : [];
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const { data, error } = await supabaseAdmin
+              .from("app_connections")
+              .upsert(
+                {
+                  user_id: key.userId,
+                  provider,
+                  display_name: String(args["display_name"] ?? provider),
+                  provider_account_id: key.userId,
+                  status: "connected",
+                  scopes,
+                  credential_reference: credentialRef,
+                  metadata: {
+                    source: "chatgpt-mcp",
+                    mode: "capability_grant",
+                    secrets_exposed: false,
+                  },
+                },
+                { onConflict: "user_id,provider,provider_account_id" },
+              )
+              .select("id,provider,display_name,status,scopes")
+              .single();
+            if (error) throw new Error(error.message);
+            result = textResult({
+              connection: data,
+              credential_reference: "configured",
+              idempotent: true,
+            });
           } else if (name === "list_resources") {
             const catalog = await getCatalog();
-            const typeFilter = typeof args['type'] === "string" ? args['type'] : null;
+            const typeFilter = typeof args["type"] === "string" ? args["type"] : null;
             const data = [...catalog.bySlug.values()]
               .filter((r) => !typeFilter || r.resource_type === typeFilter)
               .map((r) => ({
@@ -269,6 +918,10 @@ export const Route = createFileRoute("/mcp")({
                 name: r.name,
                 type: r.resource_type,
                 description: r.description,
+                review_state: reviewState(r),
+                risk: r.installation_config?.["risk"] ?? null,
+                canonical_url: r.installation_config?.["canonical_url"] ?? null,
+                executable: isExecutable(r),
               }));
             result = textResult({ data, count: data.length });
           } else if (name === "list_connections") {
@@ -292,10 +945,18 @@ export const Route = createFileRoute("/mcp")({
             });
           } else if (name?.startsWith("resource_")) {
             const match = await findResourceByToolName(name);
-            const action = typeof args['action'] === "string" ? args['action'] : "info";
+            const action = typeof args["action"] === "string" ? args["action"] : "info";
 
             if (!match) {
               result = textResult({ status: "not_found", tool: name });
+            } else if (action === "invoke" && !isExecutable(match)) {
+              result = textResult({
+                status: reviewState(match),
+                resource: { slug: match.slug, name: match.name, type: match.resource_type },
+                risk: match.installation_config?.["risk"] ?? null,
+                message:
+                  "Metadata-only resource cannot be invoked until review and approval are complete.",
+              });
             } else if (action === "invoke") {
               const providerGuess = match.slug.split("-")[0]?.toLowerCase() ?? "";
               const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

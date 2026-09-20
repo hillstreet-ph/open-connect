@@ -4,11 +4,11 @@
 #
 # Build (Dashboard → Settings → Builds):
 #   Build command:    bun install --frozen-lockfile && bun run build
-#   Build output dir: dist
+#   Build output dir: .output/public
 #   Production branch: main
 
 name = "open-connect-app"
-pages_build_output_dir = "dist"
+pages_build_output_dir = ".output/public"
 compatibility_date = "2026-08-01"
 compatibility_flags = [ "nodejs_compat" ]
 

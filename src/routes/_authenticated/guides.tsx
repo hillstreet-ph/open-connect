@@ -20,7 +20,8 @@ export const Route = createFileRoute("/_authenticated/guides")({
       { title: "Guides — Open-Connect" },
       {
         name: "description",
-        content: "User guide, marketplace access, and professional E2E setup. Not part of the marketplace catalog.",
+        content:
+          "User guide, marketplace access, and professional E2E setup. Not part of the marketplace catalog.",
       },
       { name: "robots", content: "noindex" },
     ],
@@ -113,8 +114,7 @@ function GuidesPage() {
         E2E demos live under downloads.
       </p>
       <p className="mt-2 text-xs text-muted-foreground">
-        Your role:{" "}
-        <span className="font-medium text-foreground">{loading ? "…" : primary}</span>
+        Your role: <span className="font-medium text-foreground">{loading ? "…" : primary}</span>
       </p>
 
       {/* Primary hub buttons */}
@@ -147,9 +147,14 @@ function GuidesPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="px-5 pb-5">
-            <Button asChild variant="outline" className="w-full" onClick={() => {
-              document.getElementById("user-guide")?.scrollIntoView({ behavior: "smooth" });
-            }}>
+            <Button
+              asChild
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                document.getElementById("user-guide")?.scrollIntoView({ behavior: "smooth" });
+              }}
+            >
               <a href="#user-guide">Jump to user guide</a>
             </Button>
           </CardContent>
@@ -174,7 +179,10 @@ function GuidesPage() {
       </div>
 
       {/* User guide detail */}
-      <h2 id="user-guide" className="mt-12 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      <h2
+        id="user-guide"
+        className="mt-12 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+      >
         User guide
       </h2>
       <div className="mt-3 grid gap-4 md:grid-cols-2">
@@ -209,9 +217,10 @@ function GuidesPage() {
         <CardHeader className="p-5">
           <CardTitle className="text-base">Control plane demo package</CardTitle>
           <CardDescription>
-            Deny-by-default policy, vault references, approval rules, and local validator. Served from{" "}
-            <code className="font-mono text-xs">/downloads/open-connect-control-plane-demo/</code> on
-            the edge — not from the Marketplace catalog.
+            Deny-by-default policy, vault references, approval rules, and local validator. Served
+            from{" "}
+            <code className="font-mono text-xs">/downloads/open-connect-control-plane-demo/</code>{" "}
+            on the edge — not from the Marketplace catalog.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 px-5 pb-5">
@@ -237,7 +246,10 @@ function GuidesPage() {
               </a>
             </li>
             <li>
-              <a className="text-primary hover:underline" href={`${DEMO_BASE}/validation-report.md`}>
+              <a
+                className="text-primary hover:underline"
+                href={`${DEMO_BASE}/validation-report.md`}
+              >
                 validation-report.md
               </a>
             </li>
@@ -261,7 +273,8 @@ function GuidesPage() {
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            Local validate: <code className="font-mono">pip install pyyaml && python validate_demo.py</code>
+            Local validate:{" "}
+            <code className="font-mono">pip install pyyaml && python validate_demo.py</code>
           </p>
         </CardContent>
       </Card>

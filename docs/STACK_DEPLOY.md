@@ -9,7 +9,7 @@
 GitHub (main)
     → Cloudflare Pages project open-connect-app
         → https://open-connect.site
-    → Supabase project gnqpwewbgldonarggzax
+    → Supabase project huadtiuuoiriqrjpjxhr
         → Auth · Postgres · RLS · Storage · Edge Functions
 ```
 

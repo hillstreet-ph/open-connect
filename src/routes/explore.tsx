@@ -81,8 +81,8 @@ function ExplorePage() {
         <div>
           <h1 className="text-3xl font-semibold sm:text-4xl">Explore</h1>
           <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
-            Skills, Apps, Models, MCP servers, Tools, Agents and Prompts. Pick what your agent needs and
-            bundle it into a Toolkit.
+            Skills, Apps, Models, MCP servers, Tools, Agents and Prompts. Pick what your agent needs
+            and bundle it into a Toolkit.
           </p>
         </div>
         <Button asChild>
@@ -121,7 +121,9 @@ function ExplorePage() {
 
       <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {isLoading
-          ? Array.from({ length: 6 }).map((_, index) => <Skeleton key={index} className="h-36 rounded-xl" />)
+          ? Array.from({ length: 6 }).map((_, index) => (
+              <Skeleton key={index} className="h-36 rounded-xl" />
+            ))
           : results.map((item) => (
               <Card key={item.id} className="shadow-panel">
                 <CardHeader>
@@ -138,13 +140,17 @@ function ExplorePage() {
                   <CardTitle className="mt-3 text-base">{item.name}</CardTitle>
                   <CardDescription>{item.description}</CardDescription>
                 </CardHeader>
-                <CardContent className="text-xs text-muted-foreground">{item.category_slug}</CardContent>
+                <CardContent className="text-xs text-muted-foreground">
+                  {item.category_slug}
+                </CardContent>
               </Card>
             ))}
       </div>
 
       {!isLoading && results.length === 0 ? (
-        <p className="mt-12 text-center text-sm text-muted-foreground">Nothing matches that search yet.</p>
+        <p className="mt-12 text-center text-sm text-muted-foreground">
+          Nothing matches that search yet.
+        </p>
       ) : null}
     </div>
   );

@@ -1,7 +1,7 @@
 # Owner & Auth — Open Connect
 
 **Domain:** https://open-connect.site  
-**Supabase:** gnqpwewbgldonarggzax  
+**Supabase:** huadtiuuoiriqrjpjxhr
 **Intended owner email:** `tanauancharles1@gmail.com`
 
 ## Login routes (no duplicate pages)
@@ -21,7 +21,7 @@ UI already calls `supabase.auth.signInWithOAuth({ provider: "github" })`.
 
 1. [GitHub Developer Settings](https://github.com/settings/developers) → New OAuth App  
    - Homepage: `https://open-connect.site`  
-   - Callback: `https://gnqpwewbgldonarggzax.supabase.co/auth/v1/callback`
+   - Callback: `https://huadtiuuoiriqrjpjxhr.supabase.co/auth/v1/callback`
 2. Supabase Dashboard → Authentication → Providers → **GitHub** → enable  
    - Client ID + Client Secret from the OAuth App
 3. Authentication → URL configuration  

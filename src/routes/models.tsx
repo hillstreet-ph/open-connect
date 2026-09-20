@@ -87,7 +87,7 @@ function ModelsPage() {
         </CardHeader>
         <CardContent className="space-y-3">
           <pre className="overflow-x-auto rounded-lg border border-border bg-muted/30 p-3 text-[11px] leading-relaxed">
-{`curl -sS https://open-connect.site/v1/models \\
+            {`curl -sS https://open-connect.site/v1/models \\
   -H "Authorization: Bearer oc_live_YOUR_KEY"`}
           </pre>
           <p className="text-xs text-muted-foreground">

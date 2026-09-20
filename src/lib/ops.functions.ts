@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { buildAdaptivePlan } from "@/lib/autonomous-control";
 
 export type TaskStatus = "todo" | "in_progress" | "blocked" | "done" | "cancelled";
 export type TaskPriority = "low" | "medium" | "high" | "urgent";
@@ -11,7 +12,7 @@ export type ActionType = "notify" | "webhook" | "mcp" | "agent" | "pipeline";
 
 export const listTasks = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input?: { projectId?: string; status?: string }) => ({
+  .validator((input?: { projectId?: string; status?: string }) => ({
     projectId: input?.projectId ?? null,
     status: input?.status ?? null,
   }))
@@ -32,7 +33,7 @@ export const listTasks = createServerFn({ method: "GET" })
 
 export const createTask = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (input: {
       title: string;
       description?: string;
@@ -71,7 +72,7 @@ export const createTask = createServerFn({ method: "POST" })
 
 export const updateTaskStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string; status: TaskStatus }) => ({
+  .validator((input: { id: string; status: TaskStatus }) => ({
     id: input.id,
     status: input.status,
   }))
@@ -104,7 +105,7 @@ export const listSchedules = createServerFn({ method: "GET" })
 
 export const createSchedule = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (input: {
       name: string;
       description?: string;
@@ -145,7 +146,7 @@ export const createSchedule = createServerFn({ method: "POST" })
 
 export const setScheduleStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string; status: ScheduleStatus }) => ({
+  .validator((input: { id: string; status: ScheduleStatus }) => ({
     id: input.id,
     status: input.status,
   }))
@@ -178,7 +179,7 @@ export const listAutomations = createServerFn({ method: "GET" })
 
 export const createAutomation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (input: {
       name: string;
       description?: string;
@@ -217,7 +218,7 @@ export const createAutomation = createServerFn({ method: "POST" })
 
 export const toggleAutomation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string; enabled: boolean }) => ({
+  .validator((input: { id: string; enabled: boolean }) => ({
     id: input.id,
     enabled: Boolean(input.enabled),
   }))
@@ -234,30 +235,88 @@ export const toggleAutomation = createServerFn({ method: "POST" })
 
 export const runAutomation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string }) => ({ id: input.id }))
+  .validator((input: { id: string }) => ({ id: input.id }))
   .handler(async ({ data, context }) => {
     const now = new Date().toISOString();
+    const { data: automation, error: automationError } = await context.supabase
+      .from("automations")
+      .select("id,name,description,action_type,config,project_id")
+      .eq("id", data.id)
+      .single();
+    if (automationError) throw new Error(automationError.message);
+
+    let correlationId: string | null = null;
+    let status = "ok";
+    if (automation.action_type === "agent" || automation.action_type === "pipeline") {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: resources } = await supabaseAdmin
+        .from("resources")
+        .select("slug,name,description,resource_type,installation_type")
+        .eq("published", true)
+        .limit(100);
+      const config = (automation.config ?? {}) as Record<string, unknown>;
+      const goal = String(config["goal"] ?? automation.description ?? automation.name).trim();
+      const requestedEnvironment = String(config["environment"] ?? "development");
+      const environment = ["development", "staging", "production"].includes(requestedEnvironment)
+        ? requestedEnvironment
+        : "development";
+      const plan = buildAdaptivePlan(
+        goal,
+        environment,
+        (resources ?? []).map((resource) => ({
+          slug: resource.slug,
+          name: resource.name,
+          description: resource.description,
+          resourceType: resource.resource_type,
+          installationType: resource.installation_type,
+        })),
+      );
+      correlationId = plan.id;
+      status = plan.approvalRequired ? "approval_required" : "planned";
+      // Generated Supabase types lag control-plane migrations until type generation runs.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const controlDb = supabaseAdmin as any;
+      await controlDb.from("autonomous_runs").insert({
+        id: plan.id,
+        user_id: context.userId,
+        goal: plan.goal,
+        environment: plan.environment,
+        state: status,
+        plan,
+        evidence: { automation_id: automation.id, verified: false, values_exposed: false },
+        rollback: { available: true },
+        correlation_id: plan.id,
+      });
+      await controlDb.from("autonomous_run_events").insert({
+        user_id: context.userId,
+        run_id: plan.id,
+        event_type: "planned",
+        summary: `Automation ${automation.name} created an autonomous run.`,
+        capability_slugs: plan.capabilities.map((capability) => capability.slug),
+        evidence: { automation_id: automation.id, values_exposed: false },
+      });
+      if (plan.missingCapability) {
+        await controlDb.from("capability_requests").insert({
+          user_id: context.userId,
+          source_run_id: plan.id,
+          requested_capability: plan.goal.slice(0, 240),
+          goal: plan.goal,
+          state: "draft",
+          specification: { executable: false, source: "automation" },
+        });
+      }
+    }
+
     const { data: row, error } = await context.supabase
       .from("automations")
       .update({
         last_run_at: now,
-        last_status: "ok",
+        last_status: status,
         updated_at: now,
-        config: undefined as unknown as undefined,
       })
       .eq("id", data.id)
       .select("id, name, last_run_at, last_status")
       .single();
-    // simpler update without clearing config
-    if (error) {
-      const { data: row2, error: e2 } = await context.supabase
-        .from("automations")
-        .update({ last_run_at: now, last_status: "ok", updated_at: now })
-        .eq("id", data.id)
-        .select("id, name, last_run_at, last_status")
-        .single();
-      if (e2) throw new Error(e2.message);
-      return row2;
-    }
-    return row;
+    if (error) throw new Error(error.message);
+    return { ...row, correlation_id: correlationId };
   });

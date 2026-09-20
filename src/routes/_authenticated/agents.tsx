@@ -17,9 +17,15 @@ export const Route = createFileRoute("/_authenticated/agents")({
   head: () => ({
     meta: [
       { title: "Connect an Agent — Open-Connect" },
-      { name: "description", content: "Register an MCP server URL and mint a scoped Open-Connect key for your agent." },
+      {
+        name: "description",
+        content: "Register an MCP server URL and mint a scoped Open-Connect key for your agent.",
+      },
       { property: "og:title", content: "Connect an Agent — Open-Connect" },
-      { property: "og:description", content: "Point an agent at an MCP URL and get one scoped key." },
+      {
+        property: "og:description",
+        content: "Point an agent at an MCP URL and get one scoped key.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -55,7 +61,8 @@ function AgentsPage() {
           : `Key issued — MCP server reported: ${result.connection.state}`,
       );
     },
-    onError: (error) => toast.error(error instanceof Error ? error.message : "Could not connect the agent"),
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Could not connect the agent"),
   });
 
   const disconnectMutation = useMutation({
@@ -130,15 +137,22 @@ function AgentsPage() {
                     </button>
                   ))}
                   {!toolkits.data?.length ? (
-                    <p className="text-sm text-muted-foreground">No toolkits yet — you can skip this.</p>
+                    <p className="text-sm text-muted-foreground">
+                      No toolkits yet — you can skip this.
+                    </p>
                   ) : null}
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={() => setStep(1)}>
                     Back
                   </Button>
-                  <Button disabled={connectMutation.isPending} onClick={() => connectMutation.mutate()}>
-                    {connectMutation.isPending ? <Loader2 className="mr-1 size-4 animate-spin" /> : null}
+                  <Button
+                    disabled={connectMutation.isPending}
+                    onClick={() => connectMutation.mutate()}
+                  >
+                    {connectMutation.isPending ? (
+                      <Loader2 className="mr-1 size-4 animate-spin" />
+                    ) : null}
                     Connect and generate key
                   </Button>
                 </div>
@@ -148,9 +162,13 @@ function AgentsPage() {
             {step === 3 && issuedKey ? (
               <div className="space-y-4">
                 <div className="rounded-lg border border-primary/40 bg-primary/5 p-3">
-                  <p className="text-xs text-muted-foreground">Copy this key now — it is only shown once.</p>
+                  <p className="text-xs text-muted-foreground">
+                    Copy this key now — it is only shown once.
+                  </p>
                   <div className="mt-2 flex items-center gap-2">
-                    <code className="flex-1 break-all font-mono text-xs text-primary">{issuedKey}</code>
+                    <code className="flex-1 break-all font-mono text-xs text-primary">
+                      {issuedKey}
+                    </code>
                     <Button
                       size="sm"
                       variant="outline"
@@ -164,7 +182,7 @@ function AgentsPage() {
                   </div>
                 </div>
                 <pre className="overflow-x-auto rounded-lg border border-border bg-muted/40 p-3 text-xs">
-{`curl https://open-connect.site/v1/chat/completions \\
+                  {`curl https://open-connect.site/v1/chat/completions \\
   -H "Authorization: Bearer ${issuedKey}" \\
   -H "Content-Type: application/json" \\
   -d '{"model":"google/gemini-3.7-flash","messages":[{"role":"user","content":"ping"}]}'`}
@@ -198,7 +216,9 @@ function AgentsPage() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="truncate font-medium">{connection.name}</p>
-                      <p className="truncate font-mono text-xs text-muted-foreground">{connection.mcp_url}</p>
+                      <p className="truncate font-mono text-xs text-muted-foreground">
+                        {connection.mcp_url}
+                      </p>
                     </div>
                     <Button
                       size="sm"

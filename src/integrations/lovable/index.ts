@@ -17,14 +17,13 @@ type SignInOptions = {
  */
 export const lovable = {
   auth: {
-    signInWithOAuth: async (
-      provider: "google" | "github",
-      opts?: SignInOptions,
-    ) => {
+    signInWithOAuth: async (provider: "google" | "github", opts?: SignInOptions) => {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: opts?.redirect_uri ?? `${typeof window !== "undefined" ? window.location.origin : ""}/auth`,
+          redirectTo:
+            opts?.redirect_uri ??
+            `${typeof window !== "undefined" ? window.location.origin : ""}/auth`,
           queryParams: opts?.extraParams,
         },
       });

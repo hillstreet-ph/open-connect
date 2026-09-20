@@ -1,0 +1,4 @@
+# Names only. Set real values in the Codex/ChatGPT secret facility or deployment provider.
+OPEN_CONNECT_API_KEY=
+OPEN_CONNECT_BASE_URL=https://open-connect.site
+OPENAI_API_KEY=

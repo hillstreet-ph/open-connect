@@ -122,10 +122,9 @@ function AuthPage() {
     } catch (error) {
       setBusy(false);
       const raw = error instanceof Error ? error.message : String(error);
-      const hint =
-        /provider is not enabled|Unsupported provider|validation_failed/i.test(raw)
-          ? ` ${provider === "github" ? "GitHub" : "Google"} is not enabled in Supabase Auth → Providers. Use email/password or enable the provider (see docs/OWNER_AND_AUTH.md).`
-          : "";
+      const hint = /provider is not enabled|Unsupported provider|validation_failed/i.test(raw)
+        ? ` ${provider === "github" ? "GitHub" : "Google"} is not enabled in Supabase Auth → Providers. Use email/password or enable the provider (see docs/OWNER_AND_AUTH.md).`
+        : "";
       toast.error(`${raw}${hint}`);
     }
   }
@@ -198,7 +197,9 @@ function AuthPage() {
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   autoComplete={
-                    mode === "signup" || mode === "update_password" ? "new-password" : "current-password"
+                    mode === "signup" || mode === "update_password"
+                      ? "new-password"
+                      : "current-password"
                   }
                 />
               </div>
@@ -234,7 +235,8 @@ function AuthPage() {
           {mode === "signin" || mode === "signup" ? (
             <>
               <div className="my-5 flex items-center gap-3 text-xs text-muted-foreground">
-                <span className="h-px flex-1 bg-border" /> or <span className="h-px flex-1 bg-border" />
+                <span className="h-px flex-1 bg-border" /> or{" "}
+                <span className="h-px flex-1 bg-border" />
               </div>
               <div className="space-y-2">
                 <Button
@@ -263,12 +265,20 @@ function AuthPage() {
           <div className="mt-6 space-y-2 text-center text-sm text-muted-foreground">
             {mode === "signin" ? (
               <>
-                <button type="button" className="hover:text-foreground" onClick={() => setMode("reset")}>
+                <button
+                  type="button"
+                  className="hover:text-foreground"
+                  onClick={() => setMode("reset")}
+                >
                   Forgot password?
                 </button>
                 <p>
                   Don't have an account?{" "}
-                  <button type="button" className="text-primary hover:underline" onClick={() => setMode("signup")}>
+                  <button
+                    type="button"
+                    className="text-primary hover:underline"
+                    onClick={() => setMode("signup")}
+                  >
                     Create account
                   </button>
                 </p>
@@ -276,7 +286,11 @@ function AuthPage() {
             ) : mode === "update_password" ? null : (
               <p>
                 Already have an account?{" "}
-                <button type="button" className="text-primary hover:underline" onClick={() => setMode("signin")}>
+                <button
+                  type="button"
+                  className="text-primary hover:underline"
+                  onClick={() => setMode("signin")}
+                >
                   Sign in
                 </button>
               </p>
