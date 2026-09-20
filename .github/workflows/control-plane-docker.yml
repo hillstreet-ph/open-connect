@@ -46,7 +46,10 @@ jobs:
       - name: Smoke test
         run: |
           set -euo pipefail
-          docker run --rm -d --name oc-test -p 8080:8080 "${{ env.IMAGE_NAME }}:test"
+          docker run -d --name oc-test -p 8080:8080 \
+            -e OC_PUBLIC_BASE_URL=https://open-connect.site \
+            -e OC_OIDC_ISSUER=https://open-connect.site \
+            "${{ env.IMAGE_NAME }}:test"
           trap 'docker stop oc-test >/dev/null 2>&1 || true' EXIT
           for attempt in 1 2 3 4 5; do
             if curl --fail --silent --show-error http://localhost:8080/healthz; then
