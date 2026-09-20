@@ -43,3 +43,5 @@ Create a GitHub environment named container-publish in the repository settings.
 
 - Release: :v1.2.3, :v1.2, :v1, :latest
 - Main branch: :main-sha7, :main, :latest
+
+Images publish to the existing Docker Hub repository `hillstreet/open-connect`.
