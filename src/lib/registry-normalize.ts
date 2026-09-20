@@ -7,7 +7,23 @@ export type RegistryCandidate = {
   license?: string | null;
   updatedAt?: string | null;
   trust?: string;
+  categories?: string[];
 };
+
+export function isAllowedCatalogUrl(value: string, allowedHosts: string[]): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && allowedHosts.includes(url.hostname.toLowerCase());
+  } catch {
+    return false;
+  }
+}
+
+export function hasSuspiciousMetadata(value: string): boolean {
+  return /(curl|wget)\s+[^\n]*\|\s*(sh|bash)|powershell\s+-e|BEGIN (RSA |OPENSSH )?PRIVATE KEY|(?:api[_-]?key|token|password)\s*[:=]\s*\S+/i.test(
+    value,
+  );
+}
 
 export function canonicalizeUrl(value: string): string {
   const url = new URL(value.trim());
@@ -39,6 +55,7 @@ export function registryFingerprint(candidate: RegistryCandidate): string {
     candidate.license ?? "",
     candidate.updatedAt ?? "",
     candidate.trust ?? "",
+    [...(candidate.categories ?? [])].sort().join(","),
   ]
     .join("|")
     .toLowerCase();
