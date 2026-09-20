@@ -27,6 +27,7 @@ import { Route as AuthenticatedAutomationsRouteImport } from './routes/_authenti
 import { Route as AuthenticatedCampaignStudioRouteImport } from './routes/_authenticated/campaign-studio'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedGuidesRouteImport } from './routes/_authenticated/guides'
+import { Route as AuthenticatedKnowledgeRouteImport } from './routes/_authenticated/knowledge'
 import { Route as AuthenticatedMemoryRouteImport } from './routes/_authenticated/memory'
 import { Route as AuthenticatedOrgsRouteImport } from './routes/_authenticated/orgs'
 import { Route as AuthenticatedProjectsRouteImport } from './routes/_authenticated/projects'
@@ -140,6 +141,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
 const AuthenticatedGuidesRoute = AuthenticatedGuidesRouteImport.update({
   id: '/guides',
   path: '/guides',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedKnowledgeRoute = AuthenticatedKnowledgeRouteImport.update({
+  id: '/knowledge',
+  path: '/knowledge',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedMemoryRoute = AuthenticatedMemoryRouteImport.update({
@@ -277,6 +283,7 @@ export interface FileRoutesByFullPath {
   '/campaign-studio': typeof AuthenticatedCampaignStudioRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/guides': typeof AuthenticatedGuidesRoute
+  '/knowledge': typeof AuthenticatedKnowledgeRoute
   '/memory': typeof AuthenticatedMemoryRoute
   '/orgs': typeof AuthenticatedOrgsRoute
   '/projects': typeof AuthenticatedProjectsRouteWithChildren
@@ -319,6 +326,7 @@ export interface FileRoutesByTo {
   '/campaign-studio': typeof AuthenticatedCampaignStudioRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/guides': typeof AuthenticatedGuidesRoute
+  '/knowledge': typeof AuthenticatedKnowledgeRoute
   '/memory': typeof AuthenticatedMemoryRoute
   '/orgs': typeof AuthenticatedOrgsRoute
   '/projects': typeof AuthenticatedProjectsRouteWithChildren
@@ -363,6 +371,7 @@ export interface FileRoutesById {
   '/_authenticated/campaign-studio': typeof AuthenticatedCampaignStudioRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/guides': typeof AuthenticatedGuidesRoute
+  '/_authenticated/knowledge': typeof AuthenticatedKnowledgeRoute
   '/_authenticated/memory': typeof AuthenticatedMemoryRoute
   '/_authenticated/orgs': typeof AuthenticatedOrgsRoute
   '/_authenticated/projects': typeof AuthenticatedProjectsRouteWithChildren
@@ -407,6 +416,7 @@ export interface FileRouteTypes {
     | '/campaign-studio'
     | '/dashboard'
     | '/guides'
+    | '/knowledge'
     | '/memory'
     | '/orgs'
     | '/projects'
@@ -449,6 +459,7 @@ export interface FileRouteTypes {
     | '/campaign-studio'
     | '/dashboard'
     | '/guides'
+    | '/knowledge'
     | '/memory'
     | '/orgs'
     | '/projects'
@@ -492,6 +503,7 @@ export interface FileRouteTypes {
     | '/_authenticated/campaign-studio'
     | '/_authenticated/dashboard'
     | '/_authenticated/guides'
+    | '/_authenticated/knowledge'
     | '/_authenticated/memory'
     | '/_authenticated/orgs'
     | '/_authenticated/projects'
@@ -669,6 +681,13 @@ declare module '@tanstack/react-router' {
       path: '/guides'
       fullPath: '/guides'
       preLoaderRoute: typeof AuthenticatedGuidesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/knowledge': {
+      id: '/_authenticated/knowledge'
+      path: '/knowledge'
+      fullPath: '/knowledge'
+      preLoaderRoute: typeof AuthenticatedKnowledgeRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/memory': {
@@ -856,6 +875,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCampaignStudioRoute: typeof AuthenticatedCampaignStudioRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedGuidesRoute: typeof AuthenticatedGuidesRoute
+  AuthenticatedKnowledgeRoute: typeof AuthenticatedKnowledgeRoute
   AuthenticatedMemoryRoute: typeof AuthenticatedMemoryRoute
   AuthenticatedOrgsRoute: typeof AuthenticatedOrgsRoute
   AuthenticatedProjectsRoute: typeof AuthenticatedProjectsRouteWithChildren
@@ -876,6 +896,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCampaignStudioRoute: AuthenticatedCampaignStudioRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedGuidesRoute: AuthenticatedGuidesRoute,
+  AuthenticatedKnowledgeRoute: AuthenticatedKnowledgeRoute,
   AuthenticatedMemoryRoute: AuthenticatedMemoryRoute,
   AuthenticatedOrgsRoute: AuthenticatedOrgsRoute,
   AuthenticatedProjectsRoute: AuthenticatedProjectsRouteWithChildren,
