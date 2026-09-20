@@ -19,7 +19,7 @@ import { Label } from "@/components/ui/label";
 export const Route = createFileRoute("/_authenticated/projects")({
   head: () => ({
     meta: [
-      { title: "Projects — Open-Connect" },
+      { title: "Workspaces — Open-Connect" },
       {
         name: "description",
         content:
@@ -80,14 +80,14 @@ function ProjectsPage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <Badge variant="outline" className="mb-2 border-primary/40 text-primary">
-            Operations · Projects
+            Operations · Workspaces
           </Badge>
           <h1 className="font-display text-xl font-semibold tracking-tight sm:text-2xl">
-            Organizations & projects
+            Workspaces & projects
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Separate workspaces (e.g. Development, Business). Each project gets its own agents,
-            skills, plugins, prompts, OAuth/MCP accounts, and vault credentials.
+            Each workspace project gets its own agents, skills, plugins, prompts, OAuth/MCP
+            accounts, and vault credentials.
           </p>
         </div>
         <div className="flex gap-2">

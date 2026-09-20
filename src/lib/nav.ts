@@ -50,7 +50,8 @@ export const appCategories: NavCategory[] = [
       },
       { to: "/memory", label: "Memory", description: "Project decisions and reusable context" },
       { to: "/knowledge", label: "Knowledge", description: "Project documents and sources" },
-      { to: "/orgs", label: "Organizations", description: "Orgs and projects" },
+      { to: "/orgs", label: "Organizations", description: "People, groups, and invitations" },
+      { to: "/projects", label: "Workspaces", description: "Projects and environments" },
       { to: "/agents", label: "Agents", description: "MCP agents and keys" },
       { to: "/guides", label: "Professional setup", description: "E2E guides" },
     ],
@@ -93,6 +94,7 @@ export function flatAppNav(): NavLink[] {
     { to: "/memory", label: "Memory" },
     { to: "/knowledge", label: "Knowledge" },
     { to: "/orgs", label: "Orgs" },
+    { to: "/projects", label: "Workspaces" },
     { to: "/resources", label: "Marketplace" },
     { to: "/guides", label: "Setup" },
   ];
