@@ -19,6 +19,7 @@
     "test:registry": "node --experimental-strip-types --test src/lib/registry-normalize.test.ts src/lib/databricks.server.test.ts src/lib/chatgpt-action.server.test.ts",
     "test": "npm run test:control && npm run test:navigation && npm run test:credentials && npm run test:campaign && npm run test:registry",
     "marketplace:collect": "node --experimental-strip-types scripts/collect-marketplace-resources.mjs",
+    "marketplace:validate": "node --experimental-strip-types scripts/validate-marketplace-catalog.mjs",
     "credentials:check:agent": "node scripts/credential-broker.mjs check openai-agent",
     "credentials:check:deploy": "node scripts/credential-broker.mjs check production-deploy",
     "credentials:exec:auto": "node scripts/credential-broker.mjs exec-auto --",
