@@ -3,11 +3,13 @@ import {
   Bot,
   BookOpen,
   Brain,
+  Building2,
   Boxes,
   CalendarClock,
   FolderKanban,
   LayoutDashboard,
   ListTodo,
+  LockKeyhole,
   Plug,
   Sparkles,
   Workflow,
@@ -40,16 +42,17 @@ type Item = {
 
 /**
  * Primary IA (locked):
- * Dashboard → Projects → Work → Build → Marketplace → Connections →
+ * Dashboard → Organizations → Workspaces → Work → Build → Marketplace → Connections →
  * AI Gateway → Developer. Settings live in the user avatar menu.
  *
- * Organization is a switcher, not a daily top-level work item.
+ * Organizations manage people and groups; Workspaces manage projects and environments.
  * System administration appears once for privileged roles in the shared menu.
  */
 
 const PRIMARY: Item[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/projects", label: "Organizations & Workspaces", icon: FolderKanban },
+  { to: "/orgs", label: "Organizations", icon: Building2 },
+  { to: "/projects", label: "Workspaces", icon: FolderKanban },
 ];
 
 const WORK: Item[] = [
@@ -71,6 +74,7 @@ const DISCOVER: Item[] = [{ to: "/resources", label: "Marketplace", icon: Boxes 
 const CONNECT: Item[] = [
   { to: "/connections", label: "Connections", icon: Plug },
   { to: "/integrations", label: "Integrations", icon: Plug },
+  { to: "/secrets", label: "Credentials", icon: LockKeyhole },
   { to: "/models", label: "AI Gateway", icon: Sparkles },
 ];
 
