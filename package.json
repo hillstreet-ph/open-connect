@@ -13,7 +13,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test:control": "node --experimental-strip-types --test src/lib/autonomous-control.test.ts src/lib/autonomous-mcp-contract.test.ts",
-    "test:navigation": "node --experimental-strip-types --test src/lib/navigation.test.ts",
+    "test:navigation": "node --experimental-strip-types --test src/lib/navigation.test.ts src/lib/react-compat.test.ts",
     "test:credentials": "node --test scripts/credential-broker.test.mjs scripts/capability-router.test.mjs scripts/credential-storage.test.mjs",
     "test:campaign": "node --experimental-strip-types --test src/lib/campaign-studio.test.ts",
     "test:registry": "node --experimental-strip-types --test src/lib/registry-normalize.test.ts src/lib/databricks.server.test.ts src/lib/chatgpt-action.server.test.ts",
