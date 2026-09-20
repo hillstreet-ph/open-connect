@@ -30,10 +30,7 @@ test("membership helpers cannot inspect another signed-in user", () => {
 });
 
 test("trigger and legacy OAuth helpers are server-only", () => {
-  assert.match(
-    migration,
-    /sync_authorized_identity\(\)[\s\S]*from public, anon, authenticated/i,
-  );
+  assert.match(migration, /sync_authorized_identity\(\)[\s\S]*from public, anon, authenticated/i);
   for (const name of [
     "oc_authorize_oauth_client",
     "oc_exchange_oauth_code",
