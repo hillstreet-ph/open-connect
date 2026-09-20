@@ -1,0 +1,77 @@
+{
+  "schema_version": "1.0.0",
+  "registry_id": "open-connect-fullstack-agent-toolkit",
+  "purpose": "Capability registry for autonomous full-stack engineering workers. Credentials are referenced only through the credential gateway and are never stored in this file.",
+  "agent_roles": [
+    "planner",
+    "fullstack_developer",
+    "devops",
+    "browser_operator",
+    "database_engineer",
+    "security_reviewer",
+    "qa_reviewer",
+    "release_manager"
+  ],
+  "capability_planes": {
+    "source_control": ["github"],
+    "containers": ["dockerhub"],
+    "edge_cloud": ["cloudflare"],
+    "database_auth": ["supabase"],
+    "observability": ["sentry"],
+    "runtime": ["zeabur"],
+    "integration_brokers": ["composio", "pipedream", "slimtools"],
+    "browser": ["cloud_browser", "agent_browser", "cloudflare_browser_rendering"],
+    "compute": ["terminal", "remote_terminal", "sandbox_compute", "computer_use"]
+  },
+  "toolkits": [
+    {"id":"github","mcp":"github","capabilities":["repo.read","branch.write","issue.manage","pr.manage","actions.inspect","actions.rerun","release.coordinate"]},
+    {"id":"dockerhub","mcp":"composio:docker_hub","capabilities":["repository.inspect","image.build","image.scan","image.push","tag.promote","digest.verify"]},
+    {"id":"cloudflare","mcp":"cloudflare","skills":["building-ai-agent-on-cloudflare"],"capabilities":["workers","pages","workers_ai","agents_sdk","durable_objects","workflows","queues","r2","d1","vectorize","ai_gateway","browser_rendering","zero_trust"]},
+    {"id":"supabase","mcp":"supabase","capabilities":["postgres","auth","storage","realtime","migrations","rls","edge_functions","branches","advisors","typescript_types"]},
+    {"id":"sentry","mcp":"sentry","capabilities":["projects","issues","events","traces","replays","releases","deploys","seer_analysis"]},
+    {"id":"zeabur","mcp":"zeabur","capabilities":["projects","services","deployments","domains","variables","logs","runtime_health"]},
+    {"id":"composio","mcp":"composio","capabilities":["tool_discovery","connections","multi_execute","remote_bash","remote_workbench","browser_tool"]},
+    {"id":"pipedream","mcp":"pipedream","capabilities":["workflows","triggers","actions","webhooks","integration_automation"]},
+    {"id":"slimtools","mcp":"slimtools","capabilities":["tool_routing","agent_integrations","automation"]},
+    {"id":"agent_browser","mcp":"composio:browser_tool","capabilities":["navigate","interact","extract","screenshot","download","session_continue"]},
+    {"id":"cloudflare_browser_rendering","mcp":"cloudflare-browser-rendering","capabilities":["headless_browser","screenshot","html_extract","render"]},
+    {"id":"terminal","capabilities":["shell","git","build","test","lint","typecheck","docker","cli"]},
+    {"id":"remote_compute","capabilities":["isolated_sandbox","remote_shell","artifact_processing","bounded_execution"]},
+    {"id":"computer_use","capabilities":["gui_navigation","browser_interaction","visual_validation"]}
+  ],
+  "execution_policy": {
+    "default_environment": "development",
+    "branch_flow": ["feature/*", "development", "staging", "main"],
+    "credential_transport": "opaque_reference_only",
+    "secrets_in_source": false,
+    "production_requires_gate": true,
+    "destructive_actions_require_approval": true,
+    "max_autorepair_attempts": 3,
+    "verify_after_write": true,
+    "required_checks": ["build", "test", "lint", "typecheck", "secret_scan", "dependency_scan", "deployment_health"]
+  },
+  "autonomous_loop": [
+    "discover_current_state",
+    "claim_work_unit",
+    "create_feature_branch",
+    "implement_small_change",
+    "run_local_checks",
+    "open_pull_request",
+    "run_ci_security_review",
+    "repair_bounded_failures",
+    "deploy_staging",
+    "run_smoke_and_browser_tests",
+    "check_sentry_and_runtime_health",
+    "request_or_evaluate_production_gate",
+    "deploy_production",
+    "verify_release",
+    "record_evidence_and_sync_state"
+  ],
+  "prohibited": [
+    "store_plaintext_credentials_in_git",
+    "bypass_branch_or_environment_protection",
+    "disable_security_checks_to_make_ci_green",
+    "unbounded_self_modification",
+    "unreviewed_destructive_production_operations"
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "name": "hillstreet",
+  "interface": {
+    "displayName": "Hillstreet"
+  },
+  "plugins": [
+    {
+      "name": "open-connect-plugin",
+      "source": {
+        "source": "local",
+        "path": "./.agents/plugins/open-connect-plugin"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer"
+    }
+  ]
+}

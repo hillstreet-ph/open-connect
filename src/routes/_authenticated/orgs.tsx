@@ -91,7 +91,11 @@ function OrgsPage() {
               disabled={!orgName.trim() || orgMutation.isPending}
               onClick={() => orgMutation.mutate()}
             >
-              {orgMutation.isPending ? <Loader2 className="mr-1 size-4 animate-spin" /> : <Plus className="mr-1 size-4" />}
+              {orgMutation.isPending ? (
+                <Loader2 className="mr-1 size-4 animate-spin" />
+              ) : (
+                <Plus className="mr-1 size-4" />
+              )}
               Create organization
             </Button>
           </CardContent>

@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { DataProvider } from "@data-client/react";
 import {
   Outlet,
   Link,
@@ -55,7 +56,9 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">This page didn't load</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">
+          This page didn't load
+        </h1>
         <p className="mt-2 text-sm text-muted-foreground">{detail}</p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
@@ -143,16 +146,18 @@ function RootComponent() {
   const inApp = Boolean(user) && isAppPath(pathname);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <div className="flex min-h-dvh flex-col">
-        {/* Marketing chrome only outside ops workspace */}
-        {inApp ? null : <SiteHeader />}
-        <main className={inApp ? "flex-1 bg-background" : "flex-1"}>
-          <Outlet />
-        </main>
-        {inApp ? null : <SiteFooter />}
-      </div>
-      <Toaster />
-    </QueryClientProvider>
+    <DataProvider>
+      <QueryClientProvider client={queryClient}>
+        <div className="flex min-h-dvh flex-col">
+          {/* Marketing chrome only outside ops workspace */}
+          {inApp ? null : <SiteHeader />}
+          <main className={inApp ? "flex-1 bg-background" : "flex-1"}>
+            <Outlet />
+          </main>
+          {inApp ? null : <SiteFooter />}
+        </div>
+        <Toaster />
+      </QueryClientProvider>
+    </DataProvider>
   );
 }

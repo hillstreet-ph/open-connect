@@ -2,7 +2,7 @@
 
 **Domain:** https://open-connect.site  
 **Pages project:** `open-connect-app` · production branch `main`  
-**Supabase:** `gnqpwewbgldonarggzax` (ap-northeast-1)
+**Supabase:** `huadtiuuoiriqrjpjxhr` (canonical production project)
 
 ## Cloudflare Pages — production env
 

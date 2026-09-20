@@ -39,25 +39,65 @@ const megaFeatures = [
   {
     group: "Workspace",
     items: [
-      { icon: LayoutDashboard, title: "Studio", body: "Create agents, skills, prompts, plugins", to: "/studio" as const },
-      { icon: Building2, title: "Organizations", body: "Orgs and projects for your team", to: "/orgs" as const },
-      { icon: Code2, title: "Coding agents", body: "MCP agents with scoped keys", to: "/agents" as const },
+      {
+        icon: LayoutDashboard,
+        title: "Studio",
+        body: "Create agents, skills, prompts, plugins",
+        to: "/studio" as const,
+      },
+      {
+        icon: Building2,
+        title: "Organizations",
+        body: "Orgs and projects for your team",
+        to: "/orgs" as const,
+      },
+      {
+        icon: Code2,
+        title: "Coding agents",
+        body: "MCP agents with scoped keys",
+        to: "/agents" as const,
+      },
       { icon: FileCode, title: "Guides", body: "Professional E2E setup", to: "/guides" as const },
     ],
   },
   {
     group: "Integration",
     items: [
-      { icon: MessageSquare, title: "Open WebUI", body: "Point base URL at /v1", to: "/integrations" as const },
-      { icon: Plug, title: "Chat apps", body: "Slack · Discord · Telegram", to: "/connections" as const },
-      { icon: Sparkles, title: "ChatGPT · Claude · Grok", body: "OAuth + MCP clients", to: "/integrations" as const },
-      { icon: Boxes, title: "Marketplace", body: "Skills, MCP, tools, plugins", to: "/resources" as const },
+      {
+        icon: MessageSquare,
+        title: "Open WebUI",
+        body: "Point base URL at /v1",
+        to: "/integrations" as const,
+      },
+      {
+        icon: Plug,
+        title: "Chat apps",
+        body: "Slack · Discord · Telegram",
+        to: "/connections" as const,
+      },
+      {
+        icon: Sparkles,
+        title: "ChatGPT · Claude · Grok",
+        body: "OAuth + MCP clients",
+        to: "/integrations" as const,
+      },
+      {
+        icon: Boxes,
+        title: "Marketplace",
+        body: "Skills, MCP, tools, plugins",
+        to: "/resources" as const,
+      },
     ],
   },
   {
     group: "Platform",
     items: [
-      { icon: Terminal, title: "MCP gateway", body: "open-connect.site/mcp", to: "/integrations" as const },
+      {
+        icon: Terminal,
+        title: "MCP gateway",
+        body: "open-connect.site/mcp",
+        to: "/integrations" as const,
+      },
       { icon: Sparkles, title: "Models /v1", body: "OpenAI-compatible", to: "/models" as const },
       { icon: Shield, title: "Role scopes", body: "user → owner", to: "/dashboard" as const },
       { icon: Wrench, title: "API keys", body: "Full autonomous scopes", to: "/api-keys" as const },
@@ -67,7 +107,13 @@ const megaFeatures = [
 
 const marketStats = [
   { label: "Agents", value: "MCP", hint: "Connect agents", to: "/agents" as const, icon: Bot },
-  { label: "Gateway", value: "/mcp", hint: "One tools URL", to: "/integrations" as const, icon: Plug },
+  {
+    label: "Gateway",
+    value: "/mcp",
+    hint: "One tools URL",
+    to: "/integrations" as const,
+    icon: Plug,
+  },
   { label: "Skills", value: "40+", hint: "Marketplace", to: "/resources" as const, icon: Boxes },
 ];
 
@@ -141,7 +187,9 @@ function Home() {
                         <item.icon className="size-4" />
                       </span>
                       <span>
-                        <span className="block text-sm font-medium text-foreground">{item.title}</span>
+                        <span className="block text-sm font-medium text-foreground">
+                          {item.title}
+                        </span>
                         <span className="block text-xs text-muted-foreground">{item.body}</span>
                       </span>
                     </Link>
@@ -156,16 +204,19 @@ function Home() {
       {/* Mobile feature chips */}
       <section className="border-b border-border/50 lg:hidden">
         <div className="flex gap-2 overflow-x-auto px-4 py-3 scrollbar-none">
-          {megaFeatures.flatMap((c) => c.items).slice(0, 6).map((item) => (
-            <Link
-              key={item.title}
-              to={item.to}
-              className="flex shrink-0 items-center gap-2 rounded-full border border-border/70 bg-card px-3.5 py-2 text-xs font-medium shadow-sm"
-            >
-              <item.icon className="size-3.5 text-primary" />
-              {item.title}
-            </Link>
-          ))}
+          {megaFeatures
+            .flatMap((c) => c.items)
+            .slice(0, 6)
+            .map((item) => (
+              <Link
+                key={item.title}
+                to={item.to}
+                className="flex shrink-0 items-center gap-2 rounded-full border border-border/70 bg-card px-3.5 py-2 text-xs font-medium shadow-sm"
+              >
+                <item.icon className="size-3.5 text-primary" />
+                {item.title}
+              </Link>
+            ))}
         </div>
       </section>
 
@@ -211,13 +262,12 @@ function Home() {
             open-connect.site
           </Badge>
           <h1 className="mt-6 font-display text-[2rem] leading-[1.15] tracking-tight sm:text-5xl md:text-[3.25rem]">
-            Your team just needs an{" "}
-            <span className="text-gradient">Open-Connect workspace</span>
+            Your team just needs an <span className="text-gradient">Open-Connect workspace</span>
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-[15px] leading-relaxed text-muted-foreground sm:text-base">
             Studio, organizations, and marketplace in one calm hub. Connect{" "}
-            <strong className="font-medium text-foreground">Open WebUI</strong>, ChatGPT, Claude, and
-            Grok through a single MCP URL and model gateway.
+            <strong className="font-medium text-foreground">Open WebUI</strong>, ChatGPT, Claude,
+            and Grok through a single MCP URL and model gateway.
           </p>
           <div className="mt-9 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
             {loading ? null : signedIn ? (

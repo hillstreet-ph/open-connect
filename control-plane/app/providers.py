@@ -1,10 +1,9 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from importlib.util import find_spec
-from shutil import which
 import httpx
 from .config import Settings
-from .models import SessionCreate
+from .models import BrowserAction, BrowserActionResult, SessionCreate
 
 
 class ProviderUnavailable(RuntimeError):
@@ -29,6 +28,9 @@ class RuntimeProvider(ABC):
     @abstractmethod
     async def close(self, handle: str) -> None: ...
 
+    async def act(self, handle: str, action: BrowserAction) -> BrowserActionResult:
+        raise ProviderUnavailable(f"{self.name} does not support browser actions")
+
 
 class E2BProvider(RuntimeProvider):
     name = "e2b"
@@ -43,12 +45,45 @@ class E2BProvider(RuntimeProvider):
 
 class AgentBrowserProvider(RuntimeProvider):
     name = "agent-browser"
+    def __init__(self, settings: Settings): self.settings = settings
     async def available(self) -> tuple[bool, str]:
-        ok = which("agent-browser") is not None
-        return ok, "installed" if ok else "agent-browser CLI not installed"
+        ok = bool(self.settings.browser_worker_url and self.settings.browser_worker_credential_ref)
+        return ok, "worker broker configured" if ok else "isolated browser worker and vault binding required"
     async def create(self, request: SessionCreate) -> ProviderResult:
-        raise ProviderUnavailable("agent-browser worker execution is disabled until an isolated worker broker is configured")
-    async def close(self, handle: str) -> None: return None
+        payload = {
+            "capability": request.capability,
+            "target": request.target,
+            "url": str(request.url) if request.url else None,
+            "profile_ref": request.profile_ref,
+        }
+        result = await self._request("POST", "/v1/sessions", json=payload)
+        return ProviderResult(
+            handle=str(result["session_id"]),
+            evidence={"provider": self.name, "brokered": "true"},
+        )
+    async def act(self, handle: str, action: BrowserAction) -> BrowserActionResult:
+        result = await self._request(
+            "POST", f"/v1/sessions/{handle}/actions", json=action.model_dump(mode="json", exclude_none=True)
+        )
+        return BrowserActionResult.model_validate(result)
+    async def close(self, handle: str) -> None:
+        await self._request("DELETE", f"/v1/sessions/{handle}")
+    async def _request(self, method: str, path: str, **kwargs) -> dict:
+        if not self.settings.browser_worker_url or not self.settings.browser_worker_credential_ref:
+            raise ProviderUnavailable("browser worker is not configured")
+        headers = {"X-Credential-Reference": self.settings.browser_worker_credential_ref}
+        try:
+            async with httpx.AsyncClient(timeout=30) as client:
+                response = await client.request(
+                    method,
+                    f"{str(self.settings.browser_worker_url).rstrip('/')}{path}",
+                    headers=headers,
+                    **kwargs,
+                )
+            response.raise_for_status()
+            return response.json() if response.content else {}
+        except (httpx.HTTPError, ValueError, KeyError) as exc:
+            raise ProviderUnavailable("isolated browser worker request failed") from exc
 
 
 class OpenBrowserProvider(RuntimeProvider):
@@ -82,7 +117,7 @@ class GuacamoleProvider(RuntimeProvider):
 def providers(settings: Settings) -> dict[str, RuntimeProvider]:
     return {
         "e2b": E2BProvider(settings),
-        "agent-browser": AgentBrowserProvider(),
+        "agent-browser": AgentBrowserProvider(settings),
         "openbrowser": OpenBrowserProvider(settings),
         "guacamole": GuacamoleProvider(settings),
     }

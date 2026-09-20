@@ -3,47 +3,239 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 /**
  * Connection catalog — professional app plane.
- * Connect records a capability grant (credential_reference) server-side.
+ * Connect records a pending authorization request server-side.
  * Agents never receive provider tokens; they present oc_live_ keys only.
  */
 const CATALOG = [
   // Development
-  { provider: "github", display_name: "GitHub", category: "Development", scopes: ["repo", "read:user", "workflow"], oauth: true },
-  { provider: "gitlab", display_name: "GitLab", category: "Development", scopes: ["api", "read_user"], oauth: true },
-  { provider: "linear", display_name: "Linear", category: "Development", scopes: ["read", "write"], oauth: true },
-  { provider: "jira", display_name: "Jira", category: "Development", scopes: ["read:jira-work", "write:jira-work"], oauth: true },
-  { provider: "cursor", display_name: "Cursor", category: "Development", scopes: ["mcp"], oauth: false },
+  {
+    provider: "github",
+    display_name: "GitHub",
+    category: "Development",
+    scopes: ["repo", "read:user", "workflow"],
+    oauth: true,
+  },
+  {
+    provider: "gitlab",
+    display_name: "GitLab",
+    category: "Development",
+    scopes: ["api", "read_user"],
+    oauth: true,
+  },
+  {
+    provider: "linear",
+    display_name: "Linear",
+    category: "Development",
+    scopes: ["read", "write"],
+    oauth: true,
+  },
+  {
+    provider: "jira",
+    display_name: "Jira",
+    category: "Development",
+    scopes: ["read:jira-work", "write:jira-work"],
+    oauth: true,
+  },
+  {
+    provider: "cursor",
+    display_name: "Cursor",
+    category: "Development",
+    scopes: ["mcp"],
+    oauth: false,
+  },
   // Communication
-  { provider: "telegram", display_name: "Telegram", category: "Communication", scopes: ["bot"], oauth: false },
-  { provider: "slack", display_name: "Slack", category: "Communication", scopes: ["chat:write", "channels:read", "users:read"], oauth: true },
-  { provider: "discord", display_name: "Discord", category: "Communication", scopes: ["bot", "applications.commands"], oauth: true },
-  { provider: "gmail", display_name: "Gmail", category: "Communication", scopes: ["gmail.readonly", "gmail.send"], oauth: true },
+  {
+    provider: "telegram",
+    display_name: "Telegram",
+    category: "Communication",
+    scopes: ["bot"],
+    oauth: false,
+  },
+  {
+    provider: "slack",
+    display_name: "Slack",
+    category: "Communication",
+    scopes: ["chat:write", "channels:read", "users:read"],
+    oauth: true,
+  },
+  {
+    provider: "discord",
+    display_name: "Discord",
+    category: "Communication",
+    scopes: ["bot", "applications.commands"],
+    oauth: true,
+  },
+  {
+    provider: "gmail",
+    display_name: "Gmail",
+    category: "Communication",
+    scopes: ["gmail.readonly", "gmail.send"],
+    oauth: true,
+  },
   // AI clients & gateways
-  { provider: "chatgpt", display_name: "ChatGPT / OpenAI", category: "AI", scopes: ["models", "plugins", "mcp", "actions"], oauth: true },
-  { provider: "claude", display_name: "Claude / Anthropic", category: "AI", scopes: ["models", "mcp", "plugins"], oauth: true },
-  { provider: "grok", display_name: "Grok / xAI", category: "AI", scopes: ["models", "mcp", "tools"], oauth: true },
-  { provider: "hermes", display_name: "Hermes Agent", category: "AI", scopes: ["mcp"], oauth: false },
-  { provider: "openwebui", display_name: "Open WebUI", category: "AI", scopes: ["models", "tools", "mcp"], oauth: false },
-  { provider: "openai", display_name: "OpenAI API", category: "AI", scopes: ["models"], oauth: false },
-  { provider: "openrouter", display_name: "OpenRouter", category: "AI", scopes: ["models"], oauth: false },
-  { provider: "litellm", display_name: "LiteLLM", category: "AI", scopes: ["models", "proxy"], oauth: false },
-  { provider: "lobehub", display_name: "LobeHub", category: "AI", scopes: ["models", "agents", "mcp"], oauth: false },
-  { provider: "multion", display_name: "MultiOn", category: "AI", scopes: ["browse", "sessions"], oauth: false },
+  {
+    provider: "chatgpt",
+    display_name: "ChatGPT / OpenAI",
+    category: "AI",
+    scopes: ["models", "plugins", "mcp", "actions"],
+    oauth: true,
+  },
+  {
+    provider: "claude",
+    display_name: "Claude / Anthropic",
+    category: "AI",
+    scopes: ["models", "mcp", "plugins"],
+    oauth: true,
+  },
+  {
+    provider: "grok",
+    display_name: "Grok / xAI",
+    category: "AI",
+    scopes: ["models", "mcp", "tools"],
+    oauth: true,
+  },
+  {
+    provider: "hermes",
+    display_name: "Hermes Agent",
+    category: "AI",
+    scopes: ["mcp"],
+    oauth: false,
+  },
+  {
+    provider: "openwebui",
+    display_name: "Open WebUI",
+    category: "AI",
+    scopes: ["models", "tools", "mcp"],
+    oauth: false,
+  },
+  {
+    provider: "openai",
+    display_name: "OpenAI API",
+    category: "AI",
+    scopes: ["models"],
+    oauth: false,
+  },
+  {
+    provider: "openrouter",
+    display_name: "OpenRouter",
+    category: "AI",
+    scopes: ["models"],
+    oauth: false,
+  },
+  {
+    provider: "litellm",
+    display_name: "LiteLLM",
+    category: "AI",
+    scopes: ["models", "proxy"],
+    oauth: false,
+  },
+  {
+    provider: "lobehub",
+    display_name: "LobeHub",
+    category: "AI",
+    scopes: ["models", "agents", "mcp"],
+    oauth: false,
+  },
+  {
+    provider: "multion",
+    display_name: "MultiOn",
+    category: "AI",
+    scopes: ["browse", "sessions"],
+    oauth: false,
+  },
   // Automation / integration platforms
-  { provider: "pipedream", display_name: "Pipedream", category: "Automation", scopes: ["workflows", "components", "api"], oauth: true },
-  { provider: "composio", display_name: "Composio", category: "Automation", scopes: ["tools", "actions", "triggers"], oauth: true },
-  { provider: "slimtools", display_name: "Slimtools", category: "Automation", scopes: ["tools", "api"], oauth: false },
+  {
+    provider: "pipedream",
+    display_name: "Pipedream",
+    category: "Automation",
+    scopes: ["workflows", "components", "api"],
+    oauth: true,
+  },
+  {
+    provider: "composio",
+    display_name: "Composio",
+    category: "Automation",
+    scopes: ["tools", "actions", "triggers"],
+    oauth: true,
+  },
+  {
+    provider: "slimtools",
+    display_name: "Slimtools",
+    category: "Automation",
+    scopes: ["tools", "api"],
+    oauth: false,
+  },
   // Secrets / productivity
-  { provider: "1password", display_name: "1Password", category: "Security", scopes: ["vaults:read", "items:read"], oauth: true },
-  { provider: "google_drive", display_name: "Google Drive", category: "Productivity", scopes: ["drive.readonly", "drive.file"], oauth: true },
-  { provider: "google_calendar", display_name: "Google Calendar", category: "Productivity", scopes: ["calendar.readonly", "calendar.events"], oauth: true },
-  { provider: "notion", display_name: "Notion", category: "Productivity", scopes: ["read_content", "update_content"], oauth: true },
+  {
+    provider: "1password",
+    display_name: "1Password",
+    category: "Security",
+    scopes: ["vaults:read", "items:read"],
+    oauth: true,
+  },
+  {
+    provider: "google_drive",
+    display_name: "Google Drive",
+    category: "Productivity",
+    scopes: ["drive.readonly", "drive.file"],
+    oauth: true,
+  },
+  {
+    provider: "google_calendar",
+    display_name: "Google Calendar",
+    category: "Productivity",
+    scopes: ["calendar.readonly", "calendar.events"],
+    oauth: true,
+  },
+  {
+    provider: "notion",
+    display_name: "Notion",
+    category: "Productivity",
+    scopes: ["read_content", "update_content"],
+    oauth: true,
+  },
   // Infrastructure
-  { provider: "cloudflare", display_name: "Cloudflare", category: "Infrastructure", scopes: ["zone:read", "zone:edit", "pages", "workers"], oauth: false },
-  { provider: "supabase", display_name: "Supabase", category: "Data", scopes: ["projects:read", "db", "storage"], oauth: false },
-  { provider: "stripe", display_name: "Stripe", category: "Business", scopes: ["read", "write"], oauth: false },
-  { provider: "hubspot", display_name: "HubSpot", category: "Business", scopes: ["crm.objects.contacts.read"], oauth: true },
-  { provider: "airtable", display_name: "Airtable", category: "Data", scopes: ["data.records:read"], oauth: true },
+  {
+    provider: "cloudflare",
+    display_name: "Cloudflare",
+    category: "Infrastructure",
+    scopes: ["zone:read", "zone:edit", "pages", "workers"],
+    oauth: false,
+  },
+  {
+    provider: "supabase",
+    display_name: "Supabase",
+    category: "Data",
+    scopes: ["projects:read", "db", "storage"],
+    oauth: false,
+  },
+  {
+    provider: "stripe",
+    display_name: "Stripe",
+    category: "Business",
+    scopes: ["read", "write"],
+    oauth: false,
+  },
+  {
+    provider: "hubspot",
+    display_name: "HubSpot",
+    category: "Business",
+    scopes: ["crm.objects.contacts.read"],
+    oauth: true,
+  },
+  {
+    provider: "airtable",
+    display_name: "Airtable",
+    category: "Data",
+    scopes: [
+      "data.records:read",
+      "data.records:write",
+      "schema.bases:read",
+      "schema.bases:write",
+      "webhook:manage",
+    ],
+    oauth: true,
+  },
 ] as const;
 
 export const listConnectionCatalog = createServerFn({ method: "GET" }).handler(async () => {
@@ -61,7 +253,9 @@ export const listAppConnections = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("app_connections")
-      .select("id, provider, display_name, status, scopes, provider_account_id, last_used_at, created_at")
+      .select(
+        "id, provider, display_name, status, scopes, provider_account_id, last_used_at, created_at",
+      )
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return data ?? [];
@@ -69,14 +263,14 @@ export const listAppConnections = createServerFn({ method: "GET" })
 
 export const connectApp = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { provider: string }) => ({
+  .validator((input: { provider: string }) => ({
     provider: (input?.provider ?? "").trim().toLowerCase(),
   }))
   .handler(async ({ data, context }) => {
     const app = CATALOG.find((item) => item.provider === data.provider);
     if (!app) throw new Error("Unknown application");
 
-    const credentialReference = `oc_conn_${data.provider}_${context.userId.slice(0, 8)}`;
+    const authorizationMode = app.oauth ? "oauth" : "brokered_secret";
 
     const { data: existing } = await context.supabase
       .from("app_connections")
@@ -89,15 +283,16 @@ export const connectApp = createServerFn({ method: "POST" })
       const { data: updated, error } = await context.supabase
         .from("app_connections")
         .update({
-          status: "connected",
-          scopes: [...app.scopes],
-          credential_reference: credentialReference,
+          status: "pending",
+          scopes: [],
+          credential_reference: null,
           display_name: app.display_name,
           metadata: {
             source: "open-connect",
-            mode: "capability_grant",
-            oauth_ready: app.oauth,
-            full_scopes: true,
+            mode: authorizationMode,
+            authorization_required: true,
+            requested_scopes: [...app.scopes],
+            full_scopes: false,
           },
         })
         .eq("id", existing.id)
@@ -113,15 +308,16 @@ export const connectApp = createServerFn({ method: "POST" })
         user_id: context.userId,
         provider: app.provider,
         display_name: app.display_name,
-        status: "connected",
-        scopes: [...app.scopes],
-        credential_reference: credentialReference,
-        provider_account_id: context.userId,
+        status: "pending",
+        scopes: [],
+        credential_reference: null,
+        provider_account_id: null,
         metadata: {
           source: "open-connect",
-          mode: "capability_grant",
-          oauth_ready: app.oauth,
-          full_scopes: true,
+          mode: authorizationMode,
+          authorization_required: true,
+          requested_scopes: [...app.scopes],
+          full_scopes: false,
         },
       })
       .select("id, provider, display_name, status, scopes, created_at")
@@ -132,7 +328,7 @@ export const connectApp = createServerFn({ method: "POST" })
 
 export const disconnectApp = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string }) => ({ id: input.id }))
+  .validator((input: { id: string }) => ({ id: input.id }))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("app_connections").delete().eq("id", data.id);
     if (error) throw new Error(error.message);

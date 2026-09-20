@@ -1,5 +1,52 @@
 # Open Connect Gateway
 
+## Campaign Studio and OpenAI Agents
+
+The authenticated `/campaign-studio` workspace turns a marketing brief into a campaign concept, three copy variants, a launch checklist, visual prompts, and a generated campaign image using the current OpenAI Responses API. OpenAI calls are server-only; the browser never receives `OPENAI_API_KEY`.
+
+```bash
+cp .env.example .env.local
+# Set OPENAI_API_KEY in .env.local
+npm install
+npm run dev
+```
+
+To create the reusable **New agent** in OpenAI project `proj_P1GhW0FJdBA5g3dpuKN8BZh8`, start an OpenAI-hosted session, and stream its events with direct `curl` API calls:
+
+```bash
+export OPENAI_API_KEY='...'
+npm run agent:start -- "Review the campaign studio and propose the next release tasks."
+```
+
+`agent:start` runs through the scoped credential broker. It injects only the
+variables declared by the `openai-agent` profile and never prints their values.
+Check readiness without making a provider call:
+
+```bash
+npm run credentials:check:agent
+npm run credentials:check:deploy
+```
+
+Credential names, logical references, and provider mappings live under
+`credentials/`. Live values remain in provider vaults and runtime secret stores.
+Configure one approved resolver path to remove per-app secret entry:
+
+```bash
+export OPEN_CONNECT_CREDENTIAL_RESOLVER=/absolute/path/to/approved-vault-adapter
+npm run capabilities:recommend -- "deploy the container to Zeabur and verify Sentry"
+npm run credentials:exec:auto -- gh pr list
+```
+
+See `credentials/resolver-adapter.md` for the adapter protocol. The Secrets UI stores new values in
+Supabase Vault after migration `20260918000000_encrypt_credential_secrets.sql`; browsers receive
+metadata only.
+
+The governed autonomous agent loop discovers tools, creates non-executable capability drafts for
+gaps, and converts verified outcomes into memory and knowledge. See
+`docs/AUTONOMOUS_AGENT_LOOP.md`.
+
+Deployment requires the four server-side `OPENAI_*` variables listed in `.env.example`. See [Campaign Studio setup, boundaries, configuration, and validation](docs/OPENAI_CAMPAIGN_STUDIO.md).
+
 Open-Connect — Master Development Blueprint
 
 

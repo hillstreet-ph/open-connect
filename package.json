@@ -11,9 +11,23 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "test:control": "node --experimental-strip-types --test src/lib/autonomous-control.test.ts src/lib/autonomous-mcp-contract.test.ts",
+    "test:navigation": "node --experimental-strip-types --test src/lib/navigation.test.ts",
+    "test:credentials": "node --test scripts/credential-broker.test.mjs scripts/capability-router.test.mjs scripts/credential-storage.test.mjs",
+    "test:campaign": "node --experimental-strip-types --test src/lib/campaign-studio.test.ts",
+    "test:registry": "node --experimental-strip-types --test src/lib/registry-normalize.test.ts src/lib/databricks.server.test.ts src/lib/chatgpt-action.server.test.ts",
+    "test": "npm run test:control && npm run test:navigation && npm run test:credentials && npm run test:campaign && npm run test:registry",
+    "marketplace:collect": "node --experimental-strip-types scripts/collect-marketplace-resources.mjs",
+    "credentials:check:agent": "node scripts/credential-broker.mjs check openai-agent",
+    "credentials:check:deploy": "node scripts/credential-broker.mjs check production-deploy",
+    "credentials:exec:auto": "node scripts/credential-broker.mjs exec-auto --",
+    "capabilities:recommend": "node scripts/capability-router.mjs",
+    "agent:start": "node scripts/credential-broker.mjs exec openai-agent -- bash scripts/openai-agents-session.sh"
   },
   "dependencies": {
+    "@data-client/react": "0.18.1",
+    "@data-client/rest": "0.18.1",
     "@hookform/resolvers": "^5.2.2",
     "@lovable.dev/cloud-auth-js": "^1.0.0",
     "@radix-ui/react-accordion": "^1.2.12",
@@ -70,6 +84,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@data-client/test": "0.18.0",
     "@eslint/js": "^9.32.0",
     "@lovable.dev/vite-tanstack-config": "^2.15.0",
     "@types/node": "^22.16.5",
@@ -81,7 +96,7 @@
     "eslint-plugin-prettier": "^5.2.6",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
-    "globals": "^15.15.0",
+    "globals": "^17.12.0",
     "nitro": "3.0.260603-beta",
     "prettier": "^3.7.3",
     "typescript": "^5.8.3",

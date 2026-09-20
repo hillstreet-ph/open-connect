@@ -5,9 +5,10 @@ import { useState } from "react";
 import { Loader2, Shield, Trash2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 import { useRoles } from "@/hooks/use-roles";
 import { assignRole, listRoleAssignments, revokeRole } from "@/lib/roles.functions";
-import { ALL_ROLES, roleLabel, type AppRole } from "@/lib/rbac";
+import { ALL_ROLES, roleLabel, canRevokeRole, type AppRole } from "@/lib/rbac";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({
     meta: [
-      { title: "Admin — Open-Connect" },
+      { title: "System administration — Open-Connect" },
       { name: "description", content: "Role-based access control." },
       { name: "robots", content: "noindex" },
     ],
@@ -39,24 +40,18 @@ export const Route = createFileRoute("/_authenticated/admin")({
 
 function AdminPage() {
   const queryClient = useQueryClient();
-  const { primary, isOwner } = useRoles();
+  const { primary, isOwner, roles } = useRoles();
+  const { user } = useAuth();
   const listFn = useServerFn(listRoleAssignments);
   const assignFn = useServerFn(assignRole);
   const revokeFn = useServerFn(revokeRole);
 
   const [userId, setUserId] = useState("");
-  const [role, setRole] = useState<AppRole>("developer");
+  const [role, setRole] = useState<AppRole>("user");
 
   const assignments = useQuery({
     queryKey: ["role-assignments"],
-    queryFn: async () => {
-      try {
-        return await listFn({});
-      } catch (e) {
-        console.warn("[admin roles]", e);
-        return [];
-      }
-    },
+    queryFn: () => listFn({}),
   });
 
   const assignMutation = useMutation({
@@ -90,7 +85,7 @@ function AdminPage() {
           <Shield className="size-5" />
         </span>
         <div>
-          <h1 className="text-3xl font-semibold">Admin · Roles</h1>
+          <h1 className="text-3xl font-semibold">System administration</h1>
           <p className="text-sm text-muted-foreground">
             Your role: <Badge variant="secondary">{roleLabel(primary)}</Badge>
           </p>
@@ -101,16 +96,18 @@ function AdminPage() {
         <CardHeader>
           <CardTitle className="text-base">Assign role</CardTitle>
           <CardDescription>
-            Roles: user → developer → publisher → admin → owner. Paste a Supabase auth user UUID.
+            Manage platform access for members, developers, publishers, admins, and owners.
+            Organization and project memberships are managed separately. Only owners can manage the
+            owner role.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="target-user">User ID</Label>
+            <Label htmlFor="target-user">Account ID</Label>
             <Input
               id="target-user"
               className="font-mono text-sm"
-              placeholder="uuid…"
+              placeholder="Account UUID"
               value={userId}
               onChange={(e) => setUserId(e.target.value)}
             />
@@ -147,38 +144,59 @@ function AdminPage() {
       <Card className="mt-6 shadow-panel">
         <CardHeader>
           <CardTitle className="text-base">Current assignments</CardTitle>
-          <CardDescription>Latest 200 rows from user_roles.</CardDescription>
+          <CardDescription>Up to 200 recent platform role assignments.</CardDescription>
         </CardHeader>
         <CardContent>
           {assignments.isLoading ? (
             <Skeleton className="h-24 w-full" />
+          ) : assignments.isError ? (
+            <div role="alert" className="space-y-2 text-sm text-destructive">
+              <p>Could not load role assignments. Check your access and try again.</p>
+              <Button variant="outline" onClick={() => void assignments.refetch()}>
+                Try again
+              </Button>
+            </div>
           ) : (assignments.data ?? []).length === 0 ? (
-            <p className="text-sm text-muted-foreground">No rows or insufficient permission.</p>
+            <p className="text-sm text-muted-foreground">No role assignments found.</p>
           ) : (
             <ul className="space-y-2">
-              {(assignments.data ?? []).map((row: { id: string; user_id: string; role: string }) => (
-                <li
-                  key={row.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-3 py-2"
-                >
-                  <div className="min-w-0">
-                    <Badge variant="secondary" className="mr-2">
-                      {row.role}
-                    </Badge>
-                    <span className="font-mono text-xs text-muted-foreground">{row.user_id}</span>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() =>
-                      revokeMutation.mutate({ user_id: row.user_id, role: row.role })
-                    }
-                    disabled={revokeMutation.isPending}
+              {(assignments.data ?? []).map(
+                (row: { id: string; user_id: string; role: string }) => (
+                  <li
+                    key={row.id}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-3 py-2"
                   >
-                    <Trash2 className="size-3.5" />
-                  </Button>
-                </li>
-              ))}
+                    <div className="min-w-0">
+                      <Badge variant="secondary" className="mr-2">
+                        {roleLabel(row.role as AppRole)}
+                      </Badge>
+                      <span className="font-mono text-xs text-muted-foreground">{row.user_id}</span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() =>
+                        revokeMutation.mutate({ user_id: row.user_id, role: row.role })
+                      }
+                      disabled={
+                        revokeMutation.isPending ||
+                        !user ||
+                        !canRevokeRole(roles, user.id, row.user_id, row.role as AppRole)
+                      }
+                      aria-label={`Revoke ${roleLabel(row.role as AppRole)} role for ${row.user_id}`}
+                      title={
+                        row.role === "owner" && !isOwner
+                          ? "Only owners can revoke this role"
+                          : row.user_id === user?.id && row.role === "admin" && !isOwner
+                            ? "You cannot revoke your own admin role"
+                            : "Revoke role"
+                      }
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  </li>
+                ),
+              )}
             </ul>
           )}
         </CardContent>

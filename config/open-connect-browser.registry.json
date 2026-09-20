@@ -1,0 +1,88 @@
+{
+  "id": "open-connect-browser",
+  "version": "1.0.0",
+  "purpose": "Tenant-isolated browser, cloud-computer, and remote-terminal sessions for authorized AI agents.",
+  "control_plane": {
+    "create_session": "POST /api/v1/sessions",
+    "execute_action": "POST /api/v1/sessions/{session_id}/actions",
+    "close_session": "DELETE /api/v1/sessions/{session_id}"
+  },
+  "providers": [
+    {
+      "id": "agent-browser",
+      "mode": "isolated-worker-broker",
+      "capabilities": [
+        "navigate",
+        "snapshot",
+        "click",
+        "fill",
+        "select",
+        "press",
+        "scroll",
+        "screenshot",
+        "profile_load",
+        "profile_save",
+        "login_handoff"
+      ]
+    },
+    {
+      "id": "openbrowser",
+      "mode": "remote-api",
+      "capabilities": ["browser", "cdp", "session_resume"]
+    },
+    {
+      "id": "guacamole",
+      "mode": "operator-console",
+      "capabilities": ["cloud_computer", "remote_desktop", "human_handoff"]
+    },
+    {
+      "id": "e2b",
+      "mode": "isolated-sandbox",
+      "capabilities": ["terminal", "filesystem", "code_execution"]
+    }
+  ],
+  "identity": {
+    "credential_transport": "vault_reference_only",
+    "profile_transport": "opaque_profile_reference_only",
+    "credential_ref_example": "vault://apps/github/owner/password",
+    "profile_ref_example": "profile://github/owner/staging",
+    "separate_profiles_by": ["tenant", "identity", "provider", "environment"]
+  },
+  "policy": {
+    "structured_connector_first": true,
+    "production_requires_approval": true,
+    "credential_actions_require_approval": true,
+    "profile_load_save_require_approval": true,
+    "human_handoff_required": [
+      "mfa",
+      "captcha",
+      "passkey",
+      "account_recovery",
+      "payment",
+      "permission_change",
+      "destructive_action"
+    ],
+    "forbidden": [
+      "plaintext_credentials_in_agent_context",
+      "shared_cross-tenant_browser_profiles",
+      "mfa_or_captcha_bypass",
+      "unapproved_production_changes"
+    ]
+  },
+  "audit": {
+    "fields": [
+      "correlation_id",
+      "tenant_id",
+      "actor_id",
+      "agent_id",
+      "session_id",
+      "capability",
+      "target",
+      "environment",
+      "approval_id",
+      "result",
+      "timestamp"
+    ],
+    "redact": ["credential_values", "cookies", "authorization_headers", "typed_secrets"]
+  }
+}

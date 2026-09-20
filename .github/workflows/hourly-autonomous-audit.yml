@@ -1,0 +1,140 @@
+name: Hourly autonomous audit
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: open-connect-hourly-audit
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  verify:
+    name: Verify code and production boundaries
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VITE_SUPABASE_URL: https://huadtiuuoiriqrjpjxhr.supabase.co
+      VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_placeholder' }}
+      VITE_APP_URL: https://open-connect.site
+      OPEN_CONNECT_GITHUB_APP_ID: ${{ secrets.OPEN_CONNECT_GITHUB_APP_ID }}
+      OPEN_CONNECT_GITHUB_APP_PRIVATE_KEY: ${{ secrets.OPEN_CONNECT_GITHUB_APP_PRIVATE_KEY }}
+    steps:
+      - name: Create GitHub App token
+        if: env.OPEN_CONNECT_GITHUB_APP_ID != '' && env.OPEN_CONNECT_GITHUB_APP_PRIVATE_KEY != ''
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.OPEN_CONNECT_GITHUB_APP_ID }}
+          private-key: ${{ secrets.OPEN_CONNECT_GITHUB_APP_PRIVATE_KEY }}
+
+      - uses: actions/checkout@v7
+        with:
+          token: ${{ steps.app-token.outputs.token || github.token }}
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install locked dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Lint, test and build
+        run: |
+          set -o pipefail
+          mkdir -p audit-results
+          bun run lint 2>&1 | tee audit-results/lint.txt
+          bun run test 2>&1 | tee audit-results/tests.txt
+          bun run build 2>&1 | tee audit-results/build.txt
+
+      - name: Verify public routes and security boundaries
+        run: |
+          set -euo pipefail
+          report=audit-results/production.txt
+          : > "$report"
+
+          check_status() {
+            name="$1"
+            url="$2"
+            expected="$3"
+            code=$(curl --retry 2 --retry-delay 3 --max-time 20 -sS -o /tmp/oc-body -w "%{http_code}" "$url" || true)
+            printf '%s %s expected=%s actual=%s\n' "$name" "$url" "$expected" "$code" | tee -a "$report"
+            test "$code" = "$expected"
+          }
+
+          for path in / /auth /models /resources /connections /explore; do
+            check_status "public-page" "https://open-connect.site$path" 200
+          done
+
+          check_status "health" "https://open-connect.site/api/v1/health" 200
+          curl --retry 2 --max-time 20 -fsS https://open-connect.site/api/v1/health \
+            | tee audit-results/health.json \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d.get("status") == "ok"'
+
+          curl --retry 2 --max-time 20 -fsS \
+            https://open-connect.site/.well-known/oauth-authorization-server \
+            | tee audit-results/oauth.json \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin); assert "S256" in d.get("code_challenge_methods_supported", [])'
+
+          check_status "protected-models" "https://open-connect.site/v1/models" 401
+          check_status "protected-mcp" "https://open-connect.site/mcp" 401
+
+      - name: Upload redacted evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: hourly-audit-${{ github.run_id }}
+          path: audit-results
+          retention-days: 14
+
+      - name: Open or update failure issue
+        if: failure()
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ steps.app-token.outputs.token || github.token }}
+          script: |
+            const title = '[hourly-audit] Open-Connect verification failure';
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const body = [
+              'The hourly autonomous audit detected a regression.',
+              '',
+              `Run: ${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`,
+              `Commit: ${context.sha}`,
+              '',
+              'Review the redacted audit artifact. No credentials are included.',
+            ].join('\n');
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner, repo, state: 'open', per_page: 100,
+            });
+            const existing = issues.find((issue) => issue.title === title);
+            if (existing) {
+              await github.rest.issues.createComment({ owner, repo, issue_number: existing.number, body });
+            } else {
+              await github.rest.issues.create({ owner, repo, title, body });
+            }
+
+      - name: Close recovered failure issue
+        if: success()
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ steps.app-token.outputs.token || github.token }}
+          script: |
+            const title = '[hourly-audit] Open-Connect verification failure';
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner, repo, state: 'open', per_page: 100,
+            });
+            for (const issue of issues.filter((item) => item.title === title)) {
+              await github.rest.issues.createComment({
+                owner, repo, issue_number: issue.number,
+                body: `Recovered in run ${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}.`,
+              });
+              await github.rest.issues.update({ owner, repo, issue_number: issue.number, state: 'closed' });
+            }

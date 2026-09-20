@@ -4,7 +4,12 @@ import { useServerFn } from "@tanstack/react-start";
 import { Lock, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { connectApp, disconnectApp, listAppConnections, listConnectionCatalog } from "@/lib/connections.functions";
+import {
+  connectApp,
+  disconnectApp,
+  listAppConnections,
+  listConnectionCatalog,
+} from "@/lib/connections.functions";
 import { useAuth } from "@/hooks/use-auth";
 import { connectionCategories } from "@/lib/nav";
 import { BrandLogo } from "@/components/brand-logo";
@@ -19,7 +24,8 @@ export const Route = createFileRoute("/connections")({
       { title: "Connections — Open-Connect" },
       {
         name: "description",
-        content: "Connect GitHub, Telegram, ChatGPT, Grok and more. Agents get capability, never raw credentials.",
+        content:
+          "Connect GitHub, Telegram, ChatGPT, Grok and more. Agents get capability, never raw credentials.",
       },
     ],
   }),
@@ -96,8 +102,8 @@ function ConnectionsPage() {
       </Badge>
       <h1 className="text-2xl font-semibold sm:text-4xl">Connect apps</h1>
       <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-        Official app marks. One connect per app — Open-Connect holds the capability; agents never see
-        provider secrets.
+        Official app marks. One connect per app — Open-Connect holds the capability; agents never
+        see provider secrets.
       </p>
 
       <div className="mt-8 space-y-3">
@@ -164,7 +170,10 @@ function ConnectionsPage() {
               {group.apps.map((app) => {
                 const connected = connectedProviders.has(app.provider);
                 return (
-                  <Card key={app.provider} className="flex flex-row items-center justify-between gap-3 p-4">
+                  <Card
+                    key={app.provider}
+                    className="flex flex-row items-center justify-between gap-3 p-4"
+                  >
                     <div className="flex min-w-0 items-center gap-3">
                       <BrandLogo provider={app.provider} name={app.display_name} />
                       <div className="min-w-0">

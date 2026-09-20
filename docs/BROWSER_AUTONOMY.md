@@ -1,5 +1,19 @@
 # Browser, cloud computer & terminal autonomy — Open-Connect
 
+## Session API
+
+The control plane exposes tenant-scoped browser sessions without exposing credentials to agents:
+
+1. `POST /api/v1/sessions` creates a `browser` or `computer` session through an isolated worker broker.
+2. `POST /api/v1/sessions/{id}/actions` accepts navigation, snapshot, click, fill, select, key, scroll, screenshot, profile, and login-handoff actions.
+3. `DELETE /api/v1/sessions/{id}` closes the provider session.
+
+Authentication state is addressed by an opaque `profile://...` reference. Login values are addressed by `vault://...` references and resolved only by the isolated worker. Raw credentials are never returned to the agent or stored in browser action logs.
+
+Profile load/save, credential-backed fills, and login handoff are protected actions and require a single-action approval. MFA, CAPTCHA, passkeys, account recovery, payment, permission changes, and destructive actions always require a human handoff; the automation must not bypass provider safeguards.
+
+The `agent-browser` adapter is broker-only. The API service never launches a shared local browser process. Configure `OC_BROWSER_WORKER_URL` and the corresponding vault reference in the deployment secret store. Development, staging, and production profiles must remain separate.
+
 Professional stack for autonomous browsing and compute control.
 
 ## Packages (marketplace / downloads)

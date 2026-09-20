@@ -17,7 +17,7 @@ Deno.serve(async (req: Request) => {
       status: "ok",
       service: "open-connect-edge",
       project: "open-connect",
-      project_ref: "gnqpwewbgldonarggzax",
+      project_ref: "huadtiuuoiriqrjpjxhr",
       domain: "open-connect.site",
       functions: ["health", "get_secret", "add_secret", "connection-webhook"],
       time: new Date().toISOString(),

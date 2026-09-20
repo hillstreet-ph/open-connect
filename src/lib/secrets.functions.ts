@@ -16,27 +16,15 @@ export type SecretType = "api_key" | "oauth_token" | "mcp_url" | "bot_token" | "
 export const listSecrets = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
-      .from("credential_secrets")
-      .select("id, name, secret_type, scopes, last_used_at, created_at, updated_at")
-      .eq("user_id", context.userId)
-      .order("created_at", { ascending: false });
+    const { data, error } = await context.supabase.rpc("list_credential_secrets");
     if (error) throw new Error(error.message);
-    return (data ?? []).map((row) => ({
-      ...row,
-      // never expose secret_value in list
-    }));
+    return Array.isArray(data) ? data : [];
   });
 
 export const createSecret = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
-    (input: {
-      name: string;
-      secret_type?: string;
-      scopes?: string[];
-      secret_value: string;
-    }) => ({
+  .validator(
+    (input: { name: string; secret_type?: string; scopes?: string[]; secret_value: string }) => ({
       name: (input?.name ?? "").trim().slice(0, 120),
       secret_type: (input?.secret_type ?? "api_key") as SecretType,
       scopes: Array.isArray(input?.scopes)
@@ -51,17 +39,12 @@ export const createSecret = createServerFn({ method: "POST" })
       throw new Error("Secret value required (min 4 characters)");
     }
 
-    const { data: row, error } = await context.supabase
-      .from("credential_secrets")
-      .insert({
-        user_id: context.userId,
-        name: data.name,
-        secret_type: data.secret_type,
-        scopes: data.scopes,
-        secret_value: data.secret_value,
-      })
-      .select("id, name, secret_type, scopes, created_at")
-      .single();
+    const { data: row, error } = await context.supabase.rpc("create_credential_secret", {
+      p_name: data.name,
+      p_secret_type: data.secret_type,
+      p_scopes: data.scopes,
+      p_secret_value: data.secret_value,
+    });
 
     if (error) throw new Error(error.message);
     return row;
@@ -69,14 +52,12 @@ export const createSecret = createServerFn({ method: "POST" })
 
 export const deleteSecret = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string }) => ({ id: (input?.id ?? "").trim() }))
+  .validator((input: { id: string }) => ({ id: (input?.id ?? "").trim() }))
   .handler(async ({ data, context }) => {
     if (!data.id) throw new Error("id required");
-    const { error } = await context.supabase
-      .from("credential_secrets")
-      .delete()
-      .eq("id", data.id)
-      .eq("user_id", context.userId);
+    const { data: deleted, error } = await context.supabase.rpc("delete_credential_secret", {
+      p_id: data.id,
+    });
     if (error) throw new Error(error.message);
-    return { ok: true };
+    return { ok: deleted };
   });

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/_authenticated/settings")({
@@ -51,9 +52,7 @@ function SettingsPage() {
         userId: user.id,
         email: user.email ?? "",
         displayName:
-          profile?.display_name ||
-          (user.user_metadata?.display_name as string | undefined) ||
-          "",
+          profile?.display_name || (user.user_metadata?.display_name as string | undefined) || "",
         avatarUrl:
           profile?.avatar_url || (user.user_metadata?.avatar_url as string | undefined) || "",
       };
@@ -160,131 +159,145 @@ function SettingsPage() {
       <h1 className="text-3xl font-semibold">Settings</h1>
       <p className="mt-2 text-sm text-muted-foreground">Profile and account security.</p>
 
-      <Card className="mt-8 shadow-panel">
-        <CardHeader>
-          <CardTitle className="text-base">Profile</CardTitle>
-          <CardDescription>Photo and display name shown in the account menu.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {isLoading || !data ? (
-            <Skeleton className="h-28 w-full" />
-          ) : (
-            <>
-              <div className="flex flex-wrap items-center gap-4">
-                <ProfileAvatarBadge name={displayName} email={data.email} avatarUrl={avatarUrl} />
-                <div className="min-w-0 flex-1 space-y-2">
-                  <p className="text-sm text-muted-foreground">{data.email}</p>
-                  <div className="flex flex-wrap gap-2">
-                    <input
-                      ref={fileRef}
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp"
-                      className="hidden"
-                      onChange={(e) => void onPickPhoto(e.target.files?.[0] ?? null)}
+      <Tabs defaultValue="profile" className="mt-8">
+        <TabsList aria-label="Settings categories" className="h-auto w-full justify-start gap-2">
+          <TabsTrigger value="profile">Profile</TabsTrigger>
+          <TabsTrigger value="security">Security & login</TabsTrigger>
+        </TabsList>
+        <TabsContent value="profile">
+          <Card className="shadow-panel">
+            <CardHeader>
+              <CardTitle className="text-base">Profile</CardTitle>
+              <CardDescription>Photo and display name shown in the account menu.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {isLoading || !data ? (
+                <Skeleton className="h-28 w-full" />
+              ) : (
+                <>
+                  <div className="flex flex-wrap items-center gap-4">
+                    <ProfileAvatarBadge
+                      name={displayName}
+                      email={data.email}
+                      avatarUrl={avatarUrl}
                     />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={uploading}
-                      onClick={() => fileRef.current?.click()}
-                    >
-                      {uploading ? (
-                        <Loader2 className="mr-2 size-4 animate-spin" />
-                      ) : (
-                        <Upload className="mr-2 size-4" />
-                      )}
-                      {avatarUrl ? "Change photo" : "Upload photo"}
-                    </Button>
-                    {avatarUrl ? (
-                      <Button type="button" variant="ghost" size="sm" onClick={removePhoto}>
-                        <Trash2 className="mr-2 size-4" />
-                        Remove photo
-                      </Button>
-                    ) : null}
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <p className="text-sm text-muted-foreground">{data.email}</p>
+                      <div className="flex flex-wrap gap-2">
+                        <input
+                          ref={fileRef}
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp"
+                          className="hidden"
+                          onChange={(e) => void onPickPhoto(e.target.files?.[0] ?? null)}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={uploading}
+                          onClick={() => fileRef.current?.click()}
+                        >
+                          {uploading ? (
+                            <Loader2 className="mr-2 size-4 animate-spin" />
+                          ) : (
+                            <Upload className="mr-2 size-4" />
+                          )}
+                          {avatarUrl ? "Change photo" : "Upload photo"}
+                        </Button>
+                        {avatarUrl ? (
+                          <Button type="button" variant="ghost" size="sm" onClick={removePhoto}>
+                            <Trash2 className="mr-2 size-4" />
+                            Remove photo
+                          </Button>
+                        ) : null}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
 
+                  <div className="space-y-2">
+                    <Label htmlFor="display-name">Display name</Label>
+                    <Input
+                      id="display-name"
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      placeholder="Display name"
+                      autoComplete="name"
+                    />
+                  </div>
+
+                  <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+                    {saveMutation.isPending ? (
+                      <Loader2 className="mr-2 size-4 animate-spin" />
+                    ) : (
+                      <Save className="mr-2 size-4" />
+                    )}
+                    Save changes
+                  </Button>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="security">
+          <Card className="shadow-panel">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <KeyRound className="size-4" /> Change password
+              </CardTitle>
+              <CardDescription>
+                For email/password accounts. OAuth-only users should change password with their
+                provider.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="display-name">Display name</Label>
+                <Label htmlFor="current-password">Current password</Label>
                 <Input
-                  id="display-name"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="Display name"
-                  autoComplete="name"
+                  id="current-password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
                 />
               </div>
-
-              <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
-                {saveMutation.isPending ? (
+              <div className="space-y-2">
+                <Label htmlFor="new-password">New password</Label>
+                <Input
+                  id="new-password"
+                  type="password"
+                  autoComplete="new-password"
+                  minLength={8}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirm-password">Confirm new password</Label>
+                <Input
+                  id="confirm-password"
+                  type="password"
+                  autoComplete="new-password"
+                  minLength={8}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                />
+              </div>
+              <Button
+                onClick={() => passwordMutation.mutate()}
+                disabled={passwordMutation.isPending || !currentPassword || !newPassword}
+              >
+                {passwordMutation.isPending ? (
                   <Loader2 className="mr-2 size-4 animate-spin" />
                 ) : (
-                  <Save className="mr-2 size-4" />
+                  <KeyRound className="mr-2 size-4" />
                 )}
-                Save changes
+                Update password
               </Button>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="mt-6 shadow-panel">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <KeyRound className="size-4" /> Change password
-          </CardTitle>
-          <CardDescription>
-            For email/password accounts. OAuth-only users should change password with their provider.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="current-password">Current password</Label>
-            <Input
-              id="current-password"
-              type="password"
-              autoComplete="current-password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="new-password">New password</Label>
-            <Input
-              id="new-password"
-              type="password"
-              autoComplete="new-password"
-              minLength={8}
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="confirm-password">Confirm new password</Label>
-            <Input
-              id="confirm-password"
-              type="password"
-              autoComplete="new-password"
-              minLength={8}
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-            />
-          </div>
-          <Button
-            onClick={() => passwordMutation.mutate()}
-            disabled={passwordMutation.isPending || !currentPassword || !newPassword}
-          >
-            {passwordMutation.isPending ? (
-              <Loader2 className="mr-2 size-4 animate-spin" />
-            ) : (
-              <KeyRound className="mr-2 size-4" />
-            )}
-            Update password
-          </Button>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

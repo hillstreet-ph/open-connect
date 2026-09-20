@@ -12,7 +12,7 @@ DECLARE
   _owner_email text;
 BEGIN
   -- Platform owner email — change this if ownership transfers.
-  _owner_email := 'kairocasino8@gmail.com';
+  _owner_email := 'tanauancharles1@gmail.com';
 
   IF lower(NEW.email) = lower(_owner_email) THEN
     INSERT INTO public.user_roles (user_id, role)
@@ -35,5 +35,5 @@ CREATE TRIGGER on_auth_user_created_seed_owner
 INSERT INTO public.user_roles (user_id, role)
 SELECT id, 'owner'::public.app_role
 FROM auth.users
-WHERE lower(email) = lower('kairocasino8@gmail.com')
+WHERE lower(email) = lower('tanauancharles1@gmail.com')
 ON CONFLICT (user_id, role) DO NOTHING;

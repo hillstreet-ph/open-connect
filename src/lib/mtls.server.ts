@@ -114,7 +114,9 @@ export function gateMtls(request: Request): MtlsGateResult {
 }
 
 /** RFC 8705 confirmation claim for certificate-bound access tokens (informational). */
-export function certificateBoundCnf(fingerprintSha256: string | null): { "x5t#S256": string } | undefined {
+export function certificateBoundCnf(
+  fingerprintSha256: string | null,
+): { "x5t#S256": string } | undefined {
   if (!fingerprintSha256) return undefined;
   // Cloudflare fingerprint is often hex; RFC 8705 uses base64url of SHA-256 hash of cert.
   // We expose hex fingerprint as opaque binding metadata for gateway checks.

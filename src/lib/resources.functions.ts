@@ -60,7 +60,7 @@ export const listMyResources = createServerFn({ method: "GET" })
 
 export const registerResourcePackage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (input: {
       name: string;
       slug: string;
@@ -101,15 +101,7 @@ export const registerResourcePackage = createServerFn({ method: "POST" })
       slug: uniqueSlug,
       description: data.description,
       resource_type: data.resource_type as
-        | "skill"
-        | "mcp"
-        | "tool"
-        | "plugin"
-        | "agent"
-        | "prompt"
-        | "guide"
-        | "app"
-        | "model",
+        "skill" | "mcp" | "tool" | "plugin" | "agent" | "prompt" | "guide" | "app" | "model",
       owner_id: context.userId,
       package_path: data.package_path,
       package_filename: data.package_filename,
@@ -146,7 +138,7 @@ export const registerResourcePackage = createServerFn({ method: "POST" })
 /** Storage package URL when present; otherwise skill/catalog markdown for logged-in clients. */
 export const getResourceDownloadUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string }) => ({ id: input?.id ?? "" }))
+  .validator((input: { id: string }) => ({ id: input?.id ?? "" }))
   .handler(async ({ data, context }) => {
     if (!data.id) throw new Error("id required");
 
@@ -194,7 +186,7 @@ export const getResourceDownloadUrl = createServerFn({ method: "POST" })
 /** View package metadata / manifest (login required). */
 export const getResourceView = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string }) => ({ id: input?.id ?? "" }))
+  .validator((input: { id: string }) => ({ id: input?.id ?? "" }))
   .handler(async ({ data, context }) => {
     if (!data.id) throw new Error("id required");
     const { data: resource, error } = await context.supabase
@@ -217,7 +209,7 @@ export const getResourceView = createServerFn({ method: "POST" })
 
 export const deleteMyResource = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string }) => ({ id: input?.id ?? "" }))
+  .validator((input: { id: string }) => ({ id: input?.id ?? "" }))
   .handler(async ({ data, context }) => {
     const { data: resource, error } = await context.supabase
       .from("resources")
@@ -231,7 +223,10 @@ export const deleteMyResource = createServerFn({ method: "POST" })
     if (resource.package_path) {
       await context.supabase.storage.from(BUCKET).remove([resource.package_path]);
     }
-    const { error: delError } = await context.supabase.from("resources").delete().eq("id", resource.id);
+    const { error: delError } = await context.supabase
+      .from("resources")
+      .delete()
+      .eq("id", resource.id);
     if (delError) throw new Error(delError.message);
     return { ok: true };
   });

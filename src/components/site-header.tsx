@@ -129,7 +129,9 @@ export function SiteHeader() {
                       className="block rounded-2xl px-3 py-3 transition-colors hover:bg-muted/70"
                       activeProps={{ className: "bg-primary/10 text-primary" }}
                     >
-                      <span className="block text-[15px] font-medium leading-tight">{item.label}</span>
+                      <span className="block text-[15px] font-medium leading-tight">
+                        {item.label}
+                      </span>
                       {item.description ? (
                         <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">
                           {item.description}

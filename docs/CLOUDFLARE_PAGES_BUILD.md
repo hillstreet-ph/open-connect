@@ -13,7 +13,7 @@ In **Workers & Pages → open-connect-app → Settings → Builds**:
 |---------|--------|
 | **Framework preset** | Vite (or None) |
 | **Build command** | `npm run build` |
-| **Build output directory** | `dist` |
+| **Build output directory** | `.output/public` |
 | **Root directory** | *(leave empty)* |
 | **Production branch** | `main` |
 | **Deploy command** | *(default / none)* |
@@ -26,7 +26,7 @@ In **Workers & Pages → open-connect-app → Settings → Builds**:
 - `package.json` script: `"build": "vite build"`
 - TanStack Start + Nitro Cloudflare target (via `@lovable.dev/vite-tanstack-config`) emits to **`dist`**
 - SSR entry is `src/server.ts` (OAuth well-known + error handling)
-- `wrangler.toml` sets `pages_build_output_dir = "dist"` and `nodejs_compat`
+- `wrangler.toml` sets `pages_build_output_dir = ".output/public"` and `nodejs_compat`
 
 ## Environment variables (Production)
 
@@ -34,7 +34,7 @@ Set under **Settings → Environment variables → Production**:
 
 | Name | Type | Notes |
 |------|------|--------|
-| `SUPABASE_URL` | Plain | `https://gnqpwewbgldonarggzax.supabase.co` |
+| `SUPABASE_URL` | Plain | `https://huadtiuuoiriqrjpjxhr.supabase.co` |
 | `SUPABASE_PUBLISHABLE_KEY` | Plain | anon / publishable key |
 | `SUPABASE_SERVICE_ROLE_KEY` | **Secret** | never expose to client |
 | `LITELLM_BASE_URL` | Plain | model gateway base URL |

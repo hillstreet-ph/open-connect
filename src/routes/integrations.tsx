@@ -152,12 +152,15 @@ function IntegrationsPage() {
         One access point for every AI client
       </h1>
       <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-        Open-Connect is the professional control plane for <strong className="text-foreground">ChatGPT</strong>,{" "}
-        <strong className="text-foreground">Claude</strong>, <strong className="text-foreground">Grok</strong>,{" "}
-        <strong className="text-foreground">Open WebUI</strong>, <strong className="text-foreground">Hermes</strong>,{" "}
-        <strong className="text-foreground">Mistral</strong>, and more — plugins, skills, MCP, connectors,
-        credentials (Pipedream · Composio · 1Password), LiteLLM models, Telegram, and autonomous browser /
-        terminal compute. One account. One key. One catalog.
+        Open-Connect is the professional control plane for{" "}
+        <strong className="text-foreground">ChatGPT</strong>,{" "}
+        <strong className="text-foreground">Claude</strong>,{" "}
+        <strong className="text-foreground">Grok</strong>,{" "}
+        <strong className="text-foreground">Open WebUI</strong>,{" "}
+        <strong className="text-foreground">Hermes</strong>,{" "}
+        <strong className="text-foreground">Mistral</strong>, and more — plugins, skills, MCP,
+        connectors, credentials (Pipedream · Composio · 1Password), LiteLLM models, Telegram, and
+        autonomous browser / terminal compute. One account. One key. One catalog.
       </p>
 
       <div className="mt-6 flex flex-wrap gap-2">
@@ -259,8 +262,8 @@ function IntegrationsPage() {
 
       <h2 className="mt-14 text-lg font-semibold">Unified resource catalog</h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        Create, upload, download — zip / markdown auto-detected into skills, plugins, agents, prompts,
-        MCP, tools. Bulk upload from Studio.
+        Create, upload, download — zip / markdown auto-detected into skills, plugins, agents,
+        prompts, MCP, tools. Bulk upload from Studio.
       </p>
       <div className="mt-6 grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {catalog.map((c) => (
@@ -291,9 +294,11 @@ function IntegrationsPage() {
             <CardDescription>GitHub · Cloudflare · Supabase only.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2">
-            {["github", "cloudflare", "supabase", "openai", "anthropic", "grok", "mistral"].map((p) => (
-              <BrandLogo key={p} provider={p} />
-            ))}
+            {["github", "cloudflare", "supabase", "openai", "anthropic", "grok", "mistral"].map(
+              (p) => (
+                <BrandLogo key={p} provider={p} />
+              ),
+            )}
           </CardContent>
         </Card>
       </div>

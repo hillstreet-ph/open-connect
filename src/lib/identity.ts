@@ -13,12 +13,7 @@
 export type OrgRole = "owner" | "admin" | "member";
 export type ProjectRole = "manager" | "developer" | "viewer";
 export type PrincipalType =
-  | "human"
-  | "ai_client"
-  | "ai_agent"
-  | "service_account"
-  | "api_client"
-  | "mcp_client";
+  "human" | "ai_client" | "ai_agent" | "service_account" | "api_client" | "mcp_client";
 
 export const ORG_ROLE_RANK: Record<OrgRole, number> = {
   member: 1,

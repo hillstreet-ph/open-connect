@@ -1,13 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import {
-  can,
-  hasRole,
-  highestRole,
-  type AppRole,
-  type Capability,
-} from "@/lib/rbac";
+import { can, hasRole, highestRole, type AppRole, type Capability } from "@/lib/rbac";
 
 export function useRoles() {
   const { user, loading: authLoading } = useAuth();
