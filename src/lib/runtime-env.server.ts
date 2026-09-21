@@ -1,4 +1,5 @@
 type RuntimeEnvTarget = Record<string, string | undefined>;
+type RuntimeEnvLoader = () => Promise<unknown>;
 
 /**
  * Copy string bindings into the Node-compatible environment without exposing
@@ -11,7 +12,13 @@ export function injectRuntimeBindings(
   if (!bindings || typeof bindings !== "object") return;
 
   for (const [key, value] of Object.entries(bindings)) {
-    if (typeof value !== "string" || value.length === 0 || target[key]) continue;
+    if (
+      typeof value !== "string" ||
+      value.length === 0 ||
+      Object.prototype.hasOwnProperty.call(target, key)
+    ) {
+      continue;
+    }
     target[key] = value;
   }
 }
@@ -30,7 +37,22 @@ async function getCloudflareRuntimeEnv(): Promise<unknown> {
 }
 
 /** Make Cloudflare string bindings available to existing server-only modules. */
-export async function hydrateRuntimeEnv(fetchEnv?: unknown): Promise<void> {
-  injectRuntimeBindings(fetchEnv);
-  injectRuntimeBindings(await getCloudflareRuntimeEnv());
+export async function hydrateRuntimeEnv(
+  fetchEnv?: unknown,
+  loadRuntimeEnv: RuntimeEnvLoader = getCloudflareRuntimeEnv,
+  target: RuntimeEnvTarget = process.env,
+): Promise<void> {
+  injectRuntimeBindings(fetchEnv, target);
+  injectRuntimeBindings(await loadRuntimeEnv(), target);
+}
+
+/** Hydrate bindings before any application code is loaded or executed. */
+export async function runWithRuntimeEnv<T>(
+  fetchEnv: unknown,
+  run: () => Promise<T> | T,
+  loadRuntimeEnv: RuntimeEnvLoader = getCloudflareRuntimeEnv,
+  target: RuntimeEnvTarget = process.env,
+): Promise<T> {
+  await hydrateRuntimeEnv(fetchEnv, loadRuntimeEnv, target);
+  return await run();
 }
