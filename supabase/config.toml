@@ -1,6 +1,6 @@
 # Open Connect — Supabase local/CLI config
-# Canonical cloud project: open-connect (ap-northeast-1)
-project_id = "gnqpwewbgldonarggzax"
+# Canonical cloud project: open-platform (ap-northeast-1)
+project_id = "huadtiuuoiriqrjpjxhr"
 
 [api]
 enabled = true
