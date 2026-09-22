@@ -2,7 +2,7 @@
 
 Production domain: https://open-connect.site  
 Source: https://github.com/hillstreet-ph/open-connect  
-Database: https://gnqpwewbgldonarggzax.supabase.co
+Database: https://huadtiuuoiriqrjpjxhr.supabase.co
 
 ## Cloudflare Pages (required env)
 
@@ -12,7 +12,7 @@ Set these (encrypted/secret where noted):
 
 | Variable | Value |
 |----------|--------|
-| `SUPABASE_URL` | `https://gnqpwewbgldonarggzax.supabase.co` |
+| `SUPABASE_URL` | `https://huadtiuuoiriqrjpjxhr.supabase.co` |
 | `SUPABASE_PUBLISHABLE_KEY` | your `sb_publishable_…` |
 | `SUPABASE_SERVICE_ROLE_KEY` | your service role JWT (secret) |
 | `VITE_SUPABASE_URL` | same as `SUPABASE_URL` |
