@@ -19,7 +19,7 @@ jobs:
       - name: Create GitHub App token
         if: env.OPEN_CONNECT_GITHUB_APP_ID != '' && env.OPEN_CONNECT_GITHUB_APP_PRIVATE_KEY != ''
         id: app-token
-        uses: actions/create-github-app-token@v2
+        uses: actions/create-github-app-token@v3
         with:
           app-id: ${{ secrets.OPEN_CONNECT_GITHUB_APP_ID }}
           private-key: ${{ secrets.OPEN_CONNECT_GITHUB_APP_PRIVATE_KEY }}
