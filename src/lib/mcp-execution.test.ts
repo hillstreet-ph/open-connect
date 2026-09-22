@@ -46,6 +46,19 @@ mock.module("@/integrations/supabase/client.server", () => ({
     },
   },
 }));
+mock.module("@/lib/oauth-client.server", () => ({
+  oauthDatabase: () => ({
+    from: (table: string) => {
+      tables.push(table);
+      if (table !== "resources") throw new Error(`Unexpected public query: ${table}`);
+      return {
+        select: () => ({
+          eq: () => ({ order: () => ({ limit: async () => ({ data: [resource], error: null }) }) }),
+        }),
+      };
+    },
+  }),
+}));
 await import("../routes/mcp");
 
 beforeEach(() => {

@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, FileCode, KeyRound, LogOut, Plug, Settings, Shield } from "lucide-react";
+import { ChevronDown, FileCode, KeyRound, LogOut, Settings, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -123,7 +123,11 @@ export function BrandLogo() {
   return (
     <Link to="/" className="flex items-center gap-2" aria-label="Open-Connect home">
       <span className="flex size-8 items-center justify-center rounded-lg bg-primary/15 text-primary shadow-glow">
-        <Plug className="size-4" />
+        <img
+          src="/hillstreet-logo.png"
+          alt="HillStreet"
+          className="size-8 rounded-lg object-contain"
+        />
       </span>
       <span className="font-display text-base font-semibold tracking-tight">Open-Connect</span>
     </Link>

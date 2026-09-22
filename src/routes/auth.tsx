@@ -8,14 +8,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
+import { safeOAuthReturn } from "@/lib/oauth-policy";
+
 type AuthMode = "signin" | "signup" | "reset" | "update_password";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
-  validateSearch: (search: Record<string, unknown>): { mode?: AuthMode } => {
+  validateSearch: (search: Record<string, unknown>): { mode?: AuthMode; returnTo?: string } => {
     const raw = search["mode"];
-    if (raw === "signup" || raw === "reset" || raw === "update_password") return { mode: raw };
-    return {};
+    if (raw === "signup" || raw === "reset" || raw === "update_password")
+      return { mode: raw, returnTo: safeOAuthReturn(search["returnTo"]) };
+    return { returnTo: safeOAuthReturn(search["returnTo"]) };
   },
   head: () => ({
     meta: [
@@ -32,7 +35,7 @@ export const Route = createFileRoute("/auth")({
 });
 
 function AuthPage() {
-  const { mode: initialMode } = Route.useSearch();
+  const { mode: initialMode, returnTo = "/dashboard" } = Route.useSearch();
   const navigate = useNavigate();
   const [mode, setMode] = useState<AuthMode>(initialMode ?? "signin");
   const [email, setEmail] = useState("");
@@ -50,18 +53,18 @@ function AuthPage() {
         return;
       }
       if (event === "SIGNED_IN" && session && mode !== "update_password") {
-        void navigate({ to: "/dashboard" });
+        window.location.assign(returnTo);
       }
     });
 
     void supabase.auth.getSession().then(({ data }) => {
       if (data.session && mode !== "update_password" && mode !== "reset") {
-        void navigate({ to: "/dashboard" });
+        window.location.assign(returnTo);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate, mode]);
+  }, [navigate, mode, returnTo]);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -71,7 +74,7 @@ function AuthPage() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success("Welcome back");
-        await navigate({ to: "/dashboard" });
+        window.location.assign(returnTo);
       } else if (mode === "signup") {
         const { error } = await supabase.auth.signUp({
           email,
@@ -97,7 +100,7 @@ function AuthPage() {
         const { error } = await supabase.auth.updateUser({ password });
         if (error) throw error;
         toast.success("Password updated");
-        await navigate({ to: "/dashboard" });
+        window.location.assign(returnTo);
       }
     } catch (error) {
       const msg = error instanceof Error ? error.message : "Something went wrong";
@@ -113,7 +116,7 @@ function AuthPage() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/auth`,
+          redirectTo: `${window.location.origin}/auth?returnTo=${encodeURIComponent(returnTo)}`,
           skipBrowserRedirect: false,
         },
       });
