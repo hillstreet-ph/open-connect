@@ -256,6 +256,48 @@ export const listProjects = createServerFn({ method: "GET" })
     return rows ?? [];
   });
 
+export const listWorkspaces = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((input?: { organizationId?: string }) => ({
+    organizationId: input?.organizationId ?? null,
+  }))
+  .handler(async ({ data, context }) => {
+    let query = context.supabase
+      .from("workspaces")
+      .select("id, organization_id, name, slug, description, created_at, organizations(name, slug)")
+      .order("created_at", { ascending: false });
+    if (data.organizationId) query = query.eq("organization_id", data.organizationId);
+    const { data: rows, error } = await query;
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
+export const createWorkspace = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { organizationId: string; name: string; description?: string }) => ({
+    organizationId: input.organizationId,
+    name: input.name.trim(),
+    description: input.description?.trim() || null,
+  }))
+  .handler(async ({ data, context }) => {
+    if (!data.organizationId || !data.name)
+      throw new Error("Organization and workspace name required");
+    await requireOrganizationManager(context.supabase, data.organizationId, context.userId);
+    const { data: workspace, error } = await context.supabase
+      .from("workspaces")
+      .insert({
+        organization_id: data.organizationId,
+        name: data.name,
+        slug: `${slugify(data.name) || "workspace"}-${Date.now().toString(36).slice(-4)}`,
+        description: data.description,
+        created_by: context.userId,
+      })
+      .select("id, organization_id, name, slug")
+      .single();
+    if (error) throw new Error(error.message);
+    return workspace;
+  });
+
 /** Projects the current user can access via project_members. */
 export const listMyProjectMemberships = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -325,19 +367,29 @@ export const ensureProjectEnvironments = createServerFn({ method: "POST" })
 
 export const createProject = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input: { organizationId: string; name: string; description?: string }) => ({
-    organizationId: input.organizationId,
-    name: (input?.name ?? "").trim(),
-    description: (input?.description ?? "").trim() || null,
-  }))
+  .validator(
+    (input: {
+      organizationId: string;
+      workspaceId: string;
+      name: string;
+      description?: string;
+    }) => ({
+      organizationId: input.organizationId,
+      workspaceId: input.workspaceId,
+      name: (input?.name ?? "").trim(),
+      description: (input?.description ?? "").trim() || null,
+    }),
+  )
   .handler(async ({ data, context }) => {
     if (!data.name) throw new Error("Project name required");
     if (!data.organizationId) throw new Error("Pick an organization");
+    if (!data.workspaceId) throw new Error("Pick a workspace");
     const slug = slugify(data.name) || "project";
     const { data: project, error } = await context.supabase
       .from("projects")
       .insert({
         organization_id: data.organizationId,
+        workspace_id: data.workspaceId,
         name: data.name,
         slug: `${slug}-${Date.now().toString(36).slice(-4)}`,
         description: data.description,

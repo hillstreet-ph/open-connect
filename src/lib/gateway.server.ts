@@ -246,7 +246,15 @@ export function generateKey(): { raw: string; hash: string; prefix: string } {
   return { raw, hash: hashKey(raw), prefix: raw.slice(0, KEY_PREFIX.length + 6) };
 }
 
-export type AuthedKey = { id: string; userId: string; scopes: string[] };
+export type AuthedKey = {
+  id: string;
+  userId: string;
+  scopes: string[];
+  organizationId: string | null;
+  workspaceId: string | null;
+  projectId: string | null;
+  accessProfile: string;
+};
 
 const AUTH_TTL_MS = 30_000;
 const authCache = new Map<string, { at: number; key: AuthedKey | null }>();
@@ -274,7 +282,15 @@ export async function authenticateKey(request: Request): Promise<AuthedKey | nul
   const { oauthDatabase } = await import("@/lib/oauth-client.server");
   const { data, error } = await oauthDatabase().rpc("oc_verify_gateway_key", { p_key: raw });
   if (error || !data) return null;
-  const key: AuthedKey = { id: data.id, userId: data.user_id, scopes: data.scopes ?? [] };
+  const key: AuthedKey = {
+    id: data.id,
+    userId: data.user_id,
+    scopes: data.scopes ?? [],
+    organizationId: data.organization_id ?? null,
+    workspaceId: data.workspace_id ?? null,
+    projectId: data.project_id ?? null,
+    accessProfile: data.access_profile ?? "legacy",
+  };
   if (!data.expires_at) authCache.set(digest, { at: now, key });
 
   if (authCache.size > 500) {
