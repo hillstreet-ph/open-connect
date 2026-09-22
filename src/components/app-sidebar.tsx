@@ -117,11 +117,11 @@ export function AppSidebar() {
           aria-label="Open Connect dashboard"
           className="flex items-center gap-2 rounded-md p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+          <span className="flex size-8 shrink-0 items-center justify-center">
             <img
-              src="/open-connect-mark.png"
+              src="/open-connect-mark.svg"
               alt="Open Connect"
-              className="size-8 rounded-lg object-contain"
+              className="block size-8 object-contain"
             />
           </span>
           <span className="truncate text-sm font-semibold group-data-[collapsible=icon]:hidden">

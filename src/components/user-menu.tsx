@@ -122,11 +122,11 @@ function AccountMenuItems({ onSignOut, showAdmin }: { onSignOut: () => void; sho
 export function BrandLogo() {
   return (
     <Link to="/" className="flex items-center gap-2" aria-label="Open-Connect home">
-      <span className="flex size-8 items-center justify-center rounded-lg bg-primary/15 text-primary shadow-glow">
+      <span className="flex size-8 items-center justify-center shadow-glow">
         <img
-          src="/open-connect-mark.png"
+          src="/open-connect-mark.svg"
           alt="Open Connect"
-          className="size-8 rounded-lg object-contain"
+          className="block size-8 object-contain"
         />
       </span>
       <span className="font-display text-base font-semibold tracking-tight">Open-Connect</span>
