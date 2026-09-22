@@ -1,0 +1,24 @@
+{
+  "name": "open-databricks-kit",
+  "version": "1.0.0",
+  "description": "Databricks catalogs, SQL, jobs, pipelines, compute, and model serving.",
+  "author": {
+    "name": "HillStreet Information Technology Services"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Open Databricks Kit",
+    "shortDescription": "Operate governed Databricks data and AI workloads safely.",
+    "longDescription": "Databricks catalogs, SQL, jobs, pipelines, compute, and model serving. Uses provider-authorized read/write scopes with approval gates for production and destructive operations.",
+    "developerName": "HillStreet Information Technology Services",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Databricks",
+      "Read/write operations",
+      "Health verification",
+      "Rollback planning"
+    ],
+    "defaultPrompt": "Use Open Databricks Kit to inspect current state, make the smallest authorized change, and verify the result."
+  },
+  "mcpServers": "./.mcp.json"
+}

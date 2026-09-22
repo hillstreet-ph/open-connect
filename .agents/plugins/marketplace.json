@@ -27,6 +27,102 @@
         "authentication": "ON_INSTALL"
       },
       "category": "Developer"
+    },
+    {
+      "name": "open-github-kit",
+      "source": {
+        "source": "local",
+        "path": "./.agents/plugins/open-github-kit"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer"
+    },
+    {
+      "name": "open-dockerhub-kit",
+      "source": {
+        "source": "local",
+        "path": "./.agents/plugins/open-dockerhub-kit"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer"
+    },
+    {
+      "name": "open-cloudflare-kit",
+      "source": {
+        "source": "local",
+        "path": "./.agents/plugins/open-cloudflare-kit"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer"
+    },
+    {
+      "name": "open-supabase-kit",
+      "source": {
+        "source": "local",
+        "path": "./.agents/plugins/open-supabase-kit"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer"
+    },
+    {
+      "name": "open-sentry-kit",
+      "source": {
+        "source": "local",
+        "path": "./.agents/plugins/open-sentry-kit"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer"
+    },
+    {
+      "name": "open-zeabur-kit",
+      "source": {
+        "source": "local",
+        "path": "./.agents/plugins/open-zeabur-kit"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer"
+    },
+    {
+      "name": "open-databricks-kit",
+      "source": {
+        "source": "local",
+        "path": "./.agents/plugins/open-databricks-kit"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer"
+    },
+    {
+      "name": "open-devapps-kit",
+      "source": {
+        "source": "local",
+        "path": "./.agents/plugins/open-devapps-kit"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer"
     }
   ]
 }
