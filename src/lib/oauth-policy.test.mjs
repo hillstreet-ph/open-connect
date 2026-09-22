@@ -30,3 +30,16 @@ test("preserves requested scopes without adding write permissions", () => {
   );
   assert.equal(validateOAuthRequest(req).scope, "mcp:connect resources:read connections:read");
 });
+
+test("static discovery advertises only implemented OAuth grants", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const metadata = JSON.parse(
+    await readFile(
+      new URL("../../public/.well-known/oauth-authorization-server", import.meta.url),
+      "utf8",
+    ),
+  );
+  assert.deepEqual(metadata.grant_types_supported, ["authorization_code"]);
+  assert.deepEqual(metadata.token_endpoint_auth_methods_supported, ["none"]);
+  assert.equal(metadata.logo_uri, "https://open-connect.site/hillstreet-logo.png");
+});

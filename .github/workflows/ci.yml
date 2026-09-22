@@ -87,7 +87,7 @@ jobs:
         run: |
           set -e
           for p in / /auth /models /resources /connections /explore; do
-            code=$(curl -sS -o /dev/null -w "%{http_code}" "https://open-connect.site$p")
-            echo "$p $code"
+            read -r code effective_url <<< "$(curl -sS -L --max-redirs 5 -o /dev/null -w '%{http_code} %{url_effective}' "https://open-connect.site$p")"
+            echo "$p -> $effective_url $code"
             test "$code" = "200"
           done
