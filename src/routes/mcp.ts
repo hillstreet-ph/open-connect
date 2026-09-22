@@ -127,6 +127,58 @@ const PLATFORM_TOOLS: McpTool[] = [
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
   },
   {
+    name: "e2b_health",
+    description: "Check whether the configured E2B sandbox API is reachable.",
+    inputSchema: { type: "object", properties: {} },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+  },
+  {
+    name: "e2b_list_sandboxes",
+    description: "List running or paused E2B sandboxes for the connected team.",
+    inputSchema: {
+      type: "object",
+      properties: { limit: { type: "integer", minimum: 1, maximum: 100 } },
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+  },
+  {
+    name: "e2b_create_sandbox",
+    description: "Create an isolated E2B sandbox. Owner/admin and tools:invoke are required.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        template: { type: "string", description: "E2B template id or alias; defaults to base." },
+        timeout: { type: "integer", minimum: 30, maximum: 3600 },
+        metadata: { type: "object", additionalProperties: { type: "string" } },
+      },
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
+  },
+  {
+    name: "e2b_kill_sandbox",
+    description:
+      "Terminate one E2B sandbox. Requires explicit confirm=true and owner/admin write access.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        sandbox_id: { type: "string" },
+        confirm: { type: "boolean", description: "Must be true to terminate the sandbox." },
+      },
+      required: ["sandbox_id", "confirm"],
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: true,
+      openWorldHint: true,
+    },
+  },
+  {
     name: "plan_goal",
     description:
       "Use this when converting an operator goal into a bounded autonomous execution plan.",
@@ -419,6 +471,10 @@ const TOOL_SCOPES: Record<string, string> = {
   list_connections: "connections:read",
   list_models: "models:read",
   inspect_connections: "connections:read",
+  e2b_health: "connections:read",
+  e2b_list_sandboxes: "connections:read",
+  e2b_create_sandbox: "tools:invoke",
+  e2b_kill_sandbox: "tools:invoke",
   plan_goal: "resources:read",
   recommend_toolchain: "resources:read",
   resolve_capability: "resources:read",
@@ -434,6 +490,8 @@ const SELF_GUARDED_WRITE_TOOLS = new Set([
   "record_run_outcome",
   "configure_connection",
   "install_capability",
+  "e2b_create_sandbox",
+  "e2b_kill_sandbox",
 ]);
 
 function canUseTool(key: AuthedKey, toolName: string) {
@@ -643,6 +701,40 @@ export const Route = createFileRoute("/mcp")({
                 credential_reference: connection["credential_reference"] ? "configured" : "missing",
               })),
             });
+          } else if (name === "e2b_health") {
+            const { e2bConfig, e2bHealth } = await import("@/lib/e2b.server");
+            if (!e2bConfig().configured) throw new Error("E2B is not configured");
+            result = textResult({ configured: true, reachable: true, health: await e2bHealth() });
+          } else if (name === "e2b_list_sandboxes") {
+            const { e2bConfig, listE2bSandboxes } = await import("@/lib/e2b.server");
+            if (!e2bConfig().configured) throw new Error("E2B is not configured");
+            result = textResult(await listE2bSandboxes(Number(args["limit"] ?? 100)));
+          } else if (name === "e2b_create_sandbox") {
+            await requireControlWrite(key);
+            const { createE2bSandbox, e2bConfig } = await import("@/lib/e2b.server");
+            if (!e2bConfig().configured) throw new Error("E2B is not configured");
+            const metadata =
+              args["metadata"] && typeof args["metadata"] === "object"
+                ? Object.fromEntries(
+                    Object.entries(args["metadata"] as Record<string, unknown>)
+                      .filter((entry): entry is [string, string] => typeof entry[1] === "string")
+                      .slice(0, 20),
+                  )
+                : {};
+            const template = typeof args["template"] === "string" ? args["template"] : null;
+            result = textResult(
+              await createE2bSandbox({
+                ...(template ? { template } : {}),
+                timeout: Number(args["timeout"] ?? 300),
+                metadata,
+              }),
+            );
+          } else if (name === "e2b_kill_sandbox") {
+            await requireControlWrite(key);
+            if (args["confirm"] !== true) throw new Error("Explicit confirm=true is required");
+            const { e2bConfig, killE2bSandbox } = await import("@/lib/e2b.server");
+            if (!e2bConfig().configured) throw new Error("E2B is not configured");
+            result = textResult(await killE2bSandbox(String(args["sandbox_id"] ?? "")));
           } else if (name === "recommend_toolchain" || name === "resolve_capability") {
             const goal = String(
               name === "resolve_capability" ? args["capability"] : args["goal"],
