@@ -248,7 +248,9 @@ export const listProjects = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     let q = context.supabase
       .from("projects")
-      .select("id, organization_id, name, slug, description, created_at, organizations(name, slug)")
+      .select(
+        "id, organization_id, workspace_id, name, slug, description, created_at, organizations(name, slug), workspaces(name, slug)",
+      )
       .order("created_at", { ascending: false });
     if (data.organizationId) q = q.eq("organization_id", data.organizationId);
     const { data: rows, error } = await q;
