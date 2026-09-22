@@ -35,7 +35,7 @@ function oauthAuthorizationServerMetadata() {
     code_challenge_methods_supported: ["S256"],
     ...mtlsMetadataFields(mtlsEnabled),
     token_endpoint_auth_methods_supported: ["none"],
-    logo_uri: `${ISSUER}/hillstreet-logo.png`,
+    logo_uri: `${ISSUER}/open-connect-mark.png`,
     scopes_supported: [...OAUTH_SCOPES_SUPPORTED],
     service_documentation: `${ISSUER}/integrations`,
   };

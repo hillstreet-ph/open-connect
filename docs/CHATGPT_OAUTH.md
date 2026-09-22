@@ -1,6 +1,6 @@
 # ChatGPT connection
 
-Name: Open-Connect. MCP URL: https://open-connect.site/mcp. Authentication: OAuth. Client ID and secret: leave blank for dynamic registration. Logo: https://open-connect.site/hillstreet-logo.png (original HillStreet artwork).
+Name: Open-Connect. MCP URL: https://open-connect.site/mcp. Authentication: OAuth. Client ID and secret: leave blank for dynamic registration. Logo: https://open-connect.site/open-connect-mark.png.
 
 Sign in to Open-Connect and approve the requested permissions. No API key is needed. The client receives a dedicated revocable token, visible as OAuth: <client name> in API keys & MCP. Tokens expire after 30 days; reconnect after expiration. Refresh tokens are not advertised or issued.
 
