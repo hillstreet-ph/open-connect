@@ -9,6 +9,9 @@
 GitHub (main)
     → Cloudflare Pages project open-connect-app
         → https://open-connect.site
+    → Docker Hub image hillstreet/open-connect
+        → Zeabur API service
+            → https://api.open-connect.site
     → Supabase project huadtiuuoiriqrjpjxhr
         → Auth · Postgres · RLS · Storage · Edge Functions
 ```
@@ -18,6 +21,8 @@ GitHub (main)
 | **GitHub** | Source of truth, Actions, releases |
 | **Cloudflare** | DNS, TLS, Pages edge, KV `OC_KV`, WAF |
 | **Supabase** | Database, Auth, RLS, vault references |
+| **Docker Hub** | Immutable Open-Connect control-plane API images |
+| **Zeabur** | API/server runtime only; never the apex frontend owner |
 
 Pages production branch: **`main`** only.
 
@@ -34,24 +39,25 @@ Pages production branch: **`main`** only.
 | `VITE_SUPABASE_URL` | recommended |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | recommended |
 
-## Optional platforms
+## Supporting platforms
 
 | Platform | Role | Status |
 |----------|------|--------|
 | **Sentry** | Error / performance observability | Connection metadata in `app_connections`; DSN via vault only |
-| **Zeabur** | Optional long-running runtime (e.g. LiteLLM proxy, workers) | **Not** the public edge; metadata configured |
-| **Docker Hub** | Optional OCI images for Zeabur/workers | No Dockerfile on OC app today — add only if shipping a worker image |
+| **Zeabur** | Backend API, control-plane and long-running workers | Origin at `api.open-connect.site`; never attach `open-connect.site` |
+| **Docker Hub** | OCI source for Zeabur API/control-plane | `hillstreet/open-connect`; pin a release or SHA tag in production |
 
-Open Connect **edge does not require** Docker Hub or Zeabur. Independent products may use them separately.
+Cloudflare Pages owns the frontend and apex. Zeabur owns only server workloads. Supabase remains the only primary database/Auth/Storage owner.
 
 ## Deploy checklist
 
-1. Merge to `main` on GitHub  
-2. Cloudflare Pages auto-builds (`bun install --frozen-lockfile && bun run build` → `dist`)  
-3. Confirm `/api/v1/health` → `status: ok`, `model_upstream: openrouter`  
-4. Confirm custom domains `open-connect.site` / `www` active  
-5. Optional: configure Sentry DSN as Pages secret when wiring `@sentry/*`  
-6. Optional: deploy LiteLLM on Zeabur → point `LITELLM_BASE_URL` at that proxy  
+1. Merge to `main` on GitHub
+2. Cloudflare Pages auto-builds (`bun install --frozen-lockfile && bun run build` → `.output/public`)
+3. Confirm `/api/v1/health` → `status: ok`, `model_upstream: openrouter`
+4. Confirm custom domains `open-connect.site` / `www` active
+5. Optional: configure Sentry DSN as Pages secret when wiring `@sentry/*`
+6. Deploy the validated control-plane image to Zeabur and verify `https://api.open-connect.site/healthz`
+7. Keep `open-connect.site` and `www.open-connect.site` attached only to Cloudflare Pages
 
 ## Identity (control plane)
 
