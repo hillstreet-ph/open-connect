@@ -445,6 +445,14 @@ export type Database = {
         Args: Record<PropertyKey, never>;
         Returns: Json;
       };
+      get_service_credential: {
+        Args: { p_name: string };
+        Returns: string;
+      };
+      set_service_credential: {
+        Args: { p_name: string; p_secret_value: string };
+        Returns: boolean;
+      };
     };
     Enums: {
       app_role: "user" | "developer" | "publisher" | "admin" | "owner";
