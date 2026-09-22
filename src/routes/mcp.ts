@@ -337,8 +337,8 @@ async function getCatalog(force = false) {
     return catalogCache;
   }
 
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data } = await supabaseAdmin
+  const { oauthDatabase } = await import("@/lib/oauth-client.server");
+  const { data, error } = await oauthDatabase()
     .from("resources")
     .select(
       "slug, name, description, resource_type, installation_type, installation_config, verified",
@@ -347,6 +347,7 @@ async function getCatalog(force = false) {
     .order("featured", { ascending: false })
     .limit(100);
 
+  if (error) throw new Error("Resource catalog unavailable");
   const rows = (data ?? []) as ResourceRow[];
   const bySlug = new Map<string, ResourceRow>();
   const byToolName = new Map<string, ResourceRow>();

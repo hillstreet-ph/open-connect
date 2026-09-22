@@ -118,7 +118,11 @@ export function AppSidebar() {
           className="flex items-center gap-2 rounded-md p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
-            <Plug className="size-4" />
+            <img
+              src="/hillstreet-logo.png"
+              alt="HillStreet"
+              className="size-8 rounded-lg object-contain"
+            />
           </span>
           <span className="truncate text-sm font-semibold group-data-[collapsible=icon]:hidden">
             Open Connect

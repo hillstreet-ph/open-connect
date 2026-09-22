@@ -1,17 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { newClientId } from "@/lib/oauth.server";
-
-function ok(body: unknown, status = 201) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      "content-type": "application/json",
-      "access-control-allow-origin": "*",
-      "cache-control": "no-store",
-    },
-  });
-}
-
+import { oauthDatabase } from "@/lib/oauth-client.server";
+const headers = {
+  "content-type": "application/json",
+  "access-control-allow-origin": "*",
+  "cache-control": "no-store",
+};
 export const Route = createFileRoute("/oauth/register")({
   server: {
     handlers: {
@@ -19,29 +12,48 @@ export const Route = createFileRoute("/oauth/register")({
         new Response(null, {
           status: 204,
           headers: {
-            "access-control-allow-origin": "*",
+            ...headers,
             "access-control-allow-methods": "POST, OPTIONS",
-            "access-control-allow-headers": "Content-Type, Authorization",
+            "access-control-allow-headers": "Content-Type",
           },
         }),
       POST: async ({ request }) => {
-        const body = (await request.json().catch(() => ({}))) as {
-          client_name?: string;
-          redirect_uris?: string[];
-          grant_types?: string[];
-          response_types?: string[];
-          token_endpoint_auth_method?: string;
-        };
-        const clientId = newClientId();
-        return ok({
-          client_id: clientId,
-          client_id_issued_at: Math.floor(Date.now() / 1000),
-          client_name: body.client_name ?? "MCP Client",
-          redirect_uris: body.redirect_uris ?? ["https://chatgpt.com/connector/oauth"],
-          grant_types: body.grant_types ?? ["authorization_code", "refresh_token"],
-          response_types: body.response_types ?? ["code"],
-          token_endpoint_auth_method: body.token_endpoint_auth_method ?? "none",
-        });
+        try {
+          const body = await request.json();
+          if (
+            !Array.isArray(body.redirect_uris) ||
+            body.redirect_uris.length < 1 ||
+            body.redirect_uris.length > 5
+          )
+            throw Error();
+          for (const value of body.redirect_uris) {
+            const u = new URL(value);
+            if (
+              typeof value !== "string" ||
+              value.length > 2048 ||
+              u.protocol !== "https:" ||
+              u.username ||
+              u.password ||
+              u.hash
+            )
+              throw Error();
+          }
+          if (body.token_endpoint_auth_method && body.token_endpoint_auth_method !== "none")
+            throw Error();
+          const { data, error } = await oauthDatabase().rpc("oc_register_oauth_client", {
+            p_name: typeof body.client_name === "string" ? body.client_name : "MCP client",
+            p_redirect_uris: body.redirect_uris,
+          });
+          return new Response(JSON.stringify(error ? { error: "temporarily_unavailable" } : data), {
+            status: error ? 503 : 201,
+            headers,
+          });
+        } catch {
+          return new Response(JSON.stringify({ error: "invalid_client_metadata" }), {
+            status: 400,
+            headers,
+          });
+        }
       },
     },
   },

@@ -32,9 +32,7 @@ export function McpConnectionCard({ freshKey }: { freshKey: string | null }) {
     <Card className="shadow-panel">
       <CardHeader>
         <CardTitle className="text-base">Connect ChatGPT & MCP clients</CardTitle>
-        <CardDescription>
-          Create a key above, test the connection, then configure your client.
-        </CardDescription>
+        <CardDescription>Connect ChatGPT with OAuth. No API key is required.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 text-sm">
         <p>MCP server URL</p>
@@ -42,8 +40,8 @@ export function McpConnectionCard({ freshKey }: { freshKey: string | null }) {
           https://open-connect.site/mcp
         </code>
         <p>
-          For ChatGPT, connect the MCP server using the OAuth sign-in flow. API keys are for clients
-          that support bearer-token authentication.
+          For ChatGPT, choose OAuth, sign in, and approve access. No API key or client secret is
+          required. API keys are for clients that support bearer-token authentication.
         </p>
         <ol className="list-decimal space-y-1 pl-5">
           <li>
