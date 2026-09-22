@@ -3,7 +3,6 @@ import {
   Bot,
   BookOpen,
   Brain,
-  Building2,
   Boxes,
   CalendarClock,
   FolderKanban,
@@ -32,6 +31,7 @@ import {
 import { useRoles } from "@/hooks/use-roles";
 import { type Capability } from "@/lib/rbac";
 import { UserMenu } from "@/components/user-menu";
+import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 
 type Item = {
   capability?: Capability;
@@ -42,16 +42,15 @@ type Item = {
 
 /**
  * Primary IA (locked):
- * Dashboard → Organizations → Workspaces → Work → Build → Marketplace → Connections →
+ * Workspace switcher → Dashboard → Workspaces → Work → Build → Marketplace → Connections →
  * AI Gateway → Developer. Settings live in the user avatar menu.
  *
- * Organizations manage people and groups; Workspaces manage projects and environments.
+ * Organization settings live in the user menu; workspaces manage projects and environments.
  * System administration appears once for privileged roles in the shared menu.
  */
 
 const PRIMARY: Item[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/orgs", label: "Organizations", icon: Building2 },
   { to: "/projects", label: "Workspaces", icon: FolderKanban },
 ];
 
@@ -111,23 +110,8 @@ export function AppSidebar() {
   const { can } = useRoles();
   return (
     <Sidebar collapsible="icon" className="border-sidebar-border">
-      <SidebarHeader className="gap-1 border-b border-sidebar-border px-3 py-3">
-        <Link
-          to="/dashboard"
-          aria-label="Open Connect dashboard"
-          className="flex items-center gap-2 rounded-md p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <span className="flex size-8 shrink-0 items-center justify-center">
-            <img
-              src="/open-connect-mark.svg"
-              alt="Open Connect"
-              className="block size-8 object-contain"
-            />
-          </span>
-          <span className="truncate text-sm font-semibold group-data-[collapsible=icon]:hidden">
-            Open Connect
-          </span>
-        </Link>
+      <SidebarHeader className="gap-1 border-b border-sidebar-border px-2 py-2">
+        <WorkspaceSwitcher />
       </SidebarHeader>
 
       <SidebarContent className="px-1 py-2">
