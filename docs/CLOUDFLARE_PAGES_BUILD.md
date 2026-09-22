@@ -24,7 +24,7 @@ In **Workers & Pages → open-connect-app → Settings → Builds**:
 ### Why these values
 
 - `package.json` script: `"build": "vite build"`
-- TanStack Start + Nitro Cloudflare target (via `@lovable.dev/vite-tanstack-config`) emits to **`dist`**
+- TanStack Start + Nitro Cloudflare target (via `@lovable.dev/vite-tanstack-config`) emits the Pages bundle to **`.output/public`**
 - SSR entry is `src/server.ts` (OAuth well-known + error handling)
 - `wrangler.toml` sets `pages_build_output_dir = ".output/public"` and `nodejs_compat`
 
@@ -50,8 +50,8 @@ Do **not** put service-role or master keys in `VITE_*` variables.
 ```text
 git push origin main
   → Cloudflare clones hillstreet-ph/open-connect
-  → npm install && npm run build
-  → publish dist/ (+ Pages Functions / Worker)
+  → bun install --frozen-lockfile && bun run build
+  → publish .output/public/ (+ generated Pages Worker)
   → https://open-connect.site
 ```
 
@@ -79,8 +79,8 @@ curl -sS -X PATCH \
   -d '{
     "production_branch": "main",
     "build_config": {
-      "build_command": "npm run build",
-      "destination_dir": "dist",
+      "build_command": "bun install --frozen-lockfile && bun run build",
+      "destination_dir": ".output/public",
       "root_dir": "",
       "build_caching": true
     }
