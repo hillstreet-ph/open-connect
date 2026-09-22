@@ -35,8 +35,12 @@ export const Route = createFileRoute("/_authenticated/memory")({
       { name: "robots", content: "noindex" },
     ],
   }),
-  component: MemoryKnowledgePage,
+  component: MemoryPage,
 });
+
+function MemoryPage() {
+  return <MemoryKnowledgePage defaultSection="memory" />;
+}
 
 const MEMORY_TYPES: MemoryType[] = ["fact", "preference", "decision", "instruction", "summary"];
 const SOURCE_TYPES: KnowledgeSourceType[] = [
@@ -73,7 +77,11 @@ function ProjectSelect({
   );
 }
 
-function MemoryKnowledgePage() {
+export function MemoryKnowledgePage({
+  defaultSection,
+}: {
+  defaultSection: "memory" | "knowledge";
+}) {
   const qc = useQueryClient();
   const listProj = useServerFn(listProjects);
   const getMemories = useServerFn(listMemories);
@@ -184,21 +192,22 @@ function MemoryKnowledgePage() {
             <Brain className="mr-1 size-3" /> AI context
           </Badge>
           <h1 className="font-display text-xl font-semibold tracking-tight sm:text-2xl">
-            Memory & Knowledge
+            {defaultSection === "memory" ? "Project Memory" : "Project Knowledge"}
           </h1>
           <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-            Store durable preferences, decisions, instructions, summaries, documents, URLs,
-            repository notes, and reusable project context. Records are private to your
-            authenticated identity.
+            {defaultSection === "memory"
+              ? "Store durable project decisions, instructions, preferences, and summaries."
+              : "Organize project documents, URLs, repositories, conversations, and reusable sources."}{" "}
+            Records are private to your authenticated identity and can be scoped to each project.
           </p>
         </div>
         <div className="w-full sm:w-72">
-          <Label className="mb-2 block">Workspace scope</Label>
+          <Label className="mb-2 block">Project scope</Label>
           <ProjectSelect value={projectId} onChange={setProjectId} projects={projectOptions} />
         </div>
       </div>
 
-      <Tabs defaultValue="memory" className="space-y-4">
+      <Tabs defaultValue={defaultSection} className="space-y-4">
         <TabsList>
           <TabsTrigger value="memory">
             <Brain className="mr-2 size-4" />

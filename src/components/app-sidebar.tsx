@@ -1,12 +1,15 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   Bot,
+  BookOpen,
   Brain,
+  Building2,
   Boxes,
   CalendarClock,
   FolderKanban,
   LayoutDashboard,
   ListTodo,
+  LockKeyhole,
   Plug,
   Sparkles,
   Workflow,
@@ -39,16 +42,17 @@ type Item = {
 
 /**
  * Primary IA (locked):
- * Dashboard → Projects → Work → Build → Marketplace → Connections →
+ * Dashboard → Organizations → Workspaces → Work → Build → Marketplace → Connections →
  * AI Gateway → Developer. Settings live in the user avatar menu.
  *
- * Organization is a switcher, not a daily top-level work item.
+ * Organizations manage people and groups; Workspaces manage projects and environments.
  * System administration appears once for privileged roles in the shared menu.
  */
 
 const PRIMARY: Item[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/projects", label: "Projects", icon: FolderKanban },
+  { to: "/orgs", label: "Organizations", icon: Building2 },
+  { to: "/projects", label: "Workspaces", icon: FolderKanban },
 ];
 
 const WORK: Item[] = [
@@ -60,7 +64,8 @@ const WORK: Item[] = [
 const BUILD: Item[] = [
   { to: "/studio", label: "Studio", icon: Sparkles },
   { to: "/agents", label: "Agents", icon: Bot },
-  { to: "/memory", label: "Memory & Knowledge", icon: Brain },
+  { to: "/memory", label: "Memory", icon: Brain },
+  { to: "/knowledge", label: "Knowledge", icon: BookOpen },
   { capability: "manage_toolkits", to: "/toolkits", label: "Toolkits", icon: Wrench },
 ];
 
@@ -69,6 +74,7 @@ const DISCOVER: Item[] = [{ to: "/resources", label: "Marketplace", icon: Boxes 
 const CONNECT: Item[] = [
   { to: "/connections", label: "Connections", icon: Plug },
   { to: "/integrations", label: "Integrations", icon: Plug },
+  { to: "/secrets", label: "Credentials", icon: LockKeyhole },
   { to: "/models", label: "AI Gateway", icon: Sparkles },
 ];
 
@@ -112,7 +118,11 @@ export function AppSidebar() {
           className="flex items-center gap-2 rounded-md p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
-            <Plug className="size-4" />
+            <img
+              src="/hillstreet-logo.png"
+              alt="HillStreet"
+              className="size-8 rounded-lg object-contain"
+            />
           </span>
           <span className="truncate text-sm font-semibold group-data-[collapsible=icon]:hidden">
             Open Connect

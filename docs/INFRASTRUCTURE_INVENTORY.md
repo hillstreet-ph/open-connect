@@ -11,7 +11,7 @@ Cloudflare      Pages open-connect-app · domain open-connect.site · KV OC_KV
 Supabase        project open-platform (huadtiuuoiriqrjpjxhr) · canonical target
 Models          LiteLLM / OpenRouter via /v1
 Runtime edge    Cloudflare Pages (primary production web)
-Zeabur          BLOCKED — connector not authorized in this workspace
+Zeabur          API/server runtime only · api.open-connect.site
 Vercel          Explicitly out of scope for Open Connect
 ```
 
@@ -28,7 +28,7 @@ Vercel          Explicitly out of scope for Open Connect
 | Composio GitHub | Composio account github_airily-baya | agent tools | — | ACTIVE |
 | Composio Google Drive | googledrive_coder-oleg | agent tools | — | ACTIVE |
 | Composio Supabase | supabase_gib-tarman | agent tools | — | ACTIVE |
-| Zeabur runtime | Zeabur | — | — | **PROVIDER_ACTION_REQUIRED** |
+| Zeabur runtime | Zeabur | Open-Connect control-plane API · api.open-connect.site | production | PROVIDER VERIFICATION REQUIRED |
 | Sentry | Sentry | — | — | NOT STARTED |
 
 ## Related Supabase projects (consumers — do not merge into OC DB)
@@ -63,7 +63,8 @@ Vercel          Explicitly out of scope for Open Connect
 
 ## Zeabur next step
 
-1. Authorize Zeabur in the agent connector workspace (or provide ZEABUR_TOKEN via secure channel).  
-2. Run `zeabur-e2e-setup` DISCOVER mode — audit existing projects before create.  
-3. Use Zeabur only for **workers / long-running jobs** if needed; keep public site on Cloudflare Pages.  
-4. Do not move Auth or primary DB off Supabase.
+1. Authorize Zeabur in the agent connector workspace (or provide ZEABUR_TOKEN via secure channel).
+2. Run `zeabur-e2e-setup` DISCOVER mode — audit existing projects before create.
+3. Use Zeabur for the **API/control-plane and long-running jobs**; keep the apex frontend on Cloudflare Pages.
+4. Attach only `api.open-connect.site` to Zeabur; remove any competing apex attachment after recording rollback state.
+5. Do not move Auth or primary DB off Supabase.

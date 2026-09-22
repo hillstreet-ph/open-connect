@@ -271,29 +271,11 @@ export async function authenticateKey(request: Request): Promise<AuthedKey | nul
   const cached = authCache.get(digest);
   if (cached && now - cached.at < AUTH_TTL_MS) return cached.key;
 
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data } = await supabaseAdmin
-    .from("api_keys")
-    .select("id, user_id, scopes, revoked_at")
-    .eq("key_hash", digest)
-    .maybeSingle();
-
-  if (!data || data.revoked_at) {
-    authCache.set(digest, { at: now, key: null });
-    return null;
-  }
-
-  const key: AuthedKey = {
-    id: data.id,
-    userId: data.user_id,
-    scopes: data.scopes ?? [],
-  };
-  authCache.set(digest, { at: now, key });
-
-  void supabaseAdmin
-    .from("api_keys")
-    .update({ last_used_at: new Date().toISOString() })
-    .eq("id", data.id);
+  const { oauthDatabase } = await import("@/lib/oauth-client.server");
+  const { data, error } = await oauthDatabase().rpc("oc_verify_gateway_key", { p_key: raw });
+  if (error || !data) return null;
+  const key: AuthedKey = { id: data.id, userId: data.user_id, scopes: data.scopes ?? [] };
+  if (!data.expires_at) authCache.set(digest, { at: now, key });
 
   if (authCache.size > 500) {
     const oldest = authCache.keys().next().value;
