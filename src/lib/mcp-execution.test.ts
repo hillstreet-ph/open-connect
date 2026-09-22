@@ -87,6 +87,33 @@ function call(name: string, args: Record<string, unknown> = {}) {
   });
 }
 
+function listTools() {
+  return post({
+    request: new Request("https://fixture.invalid/mcp", {
+      method: "POST",
+      headers: {
+        accept: "application/json, text/event-stream",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} }),
+    }),
+  });
+}
+
+test("tool discovery exposes a stable titled platform catalog without duplicate resource tools", async () => {
+  scopes = ["mcp:connect", "control:write"];
+  const response = await listTools();
+  const { result } = await response.json();
+  expect(result.tools.length).toBeGreaterThan(0);
+  expect(result.tools.every((tool: { title?: string }) => Boolean(tool.title))).toBe(true);
+  expect(result.tools.some((tool: { name: string }) => tool.name.startsWith("resource_"))).toBe(
+    false,
+  );
+  expect(
+    result.tools.some((tool: { name: string }) => tool.name === "hubstaff_admin_request"),
+  ).toBe(true);
+});
+
 test("approved resource invocation is an explicit tool error without an executor", async () => {
   const response = await call("resource_fixture_approved_tool", { action: "invoke" });
   const { result } = await response.json();
