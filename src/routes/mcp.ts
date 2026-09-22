@@ -428,6 +428,14 @@ const TOOL_SCOPES: Record<string, string> = {
   configure_connection: "connections:invoke",
 };
 
+const SELF_GUARDED_WRITE_TOOLS = new Set([
+  "execute_plan",
+  "create_capability_draft",
+  "record_run_outcome",
+  "configure_connection",
+  "install_capability",
+]);
+
 function canUseTool(key: AuthedKey, toolName: string) {
   const required = TOOL_SCOPES[toolName] ?? "tools:invoke";
   // Preserve pre-profile keys that used the original aggregate write grant.
@@ -545,7 +553,7 @@ export const Route = createFileRoute("/mcp")({
           const name = body.params?.name;
           const args = body.params?.arguments ?? {};
 
-          if (!name || !canUseTool(key, name)) {
+          if (!name || (!canUseTool(key, name) && !SELF_GUARDED_WRITE_TOOLS.has(name))) {
             return gatewayError(
               `Key cannot invoke ${name || "this tool"} in its selected scope.`,
               403,
