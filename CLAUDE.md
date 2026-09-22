@@ -1,82 +1,84 @@
 # CLAUDE.md — Open-Connect
 
-> AI agent collaboration guide for the Open-Connect project.
+> Repository-specific collaboration guide for Open-Connect agents.
+
+## Start Here
+
+Read, in order:
+
+1. `AGENTS.md`
+2. this file
+3. `README.md`
+4. `DEVELOPMENT.md`
+
+The Lovable integration makes published history part of the product state. Never force-push, rebase, amend, or squash commits that are already pushed. Make corrections in new commits.
 
 ## Project Identity
 
-- **Name**: Open-Connect
-- **Role**: Control Plane — AI Resource Gateway, Marketplace, MCP/API Gateway, Model Gateway, Access Control Plane
-- **Domain**: [open-connect.site](https://open-connect.site)
-- **Language**: TypeScript (TanStack Start React with server routes)
-- **Organization**: hillstreet-ph
-- **Repository**: [github.com/hillstreet-ph/open-connect](https://github.com/hillstreet-ph/open-connect)
+- **Name:** Open-Connect
+- **Role:** control plane and AI resource gateway
+- **Repository:** `hillstreet-ph/open-connect`
+- **Production web domain:** `open-connect.site`
+- **Primary language/runtime:** TypeScript with TanStack Start
+- **Production web owner:** Cloudflare Pages
+- **API/server origin:** Zeabur
+- **Transactional data and identity:** Supabase
+- **Monitoring:** Sentry project `hillstreet/open-connect`
 
-## Architecture Position
+Do not infer another repository's deployed database, schema, domain, or runtime from this file. Read that repository's own inventory before making cross-project changes.
 
-Open-Connect is the **control plane** of the HillStreet open-platform stack. It sits above Open-System (execution) and Open-Box (data/artifacts).
+## Provider Ownership
 
-### Sister Projects
+| Concern | Owner | Contract |
+|---|---|---|
+| Source, branches, PRs, CI | GitHub | protected review flow |
+| Apex and `www` web delivery | Cloudflare Pages | output `.output/public` |
+| API/server runtime | Zeabur | API hostname only; never compete for the apex |
+| Database, Auth, RLS, primary Storage | Supabase | project-specific migrations and server-only privileged keys |
+| Container artifacts | Docker Hub | immutable commit/release tags |
+| Errors and tracing | Sentry | `open-connect` project |
+| Backup objects | Cloudflare R2 | separate from Supabase database recovery |
 
-| Project | Role | Supabase project | Schema |
-|---------|------|------------------|--------|
-| **open-connect** | Control plane | `huadtiuuoiriqrjpjxhr` | `open_connect` |
-| open-system | Execution plane | `huadtiuuoiriqrjpjxhr` | `open_system` |
-| open-box | Data/artifact plane | `huadtiuuoiriqrjpjxhr` | `open_box` |
-| open-kobeplay | Application | `hoseohvgoiarxluxqwqv` | `open_kobeplay` |
-| open-tgate | Telegram gateway | `hoseohvgoiarxluxqwqv` | `open_tgate` |
-| open-teleset | Communications server | `hoseohvgoiarxluxqwqv` | `open_teleset` |
+## Database Boundaries
 
-## Infrastructure Ownership
+The repository currently uses public application tables and shared platform structures such as `platform_shared.account_roles`. The `open_connect` schema is the isolation target for Open-Connect-specific structures, but never assume a table exists merely because it appears in architecture documentation.
 
-| Layer | Owner | Details |
-|-------|-------|---------|
-| Source | GitHub | `hillstreet-ph/open-connect`, production branch `main` |
-| Web/edge | Cloudflare Pages | Apex and `www`; build output `.output/public` |
-| API/server | Zeabur | `api.open-connect.site`; control-plane container |
-| Database/Auth/Storage | Supabase | Project `huadtiuuoiriqrjpjxhr`; schema `open_connect` plus intentional shared schemas |
-| Container registry | Docker Hub | `hillstreet/open-connect` |
-| Monitoring | Sentry | Organization `hillstreet`, project `open-connect` |
-| Backup storage | Cloudflare R2 | `open-connect-backups` |
+Before changing data:
 
-## Database Schemas
+1. inspect the current migration history and generated types;
+2. inspect the live target project and schema;
+3. compare the intended migration with the deployed objects;
+4. preserve data, grants, policies, and rollback evidence.
 
-### Shared public/platform tables
-- `user_roles` and `platform_shared.account_roles` — platform role assignments
-- `categories`, `resources` — resource marketplace catalog
-- `organizations`, `organization_members` — multi-organization support
-- `oauth_clients`, `oauth_authorization_codes` — OAuth provider state
+Never apply Open-System, Open-Model, Open-Box, or application-project migrations through this repository without a separately verified ownership map.
 
-### `open_connect` schema
-- `gateway_config` — gateway configuration
-- `marketplace_listings` — marketplace entries
-- `access_policies` — RBAC/ABAC/rate-limit/IP rules
+## Roles and Authorization
 
-## Auth and Roles
+Two role layers coexist:
 
-Canonical platform roles are `owner`, `admin`, and `user` (Member in the UI). Authentication does not replace authorization. Preserve RLS and test anonymous, member, admin, and owner access separately.
+- **Application/platform roles:** `user`, `developer`, `publisher`, `admin`, `owner`
+- **Organization UI roles:** Member, Admin, Owner; Member is stored as `user` in the canonical account-role table
 
-## Key Files
+Authentication is not authorization. Keep RLS enabled and test anonymous, member/user, developer, publisher, admin, owner, and privileged server behavior as applicable.
 
-- `AGENTS.md` — repository history-preservation requirements
-- `DEVELOPMENT.md` — branch and deployment flow
-- `src/integrations/supabase/client.ts` — Supabase client
-- `supabase/config.toml` — Supabase CLI configuration
-- `.env.example` — variable contract; never commit real values
-- `wrangler.toml` — Cloudflare Pages output and bindings
+Use the established security-definer authorization helper (for example `private.has_role(auth.uid(), ...)`) where existing migrations use it. Do not query an RLS-protected role table from its own policy and reintroduce recursive evaluation.
 
-## Development and Deployment
+## Development Flow
 
-Normal web and server-route delivery:
+Normal work:
 
 ```
-feature/* or fix/* → pull request → development/main → Cloudflare Pages → open-connect.site
+feature/* or fix/* → pull request to development → validation → development
+development → promotion pull request → main → Cloudflare Pages
 ```
 
-Changes under `control-plane/**` additionally trigger `.github/workflows/control-plane-docker.yml`, which builds and publishes `hillstreet/open-connect`. Publishing an image does not itself prove or perform a Zeabur promotion; verify the exact image digest and Zeabur deployment separately.
+Critical hotfixes may target `main` directly through a protected pull request.
 
-## Environment Variables
+Changes under `control-plane/**` additionally trigger `.github/workflows/control-plane-docker.yml`, which builds and publishes `hillstreet/open-connect`. Publishing an image does not prove or perform a Zeabur promotion; verify the image digest and Zeabur deployment independently.
 
-Use the names defined by `.env.example`. Core examples:
+## Environment Contract
+
+Use `.env.example` as the naming source. Core examples include:
 
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_PUBLISHABLE_KEY`
@@ -84,25 +86,27 @@ Use the names defined by `.env.example`. Core examples:
 - `SUPABASE_PUBLISHABLE_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY` — server-side only
 
-Never expose privileged variables through a `VITE_` name.
+Never use a `VITE_` name for a privileged credential. Never commit secret values or `.env` files.
 
-## Important Rules for AI Agents
+## Verification
 
-1. Read and follow `AGENTS.md` before making changes.
-2. Never rewrite published Git history: no force-push, rebase, amend, or squash of commits already pushed.
-3. Never hard-code or commit credentials.
-4. Preserve production data and keep RLS enabled.
-5. Use the `open_connect` schema for Open-Connect-specific data.
-6. Work through normal feature/fix branches and protected pull requests.
-7. Treat Cloudflare Pages as apex web owner and Zeabur as API/server origin.
-8. Tag container releases with immutable commit identities; do not rely only on `latest`.
-9. Check current PRs, migrations, environments, and provider ownership before creating resources.
+Before pushing:
 
-## Quick Start
+- use the repository's Bun lockfile and scripts;
+- run lint, unit/navigation tests, SSR tests, and the production build;
+- validate migrations and RLS changes separately;
+- check existing PRs and workflows to avoid duplicate or conflicting work;
+- confirm Cloudflare output remains `.output/public`;
+- confirm apex traffic stays on Cloudflare Pages and the API hostname stays on Zeabur;
+- record evidence without printing secret values.
 
-1. Read `AGENTS.md`, this file, `README.md`, and `DEVELOPMENT.md`.
-2. Check `.env.example` for the variable contract.
-3. Inspect existing migrations before changing schemas.
-4. Check open pull requests and issues to avoid conflicts.
-5. Run the repository's Bun-based lint, test, SSR, and build commands before pushing.
-6. Preserve published history and use a new commit for every correction.
+## Rules
+
+1. Preserve published Git history.
+2. Preserve production data and RLS.
+3. Make the smallest reversible change.
+4. Use new commits for fixes.
+5. Do not create duplicate providers, projects, services, domains, schedulers, or secret stores.
+6. Do not treat a passing container build as a verified Zeabur deployment.
+7. Do not treat a database backup as a Storage backup.
+8. Never claim deployment completion without DNS, TLS, application, authorization, and monitoring evidence.
