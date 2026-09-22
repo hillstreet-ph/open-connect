@@ -9,6 +9,15 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ACCESS_PROFILES, type AccessProfile } from "@/lib/access-profiles";
+
+const PROFILE_LABELS: Record<AccessProfile, string> = {
+  read_only: "Read only",
+  builder: "Builder",
+  developer: "Developer",
+  administrator: "Administrator",
+  custom: "Custom",
+};
 
 export function ApiKeysCard() {
   const queryClient = useQueryClient();
@@ -16,12 +25,13 @@ export function ApiKeysCard() {
   const create = useServerFn(createApiKey);
   const revoke = useServerFn(revokeApiKey);
   const [name, setName] = useState("");
+  const [profile, setProfile] = useState<AccessProfile>("developer");
   const [freshKey, setFreshKey] = useState<string | null>(null);
 
   const keys = useQuery({ queryKey: ["api-keys"], queryFn: () => list({}) });
 
   const createMutation = useMutation({
-    mutationFn: (keyName: string) => create({ data: { name: keyName } }),
+    mutationFn: (keyName: string) => create({ data: { name: keyName, profile } }),
     onSuccess: (result) => {
       setFreshKey(result.key);
       setName("");
@@ -55,7 +65,7 @@ export function ApiKeysCard() {
         </CardHeader>
         <CardContent className="space-y-4">
           <form
-            className="flex gap-2"
+            className="grid gap-2 sm:grid-cols-[1fr_180px_auto]"
             onSubmit={(event) => {
               event.preventDefault();
               createMutation.mutate(name);
@@ -67,11 +77,31 @@ export function ApiKeysCard() {
               onChange={(event) => setName(event.target.value)}
               placeholder="Key name (e.g. local agent)"
             />
+            <select
+              aria-label="Access profile"
+              className="flex h-10 rounded-md border border-input bg-background px-3 text-sm"
+              value={profile}
+              onChange={(event) => setProfile(event.target.value as AccessProfile)}
+            >
+              {(Object.keys(PROFILE_LABELS) as AccessProfile[])
+                .filter((value) => value !== "custom")
+                .map((value) => (
+                  <option key={value} value={value}>
+                    {PROFILE_LABELS[value]}
+                  </option>
+                ))}
+            </select>
             <Button type="submit" disabled={createMutation.isPending}>
               {createMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : null}
               Create
             </Button>
           </form>
+          <p className="text-xs text-muted-foreground">
+            {profile === "administrator"
+              ? "All supported read, write, invoke, agent, model, and vault-metadata scopes."
+              : `${ACCESS_PROFILES[profile as Exclude<AccessProfile, "custom">]?.length ?? 0} least-privilege scopes selected.`}{" "}
+            Secret values remain non-exportable; agents receive opaque credential references.
+          </p>
 
           {freshKey ? (
             <div className="rounded-lg border border-primary/40 bg-primary/5 p-3">
@@ -114,6 +144,10 @@ export function ApiKeysCard() {
                     <span className="font-mono text-xs text-muted-foreground">
                       {key.key_prefix}…
                     </span>
+                    <Badge variant="secondary" className="ml-2 text-[10px]">
+                      {PROFILE_LABELS[(key.access_profile as AccessProfile) ?? "custom"] ??
+                        "Legacy"}
+                    </Badge>
                   </span>
                   {key.revoked_at ? (
                     <Badge variant="outline" className="text-muted-foreground">

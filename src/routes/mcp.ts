@@ -411,6 +411,37 @@ function fireLog(key: AuthedKey, statusCode: number) {
   });
 }
 
+const TOOL_SCOPES: Record<string, string> = {
+  search: "resources:read",
+  fetch: "resources:read",
+  open_connect_status: "mcp:connect",
+  list_resources: "resources:read",
+  list_connections: "connections:read",
+  list_models: "models:read",
+  inspect_connections: "connections:read",
+  plan_goal: "resources:read",
+  recommend_toolchain: "resources:read",
+  resolve_capability: "resources:read",
+  execute_plan: "tools:invoke",
+  create_capability_draft: "resources:write",
+  record_run_outcome: "resources:write",
+  configure_connection: "connections:invoke",
+};
+
+const SELF_GUARDED_WRITE_TOOLS = new Set([
+  "execute_plan",
+  "create_capability_draft",
+  "record_run_outcome",
+  "configure_connection",
+  "install_capability",
+]);
+
+function canUseTool(key: AuthedKey, toolName: string) {
+  const required = TOOL_SCOPES[toolName] ?? "tools:invoke";
+  // Preserve pre-profile keys that used the original aggregate write grant.
+  return hasScope(key, required) || hasScope(key, "control:write");
+}
+
 export const Route = createFileRoute("/mcp")({
   server: {
     handlers: {
@@ -421,7 +452,7 @@ export const Route = createFileRoute("/mcp")({
           name: "open-connect",
           version: "1.0.1",
           protocol: "mcp",
-          planes: ["resources", "connections", "models"],
+          planes: ["resources", "connections", "models", "credentials"],
           endpoints: {
             mcp: "https://open-connect.site/mcp",
             models: "https://open-connect.site/v1",
@@ -431,6 +462,12 @@ export const Route = createFileRoute("/mcp")({
           authenticated: true,
           user_id: key.userId,
           scopes: key.scopes,
+          context: {
+            organization_id: key.organizationId,
+            workspace_id: key.workspaceId,
+            project_id: key.projectId,
+            access_profile: key.accessProfile,
+          },
         });
       },
       POST: async ({ request }) => {
@@ -469,12 +506,12 @@ export const Route = createFileRoute("/mcp")({
             serverInfo: {
               name: "open-connect",
               version: "1.0.1",
-              planes: ["resources", "connections", "models"],
+              planes: ["resources", "connections", "models", "credentials"],
             },
           };
         } else if (body.method === "tools/list") {
           const catalog = await getCatalog();
-          result = { tools: catalog.tools };
+          result = { tools: catalog.tools.filter((tool) => canUseTool(key, tool.name)) };
         } else if (body.method === "resources/list") {
           result = {
             resources: [
@@ -515,6 +552,14 @@ export const Route = createFileRoute("/mcp")({
         } else if (body.method === "tools/call") {
           const name = body.params?.name;
           const args = body.params?.arguments ?? {};
+
+          if (!name || (!canUseTool(key, name) && !SELF_GUARDED_WRITE_TOOLS.has(name))) {
+            return gatewayError(
+              `Key cannot invoke ${name || "this tool"} in its selected scope.`,
+              403,
+              "insufficient_scope",
+            );
+          }
 
           if (name === "search") {
             const query = String(args["query"] ?? "").trim();

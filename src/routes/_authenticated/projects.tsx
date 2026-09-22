@@ -7,8 +7,10 @@ import { toast } from "sonner";
 import {
   createOrganization,
   createProject,
+  createWorkspace,
   listOrganizations,
   listProjects,
+  listWorkspaces,
 } from "@/lib/orgs.functions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,14 +39,33 @@ function ProjectsPage() {
   const listProj = useServerFn(listProjects);
   const createOrg = useServerFn(createOrganization);
   const createProj = useServerFn(createProject);
+  const listWs = useServerFn(listWorkspaces);
+  const createWs = useServerFn(createWorkspace);
 
   const [orgName, setOrgName] = useState("");
   const [projectName, setProjectName] = useState("");
+  const [workspaceName, setWorkspaceName] = useState("");
+  const [workspaceId, setWorkspaceId] = useState("");
   const [projectDesc, setProjectDesc] = useState("");
   const [orgId, setOrgId] = useState("");
 
   const orgs = useQuery({ queryKey: ["organizations"], queryFn: () => listOrgs({}) });
   const projects = useQuery({ queryKey: ["projects"], queryFn: () => listProj({}) });
+  const workspaces = useQuery({
+    queryKey: ["workspaces", orgId],
+    queryFn: () => listWs({ data: { organizationId: orgId || undefined } }),
+  });
+
+  const workspaceMutation = useMutation({
+    mutationFn: () => createWs({ data: { organizationId: orgId, name: workspaceName } }),
+    onSuccess: (workspace) => {
+      toast.success("Workspace created");
+      setWorkspaceName("");
+      setWorkspaceId(workspace.id);
+      void qc.invalidateQueries({ queryKey: ["workspaces"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not create workspace"),
+  });
 
   const orgMutation = useMutation({
     mutationFn: () => createOrg({ data: { name: orgName } }),
@@ -62,6 +83,7 @@ function ProjectsPage() {
       createProj({
         data: {
           organizationId: orgId,
+          workspaceId,
           name: projectName,
           description: projectDesc || undefined,
         },
@@ -103,11 +125,11 @@ function ProjectsPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-3">
         <Card className="shadow-panel">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">New organization</CardTitle>
-            <CardDescription>Top-level workspace — you become owner.</CardDescription>
+            <CardDescription>Top-level tenant for people, policy, and billing.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="space-y-2">
@@ -135,6 +157,50 @@ function ProjectsPage() {
 
         <Card className="shadow-panel">
           <CardHeader className="pb-2">
+            <CardTitle className="text-base">New workspace</CardTitle>
+            <CardDescription>Independent resource and access boundary.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Label htmlFor="workspace-org">Organization</Label>
+            <select
+              id="workspace-org"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              value={orgId}
+              onChange={(e) => {
+                setOrgId(e.target.value);
+                setWorkspaceId("");
+              }}
+            >
+              <option value="">Select…</option>
+              {(orgs.data ?? []).map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name}
+                </option>
+              ))}
+            </select>
+            <Label htmlFor="workspace-name">Workspace name</Label>
+            <Input
+              id="workspace-name"
+              value={workspaceName}
+              onChange={(e) => setWorkspaceName(e.target.value)}
+              placeholder="Engineering"
+            />
+            <Button
+              disabled={!orgId || !workspaceName.trim() || workspaceMutation.isPending}
+              onClick={() => workspaceMutation.mutate()}
+            >
+              {workspaceMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Plus className="size-4" />
+              )}
+              Create workspace
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-panel">
+          <CardHeader className="pb-2">
             <CardTitle className="text-base">New project</CardTitle>
             <CardDescription>e.g. Development · Business · Client X</CardDescription>
           </CardHeader>
@@ -156,6 +222,24 @@ function ProjectsPage() {
               </select>
             </div>
             <div className="space-y-2">
+              <Label htmlFor="proj-workspace">Workspace</Label>
+              <select
+                id="proj-workspace"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={workspaceId}
+                onChange={(e) => setWorkspaceId(e.target.value)}
+              >
+                <option value="">Select…</option>
+                {(workspaces.data ?? [])
+                  .filter((w) => !orgId || w.organization_id === orgId)
+                  .map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="proj-name">Project name</Label>
               <Input
                 id="proj-name"
@@ -174,7 +258,7 @@ function ProjectsPage() {
               />
             </div>
             <Button
-              disabled={!orgId || !projectName.trim() || projectMutation.isPending}
+              disabled={!orgId || !workspaceId || !projectName.trim() || projectMutation.isPending}
               onClick={() => projectMutation.mutate()}
             >
               {projectMutation.isPending ? (
