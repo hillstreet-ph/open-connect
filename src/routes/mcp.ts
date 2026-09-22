@@ -14,6 +14,7 @@ import {
   rankCapabilities,
   redactEvidence,
 } from "@/lib/autonomous-control";
+import { streamableMcpResponse } from "@/lib/mcp-transport.server";
 
 const WWW_AUTH =
   'Bearer realm="open-connect", resource_metadata="https://open-connect.site/.well-known/oauth-protected-resource"';
@@ -1170,7 +1171,11 @@ export const Route = createFileRoute("/mcp")({
         }
 
         fireLog(key, 200);
-        return json({ jsonrpc: "2.0", id: body.id ?? null, result });
+        return streamableMcpResponse(request, body, {
+          jsonrpc: "2.0",
+          id: body.id ?? null,
+          result,
+        });
       },
     },
   },
