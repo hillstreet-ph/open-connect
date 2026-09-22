@@ -124,8 +124,8 @@ export function BrandLogo() {
     <Link to="/" className="flex items-center gap-2" aria-label="Open-Connect home">
       <span className="flex size-8 items-center justify-center rounded-lg bg-primary/15 text-primary shadow-glow">
         <img
-          src="/hillstreet-logo.png"
-          alt="HillStreet"
+          src="/open-connect-mark.png"
+          alt="Open Connect"
           className="size-8 rounded-lg object-contain"
         />
       </span>

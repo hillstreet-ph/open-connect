@@ -41,5 +41,5 @@ test("static discovery advertises only implemented OAuth grants", async () => {
   );
   assert.deepEqual(metadata.grant_types_supported, ["authorization_code"]);
   assert.deepEqual(metadata.token_endpoint_auth_methods_supported, ["none"]);
-  assert.equal(metadata.logo_uri, "https://open-connect.site/hillstreet-logo.png");
+  assert.equal(metadata.logo_uri, "https://open-connect.site/open-connect-mark.png");
 });

@@ -52,8 +52,8 @@ function AuthorizePage() {
   return (
     <main className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center px-4 py-12">
       <img
-        src="/hillstreet-logo.png"
-        alt="HillStreet"
+        src="/open-connect-mark.png"
+        alt="Open Connect"
         className="mb-5 size-24 rounded-xl object-contain"
       />
       <h1 className="text-2xl font-semibold">Connect to Open-Connect</h1>

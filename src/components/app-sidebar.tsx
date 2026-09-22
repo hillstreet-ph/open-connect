@@ -119,8 +119,8 @@ export function AppSidebar() {
         >
           <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
             <img
-              src="/hillstreet-logo.png"
-              alt="HillStreet"
+              src="/open-connect-mark.png"
+              alt="Open Connect"
               className="size-8 rounded-lg object-contain"
             />
           </span>
