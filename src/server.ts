@@ -4,6 +4,7 @@ import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 import { getMtlsMode, mtlsMetadataFields } from "./lib/mtls.server";
 import { OAUTH_SCOPES_SUPPORTED } from "./lib/oauth.server";
+import { runWithRuntimeEnv } from "./lib/runtime-env.server";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -18,18 +19,6 @@ async function getServerEntry(): Promise<ServerEntry> {
     );
   }
   return serverEntryPromise;
-}
-
-function injectCloudflareEnv(env: unknown) {
-  if (!env || typeof env !== "object") return;
-  const record = env as Record<string, unknown>;
-  for (const [key, value] of Object.entries(record)) {
-    if (typeof value === "string" && value.length > 0) {
-      if (!process.env[key]) {
-        process.env[key] = value;
-      }
-    }
-  }
 }
 
 const ISSUER = "https://open-connect.site";
@@ -135,14 +124,14 @@ function isH3SwallowedErrorBody(body: string): boolean {
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
-      injectCloudflareEnv(env);
+      return await runWithRuntimeEnv(env, async () => {
+        const wellKnown = handleWellKnown(request);
+        if (wellKnown) return wellKnown;
 
-      const wellKnown = handleWellKnown(request);
-      if (wellKnown) return wellKnown;
-
-      const handler = await getServerEntry();
-      const response = await handler.fetch(request, env, ctx);
-      return await normalizeCatastrophicSsrResponse(response);
+        const handler = await getServerEntry();
+        const response = await handler.fetch(request, env, ctx);
+        return await normalizeCatastrophicSsrResponse(response);
+      });
     } catch (error) {
       console.error(error);
       return new Response(renderErrorPage(), {
