@@ -73,7 +73,10 @@ function call(name: string, args: Record<string, unknown> = {}) {
   return post({
     request: new Request("https://fixture.invalid/mcp", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        accept: "application/json, text/event-stream",
+        "content-type": "application/json",
+      },
       body: JSON.stringify({
         jsonrpc: "2.0",
         id: 1,
