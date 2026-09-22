@@ -1,6 +1,6 @@
 # Open-Connect — Supabase production setup
 
-Project: `gnqpwewbgldonarggzax` · Region: `ap-northeast-1` · URL: `https://gnqpwewbgldonarggzax.supabase.co`
+Project: `huadtiuuoiriqrjpjxhr` · Region: `ap-northeast-1` · URL: `https://huadtiuuoiriqrjpjxhr.supabase.co`
 
 ## Configured automatically
 
@@ -47,7 +47,7 @@ RLS: public read on public buckets; authenticated users only access their own fo
 4. Save.
 
 ### Google Cloud Console checklist
-- Redirect URI: `https://gnqpwewbgldonarggzax.supabase.co/auth/v1/callback`
+- Redirect URI: `https://huadtiuuoiriqrjpjxhr.supabase.co/auth/v1/callback`
 - Origins: `https://open-connect.site`, `https://www.open-connect.site`
 
 ### Supabase URL configuration
@@ -60,10 +60,10 @@ The `/auth` page already exposes **Continue with Google** and **Continue with Gi
 
 ## Supabase Auth OAuth/OIDC endpoints
 
-- OpenID: `https://gnqpwewbgldonarggzax.supabase.co/auth/v1/.well-known/openid-configuration`
-- JWKS: `https://gnqpwewbgldonarggzax.supabase.co/auth/v1/.well-known/jwks.json`
-- Authorize: `https://gnqpwewbgldonarggzax.supabase.co/auth/v1/oauth/authorize`
-- Token: `https://gnqpwewbgldonarggzax.supabase.co/auth/v1/oauth/token`
+- OpenID: `https://huadtiuuoiriqrjpjxhr.supabase.co/auth/v1/.well-known/openid-configuration`
+- JWKS: `https://huadtiuuoiriqrjpjxhr.supabase.co/auth/v1/.well-known/jwks.json`
+- Authorize: `https://huadtiuuoiriqrjpjxhr.supabase.co/auth/v1/oauth/authorize`
+- Token: `https://huadtiuuoiriqrjpjxhr.supabase.co/auth/v1/oauth/token`
 
 Product MCP OAuth (ChatGPT plugins) lives on the app:
 - `https://open-connect.site/.well-known/oauth-authorization-server`

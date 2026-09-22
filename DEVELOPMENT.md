@@ -39,7 +39,7 @@ Cloudflare already holds production runtime secrets.
 ## Human-only (cannot fully automate without tokens)
 
 1. Supabase Dashboard → Auth → **Enable Google** with your Google client ID/secret.
-2. Google Cloud → authorized redirect `https://gnqpwewbgldonarggzax.supabase.co/auth/v1/callback`.
+2. Google Cloud → authorized redirect `https://huadtiuuoiriqrjpjxhr.supabase.co/auth/v1/callback`.
 3. Supabase → Database → Backups → enable **PITR** if on a plan that supports it.
 
 Everything else (deploy, smoke, backups via `oc_backups`, self-heal issues) runs without manual steps once Actions are enabled.

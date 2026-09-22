@@ -1,0 +1,24 @@
+{
+  "name": "open-dockerhub-kit",
+  "version": "1.0.0",
+  "description": "Docker Hub repositories, images, tags, scans, provenance, and CI publishing.",
+  "author": {
+    "name": "HillStreet Information Technology Services"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Open Docker Hub Kit",
+    "shortDescription": "Build and publish verified container images safely.",
+    "longDescription": "Docker Hub repositories, images, tags, scans, provenance, and CI publishing. Uses provider-authorized read/write scopes with approval gates for production and destructive operations.",
+    "developerName": "HillStreet Information Technology Services",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Docker Hub",
+      "Read/write operations",
+      "Health verification",
+      "Rollback planning"
+    ],
+    "defaultPrompt": "Use Open Docker Hub Kit to inspect current state, make the smallest authorized change, and verify the result."
+  },
+  "mcpServers": "./.mcp.json"
+}
