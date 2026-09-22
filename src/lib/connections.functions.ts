@@ -210,6 +210,13 @@ const CATALOG = [
     oauth: false,
   },
   {
+    provider: "hubstaff_admin",
+    display_name: "Hubstaff Admin",
+    category: "Business",
+    scopes: ["hubstaff:read", "hubstaff:write", "tasks:read", "tasks:write"],
+    oauth: false,
+  },
+  {
     provider: "supabase",
     display_name: "Supabase",
     category: "Data",

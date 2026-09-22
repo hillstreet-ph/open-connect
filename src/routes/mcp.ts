@@ -179,6 +179,39 @@ const PLATFORM_TOOLS: McpTool[] = [
     },
   },
   {
+    name: "hubstaff_admin_identity",
+    description: "Validate the configured Hubstaff Admin identity and granted account access.",
+    inputSchema: { type: "object", properties: {} },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+  },
+  {
+    name: "hubstaff_admin_list_organizations",
+    description: "List Hubstaff organizations available to the configured administrator.",
+    inputSchema: { type: "object", properties: {} },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+  },
+  {
+    name: "hubstaff_admin_request",
+    description:
+      "Call an authorized Hubstaff v2 endpoint. Writes require owner/admin access; DELETE also requires confirm=true.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        method: { type: "string", enum: ["GET", "POST", "PUT", "PATCH", "DELETE"] },
+        path: { type: "string", description: "Hubstaff v2 path beginning with /v2/." },
+        body: { type: "object", additionalProperties: true },
+        confirm: { type: "boolean", description: "Required for DELETE requests." },
+      },
+      required: ["method", "path"],
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
+  },
+  {
     name: "plan_goal",
     description:
       "Use this when converting an operator goal into a bounded autonomous execution plan.",
@@ -475,6 +508,9 @@ const TOOL_SCOPES: Record<string, string> = {
   e2b_list_sandboxes: "connections:read",
   e2b_create_sandbox: "tools:invoke",
   e2b_kill_sandbox: "tools:invoke",
+  hubstaff_admin_identity: "connections:read",
+  hubstaff_admin_list_organizations: "connections:read",
+  hubstaff_admin_request: "tools:invoke",
   plan_goal: "resources:read",
   recommend_toolchain: "resources:read",
   resolve_capability: "resources:read",
@@ -492,6 +528,7 @@ const SELF_GUARDED_WRITE_TOOLS = new Set([
   "install_capability",
   "e2b_create_sandbox",
   "e2b_kill_sandbox",
+  "hubstaff_admin_request",
 ]);
 
 function canUseTool(key: AuthedKey, toolName: string) {
@@ -735,6 +772,39 @@ export const Route = createFileRoute("/mcp")({
             const { e2bConfig, killE2bSandbox } = await import("@/lib/e2b.server");
             if (!e2bConfig().configured) throw new Error("E2B is not configured");
             result = textResult(await killE2bSandbox(String(args["sandbox_id"] ?? "")));
+          } else if (name === "hubstaff_admin_identity") {
+            const { hubstaffAdminConfig, hubstaffAdminIdentity } =
+              await import("@/lib/hubstaff-admin.server");
+            if (!hubstaffAdminConfig().configured)
+              throw new Error("Hubstaff Admin is not configured");
+            result = textResult(await hubstaffAdminIdentity());
+          } else if (name === "hubstaff_admin_list_organizations") {
+            const { hubstaffAdminConfig, listHubstaffOrganizations } =
+              await import("@/lib/hubstaff-admin.server");
+            if (!hubstaffAdminConfig().configured)
+              throw new Error("Hubstaff Admin is not configured");
+            result = textResult(await listHubstaffOrganizations());
+          } else if (name === "hubstaff_admin_request") {
+            const method = String(args["method"] ?? "GET").toUpperCase();
+            if (method !== "GET") await requireControlWrite(key);
+            if (method === "DELETE" && args["confirm"] !== true) {
+              throw new Error("Explicit confirm=true is required for DELETE");
+            }
+            const { hubstaffAdminConfig, hubstaffAdminRequest } =
+              await import("@/lib/hubstaff-admin.server");
+            if (!hubstaffAdminConfig().configured)
+              throw new Error("Hubstaff Admin is not configured");
+            const body =
+              args["body"] && typeof args["body"] === "object"
+                ? (args["body"] as Record<string, unknown>)
+                : undefined;
+            result = textResult(
+              await hubstaffAdminRequest({
+                method,
+                path: String(args["path"] ?? ""),
+                ...(body ? { body } : {}),
+              }),
+            );
           } else if (name === "recommend_toolchain" || name === "resolve_capability") {
             const goal = String(
               name === "resolve_capability" ? args["capability"] : args["goal"],

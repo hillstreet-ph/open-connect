@@ -154,6 +154,25 @@
       "approval": ["sandbox.kill", "production.secret.write"]
     },
     {
+      "id": "hubstaff_admin",
+      "status": "connected_read_write",
+      "icon": "⏱️",
+      "sdk": ["Hubstaff API v2", "Hubstaff OAuth 2"],
+      "adk_adapter": "hubstaff_admin_toolkit",
+      "mcp": "open-connect:hubstaff-admin",
+      "capabilities": [
+        "identity.read",
+        "organization.read",
+        "hubstaff.read",
+        "hubstaff.write",
+        "tasks.read",
+        "tasks.write"
+      ],
+      "health_check": "Hubstaff current user and organization inventory",
+      "secret_refs": ["credential://hubstaff/admin"],
+      "approval": ["member.write", "task.delete", "time.write", "production.secret.write"]
+    },
+    {
       "id": "dockerhub",
       "status": "needs_connection",
       "icon": "🐳",
