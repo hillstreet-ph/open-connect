@@ -430,7 +430,8 @@ const TOOL_SCOPES: Record<string, string> = {
 
 function canUseTool(key: AuthedKey, toolName: string) {
   const required = TOOL_SCOPES[toolName] ?? "tools:invoke";
-  return hasScope(key, required);
+  // Preserve pre-profile keys that used the original aggregate write grant.
+  return hasScope(key, required) || hasScope(key, "control:write");
 }
 
 export const Route = createFileRoute("/mcp")({
