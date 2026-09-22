@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import {
   createProject,
   createWorkspace,
-  listOrganizations,
+  getCanonicalOrganization,
   listProjects,
   listWorkspaces,
 } from "@/lib/orgs.functions";
@@ -25,7 +25,7 @@ export const Route = createFileRoute("/_authenticated/projects")({
       {
         name: "description",
         content:
-          "Create organizations and projects — isolate agents, skills, plugins, OAuth, and vaults per workspace.",
+          "Create workspaces and projects — isolate agents, skills, plugins, OAuth, and vaults by business context.",
       },
       { name: "robots", content: "noindex" },
     ],
@@ -42,7 +42,7 @@ function ProjectsPage() {
 
 function ProjectsIndex() {
   const qc = useQueryClient();
-  const listOrgs = useServerFn(listOrganizations);
+  const getOrganization = useServerFn(getCanonicalOrganization);
   const listProj = useServerFn(listProjects);
   const createProj = useServerFn(createProject);
   const listWs = useServerFn(listWorkspaces);
@@ -55,12 +55,19 @@ function ProjectsIndex() {
   const { workspaceId: activeWorkspaceId, setWorkspaceId: setActiveWorkspaceId } =
     useWorkspaceContext();
 
-  const orgs = useQuery({ queryKey: ["organizations"], queryFn: () => listOrgs({}) });
-  const projects = useQuery({ queryKey: ["projects"], queryFn: () => listProj({}) });
+  const organization = useQuery({
+    queryKey: ["organization", "hillstreet-ph"],
+    queryFn: () => getOrganization(),
+  });
+  const projects = useQuery({
+    queryKey: ["projects", organization.data?.id],
+    queryFn: () => listProj({ data: { organizationId: organization.data!.id } }),
+    enabled: Boolean(organization.data?.id),
+  });
   const workspaces = useQuery({
     queryKey: ["workspaces", "hillstreet-ph"],
-    queryFn: () => listWs({ data: { organizationId: orgs.data?.[0]?.id } }),
-    enabled: Boolean(orgs.data?.[0]?.id),
+    queryFn: () => listWs({ data: { organizationId: organization.data!.id } }),
+    enabled: Boolean(organization.data?.id),
   });
 
   const activeWorkspace = (workspaces.data ?? []).find(
@@ -73,7 +80,7 @@ function ProjectsIndex() {
 
   const workspaceMutation = useMutation({
     mutationFn: () =>
-      createWs({ data: { organizationId: orgs.data?.[0]?.id ?? "", name: workspaceName } }),
+      createWs({ data: { organizationId: organization.data?.id ?? "", name: workspaceName } }),
     onSuccess: (workspace) => {
       toast.success("Workspace created");
       setWorkspaceName("");
@@ -87,7 +94,7 @@ function ProjectsIndex() {
     mutationFn: () =>
       createProj({
         data: {
-          organizationId: orgs.data?.[0]?.id ?? "",
+          organizationId: organization.data?.id ?? "",
           workspaceId: workspaceId || activeWorkspaceId,
           name: projectName,
           description: projectDesc || undefined,

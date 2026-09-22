@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Check, ChevronsUpDown, GalleryVerticalEnd } from "lucide-react";
 import { useEffect, useMemo } from "react";
-import { listWorkspaces } from "@/lib/orgs.functions";
+import { getCanonicalOrganization, listWorkspaces } from "@/lib/orgs.functions";
 import { useWorkspaceContext } from "@/hooks/use-workspace-context";
 import {
   DropdownMenu,
@@ -17,11 +17,17 @@ import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui
 
 export function WorkspaceSwitcher() {
   const listWs = useServerFn(listWorkspaces);
+  const getOrganization = useServerFn(getCanonicalOrganization);
   const navigate = useNavigate();
   const { workspaceId, setWorkspaceId } = useWorkspaceContext();
+  const organization = useQuery({
+    queryKey: ["organization", "hillstreet-ph"],
+    queryFn: () => getOrganization(),
+  });
   const workspaces = useQuery({
-    queryKey: ["workspaces", "hillstreet-ph"],
-    queryFn: () => listWs({}),
+    queryKey: ["workspaces", organization.data?.id],
+    queryFn: () => listWs({ data: { organizationId: organization.data!.id } }),
+    enabled: Boolean(organization.data?.id),
   });
   const rows = useMemo(() => workspaces.data ?? [], [workspaces.data]);
   const current = rows.find((workspace) => workspace.id === workspaceId) ?? rows[0];
@@ -48,7 +54,7 @@ export function WorkspaceSwitcher() {
                   {current?.name ?? "Workspace"}
                 </span>
                 <span className="block truncate text-[10px] text-muted-foreground">
-                  hillstreet-ph
+                  {organization.data?.name ?? "hillstreet-ph"}
                 </span>
               </span>
               <ChevronsUpDown className="ml-auto size-4 group-data-[collapsible=icon]:hidden" />

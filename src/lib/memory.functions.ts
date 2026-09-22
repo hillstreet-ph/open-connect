@@ -16,6 +16,26 @@ function cleanTags(value?: string) {
   ].slice(0, 20);
 }
 
+function canonicalizeSourceUrl(value?: string) {
+  const input = (value ?? "").trim();
+  if (!input) return null;
+  try {
+    const url = new URL(input);
+    url.hash = "";
+    url.hostname = url.hostname.toLowerCase();
+    if (
+      (url.protocol === "https:" && url.port === "443") ||
+      (url.protocol === "http:" && url.port === "80")
+    ) {
+      url.port = "";
+    }
+    if (url.pathname !== "/") url.pathname = url.pathname.replace(/\/+$/, "");
+    return url.toString();
+  } catch {
+    throw new Error("Source URL must be a valid http or https URL");
+  }
+}
+
 export const listMemories = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((input?: { projectId?: string; memoryType?: string }) => ({
@@ -143,13 +163,31 @@ export const createKnowledge = createServerFn({ method: "POST" })
       title: (input?.title ?? "").trim(),
       content: (input?.content ?? "").trim(),
       sourceType: input?.sourceType ?? "note",
-      sourceUrl: (input?.sourceUrl ?? "").trim() || null,
+      sourceUrl: canonicalizeSourceUrl(input?.sourceUrl),
       projectId: input?.projectId || null,
       tags: cleanTags(input?.tags),
     }),
   )
   .handler(async ({ data, context }) => {
     if (!data.title || !data.content) throw new Error("Title and knowledge content are required");
+    if (data.sourceUrl && !/^https?:\/\//i.test(data.sourceUrl)) {
+      throw new Error("Source URL must use http or https");
+    }
+
+    if (data.sourceUrl) {
+      let existingQuery = context.supabase
+        .from("knowledge_items")
+        .select("id, title")
+        .eq("user_id", context.userId)
+        .eq("source_url", data.sourceUrl)
+        .neq("status", "archived");
+      existingQuery = data.projectId
+        ? existingQuery.eq("project_id", data.projectId)
+        : existingQuery.is("project_id", null);
+      const { data: existing, error: existingError } = await existingQuery.maybeSingle();
+      if (existingError) throw new Error(existingError.message);
+      if (existing) return { ...existing, duplicate: true };
+    }
     const { data: row, error } = await context.supabase
       .from("knowledge_items")
       .insert({
