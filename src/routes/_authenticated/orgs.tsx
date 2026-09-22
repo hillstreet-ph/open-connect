@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import {
   createOrganizationGroup,
   inviteOrganizationMember,
-  listOrganizations,
+  getCanonicalOrganization,
   listOrganizationPeople,
 } from "@/lib/orgs.functions";
 import { Badge } from "@/components/ui/badge";
@@ -32,19 +32,21 @@ export const Route = createFileRoute("/_authenticated/orgs")({
 
 function OrgsPage() {
   const qc = useQueryClient();
-  const listOrgs = useServerFn(listOrganizations);
+  const getOrganization = useServerFn(getCanonicalOrganization);
   const listPeople = useServerFn(listOrganizationPeople);
   const createGroup = useServerFn(createOrganizationGroup);
   const inviteMember = useServerFn(inviteOrganizationMember);
 
-  const [peopleOrgId, setPeopleOrgId] = useState("");
   const [groupName, setGroupName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<"admin" | "member">("member");
   const [inviteGroupId, setInviteGroupId] = useState("");
 
-  const orgs = useQuery({ queryKey: ["organizations"], queryFn: () => listOrgs({}) });
-  const activeOrgId = peopleOrgId || orgs.data?.[0]?.id || "";
+  const organization = useQuery({
+    queryKey: ["organization", "hillstreet-ph"],
+    queryFn: () => getOrganization(),
+  });
+  const activeOrgId = organization.data?.id ?? "";
   const people = useQuery({
     queryKey: ["organization-people", activeOrgId],
     queryFn: () => listPeople({ data: { organizationId: activeOrgId } }),
@@ -84,7 +86,9 @@ function OrgsPage() {
       <Badge variant="outline" className="mb-2 border-primary/40 text-primary">
         <Building2 className="mr-1 size-3" /> Organization settings
       </Badge>
-      <h1 className="text-2xl font-semibold sm:text-3xl">hillstreet-ph</h1>
+      <h1 className="text-2xl font-semibold sm:text-3xl">
+        {organization.data?.name ?? "hillstreet-ph"}
+      </h1>
       <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
         Manage people, roles, and access for the single Open-Connect organization. Workspace and
         project management stays under Workspaces.
@@ -101,26 +105,6 @@ function OrgsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="people-org">Organization</Label>
-            <select
-              id="people-org"
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-              value={activeOrgId}
-              onChange={(event) => {
-                setPeopleOrgId(event.target.value);
-                setInviteGroupId("");
-              }}
-            >
-              <option value="">Select an organization…</option>
-              {(orgs.data ?? []).map((organization) => (
-                <option key={organization.id} value={organization.id}>
-                  {organization.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
           {activeOrgId ? (
             <div className="grid gap-6 lg:grid-cols-2">
               <div className="space-y-4 rounded-lg border p-4">
@@ -270,41 +254,6 @@ function OrgsPage() {
           ) : null}
         </CardContent>
       </Card>
-
-      <h2 className="mt-10 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Your organizations
-      </h2>
-      <div className="mt-3 grid gap-2 sm:grid-cols-2">
-        {(orgs.data ?? []).length === 0 ? (
-          <p className="text-sm text-muted-foreground">No organizations yet.</p>
-        ) : (
-          orgs.data?.map((o) => (
-            <Card key={o.id} className="p-4">
-              <p className="font-medium">{o.name}</p>
-              <p className="font-mono text-xs text-muted-foreground">{o.slug}</p>
-            </Card>
-          ))
-        )}
-      </div>
-
-      <h2 className="mt-10 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Your projects
-      </h2>
-      <div className="mt-3 grid gap-2 sm:grid-cols-2">
-        {(projects.data ?? []).length === 0 ? (
-          <p className="text-sm text-muted-foreground">No projects yet.</p>
-        ) : (
-          projects.data?.map((p) => (
-            <Card key={p.id} className="p-4">
-              <p className="font-medium">{p.name}</p>
-              <p className="text-xs text-muted-foreground">
-                {(p as { organizations?: { name?: string } }).organizations?.name ?? "Org"} ·{" "}
-                <span className="font-mono">{p.slug}</span>
-              </p>
-            </Card>
-          ))
-        )}
-      </div>
     </div>
   );
 }

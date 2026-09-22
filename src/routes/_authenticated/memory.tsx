@@ -165,8 +165,9 @@ export function MemoryKnowledgePage({
           tags: knowledgeTags,
         },
       }),
-    onSuccess: () => {
-      toast.success("Knowledge added");
+    onSuccess: (result) => {
+      if (result.duplicate) toast.info("This source link is already in Knowledge");
+      else toast.success("Knowledge added");
       setKnowledgeTitle("");
       setKnowledgeContent("");
       setSourceUrl("");

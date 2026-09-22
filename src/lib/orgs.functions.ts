@@ -28,28 +28,29 @@ export const listOrganizations = createServerFn({ method: "GET" })
     return data ?? [];
   });
 
+/** The product intentionally operates inside one canonical organization. */
+export const getCanonicalOrganization = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("organizations")
+      .select("id, name, slug, owner_id, created_at")
+      .eq("slug", "hillstreet-ph")
+      .single();
+    if (error) throw new Error(error.message);
+    return data;
+  });
+
 export const createOrganization = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: { name: string }) => ({
     name: (input?.name ?? "").trim(),
   }))
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data }) => {
     if (!data.name) throw new Error("Organization name required");
-    const slug = `${slugify(data.name) || "org"}-${context.userId.slice(0, 6)}`;
-    const { data: org, error } = await context.supabase
-      .from("organizations")
-      .insert({ name: data.name, slug, owner_id: context.userId })
-      .select("id, name, slug")
-      .single();
-    if (error) throw new Error(error.message);
-
-    await context.supabase.from("organization_members").insert({
-      organization_id: org.id,
-      user_id: context.userId,
-      role: "owner",
-    });
-
-    return org;
+    throw new Error(
+      "Open-Connect uses the hillstreet-ph organization. Create a workspace instead.",
+    );
   });
 
 async function requireOrganizationManager(
