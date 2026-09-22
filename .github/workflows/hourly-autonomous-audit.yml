@@ -98,7 +98,7 @@ jobs:
 
       - name: Open or update failure issue
         if: failure()
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           github-token: ${{ steps.app-token.outputs.token || github.token }}
           script: |
@@ -125,7 +125,7 @@ jobs:
 
       - name: Close recovered failure issue
         if: success()
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           github-token: ${{ steps.app-token.outputs.token || github.token }}
           script: |
