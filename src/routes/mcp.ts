@@ -48,6 +48,7 @@ function isExecutable(resource: ResourceRow) {
 
 type McpTool = {
   name: string;
+  title?: string;
   description: string;
   inputSchema: Record<string, unknown>;
   annotations?: Record<string, boolean>;
@@ -417,6 +418,24 @@ function toolNameFromSlug(slug: string) {
   return `resource_${slug.replace(/[^a-z0-9_]/gi, "_").toLowerCase()}`;
 }
 
+function toolTitle(name: string) {
+  return name
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function chatGptTools(key: AuthedKey) {
+  // Marketplace resources are intentionally accessed through list_resources,
+  // search, and fetch. Publishing every catalog row as another MCP tool creates
+  // duplicate capabilities and makes ChatGPT's plugin scan brittle.
+  return PLATFORM_TOOLS.filter((tool) => canUseTool(key, tool.name)).map((tool) => ({
+    ...tool,
+    title: tool.title ?? toolTitle(tool.name),
+  }));
+}
+
 async function getCatalog(force = false) {
   const now = Date.now();
   if (!force && catalogCache && now - catalogCache.at < CATALOG_TTL_MS) {
@@ -544,6 +563,12 @@ export const Route = createFileRoute("/mcp")({
       GET: async ({ request }) => {
         const key = await authenticateKey(request);
         if (!key) return unauthorized("Missing or invalid Open-Connect key.");
+        if (request.headers.get("accept")?.includes("text/event-stream")) {
+          return new Response(null, {
+            status: 405,
+            headers: { allow: "POST", "cache-control": "no-store" },
+          });
+        }
         return json({
           name: "open-connect",
           version: "1.0.1",
@@ -586,7 +611,11 @@ export const Route = createFileRoute("/mcp")({
           jsonrpc?: string;
           id?: string | number;
           method?: string;
-          params?: { name?: string; arguments?: Record<string, unknown> };
+          params?: {
+            name?: string;
+            arguments?: Record<string, unknown>;
+            protocolVersion?: string;
+          };
         } | null;
 
         if (!body?.method) {
@@ -597,17 +626,21 @@ export const Route = createFileRoute("/mcp")({
 
         if (body.method === "initialize") {
           result = {
-            protocolVersion: "2025-06-18",
-            capabilities: { tools: {}, resources: {} },
+            protocolVersion: body.params?.protocolVersion ?? "2025-06-18",
+            capabilities: {
+              tools: { listChanged: false },
+              resources: { listChanged: false },
+            },
             serverInfo: {
               name: "open-connect",
               version: "1.0.1",
               planes: ["resources", "connections", "models", "credentials"],
             },
+            instructions:
+              "Use read-only discovery tools before write tools. Hubstaff, E2B, connection, and credential actions are scoped to the authenticated Open-Connect account and role.",
           };
         } else if (body.method === "tools/list") {
-          const catalog = await getCatalog();
-          result = { tools: catalog.tools.filter((tool) => canUseTool(key, tool.name)) };
+          result = { tools: chatGptTools(key) };
         } else if (body.method === "resources/list") {
           result = {
             resources: [
