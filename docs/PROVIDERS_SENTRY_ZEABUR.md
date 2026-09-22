@@ -9,10 +9,10 @@
 | Edge / app | Cloudflare Pages · `open-connect.site` |
 | Data / Auth | Supabase |
 | Source | GitHub `hillstreet-ph/open-connect` |
-| **Optional runtime** | Zeabur (long-running processes only, e.g. LiteLLM proxy) |
+| **Server/API runtime** | Zeabur · `api.open-connect.site` |
 | **Observability** | Sentry (errors/performance) |
 
-Open Connect production edge does **not** require Zeabur. Zeabur is for optional workers that cannot run on Pages.
+Cloudflare Pages owns `open-connect.site`. Zeabur owns the backend API, control-plane, and long-running workers; it must not attach or compete for the apex domain.
 
 ## Sentry (HillStreet org)
 
@@ -21,7 +21,7 @@ Open Connect production edge does **not** require Zeabur. Zeabur is for optional
 - UI shows: org, region, status, last validated — **not** token values
 - Tokens must live in operator vault (1Password / Pages secret / Supabase Vault), not in resource manifests
 
-## Zeabur (optional)
+## Zeabur server boundary
 
 Metadata allowed in DB:
 
@@ -32,9 +32,11 @@ Metadata allowed in DB:
 
 Suggested use:
 
-1. Deploy LiteLLM Proxy container on Zeabur when needed
-2. Set Pages `LITELLM_BASE_URL` to that proxy `/v1`
-3. Keep OpenRouter or provider keys only on the proxy host
+1. Deploy the immutable `hillstreet/open-connect` control-plane image to Zeabur
+2. Attach only `api.open-connect.site` (or a provider-generated staging hostname)
+3. Verify `/healthz` before changing DNS
+4. Keep `open-connect.site` and `www.open-connect.site` exclusively on Cloudflare Pages
+5. Keep server-only Supabase, OpenRouter, and provider credentials in Zeabur secrets
 
 ## Production env still required on Pages
 
