@@ -62,8 +62,12 @@ jobs:
             name="$1"
             url="$2"
             expected="$3"
-            code=$(curl --retry 2 --retry-delay 3 --max-time 20 -sS -o /tmp/oc-body -w "%{http_code}" "$url" || true)
-            printf '%s %s expected=%s actual=%s\n' "$name" "$url" "$expected" "$code" | tee -a "$report"
+            result=$(curl -L --max-redirs 5 --retry 2 --retry-delay 3 --max-time 20 \
+              -sS -o /tmp/oc-body -w "%{http_code} %{url_effective}" "$url" || true)
+            code="${result%% *}"
+            effective_url="${result#* }"
+            printf '%s %s effective=%s expected=%s actual=%s\n' \
+              "$name" "$url" "$effective_url" "$expected" "$code" | tee -a "$report"
             test "$code" = "$expected"
           }
 
