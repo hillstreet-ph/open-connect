@@ -7,104 +7,102 @@
 - **Name**: Open-Connect
 - **Role**: Control Plane — AI Resource Gateway, Marketplace, MCP/API Gateway, Model Gateway, Access Control Plane
 - **Domain**: [open-connect.site](https://open-connect.site)
-- **Language**: TypeScript (React frontend + FastAPI backend)
+- **Language**: TypeScript (TanStack Start React with server routes)
 - **Organization**: hillstreet-ph
 - **Repository**: [github.com/hillstreet-ph/open-connect](https://github.com/hillstreet-ph/open-connect)
 
 ## Architecture Position
 
-Open-Connect is the **control plane** of the HillStreet open-platform stack. It sits above Open-System (execution) and Open-Box (data/artifacts) and provides:
-
-```
-[Users] → [Open-Connect (control)] → [Open-System (execution)] → [Open-Box (data)]
-              ↕                              ↕                         ↕
-         [Supabase Auth]              [Agent Workers]           [Cloudflare R2]
-```
+Open-Connect is the **control plane** of the HillStreet open-platform stack. It sits above Open-System (execution) and Open-Box (data/artifacts).
 
 ### Sister Projects
 
-| Project | Role | Supabase | Repo |
-|---------|------|----------|------|
-| **open-connect** | Control plane | huadtiuuoiriqrjpjxhr | this repo |
-| open-system | Execution plane | huadtiuuoiriqrjpjxhr | hillstreet-ph/open-system |
-| open-box | Data/artifact plane | huadtiuuoiriqrjpjxhr | hillstreet-ph/open-box |
-| open-kobeplay | Application | hoseohvgoiarxluxqwqv | hillstreet-ph/open-kobeplay |
-| open-tgate | Telegram gateway | hoseohvgoiarxluxqwqv | hillstreet-ph/open-tgate |
-| open-teleset | Communications server | hoseohvgoiarxluxqwqv | hillstreet-ph/open-teleset |
+| Project | Role | Supabase project | Schema |
+|---------|------|------------------|--------|
+| **open-connect** | Control plane | `huadtiuuoiriqrjpjxhr` | `open_connect` |
+| open-system | Execution plane | `huadtiuuoiriqrjpjxhr` | `open_system` |
+| open-box | Data/artifact plane | `huadtiuuoiriqrjpjxhr` | `open_box` |
+| open-kobeplay | Application | `hoseohvgoiarxluxqwqv` | `open_kobeplay` |
+| open-tgate | Telegram gateway | `hoseohvgoiarxluxqwqv` | `open_tgate` |
+| open-teleset | Communications server | `hoseohvgoiarxluxqwqv` | `open_teleset` |
 
-## Infrastructure Stack
+## Infrastructure Ownership
 
-| Layer | Service | Details |
-|-------|---------|---------|
-| Source | GitHub | hillstreet-ph/open-connect, branch: main |
-| Database | Supabase | Project: huadtiuuoiriqrjpjxhr, Schema: open_connect + public |
-| Auth | Supabase Auth | GitHub OAuth, email/password |
-| Container | Docker Hub | hillstreet/open-connect |
-| Runtime | Zeabur | Project: open-connect-project |
-| Edge/CDN | Cloudflare | Domain: open-connect.site |
-| Monitoring | Sentry | TBD |
+| Layer | Owner | Details |
+|-------|-------|---------|
+| Source | GitHub | `hillstreet-ph/open-connect`, production branch `main` |
+| Web/edge | Cloudflare Pages | Apex and `www`; build output `.output/public` |
+| API/server | Zeabur | `api.open-connect.site`; control-plane container |
+| Database/Auth/Storage | Supabase | Project `huadtiuuoiriqrjpjxhr`; schema `open_connect` plus intentional shared schemas |
+| Container registry | Docker Hub | `hillstreet/open-connect` |
+| Monitoring | Sentry | Organization `hillstreet`, project `open-connect` |
+| Backup storage | Cloudflare R2 | `open-connect-backups` |
 
-## Database Schema
+## Database Schemas
 
-### Public schema (shared tables)
-- `profiles` — user profiles (auto-created on signup)
-- `user_roles` — role assignments (owner/admin/user)
+### Shared public/platform tables
+- `user_roles` and `platform_shared.account_roles` — platform role assignments
 - `categories`, `resources` — resource marketplace catalog
-- `organizations`, `organization_members` — multi-org support
-- `oauth_clients`, `oauth_authorization_codes` — OAuth provider
+- `organizations`, `organization_members` — multi-organization support
+- `oauth_clients`, `oauth_authorization_codes` — OAuth provider state
 
-### open_connect schema (project-specific)
-- `gateway_config` — MCP/API/model/auth gateway configurations
-- `marketplace_listings` — marketplace entries with pricing models
-- `access_policies` — RBAC/ABAC/rate-limit/IP-allowlist rules
+### `open_connect` schema
+- `gateway_config` — gateway configuration
+- `marketplace_listings` — marketplace entries
+- `access_policies` — RBAC/ABAC/rate-limit/IP rules
 
-## Auth & User Roles
+## Auth and Roles
 
-Three roles defined in `user_roles`:
-- **owner** — full control, org management, gateway config
-- **admin** — resource management, marketplace curation, user management
-- **user** — browse marketplace, use resources, manage own API keys
-
-RLS is enabled on all tables. Admin/owner checks use:
-```sql
-EXISTS (SELECT 1 FROM public.user_roles WHERE user_id = auth.uid() AND role IN ('admin', 'owner'))
-```
+Canonical platform roles are `owner`, `admin`, and `user` (Member in the UI). Authentication does not replace authorization. Preserve RLS and test anonymous, member, admin, and owner access separately.
 
 ## Key Files
 
-- `src/integrations/supabase/client.ts` — Supabase client with env-based URL selection
-- `supabase/config.toml` — Supabase CLI config (project_id: huadtiuuoiriqrjpjxhr)
-- `.env.example` — environment variable template (never commit real values)
-- `supabase/functions/health/index.ts` — Edge function health check
+- `AGENTS.md` — repository history-preservation requirements
+- `DEVELOPMENT.md` — branch and deployment flow
+- `src/integrations/supabase/client.ts` — Supabase client
+- `supabase/config.toml` — Supabase CLI configuration
+- `.env.example` — variable contract; never commit real values
+- `wrangler.toml` — Cloudflare Pages output and bindings
 
-## Development Workflow
+## Development and Deployment
+
+Normal web and server-route delivery:
 
 ```
-feature/* → development → PR → main → Docker build → Docker Hub → Zeabur deploy
+feature/* or fix/* → pull request → development/main → Cloudflare Pages → open-connect.site
 ```
 
-### Environment Variables (see .env.example)
-- `VITE_SUPABASE_URL` — Supabase project URL
-- `VITE_SUPABASE_ANON_KEY` — Supabase publishable key
-- `SUPABASE_SERVICE_ROLE_KEY` — server-side only, never in client code
+Changes under `control-plane/**` additionally trigger `.github/workflows/control-plane-docker.yml`, which builds and publishes `hillstreet/open-connect`. Publishing an image does not itself prove or perform a Zeabur promotion; verify the exact image digest and Zeabur deployment separately.
+
+## Environment Variables
+
+Use the names defined by `.env.example`. Core examples:
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
+- `SUPABASE_URL`
+- `SUPABASE_PUBLISHABLE_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` — server-side only
+
+Never expose privileged variables through a `VITE_` name.
 
 ## Important Rules for AI Agents
 
-1. **Never hard-code credentials** — use environment variables
-2. **Never commit .env files** — only .env.example with placeholder names
-3. **Preserve existing data** — existing public schema tables have production data
-4. **RLS is mandatory** — every new table must have RLS enabled
-5. **Schema isolation** — use `open_connect` schema for project-specific tables
-6. **Branch strategy** — work on feature/* or fix/* branches, PR to main
-7. **Docker images** — tag with semver + commit SHA, not just `latest`
-8. **Cross-project coordination** — open-system and open-box share the same Supabase project but use separate schemas
+1. Read and follow `AGENTS.md` before making changes.
+2. Never rewrite published Git history: no force-push, rebase, amend, or squash of commits already pushed.
+3. Never hard-code or commit credentials.
+4. Preserve production data and keep RLS enabled.
+5. Use the `open_connect` schema for Open-Connect-specific data.
+6. Work through normal feature/fix branches and protected pull requests.
+7. Treat Cloudflare Pages as apex web owner and Zeabur as API/server origin.
+8. Tag container releases with immutable commit identities; do not rely only on `latest`.
+9. Check current PRs, migrations, environments, and provider ownership before creating resources.
 
-## Quick Start for New AI Agents
+## Quick Start
 
-1. Read this file and the README.md
-2. Check `.env.example` for required environment variables
-3. Inspect `src/integrations/supabase/client.ts` for database connection patterns
-4. Review existing migrations in `supabase/migrations/`
-5. Check open PRs and issues before starting work
-6. Use the `open_connect` schema for new tables
-7. Test locally before pushing — run `npm run build` to verify
+1. Read `AGENTS.md`, this file, `README.md`, and `DEVELOPMENT.md`.
+2. Check `.env.example` for the variable contract.
+3. Inspect existing migrations before changing schemas.
+4. Check open pull requests and issues to avoid conflicts.
+5. Run the repository's Bun-based lint, test, SSR, and build commands before pushing.
+6. Preserve published history and use a new commit for every correction.
