@@ -275,7 +275,9 @@ export function MemoryKnowledgePage({
   });
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
+    <div
+      className={studioMode ? "space-y-4" : "mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 sm:py-8"}
+    >
       {!studioMode ? (
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
