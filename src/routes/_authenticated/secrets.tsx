@@ -2,11 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { Loader2, Lock, Trash2 } from "lucide-react";
+import { Check, Clipboard, Eye, EyeOff, KeyRound, Loader2, Lock, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   createSecret,
   deleteSecret,
+  getTotpCode,
   listSecrets,
   SECRET_SCOPES,
   type SecretType,
@@ -39,6 +40,7 @@ const TYPES: { value: SecretType; label: string }[] = [
   { value: "mcp_url", label: "MCP URL / token" },
   { value: "bot_token", label: "Bot token" },
   { value: "password", label: "Password" },
+  { value: "totp", label: "2FA authenticator (TOTP)" },
   { value: "other", label: "Other" },
 ];
 
@@ -47,11 +49,15 @@ function SecretsPage() {
   const listFn = useServerFn(listSecrets);
   const createFn = useServerFn(createSecret);
   const deleteFn = useServerFn(deleteSecret);
+  const totpFn = useServerFn(getTotpCode);
 
   const [name, setName] = useState("");
   const [secretType, setSecretType] = useState<SecretType>("api_key");
   const [value, setValue] = useState("");
   const [scopes, setScopes] = useState<string[]>(["connections"]);
+  const [showValue, setShowValue] = useState(false);
+  const [totpCodes, setTotpCodes] = useState<Record<string, { code: string; seconds: number }>>({});
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const list = useQuery({
     queryKey: ["credential-secrets"],
@@ -99,6 +105,33 @@ function SecretsPage() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Delete failed"),
   });
 
+  const totpMutation = useMutation({
+    mutationFn: (id: string) => totpFn({ data: { id } }),
+    onSuccess: (result, id) => {
+      setTotpCodes((previous) => ({
+        ...previous,
+        [id]: { code: result.code, seconds: result.seconds_remaining },
+      }));
+      window.setTimeout(
+        () =>
+          setTotpCodes((previous) => {
+            const next = { ...previous };
+            delete next[id];
+            return next;
+          }),
+        result.seconds_remaining * 1000,
+      );
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not generate 2FA code"),
+  });
+
+  async function copyTotp(id: string, code: string) {
+    await navigator.clipboard.writeText(code);
+    setCopiedId(id);
+    toast.success("2FA code copied");
+    window.setTimeout(() => setCopiedId((current) => (current === id ? null : current)), 1500);
+  }
+
   return (
     <div className="mx-auto max-w-2xl px-4 py-14">
       <div className="flex items-center gap-3">
@@ -106,9 +139,9 @@ function SecretsPage() {
           <Lock className="size-5" />
         </span>
         <div>
-          <h1 className="text-3xl font-semibold">Secrets</h1>
+          <h1 className="text-3xl font-semibold">Credentials</h1>
           <p className="text-sm text-muted-foreground">
-            Password-manager style vault. Values are stored server-side and never re-displayed.
+            Password-manager style vault for passwords, API keys, and copy-ready 2FA codes.
           </p>
         </div>
       </div>
@@ -166,15 +199,40 @@ function SecretsPage() {
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="secret-value">Secret value</Label>
-            <Input
-              id="secret-value"
-              type="password"
-              autoComplete="off"
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              placeholder="Paste token / key / password"
-            />
+            <Label htmlFor="secret-value">
+              {secretType === "totp" ? "2FA setup key" : "Secret value"}
+            </Label>
+            <div className="relative">
+              <Input
+                id="secret-value"
+                type={showValue ? "text" : "password"}
+                autoComplete="off"
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                placeholder={
+                  secretType === "totp"
+                    ? "Paste the Base32 authenticator key"
+                    : "Paste token / key / password"
+                }
+                className="pr-11 font-mono"
+              />
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="absolute right-1 top-1 size-8"
+                onClick={() => setShowValue((current) => !current)}
+                aria-label={showValue ? "Hide credential" : "Show credential"}
+              >
+                {showValue ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </Button>
+            </div>
+            {secretType === "totp" ? (
+              <p className="text-xs text-muted-foreground">
+                Paste the manual setup key, not a current six-digit code. The key remains encrypted;
+                only rotating one-time codes can be requested later.
+              </p>
+            ) : null}
           </div>
           <Button
             onClick={() => createMutation.mutate()}
@@ -220,14 +278,47 @@ function SecretsPage() {
                       ))}
                     </div>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => deleteMutation.mutate(row.id)}
-                    disabled={deleteMutation.isPending}
-                  >
-                    <Trash2 className="size-3.5" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    {row.secret_type === "totp" ? (
+                      totpCodes[row.id] ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-2 font-mono"
+                          onClick={() => copyTotp(row.id, totpCodes[row.id].code)}
+                        >
+                          {copiedId === row.id ? (
+                            <Check className="size-3.5" />
+                          ) : (
+                            <Clipboard className="size-3.5" />
+                          )}
+                          {totpCodes[row.id].code}
+                          <span className="font-sans text-[10px] text-muted-foreground">
+                            {totpCodes[row.id].seconds}s
+                          </span>
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-2"
+                          onClick={() => totpMutation.mutate(row.id)}
+                          disabled={totpMutation.isPending}
+                        >
+                          <KeyRound className="size-3.5" /> Show 2FA code
+                        </Button>
+                      )
+                    ) : null}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      aria-label={`Delete ${row.name}`}
+                      onClick={() => deleteMutation.mutate(row.id)}
+                      disabled={deleteMutation.isPending}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  </div>
                 </li>
               ))}
             </ul>

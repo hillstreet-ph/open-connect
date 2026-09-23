@@ -94,11 +94,9 @@ export const registerResourcePackage = createServerFn({ method: "POST" })
     if (!data.slug) throw new Error("Invalid slug");
     if (!data.package_path) throw new Error("package_path required");
 
-    const uniqueSlug = `${data.slug}-${context.userId.slice(0, 6)}`;
-
     const row = {
       name: data.name,
-      slug: uniqueSlug,
+      slug: data.slug,
       description: data.description,
       resource_type: data.resource_type as
         "skill" | "mcp" | "tool" | "plugin" | "agent" | "prompt" | "guide" | "app" | "model",

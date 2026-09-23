@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Archive, BookOpen, Brain, Loader2, Pin, PinOff, Plus, Search, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Archive, Brain, CopyX, Loader2, Pin, PinOff, Plus, Search, Trash2 } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { listProjects } from "@/lib/orgs.functions";
 import {
   archiveKnowledge,
@@ -12,6 +13,8 @@ import {
   deleteMemory,
   listKnowledge,
   listMemories,
+  removeDuplicateKnowledge,
+  removeDuplicateMemories,
   setMemoryPinned,
   type KnowledgeSourceType,
   type MemoryType,
@@ -21,7 +24,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 
 export const Route = createFileRoute("/_authenticated/memory")({
@@ -51,6 +53,27 @@ const SOURCE_TYPES: KnowledgeSourceType[] = [
   "conversation",
   "api",
 ];
+const FILE_BUCKET = "memory-knowledge-files";
+const MAX_FILE_BYTES = 10 * 1024 * 1024;
+
+type UploadedFile = { name: string; path: string; mimeType: string; size: number };
+
+function safeFileName(name: string) {
+  return name
+    .normalize("NFKD")
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+async function extractText(file: File) {
+  if (
+    file.type.startsWith("text/") ||
+    /\.(md|mdx|json|csv|tsv|txt|log|yaml|yml|xml)$/i.test(file.name)
+  ) {
+    return (await file.text()).slice(0, 200_000);
+  }
+  return `Uploaded file: ${file.name} (${file.type || "application/octet-stream"}, ${file.size} bytes)`;
+}
 
 function ProjectSelect({
   value,
@@ -91,6 +114,8 @@ export function MemoryKnowledgePage({
   const getKnowledge = useServerFn(listKnowledge);
   const addKnowledge = useServerFn(createKnowledge);
   const removeKnowledge = useServerFn(archiveKnowledge);
+  const dedupeMemories = useServerFn(removeDuplicateMemories);
+  const dedupeKnowledge = useServerFn(removeDuplicateKnowledge);
 
   const [projectId, setProjectId] = useState("");
   const [query, setQuery] = useState("");
@@ -104,6 +129,28 @@ export function MemoryKnowledgePage({
   const [sourceType, setSourceType] = useState<KnowledgeSourceType>("note");
   const [sourceUrl, setSourceUrl] = useState("");
   const [knowledgeTags, setKnowledgeTags] = useState("");
+  const [memoryFile, setMemoryFile] = useState<File | null>(null);
+  const [knowledgeFile, setKnowledgeFile] = useState<File | null>(null);
+  const memoryFileRef = useRef<HTMLInputElement>(null);
+  const knowledgeFileRef = useRef<HTMLInputElement>(null);
+
+  async function uploadFile(file: File, kind: "memory" | "knowledge"): Promise<UploadedFile> {
+    if (file.size > MAX_FILE_BYTES) throw new Error("Files must be 10 MB or smaller");
+    const { data } = await supabase.auth.getUser();
+    if (!data.user) throw new Error("Sign in before uploading files");
+    const path = `${data.user.id}/${projectId || "personal"}/${kind}/${crypto.randomUUID()}-${safeFileName(file.name) || "file"}`;
+    const { error } = await supabase.storage.from(FILE_BUCKET).upload(path, file, {
+      contentType: file.type || "application/octet-stream",
+      upsert: false,
+    });
+    if (error) throw error;
+    return {
+      name: file.name,
+      path,
+      mimeType: file.type || "application/octet-stream",
+      size: file.size,
+    };
+  }
 
   const projects = useQuery({ queryKey: ["projects"], queryFn: () => listProj({}) });
   const memories = useQuery({
@@ -121,22 +168,28 @@ export function MemoryKnowledgePage({
   );
 
   const memoryMutation = useMutation({
-    mutationFn: () =>
-      addMemory({
+    mutationFn: async () => {
+      const file = memoryFile ? await uploadFile(memoryFile, "memory") : undefined;
+      const content = memoryContent.trim() || (memoryFile ? await extractText(memoryFile) : "");
+      return addMemory({
         data: {
-          title: memoryTitle,
-          content: memoryContent,
+          title: memoryTitle.trim() || memoryFile?.name || "",
+          content,
           memoryType,
           importance,
           projectId: projectId || undefined,
           tags: memoryTags,
+          file,
         },
-      }),
+      });
+    },
     onSuccess: () => {
       toast.success("Memory saved");
       setMemoryTitle("");
       setMemoryContent("");
       setMemoryTags("");
+      setMemoryFile(null);
+      if (memoryFileRef.current) memoryFileRef.current.value = "";
       void qc.invalidateQueries({ queryKey: ["memories"] });
     },
     onError: (error) =>
@@ -154,17 +207,22 @@ export function MemoryKnowledgePage({
     },
   });
   const knowledgeMutation = useMutation({
-    mutationFn: () =>
-      addKnowledge({
+    mutationFn: async () => {
+      const file = knowledgeFile ? await uploadFile(knowledgeFile, "knowledge") : undefined;
+      const content =
+        knowledgeContent.trim() || (knowledgeFile ? await extractText(knowledgeFile) : "");
+      return addKnowledge({
         data: {
-          title: knowledgeTitle,
-          content: knowledgeContent,
-          sourceType,
-          sourceUrl: sourceUrl || undefined,
+          title: knowledgeTitle.trim() || knowledgeFile?.name || "",
+          content,
+          sourceType: knowledgeFile ? "document" : sourceType,
+          sourceUrl: file ? undefined : sourceUrl || undefined,
           projectId: projectId || undefined,
           tags: knowledgeTags,
+          file,
         },
-      }),
+      });
+    },
     onSuccess: (result) => {
       if (result.duplicate) toast.info("This source link is already in Knowledge");
       else toast.success("Knowledge added");
@@ -172,6 +230,8 @@ export function MemoryKnowledgePage({
       setKnowledgeContent("");
       setSourceUrl("");
       setKnowledgeTags("");
+      setKnowledgeFile(null);
+      if (knowledgeFileRef.current) knowledgeFileRef.current.value = "";
       void qc.invalidateQueries({ queryKey: ["knowledge"] });
     },
     onError: (error) =>
@@ -183,6 +243,32 @@ export function MemoryKnowledgePage({
       toast.success("Knowledge archived");
       void qc.invalidateQueries({ queryKey: ["knowledge"] });
     },
+  });
+  const dedupeMemoryMutation = useMutation({
+    mutationFn: () => dedupeMemories({ data: { projectId: projectId || undefined } }),
+    onSuccess: ({ removed }) => {
+      toast.success(
+        removed
+          ? `Removed ${removed} duplicate ${removed === 1 ? "memory" : "memories"}`
+          : "No duplicate memories found",
+      );
+      void qc.invalidateQueries({ queryKey: ["memories"] });
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Duplicate cleanup failed"),
+  });
+  const dedupeKnowledgeMutation = useMutation({
+    mutationFn: () => dedupeKnowledge({ data: { projectId: projectId || undefined } }),
+    onSuccess: ({ removed }) => {
+      toast.success(
+        removed
+          ? `Archived ${removed} duplicate knowledge ${removed === 1 ? "item" : "items"}`
+          : "No duplicate knowledge found",
+      );
+      void qc.invalidateQueries({ queryKey: ["knowledge"] });
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Duplicate cleanup failed"),
   });
 
   return (
@@ -208,18 +294,8 @@ export function MemoryKnowledgePage({
         </div>
       </div>
 
-      <Tabs defaultValue={defaultSection} className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="memory">
-            <Brain className="mr-2 size-4" />
-            Memory
-          </TabsTrigger>
-          <TabsTrigger value="knowledge">
-            <BookOpen className="mr-2 size-4" />
-            Knowledge
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="memory" className="space-y-4">
+      {defaultSection === "memory" ? (
+        <div className="space-y-4">
           <Card className="shadow-panel">
             <CardHeader>
               <CardTitle className="text-base">Add durable memory</CardTitle>
@@ -279,10 +355,24 @@ export function MemoryKnowledgePage({
                   placeholder="What should agents remember and reuse?"
                 />
               </div>
-              <div className="lg:col-span-6">
+              <div className="space-y-2 lg:col-span-6">
+                <Label htmlFor="memory-file">Attach a file</Label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Input
+                    ref={memoryFileRef}
+                    id="memory-file"
+                    type="file"
+                    className="max-w-xl"
+                    onChange={(event) => setMemoryFile(event.target.files?.[0] ?? null)}
+                  />
+                  <span className="text-xs text-muted-foreground">Private · max 10 MB</span>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2 lg:col-span-6">
                 <Button
                   disabled={
-                    !memoryTitle.trim() || !memoryContent.trim() || memoryMutation.isPending
+                    (!memoryFile && (!memoryTitle.trim() || !memoryContent.trim())) ||
+                    memoryMutation.isPending
                   }
                   onClick={() => memoryMutation.mutate()}
                 >
@@ -292,6 +382,26 @@ export function MemoryKnowledgePage({
                     <Plus className="size-4" />
                   )}
                   Save memory
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled={dedupeMemoryMutation.isPending}
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        "Remove exact duplicate memories in this scope? The newest copy is kept.",
+                      )
+                    ) {
+                      dedupeMemoryMutation.mutate();
+                    }
+                  }}
+                >
+                  {dedupeMemoryMutation.isPending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <CopyX className="size-4" />
+                  )}
+                  Remove duplicates
                 </Button>
               </div>
             </CardContent>
@@ -345,9 +455,9 @@ export function MemoryKnowledgePage({
               ))
             )}
           </div>
-        </TabsContent>
-
-        <TabsContent value="knowledge" className="space-y-4">
+        </div>
+      ) : (
+        <div className="space-y-4">
           <Card className="shadow-panel">
             <CardHeader>
               <CardTitle className="text-base">Add knowledge</CardTitle>
@@ -402,11 +512,23 @@ export function MemoryKnowledgePage({
                   placeholder="Paste or write reusable knowledge…"
                 />
               </div>
-              <div className="lg:col-span-6">
+              <div className="space-y-2 lg:col-span-6">
+                <Label htmlFor="knowledge-file">Upload a knowledge file</Label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Input
+                    ref={knowledgeFileRef}
+                    id="knowledge-file"
+                    type="file"
+                    className="max-w-xl"
+                    onChange={(event) => setKnowledgeFile(event.target.files?.[0] ?? null)}
+                  />
+                  <span className="text-xs text-muted-foreground">Private · max 10 MB</span>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2 lg:col-span-6">
                 <Button
                   disabled={
-                    !knowledgeTitle.trim() ||
-                    !knowledgeContent.trim() ||
+                    (!knowledgeFile && (!knowledgeTitle.trim() || !knowledgeContent.trim())) ||
                     knowledgeMutation.isPending
                   }
                   onClick={() => knowledgeMutation.mutate()}
@@ -417,6 +539,26 @@ export function MemoryKnowledgePage({
                     <Plus className="size-4" />
                   )}
                   Add knowledge
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled={dedupeKnowledgeMutation.isPending}
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        "Archive exact duplicate knowledge items in this scope? The newest copy is kept.",
+                      )
+                    ) {
+                      dedupeKnowledgeMutation.mutate();
+                    }
+                  }}
+                >
+                  {dedupeKnowledgeMutation.isPending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <CopyX className="size-4" />
+                  )}
+                  Remove duplicates
                 </Button>
               </div>
             </CardContent>
@@ -479,8 +621,8 @@ export function MemoryKnowledgePage({
               ))
             )}
           </div>
-        </TabsContent>
-      </Tabs>
+        </div>
+      )}
     </div>
   );
 }

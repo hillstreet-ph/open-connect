@@ -1,6 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   Bot,
+  BookOpen,
   Brain,
   Boxes,
   CalendarClock,
@@ -62,7 +63,8 @@ const WORK: Item[] = [
 const BUILD: Item[] = [
   { to: "/studio", label: "Studio", icon: Sparkles },
   { to: "/agents", label: "Agents", icon: Bot },
-  { to: "/memory", label: "Memory & Knowledge", icon: Brain },
+  { to: "/memory", label: "Memory", icon: Brain },
+  { to: "/knowledge", label: "Knowledge", icon: BookOpen },
   { capability: "manage_toolkits", to: "/toolkits", label: "Toolkits", icon: Wrench },
 ];
 
