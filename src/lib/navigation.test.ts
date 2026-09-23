@@ -63,7 +63,7 @@ test("connection surfaces remain internal and separate from Marketplace", () => 
 
 test("Toolkit creation reads from the personal library, not the Marketplace catalog", () => {
   const source = readFileSync(
-    path.resolve(process.cwd(), "src/routes/_authenticated/toolkits.tsx"),
+    path.resolve(process.cwd(), "src/components/toolkit-creator.tsx"),
     "utf8",
   );
   assert.match(source, /listLibraryResources/);

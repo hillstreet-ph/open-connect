@@ -46,6 +46,31 @@ export const addResourceToProject = createServerFn({ method: "POST" })
     return row;
   });
 
+/** Projects that already contain a resource, used to prevent duplicate assignments. */
+export const listResourceProjectAssignments = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { resourceId: string }) => ({ resourceId: input?.resourceId ?? "" }))
+  .handler(async ({ data, context }) => {
+    if (!data.resourceId) throw new Error("resourceId required");
+    const { data: rows, error } = await context.supabase
+      .from("project_resources")
+      .select("project_id")
+      .eq("resource_id", data.resourceId);
+    if (error) throw new Error(error.message);
+    const projectIds = [...new Set((rows ?? []).map((row) => row.project_id))];
+    if (!projectIds.length) return [];
+    const { data: projects, error: projectError } = await context.supabase
+      .from("projects")
+      .select("id, name")
+      .in("id", projectIds);
+    if (projectError) throw new Error(projectError.message);
+    const names = new Map((projects ?? []).map((project) => [project.id, project.name]));
+    return (rows ?? []).map((row) => ({
+      projectId: row.project_id,
+      name: names.get(row.project_id) ?? "Project",
+    }));
+  });
+
 export const removeResourceFromProject = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: { projectId: string; resourceId: string }) => ({
