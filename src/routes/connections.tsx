@@ -1,11 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Lock, Search } from "lucide-react";
+import { KeyRound, Link2, Loader2, Lock, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   connectApp,
+  configureAppConnection,
   disconnectApp,
   listAppConnections,
   listConnectionCatalog,
@@ -17,6 +18,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+
+type CatalogApp = {
+  provider: string;
+  display_name: string;
+  category: string;
+  scopes: string[];
+  oauth: boolean;
+};
 
 export const Route = createFileRoute("/connections")({
   head: () => ({
@@ -41,6 +58,11 @@ function ConnectionsPage() {
   const listFn = useServerFn(listAppConnections);
   const connectFn = useServerFn(connectApp);
   const disconnectFn = useServerFn(disconnectApp);
+  const configureFn = useServerFn(configureAppConnection);
+  const [selectedApp, setSelectedApp] = useState<CatalogApp | null>(null);
+  const [accountLabel, setAccountLabel] = useState("");
+  const [endpointUrl, setEndpointUrl] = useState("");
+  const [apiKey, setApiKey] = useState("");
 
   const catalog = useQuery({ queryKey: ["connection-catalog"], queryFn: () => catalogFn({}) });
   const mine = useQuery({
@@ -64,6 +86,29 @@ function ConnectionsPage() {
       toast.success("Disconnected");
       void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
     },
+  });
+
+  const configureMutation = useMutation({
+    mutationFn: () =>
+      configureFn({
+        data: {
+          provider: selectedApp?.provider ?? "",
+          display_name: selectedApp?.display_name,
+          account_label: accountLabel,
+          endpoint_url: endpointUrl,
+          api_key: apiKey,
+          auth_type: "bearer",
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Connection saved securely");
+      setSelectedApp(null);
+      setAccountLabel("");
+      setEndpointUrl("");
+      setApiKey("");
+      void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Connection failed"),
   });
 
   const results = useMemo(() => {
@@ -195,9 +240,17 @@ function ConnectionsPage() {
                         variant="outline"
                         className="shrink-0"
                         disabled={connectMutation.isPending}
-                        onClick={() => connectMutation.mutate(app.provider)}
+                        onClick={() =>
+                          app.oauth
+                            ? connectMutation.mutate(app.provider)
+                            : setSelectedApp(app as CatalogApp)
+                        }
                       >
-                        Connect
+                        {app.oauth
+                          ? "Authorize"
+                          : app.provider === "custom_mcp"
+                            ? "Add MCP"
+                            : "Add key"}
                       </Button>
                     )}
                   </Card>
@@ -222,6 +275,76 @@ function ConnectionsPage() {
           </CardDescription>
         </CardHeader>
       </Card>
+
+      <Dialog open={Boolean(selectedApp)} onOpenChange={(open) => !open && setSelectedApp(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {selectedApp?.provider === "custom_mcp" ? (
+                <Link2 className="size-5 text-primary" />
+              ) : (
+                <KeyRound className="size-5 text-primary" />
+              )}
+              Connect {selectedApp?.display_name}
+            </DialogTitle>
+            <DialogDescription>
+              The credential is encrypted in Supabase Vault. Agents receive only an opaque
+              credential reference.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="connection-account">Account label</Label>
+              <Input
+                id="connection-account"
+                value={accountLabel}
+                onChange={(event) => setAccountLabel(event.target.value)}
+                placeholder="Production · hillstreet-ph"
+              />
+            </div>
+            {selectedApp?.provider === "custom_mcp" ? (
+              <div className="space-y-2">
+                <Label htmlFor="connection-endpoint">MCP endpoint URL</Label>
+                <Input
+                  id="connection-endpoint"
+                  type="url"
+                  value={endpointUrl}
+                  onChange={(event) => setEndpointUrl(event.target.value)}
+                  placeholder="https://mcp.example.com/mcp"
+                />
+              </div>
+            ) : null}
+            <div className="space-y-2">
+              <Label htmlFor="connection-key">
+                {selectedApp?.provider === "custom_mcp"
+                  ? "Bearer token / API key"
+                  : "API key or access token"}
+              </Label>
+              <Input
+                id="connection-key"
+                type="password"
+                autoComplete="off"
+                value={apiKey}
+                onChange={(event) => setApiKey(event.target.value)}
+                placeholder="Paste credential"
+                className="font-mono"
+              />
+            </div>
+            <Button
+              className="w-full"
+              disabled={configureMutation.isPending || apiKey.trim().length < 8}
+              onClick={() => configureMutation.mutate()}
+            >
+              {configureMutation.isPending ? (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              ) : (
+                <Lock className="mr-2 size-4" />
+              )}
+              Save secure connection
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

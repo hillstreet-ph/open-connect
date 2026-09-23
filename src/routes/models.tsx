@@ -1,8 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, KeyRound, List } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { ArrowRight, CheckCircle2, KeyRound, List, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 import { BrandLogo } from "@/components/brand-logo";
 import { useAuth } from "@/hooks/use-auth";
+import { configureAppConnection, listAppConnections } from "@/lib/connections.functions";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -21,14 +28,13 @@ export const Route = createFileRoute("/models")({
 });
 
 const providers = [
-  { id: "openrouter", name: "OpenRouter" },
-  { id: "openai", name: "OpenAI" },
-  { id: "anthropic", name: "Anthropic / Claude" },
-  { id: "google", name: "Google / Gemini" },
-  { id: "xai", name: "xAI / Grok" },
-  { id: "meta", name: "Meta Llama" },
-  { id: "mistral", name: "Mistral" },
-  { id: "deepseek", name: "DeepSeek" },
+  { id: "openrouter", name: "OpenRouter", baseUrl: "https://openrouter.ai/api/v1" },
+  { id: "openai", name: "OpenAI", baseUrl: "https://api.openai.com/v1" },
+  { id: "anthropic", name: "Anthropic / Claude", baseUrl: "https://api.anthropic.com" },
+  { id: "google", name: "Google / Gemini", baseUrl: "https://generativelanguage.googleapis.com" },
+  { id: "xai", name: "xAI / Grok", baseUrl: "https://api.x.ai/v1" },
+  { id: "mistral", name: "Mistral", baseUrl: "https://api.mistral.ai/v1" },
+  { id: "deepseek", name: "DeepSeek", baseUrl: "https://api.deepseek.com" },
 ];
 
 const aliases = [
@@ -46,6 +52,47 @@ const aliases = [
 
 function ModelsPage() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const listFn = useServerFn(listAppConnections);
+  const configureFn = useServerFn(configureAppConnection);
+  const [activeProvider, setActiveProvider] = useState<string | null>(null);
+  const [providerKey, setProviderKey] = useState("");
+  const [providerUrl, setProviderUrl] = useState("");
+  const connections = useQuery({
+    queryKey: ["app-connections"],
+    queryFn: () => listFn({}),
+    enabled: Boolean(user),
+  });
+  const connectedProviders = new Set(
+    (connections.data ?? [])
+      .filter((item) => item.status === "connected")
+      .map((item) => item.provider),
+  );
+  const configureMutation = useMutation({
+    mutationFn: () => {
+      const provider = providers.find((item) => item.id === activeProvider);
+      if (!provider) throw new Error("Choose an AI provider");
+      return configureFn({
+        data: {
+          provider: provider.id,
+          display_name: provider.name,
+          account_label: "AI Gateway",
+          endpoint_url: providerUrl || provider.baseUrl,
+          api_key: providerKey,
+          auth_type: "api_key",
+        },
+      });
+    },
+    onSuccess: () => {
+      toast.success("AI provider connected");
+      setActiveProvider(null);
+      setProviderKey("");
+      setProviderUrl("");
+      void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Provider setup failed"),
+  });
   return (
     <div className="mx-auto max-w-6xl px-4 py-16">
       <Badge variant="outline" className="mb-3 border-primary/40 text-primary">
@@ -108,21 +155,87 @@ function ModelsPage() {
         ))}
       </div>
 
-      <h2 className="mt-14 text-xl font-semibold">Providers (via OpenRouter)</h2>
-      <div className="mt-4 flex flex-wrap gap-3">
+      <h2 className="mt-14 text-xl font-semibold">AI provider credentials</h2>
+      <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+        Add each provider key once. Open‑Connect stores it in Vault and routes requests through the
+        same LiteLLM-compatible gateway.
+      </p>
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {providers.map((provider) => (
-          <div
-            key={provider.id}
-            className="flex items-center gap-2 rounded-full border border-border/70 bg-card px-3 py-1.5"
-          >
-            <BrandLogo provider={provider.id} name={provider.name} size="sm" />
-            <span className="text-sm">{provider.name}</span>
-          </div>
+          <Card key={provider.id} className="p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2">
+                <BrandLogo provider={provider.id} name={provider.name} size="sm" />
+                <span className="truncate text-sm font-medium">{provider.name}</span>
+              </div>
+              {connectedProviders.has(provider.id) ? (
+                <Badge variant="secondary" className="gap-1">
+                  <CheckCircle2 className="size-3" /> Connected
+                </Badge>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={!user}
+                  onClick={() => {
+                    setActiveProvider(provider.id);
+                    setProviderUrl(provider.baseUrl);
+                    setProviderKey("");
+                  }}
+                >
+                  Add key
+                </Button>
+              )}
+            </div>
+            {activeProvider === provider.id ? (
+              <div className="mt-4 space-y-3 border-t border-border/70 pt-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor={`provider-url-${provider.id}`}>API base URL</Label>
+                  <Input
+                    id={`provider-url-${provider.id}`}
+                    type="url"
+                    value={providerUrl}
+                    onChange={(event) => setProviderUrl(event.target.value)}
+                    className="font-mono text-xs"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor={`provider-key-${provider.id}`}>Provider API key</Label>
+                  <Input
+                    id={`provider-key-${provider.id}`}
+                    type="password"
+                    autoComplete="off"
+                    value={providerKey}
+                    onChange={(event) => setProviderKey(event.target.value)}
+                    placeholder="Paste provider key"
+                    className="font-mono"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    disabled={configureMutation.isPending || providerKey.trim().length < 8}
+                    onClick={() => configureMutation.mutate()}
+                  >
+                    {configureMutation.isPending ? (
+                      <Loader2 className="mr-1 size-3.5 animate-spin" />
+                    ) : (
+                      <KeyRound className="mr-1 size-3.5" />
+                    )}
+                    Save provider
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setActiveProvider(null)}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+          </Card>
         ))}
       </div>
       <p className="mt-3 text-xs text-muted-foreground">
-        Live upstream: OpenRouter (LiteLLM-compatible env on Cloudflare Pages). Optional second
-        LiteLLM proxy host can be added later without changing client base URLs.
+        Provider keys are never returned to the browser after saving. Clients continue using only
+        their scoped Open‑Connect key and the shared `/v1` base URL.
       </p>
 
       <div className="mt-12 flex flex-wrap gap-2">
