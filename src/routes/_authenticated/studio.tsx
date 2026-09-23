@@ -1,15 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import {
-  Bot,
-  Boxes,
-  Building2,
-  FileCode,
-  MessageSquareText,
-  Plug,
-  Puzzle,
-  Sparkles,
-  Wrench,
-} from "lucide-react";
+import { Bot, Boxes, Building2, FileCode, MessageSquareText, Puzzle, Wrench } from "lucide-react";
 import { ResourceLibraryCard } from "@/components/resource-library-card";
 import { useRoles } from "@/hooks/use-roles";
 import { roleLabel } from "@/lib/rbac";
@@ -35,9 +25,9 @@ const createActions = [
   {
     icon: Bot,
     title: "AI Agent",
-    body: "Register an MCP agent and mint a scoped oc_live_ key.",
+    body: "Upload an AI agent package and add it to one or more projects.",
     to: "/agents" as const,
-    cta: "Connect agent",
+    cta: "Upload agent",
   },
   {
     icon: Boxes,
@@ -60,24 +50,8 @@ const createActions = [
   {
     icon: FileCode,
     title: "Custom MCP",
-    body: "Publish an MCP server package or connect an external MCP URL.",
-    to: "/agents" as const,
-    cta: "MCP URL",
+    body: "Upload an MCP package. Configure external endpoints in Integrations.",
     type: "mcp",
-  },
-  {
-    icon: Plug,
-    title: "Connection / connector",
-    body: "Link GitHub, Slack, Drive, Cloudflare, Supabase, and more.",
-    to: "/connections" as const,
-    cta: "Connect apps",
-  },
-  {
-    icon: Sparkles,
-    title: "Model providers",
-    body: "Use OpenAI-compatible /v1 with OpenRouter and aliases.",
-    to: "/models" as const,
-    cta: "Models gateway",
   },
   {
     icon: Wrench,
@@ -123,7 +97,7 @@ function StudioPage() {
         </Button>
       </div>
 
-      <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {createActions.map((item) => (
           <Card key={item.title} className="shadow-panel">
             <CardHeader className="p-4">

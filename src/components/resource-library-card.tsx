@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AddToProjectButton } from "@/components/add-to-project";
 
 const TYPES = ["skill", "mcp", "tool", "plugin", "agent", "prompt", "guide"] as const;
 const BUCKET = "resource-packages";
@@ -40,7 +41,19 @@ async function detectFromFile(file: File) {
 }
 
 /** Upload / manage packages — bulk auto-detect into catalog types. */
-export function ResourceLibraryCard() {
+export function ResourceLibraryCard({
+  defaultType = "skill",
+  allowedTypes = TYPES,
+  title = "Package library",
+  cardDescription = "Upload .zip / .md / manifests — auto-detect skill · MCP · plugin · agent · prompt and publish to the catalog. Select multiple files for bulk upload.",
+  showProjectAssignment = false,
+}: {
+  defaultType?: (typeof TYPES)[number];
+  allowedTypes?: readonly (typeof TYPES)[number][];
+  title?: string;
+  cardDescription?: string;
+  showProjectAssignment?: boolean;
+}) {
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const listFn = useServerFn(listMyResources);
@@ -52,7 +65,7 @@ export function ResourceLibraryCard() {
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [description, setDescription] = useState("");
-  const [resourceType, setResourceType] = useState<string>("skill");
+  const [resourceType, setResourceType] = useState<string>(defaultType);
   const [signals, setSignals] = useState<string[]>([]);
   const [confidence, setConfidence] = useState<string>("");
   const [busy, setBusy] = useState(false);
@@ -78,7 +91,11 @@ export function ResourceLibraryCard() {
     setName(meta.name);
     setSlug(meta.slug);
     setDescription(meta.description);
-    setResourceType(meta.resource_type);
+    setResourceType(
+      allowedTypes.includes(meta.resource_type as (typeof TYPES)[number])
+        ? meta.resource_type
+        : defaultType,
+    );
     setSignals(meta.signals);
     setConfidence(meta.confidence);
   }
@@ -88,7 +105,13 @@ export function ResourceLibraryCard() {
     override?: { name: string; slug: string; description: string; resource_type: string },
   ) {
     if (fileObj.size > MAX_BYTES) throw new Error(`${fileObj.name} exceeds 50MB`);
-    const meta = override ?? (await detectFromFile(fileObj));
+    const detected = override ?? (await detectFromFile(fileObj));
+    const meta = {
+      ...detected,
+      resource_type: allowedTypes.includes(detected.resource_type as (typeof TYPES)[number])
+        ? detected.resource_type
+        : defaultType,
+    };
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -193,14 +216,15 @@ export function ResourceLibraryCard() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Delete failed"),
   });
 
+  const visibleResources = (mine.data ?? []).filter((resource) =>
+    allowedTypes.includes(resource.resource_type as (typeof TYPES)[number]),
+  );
+
   return (
     <Card className="shadow-panel" id="upload">
       <CardHeader>
-        <CardTitle className="text-base">Package library</CardTitle>
-        <CardDescription>
-          Upload .zip / .md / manifests — auto-detect skill · MCP · plugin · agent · prompt and
-          publish to the catalog. Select multiple files for bulk upload.
-        </CardDescription>
+        <CardTitle className="text-base">{title}</CardTitle>
+        <CardDescription>{cardDescription}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
@@ -241,7 +265,7 @@ export function ResourceLibraryCard() {
               value={resourceType}
               onChange={(e) => setResourceType(e.target.value)}
             >
-              {TYPES.map((t) => (
+              {allowedTypes.map((t) => (
                 <option key={t} value={t}>
                   {t}
                 </option>
@@ -279,10 +303,10 @@ export function ResourceLibraryCard() {
         <div className="space-y-2">
           <h3 className="text-sm font-medium text-muted-foreground">Your packages</h3>
           <ul className="space-y-2">
-            {(mine.data ?? []).length === 0 ? (
+            {visibleResources.length === 0 ? (
               <li className="text-sm text-muted-foreground">No uploads yet.</li>
             ) : (
-              mine.data?.map((r) => (
+              visibleResources.map((r) => (
                 <li
                   key={r.id}
                   className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-3 py-2"
@@ -300,6 +324,7 @@ export function ResourceLibraryCard() {
                     </p>
                   </div>
                   <div className="flex gap-1">
+                    {showProjectAssignment ? <AddToProjectButton resourceId={r.id} /> : null}
                     {r.package_path ? (
                       <Button
                         size="sm"
