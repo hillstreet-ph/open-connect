@@ -37,48 +37,56 @@ const clients = [
     name: "Grok / xAI",
     body: "Primary client. /v1 models + MCP tools, browser skills, MultiOn autonomy.",
     endpoints: ["/v1", "/mcp", "oc_live_ key"],
+    to: "/models" as const,
   },
   {
     provider: "chatgpt",
     name: "ChatGPT · Custom GPTs",
     body: "Plugins / Actions / MCP via OAuth PKCE S256 and scoped API key.",
     endpoints: ["/oauth", "/v1", "/mcp"],
+    to: "/api-keys" as const,
   },
   {
     provider: "claude",
     name: "Claude / Anthropic",
     body: "Claude Desktop & API clients — MCP URL + Bearer key for skills & tools.",
     endpoints: ["/mcp", "/v1"],
+    to: "/api-keys" as const,
   },
   {
     provider: "openwebui",
     name: "Open WebUI",
     body: "Rebrand path: set OpenAI base to open-connect.site/v1 + oc_live_ key.",
     endpoints: ["OPENAI_API_BASE=/v1", "OPENAI_API_KEY=oc_live_…"],
+    to: "/models" as const,
   },
   {
     provider: "hermes",
     name: "Hermes Agent",
     body: "Agent runtime with MCP tools from the Open-Connect catalog.",
     endpoints: ["https://open-connect.site/mcp"],
+    to: "/api-keys" as const,
   },
   {
     provider: "mistral",
     name: "Mistral / others",
     body: "Any OpenAI-compatible chat (Mistral, Groq, Ollama frontends) via /v1.",
     endpoints: ["Base URL · /v1", "Bearer oc_live_…"],
+    to: "/models" as const,
   },
   {
     provider: "cursor",
     name: "Cursor · IDEs",
     body: "MCP-capable IDEs: one URL, one key, tools/list from marketplace.",
     endpoints: ["MCP · /mcp"],
+    to: "/api-keys" as const,
   },
   {
     provider: "telegram",
     name: "Telegram",
     body: "Connect Telegram bots/channels as app connections for agent messaging.",
     endpoints: ["/connections", "capability grants"],
+    to: "/connections" as const,
   },
 ];
 
@@ -87,21 +95,25 @@ const credentials = [
     provider: "pipedream",
     name: "Pipedream",
     body: "Workflow automation connectors — grant via Connections, secrets server-side.",
+    to: "/connections" as const,
   },
   {
     provider: "composio",
     name: "Composio",
     body: "Toolkits & auth for 100s of apps — use with agents through Open-Connect.",
+    to: "/connections" as const,
   },
   {
     provider: "onepassword",
     name: "1Password",
     body: "Credential vault pattern — store references in Secrets, never in client prompts.",
+    to: "/secrets" as const,
   },
   {
     provider: "litellm",
     name: "LiteLLM · OpenRouter",
     body: "Multi-provider model router behind /v1 — OpenAI-compatible aliases.",
+    to: "/models" as const,
   },
 ];
 
@@ -176,9 +188,6 @@ function IntegrationsPage() {
               <Link to="/connections">Connectors</Link>
             </Button>
             <Button asChild variant="outline">
-              <Link to="/resources">Marketplace</Link>
-            </Button>
-            <Button asChild variant="outline">
               <Link to="/secrets">Secrets</Link>
             </Button>
           </>
@@ -220,6 +229,9 @@ function IntegrationsPage() {
               {c.endpoints.map((e) => (
                 <p key={e}>{e}</p>
               ))}
+              <Button asChild size="sm" variant="outline" className="mt-3 w-full font-sans">
+                <Link to={c.to}>Configure</Link>
+              </Button>
             </CardContent>
           </Card>
         ))}
@@ -237,6 +249,11 @@ function IntegrationsPage() {
               <CardTitle className="mt-3 text-sm">{c.name}</CardTitle>
               <CardDescription className="text-xs">{c.body}</CardDescription>
             </CardHeader>
+            <CardContent className="px-4 pb-4">
+              <Button asChild size="sm" variant="outline" className="w-full">
+                <Link to={c.to}>Configure</Link>
+              </Button>
+            </CardContent>
           </Card>
         ))}
       </div>

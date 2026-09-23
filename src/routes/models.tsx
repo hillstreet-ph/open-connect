@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, KeyRound, List } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
+import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,6 +45,7 @@ const aliases = [
 ];
 
 function ModelsPage() {
+  const { user } = useAuth();
   return (
     <div className="mx-auto max-w-6xl px-4 py-16">
       <Badge variant="outline" className="mb-3 border-primary/40 text-primary">
@@ -125,9 +127,15 @@ function ModelsPage() {
 
       <div className="mt-12 flex flex-wrap gap-2">
         <Button asChild>
-          <Link to="/auth" search={{ mode: "signup" }}>
-            Get a model key <ArrowRight className="ml-1 size-4" />
-          </Link>
+          {user ? (
+            <Link to="/api-keys">
+              Get a model key <ArrowRight className="ml-1 size-4" />
+            </Link>
+          ) : (
+            <Link to="/auth" search={{ mode: "signup" }}>
+              Get a model key <ArrowRight className="ml-1 size-4" />
+            </Link>
+          )}
         </Button>
         <Button asChild variant="outline">
           <Link to="/api-keys">
