@@ -130,6 +130,37 @@ export const registerResourcePackage = createServerFn({ method: "POST" })
       .single();
 
     if (error) throw new Error(error.message);
+    const librarySlug = "open-connect-personal-library";
+    const { data: existingLibrary, error: libraryReadError } = await context.supabase
+      .from("toolkits")
+      .select("id")
+      .eq("user_id", context.userId)
+      .eq("slug", librarySlug)
+      .maybeSingle();
+    if (libraryReadError) throw new Error(libraryReadError.message);
+    let library = existingLibrary;
+    if (!library) {
+      const created = await context.supabase
+        .from("toolkits")
+        .insert({
+          user_id: context.userId,
+          slug: librarySlug,
+          name: "Personal Library",
+          description: "Resources added from Studio and Marketplace.",
+          published: false,
+        })
+        .select("id")
+        .single();
+      if (created.error) throw new Error(created.error.message);
+      library = created.data;
+    }
+    const { error: libraryError } = await context.supabase
+      .from("toolkit_items")
+      .upsert(
+        { toolkit_id: library.id, resource_id: inserted.id, position: 0 },
+        { onConflict: "toolkit_id,resource_id" },
+      );
+    if (libraryError) throw new Error(libraryError.message);
     return inserted;
   });
 

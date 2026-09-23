@@ -11,6 +11,7 @@ import {
   LockKeyhole,
   Plug,
   Sparkles,
+  ScrollText,
   Workflow,
   Wrench,
 } from "lucide-react";
@@ -63,6 +64,8 @@ const WORK: Item[] = [
 const BUILD: Item[] = [
   { to: "/studio", label: "Studio", icon: Sparkles },
   { to: "/agents", label: "Agents", icon: Bot },
+  { to: "/skills", label: "Skills", icon: Wrench },
+  { to: "/prompts", label: "Prompts", icon: ScrollText },
   { to: "/memory", label: "Memory", icon: Brain },
   { to: "/knowledge", label: "Knowledge", icon: BookOpen },
   { capability: "manage_toolkits", to: "/toolkits", label: "Toolkits", icon: Wrench },

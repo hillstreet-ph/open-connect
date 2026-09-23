@@ -19,6 +19,7 @@ export const listToolkits = createServerFn({ method: "GET" })
       .select(
         "id, slug, name, description, published, created_at, toolkit_items(id, position, resources(id, name, resource_type))",
       )
+      .neq("slug", "open-connect-personal-library")
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return data ?? [];
