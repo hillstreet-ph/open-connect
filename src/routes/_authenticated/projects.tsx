@@ -169,7 +169,9 @@ function ProjectsIndex() {
               placeholder="New workspace"
             />
             <Button
-              disabled={!organization.data?.id || !workspaceName.trim() || workspaceMutation.isPending}
+              disabled={
+                !organization.data?.id || !workspaceName.trim() || workspaceMutation.isPending
+              }
               onClick={() => workspaceMutation.mutate()}
             >
               {workspaceMutation.isPending ? (
