@@ -12,13 +12,7 @@ export const SECRET_SCOPES = [
 
 export type SecretScope = (typeof SECRET_SCOPES)[number];
 export type SecretType =
-  | "api_key"
-  | "oauth_token"
-  | "mcp_url"
-  | "bot_token"
-  | "password"
-  | "totp"
-  | "other";
+  "api_key" | "oauth_token" | "mcp_url" | "bot_token" | "password" | "totp" | "other";
 
 export const listSecrets = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
