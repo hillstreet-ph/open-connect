@@ -27,6 +27,20 @@ test("normalizes a custom HTTPS MCP connection", () => {
   assert.equal(setup.apiKey, "secret-token");
 });
 
+test("allows a public custom MCP endpoint without a stored credential", () => {
+  const setup = normalizeConnectionSetup(
+    {
+      provider: "custom_mcp",
+      endpoint_url: "https://mcp.example.com/mcp",
+      api_key: "",
+      auth_type: "none",
+    },
+    app("custom_mcp"),
+  );
+  assert.equal(setup.authType, "none");
+  assert.equal(setup.apiKey, "");
+});
+
 test("rejects an insecure remote MCP endpoint", () => {
   assert.throws(
     () =>
@@ -39,6 +53,34 @@ test("rejects an insecure remote MCP endpoint", () => {
         app("custom_mcp"),
       ),
     /must use HTTPS/,
+  );
+});
+
+test("rejects private-network MCP endpoints", () => {
+  assert.throws(
+    () =>
+      normalizeConnectionSetup(
+        {
+          provider: "custom_mcp",
+          endpoint_url: "https://192.168.1.20/mcp",
+          api_key: "secret-token",
+        },
+        app("custom_mcp"),
+      ),
+    /private network/,
+  );
+  assert.throws(
+    () =>
+      normalizeConnectionSetup(
+        {
+          provider: "custom_mcp",
+          endpoint_url: "https://[::1]/mcp",
+          api_key: "",
+          auth_type: "none",
+        },
+        app("custom_mcp"),
+      ),
+    /private network/,
   );
 });
 
