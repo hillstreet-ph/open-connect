@@ -24,11 +24,24 @@ jobs:
             exit 1
           fi
           response_file=$(mktemp)
+          trap 'rm -f "$response_file"' EXIT
           code=$(curl --silent --show-error --output "$response_file" --write-out '%{http_code}' \
             --request POST \
             --header "Authorization: Bearer ${DATABRICKS_SYNC_SECRET}" \
             --header "Content-Type: application/json" \
             --data '{"bootstrap":true}' \
             https://open-connect.site/api/v1/databricks)
-          test "$code" = "200"
-          node -e 'const fs=require("fs");const p=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(!p.ok)process.exit(1);console.log(JSON.stringify({ok:p.ok,memoryRecords:p.memoryRecords,knowledgeItems:p.knowledgeItems,resources:p.resources}))' "$response_file"
+          if [ "$code" != "200" ]; then
+            case "$code" in
+              401|403) failure_class="authorization_or_runtime_secret_mismatch" ;;
+              502) failure_class="source_export_or_upstream_failure" ;;
+              503) failure_class="databricks_runtime_not_configured" ;;
+              *) failure_class="unexpected_endpoint_failure" ;;
+            esac
+            echo "::error title=Databricks sync HTTP failure::HTTP ${code}; class=${failure_class}. Response body intentionally suppressed."
+            exit 1
+          fi
+          if ! node -e 'const fs=require("fs");const p=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));if(!p.ok)process.exit(1);console.log(JSON.stringify({ok:p.ok,memoryRecords:p.memoryRecords,knowledgeItems:p.knowledgeItems,resources:p.resources}))' "$response_file"; then
+            echo "::error title=Databricks sync invalid success envelope::HTTP 200 did not contain ok=true. Response body intentionally suppressed."
+            exit 1
+          fi
