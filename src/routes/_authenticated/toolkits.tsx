@@ -5,7 +5,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { Check, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { createToolkit, deleteToolkit, listToolkits } from "@/lib/toolkits.functions";
-import { EXPLORE_TABS, useMarketplace } from "@/routes/explore";
+import { listLibraryResources } from "@/lib/library.functions";
+import { EXPLORE_TABS } from "@/routes/explore";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -36,6 +37,7 @@ export const Route = createFileRoute("/_authenticated/toolkits")({
 function ToolkitsPage() {
   const queryClient = useQueryClient();
   const list = useServerFn(listToolkits);
+  const listLibrary = useServerFn(listLibraryResources);
   const create = useServerFn(createToolkit);
   const remove = useServerFn(deleteToolkit);
 
@@ -45,7 +47,10 @@ function ToolkitsPage() {
   const [selected, setSelected] = useState<string[]>([]);
   const [filter, setFilter] = useState<string>("all");
 
-  const catalog = useMarketplace();
+  const library = useQuery({
+    queryKey: ["resource-library", "all"],
+    queryFn: () => listLibrary({ data: {} }),
+  });
   const toolkits = useQuery({ queryKey: ["toolkits"], queryFn: () => list({}) });
 
   const createMutation = useMutation({
@@ -70,16 +75,17 @@ function ToolkitsPage() {
     },
   });
 
-  const items = (catalog.data ?? []).filter(
-    (item) => filter === "all" || item.resource_type === filter,
-  );
+  const items = (library.data ?? [])
+    .flatMap((row) => (row.resources ? [row.resources] : []))
+    .filter((item) => filter === "all" || item.resource_type === filter);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-14">
       <h1 className="text-3xl font-semibold">Toolkits</h1>
       <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
         A Toolkit is a first-class bundle of capabilities — skills, apps, models, MCP servers,
-        tools, agents and prompts — that an agent can attach with a single Open-Connect key.
+        tools, agents and prompts — selected from your personal library and attached with a single
+        Open-Connect key.
       </p>
 
       <div className="mt-10 grid gap-6 lg:grid-cols-[1.4fr_1fr]">

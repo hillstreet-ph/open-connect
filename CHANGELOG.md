@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Internal Toolkit creation now selects only resources already added to the signed-in user's
+  personal library; Marketplace remains the separate public resource catalog.
+- Added navigation regression coverage that prevents Connections, Integrations, Credentials, and
+  AI Gateway from routing into Marketplace.
 - Connections now support Vault-backed API/token setup for Docker Hub, Cloudflare, Supabase,
   Sentry, Zeabur, Databricks, and other token-based providers; OAuth-capable apps such as GitHub,
   Notion, and Airtable retain their authorization-request flow.

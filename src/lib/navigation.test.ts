@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readdirSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { appCategories, flatAppNav, flatPublicNav, publicCategories } from "./nav.ts";
@@ -43,4 +43,29 @@ test("category navigation has no duplicate destinations", () => {
     const destinations = categories.flatMap((category) => category.items.map((item) => item.to));
     assert.equal(new Set(destinations).size, destinations.length);
   }
+});
+
+test("connection surfaces remain internal and separate from Marketplace", () => {
+  const sourceRoot = path.resolve(process.cwd(), "src");
+  const sidebar = readFileSync(path.join(sourceRoot, "components/app-sidebar.tsx"), "utf8");
+  const connectGroup = sidebar.match(/const CONNECT: Item\[\] = \[([\s\S]*?)\];/)?.[1] ?? "";
+
+  for (const route of ["/connections", "/integrations", "/secrets", "/models"]) {
+    assert.match(connectGroup, new RegExp(`to: ["']${route}["']`));
+  }
+  assert.doesNotMatch(connectGroup, /\/resources/);
+
+  for (const routeFile of ["connections.tsx", "integrations.tsx", "models.tsx"]) {
+    const source = readFileSync(path.join(sourceRoot, "routes", routeFile), "utf8");
+    assert.doesNotMatch(source, /(?:to|href)=["']\/resources["']/);
+  }
+});
+
+test("Toolkit creation reads from the personal library, not the Marketplace catalog", () => {
+  const source = readFileSync(
+    path.resolve(process.cwd(), "src/routes/_authenticated/toolkits.tsx"),
+    "utf8",
+  );
+  assert.match(source, /listLibraryResources/);
+  assert.doesNotMatch(source, /useMarketplace/);
 });
