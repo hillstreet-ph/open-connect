@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Credentials now support password-manager records with email, username, website, notes, an
+  encrypted password/key, and a separately encrypted optional TOTP seed. Owners can explicitly
+  reveal/copy their own value or current six-digit OTP; revealed values auto-clear after 30 seconds.
 - Internal Toolkit creation now selects only resources already added to the signed-in user's
   personal library; Marketplace remains the separate public resource catalog.
 - Added navigation regression coverage that prevents Connections, Integrations, Credentials, and
