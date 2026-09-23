@@ -475,7 +475,18 @@ export type Database = {
     Enums: {
       app_role: "user" | "developer" | "publisher" | "admin" | "owner";
       resource_type:
-        "skill" | "mcp" | "tool" | "plugin" | "agent" | "prompt" | "guide" | "app" | "model";
+        | "skill"
+        | "mcp"
+        | "tool"
+        | "plugin"
+        | "agent"
+        | "prompt"
+        | "guide"
+        | "app"
+        | "model"
+        | "toolkit"
+        | "memory"
+        | "knowledge";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -598,7 +609,20 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["user", "developer", "publisher", "admin", "owner"],
-      resource_type: ["skill", "mcp", "tool", "plugin", "agent", "prompt", "guide", "app", "model"],
+      resource_type: [
+        "skill",
+        "mcp",
+        "tool",
+        "plugin",
+        "agent",
+        "prompt",
+        "guide",
+        "app",
+        "model",
+        "toolkit",
+        "memory",
+        "knowledge",
+      ],
     },
   },
 } as const;

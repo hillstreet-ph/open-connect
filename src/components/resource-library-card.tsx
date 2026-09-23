@@ -18,7 +18,18 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AddToProjectButton } from "@/components/add-to-project";
 
-const TYPES = ["skill", "mcp", "tool", "plugin", "agent", "prompt", "guide"] as const;
+const TYPES = [
+  "skill",
+  "mcp",
+  "tool",
+  "plugin",
+  "agent",
+  "prompt",
+  "guide",
+  "toolkit",
+  "memory",
+  "knowledge",
+] as const;
 const BUCKET = "resource-packages";
 const MAX_BYTES = 50 * 1024 * 1024;
 

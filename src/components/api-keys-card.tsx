@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ACCESS_PROFILES, type AccessProfile } from "@/lib/access-profiles";
+import { listProjects } from "@/lib/orgs.functions";
 
 const PROFILE_LABELS: Record<AccessProfile, string> = {
   read_only: "Read only",
@@ -24,17 +25,22 @@ export function ApiKeysCard() {
   const list = useServerFn(listApiKeys);
   const create = useServerFn(createApiKey);
   const revoke = useServerFn(revokeApiKey);
+  const listProj = useServerFn(listProjects);
   const [name, setName] = useState("");
   const [profile, setProfile] = useState<AccessProfile>("developer");
+  const [projectId, setProjectId] = useState("");
   const [freshKey, setFreshKey] = useState<string | null>(null);
 
   const keys = useQuery({ queryKey: ["api-keys"], queryFn: () => list({}) });
+  const projects = useQuery({ queryKey: ["projects"], queryFn: () => listProj({}) });
 
   const createMutation = useMutation({
-    mutationFn: (keyName: string) => create({ data: { name: keyName, profile } }),
+    mutationFn: (keyName: string) =>
+      create({ data: { name: keyName, profile, projectId: projectId || undefined } }),
     onSuccess: (result) => {
       setFreshKey(result.key);
       setName("");
+      setProjectId("");
       void queryClient.invalidateQueries({ queryKey: ["api-keys"] });
       toast.success("Key created — copy it now, it won't be shown again.");
     },
@@ -65,7 +71,7 @@ export function ApiKeysCard() {
         </CardHeader>
         <CardContent className="space-y-4">
           <form
-            className="grid gap-2 sm:grid-cols-[1fr_180px_auto]"
+            className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[1fr_170px_220px_auto]"
             onSubmit={(event) => {
               event.preventDefault();
               createMutation.mutate(name);
@@ -91,6 +97,19 @@ export function ApiKeysCard() {
                   </option>
                 ))}
             </select>
+            <select
+              aria-label="Project scope"
+              className="flex h-10 rounded-md border border-input bg-background px-3 text-sm"
+              value={projectId}
+              onChange={(event) => setProjectId(event.target.value)}
+            >
+              <option value="">All accessible projects</option>
+              {(projects.data ?? []).map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.name}
+                </option>
+              ))}
+            </select>
             <Button type="submit" disabled={createMutation.isPending}>
               {createMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : null}
               Create
@@ -98,7 +117,7 @@ export function ApiKeysCard() {
           </form>
           <p className="text-xs text-muted-foreground">
             {profile === "administrator"
-              ? "All supported read, write, invoke, agent, model, and vault-metadata scopes."
+              ? "Full resource, tool, action, model, agent, connection, and control access."
               : `${ACCESS_PROFILES[profile as Exclude<AccessProfile, "custom">]?.length ?? 0} least-privilege scopes selected.`}{" "}
             Secret values remain non-exportable; agents receive opaque credential references.
           </p>
@@ -148,6 +167,11 @@ export function ApiKeysCard() {
                       {PROFILE_LABELS[(key.access_profile as AccessProfile) ?? "custom"] ??
                         "Legacy"}
                     </Badge>
+                    {key.project_id ? (
+                      <Badge variant="outline" className="ml-2 text-[10px]">
+                        Project scoped
+                      </Badge>
+                    ) : null}
                   </span>
                   {key.revoked_at ? (
                     <Badge variant="outline" className="text-muted-foreground">

@@ -217,6 +217,13 @@ const CATALOG = [
     oauth: true,
   },
   {
+    provider: "proton_pass",
+    display_name: "Proton Pass",
+    category: "Security",
+    scopes: ["vaults:read", "items:read"],
+    oauth: false,
+  },
+  {
     provider: "google_drive",
     display_name: "Google Drive",
     category: "Productivity",
