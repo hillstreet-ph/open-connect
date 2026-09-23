@@ -11,7 +11,14 @@ export const SECRET_SCOPES = [
 ] as const;
 
 export type SecretScope = (typeof SECRET_SCOPES)[number];
-export type SecretType = "api_key" | "oauth_token" | "mcp_url" | "bot_token" | "password" | "other";
+export type SecretType =
+  | "api_key"
+  | "oauth_token"
+  | "mcp_url"
+  | "bot_token"
+  | "password"
+  | "totp"
+  | "other";
 
 export const listSecrets = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -60,4 +67,16 @@ export const deleteSecret = createServerFn({ method: "POST" })
     });
     if (error) throw new Error(error.message);
     return { ok: deleted };
+  });
+
+export const getTotpCode = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { id: string }) => ({ id: (input?.id ?? "").trim() }))
+  .handler(async ({ data, context }) => {
+    if (!data.id) throw new Error("id required");
+    const { data: result, error } = await context.supabase.rpc("get_credential_totp_code", {
+      p_id: data.id,
+    });
+    if (error) throw new Error(error.message);
+    return result as { code: string; seconds_remaining: number };
   });
