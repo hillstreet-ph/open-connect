@@ -25,13 +25,28 @@ export const listSecrets = createServerFn({ method: "GET" })
 export const createSecret = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator(
-    (input: { name: string; secret_type?: string; scopes?: string[]; secret_value: string }) => ({
+    (input: {
+      name: string;
+      secret_type?: string;
+      scopes?: string[];
+      secret_value: string;
+      email_address?: string;
+      username?: string;
+      website?: string;
+      notes?: string;
+      totp_secret?: string;
+    }) => ({
       name: (input?.name ?? "").trim().slice(0, 120),
       secret_type: (input?.secret_type ?? "api_key") as SecretType,
       scopes: Array.isArray(input?.scopes)
         ? input.scopes.filter((s) => SECRET_SCOPES.includes(s as SecretScope))
         : [],
       secret_value: (input?.secret_value ?? "").trim(),
+      email_address: (input?.email_address ?? "").trim().slice(0, 320),
+      username: (input?.username ?? "").trim().slice(0, 320),
+      website: (input?.website ?? "").trim().slice(0, 2048),
+      notes: (input?.notes ?? "").slice(0, 4000),
+      totp_secret: (input?.totp_secret ?? "").trim(),
     }),
   )
   .handler(async ({ data, context }) => {
@@ -40,15 +55,32 @@ export const createSecret = createServerFn({ method: "POST" })
       throw new Error("Secret value required (min 4 characters)");
     }
 
-    const { data: row, error } = await context.supabase.rpc("create_credential_secret", {
+    const { data: row, error } = await context.supabase.rpc("create_credential_item", {
       p_name: data.name,
       p_secret_type: data.secret_type,
       p_scopes: data.scopes,
       p_secret_value: data.secret_value,
+      p_email_address: data.email_address,
+      p_username: data.username,
+      p_website: data.website,
+      p_notes: data.notes,
+      p_totp_secret: data.totp_secret,
     });
 
     if (error) throw new Error(error.message);
     return row;
+  });
+
+export const revealSecret = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { id: string }) => ({ id: (input?.id ?? "").trim() }))
+  .handler(async ({ data, context }) => {
+    if (!data.id) throw new Error("id required");
+    const { data: result, error } = await context.supabase.rpc("reveal_credential_secret", {
+      p_id: data.id,
+    });
+    if (error) throw new Error(error.message);
+    return result as { value: string };
   });
 
 export const deleteSecret = createServerFn({ method: "POST" })
