@@ -1,6 +1,18 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Bot, Boxes, Building2, FileCode, MessageSquareText, Puzzle, Wrench } from "lucide-react";
+import {
+  Bot,
+  Boxes,
+  Brain,
+  Building2,
+  FileCode,
+  LibraryBig,
+  MessageSquareText,
+  Puzzle,
+  Wrench,
+} from "lucide-react";
 import { ResourceLibraryCard } from "@/components/resource-library-card";
+import { ToolkitCreator } from "@/components/toolkit-creator";
+import { MemoryKnowledgePage } from "./memory";
 import { useRoles } from "@/hooks/use-roles";
 import { roleLabel } from "@/lib/rbac";
 import { Badge } from "@/components/ui/badge";
@@ -58,6 +70,27 @@ const createActions = [
     body: "Upload a tool definition package for agents.",
     type: "tool",
   },
+  {
+    icon: Brain,
+    title: "Memory",
+    body: "Create durable reusable memory, then share it with projects.",
+    type: "memory",
+    anchor: "memory-create",
+  },
+  {
+    icon: LibraryBig,
+    title: "Knowledge",
+    body: "Upload documents and create reusable project knowledge.",
+    type: "knowledge",
+    anchor: "knowledge-create",
+  },
+  {
+    icon: Boxes,
+    title: "Toolkit",
+    body: "Bundle marketplace capabilities and publish a reusable Toolkit.",
+    type: "toolkit",
+    anchor: "toolkit-create",
+  },
 ];
 
 function StudioPage() {
@@ -107,15 +140,11 @@ function StudioPage() {
               <CardDescription className="text-xs">{item.body}</CardDescription>
             </CardHeader>
             <CardContent className="px-4 pb-4">
-              {item.to ? (
-                <Button asChild size="sm" variant="outline" className="w-full">
-                  <Link to={item.to}>{item.cta ?? "Open"}</Link>
-                </Button>
-              ) : (
-                <Button asChild size="sm" variant="outline" className="w-full">
-                  <a href="#upload">{item.cta ?? "Upload below"}</a>
-                </Button>
-              )}
+              <Button asChild size="sm" variant="outline" className="w-full">
+                <a href={`#${"anchor" in item ? item.anchor : "upload"}`}>
+                  {"anchor" in item ? "Create below" : "Upload below"}
+                </a>
+              </Button>
             </CardContent>
           </Card>
         ))}
@@ -141,6 +170,16 @@ function StudioPage() {
           Your role cannot upload packages. Contact an admin to raise permissions.
         </p>
       )}
+
+      <section id="memory-create" className="mt-12 scroll-mt-6">
+        <MemoryKnowledgePage defaultSection="memory" studioMode />
+      </section>
+      <section id="knowledge-create" className="mt-12 scroll-mt-6">
+        <MemoryKnowledgePage defaultSection="knowledge" studioMode />
+      </section>
+      <section id="toolkit-create" className="mt-12 scroll-mt-6">
+        <ToolkitCreator />
+      </section>
 
       <Card className="mt-10 bg-pillar">
         <CardHeader className="p-5">

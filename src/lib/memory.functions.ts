@@ -77,7 +77,7 @@ export const listMemories = createServerFn({ method: "GET" })
       .order("importance", { ascending: false })
       .order("updated_at", { ascending: false })
       .limit(200);
-    if (data.projectId) query = query.eq("project_id", data.projectId);
+    query = data.projectId ? query.eq("project_id", data.projectId) : query.is("project_id", null);
     if (data.memoryType) query = query.eq("memory_type", data.memoryType);
     const { data: rows, error } = await query;
     if (error) throw new Error(error.message);
@@ -160,7 +160,7 @@ export const removeDuplicateMemories = createServerFn({ method: "POST" })
       .select("id, project_id, title, content")
       .order("updated_at", { ascending: false })
       .limit(1000);
-    if (data.projectId) query = query.eq("project_id", data.projectId);
+    query = data.projectId ? query.eq("project_id", data.projectId) : query.is("project_id", null);
     const { data: rows, error } = await query;
     if (error) throw new Error(error.message);
     const ids = duplicateIds(rows ?? []);
@@ -294,4 +294,94 @@ export const removeDuplicateKnowledge = createServerFn({ method: "POST" })
       .in("id", ids);
     if (archiveError) throw new Error(archiveError.message);
     return { removed: ids.length };
+  });
+
+export const listContextProjectAssignments = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { kind: "memory" | "knowledge"; id: string }) => ({
+    kind: input.kind,
+    id: input.id,
+  }))
+  .handler(async ({ data, context }) => {
+    const table = data.kind === "memory" ? "memory_records" : "knowledge_items";
+    const { data: rows, error } = await context.supabase
+      .from(table)
+      .select("project_id, metadata")
+      .not("project_id", "is", null);
+    if (error) throw new Error(error.message);
+    const matched = (rows ?? []).filter(
+      (row) =>
+        (row.metadata as { library_source_id?: string } | null)?.library_source_id === data.id,
+    );
+    const projectIds = matched.flatMap((row) => (row.project_id ? [row.project_id] : []));
+    if (!projectIds.length) return [];
+    const { data: projects, error: projectError } = await context.supabase
+      .from("projects")
+      .select("id, name")
+      .in("id", projectIds);
+    if (projectError) throw new Error(projectError.message);
+    const names = new Map((projects ?? []).map((project) => [project.id, project.name]));
+    return matched.map((row) => ({
+      projectId: row.project_id as string,
+      name: names.get(row.project_id as string) ?? "Project",
+    }));
+  });
+
+export const addContextToProject = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { kind: "memory" | "knowledge"; id: string; projectId: string }) => ({
+    kind: input.kind,
+    id: input.id,
+    projectId: input.projectId,
+  }))
+  .handler(async ({ data, context }) => {
+    if (!data.id || !data.projectId) throw new Error("Item and project are required");
+    if (data.kind === "memory") {
+      const source = await context.supabase
+        .from("memory_records")
+        .select("title, content, memory_type, importance, pinned, tags, expires_at, metadata")
+        .eq("id", data.id)
+        .single();
+      if (source.error) throw new Error(source.error.message);
+      const existing = await context.supabase
+        .from("memory_records")
+        .select("id")
+        .eq("project_id", data.projectId)
+        .contains("metadata", { library_source_id: data.id })
+        .maybeSingle();
+      if (existing.error) throw new Error(existing.error.message);
+      if (existing.data) return { duplicate: true };
+      const { error } = await context.supabase.from("memory_records").insert({
+        ...source.data,
+        user_id: context.userId,
+        project_id: data.projectId,
+        metadata: { ...(source.data.metadata as object), library_source_id: data.id },
+      });
+      if (error) throw new Error(error.message);
+    } else {
+      const source = await context.supabase
+        .from("knowledge_items")
+        .select("title, content, source_type, source_url, mime_type, tags, metadata")
+        .eq("id", data.id)
+        .single();
+      if (source.error) throw new Error(source.error.message);
+      const existing = await context.supabase
+        .from("knowledge_items")
+        .select("id")
+        .eq("project_id", data.projectId)
+        .contains("metadata", { library_source_id: data.id })
+        .neq("status", "archived")
+        .maybeSingle();
+      if (existing.error) throw new Error(existing.error.message);
+      if (existing.data) return { duplicate: true };
+      const { error } = await context.supabase.from("knowledge_items").insert({
+        ...source.data,
+        user_id: context.userId,
+        project_id: data.projectId,
+        status: "ready",
+        metadata: { ...(source.data.metadata as object), library_source_id: data.id },
+      });
+      if (error) throw new Error(error.message);
+    }
+    return { duplicate: false };
   });
