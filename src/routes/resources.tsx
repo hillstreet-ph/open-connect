@@ -40,6 +40,9 @@ const PACKAGE_TYPES = new Set([
   "prompt",
   "app",
   "model",
+  "toolkit",
+  "memory",
+  "knowledge",
 ]);
 
 function triggerBlobDownload(filename: string, content: string, mime: string) {

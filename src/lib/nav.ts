@@ -108,6 +108,9 @@ export const resourceCategories = [
   { value: "plugin", label: "Plugins" },
   { value: "agent", label: "Agents" },
   { value: "prompt", label: "Prompts" },
+  { value: "toolkit", label: "Toolkits" },
+  { value: "memory", label: "Memory" },
+  { value: "knowledge", label: "Knowledge" },
 ] as const;
 
 export const connectionCategories = [

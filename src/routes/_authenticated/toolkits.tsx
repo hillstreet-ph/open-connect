@@ -8,6 +8,7 @@ import { AddToolkitToProject } from "@/components/add-toolkit-to-project";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { InstalledResourceSection } from "@/components/installed-resource-section";
 
 export const Route = createFileRoute("/_authenticated/toolkits")({
   head: () => ({
@@ -52,6 +53,7 @@ function ToolkitsPage() {
           .
         </p>
       </div>
+      <InstalledResourceSection resourceType="toolkit" />
       <div className="grid gap-3 sm:grid-cols-2">
         {(toolkits.data ?? []).map((toolkit) => (
           <Card key={toolkit.id} className="shadow-panel">

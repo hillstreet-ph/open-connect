@@ -73,8 +73,10 @@ function ConnectionsPage() {
 
   const connectMutation = useMutation({
     mutationFn: (provider: string) => connectFn({ data: { provider } }),
-    onSuccess: () => {
-      toast.success("Connected");
+    onSuccess: (result) => {
+      toast.success(
+        result.status === "pending" ? "Authorization request created" : "Connection saved securely",
+      );
       void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Connect failed"),
@@ -137,7 +139,7 @@ function ConnectionsPage() {
       .map((c) => ({ category: c, apps: map.get(c)! }));
   }, [results]);
 
-  const connectedProviders = new Set((mine.data ?? []).map((c) => c.provider));
+  const connectionsByProvider = new Map((mine.data ?? []).map((item) => [item.provider, item]));
   const catOptions = ["All", ...connectionCategories];
 
   return (
@@ -213,7 +215,7 @@ function ConnectionsPage() {
             </h2>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {group.apps.map((app) => {
-                const connected = connectedProviders.has(app.provider);
+                const connection = connectionsByProvider.get(app.provider);
                 return (
                   <Card
                     key={app.provider}
@@ -230,9 +232,9 @@ function ConnectionsPage() {
                       <Button asChild size="sm" variant="outline" className="shrink-0">
                         <Link to="/auth">Sign in</Link>
                       </Button>
-                    ) : connected ? (
+                    ) : connection ? (
                       <Badge variant="secondary" className="shrink-0">
-                        Connected
+                        {connection.status === "connected" ? "Connected" : "Authorization pending"}
                       </Badge>
                     ) : (
                       <Button

@@ -1,5 +1,14 @@
 export type DetectedResourceType =
-  "skill" | "mcp" | "tool" | "plugin" | "agent" | "prompt" | "guide";
+  | "skill"
+  | "mcp"
+  | "tool"
+  | "plugin"
+  | "agent"
+  | "prompt"
+  | "guide"
+  | "toolkit"
+  | "memory"
+  | "knowledge";
 
 export type DetectResult = {
   resource_type: DetectedResourceType;

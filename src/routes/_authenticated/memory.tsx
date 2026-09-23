@@ -26,6 +26,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { AddContextToProject } from "@/components/add-context-to-project";
+import { InstalledResourceSection } from "@/components/installed-resource-section";
 
 export const Route = createFileRoute("/_authenticated/memory")({
   head: () => ({
@@ -307,6 +308,8 @@ export function MemoryKnowledgePage({
           </div>
         </div>
       )}
+
+      {!studioMode ? <InstalledResourceSection resourceType={defaultSection} /> : null}
 
       {defaultSection === "memory" ? (
         <div className="space-y-4">

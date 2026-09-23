@@ -35,6 +35,7 @@ const providers = [
   { id: "xai", name: "xAI / Grok", baseUrl: "https://api.x.ai/v1" },
   { id: "mistral", name: "Mistral", baseUrl: "https://api.mistral.ai/v1" },
   { id: "deepseek", name: "DeepSeek", baseUrl: "https://api.deepseek.com" },
+  { id: "litellm", name: "LiteLLM proxy", baseUrl: "https://litellm.example.com/v1" },
 ];
 
 const aliases = [

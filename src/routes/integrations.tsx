@@ -88,6 +88,13 @@ const clients = [
     endpoints: ["/connections", "capability grants"],
     to: "/connections" as const,
   },
+  {
+    provider: "manus",
+    name: "Manus AI · internal agents",
+    body: "Give autonomous and internal AI clients scoped access to projects, resources, and tools.",
+    endpoints: ["/mcp", "/v1", "oc_live_ key"],
+    to: "/api-keys" as const,
+  },
 ];
 
 const credentials = [
@@ -107,6 +114,12 @@ const credentials = [
     provider: "onepassword",
     name: "1Password",
     body: "Credential vault pattern — store references in Secrets, never in client prompts.",
+    to: "/secrets" as const,
+  },
+  {
+    provider: "proton_pass",
+    name: "Proton Pass",
+    body: "Password-manager integration pattern with opaque vault references and no prompt exposure.",
     to: "/secrets" as const,
   },
   {

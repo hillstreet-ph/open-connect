@@ -99,7 +99,18 @@ export const registerResourcePackage = createServerFn({ method: "POST" })
       slug: data.slug,
       description: data.description,
       resource_type: data.resource_type as
-        "skill" | "mcp" | "tool" | "plugin" | "agent" | "prompt" | "guide" | "app" | "model",
+        | "skill"
+        | "mcp"
+        | "tool"
+        | "plugin"
+        | "agent"
+        | "prompt"
+        | "guide"
+        | "app"
+        | "model"
+        | "toolkit"
+        | "memory"
+        | "knowledge",
       owner_id: context.userId,
       package_path: data.package_path,
       package_filename: data.package_filename,

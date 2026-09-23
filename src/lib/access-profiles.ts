@@ -10,6 +10,7 @@ export const AVAILABLE_KEY_SCOPES = [
   "tools:invoke",
   "secrets:read",
   "agents:invoke",
+  "control:write",
 ] as const;
 
 export type KeyScope = (typeof AVAILABLE_KEY_SCOPES)[number];

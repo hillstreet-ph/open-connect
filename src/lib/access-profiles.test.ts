@@ -4,6 +4,7 @@ import { AVAILABLE_KEY_SCOPES, scopesForProfile } from "./access-profiles.ts";
 
 test("administrator receives the complete supported surface", () => {
   assert.deepEqual(scopesForProfile("administrator"), [...AVAILABLE_KEY_SCOPES]);
+  assert.equal(scopesForProfile("administrator").includes("control:write"), true);
 });
 
 test("custom profiles reject unknown and duplicate scopes", () => {
