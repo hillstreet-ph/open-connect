@@ -1,20 +1,22 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { FolderKanban, Loader2, Plus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
-  createOrganization,
   createProject,
-  listOrganizations,
+  createWorkspace,
+  getCanonicalOrganization,
   listProjects,
+  listWorkspaces,
 } from "@/lib/orgs.functions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useWorkspaceContext } from "@/hooks/use-workspace-context";
 
 export const Route = createFileRoute("/_authenticated/projects")({
   head: () => ({
@@ -23,7 +25,7 @@ export const Route = createFileRoute("/_authenticated/projects")({
       {
         name: "description",
         content:
-          "Create organizations and projects — isolate agents, skills, plugins, OAuth, and vaults per workspace.",
+          "Create workspaces and projects — isolate agents, skills, plugins, OAuth, and vaults by business context.",
       },
       { name: "robots", content: "noindex" },
     ],
@@ -32,36 +34,68 @@ export const Route = createFileRoute("/_authenticated/projects")({
 });
 
 function ProjectsPage() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  if (pathname !== "/projects" && pathname.startsWith("/projects/")) return <Outlet />;
+
+  return <ProjectsIndex />;
+}
+
+function ProjectsIndex() {
   const qc = useQueryClient();
-  const listOrgs = useServerFn(listOrganizations);
+  const getOrganization = useServerFn(getCanonicalOrganization);
   const listProj = useServerFn(listProjects);
-  const createOrg = useServerFn(createOrganization);
   const createProj = useServerFn(createProject);
+  const listWs = useServerFn(listWorkspaces);
+  const createWs = useServerFn(createWorkspace);
 
-  const [orgName, setOrgName] = useState("");
   const [projectName, setProjectName] = useState("");
+  const [workspaceName, setWorkspaceName] = useState("");
+  const [workspaceId, setWorkspaceId] = useState("");
   const [projectDesc, setProjectDesc] = useState("");
-  const [orgId, setOrgId] = useState("");
+  const { workspaceId: activeWorkspaceId, setWorkspaceId: setActiveWorkspaceId } =
+    useWorkspaceContext();
 
-  const orgs = useQuery({ queryKey: ["organizations"], queryFn: () => listOrgs({}) });
-  const projects = useQuery({ queryKey: ["projects"], queryFn: () => listProj({}) });
+  const organization = useQuery({
+    queryKey: ["organization", "hillstreet-ph"],
+    queryFn: () => getOrganization(),
+  });
+  const projects = useQuery({
+    queryKey: ["projects", organization.data?.id],
+    queryFn: () => listProj({ data: { organizationId: organization.data!.id } }),
+    enabled: Boolean(organization.data?.id),
+  });
+  const workspaces = useQuery({
+    queryKey: ["workspaces", "hillstreet-ph"],
+    queryFn: () => listWs({ data: { organizationId: organization.data!.id } }),
+    enabled: Boolean(organization.data?.id),
+  });
 
-  const orgMutation = useMutation({
-    mutationFn: () => createOrg({ data: { name: orgName } }),
-    onSuccess: (org) => {
-      toast.success("Organization created");
-      setOrgName("");
-      if (org?.id) setOrgId(org.id);
-      void qc.invalidateQueries({ queryKey: ["organizations"] });
+  const activeWorkspace = (workspaces.data ?? []).find(
+    (workspace) => workspace.id === activeWorkspaceId,
+  );
+  const visibleProjects = (projects.data ?? []).filter(
+    (project: { workspace_id?: string | null }) =>
+      !activeWorkspaceId || project.workspace_id === activeWorkspaceId,
+  );
+
+  const workspaceMutation = useMutation({
+    mutationFn: () =>
+      createWs({ data: { organizationId: organization.data?.id ?? "", name: workspaceName } }),
+    onSuccess: (workspace) => {
+      toast.success("Workspace created");
+      setWorkspaceName("");
+      setWorkspaceId(workspace.id);
+      void qc.invalidateQueries({ queryKey: ["workspaces"] });
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not create org"),
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not create workspace"),
   });
 
   const projectMutation = useMutation({
     mutationFn: () =>
       createProj({
         data: {
-          organizationId: orgId,
+          organizationId: organization.data?.id ?? "",
+          workspaceId: workspaceId || activeWorkspaceId,
           name: projectName,
           description: projectDesc || undefined,
         },
@@ -92,9 +126,6 @@ function ProjectsPage() {
         </div>
         <div className="flex gap-2">
           <Button asChild variant="outline" size="sm">
-            <Link to="/orgs">Organizations</Link>
-          </Button>
-          <Button asChild variant="outline" size="sm">
             <Link to="/resources">Marketplace</Link>
           </Button>
           <Button asChild variant="outline" size="sm">
@@ -103,32 +134,50 @@ function ProjectsPage() {
         </div>
       </div>
 
+      <Card className="shadow-panel">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Workspaces</CardTitle>
+          <CardDescription>
+            Switch between isolated business contexts inside hillstreet-ph.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-2">
+          {(workspaces.data ?? []).map((workspace) => (
+            <Button
+              key={workspace.id}
+              variant={workspace.id === activeWorkspaceId ? "default" : "outline"}
+              onClick={() => setActiveWorkspaceId(workspace.id)}
+            >
+              {workspace.name}
+            </Button>
+          ))}
+        </CardContent>
+      </Card>
+
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="shadow-panel">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">New organization</CardTitle>
-            <CardDescription>Top-level workspace — you become owner.</CardDescription>
+            <CardTitle className="text-base">New workspace</CardTitle>
+            <CardDescription>Independent resource and access boundary.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="space-y-2">
-              <Label htmlFor="org-name">Name</Label>
-              <Input
-                id="org-name"
-                value={orgName}
-                onChange={(e) => setOrgName(e.target.value)}
-                placeholder="HillStreet AI"
-              />
-            </div>
+            <Label htmlFor="workspace-name">Workspace name</Label>
+            <Input
+              id="workspace-name"
+              value={workspaceName}
+              onChange={(e) => setWorkspaceName(e.target.value)}
+              placeholder="New workspace"
+            />
             <Button
-              disabled={!orgName.trim() || orgMutation.isPending}
-              onClick={() => orgMutation.mutate()}
+              disabled={!orgs.data?.[0]?.id || !workspaceName.trim() || workspaceMutation.isPending}
+              onClick={() => workspaceMutation.mutate()}
             >
-              {orgMutation.isPending ? (
+              {workspaceMutation.isPending ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : (
                 <Plus className="size-4" />
               )}
-              Create organization
+              Create workspace
             </Button>
           </CardContent>
         </Card>
@@ -140,17 +189,21 @@ function ProjectsPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="space-y-2">
-              <Label htmlFor="proj-org">Organization</Label>
+              <Label>Organization</Label>
+              <Input value="hillstreet-ph" readOnly />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="proj-workspace">Workspace</Label>
               <select
-                id="proj-org"
+                id="proj-workspace"
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                value={orgId}
-                onChange={(e) => setOrgId(e.target.value)}
+                value={workspaceId || activeWorkspaceId}
+                onChange={(e) => setWorkspaceId(e.target.value)}
               >
                 <option value="">Select…</option>
-                {(orgs.data ?? []).map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.name}
+                {(workspaces.data ?? []).map((w) => (
+                  <option key={w.id} value={w.id}>
+                    {w.name}
                   </option>
                 ))}
               </select>
@@ -174,7 +227,12 @@ function ProjectsPage() {
               />
             </div>
             <Button
-              disabled={!orgId || !projectName.trim() || projectMutation.isPending}
+              disabled={
+                !orgs.data?.[0]?.id ||
+                !(workspaceId || activeWorkspaceId) ||
+                !projectName.trim() ||
+                projectMutation.isPending
+              }
               onClick={() => projectMutation.mutate()}
             >
               {projectMutation.isPending ? (
@@ -190,15 +248,13 @@ function ProjectsPage() {
 
       <div>
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Your projects ({projects.data?.length ?? 0})
+          {activeWorkspace?.name ?? "Workspace"} projects ({visibleProjects.length})
         </h2>
         <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {(projects.data ?? []).length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No projects yet — create an org, then a project.
-            </p>
+          {visibleProjects.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No projects yet in this workspace.</p>
           ) : (
-            projects.data?.map((p) => (
+            visibleProjects.map((p) => (
               <Card key={p.id} className="p-4 shadow-panel">
                 <p className="font-medium">{p.name}</p>
                 <p className="mt-1 text-xs text-muted-foreground">

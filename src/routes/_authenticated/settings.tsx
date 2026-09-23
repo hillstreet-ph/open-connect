@@ -383,14 +383,8 @@ function SettingsPage() {
             <SettingsLinkCard
               to="/memory"
               icon={Database}
-              title="Project memory"
-              description="Manage durable, private instructions and decisions scoped to projects."
-            />
-            <SettingsLinkCard
-              to="/knowledge"
-              icon={Database}
-              title="Project knowledge"
-              description="Manage documents, repositories, URLs, and reusable project sources."
+              title="Memory & knowledge"
+              description="Manage durable project context, documents, repositories, URLs, and reusable sources."
             />
           </div>
         </TabsContent>

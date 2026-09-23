@@ -14,6 +14,7 @@ import {
   rankCapabilities,
   redactEvidence,
 } from "@/lib/autonomous-control";
+import { streamableMcpResponse } from "@/lib/mcp-transport.server";
 
 const WWW_AUTH =
   'Bearer realm="open-connect", resource_metadata="https://open-connect.site/.well-known/oauth-protected-resource"';
@@ -47,6 +48,7 @@ function isExecutable(resource: ResourceRow) {
 
 type McpTool = {
   name: string;
+  title?: string;
   description: string;
   inputSchema: Record<string, unknown>;
   annotations?: Record<string, boolean>;
@@ -125,6 +127,91 @@ const PLATFORM_TOOLS: McpTool[] = [
       "Use this when validating connection health, scopes, and opaque credential bindings.",
     inputSchema: { type: "object", properties: { provider: { type: "string" } } },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+  },
+  {
+    name: "e2b_health",
+    description: "Check whether the configured E2B sandbox API is reachable.",
+    inputSchema: { type: "object", properties: {} },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+  },
+  {
+    name: "e2b_list_sandboxes",
+    description: "List running or paused E2B sandboxes for the connected team.",
+    inputSchema: {
+      type: "object",
+      properties: { limit: { type: "integer", minimum: 1, maximum: 100 } },
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+  },
+  {
+    name: "e2b_create_sandbox",
+    description: "Create an isolated E2B sandbox. Owner/admin and tools:invoke are required.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        template: { type: "string", description: "E2B template id or alias; defaults to base." },
+        timeout: { type: "integer", minimum: 30, maximum: 3600 },
+        metadata: { type: "object", additionalProperties: { type: "string" } },
+      },
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
+  },
+  {
+    name: "e2b_kill_sandbox",
+    description:
+      "Terminate one E2B sandbox. Requires explicit confirm=true and owner/admin write access.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        sandbox_id: { type: "string" },
+        confirm: { type: "boolean", description: "Must be true to terminate the sandbox." },
+      },
+      required: ["sandbox_id", "confirm"],
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: true,
+      openWorldHint: true,
+    },
+  },
+  {
+    name: "hubstaff_admin_identity",
+    description: "Validate the configured Hubstaff Admin identity and granted account access.",
+    inputSchema: { type: "object", properties: {} },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+  },
+  {
+    name: "hubstaff_admin_list_organizations",
+    description: "List Hubstaff organizations available to the configured administrator.",
+    inputSchema: { type: "object", properties: {} },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+  },
+  {
+    name: "hubstaff_admin_request",
+    description:
+      "Call an authorized Hubstaff v2 endpoint. Writes require owner/admin access; DELETE also requires confirm=true.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        method: { type: "string", enum: ["GET", "POST", "PUT", "PATCH", "DELETE"] },
+        path: { type: "string", description: "Hubstaff v2 path beginning with /v2/." },
+        body: { type: "object", additionalProperties: true },
+        confirm: { type: "boolean", description: "Required for DELETE requests." },
+      },
+      required: ["method", "path"],
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
   },
   {
     name: "plan_goal",
@@ -331,6 +418,24 @@ function toolNameFromSlug(slug: string) {
   return `resource_${slug.replace(/[^a-z0-9_]/gi, "_").toLowerCase()}`;
 }
 
+function toolTitle(name: string) {
+  return name
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function chatGptTools(key: AuthedKey) {
+  // Marketplace resources are intentionally accessed through list_resources,
+  // search, and fetch. Publishing every catalog row as another MCP tool creates
+  // duplicate capabilities and makes ChatGPT's plugin scan brittle.
+  return PLATFORM_TOOLS.filter((tool) => canUseTool(key, tool.name)).map((tool) => ({
+    ...tool,
+    title: tool.title ?? toolTitle(tool.name),
+  }));
+}
+
 async function getCatalog(force = false) {
   const now = Date.now();
   if (!force && catalogCache && now - catalogCache.at < CATALOG_TTL_MS) {
@@ -411,17 +516,64 @@ function fireLog(key: AuthedKey, statusCode: number) {
   });
 }
 
+const TOOL_SCOPES: Record<string, string> = {
+  search: "resources:read",
+  fetch: "resources:read",
+  open_connect_status: "mcp:connect",
+  list_resources: "resources:read",
+  list_connections: "connections:read",
+  list_models: "models:read",
+  inspect_connections: "connections:read",
+  e2b_health: "connections:read",
+  e2b_list_sandboxes: "connections:read",
+  e2b_create_sandbox: "tools:invoke",
+  e2b_kill_sandbox: "tools:invoke",
+  hubstaff_admin_identity: "connections:read",
+  hubstaff_admin_list_organizations: "connections:read",
+  hubstaff_admin_request: "tools:invoke",
+  plan_goal: "resources:read",
+  recommend_toolchain: "resources:read",
+  resolve_capability: "resources:read",
+  execute_plan: "tools:invoke",
+  create_capability_draft: "resources:write",
+  record_run_outcome: "resources:write",
+  configure_connection: "connections:invoke",
+};
+
+const SELF_GUARDED_WRITE_TOOLS = new Set([
+  "execute_plan",
+  "create_capability_draft",
+  "record_run_outcome",
+  "configure_connection",
+  "install_capability",
+  "e2b_create_sandbox",
+  "e2b_kill_sandbox",
+  "hubstaff_admin_request",
+]);
+
+function canUseTool(key: AuthedKey, toolName: string) {
+  const required = TOOL_SCOPES[toolName] ?? "tools:invoke";
+  // Preserve pre-profile keys that used the original aggregate write grant.
+  return hasScope(key, required) || hasScope(key, "control:write");
+}
+
 export const Route = createFileRoute("/mcp")({
   server: {
     handlers: {
       GET: async ({ request }) => {
         const key = await authenticateKey(request);
         if (!key) return unauthorized("Missing or invalid Open-Connect key.");
+        if (request.headers.get("accept")?.includes("text/event-stream")) {
+          return new Response(null, {
+            status: 405,
+            headers: { allow: "POST", "cache-control": "no-store" },
+          });
+        }
         return json({
           name: "open-connect",
           version: "1.0.1",
           protocol: "mcp",
-          planes: ["resources", "connections", "models"],
+          planes: ["resources", "connections", "models", "credentials"],
           endpoints: {
             mcp: "https://open-connect.site/mcp",
             models: "https://open-connect.site/v1",
@@ -431,6 +583,12 @@ export const Route = createFileRoute("/mcp")({
           authenticated: true,
           user_id: key.userId,
           scopes: key.scopes,
+          context: {
+            organization_id: key.organizationId,
+            workspace_id: key.workspaceId,
+            project_id: key.projectId,
+            access_profile: key.accessProfile,
+          },
         });
       },
       POST: async ({ request }) => {
@@ -453,7 +611,11 @@ export const Route = createFileRoute("/mcp")({
           jsonrpc?: string;
           id?: string | number;
           method?: string;
-          params?: { name?: string; arguments?: Record<string, unknown> };
+          params?: {
+            name?: string;
+            arguments?: Record<string, unknown>;
+            protocolVersion?: string;
+          };
         } | null;
 
         if (!body?.method) {
@@ -464,17 +626,21 @@ export const Route = createFileRoute("/mcp")({
 
         if (body.method === "initialize") {
           result = {
-            protocolVersion: "2025-06-18",
-            capabilities: { tools: {}, resources: {} },
+            protocolVersion: body.params?.protocolVersion ?? "2025-06-18",
+            capabilities: {
+              tools: { listChanged: false },
+              resources: { listChanged: false },
+            },
             serverInfo: {
               name: "open-connect",
               version: "1.0.1",
-              planes: ["resources", "connections", "models"],
+              planes: ["resources", "connections", "models", "credentials"],
             },
+            instructions:
+              "Use read-only discovery tools before write tools. Hubstaff, E2B, connection, and credential actions are scoped to the authenticated Open-Connect account and role.",
           };
         } else if (body.method === "tools/list") {
-          const catalog = await getCatalog();
-          result = { tools: catalog.tools };
+          result = { tools: chatGptTools(key) };
         } else if (body.method === "resources/list") {
           result = {
             resources: [
@@ -515,6 +681,14 @@ export const Route = createFileRoute("/mcp")({
         } else if (body.method === "tools/call") {
           const name = body.params?.name;
           const args = body.params?.arguments ?? {};
+
+          if (!name || (!canUseTool(key, name) && !SELF_GUARDED_WRITE_TOOLS.has(name))) {
+            return gatewayError(
+              `Key cannot invoke ${name || "this tool"} in its selected scope.`,
+              403,
+              "insufficient_scope",
+            );
+          }
 
           if (name === "search") {
             const query = String(args["query"] ?? "").trim();
@@ -598,6 +772,73 @@ export const Route = createFileRoute("/mcp")({
                 credential_reference: connection["credential_reference"] ? "configured" : "missing",
               })),
             });
+          } else if (name === "e2b_health") {
+            const { e2bConfig, e2bHealth } = await import("@/lib/e2b.server");
+            if (!e2bConfig().configured) throw new Error("E2B is not configured");
+            result = textResult({ configured: true, reachable: true, health: await e2bHealth() });
+          } else if (name === "e2b_list_sandboxes") {
+            const { e2bConfig, listE2bSandboxes } = await import("@/lib/e2b.server");
+            if (!e2bConfig().configured) throw new Error("E2B is not configured");
+            result = textResult(await listE2bSandboxes(Number(args["limit"] ?? 100)));
+          } else if (name === "e2b_create_sandbox") {
+            await requireControlWrite(key);
+            const { createE2bSandbox, e2bConfig } = await import("@/lib/e2b.server");
+            if (!e2bConfig().configured) throw new Error("E2B is not configured");
+            const metadata =
+              args["metadata"] && typeof args["metadata"] === "object"
+                ? Object.fromEntries(
+                    Object.entries(args["metadata"] as Record<string, unknown>)
+                      .filter((entry): entry is [string, string] => typeof entry[1] === "string")
+                      .slice(0, 20),
+                  )
+                : {};
+            const template = typeof args["template"] === "string" ? args["template"] : null;
+            result = textResult(
+              await createE2bSandbox({
+                ...(template ? { template } : {}),
+                timeout: Number(args["timeout"] ?? 300),
+                metadata,
+              }),
+            );
+          } else if (name === "e2b_kill_sandbox") {
+            await requireControlWrite(key);
+            if (args["confirm"] !== true) throw new Error("Explicit confirm=true is required");
+            const { e2bConfig, killE2bSandbox } = await import("@/lib/e2b.server");
+            if (!e2bConfig().configured) throw new Error("E2B is not configured");
+            result = textResult(await killE2bSandbox(String(args["sandbox_id"] ?? "")));
+          } else if (name === "hubstaff_admin_identity") {
+            const { hubstaffAdminConfig, hubstaffAdminIdentity } =
+              await import("@/lib/hubstaff-admin.server");
+            if (!hubstaffAdminConfig().configured)
+              throw new Error("Hubstaff Admin is not configured");
+            result = textResult(await hubstaffAdminIdentity());
+          } else if (name === "hubstaff_admin_list_organizations") {
+            const { hubstaffAdminConfig, listHubstaffOrganizations } =
+              await import("@/lib/hubstaff-admin.server");
+            if (!hubstaffAdminConfig().configured)
+              throw new Error("Hubstaff Admin is not configured");
+            result = textResult(await listHubstaffOrganizations());
+          } else if (name === "hubstaff_admin_request") {
+            const method = String(args["method"] ?? "GET").toUpperCase();
+            if (method !== "GET") await requireControlWrite(key);
+            if (method === "DELETE" && args["confirm"] !== true) {
+              throw new Error("Explicit confirm=true is required for DELETE");
+            }
+            const { hubstaffAdminConfig, hubstaffAdminRequest } =
+              await import("@/lib/hubstaff-admin.server");
+            if (!hubstaffAdminConfig().configured)
+              throw new Error("Hubstaff Admin is not configured");
+            const body =
+              args["body"] && typeof args["body"] === "object"
+                ? (args["body"] as Record<string, unknown>)
+                : undefined;
+            result = textResult(
+              await hubstaffAdminRequest({
+                method,
+                path: String(args["path"] ?? ""),
+                ...(body ? { body } : {}),
+              }),
+            );
           } else if (name === "recommend_toolchain" || name === "resolve_capability") {
             const goal = String(
               name === "resolve_capability" ? args["capability"] : args["goal"],
@@ -963,7 +1204,11 @@ export const Route = createFileRoute("/mcp")({
         }
 
         fireLog(key, 200);
-        return json({ jsonrpc: "2.0", id: body.id ?? null, result });
+        return streamableMcpResponse(request, body, {
+          jsonrpc: "2.0",
+          id: body.id ?? null,
+          result,
+        });
       },
     },
   },

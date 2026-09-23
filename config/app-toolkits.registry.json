@@ -1,22 +1,13 @@
 {
   "schema_version": "1.0.0",
   "registry_id": "open-connect-app-toolkits",
-  "environments": [
-    "development",
-    "staging",
-    "production"
-  ],
+  "environments": ["development", "staging", "production"],
   "execution_policy": {
     "default_mode": "read_only",
     "credential_transport": "opaque_reference_only",
     "production_approval_required": true,
     "destructive_approval_required": true,
-    "branch_flow": [
-      "feature/*",
-      "development",
-      "staging",
-      "main"
-    ],
+    "branch_flow": ["feature/*", "development", "staging", "main"],
     "max_autorepair_attempts": 3,
     "audit_fields": [
       "actor",
@@ -44,11 +35,7 @@
       "id": "github",
       "status": "connected_read_write",
       "icon": "🐙",
-      "sdk": [
-        "GitHub REST",
-        "GitHub GraphQL",
-        "Octokit"
-      ],
+      "sdk": ["GitHub REST", "GitHub GraphQL", "Octokit"],
       "adk_adapter": "github_toolkit",
       "mcp": "github",
       "capabilities": [
@@ -61,24 +48,14 @@
         "workflow.rerun"
       ],
       "health_check": "repository and workflow read",
-      "secret_refs": [
-        "credential://github/app-installation"
-      ],
-      "approval": [
-        "merge.main",
-        "release",
-        "secret.write"
-      ]
+      "secret_refs": ["credential://github/app-installation"],
+      "approval": ["merge.main", "release", "secret.write"]
     },
     {
       "id": "notion",
       "status": "connected_read_write",
       "icon": "🗂️",
-      "sdk": [
-        "Notion API",
-        "Notion SDK",
-        "ntn CLI"
-      ],
+      "sdk": ["Notion API", "Notion SDK", "ntn CLI"],
       "adk_adapter": "notion_toolkit",
       "mcp": "notion",
       "capabilities": [
@@ -90,24 +67,14 @@
         "database.update"
       ],
       "health_check": "fetch self and canonical registry",
-      "secret_refs": [
-        "credential://notion/kobeplay"
-      ],
-      "approval": [
-        "archive",
-        "permission.change",
-        "sensitive.move"
-      ]
+      "secret_refs": ["credential://notion/kobeplay"],
+      "approval": ["archive", "permission.change", "sensitive.move"]
     },
     {
       "id": "supabase",
       "status": "connected_control_plane",
       "icon": "⚡",
-      "sdk": [
-        "supabase-js",
-        "Supabase CLI",
-        "PostgREST"
-      ],
+      "sdk": ["supabase-js", "Supabase CLI", "PostgREST"],
       "adk_adapter": "supabase_toolkit",
       "mcp": "supabase",
       "capabilities": [
@@ -120,9 +87,7 @@
         "branch.manage"
       ],
       "health_check": "projects and advisors read",
-      "secret_refs": [
-        "credential://supabase/open-connect"
-      ],
+      "secret_refs": ["credential://supabase/open-connect"],
       "approval": [
         "migration.production",
         "rls.write",
@@ -135,10 +100,7 @@
       "id": "cloudflare",
       "status": "connected_control_plane",
       "icon": "☁️",
-      "sdk": [
-        "Cloudflare API",
-        "Wrangler"
-      ],
+      "sdk": ["Cloudflare API", "Wrangler"],
       "adk_adapter": "cloudflare_toolkit",
       "mcp": "cloudflare",
       "capabilities": [
@@ -151,9 +113,7 @@
         "dns.inspect"
       ],
       "health_check": "account zone and deployment read",
-      "secret_refs": [
-        "credential://cloudflare/open-connect"
-      ],
+      "secret_refs": ["credential://cloudflare/open-connect"],
       "approval": [
         "dns.write",
         "production.deploy",
@@ -166,11 +126,7 @@
       "id": "sentry",
       "status": "needs_connection",
       "icon": "🛡️",
-      "sdk": [
-        "Sentry SDK",
-        "Sentry API",
-        "sentry-cli"
-      ],
+      "sdk": ["Sentry SDK", "Sentry API", "sentry-cli"],
       "adk_adapter": "sentry_toolkit",
       "mcp": "connector_required",
       "capabilities": [
@@ -182,23 +138,45 @@
         "sourcemap.upload"
       ],
       "health_check": "organization project and issue read",
-      "secret_refs": [
-        "credential://sentry/hillstreet"
+      "secret_refs": ["credential://sentry/hillstreet"],
+      "approval": ["issue.bulk_write", "release.write"]
+    },
+    {
+      "id": "e2b",
+      "status": "connected_read_write",
+      "icon": "🧪",
+      "sdk": ["E2B API", "E2B SDK", "E2B CLI"],
+      "adk_adapter": "e2b_sandbox_toolkit",
+      "mcp": "open-connect:e2b",
+      "capabilities": ["sandbox.health", "sandbox.list", "sandbox.create", "sandbox.kill"],
+      "health_check": "E2B health and sandbox inventory",
+      "secret_refs": ["credential://e2b/open-connect"],
+      "approval": ["sandbox.kill", "production.secret.write"]
+    },
+    {
+      "id": "hubstaff_admin",
+      "status": "connected_read_write",
+      "icon": "⏱️",
+      "sdk": ["Hubstaff API v2", "Hubstaff OAuth 2"],
+      "adk_adapter": "hubstaff_admin_toolkit",
+      "mcp": "open-connect:hubstaff-admin",
+      "capabilities": [
+        "identity.read",
+        "organization.read",
+        "hubstaff.read",
+        "hubstaff.write",
+        "tasks.read",
+        "tasks.write"
       ],
-      "approval": [
-        "issue.bulk_write",
-        "release.write"
-      ]
+      "health_check": "Hubstaff current user and organization inventory",
+      "secret_refs": ["credential://hubstaff/admin"],
+      "approval": ["member.write", "task.delete", "time.write", "production.secret.write"]
     },
     {
       "id": "dockerhub",
       "status": "needs_connection",
       "icon": "🐳",
-      "sdk": [
-        "Docker Engine API",
-        "Docker Hub API",
-        "Buildx"
-      ],
+      "sdk": ["Docker Engine API", "Docker Hub API", "Buildx"],
       "adk_adapter": "dockerhub_toolkit",
       "mcp": "connector_required",
       "capabilities": [
@@ -210,27 +188,15 @@
         "digest.verify"
       ],
       "health_check": "repository tag and digest read",
-      "secret_refs": [
-        "credential://dockerhub/hillstreet"
-      ],
-      "approval": [
-        "production.promote",
-        "visibility.write",
-        "image.delete"
-      ]
+      "secret_refs": ["credential://dockerhub/hillstreet"],
+      "approval": ["production.promote", "visibility.write", "image.delete"]
     },
     {
       "id": "hetzner",
-      "aliases": [
-        "zetzner"
-      ],
+      "aliases": ["zetzner"],
       "status": "needs_connection",
       "icon": "🖥️",
-      "sdk": [
-        "Hetzner Cloud API",
-        "hcloud CLI",
-        "Terraform Provider"
-      ],
+      "sdk": ["Hetzner Cloud API", "hcloud CLI", "Terraform Provider"],
       "adk_adapter": "hetzner_toolkit",
       "mcp": "connector_required",
       "capabilities": [
@@ -241,9 +207,7 @@
         "staging.provision"
       ],
       "health_check": "project and server inventory read",
-      "secret_refs": [
-        "credential://hetzner/hillstreet"
-      ],
+      "secret_refs": ["credential://hetzner/hillstreet"],
       "approval": [
         "server.write",
         "firewall.write",

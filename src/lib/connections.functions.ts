@@ -203,6 +203,20 @@ const CATALOG = [
     oauth: false,
   },
   {
+    provider: "e2b",
+    display_name: "E2B Sandboxes",
+    category: "Infrastructure",
+    scopes: ["sandboxes:read", "sandboxes:create", "sandboxes:kill"],
+    oauth: false,
+  },
+  {
+    provider: "hubstaff_admin",
+    display_name: "Hubstaff Admin",
+    category: "Business",
+    scopes: ["hubstaff:read", "hubstaff:write", "tasks:read", "tasks:write"],
+    oauth: false,
+  },
+  {
     provider: "supabase",
     display_name: "Supabase",
     category: "Data",
