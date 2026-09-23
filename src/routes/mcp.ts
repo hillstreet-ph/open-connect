@@ -29,6 +29,7 @@ const MODEL_ALIASES = [
 ] as const;
 
 type ResourceRow = {
+  id: string;
   slug: string;
   name: string;
   description: string | null;
@@ -73,6 +74,7 @@ let catalogCache: {
   at: number;
   tools: McpTool[];
   bySlug: Map<string, ResourceRow>;
+  byId: Map<string, ResourceRow>;
   byToolName: Map<string, ResourceRow>;
   count: number;
 } | null = null;
@@ -446,7 +448,7 @@ async function getCatalog(force = false) {
   const { data, error } = await oauthDatabase()
     .from("resources")
     .select(
-      "slug, name, description, resource_type, installation_type, installation_config, verified",
+      "id, slug, name, description, resource_type, installation_type, installation_config, verified",
     )
     .eq("published", true)
     .order("featured", { ascending: false })
@@ -455,11 +457,13 @@ async function getCatalog(force = false) {
   if (error) throw new Error("Resource catalog unavailable");
   const rows = (data ?? []) as ResourceRow[];
   const bySlug = new Map<string, ResourceRow>();
+  const byId = new Map<string, ResourceRow>();
   const byToolName = new Map<string, ResourceRow>();
   const resourceTools: McpTool[] = [];
 
   for (const r of rows) {
     bySlug.set(r.slug, r);
+    byId.set(r.id, r);
     if (isExecutable(r)) {
       const tn = toolNameFromSlug(r.slug);
       byToolName.set(tn, r);
@@ -480,6 +484,7 @@ async function getCatalog(force = false) {
     at: now,
     tools: [...PLATFORM_TOOLS, ...resourceTools],
     bySlug,
+    byId,
     byToolName,
     count: rows.length,
   };
@@ -498,7 +503,7 @@ async function findResourceByToolName(toolName: string): Promise<ResourceRow | n
   const { data } = await supabaseAdmin
     .from("resources")
     .select(
-      "slug, name, description, resource_type, installation_type, installation_config, verified",
+      "id, slug, name, description, resource_type, installation_type, installation_config, verified",
     )
     .eq("published", true)
     .or(`slug.eq.${slugHyphen},slug.eq.${raw}`)
@@ -712,7 +717,7 @@ export const Route = createFileRoute("/mcp")({
           } else if (name === "fetch") {
             const id = String(args["id"] ?? "").trim();
             const catalog = await getCatalog();
-            const item = catalog.bySlug.get(id);
+            const item = catalog.bySlug.get(id) ?? catalog.byId.get(id);
             result = textResult(
               item
                 ? {
@@ -738,17 +743,23 @@ export const Route = createFileRoute("/mcp")({
             );
           } else if (name === "open_connect_status") {
             const catalog = await getCatalog();
-            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-            const { count: connections } = await supabaseAdmin
-              .from("app_connections")
-              .select("id", { count: "exact", head: true })
-              .eq("user_id", key.userId)
-              .eq("status", "connected");
+            let connections: number | null = null;
+            try {
+              const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+              const response = await supabaseAdmin
+                .from("app_connections")
+                .select("id", { count: "exact", head: true })
+                .eq("user_id", key.userId)
+                .eq("status", "connected");
+              if (!response.error) connections = response.count;
+            } catch {
+              // Status must remain available even when the optional connection counter is not.
+            }
             result = textResult({
               gateway: "open-connect.site",
               planes: {
                 resources: { published: catalog.count },
-                connections: { connected: connections ?? 0 },
+                connections: { connected: connections, available: connections !== null },
                 models: {
                   endpoint: "https://open-connect.site/v1",
                   aliases: MODEL_ALIASES.map((a) => a.id),
