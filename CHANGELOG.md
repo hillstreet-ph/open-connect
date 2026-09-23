@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Connections now support Vault-backed API/token setup for Docker Hub, Cloudflare, Supabase,
+  Sentry, Zeabur, Databricks, and other token-based providers; OAuth-capable apps such as GitHub,
+  Notion, and Airtable retain their authorization-request flow.
+- Added Custom MCP server setup with HTTPS endpoint validation and encrypted bearer credentials.
+- AI Gateway now accepts separate OpenRouter, OpenAI, Anthropic, Gemini, xAI, Mistral, and DeepSeek
+  provider keys while clients continue to use one Open-Connect `/v1` endpoint.
+
 All notable changes to **Open-Connect** are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),

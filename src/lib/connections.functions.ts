@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { normalizeConnectionSetup, type ConnectionSetupInput } from "@/lib/connection-setup";
 
 /**
  * Connection catalog — professional app plane.
@@ -14,6 +15,13 @@ const CATALOG = [
     category: "Development",
     scopes: ["repo", "read:user", "workflow"],
     oauth: true,
+  },
+  {
+    provider: "dockerhub",
+    display_name: "Docker Hub",
+    category: "Development",
+    scopes: ["repositories:read", "repositories:write"],
+    oauth: false,
   },
   {
     provider: "gitlab",
@@ -123,6 +131,41 @@ const CATALOG = [
     oauth: false,
   },
   {
+    provider: "anthropic",
+    display_name: "Anthropic API",
+    category: "AI",
+    scopes: ["models"],
+    oauth: false,
+  },
+  {
+    provider: "google",
+    display_name: "Google Gemini API",
+    category: "AI",
+    scopes: ["models"],
+    oauth: false,
+  },
+  {
+    provider: "xai",
+    display_name: "xAI API",
+    category: "AI",
+    scopes: ["models"],
+    oauth: false,
+  },
+  {
+    provider: "mistral",
+    display_name: "Mistral API",
+    category: "AI",
+    scopes: ["models"],
+    oauth: false,
+  },
+  {
+    provider: "deepseek",
+    display_name: "DeepSeek API",
+    category: "AI",
+    scopes: ["models"],
+    oauth: false,
+  },
+  {
     provider: "litellm",
     display_name: "LiteLLM",
     category: "AI",
@@ -203,6 +246,20 @@ const CATALOG = [
     oauth: false,
   },
   {
+    provider: "sentry",
+    display_name: "Sentry",
+    category: "Infrastructure",
+    scopes: ["org:read", "project:read", "event:read"],
+    oauth: false,
+  },
+  {
+    provider: "zeabur",
+    display_name: "Zeabur",
+    category: "Infrastructure",
+    scopes: ["projects:read", "services:read", "services:write"],
+    oauth: false,
+  },
+  {
     provider: "e2b",
     display_name: "E2B Sandboxes",
     category: "Infrastructure",
@@ -221,6 +278,13 @@ const CATALOG = [
     display_name: "Supabase",
     category: "Data",
     scopes: ["projects:read", "db", "storage"],
+    oauth: false,
+  },
+  {
+    provider: "databricks",
+    display_name: "Databricks",
+    category: "Data",
+    scopes: ["workspace", "sql", "catalog"],
     oauth: false,
   },
   {
@@ -249,6 +313,13 @@ const CATALOG = [
       "webhook:manage",
     ],
     oauth: true,
+  },
+  {
+    provider: "custom_mcp",
+    display_name: "Custom MCP server",
+    category: "Custom",
+    scopes: ["tools:list", "tools:invoke"],
+    oauth: false,
   },
 ] as const;
 
@@ -347,4 +418,71 @@ export const disconnectApp = createServerFn({ method: "POST" })
     const { error } = await context.supabase.from("app_connections").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+export const configureAppConnection = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: ConnectionSetupInput) => input)
+  .handler(async ({ data, context }) => {
+    const app = CATALOG.find((item) => item.provider === data.provider.trim().toLowerCase());
+    if (!app) throw new Error("Unknown application");
+    const setup = normalizeConnectionSetup(data, app);
+    const secretPayload = JSON.stringify({
+      version: 1,
+      auth_type: setup.authType,
+      credential: setup.apiKey,
+    });
+    const { data: secret, error: secretError } = await context.supabase.rpc(
+      "create_credential_secret",
+      {
+        p_name: `${setup.displayName} · ${setup.accountLabel}`,
+        p_secret_type: "api_key",
+        p_scopes: ["connections"],
+        p_secret_value: secretPayload,
+      },
+    );
+    if (secretError) throw new Error(secretError.message);
+
+    const secretId = String((secret as { id?: string } | null)?.id ?? "");
+    if (!secretId) throw new Error("Credential vault did not return a reference");
+    const accountId =
+      setup.provider === "custom_mcp"
+        ? `${setup.accountLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${secretId.slice(0, 8)}`
+        : null;
+    const record = {
+      user_id: context.userId,
+      provider: setup.provider,
+      display_name: setup.displayName,
+      provider_account_id: accountId,
+      status: "connected",
+      scopes: [...setup.app.scopes],
+      credential_reference: `credential://${setup.provider}/${secretId}`,
+      metadata: {
+        source: "open-connect",
+        mode: setup.provider === "custom_mcp" ? "custom_mcp" : "brokered_secret",
+        auth_type: setup.authType,
+        account_label: setup.accountLabel,
+        endpoint_url: setup.endpointUrl || null,
+        full_scopes: false,
+      },
+    };
+
+    const existing =
+      setup.provider === "custom_mcp"
+        ? null
+        : await context.supabase
+            .from("app_connections")
+            .select("id")
+            .eq("user_id", context.userId)
+            .eq("provider", setup.provider)
+            .is("provider_account_id", null)
+            .maybeSingle();
+    const query = existing?.data?.id
+      ? context.supabase.from("app_connections").update(record).eq("id", existing.data.id)
+      : context.supabase.from("app_connections").insert(record);
+    const { data: connection, error } = await query
+      .select("id, provider, display_name, status, scopes, provider_account_id, created_at")
+      .single();
+    if (error) throw new Error(error.message);
+    return connection;
   });
