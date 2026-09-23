@@ -5,6 +5,31 @@ export type MemoryType = "fact" | "preference" | "decision" | "instruction" | "s
 export type KnowledgeSourceType =
   "note" | "document" | "url" | "repository" | "conversation" | "api";
 
+type UploadedFile = {
+  name: string;
+  path: string;
+  mimeType: string;
+  size: number;
+};
+
+function duplicateKey(title: string, content: string, projectId: string | null) {
+  const normalize = (value: string) => value.trim().replace(/\s+/g, " ").toLowerCase();
+  return `${projectId ?? "personal"}\u0000${normalize(title)}\u0000${normalize(content)}`;
+}
+
+function duplicateIds(
+  rows: Array<{ id: string; title: string; content: string; project_id: string | null }>,
+) {
+  const seen = new Set<string>();
+  const duplicates: string[] = [];
+  for (const row of rows) {
+    const key = duplicateKey(row.title, row.content, row.project_id);
+    if (seen.has(key)) duplicates.push(row.id);
+    else seen.add(key);
+  }
+  return duplicates;
+}
+
 function cleanTags(value?: string) {
   return [
     ...new Set(
@@ -69,6 +94,7 @@ export const createMemory = createServerFn({ method: "POST" })
       importance?: number;
       projectId?: string;
       tags?: string;
+      file?: UploadedFile;
     }) => ({
       title: (input?.title ?? "").trim(),
       content: (input?.content ?? "").trim(),
@@ -76,6 +102,7 @@ export const createMemory = createServerFn({ method: "POST" })
       importance: Math.min(5, Math.max(1, Number(input?.importance) || 3)),
       projectId: input?.projectId || null,
       tags: cleanTags(input?.tags),
+      file: input?.file ?? null,
     }),
   )
   .handler(async ({ data, context }) => {
@@ -90,6 +117,7 @@ export const createMemory = createServerFn({ method: "POST" })
         memory_type: data.memoryType,
         importance: data.importance,
         tags: data.tags,
+        metadata: data.file ? { file: data.file } : {},
       })
       .select("id, title")
       .single();
@@ -121,6 +149,28 @@ export const deleteMemory = createServerFn({ method: "POST" })
     const { error } = await context.supabase.from("memory_records").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+export const removeDuplicateMemories = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input?: { projectId?: string }) => ({ projectId: input?.projectId || null }))
+  .handler(async ({ data, context }) => {
+    let query = context.supabase
+      .from("memory_records")
+      .select("id, project_id, title, content")
+      .order("updated_at", { ascending: false })
+      .limit(1000);
+    if (data.projectId) query = query.eq("project_id", data.projectId);
+    const { data: rows, error } = await query;
+    if (error) throw new Error(error.message);
+    const ids = duplicateIds(rows ?? []);
+    if (!ids.length) return { removed: 0 };
+    const { error: deleteError } = await context.supabase
+      .from("memory_records")
+      .delete()
+      .in("id", ids);
+    if (deleteError) throw new Error(deleteError.message);
+    return { removed: ids.length };
   });
 
 export const listKnowledge = createServerFn({ method: "GET" })
@@ -159,6 +209,7 @@ export const createKnowledge = createServerFn({ method: "POST" })
       sourceUrl?: string;
       projectId?: string;
       tags?: string;
+      file?: UploadedFile;
     }) => ({
       title: (input?.title ?? "").trim(),
       content: (input?.content ?? "").trim(),
@@ -166,6 +217,7 @@ export const createKnowledge = createServerFn({ method: "POST" })
       sourceUrl: canonicalizeSourceUrl(input?.sourceUrl),
       projectId: input?.projectId || null,
       tags: cleanTags(input?.tags),
+      file: input?.file ?? null,
     }),
   )
   .handler(async ({ data, context }) => {
@@ -197,8 +249,10 @@ export const createKnowledge = createServerFn({ method: "POST" })
         content: data.content,
         source_type: data.sourceType,
         source_url: data.sourceUrl,
+        mime_type: data.file?.mimeType ?? null,
         tags: data.tags,
         status: "ready",
+        metadata: data.file ? { file: data.file } : {},
       })
       .select("id, title")
       .single();
@@ -217,4 +271,27 @@ export const archiveKnowledge = createServerFn({ method: "POST" })
       .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+export const removeDuplicateKnowledge = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input?: { projectId?: string }) => ({ projectId: input?.projectId || null }))
+  .handler(async ({ data, context }) => {
+    let query = context.supabase
+      .from("knowledge_items")
+      .select("id, project_id, title, content")
+      .neq("status", "archived")
+      .order("updated_at", { ascending: false })
+      .limit(1000);
+    if (data.projectId) query = query.eq("project_id", data.projectId);
+    const { data: rows, error } = await query;
+    if (error) throw new Error(error.message);
+    const ids = duplicateIds(rows ?? []);
+    if (!ids.length) return { removed: 0 };
+    const { error: archiveError } = await context.supabase
+      .from("knowledge_items")
+      .update({ status: "archived" })
+      .in("id", ids);
+    if (archiveError) throw new Error(archiveError.message);
+    return { removed: ids.length };
   });
