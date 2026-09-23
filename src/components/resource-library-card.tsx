@@ -47,12 +47,14 @@ export function ResourceLibraryCard({
   title = "Package library",
   cardDescription = "Upload .zip / .md / manifests — auto-detect skill · MCP · plugin · agent · prompt and publish to the catalog. Select multiple files for bulk upload.",
   showProjectAssignment = false,
+  showResourceList = true,
 }: {
   defaultType?: (typeof TYPES)[number];
   allowedTypes?: readonly (typeof TYPES)[number][];
   title?: string;
   cardDescription?: string;
   showProjectAssignment?: boolean;
+  showResourceList?: boolean;
 }) {
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -227,30 +229,32 @@ export function ResourceLibraryCard({
         <CardDescription>{cardDescription}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="pkg-file">Files</Label>
-          <Input
-            id="pkg-file"
-            ref={fileRef}
-            type="file"
-            multiple
-            accept=".zip,.md,.json,.yaml,.yml,.txt,application/zip"
-            onChange={(e) => {
-              const files = e.target.files;
-              if (!files?.length) return;
-              if (files.length === 1) void onPickFile(files[0]!);
-              else void bulkUpload(files);
-            }}
-          />
-          {bulkProgress ? <p className="text-xs text-primary">{bulkProgress}</p> : null}
-          {file && !bulkProgress ? (
-            <p className="text-xs text-muted-foreground">
-              {file.name} · {formatBytes(file.size)}
-              {confidence ? ` · detect ${confidence}` : ""}
-              {signals.length ? ` · ${signals.join(", ")}` : ""}
-            </p>
-          ) : null}
-        </div>
+        {showResourceList ? (
+          <div className="space-y-2">
+            <Label htmlFor="pkg-file">Files</Label>
+            <Input
+              id="pkg-file"
+              ref={fileRef}
+              type="file"
+              multiple
+              accept=".zip,.md,.json,.yaml,.yml,.txt,application/zip"
+              onChange={(e) => {
+                const files = e.target.files;
+                if (!files?.length) return;
+                if (files.length === 1) void onPickFile(files[0]!);
+                else void bulkUpload(files);
+              }}
+            />
+            {bulkProgress ? <p className="text-xs text-primary">{bulkProgress}</p> : null}
+            {file && !bulkProgress ? (
+              <p className="text-xs text-muted-foreground">
+                {file.name} · {formatBytes(file.size)}
+                {confidence ? ` · detect ${confidence}` : ""}
+                {signals.length ? ` · ${signals.join(", ")}` : ""}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-2">

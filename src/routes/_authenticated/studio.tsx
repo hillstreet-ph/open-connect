@@ -1,15 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import {
-  Bot,
-  Boxes,
-  Brain,
-  Building2,
-  FileCode,
-  LibraryBig,
-  MessageSquareText,
-  Puzzle,
-  Wrench,
-} from "lucide-react";
+import { Boxes, Brain, Building2, Layers3, LibraryBig, PackageOpen } from "lucide-react";
 import { ResourceLibraryCard } from "@/components/resource-library-card";
 import { ToolkitCreator } from "@/components/toolkit-creator";
 import { MemoryKnowledgePage } from "./memory";
@@ -18,6 +8,7 @@ import { roleLabel } from "@/lib/rbac";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const Route = createFileRoute("/_authenticated/studio")({
   head: () => ({
@@ -25,7 +16,7 @@ export const Route = createFileRoute("/_authenticated/studio")({
       { title: "Studio — Open-Connect" },
       {
         name: "description",
-        content: "Create AI agents, skills, prompts, plugins, custom MCP, and connectors.",
+        content: "Create and publish Open-Connect packages, context, and Toolkits.",
       },
       { name: "robots", content: "noindex" },
     ],
@@ -33,173 +24,176 @@ export const Route = createFileRoute("/_authenticated/studio")({
   component: StudioPage,
 });
 
-const createActions = [
-  {
-    icon: Bot,
-    title: "AI Agent",
-    body: "Upload an AI agent package and add it to one or more projects.",
-    type: "agent",
-  },
-  {
-    icon: Boxes,
-    title: "Skill",
-    body: "Upload a skill package (.zip / SKILL.md) to the marketplace.",
-    type: "skill",
-  },
-  {
-    icon: MessageSquareText,
-    title: "Prompt",
-    body: "Publish a reusable system or task prompt package.",
-    type: "prompt",
-  },
-  {
-    icon: Puzzle,
-    title: "Plugin",
-    body: "Ship a plugin package for ChatGPT Actions or custom agents.",
-    type: "plugin",
-  },
-  {
-    icon: FileCode,
-    title: "Custom MCP",
-    body: "Upload an MCP package. Configure external endpoints in Integrations.",
-    type: "mcp",
-  },
-  {
-    icon: Wrench,
-    title: "Tool",
-    body: "Upload a tool definition package for agents.",
-    type: "tool",
-  },
-  {
-    icon: Brain,
-    title: "Memory",
-    body: "Create durable reusable memory, then share it with projects.",
-    type: "memory",
-    anchor: "memory-create",
-  },
-  {
-    icon: LibraryBig,
-    title: "Knowledge",
-    body: "Upload documents and create reusable project knowledge.",
-    type: "knowledge",
-    anchor: "knowledge-create",
-  },
-  {
-    icon: Boxes,
-    title: "Toolkit",
-    body: "Bundle marketplace capabilities and publish a reusable Toolkit.",
-    type: "toolkit",
-    anchor: "toolkit-create",
-  },
-];
+const packageTypes = ["AI Agent", "Skill", "Prompt", "Plugin", "Custom MCP", "Tool"];
+
+function SectionHeading({
+  icon: Icon,
+  label,
+  title,
+  description,
+}: {
+  icon: typeof PackageOpen;
+  label: string;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+        <Icon className="size-5" />
+      </span>
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wider text-primary">{label}</p>
+        <h2 className="mt-0.5 text-xl font-semibold">{title}</h2>
+        <p className="mt-1 max-w-3xl text-sm text-muted-foreground">{description}</p>
+      </div>
+    </div>
+  );
+}
 
 function StudioPage() {
   const { primary, can } = useRoles();
-
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:py-14">
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge variant="outline" className="border-primary/40 text-primary">
-          Workspace · Studio hub
-        </Badge>
-        <Badge variant="secondary" className="uppercase">
-          {roleLabel(primary)}
-        </Badge>
-      </div>
-      <h1 className="mt-2 text-2xl font-semibold sm:text-3xl">Create</h1>
-      <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-        Build agents, skills, prompts, plugins, custom MCP, and connectors. Assign work to an{" "}
-        <Link to="/orgs" className="text-primary underline-offset-2 hover:underline">
-          organization / project
-        </Link>
-        , then wire ChatGPT, Claude, Grok, Open WebUI, or Hermes.
-      </p>
+    <div className="mx-auto max-w-6xl space-y-12 px-4 py-8 sm:px-6 sm:py-12">
+      <header>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="outline" className="border-primary/40 text-primary">
+            Workspace · Studio
+          </Badge>
+          <Badge variant="secondary" className="uppercase">
+            {roleLabel(primary)}
+          </Badge>
+        </div>
+        <h1 className="mt-3 text-2xl font-semibold sm:text-3xl">Create and publish</h1>
+        <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
+          Studio is the single creation workspace. Upload packages, create reusable context, and
+          assemble Toolkits here. Manage published items and assign them to projects from their
+          sidebar library pages.
+        </p>
+        <div className="mt-5 flex flex-wrap gap-2">
+          <Button asChild size="sm" variant="outline">
+            <a href="#packages">
+              <PackageOpen className="size-3.5" />
+              Packages
+            </a>
+          </Button>
+          <Button asChild size="sm" variant="outline">
+            <a href="#context">
+              <Brain className="size-3.5" />
+              Memory & Knowledge
+            </a>
+          </Button>
+          <Button asChild size="sm" variant="outline">
+            <a href="#toolkits">
+              <Boxes className="size-3.5" />
+              Toolkits
+            </a>
+          </Button>
+          <Button asChild size="sm" variant="ghost">
+            <Link to="/orgs">
+              <Building2 className="size-3.5" />
+              Organizations & projects
+            </Link>
+          </Button>
+        </div>
+      </header>
 
-      <div className="mt-6 flex flex-wrap gap-2">
-        <Button asChild size="sm" variant="outline">
-          <Link to="/orgs">
-            <Building2 className="mr-1 size-3.5" /> Organizations
-          </Link>
-        </Button>
-        <Button asChild size="sm" variant="outline">
-          <Link to="/guides">Professional setup</Link>
-        </Button>
-        <Button asChild size="sm" variant="outline">
-          <Link to="/dashboard">Dashboard hub</Link>
-        </Button>
-      </div>
-
-      <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {createActions.map((item) => (
-          <Card key={item.title} className="shadow-panel">
-            <CardHeader className="p-4">
-              <span className="flex size-9 items-center justify-center rounded-lg bg-primary/15 text-primary">
-                <item.icon className="size-4" />
-              </span>
-              <CardTitle className="mt-3 text-base">{item.title}</CardTitle>
-              <CardDescription className="text-xs">{item.body}</CardDescription>
-            </CardHeader>
-            <CardContent className="px-4 pb-4">
-              <Button asChild size="sm" variant="outline" className="w-full">
-                <a href={`#${"anchor" in item ? item.anchor : "upload"}`}>
-                  {"anchor" in item ? "Create below" : "Upload below"}
-                </a>
-              </Button>
+      <section id="packages" className="scroll-mt-6 space-y-5">
+        <SectionHeading
+          icon={PackageOpen}
+          label="Packages & capabilities"
+          title="Upload once, publish once"
+          description="One uploader handles every package type. Automatic detection fills the metadata, while the catalog type remains editable before publishing."
+        />
+        <div className="flex flex-wrap gap-2">
+          {packageTypes.map((type) => (
+            <Badge key={type} variant="secondary">
+              {type}
+            </Badge>
+          ))}
+        </div>
+        {can("upload_resources") ? (
+          <div className="max-w-3xl">
+            <ResourceLibraryCard
+              title="Upload package"
+              cardDescription="Choose one or multiple files. Packages are published to Marketplace and added to your personal library automatically."
+              showResourceList={false}
+            />
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="p-5 text-sm text-muted-foreground">
+              Your role cannot upload packages. Contact an administrator to raise permissions.
             </CardContent>
           </Card>
-        ))}
-      </div>
-
-      {can("upload_resources") ? (
-        <>
-          <h2
-            id="upload"
-            className="mt-12 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
-          >
-            Upload package
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Skills, MCP, tools, plugins, agents, prompts — auto-detected type, then publish.
-          </p>
-          <div className="mt-4 max-w-2xl">
-            <ResourceLibraryCard />
-          </div>
-        </>
-      ) : (
-        <p className="mt-10 text-sm text-muted-foreground">
-          Your role cannot upload packages. Contact an admin to raise permissions.
-        </p>
-      )}
-
-      <section id="memory-create" className="mt-12 scroll-mt-6">
-        <MemoryKnowledgePage defaultSection="memory" studioMode />
-      </section>
-      <section id="knowledge-create" className="mt-12 scroll-mt-6">
-        <MemoryKnowledgePage defaultSection="knowledge" studioMode />
-      </section>
-      <section id="toolkit-create" className="mt-12 scroll-mt-6">
-        <ToolkitCreator />
+        )}
       </section>
 
-      <Card className="mt-10 bg-pillar">
+      <section id="context" className="scroll-mt-6 space-y-5">
+        <SectionHeading
+          icon={LibraryBig}
+          label="Context & data"
+          title="Create Memory or Knowledge"
+          description="Use one focused form at a time. Memory stores durable instructions and decisions; Knowledge stores reusable documents, sources, and reference material."
+        />
+        <Tabs defaultValue="memory" className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="memory">
+              <Brain className="mr-2 size-4" />
+              Memory
+            </TabsTrigger>
+            <TabsTrigger value="knowledge">
+              <LibraryBig className="mr-2 size-4" />
+              Knowledge
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="memory" className="mt-4">
+            <MemoryKnowledgePage defaultSection="memory" studioMode />
+          </TabsContent>
+          <TabsContent value="knowledge" className="mt-4">
+            <MemoryKnowledgePage defaultSection="knowledge" studioMode />
+          </TabsContent>
+        </Tabs>
+      </section>
+
+      <section id="toolkits" className="scroll-mt-6 space-y-5">
+        <SectionHeading
+          icon={Layers3}
+          label="Bundles"
+          title="Build a Toolkit"
+          description="Combine capabilities already in your personal library into one reusable bundle, then publish it for project assignment."
+        />
+        <div className="max-w-3xl">
+          <ToolkitCreator />
+        </div>
+      </section>
+
+      <Card className="bg-pillar">
         <CardHeader className="p-5">
-          <CardTitle className="text-base">Wire into any AI chat</CardTitle>
+          <CardTitle className="text-base">Use what you created</CardTitle>
           <CardDescription>
-            After you create a key, point the client at Open-Connect MCP and /v1.
+            Open the matching sidebar library to review items, see project assignment badges, and
+            add each item to a project.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2 px-5 pb-5">
           <Button asChild size="sm">
-            <Link to="/api-keys">API Keys</Link>
+            <Link to="/agents">Agents</Link>
           </Button>
           <Button asChild size="sm" variant="outline">
-            <Link to="/guides">Professional setup</Link>
+            <Link to="/skills">Skills</Link>
           </Button>
           <Button asChild size="sm" variant="outline">
-            <Link to="/integrations">Client integrations</Link>
+            <Link to="/prompts">Prompts</Link>
           </Button>
           <Button asChild size="sm" variant="outline">
-            <Link to="/orgs">Organizations</Link>
+            <Link to="/memory">Memory</Link>
+          </Button>
+          <Button asChild size="sm" variant="outline">
+            <Link to="/knowledge">Knowledge</Link>
+          </Button>
+          <Button asChild size="sm" variant="outline">
+            <Link to="/toolkits">Toolkits</Link>
           </Button>
         </CardContent>
       </Card>
