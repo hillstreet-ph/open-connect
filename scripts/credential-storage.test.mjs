@@ -17,6 +17,17 @@ const passwordManagerMigration = readFileSync(
   ),
   "utf8",
 );
+const connectionBrokerMigration = readFileSync(
+  new URL(
+    "../supabase/migrations/20260924030000_connection_credential_broker.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
+const customMcpBroker = readFileSync(
+  new URL("../src/lib/custom-mcp.server.ts", import.meta.url),
+  "utf8",
+);
 
 test("moves credential values to Supabase Vault and clears plaintext", () => {
   assert.match(migration, /vault\.create_secret/);
@@ -41,4 +52,14 @@ test("uses metadata-only RPCs instead of direct credential table access", () => 
     migration.match(/list_credential_secrets[\s\S]*?\$\$;/)?.[0] ?? "",
     /secret_value/,
   );
+});
+
+test("resolves connection credentials only through the service-role broker", () => {
+  assert.match(connectionBrokerMigration, /auth\.role\(\).*service_role/s);
+  assert.match(connectionBrokerMigration, /credential\.user_id = p_user_id/);
+  assert.match(connectionBrokerMigration, /REVOKE ALL.*FROM PUBLIC, anon, authenticated/s);
+  assert.match(connectionBrokerMigration, /GRANT EXECUTE.*TO service_role/s);
+  assert.match(customMcpBroker, /rpc\(["']resolve_connection_credential["']/);
+  assert.doesNotMatch(customMcpBroker, /decrypted_secrets/);
+  assert.doesNotMatch(customMcpBroker, /\.schema\(["']vault["']\)/);
 });

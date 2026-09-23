@@ -422,8 +422,18 @@ export const disconnectApp = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: { id: string }) => ({ id: input.id }))
   .handler(async ({ data, context }) => {
+    const { data: connection, error: readError } = await context.supabase
+      .from("app_connections")
+      .select("credential_reference")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (readError) throw new Error(readError.message);
     const { error } = await context.supabase.from("app_connections").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
+    const secretId = connection?.credential_reference?.match(
+      /^credential:\/\/[^/]+\/([0-9a-f-]{36})$/i,
+    )?.[1];
+    if (secretId) await context.supabase.rpc("delete_credential_secret", { p_id: secretId });
     return { ok: true };
   });
 
@@ -434,62 +444,84 @@ export const configureAppConnection = createServerFn({ method: "POST" })
     const app = CATALOG.find((item) => item.provider === data.provider.trim().toLowerCase());
     if (!app) throw new Error("Unknown application");
     const setup = normalizeConnectionSetup(data, app);
-    const secretPayload = JSON.stringify({
-      version: 1,
-      auth_type: setup.authType,
-      credential: setup.apiKey,
-    });
-    const { data: secret, error: secretError } = await context.supabase.rpc(
-      "create_credential_secret",
-      {
-        p_name: `${setup.displayName} · ${setup.accountLabel}`,
-        p_secret_type: "api_key",
-        p_scopes: ["connections"],
-        p_secret_value: secretPayload,
-      },
-    );
-    if (secretError) throw new Error(secretError.message);
-
-    const secretId = String((secret as { id?: string } | null)?.id ?? "");
-    if (!secretId) throw new Error("Credential vault did not return a reference");
+    const { validateConnectionCredential } = await import("@/lib/connection-validation.server");
+    const validation = await validateConnectionCredential(setup);
+    const existing =
+      setup.provider === "custom_mcp"
+        ? null
+        : await context.supabase
+            .from("app_connections")
+            .select("id,credential_reference")
+            .eq("user_id", context.userId)
+            .eq("provider", setup.provider)
+            .is("provider_account_id", null)
+            .maybeSingle();
+    if (existing?.error) throw new Error(existing.error.message);
+    let secretId = "";
+    if (setup.apiKey) {
+      const secretPayload = JSON.stringify({
+        version: 1,
+        auth_type: setup.authType,
+        credential: setup.apiKey,
+      });
+      const { data: secret, error: secretError } = await context.supabase.rpc(
+        "create_credential_secret",
+        {
+          p_name: `${setup.displayName} · ${setup.accountLabel}`,
+          p_secret_type: "api_key",
+          p_scopes: ["connections"],
+          p_secret_value: secretPayload,
+        },
+      );
+      if (secretError) throw new Error(secretError.message);
+      secretId = String((secret as { id?: string } | null)?.id ?? "");
+      if (!secretId) throw new Error("Credential vault did not return a reference");
+    }
     const accountId =
       setup.provider === "custom_mcp"
-        ? `${setup.accountLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${secretId.slice(0, 8)}`
+        ? `${setup.accountLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${(secretId || crypto.randomUUID()).slice(0, 8)}`
         : null;
     const record = {
       user_id: context.userId,
       provider: setup.provider,
       display_name: setup.displayName,
       provider_account_id: accountId,
-      status: "connected",
+      status: validation.verified ? "connected" : "configured_unverified",
       scopes: [...setup.app.scopes],
-      credential_reference: `credential://${setup.provider}/${secretId}`,
+      credential_reference: secretId ? `credential://${setup.provider}/${secretId}` : null,
       metadata: {
         source: "open-connect",
         mode: setup.provider === "custom_mcp" ? "custom_mcp" : "brokered_secret",
         auth_type: setup.authType,
         account_label: setup.accountLabel,
         endpoint_url: setup.endpointUrl || null,
+        validation: {
+          verified: validation.verified,
+          detail: validation.detail,
+          provider_account_id: validation.accountId ?? null,
+          checked_at: new Date().toISOString(),
+        },
         full_scopes: false,
       },
     };
 
-    const existing =
-      setup.provider === "custom_mcp"
-        ? null
-        : await context.supabase
-            .from("app_connections")
-            .select("id")
-            .eq("user_id", context.userId)
-            .eq("provider", setup.provider)
-            .is("provider_account_id", null)
-            .maybeSingle();
     const query = existing?.data?.id
       ? context.supabase.from("app_connections").update(record).eq("id", existing.data.id)
       : context.supabase.from("app_connections").insert(record);
     const { data: connection, error } = await query
       .select("id, provider, display_name, status, scopes, provider_account_id, created_at")
       .single();
-    if (error) throw new Error(error.message);
-    return connection;
+    if (error) {
+      if (secretId) {
+        await context.supabase.rpc("delete_credential_secret", { p_id: secretId });
+      }
+      throw new Error(error.message);
+    }
+    const oldSecretId = existing?.data?.credential_reference?.match(
+      /^credential:\/\/[^/]+\/([0-9a-f-]{36})$/i,
+    )?.[1];
+    if (oldSecretId && oldSecretId !== secretId) {
+      await context.supabase.rpc("delete_credential_secret", { p_id: oldSecretId });
+    }
+    return { ...connection, validation };
   });

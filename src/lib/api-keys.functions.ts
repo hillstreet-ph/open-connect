@@ -45,6 +45,49 @@ export const createApiKey = createServerFn({ method: "POST" })
     },
   )
   .handler(async ({ data, context }) => {
+    let organizationId = data.organizationId;
+    let workspaceId = data.workspaceId;
+    const projectId = data.projectId;
+
+    if (projectId) {
+      const { data: project, error } = await context.supabase
+        .from("projects")
+        .select("id,organization_id,workspace_id")
+        .eq("id", projectId)
+        .maybeSingle();
+      if (error || !project) throw new Error("Project is unavailable to this user");
+      if (organizationId && organizationId !== project.organization_id) {
+        throw new Error("Project does not belong to the selected organization");
+      }
+      if (workspaceId && workspaceId !== project.workspace_id) {
+        throw new Error("Project does not belong to the selected workspace");
+      }
+      organizationId = project.organization_id;
+      workspaceId = project.workspace_id;
+    }
+
+    if (workspaceId) {
+      const { data: workspace, error } = await context.supabase
+        .from("workspaces")
+        .select("id,organization_id")
+        .eq("id", workspaceId)
+        .maybeSingle();
+      if (error || !workspace) throw new Error("Workspace is unavailable to this user");
+      if (organizationId && organizationId !== workspace.organization_id) {
+        throw new Error("Workspace does not belong to the selected organization");
+      }
+      organizationId = workspace.organization_id;
+    }
+
+    if (organizationId) {
+      const { data: organization, error } = await context.supabase
+        .from("organizations")
+        .select("id")
+        .eq("id", organizationId)
+        .maybeSingle();
+      if (error || !organization) throw new Error("Organization is unavailable to this user");
+    }
+
     const { generateKey } = await import("./gateway.server");
     const key = generateKey();
     const { error } = await context.supabase.from("api_keys").insert({
@@ -54,9 +97,9 @@ export const createApiKey = createServerFn({ method: "POST" })
       key_hash: key.hash,
       scopes: data.scopes,
       access_profile: data.profile,
-      organization_id: data.organizationId,
-      workspace_id: data.workspaceId,
-      project_id: data.projectId,
+      organization_id: organizationId,
+      workspace_id: workspaceId,
+      project_id: projectId,
     });
     if (error) throw new Error(error.message);
     return { key: key.raw, scopes: data.scopes, profile: data.profile };

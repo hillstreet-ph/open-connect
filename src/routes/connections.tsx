@@ -35,6 +35,16 @@ type CatalogApp = {
   oauth: boolean;
 };
 
+function connectionStatusLabel(status: string) {
+  if (status === "connected") return "Connected · verified";
+  if (status === "pending") return "Authorization pending";
+  if (status === "configured_unverified") return "Configured · unverified";
+  if (status === "degraded") return "Degraded";
+  if (status === "error") return "Error";
+  if (status === "disabled") return "Disabled";
+  return status.replaceAll("_", " ");
+}
+
 export const Route = createFileRoute("/connections")({
   head: () => ({
     meta: [
@@ -63,6 +73,8 @@ function ConnectionsPage() {
   const [accountLabel, setAccountLabel] = useState("");
   const [endpointUrl, setEndpointUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
+  const [authType, setAuthType] = useState<"none" | "bearer" | "api_key">("bearer");
+  const endpointProviders = new Set(["custom_mcp", "supabase", "databricks", "litellm"]);
 
   const catalog = useQuery({ queryKey: ["connection-catalog"], queryFn: () => catalogFn({}) });
   const mine = useQuery({
@@ -99,15 +111,20 @@ function ConnectionsPage() {
           account_label: accountLabel,
           endpoint_url: endpointUrl,
           api_key: apiKey,
-          auth_type: "bearer",
+          auth_type: authType,
         },
       }),
-    onSuccess: () => {
-      toast.success("Connection saved securely");
+    onSuccess: (result) => {
+      toast.success(
+        result.validation.verified
+          ? "Connection verified and saved securely"
+          : "Credential saved; provider validation is not available yet",
+      );
       setSelectedApp(null);
       setAccountLabel("");
       setEndpointUrl("");
       setApiKey("");
+      setAuthType("bearer");
       void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Connection failed"),
@@ -194,7 +211,7 @@ function ConnectionsPage() {
                   <div className="min-w-0">
                     <p className="truncate font-medium">{c.display_name}</p>
                     <Badge variant="outline" className="mt-1 text-xs">
-                      {c.status}
+                      {connectionStatusLabel(c.status)}
                     </Badge>
                   </div>
                 </div>
@@ -234,7 +251,7 @@ function ConnectionsPage() {
                       </Button>
                     ) : connection ? (
                       <Badge variant="secondary" className="shrink-0">
-                        {connection.status === "connected" ? "Connected" : "Authorization pending"}
+                        {connectionStatusLabel(connection.status)}
                       </Badge>
                     ) : (
                       <Button
@@ -304,37 +321,67 @@ function ConnectionsPage() {
                 placeholder="Production · hillstreet-ph"
               />
             </div>
-            {selectedApp?.provider === "custom_mcp" ? (
+            {selectedApp && endpointProviders.has(selectedApp.provider) ? (
               <div className="space-y-2">
-                <Label htmlFor="connection-endpoint">MCP endpoint URL</Label>
+                <Label htmlFor="connection-endpoint">
+                  {selectedApp.provider === "custom_mcp" ? "MCP endpoint URL" : "Service base URL"}
+                </Label>
                 <Input
                   id="connection-endpoint"
                   type="url"
                   value={endpointUrl}
                   onChange={(event) => setEndpointUrl(event.target.value)}
-                  placeholder="https://mcp.example.com/mcp"
+                  placeholder={
+                    selectedApp.provider === "custom_mcp"
+                      ? "https://mcp.example.com/mcp"
+                      : "https://workspace.example.com"
+                  }
                 />
               </div>
             ) : null}
-            <div className="space-y-2">
-              <Label htmlFor="connection-key">
-                {selectedApp?.provider === "custom_mcp"
-                  ? "Bearer token / API key"
-                  : "API key or access token"}
-              </Label>
-              <Input
-                id="connection-key"
-                type="password"
-                autoComplete="off"
-                value={apiKey}
-                onChange={(event) => setApiKey(event.target.value)}
-                placeholder="Paste credential"
-                className="font-mono"
-              />
-            </div>
+            {selectedApp?.provider === "custom_mcp" ? (
+              <div className="space-y-2">
+                <Label htmlFor="connection-auth">Authentication method</Label>
+                <select
+                  id="connection-auth"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={authType}
+                  onChange={(event) =>
+                    setAuthType(event.target.value as "none" | "bearer" | "api_key")
+                  }
+                >
+                  <option value="none">No authentication</option>
+                  <option value="bearer">Bearer token</option>
+                  <option value="api_key">X-API-Key header</option>
+                </select>
+              </div>
+            ) : null}
+            {selectedApp?.provider !== "custom_mcp" || authType !== "none" ? (
+              <div className="space-y-2">
+                <Label htmlFor="connection-key">
+                  {selectedApp?.provider === "custom_mcp"
+                    ? "Bearer token / API key"
+                    : "API key or access token"}
+                </Label>
+                <Input
+                  id="connection-key"
+                  type="password"
+                  autoComplete="off"
+                  value={apiKey}
+                  onChange={(event) => setApiKey(event.target.value)}
+                  placeholder="Paste credential"
+                  className="font-mono"
+                />
+              </div>
+            ) : null}
             <Button
               className="w-full"
-              disabled={configureMutation.isPending || apiKey.trim().length < 8}
+              disabled={
+                configureMutation.isPending ||
+                (selectedApp?.provider === "custom_mcp"
+                  ? !endpointUrl.trim() || (authType !== "none" && apiKey.trim().length < 8)
+                  : apiKey.trim().length < 8)
+              }
               onClick={() => configureMutation.mutate()}
             >
               {configureMutation.isPending ? (
@@ -342,7 +389,7 @@ function ConnectionsPage() {
               ) : (
                 <Lock className="mr-2 size-4" />
               )}
-              Save secure connection
+              Validate & save connection
             </Button>
           </div>
         </DialogContent>
