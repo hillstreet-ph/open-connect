@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { AddToProjectButton } from "@/components/add-to-project";
+import { AddToLibraryButton } from "@/components/add-to-library";
 
 export const Route = createFileRoute("/resources")({
   head: () => ({
@@ -137,8 +137,8 @@ function ResourcesPage() {
           </Badge>
           <h1 className="text-2xl font-semibold sm:text-4xl">Marketplace</h1>
           <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-            Browse skills, MCP, tools, plugins, agents, and prompts. Sign in to download or{" "}
-            <strong className="font-medium text-foreground">add to a project workspace</strong>.
+            Browse skills, MCP, tools, plugins, agents, and prompts. Add packages to your personal
+            library, then share them with projects from the matching sidebar page.
           </p>
         </div>
         {user ? (
@@ -167,7 +167,8 @@ function ResourcesPage() {
         <div className="mt-6 flex items-start gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2.5 text-sm text-muted-foreground">
           <Lock className="mt-0.5 size-4 shrink-0" />
           <span>
-            Browse freely while logged out. Sign in to view, download, or add packages to a project.
+            Browse freely while logged out. Sign in to view, download, or add packages to your
+            library.
           </span>
         </div>
       ) : null}
@@ -278,7 +279,7 @@ function ResourcesPage() {
                             {executable ? "Download" : "Metadata"}
                           </Button>
                         </div>
-                        {executable ? <AddToProjectButton resourceId={item.id} /> : null}
+                        {executable ? <AddToLibraryButton resourceId={item.id} /> : null}
                       </div>
                     ) : (
                       <Button asChild size="sm" variant="outline">

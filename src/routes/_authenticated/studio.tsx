@@ -26,8 +26,7 @@ const createActions = [
     icon: Bot,
     title: "AI Agent",
     body: "Upload an AI agent package and add it to one or more projects.",
-    to: "/agents" as const,
-    cta: "Upload agent",
+    type: "agent",
   },
   {
     icon: Boxes,

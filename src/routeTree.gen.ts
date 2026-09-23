@@ -31,10 +31,12 @@ import { Route as AuthenticatedKnowledgeRouteImport } from './routes/_authentica
 import { Route as AuthenticatedMemoryRouteImport } from './routes/_authenticated/memory'
 import { Route as AuthenticatedOrgsRouteImport } from './routes/_authenticated/orgs'
 import { Route as AuthenticatedProjectsRouteImport } from './routes/_authenticated/projects'
+import { Route as AuthenticatedPromptsRouteImport } from './routes/_authenticated/prompts'
 import { Route as AuthenticatedRolesRouteImport } from './routes/_authenticated/roles'
 import { Route as AuthenticatedScheduleRouteImport } from './routes/_authenticated/schedule'
 import { Route as AuthenticatedSecretsRouteImport } from './routes/_authenticated/secrets'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedSkillsRouteImport } from './routes/_authenticated/skills'
 import { Route as AuthenticatedStudioRouteImport } from './routes/_authenticated/studio'
 import { Route as AuthenticatedTasksRouteImport } from './routes/_authenticated/tasks'
 import { Route as AuthenticatedToolkitsRouteImport } from './routes/_authenticated/toolkits'
@@ -163,6 +165,11 @@ const AuthenticatedProjectsRoute = AuthenticatedProjectsRouteImport.update({
   path: '/projects',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPromptsRoute = AuthenticatedPromptsRouteImport.update({
+  id: '/prompts',
+  path: '/prompts',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedRolesRoute = AuthenticatedRolesRouteImport.update({
   id: '/roles',
   path: '/roles',
@@ -181,6 +188,11 @@ const AuthenticatedSecretsRoute = AuthenticatedSecretsRouteImport.update({
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedSkillsRoute = AuthenticatedSkillsRouteImport.update({
+  id: '/skills',
+  path: '/skills',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedStudioRoute = AuthenticatedStudioRouteImport.update({
@@ -287,10 +299,12 @@ export interface FileRoutesByFullPath {
   '/memory': typeof AuthenticatedMemoryRoute
   '/orgs': typeof AuthenticatedOrgsRoute
   '/projects': typeof AuthenticatedProjectsRouteWithChildren
+  '/prompts': typeof AuthenticatedPromptsRoute
   '/roles': typeof AuthenticatedRolesRoute
   '/schedule': typeof AuthenticatedScheduleRoute
   '/secrets': typeof AuthenticatedSecretsRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/skills': typeof AuthenticatedSkillsRoute
   '/studio': typeof AuthenticatedStudioRoute
   '/tasks': typeof AuthenticatedTasksRoute
   '/toolkits': typeof AuthenticatedToolkitsRoute
@@ -330,10 +344,12 @@ export interface FileRoutesByTo {
   '/memory': typeof AuthenticatedMemoryRoute
   '/orgs': typeof AuthenticatedOrgsRoute
   '/projects': typeof AuthenticatedProjectsRouteWithChildren
+  '/prompts': typeof AuthenticatedPromptsRoute
   '/roles': typeof AuthenticatedRolesRoute
   '/schedule': typeof AuthenticatedScheduleRoute
   '/secrets': typeof AuthenticatedSecretsRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/skills': typeof AuthenticatedSkillsRoute
   '/studio': typeof AuthenticatedStudioRoute
   '/tasks': typeof AuthenticatedTasksRoute
   '/toolkits': typeof AuthenticatedToolkitsRoute
@@ -375,10 +391,12 @@ export interface FileRoutesById {
   '/_authenticated/memory': typeof AuthenticatedMemoryRoute
   '/_authenticated/orgs': typeof AuthenticatedOrgsRoute
   '/_authenticated/projects': typeof AuthenticatedProjectsRouteWithChildren
+  '/_authenticated/prompts': typeof AuthenticatedPromptsRoute
   '/_authenticated/roles': typeof AuthenticatedRolesRoute
   '/_authenticated/schedule': typeof AuthenticatedScheduleRoute
   '/_authenticated/secrets': typeof AuthenticatedSecretsRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/skills': typeof AuthenticatedSkillsRoute
   '/_authenticated/studio': typeof AuthenticatedStudioRoute
   '/_authenticated/tasks': typeof AuthenticatedTasksRoute
   '/_authenticated/toolkits': typeof AuthenticatedToolkitsRoute
@@ -420,10 +438,12 @@ export interface FileRouteTypes {
     | '/memory'
     | '/orgs'
     | '/projects'
+    | '/prompts'
     | '/roles'
     | '/schedule'
     | '/secrets'
     | '/settings'
+    | '/skills'
     | '/studio'
     | '/tasks'
     | '/toolkits'
@@ -463,10 +483,12 @@ export interface FileRouteTypes {
     | '/memory'
     | '/orgs'
     | '/projects'
+    | '/prompts'
     | '/roles'
     | '/schedule'
     | '/secrets'
     | '/settings'
+    | '/skills'
     | '/studio'
     | '/tasks'
     | '/toolkits'
@@ -507,10 +529,12 @@ export interface FileRouteTypes {
     | '/_authenticated/memory'
     | '/_authenticated/orgs'
     | '/_authenticated/projects'
+    | '/_authenticated/prompts'
     | '/_authenticated/roles'
     | '/_authenticated/schedule'
     | '/_authenticated/secrets'
     | '/_authenticated/settings'
+    | '/_authenticated/skills'
     | '/_authenticated/studio'
     | '/_authenticated/tasks'
     | '/_authenticated/toolkits'
@@ -711,6 +735,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/prompts': {
+      id: '/_authenticated/prompts'
+      path: '/prompts'
+      fullPath: '/prompts'
+      preLoaderRoute: typeof AuthenticatedPromptsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/roles': {
       id: '/_authenticated/roles'
       path: '/roles'
@@ -737,6 +768,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/skills': {
+      id: '/_authenticated/skills'
+      path: '/skills'
+      fullPath: '/skills'
+      preLoaderRoute: typeof AuthenticatedSkillsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/studio': {
@@ -879,10 +917,12 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedMemoryRoute: typeof AuthenticatedMemoryRoute
   AuthenticatedOrgsRoute: typeof AuthenticatedOrgsRoute
   AuthenticatedProjectsRoute: typeof AuthenticatedProjectsRouteWithChildren
+  AuthenticatedPromptsRoute: typeof AuthenticatedPromptsRoute
   AuthenticatedRolesRoute: typeof AuthenticatedRolesRoute
   AuthenticatedScheduleRoute: typeof AuthenticatedScheduleRoute
   AuthenticatedSecretsRoute: typeof AuthenticatedSecretsRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedSkillsRoute: typeof AuthenticatedSkillsRoute
   AuthenticatedStudioRoute: typeof AuthenticatedStudioRoute
   AuthenticatedTasksRoute: typeof AuthenticatedTasksRoute
   AuthenticatedToolkitsRoute: typeof AuthenticatedToolkitsRoute
@@ -900,10 +940,12 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedMemoryRoute: AuthenticatedMemoryRoute,
   AuthenticatedOrgsRoute: AuthenticatedOrgsRoute,
   AuthenticatedProjectsRoute: AuthenticatedProjectsRouteWithChildren,
+  AuthenticatedPromptsRoute: AuthenticatedPromptsRoute,
   AuthenticatedRolesRoute: AuthenticatedRolesRoute,
   AuthenticatedScheduleRoute: AuthenticatedScheduleRoute,
   AuthenticatedSecretsRoute: AuthenticatedSecretsRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedSkillsRoute: AuthenticatedSkillsRoute,
   AuthenticatedStudioRoute: AuthenticatedStudioRoute,
   AuthenticatedTasksRoute: AuthenticatedTasksRoute,
   AuthenticatedToolkitsRoute: AuthenticatedToolkitsRoute,
