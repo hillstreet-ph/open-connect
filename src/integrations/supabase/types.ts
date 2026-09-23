@@ -437,12 +437,30 @@ export type Database = {
         };
         Returns: Json;
       };
+      create_credential_item: {
+        Args: {
+          p_email_address: string;
+          p_name: string;
+          p_notes: string;
+          p_scopes: string[];
+          p_secret_type: string;
+          p_secret_value: string;
+          p_totp_secret: string;
+          p_username: string;
+          p_website: string;
+        };
+        Returns: Json;
+      };
       delete_credential_secret: {
         Args: { p_id: string };
         Returns: boolean;
       };
       list_credential_secrets: {
         Args: Record<PropertyKey, never>;
+        Returns: Json;
+      };
+      reveal_credential_secret: {
+        Args: { p_id: string };
         Returns: Json;
       };
       get_service_credential: {
