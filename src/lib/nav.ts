@@ -21,7 +21,6 @@ export const publicCategories: NavCategory[] = [
     label: "Products",
     items: [
       { to: "/resources", label: "Marketplace", description: "Agents, MCP, skills" },
-      { to: "/connections", label: "Connections", description: "Slack, GitHub, apps" },
       { to: "/models", label: "Models", description: "OpenAI-compatible /v1" },
     ],
   },
@@ -60,7 +59,7 @@ export const appCategories: NavCategory[] = [
     label: "Catalog",
     items: [
       { to: "/resources", label: "Marketplace", description: "Download skills" },
-      { to: "/connections", label: "Connections", description: "Link apps" },
+      { to: "/connections", label: "Connectors", description: "Connect apps and custom MCP" },
       { to: "/models", label: "Models", description: "Gateway models" },
       { to: "/toolkits", label: "Toolkits", description: "Developer+" },
     ],
@@ -78,7 +77,6 @@ export const appCategories: NavCategory[] = [
 export function flatPublicNav(): NavLink[] {
   return [
     { to: "/resources", label: "Marketplace" },
-    { to: "/connections", label: "Connections" },
     { to: "/models", label: "Models" },
   ];
 }
