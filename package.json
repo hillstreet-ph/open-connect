@@ -12,7 +12,7 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "test:control": "node --experimental-strip-types --test src/lib/access-profiles.test.ts src/lib/autonomous-control.test.ts src/lib/autonomous-mcp-contract.test.ts src/lib/calculator.test.ts src/lib/connection-validation.server.test.ts src/lib/connections.functions.test.ts src/lib/custom-mcp.server.test.ts src/lib/provider-oauth.server.test.ts src/lib/runtime-env.server.test.ts",
+    "test:control": "node --experimental-strip-types --test src/lib/access-profiles.test.ts src/lib/autonomous-control.test.ts src/lib/autonomous-mcp-contract.test.ts src/lib/calculator.test.ts src/lib/connection-validation.server.test.ts src/lib/connections.functions.test.ts src/lib/custom-mcp.server.test.ts src/lib/managed-connectors.server.test.ts src/lib/provider-oauth.server.test.ts src/lib/runtime-env.server.test.ts",
     "test:navigation": "node --experimental-strip-types --test src/lib/navigation.test.ts src/lib/react-compat.test.ts",
     "test:credentials": "node --test scripts/credential-broker.test.mjs scripts/capability-router.test.mjs scripts/credential-storage.test.mjs scripts/supabase-advisor-hardening.test.mjs",
     "test:campaign": "node --experimental-strip-types --test src/lib/campaign-studio.test.ts",
