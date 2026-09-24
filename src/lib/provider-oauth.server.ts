@@ -62,7 +62,8 @@ export async function exchangeGitHubCode(input: {
     cache: "no-store",
     signal: AbortSignal.timeout(12_000),
   });
-  if (!tokenResponse.ok) throw new Error(`GitHub token exchange failed (HTTP ${tokenResponse.status}).`);
+  if (!tokenResponse.ok)
+    throw new Error(`GitHub token exchange failed (HTTP ${tokenResponse.status}).`);
   const tokenPayload = (await tokenResponse.json()) as {
     access_token?: string;
     scope?: string;
@@ -70,7 +71,11 @@ export async function exchangeGitHubCode(input: {
     error_description?: string;
   };
   if (!tokenPayload.access_token) {
-    throw new Error(tokenPayload.error_description || tokenPayload.error || "GitHub did not return an access token.");
+    throw new Error(
+      tokenPayload.error_description ||
+        tokenPayload.error ||
+        "GitHub did not return an access token.",
+    );
   }
 
   const identityResponse = await send("https://api.github.com/user", {
@@ -91,7 +96,10 @@ export async function exchangeGitHubCode(input: {
 
   return {
     accessToken: tokenPayload.access_token,
-    scopes: (tokenPayload.scope || "").split(",").map((scope) => scope.trim()).filter(Boolean),
+    scopes: (tokenPayload.scope || "")
+      .split(",")
+      .map((scope) => scope.trim())
+      .filter(Boolean),
     accountId: String(identity.id),
     accountLogin: identity.login,
   };
