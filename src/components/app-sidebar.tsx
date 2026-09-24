@@ -44,7 +44,7 @@ type Item = {
 /**
  * Primary IA (locked):
  * Workspace switcher → Dashboard → Workspaces → Work → Build → Marketplace → Connections →
- * AI Gateway → Developer. Settings live in the user avatar menu.
+ * AI Gateway. Integrations, API keys, and settings live in the user avatar menu.
  *
  * Organization settings live in the user menu; workspaces manage projects and environments.
  * System administration appears once for privileged roles in the shared menu.
@@ -75,7 +75,6 @@ const DISCOVER: Item[] = [{ to: "/resources", label: "Marketplace", icon: Boxes 
 
 const CONNECT: Item[] = [
   { to: "/connections", label: "Connections", icon: Plug },
-  { to: "/integrations", label: "Integrations", icon: Plug },
   { to: "/secrets", label: "Credentials", icon: LockKeyhole },
   { to: "/models", label: "AI Gateway", icon: Sparkles },
 ];
