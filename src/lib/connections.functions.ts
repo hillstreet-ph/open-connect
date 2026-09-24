@@ -337,6 +337,7 @@ export const listConnectionCatalog = createServerFn({ method: "GET" }).handler(a
     category: item.category,
     scopes: [...item.scopes],
     oauth: item.oauth,
+    oauth_ready: item.provider === "github",
   }));
 });
 
