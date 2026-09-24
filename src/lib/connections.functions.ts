@@ -365,7 +365,44 @@ export const listAppConnections = createServerFn({ method: "GET" })
       )
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
-    return data ?? [];
+    const connections = data ?? [];
+    const pendingManaged = connections.filter(
+      (connection) =>
+        connection.status === "pending" &&
+        connection.credential_reference?.startsWith("composio://connected-account/"),
+    );
+    if (pendingManaged.length) {
+      const { getManagedConnection } = await import("@/lib/managed-connectors.server");
+      await Promise.all(
+        pendingManaged.map(async (connection) => {
+          const accountId = connection.credential_reference!.split("/").pop()!;
+          try {
+            const remote = await getManagedConnection(connection.provider, accountId);
+            if (remote.status?.toUpperCase() !== "ACTIVE") return;
+            connection.status = "connected";
+            connection.provider_account_id = remote.id || accountId;
+            connection.scopes = [];
+            await context.supabase
+              .from("app_connections")
+              .update({
+                status: "connected",
+                provider_account_id: remote.id || accountId,
+                metadata: {
+                  source: "open-connect",
+                  mode: "managed_oauth",
+                  broker: "composio",
+                  validation: { verified: true, checked_at: new Date().toISOString() },
+                  full_scopes: false,
+                },
+              })
+              .eq("id", connection.id);
+          } catch {
+            // Keep pending. The broker may still be waiting for the user to finish authorization.
+          }
+        }),
+      );
+    }
+    return connections;
   });
 
 export const connectApp = createServerFn({ method: "POST" })
