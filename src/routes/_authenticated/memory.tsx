@@ -26,7 +26,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { AddContextToProject } from "@/components/add-context-to-project";
-import { InstalledResourceSection } from "@/components/installed-resource-section";
 
 export const Route = createFileRoute("/_authenticated/memory")({
   head: () => ({
@@ -170,6 +169,21 @@ export function MemoryKnowledgePage({
     () => (projects.data ?? []).map((project) => ({ id: project.id, name: project.name })),
     [projects.data],
   );
+  const projectNames = useMemo(
+    () => new Map(projectOptions.map((project) => [project.id, project.name])),
+    [projectOptions],
+  );
+  const visibleMemories = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return memories.data ?? [];
+    return (memories.data ?? []).filter((item) =>
+      [item.title, item.content, ...(item.tags ?? [])].some((value) =>
+        String(value ?? "")
+          .toLowerCase()
+          .includes(needle),
+      ),
+    );
+  }, [memories.data, query]);
 
   const memoryMutation = useMutation({
     mutationFn: async () => {
@@ -309,8 +323,6 @@ export function MemoryKnowledgePage({
         </div>
       )}
 
-      {!studioMode ? <InstalledResourceSection resourceType={defaultSection} /> : null}
-
       {defaultSection === "memory" ? (
         <div className="space-y-4">
           {studioMode ? (
@@ -426,56 +438,78 @@ export function MemoryKnowledgePage({
             </Card>
           ) : null}
           {!studioMode ? (
-            <div className="grid gap-3 lg:grid-cols-2">
-              {memories.isLoading ? (
-                <Loader2 className="size-5 animate-spin" />
-              ) : (memories.data ?? []).length === 0 ? (
-                <p className="text-sm text-muted-foreground">No memories in this scope yet.</p>
-              ) : (
-                memories.data?.map((item) => (
-                  <Card key={item.id} className="p-4 shadow-panel">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="font-medium">{item.title}</p>
-                          <Badge variant="secondary">{item.memory_type}</Badge>
-                          <Badge variant="outline">importance {item.importance}</Badge>
-                        </div>
-                        <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">
-                          {item.content}
-                        </p>
-                        <div className="mt-3 flex flex-wrap gap-1">
-                          {(item.tags ?? []).map((tag: string) => (
-                            <Badge key={tag} variant="outline">
-                              {tag}
+            <>
+              <div className="relative max-w-xl">
+                <Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" />
+                <Input
+                  className="pl-9"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search memory title, content, and tags…"
+                />
+              </div>
+              <div className="grid gap-3 lg:grid-cols-2">
+                {memories.isLoading ? (
+                  <Loader2 className="size-5 animate-spin" />
+                ) : visibleMemories.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No memories found in this scope.</p>
+                ) : (
+                  visibleMemories.map((item) => (
+                    <Card key={item.id} className="p-4 shadow-panel">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-medium">{item.title}</p>
+                            <Badge variant="secondary">{item.memory_type}</Badge>
+                            <Badge variant="outline">importance {item.importance}</Badge>
+                            <Badge variant="outline">
+                              {item.project_id
+                                ? (projectNames.get(item.project_id) ?? "Assigned project")
+                                : "Personal"}
                             </Badge>
-                          ))}
+                          </div>
+                          <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">
+                            {item.content}
+                          </p>
+                          <div className="mt-3 flex flex-wrap gap-1">
+                            {(item.tags ?? []).map((tag: string) => (
+                              <Badge key={tag} variant="outline">
+                                {tag}
+                              </Badge>
+                            ))}
+                          </div>
+                          {!projectId ? <AddContextToProject kind="memory" id={item.id} /> : null}
                         </div>
-                        {!projectId ? <AddContextToProject kind="memory" id={item.id} /> : null}
+                        <div className="flex shrink-0 gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            aria-label={item.pinned ? "Unpin memory" : "Pin memory"}
+                            onClick={() =>
+                              pinMutation.mutate({ id: item.id, pinned: !item.pinned })
+                            }
+                          >
+                            {item.pinned ? (
+                              <PinOff className="size-4" />
+                            ) : (
+                              <Pin className="size-4" />
+                            )}
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            aria-label="Delete memory"
+                            onClick={() => deleteMutation.mutate(item.id)}
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex shrink-0 gap-1">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          aria-label={item.pinned ? "Unpin memory" : "Pin memory"}
-                          onClick={() => pinMutation.mutate({ id: item.id, pinned: !item.pinned })}
-                        >
-                          {item.pinned ? <PinOff className="size-4" /> : <Pin className="size-4" />}
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          aria-label="Delete memory"
-                          onClick={() => deleteMutation.mutate(item.id)}
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
-                ))
-              )}
-            </div>
+                    </Card>
+                  ))
+                )}
+              </div>
+            </>
           ) : null}
         </div>
       ) : (
@@ -612,6 +646,11 @@ export function MemoryKnowledgePage({
                             <p className="font-medium">{item.title}</p>
                             <Badge variant="secondary">{item.source_type}</Badge>
                             <Badge variant="outline">{item.status}</Badge>
+                            <Badge variant="outline">
+                              {item.project_id
+                                ? (projectNames.get(item.project_id) ?? "Assigned project")
+                                : "Personal"}
+                            </Badge>
                           </div>
                           <p className="mt-2 line-clamp-6 whitespace-pre-wrap text-sm text-muted-foreground">
                             {item.content}
