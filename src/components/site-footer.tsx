@@ -42,11 +42,6 @@ export function SiteFooter() {
             Connect
           </p>
           <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-            <li>
-              <Link to="/integrations" className="hover:text-foreground">
-                Integrations
-              </Link>
-            </li>
             <li className="font-mono text-xs">/mcp</li>
             <li className="font-mono text-xs">/v1 · /api/v1 · /oauth</li>
           </ul>
@@ -62,11 +57,6 @@ export function SiteFooter() {
                 <li>
                   <Link to="/dashboard" className="hover:text-foreground">
                     Dashboard
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/api-keys" className="hover:text-foreground">
-                    API Keys
                   </Link>
                 </li>
                 <li>
