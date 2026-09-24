@@ -33,6 +33,7 @@ type CatalogApp = {
   category: string;
   scopes: string[];
   oauth: boolean;
+  oauth_ready: boolean;
 };
 
 function connectionStatusLabel(status: string) {
@@ -86,11 +87,11 @@ function ConnectionsPage() {
   const connectMutation = useMutation({
     mutationFn: (provider: string) => connectFn({ data: { provider } }),
     onSuccess: (result) => {
-      toast.success(
-        result.status === "pending"
-          ? "Authorization pending — complete the official provider flow before use"
-          : "Connection saved securely",
-      );
+      if (result.authorization_url) {
+        window.location.assign(result.authorization_url);
+        return;
+      }
+      toast.success("Connection saved securely");
       void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Connect failed"),
@@ -287,7 +288,12 @@ function ConnectionsPage() {
                         size="sm"
                         variant="outline"
                         className="shrink-0"
-                        disabled={connectMutation.isPending}
+                        disabled={connectMutation.isPending || (app.oauth && !app.oauth_ready)}
+                        title={
+                          app.oauth && !app.oauth_ready
+                            ? "Official provider OAuth setup is not available yet"
+                            : undefined
+                        }
                         onClick={() =>
                           app.oauth
                             ? connectMutation.mutate(app.provider)
@@ -295,7 +301,9 @@ function ConnectionsPage() {
                         }
                       >
                         {app.oauth
-                          ? "Authorize"
+                          ? app.oauth_ready
+                            ? "Sign in"
+                            : "Setup required"
                           : app.provider === "custom_mcp"
                             ? "Add MCP"
                             : "Add key"}
