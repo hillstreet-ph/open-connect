@@ -137,6 +137,29 @@ test("Project deletion is confirmed, privileged, audited, and keeps library reso
   assert.match(organizationFunctions, /control_audit_events/);
 });
 
+test("Projects support audited renaming and metadata-only shared credentials", () => {
+  const sourceRoot = path.resolve(process.cwd(), "src");
+  const projectPage = readFileSync(
+    path.join(sourceRoot, "routes/_authenticated/projects.$projectId.tsx"),
+    "utf8",
+  );
+  const organizationFunctions = readFileSync(
+    path.join(sourceRoot, "lib/orgs.functions.ts"),
+    "utf8",
+  );
+  const migration = readFileSync(
+    path.resolve(process.cwd(), "supabase/migrations/20260924040000_project_credential_scopes.sql"),
+    "utf8",
+  );
+
+  assert.match(projectPage, /Rename project/);
+  assert.match(projectPage, /Shared credentials/);
+  assert.match(projectPage, /Connections · MCP · AI Gateway/);
+  assert.match(organizationFunctions, /projects\.rename/);
+  assert.match(migration, /join public\.credential_secrets/);
+  assert.doesNotMatch(migration, /vault\.decrypted_secrets|secret_value/);
+});
+
 test("installed project resources are grouped into professional categories", () => {
   const groups = groupProjectResources([
     { id: "a", resources: { id: "1", name: "Agent", resource_type: "agent" } },
