@@ -5,7 +5,6 @@ import {
   Bell,
   Building2,
   Database,
-  KeyRound,
   Loader2,
   Network,
   Save,
@@ -365,12 +364,6 @@ function SettingsPage() {
               description="Use brokered credential references without exposing raw secret values."
             />
             <SettingsLinkCard
-              to="/api-keys"
-              icon={KeyRound}
-              title="API keys & developer access"
-              description="Create scoped keys and configure Open-Connect API access."
-            />
-            <SettingsLinkCard
               to="/automations"
               icon={Bell}
               title="Automations & notifications"
@@ -406,7 +399,6 @@ function SettingsLinkCard({
     | "/admin"
     | "/connections"
     | "/secrets"
-    | "/api-keys"
     | "/automations"
     | "/memory"
     | "/knowledge";
