@@ -54,6 +54,12 @@ export const createSecret = createServerFn({ method: "POST" })
     if (!data.secret_value || data.secret_value.length < 4) {
       throw new Error("Secret value required (min 4 characters)");
     }
+    if (
+      ["api_key", "oauth_token", "bot_token"].includes(data.secret_type) &&
+      /\s/.test(data.secret_value)
+    ) {
+      throw new Error("API keys and tokens cannot contain spaces or sentences");
+    }
 
     const { data: row, error } = await context.supabase.rpc("create_credential_item", {
       p_name: data.name,
