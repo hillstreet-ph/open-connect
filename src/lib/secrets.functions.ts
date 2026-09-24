@@ -1,16 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-export const SECRET_SCOPES = [
-  "resources",
-  "connections",
-  "models",
-  "mcp",
-  "secrets",
-  "agents",
-] as const;
-
-export type SecretScope = (typeof SECRET_SCOPES)[number];
 export type SecretType =
   "api_key" | "oauth_token" | "mcp_url" | "bot_token" | "password" | "totp" | "other";
 
@@ -28,7 +18,6 @@ export const createSecret = createServerFn({ method: "POST" })
     (input: {
       name: string;
       secret_type?: string;
-      scopes?: string[];
       secret_value: string;
       email_address?: string;
       username?: string;
@@ -38,9 +27,6 @@ export const createSecret = createServerFn({ method: "POST" })
     }) => ({
       name: (input?.name ?? "").trim().slice(0, 120),
       secret_type: (input?.secret_type ?? "api_key") as SecretType,
-      scopes: Array.isArray(input?.scopes)
-        ? input.scopes.filter((s) => SECRET_SCOPES.includes(s as SecretScope))
-        : [],
       secret_value: (input?.secret_value ?? "").trim(),
       email_address: (input?.email_address ?? "").trim().slice(0, 320),
       username: (input?.username ?? "").trim().slice(0, 320),
@@ -64,7 +50,9 @@ export const createSecret = createServerFn({ method: "POST" })
     const { data: row, error } = await context.supabase.rpc("create_credential_item", {
       p_name: data.name,
       p_secret_type: data.secret_type,
-      p_scopes: data.scopes,
+      // Vault items do not grant capabilities. Project sharing and API-key
+      // policies are managed by their dedicated access-control surfaces.
+      p_scopes: [],
       p_secret_value: data.secret_value,
       p_email_address: data.email_address,
       p_username: data.username,

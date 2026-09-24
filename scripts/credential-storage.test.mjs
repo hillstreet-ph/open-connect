@@ -83,4 +83,7 @@ test("credential manager uses type-aware fields and full reveal controls", () =>
   assert.match(credentialRoute, /This is the exact value stored in Vault/);
   assert.match(credentialRoute, /Hide credential value for/);
   assert.match(serverFunctions, /API keys and tokens cannot contain spaces or sentences/);
+  assert.doesNotMatch(credentialRoute, />Scopes</);
+  assert.doesNotMatch(credentialRoute, /SECRET_SCOPES|toggleScope/);
+  assert.match(serverFunctions, /p_scopes: \[\]/);
 });
