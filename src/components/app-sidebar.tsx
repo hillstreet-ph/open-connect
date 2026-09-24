@@ -43,8 +43,8 @@ type Item = {
 
 /**
  * Primary IA (locked):
- * Workspace switcher → Dashboard → Workspaces → Work → Build → Marketplace → Connections →
- * AI Gateway. Integrations, API keys, and settings live in the user avatar menu.
+ * Workspace switcher → Dashboard → Projects → Work → Build → Marketplace → Connections →
+ * Connectors, Credentials, and AI Gateway. Integrations, API keys, and settings live in the user avatar menu.
  *
  * Organization settings live in the user menu; workspaces manage projects and environments.
  * System administration appears once for privileged roles in the shared menu.
@@ -73,8 +73,8 @@ const BUILD: Item[] = [
 
 const DISCOVER: Item[] = [{ to: "/resources", label: "Marketplace", icon: Boxes }];
 
-const CONNECT: Item[] = [
-  { to: "/connections", label: "Connections", icon: Plug },
+const CONNECTIONS: Item[] = [
+  { to: "/connections", label: "Connectors", icon: Plug },
   { to: "/secrets", label: "Credentials", icon: LockKeyhole },
   { to: "/models", label: "AI Gateway", icon: Sparkles },
 ];
@@ -125,7 +125,7 @@ export function AppSidebar() {
           pathname={pathname}
         />
         <NavGroup label="Discover" items={DISCOVER} pathname={pathname} />
-        <NavGroup label="Connect" items={CONNECT} pathname={pathname} />
+        <NavGroup label="Connections" items={CONNECTIONS} pathname={pathname} />
       </SidebarContent>
 
       <SidebarSeparator />
