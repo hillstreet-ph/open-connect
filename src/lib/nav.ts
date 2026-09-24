@@ -19,9 +19,7 @@ export const publicCategories: NavCategory[] = [
   {
     id: "products",
     label: "Products",
-    items: [
-      { to: "/resources", label: "Marketplace", description: "Agents, MCP, skills" },
-    ],
+    items: [{ to: "/resources", label: "Marketplace", description: "Agents, MCP, skills" }],
   },
   {
     id: "workspace",
@@ -74,9 +72,7 @@ export const appCategories: NavCategory[] = [
 ];
 
 export function flatPublicNav(): NavLink[] {
-  return [
-    { to: "/resources", label: "Marketplace" },
-  ];
+  return [{ to: "/resources", label: "Marketplace" }];
 }
 
 export function flatAppNav(): NavLink[] {
