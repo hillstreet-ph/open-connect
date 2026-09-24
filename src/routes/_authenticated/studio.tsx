@@ -25,6 +25,7 @@ export const Route = createFileRoute("/_authenticated/studio")({
 });
 
 const packageTypes = ["AI Agent", "Skill", "Prompt", "Plugin", "Custom MCP", "Tool"];
+const publishablePackageTypes = ["agent", "skill", "prompt", "plugin", "mcp", "tool"] as const;
 
 function SectionHeading({
   icon: Icon,
@@ -90,9 +91,9 @@ function StudioPage() {
             </a>
           </Button>
           <Button asChild size="sm" variant="ghost">
-            <Link to="/orgs">
+            <Link to="/projects">
               <Building2 className="size-3.5" />
-              Organizations & projects
+              Projects
             </Link>
           </Button>
         </div>
@@ -115,8 +116,9 @@ function StudioPage() {
         {can("upload_resources") ? (
           <div className="max-w-3xl">
             <ResourceLibraryCard
+              allowedTypes={publishablePackageTypes}
               title="Upload package"
-              cardDescription="Choose one or multiple files. Packages are published to Marketplace and added to your personal library automatically."
+              cardDescription="Agents, skills, prompts, plugins, MCP, and tools publish to Marketplace and enter your personal library. Memory and Knowledge stay private in their Studio section below."
               showResourceList={false}
             />
           </div>

@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useRoles } from "@/hooks/use-roles";
 import { groupProjectResources, RESOURCE_CATEGORIES } from "@/lib/resource-categories";
+import { listKnowledge, listMemories } from "@/lib/memory.functions";
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId")({
   head: () => ({
@@ -83,6 +84,8 @@ function ProjectWorkspacePage() {
   const remConn = useServerFn(removeConnectionFromProject);
   const addCred = useServerFn(addCredentialToProject);
   const remCred = useServerFn(removeCredentialFromProject);
+  const getMemories = useServerFn(listMemories);
+  const getKnowledge = useServerFn(listKnowledge);
 
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [pickResource, setPickResource] = useState("");
@@ -138,6 +141,16 @@ function ProjectWorkspacePage() {
   const projectCredentials = useQuery({
     queryKey: ["project-credentials", projectId],
     queryFn: () => listProjCred({ data: { projectId } }),
+    enabled: Boolean(projectId),
+  });
+  const projectMemories = useQuery({
+    queryKey: ["memories", projectId],
+    queryFn: () => getMemories({ data: { projectId } }),
+    enabled: Boolean(projectId),
+  });
+  const projectKnowledge = useQuery({
+    queryKey: ["knowledge", projectId],
+    queryFn: () => getKnowledge({ data: { projectId } }),
     enabled: Boolean(projectId),
   });
 
@@ -271,6 +284,49 @@ function ProjectWorkspacePage() {
           ) : null}
         </div>
       </div>
+
+      <Card className="shadow-panel">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Memory · Knowledge</CardTitle>
+          <CardDescription>
+            Private context assigned from Studio. These records never publish to Marketplace.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-5 lg:grid-cols-2">
+          <section className="space-y-2" aria-label="Project memory">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold">Memory</h3>
+              <Badge variant="secondary">{projectMemories.data?.length ?? 0}</Badge>
+            </div>
+            {(projectMemories.data ?? []).length === 0 ? (
+              <p className="text-xs text-muted-foreground">No memory assigned.</p>
+            ) : (
+              (projectMemories.data ?? []).map((item) => (
+                <div key={item.id} className="rounded-lg border border-border/80 px-3 py-2">
+                  <p className="text-sm font-medium">{item.title}</p>
+                  <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{item.content}</p>
+                </div>
+              ))
+            )}
+          </section>
+          <section className="space-y-2" aria-label="Project knowledge">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold">Knowledge</h3>
+              <Badge variant="secondary">{projectKnowledge.data?.length ?? 0}</Badge>
+            </div>
+            {(projectKnowledge.data ?? []).length === 0 ? (
+              <p className="text-xs text-muted-foreground">No knowledge assigned.</p>
+            ) : (
+              (projectKnowledge.data ?? []).map((item) => (
+                <div key={item.id} className="rounded-lg border border-border/80 px-3 py-2">
+                  <p className="text-sm font-medium">{item.title}</p>
+                  <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{item.content}</p>
+                </div>
+              ))
+            )}
+          </section>
+        </CardContent>
+      </Card>
 
       <Card className="shadow-panel">
         <CardHeader className="pb-2">

@@ -160,6 +160,29 @@ test("Projects support audited renaming and metadata-only shared credentials", (
   assert.doesNotMatch(migration, /vault\.decrypted_secrets|secret_value/);
 });
 
+test("Memory and Knowledge stay private, searchable, and project-organized", () => {
+  const sourceRoot = path.resolve(process.cwd(), "src");
+  const studio = readFileSync(path.join(sourceRoot, "routes/_authenticated/studio.tsx"), "utf8");
+  const memoryPage = readFileSync(
+    path.join(sourceRoot, "routes/_authenticated/memory.tsx"),
+    "utf8",
+  );
+  const projectPage = readFileSync(
+    path.join(sourceRoot, "routes/_authenticated/projects.$projectId.tsx"),
+    "utf8",
+  );
+
+  assert.match(studio, /publishablePackageTypes/);
+  assert.doesNotMatch(
+    studio.match(/const publishablePackageTypes = \[([^\]]+)\]/)?.[1] ?? "",
+    /memory|knowledge/,
+  );
+  assert.match(studio, /Memory and Knowledge stay private/);
+  assert.match(memoryPage, /Search memory title, content, and tags/);
+  assert.match(memoryPage, /projectNames\.get/);
+  assert.match(projectPage, /Private context assigned from Studio/);
+});
+
 test("installed project resources are grouped into professional categories", () => {
   const groups = groupProjectResources([
     { id: "a", resources: { id: "1", name: "Agent", resource_type: "agent" } },

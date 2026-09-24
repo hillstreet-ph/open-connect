@@ -77,7 +77,7 @@ export const listMemories = createServerFn({ method: "GET" })
       .order("importance", { ascending: false })
       .order("updated_at", { ascending: false })
       .limit(200);
-    query = data.projectId ? query.eq("project_id", data.projectId) : query.is("project_id", null);
+    if (data.projectId) query = query.eq("project_id", data.projectId);
     if (data.memoryType) query = query.eq("memory_type", data.memoryType);
     const { data: rows, error } = await query;
     if (error) throw new Error(error.message);
