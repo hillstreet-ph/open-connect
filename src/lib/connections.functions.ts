@@ -402,7 +402,9 @@ export const listAppConnections = createServerFn({ method: "GET" })
         }),
       );
     }
-    return connections.map(({ credential_reference: _credentialReference, ...connection }) => connection);
+    return connections.map(
+      ({ credential_reference: _credentialReference, ...connection }) => connection,
+    );
   });
 
 export const connectApp = createServerFn({ method: "POST" })
