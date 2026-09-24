@@ -87,7 +87,7 @@ function Dashboard() {
     { icon: Layers, label: "Toolkits", value: profile?.toolkits ?? 0, to: "/toolkits" as const },
     {
       icon: Plug,
-      label: "Connections",
+      label: "Connectors",
       value: profile?.connections ?? 0,
       to: "/connections" as const,
     },

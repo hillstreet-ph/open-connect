@@ -60,19 +60,27 @@ test("connection surfaces remain internal and separate from Marketplace", () => 
   const sourceRoot = path.resolve(process.cwd(), "src");
   const sidebar = readFileSync(path.join(sourceRoot, "components/app-sidebar.tsx"), "utf8");
   const userMenu = readFileSync(path.join(sourceRoot, "components/user-menu.tsx"), "utf8");
-  const connectGroup = sidebar.match(/const CONNECT: Item\[\] = \[([\s\S]*?)\];/)?.[1] ?? "";
+  const connectGroup = sidebar.match(/const CONNECTIONS: Item\[\] = \[([\s\S]*?)\];/)?.[1] ?? "";
 
   for (const route of ["/connections", "/secrets", "/models"]) {
     assert.match(connectGroup, new RegExp(`to: ["']${route}["']`));
   }
+  assert.match(sidebar, /<NavGroup label="Connections" items={CONNECTIONS}/);
+  assert.match(connectGroup, /to: "\/connections", label: "Connectors"/);
   assert.doesNotMatch(connectGroup, /\/resources|\/integrations|\/api-keys/);
   assert.match(userMenu, /to="\/integrations"/);
   assert.match(userMenu, /to="\/api-keys"/);
 
-  for (const routeFile of ["connections.tsx", "models.tsx"]) {
-    const source = readFileSync(path.join(sourceRoot, "routes", routeFile), "utf8");
-    assert.doesNotMatch(source, /(?:to|href)=["']\/resources["']/);
-  }
+  const models = readFileSync(path.join(sourceRoot, "routes/models.tsx"), "utf8");
+  assert.doesNotMatch(models, /(?:to|href)=["']\/resources["']/);
+
+  const connectors = readFileSync(
+    path.join(sourceRoot, "routes/_authenticated/connections.tsx"),
+    "utf8",
+  );
+  assert.match(connectors, /createFileRoute\("\/_authenticated\/connections"\)/);
+  assert.match(connectors, /Add custom MCP/);
+  assert.doesNotMatch(connectors, /(?:to|href)=["']\/resources["']/);
 
   const integrations = readFileSync(
     path.join(sourceRoot, "routes/_authenticated/integrations.tsx"),

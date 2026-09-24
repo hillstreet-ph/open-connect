@@ -45,10 +45,10 @@ function connectionStatusLabel(status: string) {
   return status.replaceAll("_", " ");
 }
 
-export const Route = createFileRoute("/connections")({
+export const Route = createFileRoute("/_authenticated/connections")({
   head: () => ({
     meta: [
-      { title: "Connections — Open-Connect" },
+      { title: "Connectors — Open-Connect" },
       {
         name: "description",
         content:
@@ -162,13 +162,36 @@ function ConnectionsPage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:py-16">
       <Badge variant="outline" className="mb-2 border-primary/40 text-primary">
-        Catalog · Connections
+        Internal · Connectors
       </Badge>
-      <h1 className="text-2xl font-semibold sm:text-4xl">Connect apps</h1>
+      <h1 className="text-2xl font-semibold sm:text-4xl">Connectors</h1>
       <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-        Official app marks. One connect per app — Open-Connect holds the capability; agents never
-        see provider secrets.
+        Connect official apps or add a custom MCP endpoint. Open-Connect keeps credentials
+        server-side and gives agents only approved capabilities.
       </p>
+
+      <div className="mt-6 flex flex-wrap gap-2">
+        <Button
+          type="button"
+          onClick={() => {
+            setCategory("All");
+            setQuery("");
+          }}
+        >
+          Browse app connectors
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            const customMcp = (catalog.data ?? []).find((app) => app.provider === "custom_mcp");
+            if (customMcp) setSelectedApp(customMcp as CatalogApp);
+          }}
+          disabled={!(catalog.data ?? []).some((app) => app.provider === "custom_mcp")}
+        >
+          Add custom MCP
+        </Button>
+      </div>
 
       <div className="mt-8 space-y-3">
         <div className="relative max-w-md">
