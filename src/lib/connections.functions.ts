@@ -604,10 +604,17 @@ export const disconnectApp = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: connection, error: readError } = await context.supabase
       .from("app_connections")
-      .select("credential_reference")
+      .select("provider,credential_reference")
       .eq("id", data.id)
       .maybeSingle();
     if (readError) throw new Error(readError.message);
+    const managedAccountId = connection?.credential_reference?.match(
+      /^composio:\/\/connected-account\/([^/]+)$/,
+    )?.[1];
+    if (managedAccountId && connection?.provider) {
+      const { deleteManagedConnection } = await import("@/lib/managed-connectors.server");
+      await deleteManagedConnection(connection.provider, managedAccountId);
+    }
     const { error } = await context.supabase.from("app_connections").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     const secretId = connection?.credential_reference?.match(
