@@ -23,7 +23,6 @@ export const publicCategories: NavCategory[] = [
       { to: "/resources", label: "Marketplace", description: "Agents, MCP, skills" },
       { to: "/connections", label: "Connections", description: "Slack, GitHub, apps" },
       { to: "/models", label: "Models", description: "OpenAI-compatible /v1" },
-      { to: "/integrations", label: "Open WebUI & clients", description: "ChatGPT, Claude, Grok" },
     ],
   },
   {
@@ -70,7 +69,6 @@ export const appCategories: NavCategory[] = [
     id: "security",
     label: "Security",
     items: [
-      { to: "/api-keys", label: "API Keys", description: "oc_live_ scopes" },
       { to: "/secrets", label: "Secrets", description: "Credential vault" },
       { to: "/settings", label: "Settings", description: "Role & profile" },
     ],
@@ -82,7 +80,6 @@ export function flatPublicNav(): NavLink[] {
     { to: "/resources", label: "Marketplace" },
     { to: "/connections", label: "Connections" },
     { to: "/models", label: "Models" },
-    { to: "/integrations", label: "Integrations" },
   ];
 }
 
