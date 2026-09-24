@@ -75,3 +75,12 @@ test("requires explicit confirmation before permanently deleting Vault entries",
   assert.match(credentialRoute, /Copy 2FA code for/);
   assert.match(credentialRoute, /Copy credential value for/);
 });
+
+test("credential manager uses type-aware fields and full reveal controls", () => {
+  assert.match(credentialRoute, /TYPE_DETAILS/);
+  assert.match(credentialRoute, /Search credentials/);
+  assert.match(credentialRoute, /All types/);
+  assert.match(credentialRoute, /This is the exact value stored in Vault/);
+  assert.match(credentialRoute, /Hide credential value for/);
+  assert.match(serverFunctions, /API keys and tokens cannot contain spaces or sentences/);
+});
