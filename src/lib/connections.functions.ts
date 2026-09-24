@@ -364,9 +364,8 @@ export const connectApp = createServerFn({ method: "POST" })
     if (!app) throw new Error("Unknown application");
     if (!app.oauth) throw new Error("This provider uses a verified API key or token connection.");
 
-    const { buildGitHubAuthorizationUrl, oauthConfig, sha256 } = await import(
-      "@/lib/provider-oauth.server"
-    );
+    const { buildGitHubAuthorizationUrl, oauthConfig, sha256 } =
+      await import("@/lib/provider-oauth.server");
     const config = oauthConfig(app.provider);
     const state = `${crypto.randomUUID()}${crypto.randomUUID()}`;
     const stateHash = await sha256(state);
@@ -427,9 +426,8 @@ export const completeOAuthConnection = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     if (!data.code || !data.state) throw new Error("The provider callback is incomplete.");
 
-    const { exchangeGitHubCode, oauthConfig, sha256 } = await import(
-      "@/lib/provider-oauth.server"
-    );
+    const { exchangeGitHubCode, oauthConfig, sha256 } =
+      await import("@/lib/provider-oauth.server");
     const config = oauthConfig(data.provider);
     const { data: pending, error: pendingError } = await context.supabase
       .from("app_connections")
@@ -446,8 +444,15 @@ export const completeOAuthConnection = createServerFn({ method: "POST" })
     const expectedHash = String(metadata["oauth_state_hash"] ?? "");
     const expiresAt = Date.parse(String(metadata["oauth_state_expires_at"] ?? ""));
     const actualHash = await sha256(data.state);
-    if (!expectedHash || actualHash !== expectedHash || !Number.isFinite(expiresAt) || expiresAt < Date.now()) {
-      throw new Error("The authorization request expired or failed state verification. Start again.");
+    if (
+      !expectedHash ||
+      actualHash !== expectedHash ||
+      !Number.isFinite(expiresAt) ||
+      expiresAt < Date.now()
+    ) {
+      throw new Error(
+        "The authorization request expired or failed state verification. Start again.",
+      );
     }
 
     const verified = await exchangeGitHubCode({
