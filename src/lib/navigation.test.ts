@@ -71,8 +71,9 @@ test("connection surfaces remain internal and separate from Marketplace", () => 
   assert.match(userMenu, /to="\/integrations"/);
   assert.match(userMenu, /to="\/api-keys"/);
 
-  const models = readFileSync(path.join(sourceRoot, "routes/models.tsx"), "utf8");
-  assert.doesNotMatch(models, /(?:to|href)=["']\/resources["']/);
+  const models = readFileSync(path.join(sourceRoot, "routes/_authenticated/models.tsx"), "utf8");
+  assert.match(models, /createFileRoute\("\/_authenticated\/models"\)/);
+  assert.doesNotMatch(models, /(?:to|href)=["']\/(?:resources|auth)["']/);
 
   const connectors = readFileSync(
     path.join(sourceRoot, "routes/_authenticated/connections.tsx"),

@@ -87,7 +87,9 @@ function ConnectionsPage() {
     mutationFn: (provider: string) => connectFn({ data: { provider } }),
     onSuccess: (result) => {
       toast.success(
-        result.status === "pending" ? "Authorization request created" : "Connection saved securely",
+        result.status === "pending"
+          ? "Authorization pending — complete the official provider flow before use"
+          : "Connection saved securely",
       );
       void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
     },
@@ -265,7 +267,11 @@ function ConnectionsPage() {
                       <BrandLogo provider={app.provider} name={app.display_name} />
                       <div className="min-w-0">
                         <p className="truncate font-semibold">{app.display_name}</p>
-                        <p className="text-xs text-muted-foreground">{app.category}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {app.provider === "custom_mcp"
+                            ? "Custom MCP endpoint"
+                            : `${app.category} · Official provider`}
+                        </p>
                       </div>
                     </div>
                     {!user ? (

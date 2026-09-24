@@ -13,10 +13,10 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-export const Route = createFileRoute("/models")({
+export const Route = createFileRoute("/_authenticated/models")({
   head: () => ({
     meta: [
-      { title: "AI Models — Open-Connect" },
+      { title: "AI Gateway — Open-Connect" },
       {
         name: "description",
         content:
@@ -97,9 +97,9 @@ function ModelsPage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-16">
       <Badge variant="outline" className="mb-3 border-primary/40 text-primary">
-        LiteLLM-compatible · OpenRouter multi-provider
+        Internal · Multi-provider gateway
       </Badge>
-      <h1 className="text-3xl font-semibold sm:text-4xl">AI Models</h1>
+      <h1 className="text-3xl font-semibold sm:text-4xl">AI Gateway</h1>
       <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
         One gateway for OpenAI, Claude, Gemini, Grok and the full OpenRouter catalog. Provider
         secrets stay on the server; clients only use an Open-Connect key.
@@ -241,15 +241,9 @@ function ModelsPage() {
 
       <div className="mt-12 flex flex-wrap gap-2">
         <Button asChild>
-          {user ? (
-            <Link to="/api-keys">
-              Get a model key <ArrowRight className="ml-1 size-4" />
-            </Link>
-          ) : (
-            <Link to="/auth" search={{ mode: "signup" }}>
-              Get a model key <ArrowRight className="ml-1 size-4" />
-            </Link>
-          )}
+          <Link to="/api-keys">
+            Get a model key <ArrowRight className="ml-1 size-4" />
+          </Link>
         </Button>
         <Button asChild variant="outline">
           <Link to="/api-keys">
