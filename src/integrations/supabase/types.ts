@@ -451,6 +451,14 @@ export type Database = {
         };
         Returns: Json;
       };
+      assert_credential_value_unique: {
+        Args: { p_secret_value: string };
+        Returns: boolean;
+      };
+      organize_credential: {
+        Args: { p_credential_id: string; p_tags: string[]; p_project_ids: string[] };
+        Returns: Json;
+      };
       delete_credential_secret: {
         Args: { p_id: string };
         Returns: boolean;

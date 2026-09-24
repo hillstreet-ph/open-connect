@@ -32,6 +32,14 @@ const credentialRoute = readFileSync(
   new URL("../src/routes/_authenticated/secrets.tsx", import.meta.url),
   "utf8",
 );
+const credentialOrganizationMigration = readFileSync(
+  new URL("../supabase/migrations/20260924060000_credential_tags_projects.sql", import.meta.url),
+  "utf8",
+);
+const projectCredentialMigration = readFileSync(
+  new URL("../supabase/migrations/20260924040000_project_credential_scopes.sql", import.meta.url),
+  "utf8",
+);
 
 test("moves credential values to Supabase Vault and clears plaintext", () => {
   assert.match(migration, /vault\.create_secret/);
@@ -86,4 +94,19 @@ test("credential manager uses type-aware fields and full reveal controls", () =>
   assert.doesNotMatch(credentialRoute, />Scopes</);
   assert.doesNotMatch(credentialRoute, /SECRET_SCOPES|toggleScope/);
   assert.match(serverFunctions, /p_scopes: \[\]/);
+});
+
+test("organizes one Vault credential with tags and duplicate-safe project references", () => {
+  assert.match(credentialOrganizationMigration, /add column if not exists tags text\[\]/i);
+  assert.match(projectCredentialMigration, /unique \(project_id, credential_id\)/i);
+  assert.match(
+    credentialOrganizationMigration,
+    /on conflict \(project_id, credential_id\) do nothing/i,
+  );
+  assert.match(credentialOrganizationMigration, /vault\.decrypted_secrets/);
+  assert.match(credentialOrganizationMigration, /already stored/);
+  assert.match(credentialRoute, /Assign to projects/);
+  assert.match(credentialRoute, /All tags/);
+  assert.match(credentialRoute, /All projects/);
+  assert.match(serverFunctions, /organize_credential/);
 });

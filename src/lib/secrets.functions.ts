@@ -24,6 +24,8 @@ export const createSecret = createServerFn({ method: "POST" })
       website?: string;
       notes?: string;
       totp_secret?: string;
+      tags?: string[];
+      project_ids?: string[];
     }) => ({
       name: (input?.name ?? "").trim().slice(0, 120),
       secret_type: (input?.secret_type ?? "api_key") as SecretType,
@@ -33,6 +35,15 @@ export const createSecret = createServerFn({ method: "POST" })
       website: (input?.website ?? "").trim().slice(0, 2048),
       notes: (input?.notes ?? "").slice(0, 4000),
       totp_secret: (input?.totp_secret ?? "").trim(),
+      tags: Array.isArray(input?.tags)
+        ? input.tags
+            .map((tag) => tag.trim().toLowerCase().slice(0, 40))
+            .filter(Boolean)
+            .slice(0, 20)
+        : [],
+      project_ids: Array.isArray(input?.project_ids)
+        ? [...new Set(input.project_ids.map((id) => id.trim()).filter(Boolean))]
+        : [],
     }),
   )
   .handler(async ({ data, context }) => {
@@ -46,6 +57,11 @@ export const createSecret = createServerFn({ method: "POST" })
     ) {
       throw new Error("API keys and tokens cannot contain spaces or sentences");
     }
+
+    const { error: duplicateError } = await context.supabase.rpc("assert_credential_value_unique", {
+      p_secret_value: data.secret_value,
+    });
+    if (duplicateError) throw new Error(duplicateError.message);
 
     const { data: row, error } = await context.supabase.rpc("create_credential_item", {
       p_name: data.name,
@@ -62,6 +78,18 @@ export const createSecret = createServerFn({ method: "POST" })
     });
 
     if (error) throw new Error(error.message);
+    const credentialId = (row as { id?: string } | null)?.id;
+    if (!credentialId) throw new Error("Credential was stored without an identifier");
+
+    const { error: organizeError } = await context.supabase.rpc("organize_credential", {
+      p_credential_id: credentialId,
+      p_tags: data.tags,
+      p_project_ids: data.project_ids,
+    });
+    if (organizeError) {
+      await context.supabase.rpc("delete_credential_secret", { p_id: credentialId });
+      throw new Error(organizeError.message);
+    }
     return row;
   });
 
