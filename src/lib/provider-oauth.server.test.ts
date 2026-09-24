@@ -17,7 +17,10 @@ test("builds the official GitHub authorization URL with state and callback", () 
   assert.equal(url.origin, "https://github.com");
   assert.equal(url.pathname, "/login/oauth/authorize");
   assert.equal(url.searchParams.get("client_id"), "client-123");
-  assert.equal(url.searchParams.get("redirect_uri"), githubCallbackUrl("https://open-connect.site"));
+  assert.equal(
+    url.searchParams.get("redirect_uri"),
+    githubCallbackUrl("https://open-connect.site"),
+  );
   assert.equal(url.searchParams.get("state"), "opaque-state");
   assert.match(url.searchParams.get("scope") ?? "", /read:user/);
 });
@@ -33,10 +36,13 @@ test("exchanges a GitHub code and verifies the provider identity", async () => {
     const url = String(input);
     calls.push(url);
     if (url.includes("access_token")) {
-      return new Response(JSON.stringify({ access_token: "provider-token", scope: "repo,read:user" }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ access_token: "provider-token", scope: "repo,read:user" }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
     }
     return new Response(JSON.stringify({ id: 42, login: "hillstreet-ph" }), {
       status: 200,
