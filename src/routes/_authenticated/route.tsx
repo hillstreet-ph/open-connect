@@ -74,7 +74,7 @@ function pageTitle(pathname: string): string {
     "/studio": "Studio",
     "/campaign-studio": "Campaign concept studio",
     "/orgs": "Organizations",
-    "/projects": "Workspaces",
+    "/projects": "Projects",
     "/tasks": "Tasks",
     "/schedule": "Schedules",
     "/automations": "Automations",

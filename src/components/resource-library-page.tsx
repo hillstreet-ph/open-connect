@@ -38,7 +38,7 @@ export function ResourceLibraryPage({
     <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
       <div>
         <Badge variant="outline" className="mb-2 border-primary/40 text-primary">
-          <Boxes className="mr-1 size-3" /> Personal library
+          <Boxes className="mr-1 size-3" /> HillStreet workspace library
         </Badge>
         <h1 className="font-display text-xl font-semibold tracking-tight sm:text-2xl">{title}</h1>
         <p className="mt-1 max-w-3xl text-sm text-muted-foreground">{description}</p>
