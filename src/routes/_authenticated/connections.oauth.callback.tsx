@@ -38,7 +38,9 @@ function OAuthCallbackPage() {
 
   const error =
     search.error ||
-    (!search.code || !search.state ? "GitHub did not return a complete authorization response." : "") ||
+    (!search.code || !search.state
+      ? "GitHub did not return a complete authorization response."
+      : "") ||
     (mutation.error instanceof Error ? mutation.error.message : "");
 
   return (
