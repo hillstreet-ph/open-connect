@@ -459,6 +459,15 @@ export type Database = {
         Args: { p_credential_id: string; p_tags: string[]; p_project_ids: string[] };
         Returns: Json;
       };
+      update_credential_organization: {
+        Args: {
+          p_credential_id: string;
+          p_notes: string;
+          p_tags: string[];
+          p_project_ids: string[];
+        };
+        Returns: Json;
+      };
       delete_credential_secret: {
         Args: { p_id: string };
         Returns: boolean;
