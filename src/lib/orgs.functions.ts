@@ -268,6 +268,7 @@ export const listWorkspaces = createServerFn({ method: "GET" })
     let query = context.supabase
       .from("workspaces")
       .select("id, organization_id, name, slug, description, created_at, organizations(name, slug)")
+      .eq("slug", "hillstreet")
       .order("created_at", { ascending: false });
     if (data.organizationId) query = query.eq("organization_id", data.organizationId);
     const { data: rows, error } = await query;
@@ -282,23 +283,8 @@ export const createWorkspace = createServerFn({ method: "POST" })
     name: input.name.trim(),
     description: input.description?.trim() || null,
   }))
-  .handler(async ({ data, context }) => {
-    if (!data.organizationId || !data.name)
-      throw new Error("Organization and workspace name required");
-    await requireOrganizationManager(context.supabase, data.organizationId, context.userId);
-    const { data: workspace, error } = await context.supabase
-      .from("workspaces")
-      .insert({
-        organization_id: data.organizationId,
-        name: data.name,
-        slug: `${slugify(data.name) || "workspace"}-${Date.now().toString(36).slice(-4)}`,
-        description: data.description,
-        created_by: context.userId,
-      })
-      .select("id, organization_id, name, slug")
-      .single();
-    if (error) throw new Error(error.message);
-    return workspace;
+  .handler(async () => {
+    throw new Error("Open-Connect uses one HillStreet workspace. Create a project instead.");
   });
 
 /** Projects the current user can access via project_members. */
@@ -370,29 +356,28 @@ export const ensureProjectEnvironments = createServerFn({ method: "POST" })
 
 export const createProject = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
-    (input: {
-      organizationId: string;
-      workspaceId: string;
-      name: string;
-      description?: string;
-    }) => ({
-      organizationId: input.organizationId,
-      workspaceId: input.workspaceId,
-      name: (input?.name ?? "").trim(),
-      description: (input?.description ?? "").trim() || null,
-    }),
-  )
+  .validator((input: { organizationId: string; name: string; description?: string }) => ({
+    organizationId: input.organizationId,
+    name: (input?.name ?? "").trim(),
+    description: (input?.description ?? "").trim() || null,
+  }))
   .handler(async ({ data, context }) => {
     if (!data.name) throw new Error("Project name required");
     if (!data.organizationId) throw new Error("Pick an organization");
-    if (!data.workspaceId) throw new Error("Pick a workspace");
+    await requireOrganizationManager(context.supabase, data.organizationId, context.userId);
+    const { data: workspace, error: workspaceError } = await context.supabase
+      .from("workspaces")
+      .select("id")
+      .eq("organization_id", data.organizationId)
+      .eq("slug", "hillstreet")
+      .single();
+    if (workspaceError || !workspace) throw new Error("HillStreet workspace is unavailable");
     const slug = slugify(data.name) || "project";
     const { data: project, error } = await context.supabase
       .from("projects")
       .insert({
         organization_id: data.organizationId,
-        workspace_id: data.workspaceId,
+        workspace_id: workspace.id,
         name: data.name,
         slug: `${slug}-${Date.now().toString(36).slice(-4)}`,
         description: data.description,

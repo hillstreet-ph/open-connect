@@ -52,7 +52,7 @@ type Item = {
 
 const PRIMARY: Item[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/projects", label: "Workspaces", icon: FolderKanban },
+  { to: "/projects", label: "Projects", icon: FolderKanban },
 ];
 
 const WORK: Item[] = [

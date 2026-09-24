@@ -69,3 +69,40 @@ test("Toolkit creation reads from the personal library, not the Marketplace cata
   assert.match(source, /listLibraryResources/);
   assert.doesNotMatch(source, /useMarketplace/);
 });
+
+test("Open-Connect exposes one HillStreet workspace with project-only creation", () => {
+  const sourceRoot = path.resolve(process.cwd(), "src");
+  const projects = readFileSync(
+    path.join(sourceRoot, "routes/_authenticated/projects.tsx"),
+    "utf8",
+  );
+  const switcher = readFileSync(path.join(sourceRoot, "components/workspace-switcher.tsx"), "utf8");
+  const organizationFunctions = readFileSync(
+    path.join(sourceRoot, "lib/orgs.functions.ts"),
+    "utf8",
+  );
+
+  assert.match(projects, /One workspace for every HillStreet project/);
+  assert.doesNotMatch(projects, /Create workspace/);
+  assert.doesNotMatch(switcher, /Switch workspace|View all workspaces/);
+  assert.match(organizationFunctions, /uses one HillStreet workspace/);
+  assert.match(organizationFunctions, /\.eq\("slug", "hillstreet"\)/);
+});
+
+test("Projects can only select resources from the installed workspace library", () => {
+  const sourceRoot = path.resolve(process.cwd(), "src");
+  const projectPage = readFileSync(
+    path.join(sourceRoot, "routes/_authenticated/projects.$projectId.tsx"),
+    "utf8",
+  );
+  const workspaceFunctions = readFileSync(
+    path.join(sourceRoot, "lib/workspace.functions.ts"),
+    "utf8",
+  );
+
+  assert.match(projectPage, /Add from workspace library/);
+  assert.doesNotMatch(projectPage, /Add from marketplace catalog/);
+  assert.match(workspaceFunctions, /open-connect-personal-library/);
+  assert.match(workspaceFunctions, /Install this resource into your workspace library first/);
+  assert.doesNotMatch(workspaceFunctions, /\.eq\("published", true\)/);
+});

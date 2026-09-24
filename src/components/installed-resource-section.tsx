@@ -42,8 +42,8 @@ export function InstalledResourceSection({
           <PackageCheck className="size-4 text-primary" /> Installed packages
         </h2>
         <p className="mt-1 text-xs text-muted-foreground">
-          Added from Marketplace or published in Studio. Assign packages to projects without
-          creating duplicate copies.
+          Installed in the HillStreet workspace from Marketplace or published in Studio. Assign
+          packages to projects without creating duplicate copies.
         </p>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

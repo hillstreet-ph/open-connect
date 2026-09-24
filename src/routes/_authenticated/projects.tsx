@@ -1,12 +1,11 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { FolderKanban, Loader2, Plus } from "lucide-react";
+import { FolderKanban, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
   createProject,
-  createWorkspace,
   getCanonicalOrganization,
   listProjects,
   listWorkspaces,
@@ -21,11 +20,11 @@ import { useWorkspaceContext } from "@/hooks/use-workspace-context";
 export const Route = createFileRoute("/_authenticated/projects")({
   head: () => ({
     meta: [
-      { title: "Workspaces — Open-Connect" },
+      { title: "Projects — Open-Connect" },
       {
         name: "description",
         content:
-          "Create workspaces and projects — isolate agents, skills, plugins, OAuth, and vaults by business context.",
+          "Manage HillStreet projects and assign installed workspace resources without duplicates.",
       },
       { name: "robots", content: "noindex" },
     ],
@@ -46,14 +45,10 @@ function ProjectsIndex() {
   const listProj = useServerFn(listProjects);
   const createProj = useServerFn(createProject);
   const listWs = useServerFn(listWorkspaces);
-  const createWs = useServerFn(createWorkspace);
 
   const [projectName, setProjectName] = useState("");
-  const [workspaceName, setWorkspaceName] = useState("");
-  const [workspaceId, setWorkspaceId] = useState("");
   const [projectDesc, setProjectDesc] = useState("");
-  const { workspaceId: activeWorkspaceId, setWorkspaceId: setActiveWorkspaceId } =
-    useWorkspaceContext();
+  const { workspaceId: activeWorkspaceId } = useWorkspaceContext();
 
   const organization = useQuery({
     queryKey: ["organization", "hillstreet-ph"],
@@ -75,27 +70,14 @@ function ProjectsIndex() {
   );
   const visibleProjects = (projects.data ?? []).filter(
     (project: { workspace_id?: string | null }) =>
-      !activeWorkspaceId || project.workspace_id === activeWorkspaceId,
+      !activeWorkspace?.id || project.workspace_id === activeWorkspace.id,
   );
-
-  const workspaceMutation = useMutation({
-    mutationFn: () =>
-      createWs({ data: { organizationId: organization.data?.id ?? "", name: workspaceName } }),
-    onSuccess: (workspace) => {
-      toast.success("Workspace created");
-      setWorkspaceName("");
-      setWorkspaceId(workspace.id);
-      void qc.invalidateQueries({ queryKey: ["workspaces"] });
-    },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not create workspace"),
-  });
 
   const projectMutation = useMutation({
     mutationFn: () =>
       createProj({
         data: {
           organizationId: organization.data?.id ?? "",
-          workspaceId: workspaceId || activeWorkspaceId,
           name: projectName,
           description: projectDesc || undefined,
         },
@@ -114,14 +96,14 @@ function ProjectsIndex() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <Badge variant="outline" className="mb-2 border-primary/40 text-primary">
-            Operations · Workspaces
+            hillstreet-ph · HillStreet
           </Badge>
           <h1 className="font-display text-xl font-semibold tracking-tight sm:text-2xl">
-            Workspaces & projects
+            Projects
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Each workspace project gets its own agents, skills, plugins, prompts, OAuth/MCP
-            accounts, and vault credentials.
+            One workspace for every HillStreet project. Install resources from Marketplace into the
+            workspace library, then assign them to one or more projects.
           </p>
         </div>
         <div className="flex gap-2">
@@ -136,55 +118,21 @@ function ProjectsIndex() {
 
       <Card className="shadow-panel">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Workspaces</CardTitle>
+          <CardTitle className="text-base">HillStreet workspace</CardTitle>
           <CardDescription>
-            Switch between isolated business contexts inside hillstreet-ph.
+            The single resource and access boundary for the hillstreet-ph organization.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
-          {(workspaces.data ?? []).map((workspace) => (
-            <Button
-              key={workspace.id}
-              variant={workspace.id === activeWorkspaceId ? "default" : "outline"}
-              onClick={() => setActiveWorkspaceId(workspace.id)}
-            >
-              {workspace.name}
-            </Button>
-          ))}
+          <Badge variant="secondary">{activeWorkspace?.name ?? "HillStreet"}</Badge>
+          <span className="text-sm text-muted-foreground">
+            {visibleProjects.length} projects · shared personal library
+          </span>
         </CardContent>
       </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="shadow-panel">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">New workspace</CardTitle>
-            <CardDescription>Independent resource and access boundary.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Label htmlFor="workspace-name">Workspace name</Label>
-            <Input
-              id="workspace-name"
-              value={workspaceName}
-              onChange={(e) => setWorkspaceName(e.target.value)}
-              placeholder="New workspace"
-            />
-            <Button
-              disabled={
-                !organization.data?.id || !workspaceName.trim() || workspaceMutation.isPending
-              }
-              onClick={() => workspaceMutation.mutate()}
-            >
-              {workspaceMutation.isPending ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Plus className="size-4" />
-              )}
-              Create workspace
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-panel">
+        <Card className="shadow-panel lg:col-span-1">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">New project</CardTitle>
             <CardDescription>e.g. Development · Business · Client X</CardDescription>
@@ -195,20 +143,8 @@ function ProjectsIndex() {
               <Input value="hillstreet-ph" readOnly />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="proj-workspace">Workspace</Label>
-              <select
-                id="proj-workspace"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                value={workspaceId || activeWorkspaceId}
-                onChange={(e) => setWorkspaceId(e.target.value)}
-              >
-                <option value="">Select…</option>
-                {(workspaces.data ?? []).map((w) => (
-                  <option key={w.id} value={w.id}>
-                    {w.name}
-                  </option>
-                ))}
-              </select>
+              <Label>Workspace</Label>
+              <Input value={activeWorkspace?.name ?? "HillStreet"} readOnly />
             </div>
             <div className="space-y-2">
               <Label htmlFor="proj-name">Project name</Label>
@@ -231,7 +167,7 @@ function ProjectsIndex() {
             <Button
               disabled={
                 !organization.data?.id ||
-                !(workspaceId || activeWorkspaceId) ||
+                !activeWorkspace?.id ||
                 !projectName.trim() ||
                 projectMutation.isPending
               }
@@ -269,11 +205,11 @@ function ProjectsIndex() {
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Button asChild size="sm">
                     <Link to="/projects/$projectId" params={{ projectId: p.id }}>
-                      Open workspace
+                      Open project
                     </Link>
                   </Button>
                   <Button asChild size="sm" variant="outline">
-                    <Link to="/resources">Add catalog</Link>
+                    <Link to="/resources">Marketplace</Link>
                   </Button>
                 </div>
               </Card>

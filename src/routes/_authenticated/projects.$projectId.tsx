@@ -39,17 +39,7 @@ export const Route = createFileRoute("/_authenticated/projects/$projectId")({
   component: ProjectWorkspacePage,
 });
 
-const TYPE_FILTERS = [
-  "all",
-  "agent",
-  "skill",
-  "plugin",
-  "prompt",
-  "mcp",
-  "tool",
-  "app",
-  "model",
-] as const;
+const TYPE_FILTERS = ["all", "agent", "skill", "prompt", "toolkit", "memory", "knowledge"] as const;
 
 function ProjectWorkspacePage() {
   const { projectId } = Route.useParams();
@@ -254,9 +244,10 @@ function ProjectWorkspacePage() {
 
       <Card className="shadow-panel">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Add from marketplace catalog</CardTitle>
+          <CardTitle className="text-base">Add from workspace library</CardTitle>
           <CardDescription>
-            Attach agents, skills, plugins, prompts, MCP, tools to this project only.
+            Assign resources already installed from Marketplace or published in Studio. Public
+            Marketplace items must be installed first.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -274,7 +265,7 @@ function ProjectWorkspacePage() {
           </div>
           <div className="flex flex-wrap items-end gap-2">
             <div className="min-w-[220px] flex-1 space-y-1">
-              <Label htmlFor="pick-res">Catalog item</Label>
+              <Label htmlFor="pick-res">Installed resource</Label>
               <select
                 id="pick-res"
                 className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
@@ -309,7 +300,8 @@ function ProjectWorkspacePage() {
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
           {(resources.data ?? []).length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No packages linked yet — add from the catalog or marketplace.
+              No resources assigned yet — install from Marketplace, then add from the workspace
+              library.
             </p>
           ) : (
             resources.data?.map(
