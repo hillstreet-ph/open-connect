@@ -93,6 +93,33 @@ export const createSecret = createServerFn({ method: "POST" })
     return row;
   });
 
+export const updateSecretOrganization = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { id: string; notes?: string; tags?: string[]; project_ids?: string[] }) => ({
+    id: (input?.id ?? "").trim(),
+    notes: (input?.notes ?? "").slice(0, 4000),
+    tags: Array.isArray(input?.tags)
+      ? input.tags
+          .map((tag) => tag.trim().toLowerCase().slice(0, 40))
+          .filter(Boolean)
+          .slice(0, 20)
+      : [],
+    project_ids: Array.isArray(input?.project_ids)
+      ? [...new Set(input.project_ids.map((id) => id.trim()).filter(Boolean))]
+      : [],
+  }))
+  .handler(async ({ data, context }) => {
+    if (!data.id) throw new Error("id required");
+    const { data: result, error } = await context.supabase.rpc("update_credential_organization", {
+      p_credential_id: data.id,
+      p_notes: data.notes,
+      p_tags: data.tags,
+      p_project_ids: data.project_ids,
+    });
+    if (error) throw new Error(error.message);
+    return result;
+  });
+
 export const revealSecret = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: { id: string }) => ({ id: (input?.id ?? "").trim() }))

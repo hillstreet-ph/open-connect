@@ -109,4 +109,7 @@ test("organizes one Vault credential with tags and duplicate-safe project refere
   assert.match(credentialRoute, /All tags/);
   assert.match(credentialRoute, /All projects/);
   assert.match(serverFunctions, /organize_credential/);
+  assert.match(serverFunctions, /update_credential_organization/);
+  assert.match(credentialRoute, /Edit organization/);
+  assert.match(credentialRoute, /Save organization/);
 });
