@@ -404,3 +404,50 @@ export const createProject = createServerFn({ method: "POST" })
 
     return project;
   });
+
+export const deleteProject = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { projectId: string }) => ({ projectId: input?.projectId ?? "" }))
+  .handler(async ({ data, context }) => {
+    if (!data.projectId) throw new Error("Project required");
+    const { data: project, error: projectError } = await context.supabase
+      .from("projects")
+      .select("id, organization_id, name, slug")
+      .eq("id", data.projectId)
+      .single();
+    if (projectError || !project) throw new Error("Project not found or access denied");
+
+    await requireOrganizationManager(context.supabase, project.organization_id, context.userId);
+    const correlationId = crypto.randomUUID();
+    const { data: audit, error: auditError } = await supabaseAdmin
+      .from("control_audit_events")
+      .insert({
+        tenant_id: project.organization_id,
+        actor_id: context.userId,
+        agent_id: "open-connect-ui",
+        capability: "projects.delete",
+        target: `project:${project.id}`,
+        environment: "production",
+        result: "requested",
+        correlation_id: correlationId,
+        evidence: { project_name: project.name, project_slug: project.slug },
+      })
+      .select("id")
+      .single();
+    if (auditError || !audit) throw new Error("Deletion audit is unavailable; project not deleted");
+
+    const { error } = await context.supabase.from("projects").delete().eq("id", project.id);
+    if (error) {
+      await supabaseAdmin
+        .from("control_audit_events")
+        .update({ result: "failure", evidence: { error: "project_delete_failed" } })
+        .eq("id", audit.id);
+      throw new Error(error.message);
+    }
+    await supabaseAdmin
+      .from("control_audit_events")
+      .update({ result: "success" })
+      .eq("id", audit.id);
+
+    return { id: project.id, name: project.name };
+  });
