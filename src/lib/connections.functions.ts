@@ -331,14 +331,28 @@ const CATALOG = [
 ] as const;
 
 export const listConnectionCatalog = createServerFn({ method: "GET" }).handler(async () => {
-  return CATALOG.map((item) => ({
-    provider: item.provider,
-    display_name: item.display_name,
-    category: item.category,
-    scopes: [...item.scopes],
-    oauth: item.oauth,
-    oauth_ready: item.provider === "github",
-  }));
+  const { managedConnectorReady } = await import("@/lib/managed-connectors.server");
+  const githubReady = Boolean(
+    process.env["GITHUB_CLIENT_ID"]?.trim() && process.env["GITHUB_CLIENT_SECRET"]?.trim(),
+  );
+  return CATALOG.map((item) => {
+    const method =
+      item.provider === "github" ? "native_oauth" : item.oauth ? "managed_oauth" : "api_key";
+    return {
+      provider: item.provider,
+      display_name: item.display_name,
+      category: item.category,
+      scopes: [...item.scopes],
+      oauth: item.oauth,
+      connection_method: method,
+      oauth_ready:
+        method === "native_oauth"
+          ? githubReady
+          : method === "managed_oauth"
+            ? managedConnectorReady(item.provider)
+            : false,
+    };
+  });
 });
 
 export const listAppConnections = createServerFn({ method: "GET" })
@@ -347,11 +361,50 @@ export const listAppConnections = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("app_connections")
       .select(
-        "id, provider, display_name, status, scopes, provider_account_id, last_used_at, created_at",
+        "id, provider, display_name, status, scopes, provider_account_id, credential_reference, last_used_at, created_at",
       )
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
-    return data ?? [];
+    const connections = data ?? [];
+    const pendingManaged = connections.filter(
+      (connection) =>
+        connection.status === "pending" &&
+        connection.credential_reference?.startsWith("composio://connected-account/"),
+    );
+    if (pendingManaged.length) {
+      const { getManagedConnection } = await import("@/lib/managed-connectors.server");
+      await Promise.all(
+        pendingManaged.map(async (connection) => {
+          const accountId = connection.credential_reference!.split("/").pop()!;
+          try {
+            const remote = await getManagedConnection(connection.provider, accountId);
+            if (remote.status?.toUpperCase() !== "ACTIVE") return;
+            connection.status = "connected";
+            connection.provider_account_id = remote.id || accountId;
+            connection.scopes = [];
+            await context.supabase
+              .from("app_connections")
+              .update({
+                status: "connected",
+                provider_account_id: remote.id || accountId,
+                metadata: {
+                  source: "open-connect",
+                  mode: "managed_oauth",
+                  broker: "composio",
+                  validation: { verified: true, checked_at: new Date().toISOString() },
+                  full_scopes: false,
+                },
+              })
+              .eq("id", connection.id);
+          } catch {
+            // Keep pending. The broker may still be waiting for the user to finish authorization.
+          }
+        }),
+      );
+    }
+    return connections.map(
+      ({ credential_reference: _credentialReference, ...connection }) => connection,
+    );
   });
 
 export const connectApp = createServerFn({ method: "POST" })
@@ -363,6 +416,44 @@ export const connectApp = createServerFn({ method: "POST" })
     const app = CATALOG.find((item) => item.provider === data.provider);
     if (!app) throw new Error("Unknown application");
     if (!app.oauth) throw new Error("This provider uses a verified API key or token connection.");
+
+    if (app.provider !== "github") {
+      const { createManagedConnectionLink } = await import("@/lib/managed-connectors.server");
+      const callbackUrl = `${(process.env["VITE_APP_URL"] || "https://open-connect.site").replace(
+        /\/$/,
+        "",
+      )}/connections?connected=${encodeURIComponent(app.provider)}`;
+      const link = await createManagedConnectionLink({
+        provider: app.provider,
+        userId: context.userId,
+        callbackUrl,
+      });
+      const record = {
+        user_id: context.userId,
+        provider: app.provider,
+        display_name: app.display_name,
+        status: "pending",
+        scopes: [] as string[],
+        credential_reference: `composio://connected-account/${link.connected_account_id}`,
+        provider_account_id: link.connected_account_id,
+        metadata: {
+          source: "open-connect",
+          mode: "managed_oauth",
+          broker: "composio",
+          authorization_required: true,
+          requested_scopes: [...app.scopes],
+          expires_at: link.expires_at,
+          full_scopes: false,
+        },
+      };
+      const { data: connection, error } = await context.supabase
+        .from("app_connections")
+        .upsert(record, { onConflict: "user_id,provider,provider_account_id" })
+        .select("id,provider,display_name,status,scopes,created_at")
+        .single();
+      if (error) throw new Error(error.message);
+      return { ...connection, authorization_url: link.redirect_url };
+    }
 
     const { buildGitHubAuthorizationUrl, oauthConfig, sha256 } =
       await import("@/lib/provider-oauth.server");
@@ -515,10 +606,17 @@ export const disconnectApp = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: connection, error: readError } = await context.supabase
       .from("app_connections")
-      .select("credential_reference")
+      .select("provider,credential_reference")
       .eq("id", data.id)
       .maybeSingle();
     if (readError) throw new Error(readError.message);
+    const managedAccountId = connection?.credential_reference?.match(
+      /^composio:\/\/connected-account\/([^/]+)$/,
+    )?.[1];
+    if (managedAccountId && connection?.provider) {
+      const { deleteManagedConnection } = await import("@/lib/managed-connectors.server");
+      await deleteManagedConnection(connection.provider, managedAccountId);
+    }
     const { error } = await context.supabase.from("app_connections").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     const secretId = connection?.credential_reference?.match(
