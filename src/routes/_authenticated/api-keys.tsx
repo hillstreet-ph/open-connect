@@ -22,7 +22,8 @@ function ApiKeysPage() {
       <p className="mt-2 text-sm text-muted-foreground">
         Create multiple scoped keys for agents, ChatGPT plugins, Claude, Hermes, and custom clients.
         Authenticate against <code className="font-mono text-primary">/mcp</code> and{" "}
-        <code className="font-mono text-primary">/v1</code>.
+        <code className="font-mono text-primary">/v1</code>. Organization-wide keys can access all
+        accessible projects and resources; project keys remain isolated to their selected project.
       </p>
       <div className="mt-8">
         <ApiKeysCard />

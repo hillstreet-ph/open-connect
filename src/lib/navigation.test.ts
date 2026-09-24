@@ -59,16 +59,41 @@ test("Dashboard links to the canonical Studio uploader without duplicating it", 
 test("connection surfaces remain internal and separate from Marketplace", () => {
   const sourceRoot = path.resolve(process.cwd(), "src");
   const sidebar = readFileSync(path.join(sourceRoot, "components/app-sidebar.tsx"), "utf8");
+  const userMenu = readFileSync(path.join(sourceRoot, "components/user-menu.tsx"), "utf8");
   const connectGroup = sidebar.match(/const CONNECT: Item\[\] = \[([\s\S]*?)\];/)?.[1] ?? "";
 
-  for (const route of ["/connections", "/integrations", "/secrets", "/models"]) {
+  for (const route of ["/connections", "/secrets", "/models"]) {
     assert.match(connectGroup, new RegExp(`to: ["']${route}["']`));
   }
-  assert.doesNotMatch(connectGroup, /\/resources/);
+  assert.doesNotMatch(connectGroup, /\/resources|\/integrations|\/api-keys/);
+  assert.match(userMenu, /to="\/integrations"/);
+  assert.match(userMenu, /to="\/api-keys"/);
 
-  for (const routeFile of ["connections.tsx", "integrations.tsx", "models.tsx"]) {
+  for (const routeFile of ["connections.tsx", "models.tsx"]) {
     const source = readFileSync(path.join(sourceRoot, "routes", routeFile), "utf8");
     assert.doesNotMatch(source, /(?:to|href)=["']\/resources["']/);
+  }
+
+  const integrations = readFileSync(
+    path.join(sourceRoot, "routes/_authenticated/integrations.tsx"),
+    "utf8",
+  );
+  assert.match(integrations, /createFileRoute\("\/_authenticated\/integrations"\)/);
+  assert.doesNotMatch(integrations, /(?:to|href)=["']\/resources["']/);
+});
+
+test("AI control integrations and API keys only appear in the avatar menu", () => {
+  const sourceRoot = path.resolve(process.cwd(), "src");
+  const duplicateSurfaces = [
+    "components/app-sidebar.tsx",
+    "components/site-footer.tsx",
+    "routes/_authenticated/projects.$projectId.tsx",
+    "routes/_authenticated/settings.tsx",
+  ];
+
+  for (const sourceFile of duplicateSurfaces) {
+    const source = readFileSync(path.join(sourceRoot, sourceFile), "utf8");
+    assert.doesNotMatch(source, /(?:to|href)=["']\/(?:integrations|api-keys)["']/);
   }
 });
 

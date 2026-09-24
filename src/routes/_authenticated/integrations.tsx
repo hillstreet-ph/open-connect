@@ -17,14 +17,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-export const Route = createFileRoute("/integrations")({
+export const Route = createFileRoute("/_authenticated/integrations")({
   head: () => ({
     meta: [
       { title: "Single gateway — Open-Connect" },
       {
         name: "description",
         content:
-          "One gateway for ChatGPT, Claude, Grok, Open WebUI, Hermes, Mistral — plugins, skills, MCP, credentials, LiteLLM models, MultiOn browser.",
+          "Connect approved AI clients to Open-Connect projects, resources, and actions through scoped API keys and MCP.",
       },
     ],
   }),
@@ -185,7 +185,9 @@ function IntegrationsPage() {
         <strong className="text-foreground">Hermes</strong>,{" "}
         <strong className="text-foreground">Mistral</strong>, and more — plugins, skills, MCP,
         connectors, credentials (Pipedream · Composio · 1Password), LiteLLM models, Telegram, and
-        autonomous browser / terminal compute. One account. One key. One catalog.
+        autonomous browser / terminal compute. External AI clients receive governed control of
+        approved projects, resources, and actions through scoped API keys; ownership boundaries,
+        approvals, audits, and secret protections always remain enforced.
       </p>
 
       <div className="mt-6 flex flex-wrap gap-2">

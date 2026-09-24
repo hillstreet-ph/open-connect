@@ -262,9 +262,6 @@ function ProjectWorkspacePage() {
           <Button asChild size="sm" variant="outline">
             <Link to="/secrets">Vault</Link>
           </Button>
-          <Button asChild size="sm" variant="outline">
-            <Link to="/api-keys">API keys</Link>
-          </Button>
           {isAdmin ? (
             <>
               <Button
