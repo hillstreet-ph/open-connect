@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Check,
   Clipboard,
@@ -13,6 +13,7 @@ import {
   Loader2,
   Lock,
   Mail,
+  Search,
   Trash2,
   UserRound,
 } from "lucide-react";
@@ -69,6 +70,54 @@ const TYPES: { value: SecretType; label: string }[] = [
   { value: "other", label: "Other" },
 ];
 
+const TYPE_DETAILS: Record<
+  SecretType,
+  { label: string; valueLabel: string; placeholder: string; loginFields: boolean }
+> = {
+  password: {
+    label: "Login",
+    valueLabel: "Password",
+    placeholder: "Enter password",
+    loginFields: true,
+  },
+  api_key: {
+    label: "API key",
+    valueLabel: "API key",
+    placeholder: "Paste API key",
+    loginFields: false,
+  },
+  oauth_token: {
+    label: "OAuth token",
+    valueLabel: "Access or refresh token",
+    placeholder: "Paste OAuth token",
+    loginFields: false,
+  },
+  bot_token: {
+    label: "Bot token",
+    valueLabel: "Bot token",
+    placeholder: "Paste bot token",
+    loginFields: false,
+  },
+  mcp_url: {
+    label: "MCP credential",
+    valueLabel: "MCP endpoint or bearer token",
+    placeholder: "https://… or bearer token",
+    loginFields: false,
+  },
+  totp: {
+    label: "Authenticator",
+    valueLabel: "Base32 setup key",
+    placeholder: "Paste Base32 authenticator key",
+    loginFields: false,
+  },
+  other: {
+    label: "Secure note",
+    valueLabel: "Secret value",
+    placeholder: "Enter secret value",
+    loginFields: false,
+  },
+};
+
 function SecretsPage() {
   const queryClient = useQueryClient();
   const listFn = useServerFn(listSecrets);
@@ -91,6 +140,8 @@ function SecretsPage() {
   const [revealedValues, setRevealedValues] = useState<Record<string, string>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
+  const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState<SecretType | "all">("all");
 
   const list = useQuery({
     queryKey: ["credential-secrets"],
@@ -103,6 +154,19 @@ function SecretsPage() {
       }
     },
   });
+
+  const visibleCredentials = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return (list.data ?? []).filter((row) => {
+      if (typeFilter !== "all" && row.secret_type !== typeFilter) return false;
+      if (!query) return true;
+      return [row.name, row.email_address, row.username, row.website, row.secret_type]
+        .filter(Boolean)
+        .some((field) => String(field).toLowerCase().includes(query));
+    });
+  }, [list.data, search, typeFilter]);
+
+  const typeDetails = TYPE_DETAILS[secretType];
 
   function toggleScope(s: string) {
     setScopes((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
@@ -272,37 +336,41 @@ function SecretsPage() {
             </div>
           </div>
           <div className="overflow-hidden rounded-xl border border-border/80 bg-muted/20">
-            <div className="relative border-b border-border/70 p-3 pl-12">
-              <Mail className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Label htmlFor="credential-email" className="sr-only">
-                Email address
-              </Label>
-              <Input
-                id="credential-email"
-                type="email"
-                value={emailAddress}
-                onChange={(e) => setEmailAddress(e.target.value)}
-                placeholder="Email address"
-                className="border-0 bg-transparent shadow-none"
-              />
-            </div>
-            <div className="relative border-b border-border/70 p-3 pl-12">
-              <UserRound className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Label htmlFor="credential-username" className="sr-only">
-                Username
-              </Label>
-              <Input
-                id="credential-username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Username"
-                className="border-0 bg-transparent shadow-none"
-              />
-            </div>
+            {typeDetails.loginFields ? (
+              <div className="relative border-b border-border/70 p-3 pl-12">
+                <Mail className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Label htmlFor="credential-email" className="sr-only">
+                  Email address
+                </Label>
+                <Input
+                  id="credential-email"
+                  type="email"
+                  value={emailAddress}
+                  onChange={(e) => setEmailAddress(e.target.value)}
+                  placeholder="Email address"
+                  className="border-0 bg-transparent shadow-none"
+                />
+              </div>
+            ) : null}
+            {typeDetails.loginFields ? (
+              <div className="relative border-b border-border/70 p-3 pl-12">
+                <UserRound className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Label htmlFor="credential-username" className="sr-only">
+                  Username
+                </Label>
+                <Input
+                  id="credential-username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Username"
+                  className="border-0 bg-transparent shadow-none"
+                />
+              </div>
+            ) : null}
             <div className="relative border-b border-border/70 p-3 pl-12">
               <KeyRound className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Label htmlFor="secret-value" className="sr-only">
-                Credential value
+                {typeDetails.valueLabel}
               </Label>
               <Input
                 id="secret-value"
@@ -310,11 +378,7 @@ function SecretsPage() {
                 autoComplete="off"
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
-                placeholder={
-                  secretType === "totp"
-                    ? "Paste the Base32 authenticator key"
-                    : "Password, token, or API key"
-                }
+                placeholder={typeDetails.placeholder}
                 className="pr-11 font-mono"
               />
               <Button
@@ -328,7 +392,7 @@ function SecretsPage() {
                 {showValue ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
               </Button>
             </div>
-            {secretType !== "totp" ? (
+            {secretType === "password" ? (
               <div className="relative p-3 pl-12">
                 <Lock className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Label htmlFor="totp-secret" className="sr-only">
@@ -386,7 +450,7 @@ function SecretsPage() {
             ) : (
               <Lock className="mr-2 size-4" />
             )}
-            Store secret
+            Save {typeDetails.label.toLowerCase()}
           </Button>
         </CardContent>
       </Card>
@@ -400,13 +464,39 @@ function SecretsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="mb-4 grid gap-2 sm:grid-cols-[1fr_auto]">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search credentials"
+                className="pl-9"
+              />
+            </div>
+            <select
+              aria-label="Filter credential type"
+              value={typeFilter}
+              onChange={(event) => setTypeFilter(event.target.value as SecretType | "all")}
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="all">All types</option>
+              {TYPES.map((type) => (
+                <option key={type.value} value={type.value}>
+                  {type.label}
+                </option>
+              ))}
+            </select>
+          </div>
           {list.isLoading ? (
             <Skeleton className="h-20 w-full" />
-          ) : (list.data ?? []).length === 0 ? (
-            <p className="text-sm text-muted-foreground">No secrets yet.</p>
+          ) : visibleCredentials.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {(list.data ?? []).length === 0 ? "No credentials yet." : "No matching credentials."}
+            </p>
           ) : (
             <ul className="space-y-2">
-              {(list.data ?? []).map((row) => (
+              {visibleCredentials.map((row) => (
                 <li key={row.id} className="rounded-xl border border-border px-4 py-3">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -418,7 +508,7 @@ function SecretsPage() {
                       ) : null}
                       <div className="mt-1 flex flex-wrap gap-1">
                         <Badge variant="secondary" className="text-xs">
-                          {row.secret_type}
+                          {TYPE_DETAILS[row.secret_type as SecretType]?.label ?? row.secret_type}
                         </Badge>
                         {(row.scopes ?? []).map((s: string) => (
                           <Badge key={s} variant="outline" className="text-xs">
@@ -428,22 +518,7 @@ function SecretsPage() {
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-1">
-                      {revealedValues[row.id] ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="gap-2 font-mono"
-                          aria-label={`Copy credential value for ${row.name}`}
-                          onClick={() => copyCredential(row.id, revealedValues[row.id])}
-                        >
-                          {copiedId === row.id ? (
-                            <Check className="size-3.5" />
-                          ) : (
-                            <Clipboard className="size-3.5" />
-                          )}
-                          <span className="max-w-32 truncate">{revealedValues[row.id]}</span>
-                        </Button>
-                      ) : (
+                      {!revealedValues[row.id] ? (
                         <Button
                           size="sm"
                           variant="outline"
@@ -453,7 +528,7 @@ function SecretsPage() {
                         >
                           <Eye className="size-3.5" /> Reveal
                         </Button>
-                      )}
+                      ) : null}
                       {row.has_totp ? (
                         totpCodes[row.id] ? (
                           <Button
@@ -496,6 +571,54 @@ function SecretsPage() {
                       </Button>
                     </div>
                   </div>
+                  {revealedValues[row.id] ? (
+                    <div className="mt-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
+                      <Label
+                        htmlFor={`revealed-${row.id}`}
+                        className="text-xs text-muted-foreground"
+                      >
+                        {TYPE_DETAILS[row.secret_type as SecretType]?.valueLabel ?? "Secret value"}
+                      </Label>
+                      <div className="mt-1 flex gap-2">
+                        <Input
+                          id={`revealed-${row.id}`}
+                          readOnly
+                          value={revealedValues[row.id]}
+                          className="min-w-0 font-mono"
+                        />
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          aria-label={`Copy credential value for ${row.name}`}
+                          onClick={() => copyCredential(row.id, revealedValues[row.id])}
+                        >
+                          {copiedId === row.id ? (
+                            <Check className="size-4" />
+                          ) : (
+                            <Clipboard className="size-4" />
+                          )}
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          aria-label={`Hide credential value for ${row.name}`}
+                          onClick={() =>
+                            setRevealedValues((previous) => {
+                              const next = { ...previous };
+                              delete next[row.id];
+                              return next;
+                            })
+                          }
+                        >
+                          <EyeOff className="size-4" />
+                        </Button>
+                      </div>
+                      <p className="mt-2 text-[11px] text-muted-foreground">
+                        This is the exact value stored in Vault. It will hide automatically after 30
+                        seconds.
+                      </p>
+                    </div>
+                  ) : null}
                   {row.website || row.notes ? (
                     <div className="mt-3 border-t border-border/70 pt-3 text-xs text-muted-foreground">
                       {row.website ? <p className="truncate">{row.website}</p> : null}
