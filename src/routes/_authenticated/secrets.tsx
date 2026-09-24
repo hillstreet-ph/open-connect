@@ -14,6 +14,7 @@ import {
   Loader2,
   Lock,
   Mail,
+  Pencil,
   Search,
   Tag,
   Trash2,
@@ -27,6 +28,7 @@ import {
   listSecrets,
   revealSecret,
   type SecretType,
+  updateSecretOrganization,
 } from "@/lib/secrets.functions";
 import { listProjects } from "@/lib/orgs.functions";
 import { Badge } from "@/components/ui/badge";
@@ -127,6 +129,7 @@ function SecretsPage() {
   const totpFn = useServerFn(getTotpCode);
   const revealFn = useServerFn(revealSecret);
   const listProjectsFn = useServerFn(listProjects);
+  const updateOrganizationFn = useServerFn(updateSecretOrganization);
 
   const [name, setName] = useState("");
   const [secretType, setSecretType] = useState<SecretType>("api_key");
@@ -147,6 +150,10 @@ function SecretsPage() {
   const [projectIds, setProjectIds] = useState<string[]>([]);
   const [tagFilter, setTagFilter] = useState("all");
   const [projectFilter, setProjectFilter] = useState("all");
+  const [editingCredentialId, setEditingCredentialId] = useState<string | null>(null);
+  const [editTags, setEditTags] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+  const [editProjectIds, setEditProjectIds] = useState<string[]>([]);
 
   const list = useQuery({
     queryKey: ["credential-secrets"],
@@ -247,6 +254,37 @@ function SecretsPage() {
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Delete failed"),
   });
+
+  const organizationMutation = useMutation({
+    mutationFn: () =>
+      updateOrganizationFn({
+        data: {
+          id: editingCredentialId ?? "",
+          notes: editNotes,
+          tags: editTags.split(","),
+          project_ids: editProjectIds,
+        },
+      }),
+    onSuccess: () => {
+      setEditingCredentialId(null);
+      toast.success("Credential organization updated");
+      void queryClient.invalidateQueries({ queryKey: ["credential-secrets"] });
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Could not update credential"),
+  });
+
+  function beginEditingOrganization(row: {
+    id: string;
+    notes?: string | null;
+    tags?: string[] | null;
+    projects?: { id: string }[] | null;
+  }) {
+    setEditingCredentialId(row.id);
+    setEditNotes(row.notes ?? "");
+    setEditTags((row.tags ?? []).join(", "));
+    setEditProjectIds((row.projects ?? []).map((project) => project.id));
+  }
 
   const totpMutation = useMutation({
     mutationFn: (id: string) => totpFn({ data: { id } }),
@@ -451,6 +489,19 @@ function SecretsPage() {
               className="border-0 bg-transparent shadow-none"
             />
           </div>
+          <div className="relative rounded-xl border border-border/80 bg-muted/20 p-3 pl-12">
+            <FileText className="absolute left-4 top-5 size-4 text-muted-foreground" />
+            <Label htmlFor="credential-notes" className="sr-only">
+              Notes
+            </Label>
+            <Textarea
+              id="credential-notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Notes"
+              className="min-h-20 resize-y border-0 bg-transparent shadow-none"
+            />
+          </div>
           <div className="space-y-2 rounded-xl border border-border/80 bg-muted/20 p-4">
             <div className="flex items-center gap-2">
               <FolderKanban className="size-4 text-muted-foreground" />
@@ -480,19 +531,6 @@ function SecretsPage() {
                 </label>
               ))}
             </div>
-          </div>
-          <div className="relative rounded-xl border border-border/80 bg-muted/20 p-3 pl-12">
-            <FileText className="absolute left-4 top-5 size-4 text-muted-foreground" />
-            <Label htmlFor="credential-notes" className="sr-only">
-              Notes
-            </Label>
-            <Textarea
-              id="credential-notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Notes"
-              className="min-h-20 resize-y border-0 bg-transparent shadow-none"
-            />
           </div>
           <Button
             onClick={() => createMutation.mutate()}
@@ -603,6 +641,14 @@ function SecretsPage() {
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-1">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-2"
+                        onClick={() => beginEditingOrganization(row)}
+                      >
+                        <Pencil className="size-3.5" /> Organize
+                      </Button>
                       {!revealedValues[row.id] ? (
                         <Button
                           size="sm"
@@ -702,6 +748,62 @@ function SecretsPage() {
                         This is the exact value stored in Vault. It will hide automatically after 30
                         seconds.
                       </p>
+                    </div>
+                  ) : null}
+                  {editingCredentialId === row.id ? (
+                    <div className="mt-3 space-y-3 rounded-lg border border-border bg-muted/20 p-3">
+                      <div>
+                        <p className="text-sm font-medium">Edit organization</p>
+                        <p className="text-xs text-muted-foreground">
+                          Add or remove project access without duplicating or changing the Vault secret.
+                        </p>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor={`edit-tags-${row.id}`}>Tags</Label>
+                        <Input id={`edit-tags-${row.id}`} value={editTags}
+                          onChange={(event) => setEditTags(event.target.value)}
+                          placeholder="production, supabase" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor={`edit-notes-${row.id}`}>Notes</Label>
+                        <Textarea id={`edit-notes-${row.id}`} value={editNotes}
+                          onChange={(event) => setEditNotes(event.target.value)}
+                          placeholder="Notes" className="min-h-20" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Assigned projects</Label>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {(projects.data ?? []).map((project) => (
+                            <label key={project.id}
+                              className="flex items-center gap-2 rounded-lg border bg-background p-2 text-sm">
+                              <input type="checkbox"
+                                checked={editProjectIds.includes(project.id)}
+                                onChange={(event) =>
+                                  setEditProjectIds((current) =>
+                                    event.target.checked
+                                      ? [...new Set([...current, project.id])]
+                                      : current.filter((id) => id !== project.id),
+                                  )
+                                } />
+                              <span className="truncate">{project.name}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Button size="sm" onClick={() => organizationMutation.mutate()}
+                          disabled={organizationMutation.isPending}>
+                          {organizationMutation.isPending ? (
+                            <Loader2 className="mr-2 size-4 animate-spin" />
+                          ) : null}
+                          Save organization
+                        </Button>
+                        <Button size="sm" variant="ghost"
+                          onClick={() => setEditingCredentialId(null)}
+                          disabled={organizationMutation.isPending}>
+                          Cancel
+                        </Button>
+                      </div>
                     </div>
                   ) : null}
                   {row.website || row.notes ? (
