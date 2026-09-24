@@ -138,6 +138,14 @@ export const addConnectionToProject = createServerFn({ method: "POST" })
     connectionId: input.connectionId,
   }))
   .handler(async ({ data, context }) => {
+    const { data: ownedConnection, error: ownershipError } = await context.supabase
+      .from("app_connections")
+      .select("id")
+      .eq("id", data.connectionId)
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    if (ownershipError) throw new Error(ownershipError.message);
+    if (!ownedConnection) throw new Error("Connection not found or access denied");
     const { data: row, error } = await context.supabase
       .from("project_connections")
       .upsert(
@@ -151,12 +159,6 @@ export const addConnectionToProject = createServerFn({ method: "POST" })
       .select("id, project_id, connection_id")
       .single();
     if (error) throw new Error(error.message);
-    // also stamp project_id on connection for filtering
-    await context.supabase
-      .from("app_connections")
-      .update({ project_id: data.projectId, updated_at: new Date().toISOString() })
-      .eq("id", data.connectionId)
-      .eq("user_id", context.userId);
     return row;
   });
 
@@ -223,4 +225,54 @@ export const listMyConnections = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return data ?? [];
+  });
+
+/** Metadata-only credentials from the general Vault, available for project scoping. */
+export const listMyCredentialMetadata = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase.rpc("list_credential_secrets");
+    if (error) throw new Error(error.message);
+    return Array.isArray(data) ? data : [];
+  });
+
+export const listProjectCredentials = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { projectId: string }) => ({ projectId: input?.projectId ?? "" }))
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase.rpc("list_project_credentials", {
+      p_project_id: data.projectId,
+    });
+    if (error) throw new Error(error.message);
+    return Array.isArray(rows) ? rows : [];
+  });
+
+export const addCredentialToProject = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { projectId: string; credentialId: string }) => ({
+    projectId: input.projectId,
+    credentialId: input.credentialId,
+  }))
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase.rpc("add_project_credential", {
+      p_project_id: data.projectId,
+      p_credential_id: data.credentialId,
+    });
+    if (error) throw new Error(error.message);
+    return row;
+  });
+
+export const removeCredentialFromProject = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { projectId: string; credentialId: string }) => ({
+    projectId: input.projectId,
+    credentialId: input.credentialId,
+  }))
+  .handler(async ({ data, context }) => {
+    const { data: removed, error } = await context.supabase.rpc("remove_project_credential", {
+      p_project_id: data.projectId,
+      p_credential_id: data.credentialId,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: removed };
   });

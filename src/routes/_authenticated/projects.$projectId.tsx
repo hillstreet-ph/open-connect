@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { FolderKanban, Layers, Loader2, Plus, Trash2 } from "lucide-react";
+import { FolderKanban, Layers, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
@@ -9,21 +9,27 @@ import {
   deleteProject,
   listProjectEnvironments,
   listProjects,
+  renameProject,
 } from "@/lib/orgs.functions";
 import {
+  addCredentialToProject,
   addConnectionToProject,
   addResourceToProject,
   listCatalogForProject,
   listMyConnections,
+  listMyCredentialMetadata,
   listProjectConnections,
+  listProjectCredentials,
   listProjectResources,
   removeConnectionFromProject,
+  removeCredentialFromProject,
   removeResourceFromProject,
 } from "@/lib/workspace.functions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -64,18 +70,26 @@ function ProjectWorkspacePage() {
   const listEnvs = useServerFn(listProjectEnvironments);
   const ensureEnvs = useServerFn(ensureProjectEnvironments);
   const deleteProj = useServerFn(deleteProject);
+  const renameProj = useServerFn(renameProject);
   const listRes = useServerFn(listProjectResources);
   const listConn = useServerFn(listProjectConnections);
   const listCat = useServerFn(listCatalogForProject);
   const listMyConn = useServerFn(listMyConnections);
+  const listMyCred = useServerFn(listMyCredentialMetadata);
+  const listProjCred = useServerFn(listProjectCredentials);
   const addRes = useServerFn(addResourceToProject);
   const remRes = useServerFn(removeResourceFromProject);
   const addConn = useServerFn(addConnectionToProject);
   const remConn = useServerFn(removeConnectionFromProject);
+  const addCred = useServerFn(addCredentialToProject);
+  const remCred = useServerFn(removeCredentialFromProject);
 
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [pickResource, setPickResource] = useState("");
   const [pickConnection, setPickConnection] = useState("");
+  const [pickCredential, setPickCredential] = useState("");
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [projectName, setProjectName] = useState("");
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   const projects = useQuery({ queryKey: ["projects"], queryFn: () => listProj({}) });
@@ -117,6 +131,15 @@ function ProjectWorkspacePage() {
     queryKey: ["my-connections"],
     queryFn: () => listMyConn({}),
   });
+  const myCredentials = useQuery({
+    queryKey: ["my-credential-metadata"],
+    queryFn: () => listMyCred({}),
+  });
+  const projectCredentials = useQuery({
+    queryKey: ["project-credentials", projectId],
+    queryFn: () => listProjCred({ data: { projectId } }),
+    enabled: Boolean(projectId),
+  });
 
   const addResMut = useMutation({
     mutationFn: () => addRes({ data: { projectId, resourceId: pickResource } }),
@@ -146,6 +169,31 @@ function ProjectWorkspacePage() {
   const remConnMut = useMutation({
     mutationFn: (connectionId: string) => remConn({ data: { projectId, connectionId } }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["project-connections", projectId] }),
+  });
+
+  const addCredMut = useMutation({
+    mutationFn: () => addCred({ data: { projectId, credentialId: pickCredential } }),
+    onSuccess: () => {
+      toast.success("Credential shared with project");
+      setPickCredential("");
+      void qc.invalidateQueries({ queryKey: ["project-credentials", projectId] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+
+  const remCredMut = useMutation({
+    mutationFn: (credentialId: string) => remCred({ data: { projectId, credentialId } }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ["project-credentials", projectId] }),
+  });
+
+  const renameProjectMut = useMutation({
+    mutationFn: () => renameProj({ data: { projectId, name: projectName } }),
+    onSuccess: () => {
+      toast.success("Project renamed");
+      setRenameOpen(false);
+      void qc.invalidateQueries({ queryKey: ["projects"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not rename project"),
   });
 
   const deleteProjectMut = useMutation({
@@ -205,9 +253,21 @@ function ProjectWorkspacePage() {
             <Link to="/api-keys">API keys</Link>
           </Button>
           {isAdmin ? (
-            <Button size="sm" variant="destructive" onClick={() => setDeleteOpen(true)}>
-              <Trash2 className="size-3.5" /> Delete project
-            </Button>
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setProjectName(project?.name ?? "");
+                  setRenameOpen(true);
+                }}
+              >
+                <Pencil className="size-3.5" /> Rename
+              </Button>
+              <Button size="sm" variant="destructive" onClick={() => setDeleteOpen(true)}>
+                <Trash2 className="size-3.5" /> Delete project
+              </Button>
+            </>
           ) : null}
         </div>
       </div>
@@ -385,9 +445,10 @@ function ProjectWorkspacePage() {
 
       <Card className="shadow-panel">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">OAuth · MCP accounts (project-separated)</CardTitle>
+          <CardTitle className="text-base">Connections · MCP · AI Gateway</CardTitle>
           <CardDescription>
-            Scope connected accounts to this project so environments stay isolated.
+            Share a general sidebar connection or AI provider with this project. Secrets remain in
+            Vault and only the opaque broker reference is scoped.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -461,6 +522,116 @@ function ProjectWorkspacePage() {
           </div>
         </CardContent>
       </Card>
+
+      <Card className="shadow-panel">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Shared credentials</CardTitle>
+          <CardDescription>
+            Select credentials from the general sidebar Vault. Project pages show metadata only;
+            saved passwords, tokens, and TOTP seeds are never exposed here.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="min-w-[220px] flex-1 space-y-1">
+              <Label htmlFor="pick-credential">General Vault credential</Label>
+              <select
+                id="pick-credential"
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={pickCredential}
+                onChange={(event) => setPickCredential(event.target.value)}
+              >
+                <option value="">Select credential…</option>
+                {(myCredentials.data ?? []).map(
+                  (credential: { id: string; name?: string; secret_type?: string }) => (
+                    <option key={credential.id} value={credential.id}>
+                      {credential.name} ({credential.secret_type})
+                    </option>
+                  ),
+                )}
+              </select>
+            </div>
+            <Button
+              disabled={!pickCredential || addCredMut.isPending}
+              onClick={() => addCredMut.mutate()}
+            >
+              {addCredMut.isPending ? <Loader2 className="mr-1 size-3.5 animate-spin" /> : null}
+              Share with project
+            </Button>
+          </div>
+          <div className="space-y-2">
+            {(projectCredentials.data ?? []).length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No general credentials shared with this project.
+              </p>
+            ) : (
+              (projectCredentials.data ?? []).map(
+                (credential: {
+                  id: string;
+                  credential_id: string;
+                  name?: string;
+                  secret_type?: string;
+                  scopes?: string[];
+                }) => (
+                  <div
+                    key={credential.id}
+                    className="flex items-center justify-between rounded-lg border border-border/80 px-3 py-2"
+                  >
+                    <div>
+                      <p className="text-sm font-medium">{credential.name}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {credential.secret_type} ·{" "}
+                        {(credential.scopes ?? []).join(", ") || "general"}
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      aria-label={`Remove ${credential.name ?? "credential"} from project`}
+                      onClick={() => remCredMut.mutate(credential.credential_id)}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  </div>
+                ),
+              )
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <AlertDialog open={renameOpen} onOpenChange={setRenameOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Rename project</AlertDialogTitle>
+            <AlertDialogDescription>
+              Change the display name. The stable project ID and slug remain unchanged so existing
+              integrations keep working.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-1.5">
+            <Label htmlFor="project-name">Project name</Label>
+            <Input
+              id="project-name"
+              value={projectName}
+              maxLength={120}
+              onChange={(event) => setProjectName(event.target.value)}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={renameProjectMut.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={projectName.trim().length < 2 || renameProjectMut.isPending}
+              onClick={(event) => {
+                event.preventDefault();
+                renameProjectMut.mutate();
+              }}
+            >
+              {renameProjectMut.isPending ? "Saving…" : "Save name"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>

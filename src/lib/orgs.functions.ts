@@ -451,3 +451,40 @@ export const deleteProject = createServerFn({ method: "POST" })
 
     return { id: project.id, name: project.name };
   });
+
+export const renameProject = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { projectId: string; name: string }) => ({
+    projectId: input?.projectId ?? "",
+    name: (input?.name ?? "").trim().slice(0, 120),
+  }))
+  .handler(async ({ data, context }) => {
+    if (!data.projectId || data.name.length < 2) throw new Error("A project name is required");
+    const { data: project, error: projectError } = await context.supabase
+      .from("projects")
+      .select("id, organization_id, name")
+      .eq("id", data.projectId)
+      .single();
+    if (projectError || !project) throw new Error("Project not found or access denied");
+    await requireOrganizationManager(context.supabase, project.organization_id, context.userId);
+
+    const { data: updated, error } = await context.supabase
+      .from("projects")
+      .update({ name: data.name })
+      .eq("id", project.id)
+      .select("id, name, slug")
+      .single();
+    if (error) throw new Error(error.message);
+    await supabaseAdmin.from("control_audit_events").insert({
+      tenant_id: project.organization_id,
+      actor_id: context.userId,
+      agent_id: "open-connect-ui",
+      capability: "projects.rename",
+      target: `project:${project.id}`,
+      environment: "production",
+      result: "success",
+      correlation_id: crypto.randomUUID(),
+      evidence: { previous_name: project.name, new_name: data.name },
+    });
+    return updated;
+  });
