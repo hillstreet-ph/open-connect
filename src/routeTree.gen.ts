@@ -15,7 +15,6 @@ import { Route as ARouteImport } from './routes/a'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ConnectionsRouteImport } from './routes/connections'
 import { Route as ExploreRouteImport } from './routes/explore'
-import { Route as IntegrationsRouteImport } from './routes/integrations'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as ModelsRouteImport } from './routes/models'
@@ -27,6 +26,7 @@ import { Route as AuthenticatedAutomationsRouteImport } from './routes/_authenti
 import { Route as AuthenticatedCampaignStudioRouteImport } from './routes/_authenticated/campaign-studio'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedGuidesRouteImport } from './routes/_authenticated/guides'
+import { Route as AuthenticatedIntegrationsRouteImport } from './routes/_authenticated/integrations'
 import { Route as AuthenticatedKnowledgeRouteImport } from './routes/_authenticated/knowledge'
 import { Route as AuthenticatedMemoryRouteImport } from './routes/_authenticated/memory'
 import { Route as AuthenticatedOrgsRouteImport } from './routes/_authenticated/orgs'
@@ -81,11 +81,6 @@ const ConnectionsRoute = ConnectionsRouteImport.update({
 const ExploreRoute = ExploreRouteImport.update({
   id: '/explore',
   path: '/explore',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const IntegrationsRoute = IntegrationsRouteImport.update({
-  id: '/integrations',
-  path: '/integrations',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -145,6 +140,12 @@ const AuthenticatedGuidesRoute = AuthenticatedGuidesRouteImport.update({
   path: '/guides',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedIntegrationsRoute =
+  AuthenticatedIntegrationsRouteImport.update({
+    id: '/integrations',
+    path: '/integrations',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedKnowledgeRoute = AuthenticatedKnowledgeRouteImport.update({
   id: '/knowledge',
   path: '/knowledge',
@@ -283,7 +284,6 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/connections': typeof ConnectionsRoute
   '/explore': typeof ExploreRoute
-  '/integrations': typeof IntegrationsRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/models': typeof ModelsRoute
@@ -295,6 +295,7 @@ export interface FileRoutesByFullPath {
   '/campaign-studio': typeof AuthenticatedCampaignStudioRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/guides': typeof AuthenticatedGuidesRoute
+  '/integrations': typeof AuthenticatedIntegrationsRoute
   '/knowledge': typeof AuthenticatedKnowledgeRoute
   '/memory': typeof AuthenticatedMemoryRoute
   '/orgs': typeof AuthenticatedOrgsRoute
@@ -328,7 +329,6 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/connections': typeof ConnectionsRoute
   '/explore': typeof ExploreRoute
-  '/integrations': typeof IntegrationsRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/models': typeof ModelsRoute
@@ -340,6 +340,7 @@ export interface FileRoutesByTo {
   '/campaign-studio': typeof AuthenticatedCampaignStudioRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/guides': typeof AuthenticatedGuidesRoute
+  '/integrations': typeof AuthenticatedIntegrationsRoute
   '/knowledge': typeof AuthenticatedKnowledgeRoute
   '/memory': typeof AuthenticatedMemoryRoute
   '/orgs': typeof AuthenticatedOrgsRoute
@@ -375,7 +376,6 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/connections': typeof ConnectionsRoute
   '/explore': typeof ExploreRoute
-  '/integrations': typeof IntegrationsRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/models': typeof ModelsRoute
@@ -387,6 +387,7 @@ export interface FileRoutesById {
   '/_authenticated/campaign-studio': typeof AuthenticatedCampaignStudioRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/guides': typeof AuthenticatedGuidesRoute
+  '/_authenticated/integrations': typeof AuthenticatedIntegrationsRoute
   '/_authenticated/knowledge': typeof AuthenticatedKnowledgeRoute
   '/_authenticated/memory': typeof AuthenticatedMemoryRoute
   '/_authenticated/orgs': typeof AuthenticatedOrgsRoute
@@ -422,7 +423,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/connections'
     | '/explore'
-    | '/integrations'
     | '/login'
     | '/mcp'
     | '/models'
@@ -434,6 +434,7 @@ export interface FileRouteTypes {
     | '/campaign-studio'
     | '/dashboard'
     | '/guides'
+    | '/integrations'
     | '/knowledge'
     | '/memory'
     | '/orgs'
@@ -467,7 +468,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/connections'
     | '/explore'
-    | '/integrations'
     | '/login'
     | '/mcp'
     | '/models'
@@ -479,6 +479,7 @@ export interface FileRouteTypes {
     | '/campaign-studio'
     | '/dashboard'
     | '/guides'
+    | '/integrations'
     | '/knowledge'
     | '/memory'
     | '/orgs'
@@ -513,7 +514,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/connections'
     | '/explore'
-    | '/integrations'
     | '/login'
     | '/mcp'
     | '/models'
@@ -525,6 +525,7 @@ export interface FileRouteTypes {
     | '/_authenticated/campaign-studio'
     | '/_authenticated/dashboard'
     | '/_authenticated/guides'
+    | '/_authenticated/integrations'
     | '/_authenticated/knowledge'
     | '/_authenticated/memory'
     | '/_authenticated/orgs'
@@ -560,7 +561,6 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   ConnectionsRoute: typeof ConnectionsRoute
   ExploreRoute: typeof ExploreRoute
-  IntegrationsRoute: typeof IntegrationsRoute
   LoginRoute: typeof LoginRoute
   McpRoute: typeof McpRoute
   ModelsRoute: typeof ModelsRoute
@@ -621,13 +621,6 @@ declare module '@tanstack/react-router' {
       path: '/explore'
       fullPath: '/explore'
       preLoaderRoute: typeof ExploreRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/integrations': {
-      id: '/integrations'
-      path: '/integrations'
-      fullPath: '/integrations'
-      preLoaderRoute: typeof IntegrationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -705,6 +698,13 @@ declare module '@tanstack/react-router' {
       path: '/guides'
       fullPath: '/guides'
       preLoaderRoute: typeof AuthenticatedGuidesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/integrations': {
+      id: '/_authenticated/integrations'
+      path: '/integrations'
+      fullPath: '/integrations'
+      preLoaderRoute: typeof AuthenticatedIntegrationsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/knowledge': {
@@ -913,6 +913,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCampaignStudioRoute: typeof AuthenticatedCampaignStudioRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedGuidesRoute: typeof AuthenticatedGuidesRoute
+  AuthenticatedIntegrationsRoute: typeof AuthenticatedIntegrationsRoute
   AuthenticatedKnowledgeRoute: typeof AuthenticatedKnowledgeRoute
   AuthenticatedMemoryRoute: typeof AuthenticatedMemoryRoute
   AuthenticatedOrgsRoute: typeof AuthenticatedOrgsRoute
@@ -936,6 +937,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCampaignStudioRoute: AuthenticatedCampaignStudioRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedGuidesRoute: AuthenticatedGuidesRoute,
+  AuthenticatedIntegrationsRoute: AuthenticatedIntegrationsRoute,
   AuthenticatedKnowledgeRoute: AuthenticatedKnowledgeRoute,
   AuthenticatedMemoryRoute: AuthenticatedMemoryRoute,
   AuthenticatedOrgsRoute: AuthenticatedOrgsRoute,
@@ -961,7 +963,6 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   ConnectionsRoute: ConnectionsRoute,
   ExploreRoute: ExploreRoute,
-  IntegrationsRoute: IntegrationsRoute,
   LoginRoute: LoginRoute,
   McpRoute: McpRoute,
   ModelsRoute: ModelsRoute,
