@@ -426,8 +426,7 @@ export const completeOAuthConnection = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     if (!data.code || !data.state) throw new Error("The provider callback is incomplete.");
 
-    const { exchangeGitHubCode, oauthConfig, sha256 } =
-      await import("@/lib/provider-oauth.server");
+    const { exchangeGitHubCode, oauthConfig, sha256 } = await import("@/lib/provider-oauth.server");
     const config = oauthConfig(data.provider);
     const { data: pending, error: pendingError } = await context.supabase
       .from("app_connections")
