@@ -3,6 +3,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { appCategories, flatAppNav, flatPublicNav, publicCategories } from "./nav.ts";
+import { groupProjectResources } from "./resource-categories.ts";
 
 function routePaths() {
   const routesRoot = path.resolve(process.cwd(), "src/routes");
@@ -105,4 +106,42 @@ test("Projects can only select resources from the installed workspace library", 
   assert.match(workspaceFunctions, /open-connect-personal-library/);
   assert.match(workspaceFunctions, /Install this resource into your workspace library first/);
   assert.doesNotMatch(workspaceFunctions, /\.eq\("published", true\)/);
+});
+
+test("Project deletion is confirmed, privileged, audited, and keeps library resources", () => {
+  const sourceRoot = path.resolve(process.cwd(), "src");
+  const projectPage = readFileSync(
+    path.join(sourceRoot, "routes/_authenticated/projects.$projectId.tsx"),
+    "utf8",
+  );
+  const organizationFunctions = readFileSync(
+    path.join(sourceRoot, "lib/orgs.functions.ts"),
+    "utf8",
+  );
+
+  assert.match(projectPage, /Delete project permanently\?/);
+  assert.match(projectPage, /Installed workspace-library resources are\s+not deleted/);
+  assert.match(projectPage, /isAdmin/);
+  assert.match(organizationFunctions, /requireOrganizationManager/);
+  assert.match(organizationFunctions, /projects\.delete/);
+  assert.match(organizationFunctions, /control_audit_events/);
+});
+
+test("installed project resources are grouped into professional categories", () => {
+  const groups = groupProjectResources([
+    { id: "a", resources: { id: "1", name: "Agent", resource_type: "agent" } },
+    { id: "s", resources: { id: "2", name: "Skill", resource_type: "skill" } },
+    { id: "m", resources: { id: "3", name: "Memory", resource_type: "memory" } },
+    { id: "x", resources: { id: "4", name: "MCP", resource_type: "mcp" } },
+  ]);
+
+  assert.deepEqual(
+    groups.map((group) => [group.label, group.items.length]),
+    [
+      ["Agents", 1],
+      ["Skills", 1],
+      ["Memory", 1],
+      ["Other", 1],
+    ],
+  );
 });

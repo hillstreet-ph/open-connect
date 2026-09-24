@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { FolderKanban, Layers, Loader2, Plus, Trash2 } from "lucide-react";
@@ -6,6 +6,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import {
   ensureProjectEnvironments,
+  deleteProject,
   listProjectEnvironments,
   listProjects,
 } from "@/lib/orgs.functions";
@@ -23,6 +24,18 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useRoles } from "@/hooks/use-roles";
+import { groupProjectResources, RESOURCE_CATEGORIES } from "@/lib/resource-categories";
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId")({
   head: () => ({
@@ -39,15 +52,18 @@ export const Route = createFileRoute("/_authenticated/projects/$projectId")({
   component: ProjectWorkspacePage,
 });
 
-const TYPE_FILTERS = ["all", "agent", "skill", "prompt", "toolkit", "memory", "knowledge"] as const;
+const TYPE_FILTERS = ["all", ...RESOURCE_CATEGORIES.map((category) => category.type)] as const;
 
 function ProjectWorkspacePage() {
   const { projectId } = Route.useParams();
   const qc = useQueryClient();
+  const navigate = useNavigate();
+  const { isAdmin } = useRoles();
 
   const listProj = useServerFn(listProjects);
   const listEnvs = useServerFn(listProjectEnvironments);
   const ensureEnvs = useServerFn(ensureProjectEnvironments);
+  const deleteProj = useServerFn(deleteProject);
   const listRes = useServerFn(listProjectResources);
   const listConn = useServerFn(listProjectConnections);
   const listCat = useServerFn(listCatalogForProject);
@@ -60,6 +76,7 @@ function ProjectWorkspacePage() {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [pickResource, setPickResource] = useState("");
   const [pickConnection, setPickConnection] = useState("");
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const projects = useQuery({ queryKey: ["projects"], queryFn: () => listProj({}) });
   const project = (projects.data ?? []).find((p) => p.id === projectId);
@@ -131,6 +148,19 @@ function ProjectWorkspacePage() {
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["project-connections", projectId] }),
   });
 
+  const deleteProjectMut = useMutation({
+    mutationFn: () => deleteProj({ data: { projectId } }),
+    onSuccess: (deleted) => {
+      toast.success(`${deleted.name} deleted`);
+      void qc.invalidateQueries({ queryKey: ["projects"] });
+      void navigate({ to: "/projects" });
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Could not delete project"),
+  });
+
+  const resourceGroups = groupProjectResources(resources.data ?? []);
+
   if (!project && !projects.isLoading) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-10">
@@ -174,6 +204,11 @@ function ProjectWorkspacePage() {
           <Button asChild size="sm" variant="outline">
             <Link to="/api-keys">API keys</Link>
           </Button>
+          {isAdmin ? (
+            <Button size="sm" variant="destructive" onClick={() => setDeleteOpen(true)}>
+              <Trash2 className="size-3.5" /> Delete project
+            </Button>
+          ) : null}
         </div>
       </div>
 
@@ -259,7 +294,9 @@ function ProjectWorkspacePage() {
                 variant={typeFilter === t ? "default" : "outline"}
                 onClick={() => setTypeFilter(t)}
               >
-                {t}
+                {t === "all"
+                  ? "All"
+                  : (RESOURCE_CATEGORIES.find((category) => category.type === t)?.label ?? t)}
               </Button>
             ))}
           </div>
@@ -293,58 +330,57 @@ function ProjectWorkspacePage() {
         </CardContent>
       </Card>
 
-      <div>
+      <div className="space-y-4">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Project catalog ({resources.data?.length ?? 0})
+          Installed project resources ({resources.data?.length ?? 0})
         </h2>
-        <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          {(resources.data ?? []).length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No resources assigned yet — install from Marketplace, then add from the workspace
-              library.
-            </p>
-          ) : (
-            resources.data?.map(
-              (row: {
-                id: string;
-                resources?: {
-                  id?: string;
-                  name?: string;
-                  resource_type?: string;
-                  version?: string;
-                  description?: string;
-                } | null;
-              }) => {
-                const r = row.resources;
-                return (
-                  <Card key={row.id} className="p-4 shadow-panel">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="font-medium">{r?.name ?? "Resource"}</p>
-                          <Badge variant="secondary" className="text-[10px] uppercase">
-                            {r?.resource_type}
-                          </Badge>
+        {(resources.data ?? []).length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No resources assigned yet — install from Marketplace, then add from the workspace
+            library.
+          </p>
+        ) : (
+          resourceGroups.map((group) => (
+            <section key={group.type} className="space-y-2" aria-label={group.label}>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-semibold">{group.label}</h3>
+                <Badge variant="secondary" className="text-[10px]">
+                  {group.items.length}
+                </Badge>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {group.items.map((row) => {
+                  const resource = row.resources;
+                  return (
+                    <Card key={row.id} className="p-4 shadow-panel">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-medium">{resource?.name ?? "Resource"}</p>
+                            <Badge variant="secondary" className="text-[10px] uppercase">
+                              {resource?.resource_type}
+                            </Badge>
+                          </div>
+                          <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                            {resource?.description || resource?.version || ""}
+                          </p>
                         </div>
-                        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                          {r?.description || r?.version || ""}
-                        </p>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => resource?.id && remResMut.mutate(resource.id)}
+                          aria-label={`Remove ${resource?.name ?? "resource"} from project`}
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => r?.id && remResMut.mutate(r.id)}
-                        aria-label="Remove"
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
-                    </div>
-                  </Card>
-                );
-              },
-            )
-          )}
-        </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            </section>
+          ))
+        )}
       </div>
 
       <Card className="shadow-panel">
@@ -425,6 +461,32 @@ function ProjectWorkspacePage() {
           </div>
         </CardContent>
       </Card>
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete project permanently?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently deletes “{project?.name}”, its environments, memberships, resource
+              assignments, and project-scoped API keys. Installed workspace-library resources are
+              not deleted. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteProjectMut.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteProjectMut.isPending}
+              onClick={(event) => {
+                event.preventDefault();
+                deleteProjectMut.mutate();
+              }}
+            >
+              {deleteProjectMut.isPending ? "Deleting…" : "Delete project permanently"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
