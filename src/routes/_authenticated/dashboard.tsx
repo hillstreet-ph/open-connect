@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Boxes, ListTodo, Plug, Layers, LayoutDashboard } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ProfileAvatarBadge } from "@/components/user-menu";
-import { ResourceLibraryCard } from "@/components/resource-library-card";
 import { useRoles } from "@/hooks/use-roles";
 import { roleLabel } from "@/lib/rbac";
 import { Badge } from "@/components/ui/badge";
@@ -185,20 +184,6 @@ function Dashboard() {
         Open your user menu at the bottom of the sidebar for organizations and workspaces, API keys
         & MCP, credentials, settings, and administration available to your role.
       </p>
-
-      {can("upload_resources") ? (
-        <>
-          <h2 className="mt-10 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Upload packages
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Publish skills, tools, and agents. Prefer Studio for the full create hub.
-          </p>
-          <div className="mt-4 max-w-xl">
-            <ResourceLibraryCard />
-          </div>
-        </>
-      ) : null}
     </div>
   );
 }

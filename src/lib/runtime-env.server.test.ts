@@ -35,12 +35,12 @@ describe("injectRuntimeBindings", () => {
     assert.equal(target.OPENROUTER_BASE_URL, "https://configured.example");
   });
 
-  it("preserves an explicitly empty fail-closed override", () => {
+  it("replaces an empty build-time placeholder with the runtime binding", () => {
     const target = { OPENROUTER_API_KEY: "" };
 
-    injectRuntimeBindings({ OPENROUTER_API_KEY: "stale-binding" }, target);
+    injectRuntimeBindings({ OPENROUTER_API_KEY: "runtime-binding" }, target);
 
-    assert.equal(target.OPENROUTER_API_KEY, "");
+    assert.equal(target.OPENROUTER_API_KEY, "runtime-binding");
   });
 
   it("ignores absent and primitive binding collections", () => {

@@ -15,7 +15,7 @@ export function injectRuntimeBindings(
     if (
       typeof value !== "string" ||
       value.length === 0 ||
-      Object.prototype.hasOwnProperty.call(target, key)
+      (typeof target[key] === "string" && target[key]!.length > 0)
     ) {
       continue;
     }
