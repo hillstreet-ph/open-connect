@@ -448,7 +448,11 @@ export const connectApp = createServerFn({ method: "POST" })
       };
       const { data: connection, error } = await context.supabase
         .from("app_connections")
-        .upsert(record, { onConflict: "user_id,provider,provider_account_id" })
+        // Every hosted authorization creates a new opaque connected-account ID.
+        // Insert directly because the database protects this tuple with an
+        // expression index (COALESCE(provider_account_id, '')), which cannot be
+        // addressed by PostgREST's column-only onConflict parameter.
+        .insert(record)
         .select("id,provider,display_name,status,scopes,created_at")
         .single();
       if (error) throw new Error(error.message);
