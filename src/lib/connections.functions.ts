@@ -361,61 +361,147 @@ export const connectApp = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const app = CATALOG.find((item) => item.provider === data.provider);
     if (!app) throw new Error("Unknown application");
+    if (!app.oauth) throw new Error("This provider uses a verified API key or token connection.");
 
-    const authorizationMode = app.oauth ? "oauth" : "brokered_secret";
+    const { buildGitHubAuthorizationUrl, oauthConfig, sha256 } = await import(
+      "@/lib/provider-oauth.server"
+    );
+    const config = oauthConfig(app.provider);
+    const state = `${crypto.randomUUID()}${crypto.randomUUID()}`;
+    const stateHash = await sha256(state);
+    const expiresAt = new Date(Date.now() + 10 * 60_000).toISOString();
 
-    const { data: existing } = await context.supabase
+    const { data: existing, error: existingError } = await context.supabase
       .from("app_connections")
-      .select("id")
+      .select("id,credential_reference")
       .eq("provider", app.provider)
       .eq("user_id", context.userId)
+      .is("provider_account_id", null)
       .maybeSingle();
+    if (existingError) throw new Error(existingError.message);
 
-    if (existing) {
-      const { data: updated, error } = await context.supabase
-        .from("app_connections")
-        .update({
-          status: "pending",
-          scopes: [],
-          credential_reference: null,
-          display_name: app.display_name,
-          metadata: {
-            source: "open-connect",
-            mode: authorizationMode,
-            authorization_required: true,
-            requested_scopes: [...app.scopes],
-            full_scopes: false,
-          },
-        })
-        .eq("id", existing.id)
-        .select("id, provider, display_name, status, scopes, created_at")
-        .single();
-      if (error) throw new Error(error.message);
-      return updated;
-    }
+    const record = {
+      user_id: context.userId,
+      provider: app.provider,
+      display_name: app.display_name,
+      status: "pending",
+      scopes: [] as string[],
+      provider_account_id: null,
+      metadata: {
+        source: "open-connect",
+        mode: "oauth",
+        authorization_required: true,
+        requested_scopes: [...app.scopes],
+        oauth_state_hash: stateHash,
+        oauth_state_expires_at: expiresAt,
+        full_scopes: false,
+      },
+    };
 
-    const { data: inserted, error } = await context.supabase
-      .from("app_connections")
-      .insert({
-        user_id: context.userId,
-        provider: app.provider,
-        display_name: app.display_name,
-        status: "pending",
-        scopes: [],
-        credential_reference: null,
-        provider_account_id: null,
-        metadata: {
-          source: "open-connect",
-          mode: authorizationMode,
-          authorization_required: true,
-          requested_scopes: [...app.scopes],
-          full_scopes: false,
-        },
-      })
+    const query = existing?.id
+      ? context.supabase.from("app_connections").update(record).eq("id", existing.id)
+      : context.supabase.from("app_connections").insert({ ...record, credential_reference: null });
+    const { data: connection, error } = await query
       .select("id, provider, display_name, status, scopes, created_at")
       .single();
     if (error) throw new Error(error.message);
-    return inserted;
+
+    return {
+      ...connection,
+      authorization_url: buildGitHubAuthorizationUrl({
+        clientId: config.clientId,
+        appUrl: config.appUrl,
+        state,
+      }),
+    };
+  });
+
+export const completeOAuthConnection = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { provider: string; code: string; state: string }) => ({
+    provider: (input?.provider ?? "").trim().toLowerCase(),
+    code: (input?.code ?? "").trim(),
+    state: (input?.state ?? "").trim(),
+  }))
+  .handler(async ({ data, context }) => {
+    if (!data.code || !data.state) throw new Error("The provider callback is incomplete.");
+
+    const { exchangeGitHubCode, oauthConfig, sha256 } = await import(
+      "@/lib/provider-oauth.server"
+    );
+    const config = oauthConfig(data.provider);
+    const { data: pending, error: pendingError } = await context.supabase
+      .from("app_connections")
+      .select("id,metadata,credential_reference")
+      .eq("user_id", context.userId)
+      .eq("provider", data.provider)
+      .eq("status", "pending")
+      .is("provider_account_id", null)
+      .maybeSingle();
+    if (pendingError) throw new Error(pendingError.message);
+    if (!pending) throw new Error("No matching authorization request was found.");
+
+    const metadata = (pending.metadata ?? {}) as Record<string, unknown>;
+    const expectedHash = String(metadata["oauth_state_hash"] ?? "");
+    const expiresAt = Date.parse(String(metadata["oauth_state_expires_at"] ?? ""));
+    const actualHash = await sha256(data.state);
+    if (!expectedHash || actualHash !== expectedHash || !Number.isFinite(expiresAt) || expiresAt < Date.now()) {
+      throw new Error("The authorization request expired or failed state verification. Start again.");
+    }
+
+    const verified = await exchangeGitHubCode({
+      code: data.code,
+      clientId: config.clientId,
+      clientSecret: config.clientSecret,
+      appUrl: config.appUrl,
+    });
+    const { data: secret, error: secretError } = await context.supabase.rpc(
+      "create_credential_secret",
+      {
+        p_name: `GitHub OAuth · ${verified.accountLogin}`,
+        p_secret_type: "oauth_token",
+        p_scopes: ["connections"],
+        p_secret_value: JSON.stringify({
+          version: 1,
+          auth_type: "oauth",
+          credential: verified.accessToken,
+        }),
+      },
+    );
+    if (secretError) throw new Error(secretError.message);
+    const secretId = String((secret as { id?: string } | null)?.id ?? "");
+    if (!secretId) throw new Error("Credential Vault did not return a reference.");
+
+    const { data: connected, error: updateError } = await context.supabase
+      .from("app_connections")
+      .update({
+        status: "connected",
+        scopes: verified.scopes,
+        credential_reference: `credential://github/${secretId}`,
+        provider_account_id: verified.accountId,
+        metadata: {
+          source: "open-connect",
+          mode: "oauth",
+          account_login: verified.accountLogin,
+          validation: { verified: true, checked_at: new Date().toISOString() },
+          full_scopes: false,
+        },
+      })
+      .eq("id", pending.id)
+      .select("id,provider,display_name,status,scopes,provider_account_id,created_at")
+      .single();
+    if (updateError) {
+      await context.supabase.rpc("delete_credential_secret", { p_id: secretId });
+      throw new Error(updateError.message);
+    }
+
+    const oldSecretId = pending.credential_reference?.match(
+      /^credential:\/\/[^/]+\/([0-9a-f-]{36})$/i,
+    )?.[1];
+    if (oldSecretId && oldSecretId !== secretId) {
+      await context.supabase.rpc("delete_credential_secret", { p_id: oldSecretId });
+    }
+    return connected;
   });
 
 export const disconnectApp = createServerFn({ method: "POST" })
