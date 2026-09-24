@@ -331,14 +331,28 @@ const CATALOG = [
 ] as const;
 
 export const listConnectionCatalog = createServerFn({ method: "GET" }).handler(async () => {
-  return CATALOG.map((item) => ({
-    provider: item.provider,
-    display_name: item.display_name,
-    category: item.category,
-    scopes: [...item.scopes],
-    oauth: item.oauth,
-    oauth_ready: item.provider === "github",
-  }));
+  const { managedConnectorReady } = await import("@/lib/managed-connectors.server");
+  const githubReady = Boolean(
+    process.env["GITHUB_CLIENT_ID"]?.trim() && process.env["GITHUB_CLIENT_SECRET"]?.trim(),
+  );
+  return CATALOG.map((item) => {
+    const method =
+      item.provider === "github" ? "native_oauth" : item.oauth ? "managed_oauth" : "api_key";
+    return {
+      provider: item.provider,
+      display_name: item.display_name,
+      category: item.category,
+      scopes: [...item.scopes],
+      oauth: item.oauth,
+      connection_method: method,
+      oauth_ready:
+        method === "native_oauth"
+          ? githubReady
+          : method === "managed_oauth"
+            ? managedConnectorReady(item.provider)
+            : false,
+    };
+  });
 });
 
 export const listAppConnections = createServerFn({ method: "GET" })
@@ -363,6 +377,44 @@ export const connectApp = createServerFn({ method: "POST" })
     const app = CATALOG.find((item) => item.provider === data.provider);
     if (!app) throw new Error("Unknown application");
     if (!app.oauth) throw new Error("This provider uses a verified API key or token connection.");
+
+    if (app.provider !== "github") {
+      const { createManagedConnectionLink } = await import("@/lib/managed-connectors.server");
+      const callbackUrl = `${(process.env["VITE_APP_URL"] || "https://open-connect.site").replace(
+        /\/$/,
+        "",
+      )}/connections?connected=${encodeURIComponent(app.provider)}`;
+      const link = await createManagedConnectionLink({
+        provider: app.provider,
+        userId: context.userId,
+        callbackUrl,
+      });
+      const record = {
+        user_id: context.userId,
+        provider: app.provider,
+        display_name: app.display_name,
+        status: "pending",
+        scopes: [] as string[],
+        credential_reference: `composio://connected-account/${link.connected_account_id}`,
+        provider_account_id: link.connected_account_id,
+        metadata: {
+          source: "open-connect",
+          mode: "managed_oauth",
+          broker: "composio",
+          authorization_required: true,
+          requested_scopes: [...app.scopes],
+          expires_at: link.expires_at,
+          full_scopes: false,
+        },
+      };
+      const { data: connection, error } = await context.supabase
+        .from("app_connections")
+        .upsert(record, { onConflict: "user_id,provider,provider_account_id" })
+        .select("id,provider,display_name,status,scopes,created_at")
+        .single();
+      if (error) throw new Error(error.message);
+      return { ...connection, authorization_url: link.redirect_url };
+    }
 
     const { buildGitHubAuthorizationUrl, oauthConfig, sha256 } =
       await import("@/lib/provider-oauth.server");
