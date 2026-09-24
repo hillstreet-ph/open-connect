@@ -86,13 +86,13 @@ function AccountMenuItems({ onSignOut, showAdmin }: { onSignOut: () => void; sho
       <DropdownMenuItem asChild>
         <Link to="/integrations" className="cursor-pointer">
           <Plug className="mr-2 size-4" />
-          AI integrations
+          AI control integrations
         </Link>
       </DropdownMenuItem>
       <DropdownMenuItem asChild>
         <Link to="/api-keys" className="cursor-pointer">
           <KeyRound className="mr-2 size-4" />
-          API keys & MCP
+          API keys · plugins · MCP
         </Link>
       </DropdownMenuItem>
       <DropdownMenuItem asChild>
