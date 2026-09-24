@@ -268,7 +268,9 @@ function ConnectionsPage() {
                       <div className="min-w-0">
                         <p className="truncate font-semibold">{app.display_name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {app.category} · Official provider
+                          {app.provider === "custom_mcp"
+                            ? "Custom MCP endpoint"
+                            : `${app.category} · Official provider`}
                         </p>
                       </div>
                     </div>
