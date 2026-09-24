@@ -60,8 +60,7 @@ test("connection surfaces remain internal and separate from Marketplace", () => 
   const sourceRoot = path.resolve(process.cwd(), "src");
   const sidebar = readFileSync(path.join(sourceRoot, "components/app-sidebar.tsx"), "utf8");
   const userMenu = readFileSync(path.join(sourceRoot, "components/user-menu.tsx"), "utf8");
-  const connectGroup =
-    sidebar.match(/const CONNECTIONS: Item\[\] = \[([\s\S]*?)\];/)?.[1] ?? "";
+  const connectGroup = sidebar.match(/const CONNECTIONS: Item\[\] = \[([\s\S]*?)\];/)?.[1] ?? "";
 
   for (const route of ["/connections", "/secrets", "/models"]) {
     assert.match(connectGroup, new RegExp(`to: ["']${route}["']`));
