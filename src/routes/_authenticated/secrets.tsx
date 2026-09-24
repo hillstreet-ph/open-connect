@@ -33,6 +33,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/secrets")({
@@ -80,6 +90,7 @@ function SecretsPage() {
   const [totpCodes, setTotpCodes] = useState<Record<string, { code: string; seconds: number }>>({});
   const [revealedValues, setRevealedValues] = useState<Record<string, string>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
 
   const list = useQuery({
     queryKey: ["credential-secrets"],
@@ -136,6 +147,7 @@ function SecretsPage() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteFn({ data: { id } }),
     onSuccess: () => {
+      setPendingDelete(null);
       toast.success("Secret deleted");
       void queryClient.invalidateQueries({ queryKey: ["credential-secrets"] });
     },
@@ -421,6 +433,7 @@ function SecretsPage() {
                           size="sm"
                           variant="outline"
                           className="gap-2 font-mono"
+                          aria-label={`Copy credential value for ${row.name}`}
                           onClick={() => copyCredential(row.id, revealedValues[row.id])}
                         >
                           {copiedId === row.id ? (
@@ -447,6 +460,7 @@ function SecretsPage() {
                             size="sm"
                             variant="outline"
                             className="gap-2 font-mono"
+                            aria-label={`Copy 2FA code for ${row.name}`}
                             onClick={() => copyTotp(row.id, totpCodes[row.id].code)}
                           >
                             {copiedId === row.id ? (
@@ -475,7 +489,7 @@ function SecretsPage() {
                         size="sm"
                         variant="ghost"
                         aria-label={`Delete ${row.name}`}
-                        onClick={() => deleteMutation.mutate(row.id)}
+                        onClick={() => setPendingDelete({ id: row.id, name: row.name })}
                         disabled={deleteMutation.isPending}
                       >
                         <Trash2 className="size-3.5" />
@@ -496,6 +510,34 @@ function SecretsPage() {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog
+        open={Boolean(pendingDelete)}
+        onOpenChange={(open) => !open && setPendingDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete credential permanently?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes “{pendingDelete?.name}” and its encrypted Vault entries. This action
+              cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={!pendingDelete || deleteMutation.isPending}
+              onClick={(event) => {
+                event.preventDefault();
+                if (pendingDelete) deleteMutation.mutate(pendingDelete.id);
+              }}
+            >
+              {deleteMutation.isPending ? "Deleting…" : "Delete permanently"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

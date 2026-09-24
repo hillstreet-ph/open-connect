@@ -28,6 +28,10 @@ const customMcpBroker = readFileSync(
   new URL("../src/lib/custom-mcp.server.ts", import.meta.url),
   "utf8",
 );
+const credentialRoute = readFileSync(
+  new URL("../src/routes/_authenticated/secrets.tsx", import.meta.url),
+  "utf8",
+);
 
 test("moves credential values to Supabase Vault and clears plaintext", () => {
   assert.match(migration, /vault\.create_secret/);
@@ -62,4 +66,12 @@ test("resolves connection credentials only through the service-role broker", () 
   assert.match(customMcpBroker, /rpc\(["']resolve_connection_credential["']/);
   assert.doesNotMatch(customMcpBroker, /decrypted_secrets/);
   assert.doesNotMatch(customMcpBroker, /\.schema\(["']vault["']\)/);
+});
+
+test("requires explicit confirmation before permanently deleting Vault entries", () => {
+  assert.match(credentialRoute, /Delete credential permanently\?/);
+  assert.match(credentialRoute, /Delete permanently/);
+  assert.match(credentialRoute, /setPendingDelete\(\{ id: row\.id, name: row\.name \}\)/);
+  assert.match(credentialRoute, /Copy 2FA code for/);
+  assert.match(credentialRoute, /Copy credential value for/);
 });
