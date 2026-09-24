@@ -361,7 +361,7 @@ export const listAppConnections = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("app_connections")
       .select(
-        "id, provider, display_name, status, scopes, provider_account_id, last_used_at, created_at",
+        "id, provider, display_name, status, scopes, provider_account_id, credential_reference, last_used_at, created_at",
       )
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
@@ -402,7 +402,7 @@ export const listAppConnections = createServerFn({ method: "GET" })
         }),
       );
     }
-    return connections;
+    return connections.map(({ credential_reference: _credentialReference, ...connection }) => connection);
   });
 
 export const connectApp = createServerFn({ method: "POST" })
