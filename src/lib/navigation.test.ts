@@ -46,6 +46,16 @@ test("category navigation has no duplicate destinations", () => {
   }
 });
 
+test("Dashboard links to the canonical Studio uploader without duplicating it", () => {
+  const source = readFileSync(
+    path.resolve(process.cwd(), "src/routes/_authenticated/dashboard.tsx"),
+    "utf8",
+  );
+
+  assert.match(source, /to: "\/studio"/);
+  assert.doesNotMatch(source, /ResourceLibraryCard|Upload packages/);
+});
+
 test("connection surfaces remain internal and separate from Marketplace", () => {
   const sourceRoot = path.resolve(process.cwd(), "src");
   const sidebar = readFileSync(path.join(sourceRoot, "components/app-sidebar.tsx"), "utf8");
