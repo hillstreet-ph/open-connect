@@ -83,3 +83,12 @@ export async function getManagedConnection(provider: string, connectedAccountId:
     toolkit?: { slug?: string };
   }>(`/connected_accounts/${encodeURIComponent(connectedAccountId)}`, apiKey);
 }
+
+export async function deleteManagedConnection(provider: string, connectedAccountId: string) {
+  const { apiKey } = config(provider);
+  await composioRequest<unknown>(
+    `/connected_accounts/${encodeURIComponent(connectedAccountId)}`,
+    apiKey,
+    { method: "DELETE" },
+  );
+}
