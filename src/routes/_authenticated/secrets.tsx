@@ -755,28 +755,39 @@ function SecretsPage() {
                       <div>
                         <p className="text-sm font-medium">Edit organization</p>
                         <p className="text-xs text-muted-foreground">
-                          Add or remove project access without duplicating or changing the Vault secret.
+                          Add or remove project access without duplicating or changing the Vault
+                          secret.
                         </p>
                       </div>
                       <div className="space-y-1.5">
                         <Label htmlFor={`edit-tags-${row.id}`}>Tags</Label>
-                        <Input id={`edit-tags-${row.id}`} value={editTags}
+                        <Input
+                          id={`edit-tags-${row.id}`}
+                          value={editTags}
                           onChange={(event) => setEditTags(event.target.value)}
-                          placeholder="production, supabase" />
+                          placeholder="production, supabase"
+                        />
                       </div>
                       <div className="space-y-1.5">
                         <Label htmlFor={`edit-notes-${row.id}`}>Notes</Label>
-                        <Textarea id={`edit-notes-${row.id}`} value={editNotes}
+                        <Textarea
+                          id={`edit-notes-${row.id}`}
+                          value={editNotes}
                           onChange={(event) => setEditNotes(event.target.value)}
-                          placeholder="Notes" className="min-h-20" />
+                          placeholder="Notes"
+                          className="min-h-20"
+                        />
                       </div>
                       <div className="space-y-2">
                         <Label>Assigned projects</Label>
                         <div className="grid gap-2 sm:grid-cols-2">
                           {(projects.data ?? []).map((project) => (
-                            <label key={project.id}
-                              className="flex items-center gap-2 rounded-lg border bg-background p-2 text-sm">
-                              <input type="checkbox"
+                            <label
+                              key={project.id}
+                              className="flex items-center gap-2 rounded-lg border bg-background p-2 text-sm"
+                            >
+                              <input
+                                type="checkbox"
                                 checked={editProjectIds.includes(project.id)}
                                 onChange={(event) =>
                                   setEditProjectIds((current) =>
@@ -784,23 +795,30 @@ function SecretsPage() {
                                       ? [...new Set([...current, project.id])]
                                       : current.filter((id) => id !== project.id),
                                   )
-                                } />
+                                }
+                              />
                               <span className="truncate">{project.name}</span>
                             </label>
                           ))}
                         </div>
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        <Button size="sm" onClick={() => organizationMutation.mutate()}
-                          disabled={organizationMutation.isPending}>
+                        <Button
+                          size="sm"
+                          onClick={() => organizationMutation.mutate()}
+                          disabled={organizationMutation.isPending}
+                        >
                           {organizationMutation.isPending ? (
                             <Loader2 className="mr-2 size-4 animate-spin" />
                           ) : null}
                           Save organization
                         </Button>
-                        <Button size="sm" variant="ghost"
+                        <Button
+                          size="sm"
+                          variant="ghost"
                           onClick={() => setEditingCredentialId(null)}
-                          disabled={organizationMutation.isPending}>
+                          disabled={organizationMutation.isPending}
+                        >
                           Cancel
                         </Button>
                       </div>
