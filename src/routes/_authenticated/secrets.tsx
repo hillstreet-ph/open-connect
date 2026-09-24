@@ -8,12 +8,14 @@ import {
   Eye,
   EyeOff,
   FileText,
+  FolderKanban,
   Globe,
   KeyRound,
   Loader2,
   Lock,
   Mail,
   Search,
+  Tag,
   Trash2,
   UserRound,
 } from "lucide-react";
@@ -26,6 +28,7 @@ import {
   revealSecret,
   type SecretType,
 } from "@/lib/secrets.functions";
+import { listProjects } from "@/lib/orgs.functions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -123,6 +126,7 @@ function SecretsPage() {
   const deleteFn = useServerFn(deleteSecret);
   const totpFn = useServerFn(getTotpCode);
   const revealFn = useServerFn(revealSecret);
+  const listProjectsFn = useServerFn(listProjects);
 
   const [name, setName] = useState("");
   const [secretType, setSecretType] = useState<SecretType>("api_key");
@@ -139,6 +143,10 @@ function SecretsPage() {
   const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<SecretType | "all">("all");
+  const [tags, setTags] = useState("");
+  const [projectIds, setProjectIds] = useState<string[]>([]);
+  const [tagFilter, setTagFilter] = useState("all");
+  const [projectFilter, setProjectFilter] = useState("all");
 
   const list = useQuery({
     queryKey: ["credential-secrets"],
@@ -151,17 +159,43 @@ function SecretsPage() {
       }
     },
   });
+  const projects = useQuery({
+    queryKey: ["projects"],
+    queryFn: () => listProjectsFn({ data: {} }),
+  });
+
+  const availableTags = useMemo(
+    () =>
+      Array.from(
+        new Set((list.data ?? []).flatMap((row) => (Array.isArray(row.tags) ? row.tags : []))),
+      ).sort(),
+    [list.data],
+  );
 
   const visibleCredentials = useMemo(() => {
     const query = search.trim().toLowerCase();
     return (list.data ?? []).filter((row) => {
       if (typeFilter !== "all" && row.secret_type !== typeFilter) return false;
+      if (tagFilter !== "all" && !(row.tags ?? []).includes(tagFilter)) return false;
+      if (
+        projectFilter !== "all" &&
+        !(row.projects ?? []).some((project: { id: string }) => project.id === projectFilter)
+      )
+        return false;
       if (!query) return true;
-      return [row.name, row.email_address, row.username, row.website, row.secret_type]
+      return [
+        row.name,
+        row.email_address,
+        row.username,
+        row.website,
+        row.secret_type,
+        ...(row.tags ?? []),
+        ...(row.projects ?? []).map((project: { name: string }) => project.name),
+      ]
         .filter(Boolean)
         .some((field) => String(field).toLowerCase().includes(query));
     });
-  }, [list.data, search, typeFilter]);
+  }, [list.data, projectFilter, search, tagFilter, typeFilter]);
 
   const typeDetails = TYPE_DETAILS[secretType];
 
@@ -177,6 +211,8 @@ function SecretsPage() {
           website,
           notes,
           totp_secret: totpSecret,
+          tags: tags.split(","),
+          project_ids: projectIds,
         },
       }),
     onSuccess: () => {
@@ -188,6 +224,8 @@ function SecretsPage() {
       setWebsite("");
       setNotes("");
       setTotpSecret("");
+      setTags("");
+      setProjectIds([]);
       void queryClient.invalidateQueries({ queryKey: ["credential-secrets"] });
     },
     onError: (e) =>
@@ -401,6 +439,49 @@ function SecretsPage() {
             />
           </div>
           <div className="relative rounded-xl border border-border/80 bg-muted/20 p-3 pl-12">
+            <Tag className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Label htmlFor="credential-tags" className="sr-only">
+              Custom tags
+            </Label>
+            <Input
+              id="credential-tags"
+              value={tags}
+              onChange={(event) => setTags(event.target.value)}
+              placeholder="Tags separated by commas · production, supabase"
+              className="border-0 bg-transparent shadow-none"
+            />
+          </div>
+          <div className="space-y-2 rounded-xl border border-border/80 bg-muted/20 p-4">
+            <div className="flex items-center gap-2">
+              <FolderKanban className="size-4 text-muted-foreground" />
+              <Label>Assign to projects</Label>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Optional. The credential is stored once and projects receive only a secure reference.
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {(projects.data ?? []).map((project) => (
+                <label
+                  key={project.id}
+                  className="flex items-center gap-2 rounded-lg border p-2 text-sm"
+                >
+                  <input
+                    type="checkbox"
+                    checked={projectIds.includes(project.id)}
+                    onChange={(event) =>
+                      setProjectIds((current) =>
+                        event.target.checked
+                          ? [...current, project.id]
+                          : current.filter((id) => id !== project.id),
+                      )
+                    }
+                  />
+                  <span className="truncate">{project.name}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className="relative rounded-xl border border-border/80 bg-muted/20 p-3 pl-12">
             <FileText className="absolute left-4 top-5 size-4 text-muted-foreground" />
             <Label htmlFor="credential-notes" className="sr-only">
               Notes
@@ -436,7 +517,7 @@ function SecretsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="mb-4 grid gap-2 sm:grid-cols-[1fr_auto]">
+          <div className="mb-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -456,6 +537,32 @@ function SecretsPage() {
               {TYPES.map((type) => (
                 <option key={type.value} value={type.value}>
                   {type.label}
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label="Filter credential tag"
+              value={tagFilter}
+              onChange={(event) => setTagFilter(event.target.value)}
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="all">All tags</option>
+              {availableTags.map((tag) => (
+                <option key={tag} value={tag}>
+                  {tag}
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label="Filter credential project"
+              value={projectFilter}
+              onChange={(event) => setProjectFilter(event.target.value)}
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="all">All projects</option>
+              {(projects.data ?? []).map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.name}
                 </option>
               ))}
             </select>
@@ -482,6 +589,17 @@ function SecretsPage() {
                         <Badge variant="secondary" className="text-xs">
                           {TYPE_DETAILS[row.secret_type as SecretType]?.label ?? row.secret_type}
                         </Badge>
+                        {(row.tags ?? []).map((tag: string) => (
+                          <Badge key={tag} variant="outline" className="text-xs">
+                            #{tag}
+                          </Badge>
+                        ))}
+                        {(row.projects ?? []).map((project: { id: string; name: string }) => (
+                          <Badge key={project.id} variant="outline" className="text-xs">
+                            <FolderKanban className="mr-1 size-3" />
+                            {project.name}
+                          </Badge>
+                        ))}
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-1">
