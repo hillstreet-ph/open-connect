@@ -24,7 +24,6 @@ import {
   getTotpCode,
   listSecrets,
   revealSecret,
-  SECRET_SCOPES,
   type SecretType,
 } from "@/lib/secrets.functions";
 import { Badge } from "@/components/ui/badge";
@@ -44,7 +43,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/secrets")({
   head: () => ({
@@ -134,7 +132,6 @@ function SecretsPage() {
   const [website, setWebsite] = useState("");
   const [notes, setNotes] = useState("");
   const [totpSecret, setTotpSecret] = useState("");
-  const [scopes, setScopes] = useState<string[]>(["connections"]);
   const [showValue, setShowValue] = useState(false);
   const [totpCodes, setTotpCodes] = useState<Record<string, { code: string; seconds: number }>>({});
   const [revealedValues, setRevealedValues] = useState<Record<string, string>>({});
@@ -168,17 +165,12 @@ function SecretsPage() {
 
   const typeDetails = TYPE_DETAILS[secretType];
 
-  function toggleScope(s: string) {
-    setScopes((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
-  }
-
   const createMutation = useMutation({
     mutationFn: () =>
       createFn({
         data: {
           name,
           secret_type: secretType,
-          scopes,
           secret_value: value,
           email_address: emailAddress,
           username,
@@ -314,26 +306,6 @@ function SecretsPage() {
                 </option>
               ))}
             </select>
-          </div>
-          <div className="space-y-2">
-            <Label>Scopes</Label>
-            <div className="flex flex-wrap gap-2">
-              {SECRET_SCOPES.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => toggleScope(s)}
-                  className={cn(
-                    "rounded-full border px-3 py-1 text-xs capitalize transition-colors",
-                    scopes.includes(s)
-                      ? "border-primary/50 bg-primary/15 text-primary"
-                      : "border-border text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
           </div>
           <div className="overflow-hidden rounded-xl border border-border/80 bg-muted/20">
             {typeDetails.loginFields ? (
@@ -510,11 +482,6 @@ function SecretsPage() {
                         <Badge variant="secondary" className="text-xs">
                           {TYPE_DETAILS[row.secret_type as SecretType]?.label ?? row.secret_type}
                         </Badge>
-                        {(row.scopes ?? []).map((s: string) => (
-                          <Badge key={s} variant="outline" className="text-xs">
-                            {s}
-                          </Badge>
-                        ))}
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-1">
