@@ -15,7 +15,7 @@ test("uses free model, bounded tokens and does not follow redirects or execute t
     assert.equal(url, upstream.baseUrl + "/chat/completions");
     assert.equal(options?.redirect, "manual");
     const body = JSON.parse(String(options?.body));
-    assert.equal(body.model, "openrouter/free");
+    assert.equal(body.model, "poolside/laguna-s-2.1:free");
     assert.equal(body.max_tokens, 2048);
     assert.equal(body.tools, undefined);
     return Response.json({ model: "test:free", choices: [{ message: { content: "Hello!" } }] });
