@@ -70,8 +70,12 @@ function AutomationsPage() {
 
   const runMutation = useMutation({
     mutationFn: (id: string) => run({ data: { id } }),
-    onSuccess: () => {
-      toast.success("Run recorded");
+    onSuccess: (result) => {
+      toast.success(
+        result.last_status === "approval_required"
+          ? "Plan saved — approval required"
+          : "Plan saved — execution pending",
+      );
       void qc.invalidateQueries({ queryKey: ["automations"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Run failed"),
@@ -87,7 +91,8 @@ function AutomationsPage() {
           Automations
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Trigger → action rules for agents, webhooks, MCP tools, and pipelines.
+          Create automation definitions and generate agent plans. Plans require an execution worker;
+          other action types require a configured executor.
         </p>
       </div>
 
@@ -152,7 +157,16 @@ function AutomationsPage() {
       </Card>
 
       <div className="space-y-2">
-        {(rows.data ?? []).length === 0 ? (
+        {rows.isLoading ? <p role="status">Loading automations…</p> : null}
+        {rows.isError ? (
+          <p role="alert">
+            Could not load automations.{" "}
+            <Button variant="link" onClick={() => void rows.refetch()}>
+              Retry
+            </Button>
+          </p>
+        ) : null}
+        {!rows.isLoading && !rows.isError && (rows.data ?? []).length === 0 ? (
           <p className="text-sm text-muted-foreground">No automations yet.</p>
         ) : (
           rows.data?.map((a) => (
@@ -182,7 +196,7 @@ function AutomationsPage() {
                   </Button>
                   <Button
                     size="sm"
-                    disabled={runMutation.isPending}
+                    disabled={runMutation.isPending || !a.enabled}
                     onClick={() => runMutation.mutate(a.id)}
                   >
                     <Play className="size-3.5" /> Run

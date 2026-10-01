@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { assertAutomationRunnable } from "@/lib/automation-readiness";
 import { buildAdaptivePlan } from "@/lib/autonomous-control";
 
 export type TaskStatus = "todo" | "in_progress" | "blocked" | "done" | "cancelled";
@@ -240,20 +241,22 @@ export const runAutomation = createServerFn({ method: "POST" })
     const now = new Date().toISOString();
     const { data: automation, error: automationError } = await context.supabase
       .from("automations")
-      .select("id,name,description,action_type,config,project_id")
+      .select("id,name,description,action_type,config,project_id,enabled")
       .eq("id", data.id)
       .single();
     if (automationError) throw new Error(automationError.message);
+    assertAutomationRunnable(automation);
 
     let correlationId: string | null = null;
-    let status = "ok";
+    let status = "planned";
     if (automation.action_type === "agent" || automation.action_type === "pipeline") {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      const { data: resources } = await supabaseAdmin
+      const { data: resources, error: resourcesError } = await supabaseAdmin
         .from("resources")
         .select("slug,name,description,resource_type,installation_type")
         .eq("published", true)
         .limit(100);
+      if (resourcesError) throw new Error(resourcesError.message);
       const config = (automation.config ?? {}) as Record<string, unknown>;
       const goal = String(config["goal"] ?? automation.description ?? automation.name).trim();
       const requestedEnvironment = String(config["environment"] ?? "development");
@@ -276,7 +279,7 @@ export const runAutomation = createServerFn({ method: "POST" })
       // Generated Supabase types lag control-plane migrations until type generation runs.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const controlDb = supabaseAdmin as any;
-      await controlDb.from("autonomous_runs").insert({
+      const { error: runError } = await controlDb.from("autonomous_runs").insert({
         id: plan.id,
         user_id: context.userId,
         goal: plan.goal,
@@ -287,7 +290,8 @@ export const runAutomation = createServerFn({ method: "POST" })
         rollback: { available: true },
         correlation_id: plan.id,
       });
-      await controlDb.from("autonomous_run_events").insert({
+      if (runError) throw new Error(`Could not save automation plan: ${runError.message}`);
+      const { error: eventError } = await controlDb.from("autonomous_run_events").insert({
         user_id: context.userId,
         run_id: plan.id,
         event_type: "planned",
@@ -295,8 +299,10 @@ export const runAutomation = createServerFn({ method: "POST" })
         capability_slugs: plan.capabilities.map((capability) => capability.slug),
         evidence: { automation_id: automation.id, values_exposed: false },
       });
+      if (eventError)
+        throw new Error(`Plan ${plan.id} saved, but audit event failed: ${eventError.message}`);
       if (plan.missingCapability) {
-        await controlDb.from("capability_requests").insert({
+        const { error: requestError } = await controlDb.from("capability_requests").insert({
           user_id: context.userId,
           source_run_id: plan.id,
           requested_capability: plan.goal.slice(0, 240),
@@ -304,6 +310,10 @@ export const runAutomation = createServerFn({ method: "POST" })
           state: "draft",
           specification: { executable: false, source: "automation" },
         });
+        if (requestError)
+          throw new Error(
+            `Plan ${plan.id} saved, but capability request failed: ${requestError.message}`,
+          );
       }
     }
 
