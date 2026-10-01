@@ -11,7 +11,7 @@ export const testFreeModel = createServerFn({ method: "POST" })
     if (!upstream) throw new Error("Connect OpenRouter before testing.");
     const response = await fetch(upstream.baseUrl + "/chat/completions", {
       method: "POST",
-      redirect: "error",
+      redirect: "manual",
       signal: AbortSignal.timeout(60000),
       headers: upstream.headers,
       body: JSON.stringify({
