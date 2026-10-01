@@ -145,7 +145,7 @@ test("Projects can only select resources from the installed workspace library", 
     "utf8",
   );
 
-  assert.match(projectPage, /Add from workspace library/);
+  assert.match(projectPage, /Shared workspace library/);
   assert.doesNotMatch(projectPage, /Add from marketplace catalog/);
   assert.match(workspaceFunctions, /open-connect-personal-library/);
   assert.match(workspaceFunctions, /Install this resource into your workspace library first/);
@@ -230,8 +230,8 @@ test("installed project resources are grouped into professional categories", () 
     [
       ["Agents", 1],
       ["Skills", 1],
+      ["MCP Servers", 1],
       ["Memory", 1],
-      ["Other", 1],
     ],
   );
 });

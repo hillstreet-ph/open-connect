@@ -1,6 +1,12 @@
 export const RESOURCE_CATEGORIES = [
   { type: "agent", label: "Agents" },
   { type: "skill", label: "Skills" },
+  { type: "plugin", label: "Plugins" },
+  { type: "mcp", label: "MCP Servers" },
+  { type: "tool", label: "Tools" },
+  { type: "guide", label: "Guides" },
+  { type: "app", label: "Apps" },
+  { type: "model", label: "Models" },
   { type: "prompt", label: "Prompts" },
   { type: "toolkit", label: "Toolkits" },
   { type: "memory", label: "Memory" },
@@ -8,17 +14,18 @@ export const RESOURCE_CATEGORIES = [
 ] as const;
 
 export type ProjectResourceRow = {
+  shared?: boolean;
   id: string;
   resources?: {
     id?: string;
     name?: string;
     resource_type?: string;
-    version?: string;
-    description?: string;
+    version?: string | null;
+    description?: string | null;
   } | null;
 };
 
-export function groupProjectResources(rows: ProjectResourceRow[]) {
+export function groupProjectResources<T extends ProjectResourceRow>(rows: T[]) {
   const groups = RESOURCE_CATEGORIES.map((category) => ({
     ...category,
     items: rows.filter((row) => row.resources?.resource_type === category.type),

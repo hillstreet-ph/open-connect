@@ -67,6 +67,7 @@ const WORK: Item[] = [
 ];
 
 const BUILD: Item[] = [
+  { to: "/library", label: "Installed Resources", icon: Boxes },
   { to: "/studio", label: "Studio", icon: Sparkles },
   { to: "/agents", label: "Agents", icon: Bot },
   { to: "/plugins", label: "Plugins", icon: Puzzle },

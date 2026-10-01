@@ -14,8 +14,6 @@ import {
 import {
   addCredentialToProject,
   addConnectionToProject,
-  addResourceToProject,
-  listCatalogForProject,
   listMyConnections,
   listMyCredentialMetadata,
   listProjectConnections,
@@ -23,7 +21,6 @@ import {
   listProjectResources,
   removeConnectionFromProject,
   removeCredentialFromProject,
-  removeResourceFromProject,
 } from "@/lib/workspace.functions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -41,7 +38,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useRoles } from "@/hooks/use-roles";
-import { groupProjectResources, RESOURCE_CATEGORIES } from "@/lib/resource-categories";
+import { groupProjectResources } from "@/lib/resource-categories";
 import { listKnowledge, listMemories } from "@/lib/memory.functions";
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId")({
@@ -59,8 +56,6 @@ export const Route = createFileRoute("/_authenticated/projects/$projectId")({
   component: ProjectWorkspacePage,
 });
 
-const TYPE_FILTERS = ["all", ...RESOURCE_CATEGORIES.map((category) => category.type)] as const;
-
 function ProjectWorkspacePage() {
   const { projectId } = Route.useParams();
   const qc = useQueryClient();
@@ -74,12 +69,9 @@ function ProjectWorkspacePage() {
   const renameProj = useServerFn(renameProject);
   const listRes = useServerFn(listProjectResources);
   const listConn = useServerFn(listProjectConnections);
-  const listCat = useServerFn(listCatalogForProject);
   const listMyConn = useServerFn(listMyConnections);
   const listMyCred = useServerFn(listMyCredentialMetadata);
   const listProjCred = useServerFn(listProjectCredentials);
-  const addRes = useServerFn(addResourceToProject);
-  const remRes = useServerFn(removeResourceFromProject);
   const addConn = useServerFn(addConnectionToProject);
   const remConn = useServerFn(removeConnectionFromProject);
   const addCred = useServerFn(addCredentialToProject);
@@ -87,8 +79,6 @@ function ProjectWorkspacePage() {
   const getMemories = useServerFn(listMemories);
   const getKnowledge = useServerFn(listKnowledge);
 
-  const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [pickResource, setPickResource] = useState("");
   const [pickConnection, setPickConnection] = useState("");
   const [pickCredential, setPickCredential] = useState("");
   const [renameOpen, setRenameOpen] = useState(false);
@@ -123,13 +113,6 @@ function ProjectWorkspacePage() {
     queryFn: () => listConn({ data: { projectId } }),
     enabled: Boolean(projectId),
   });
-  const catalog = useQuery({
-    queryKey: ["catalog-for-project", typeFilter],
-    queryFn: () =>
-      listCat({
-        data: typeFilter === "all" ? {} : { resourceType: typeFilter },
-      }),
-  });
   const myConnections = useQuery({
     queryKey: ["my-connections"],
     queryFn: () => listMyConn({}),
@@ -152,21 +135,6 @@ function ProjectWorkspacePage() {
     queryKey: ["knowledge", projectId],
     queryFn: () => getKnowledge({ data: { projectId } }),
     enabled: Boolean(projectId),
-  });
-
-  const addResMut = useMutation({
-    mutationFn: () => addRes({ data: { projectId, resourceId: pickResource } }),
-    onSuccess: () => {
-      toast.success("Added to project");
-      setPickResource("");
-      void qc.invalidateQueries({ queryKey: ["project-resources", projectId] });
-    },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
-  });
-
-  const remResMut = useMutation({
-    mutationFn: (resourceId: string) => remRes({ data: { projectId, resourceId } }),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ["project-resources", projectId] }),
   });
 
   const addConnMut = useMutation({
@@ -391,66 +359,27 @@ function ProjectWorkspacePage() {
       </Card>
 
       <Card className="shadow-panel">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Add from workspace library</CardTitle>
+        <CardHeader>
+          <CardTitle className="text-base">Shared workspace library</CardTitle>
           <CardDescription>
-            Assign resources already installed from Marketplace or published in Studio. Public
-            Marketplace items must be installed first.
+            Install once and use across all your projects. Choose project credentials separately
+            below.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap gap-2">
-            {TYPE_FILTERS.map((t) => (
-              <Button
-                key={t}
-                size="sm"
-                variant={typeFilter === t ? "default" : "outline"}
-                onClick={() => setTypeFilter(t)}
-              >
-                {t === "all"
-                  ? "All"
-                  : (RESOURCE_CATEGORIES.find((category) => category.type === t)?.label ?? t)}
-              </Button>
-            ))}
-          </div>
-          <div className="flex flex-wrap items-end gap-2">
-            <div className="min-w-[220px] flex-1 space-y-1">
-              <Label htmlFor="pick-res">Installed resource</Label>
-              <select
-                id="pick-res"
-                className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                value={pickResource}
-                onChange={(e) => setPickResource(e.target.value)}
-              >
-                <option value="">Select resource…</option>
-                {(catalog.data ?? []).map(
-                  (r: { id: string; name?: string; resource_type?: string }) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name} ({r.resource_type})
-                    </option>
-                  ),
-                )}
-              </select>
-            </div>
-            <Button
-              disabled={!pickResource || addResMut.isPending}
-              onClick={() => addResMut.mutate()}
-            >
-              {addResMut.isPending ? <Loader2 className="mr-1 size-3.5 animate-spin" /> : null}
-              Add to project
-            </Button>
-          </div>
+        <CardContent>
+          <Button asChild variant="outline">
+            <Link to="/library">Manage installed resources</Link>
+          </Button>
         </CardContent>
       </Card>
 
       <div className="space-y-4">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Installed project resources ({resources.data?.length ?? 0})
+          Available resources ({resources.data?.length ?? 0})
         </h2>
         {(resources.data ?? []).length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            No resources assigned yet — install from Marketplace, then add from the workspace
-            library.
+            No resources yet. Install from Marketplace to make them available across your projects.
           </p>
         ) : (
           resourceGroups.map((group) => (
@@ -478,14 +407,9 @@ function ProjectWorkspacePage() {
                             {resource?.description || resource?.version || ""}
                           </p>
                         </div>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => resource?.id && remResMut.mutate(resource.id)}
-                          aria-label={`Remove ${resource?.name ?? "resource"} from project`}
-                        >
-                          <Trash2 className="size-3.5" />
-                        </Button>
+                        <Badge variant="outline">
+                          {row.shared ? "All projects" : "Project context"}
+                        </Badge>
                       </div>
                     </Card>
                   );

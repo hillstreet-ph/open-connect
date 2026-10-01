@@ -2,7 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { PackageCheck, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { AddToProjectButton } from "@/components/add-to-project";
+import { isSharedLibraryRow } from "@/lib/shared-resources";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,12 +27,23 @@ export function InstalledResourceSection({
     mutationFn: (resourceId: string) => remove({ data: { resourceId } }),
     onSuccess: () => {
       toast.success("Removed from your library");
-      void queryClient.invalidateQueries({ queryKey: ["resource-library", resourceType] });
+      void queryClient.invalidateQueries({ queryKey: ["resource-library"] });
+      void queryClient.invalidateQueries({ queryKey: ["project-resources"] });
     },
     onError: (error) =>
       toast.error(error instanceof Error ? error.message : "Could not remove package"),
   });
-  const items = (resources.data ?? []).flatMap((row) => (row.resources ? [row.resources] : []));
+  const items = (resources.data ?? []).flatMap((row) =>
+    row.resources
+      ? [
+          {
+            ...row.resources,
+            shared: isSharedLibraryRow(row),
+            installed: !row.id.startsWith("owned-"),
+          },
+        ]
+      : [],
+  );
 
   if (!resources.isLoading && items.length === 0) return null;
 
@@ -42,8 +54,8 @@ export function InstalledResourceSection({
           <PackageCheck className="size-4 text-primary" /> Installed packages
         </h2>
         <p className="mt-1 text-xs text-muted-foreground">
-          Installed in the HillStreet workspace from Marketplace or published in Studio. Assign
-          packages to projects without creating duplicate copies.
+          Installed in the HillStreet workspace from Marketplace or published in Studio. Installed
+          packages are available across all your projects.
         </p>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -57,16 +69,25 @@ export function InstalledResourceSection({
               <CardDescription className="line-clamp-2">{resource.description}</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-wrap items-center gap-2 p-4 pt-2">
-              <AddToProjectButton resourceId={resource.id} />
-              <Button
-                size="sm"
-                variant="ghost"
-                aria-label={`Remove ${resource.name} from library`}
-                disabled={removeMutation.isPending}
-                onClick={() => removeMutation.mutate(resource.id)}
-              >
-                <Trash2 className="size-3.5" />
-              </Button>
+              <Badge variant="secondary">
+                {resource.shared ? "All projects" : "Private context"}
+              </Badge>
+              {resource.installed ? (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  aria-label={`Remove ${resource.name} from library`}
+                  disabled={removeMutation.isPending}
+                  onClick={() => {
+                    if (
+                      window.confirm(`Remove ${resource.name} from the shared workspace library?`)
+                    )
+                      removeMutation.mutate(resource.id);
+                  }}
+                >
+                  <Trash2 className="size-3.5" />
+                </Button>
+              ) : null}
             </CardContent>
           </Card>
         ))}
