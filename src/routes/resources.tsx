@@ -1,8 +1,10 @@
+import { groupResourcesByPurpose, resourcePurpose } from "@/lib/resource-categories";
+import { WorkspaceShell } from "@/components/workspace-shell";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
-import { Download, ExternalLink, Eye, Lock, Search, Upload } from "lucide-react";
+import { Download, ExternalLink, Eye, Lock, Search } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -60,14 +62,26 @@ function triggerBlobDownload(filename: string, content: string, mime: string) {
 
 function ResourcesPage() {
   const { user } = useAuth();
+  return user ? (
+    <WorkspaceShell>
+      <MarketplaceContent />
+    </WorkspaceShell>
+  ) : (
+    <MarketplaceContent />
+  );
+}
+
+function MarketplaceContent() {
+  const { user } = useAuth();
   const [type, setType] = useState<string>("all");
   const [query, setQuery] = useState("");
+  const [purpose, setPurpose] = useState("all");
   const [viewText, setViewText] = useState<string | null>(null);
   const [viewTitle, setViewTitle] = useState("");
   const downloadFn = useServerFn(getResourceDownloadUrl);
   const viewFn = useServerFn(getResourceView);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["resources-marketplace"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -110,6 +124,10 @@ function ResourcesPage() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not load skill"),
   });
 
+  const purposes = groupResourcesByPurpose(
+    (data ?? []).map((resources) => ({ id: resources.id, resources })),
+  );
+
   const results = useMemo(() => {
     const term = query.trim().toLowerCase();
     return (data ?? []).filter((item) => {
@@ -119,9 +137,13 @@ function ResourcesPage() {
         item.name.toLowerCase().includes(term) ||
         (item.description ?? "").toLowerCase().includes(term) ||
         item.slug.toLowerCase().includes(term);
-      return matchesType && matchesTerm;
+      return (
+        matchesType &&
+        matchesTerm &&
+        (purpose === "all" || resourcePurpose({ id: item.id, resources: item }) === purpose)
+      );
     });
-  }, [data, query, type]);
+  }, [data, query, type, purpose]);
 
   const counts = useMemo(() => {
     const map: Record<string, number> = { all: data?.length ?? 0 };
@@ -132,38 +154,26 @@ function ResourcesPage() {
   }, [data]);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:py-16">
+    <div className="mx-auto max-w-6xl px-4 py-5 sm:px-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <Badge variant="outline" className="mb-2 border-primary/40 text-primary">
             Public catalog · Packages
           </Badge>
-          <h1 className="text-2xl font-semibold sm:text-4xl">Marketplace</h1>
+          <h1 className="text-xl font-semibold">Marketplace</h1>
           <p className="mt-2 max-w-xl text-sm text-muted-foreground">
             Browse skills, MCP, tools, plugins, agents, and prompts. Add packages to your personal
             library, then share them with projects from the matching sidebar page.
           </p>
         </div>
-        {user ? (
-          <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row">
-            <Button asChild className="w-full sm:w-auto">
-              <Link to="/studio">
-                <Upload className="mr-2 size-4" />
-                Studio
-              </Link>
-            </Button>
-            <Button asChild variant="outline" className="w-full sm:w-auto">
-              <Link to="/projects">Projects</Link>
-            </Button>
-          </div>
-        ) : (
+        {!user ? (
           <Button asChild variant="outline" className="w-full shrink-0 sm:w-auto">
             <Link to="/auth">
               <Lock className="mr-2 size-4" />
               Sign in to download
             </Link>
           </Button>
-        )}
+        ) : null}
       </div>
 
       {!user ? (
@@ -187,6 +197,19 @@ function ResourcesPage() {
             aria-label="Search marketplace"
           />
         </div>
+        <select
+          aria-label="Marketplace purpose category"
+          className="h-9 rounded-md border bg-background px-2 text-sm"
+          value={purpose}
+          onChange={(event) => setPurpose(event.target.value)}
+        >
+          <option value="all">All categories</option>
+          {purposes.map((group) => (
+            <option key={group.type} value={group.type}>
+              {group.label} ({group.items.length})
+            </option>
+          ))}
+        </select>
         <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
           {resourceCategories.map((filter) => (
             <button
@@ -209,6 +232,19 @@ function ResourcesPage() {
         </div>
       </div>
 
+      {isError ? (
+        <p role="alert" className="mt-4">
+          Could not load Marketplace.{" "}
+          <Button variant="link" onClick={() => void refetch()}>
+            Retry
+          </Button>
+        </p>
+      ) : null}
+      {!isLoading && !isError && results.length === 0 ? (
+        <p role="status" className="mt-4 text-sm text-muted-foreground">
+          No resources match your filters.
+        </p>
+      ) : null}
       <div className="mt-8 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {isLoading
           ? Array.from({ length: 6 }).map((_, index) => (
@@ -299,12 +335,6 @@ function ResourcesPage() {
               );
             })}
       </div>
-
-      {!isLoading && results.length === 0 ? (
-        <p className="mt-12 text-center text-sm text-muted-foreground">
-          No matches in this category.
-        </p>
-      ) : null}
 
       {viewText ? (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 sm:items-center">

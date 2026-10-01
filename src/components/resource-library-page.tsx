@@ -45,9 +45,17 @@ export function ResourceLibraryPage({
   const rows = (resources.data ?? []).filter(
     (row) =>
       !otherTypesOnly ||
-      !["plugin", "agent", "skill", "toolkit", "prompt", "memory", "knowledge"].includes(
-        row.resources?.resource_type ?? "",
-      ),
+      ![
+        "plugin",
+        "agent",
+        "skill",
+        "mcp",
+        "tool",
+        "toolkit",
+        "prompt",
+        "memory",
+        "knowledge",
+      ].includes(row.resources?.resource_type ?? ""),
   );
   const categories = groupResourcesByPurpose(rows);
   const filtered = rows.filter((row) => {

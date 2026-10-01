@@ -80,6 +80,8 @@ const DISCOVER: Item[] = [
   { to: "/plugins", label: "Plugins", icon: Puzzle },
   { to: "/agents", label: "Agents", icon: Bot },
   { to: "/skills", label: "Skills", icon: Wrench },
+  { to: "/mcp-servers", label: "MCP", icon: Plug },
+  { to: "/tools", label: "Tools", icon: Wrench },
   { capability: "manage_toolkits", to: "/toolkits", label: "Toolkits", icon: Wrench },
   { to: "/prompts", label: "Prompts", icon: ScrollText },
   { to: "/memory", label: "Memory", icon: Brain },
