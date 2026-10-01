@@ -17,14 +17,14 @@ export async function readWorkspaceLibrary(
   let installedQuery = context.supabase
     .from("toolkit_items")
     .select(
-      "id, created_at, resources(id, name, slug, description, resource_type, version, verified, package_filename, package_size)",
+      "id, created_at, resources(id, name, slug, description, category_slug, resource_type, version, verified, package_filename, package_size)",
     )
     .eq("toolkit_id", libraryId)
     .order("created_at", { ascending: false });
   let ownedQuery = context.supabase
     .from("resources")
     .select(
-      "id, created_at, name, slug, description, resource_type, version, verified, package_filename, package_size",
+      "id, created_at, name, slug, description, category_slug, resource_type, version, verified, package_filename, package_size",
     )
     .eq("owner_id", context.userId)
     .order("created_at", { ascending: false });
@@ -46,6 +46,7 @@ export async function readWorkspaceLibrary(
       name: string;
       slug: string;
       description: string | null;
+      category_slug: string | null;
       resource_type: string;
       version: string | null;
       verified: boolean;

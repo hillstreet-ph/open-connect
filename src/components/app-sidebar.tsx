@@ -67,7 +67,7 @@ const WORK: Item[] = [
 ];
 
 const BUILD: Item[] = [
-  { to: "/library", label: "Installed Resources", icon: Boxes },
+  { to: "/library", label: "Resources", icon: Boxes },
   { to: "/studio", label: "Studio", icon: Sparkles },
   { to: "/agents", label: "Agents", icon: Bot },
   { to: "/plugins", label: "Plugins", icon: Puzzle },
@@ -96,17 +96,24 @@ const CONNECTIONS: Item[] = [
 function NavGroup({ label, items, pathname }: { label: string; items: Item[]; pathname: string }) {
   if (!items.length) return null;
   return (
-    <SidebarGroup>
-      <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.12em] text-sidebar-foreground/50">
-        {label}
-      </SidebarGroupLabel>
+    <SidebarGroup className="py-1">
+      {label ? (
+        <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.12em] text-sidebar-foreground/50">
+          {label}
+        </SidebarGroupLabel>
+      ) : null}
       <SidebarGroupContent>
         <SidebarMenu>
           {items.map((item) => {
             const active = pathname === item.to || pathname.startsWith(item.to + "/");
             return (
               <SidebarMenuItem key={label + item.to + item.label}>
-                <SidebarMenuButton asChild isActive={active} tooltip={item.label}>
+                <SidebarMenuButton
+                  asChild
+                  className="h-8 text-xs"
+                  isActive={active}
+                  tooltip={item.label}
+                >
                   <Link to={item.to}>
                     <item.icon className="size-4" />
                     <span>{item.label}</span>
@@ -130,7 +137,7 @@ export function AppSidebar() {
         <WorkspaceSwitcher />
       </SidebarHeader>
 
-      <SidebarContent className="px-1 py-2">
+      <SidebarContent className="gap-1 px-1 py-1">
         <NavGroup label="" items={PRIMARY} pathname={pathname} />
         <NavGroup label="Work" items={WORK} pathname={pathname} />
         <NavGroup

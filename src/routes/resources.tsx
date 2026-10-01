@@ -209,7 +209,7 @@ function ResourcesPage() {
         </div>
       </div>
 
-      <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-8 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {isLoading
           ? Array.from({ length: 6 }).map((_, index) => (
               <Skeleton key={index} className="h-36 rounded-xl" />
@@ -225,7 +225,7 @@ function ResourcesPage() {
               const executable = item.verified && reviewState === "approved";
               return (
                 <Card key={item.id} className="shadow-panel">
-                  <CardHeader className="p-4 pb-2">
+                  <CardHeader className="p-3 pb-1">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <Badge variant="secondary" className="text-[10px] uppercase">
                         {item.resource_type}
@@ -244,10 +244,12 @@ function ResourcesPage() {
                         </Badge>
                       ) : null}
                     </div>
-                    <CardTitle className="mt-2 text-base leading-snug">{item.name}</CardTitle>
-                    <CardDescription className="line-clamp-2">{item.description}</CardDescription>
+                    <CardTitle className="mt-1 text-sm leading-snug">{item.name}</CardTitle>
+                    <CardDescription className="line-clamp-2 text-xs">
+                      {item.description}
+                    </CardDescription>
                   </CardHeader>
-                  <CardContent className="flex flex-wrap items-center justify-between gap-2 p-4 pt-0 text-xs text-muted-foreground">
+                  <CardContent className="flex flex-wrap items-center justify-between gap-2 p-3 pt-1 text-xs text-muted-foreground">
                     <span className="font-mono">v{item.version}</span>
                     {user ? (
                       <div className="flex flex-col items-end gap-1">

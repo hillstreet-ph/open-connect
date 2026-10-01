@@ -3,7 +3,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { appCategories, flatAppNav, flatPublicNav, publicCategories } from "./nav.ts";
-import { groupProjectResources } from "./resource-categories.ts";
+import { groupProjectResources, groupResourcesByPurpose } from "./resource-categories.ts";
 
 function routePaths() {
   const routesRoot = path.resolve(process.cwd(), "src/routes");
@@ -234,4 +234,25 @@ test("installed project resources are grouped into professional categories", () 
       ["Memory", 1],
     ],
   );
+});
+
+test("resource purposes combine catalog aliases without mixing types or losing uncategorized items", () => {
+  const rows = [
+    { id: "a", resources: { resource_type: "skill", category_slug: "development" } },
+    { id: "b", resources: { resource_type: "plugin", category_slug: "developer" } },
+    { id: "c", resources: { resource_type: "skill", category_slug: "business" } },
+    { id: "d", resources: { resource_type: "mcp", category_slug: null } },
+    { id: "e", resources: null },
+    { id: "f", resources: { resource_type: "agent", category_slug: "customer-support" } },
+  ];
+  assert.deepEqual(
+    groupResourcesByPurpose(rows).map(({ label, items }) => [label, items.map((row) => row.id)]),
+    [
+      ["Business", ["c"]],
+      ["Customer Support", ["f"]],
+      ["Developer", ["a", "b"]],
+      ["General", ["d"]],
+    ],
+  );
+  assert.deepEqual(groupResourcesByPurpose([]), []);
 });
