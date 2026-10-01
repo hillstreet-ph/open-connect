@@ -14,10 +14,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 export function ResourceLibraryPage({
   resourceType,
+  otherTypesOnly = false,
   title,
   description,
 }: {
   resourceType?: "agent" | "skill" | "prompt" | "plugin" | "mcp" | "tool";
+  otherTypesOnly?: boolean;
   title: string;
   description: string;
 }) {
@@ -40,7 +42,13 @@ export function ResourceLibraryPage({
     onError: (error) => toast.error(error.message),
   });
 
-  const rows = resources.data ?? [];
+  const rows = (resources.data ?? []).filter(
+    (row) =>
+      !otherTypesOnly ||
+      !["plugin", "agent", "skill", "toolkit", "prompt", "memory", "knowledge"].includes(
+        row.resources?.resource_type ?? "",
+      ),
+  );
   const categories = groupResourcesByPurpose(rows);
   const filtered = rows.filter((row) => {
     const resource = row.resources;

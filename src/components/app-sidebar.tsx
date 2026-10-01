@@ -48,7 +48,7 @@ type Item = {
 
 /**
  * Primary IA (locked):
- * Workspace switcher → Dashboard → Projects → Work → Build → Cloud → Discover → Connections →
+ * Workspace switcher → Dashboard → Projects → Work → Discover → Cloud → Connections →
  * Connectors, Credentials, and AI Gateway. Integrations, API keys, and settings live in the user avatar menu.
  *
  * Organization settings live in the user menu; workspaces manage projects and environments.
@@ -61,12 +61,11 @@ const PRIMARY: Item[] = [
 ];
 
 const WORK: Item[] = [
-  { to: "/tasks", label: "Tasks", icon: ListTodo },
-  { to: "/automations", label: "Automations", icon: Workflow },
+  { to: "/studio", label: "Studio", icon: Sparkles },
+  { to: "/tasks", label: "Task", icon: ListTodo },
   { to: "/schedule", label: "Schedules", icon: CalendarClock },
+  { to: "/automations", label: "Automations", icon: Workflow },
 ];
-
-const BUILD: Item[] = [{ to: "/studio", label: "Studio", icon: Sparkles }];
 
 const CLOUD: Item[] = [
   { to: "/cloud-computer", label: "Cloud Computer", icon: Monitor },
@@ -85,6 +84,7 @@ const DISCOVER: Item[] = [
   { to: "/prompts", label: "Prompts", icon: ScrollText },
   { to: "/memory", label: "Memory", icon: Brain },
   { to: "/knowledge", label: "Knowledge", icon: BookOpen },
+  { to: "/others", label: "Others", icon: Boxes },
 ];
 
 const CONNECTIONS: Item[] = [
@@ -141,16 +141,11 @@ export function AppSidebar() {
         <NavGroup label="" items={PRIMARY} pathname={pathname} />
         <NavGroup label="Work" items={WORK} pathname={pathname} />
         <NavGroup
-          label="Build"
-          items={BUILD.filter((item) => !item.capability || can(item.capability))}
-          pathname={pathname}
-        />
-        <NavGroup label="Cloud" items={CLOUD} pathname={pathname} />
-        <NavGroup
           label="Discover"
           items={DISCOVER.filter((item) => !item.capability || can(item.capability))}
           pathname={pathname}
         />
+        <NavGroup label="Cloud" items={CLOUD} pathname={pathname} />
         <NavGroup label="Connections" items={CONNECTIONS} pathname={pathname} />
       </SidebarContent>
 
