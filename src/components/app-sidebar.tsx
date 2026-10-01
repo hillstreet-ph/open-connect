@@ -68,10 +68,10 @@ const WORK: Item[] = [
 ];
 
 const CLOUD: Item[] = [
-  { to: "/cloud-computer", label: "Cloud Computer", icon: Monitor },
+  { to: "/cloud-phone", label: "Cloud Phone", icon: Smartphone },
   { to: "/cloud-browser", label: "Cloud Browser", icon: Globe },
   { to: "/cloud-terminal", label: "Cloud Terminal", icon: Terminal },
-  { to: "/cloud-phone", label: "Cloud Phone", icon: Smartphone },
+  { to: "/cloud-computer", label: "Cloud Computer", icon: Monitor },
 ];
 
 const DISCOVER: Item[] = [
