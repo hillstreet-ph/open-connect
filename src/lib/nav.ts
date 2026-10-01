@@ -60,6 +60,7 @@ export const appCategories: NavCategory[] = [
       { to: "/models", label: "AI Gateway", description: "Provider credentials and models" },
       { to: "/plugins", label: "Plugins", description: "Installed plugin library" },
       { to: "/library", label: "Resources", description: "Shared across your projects" },
+      { to: "/others", label: "Others", description: "Other installed resources" },
       { to: "/toolkits", label: "Toolkits", description: "Developer+" },
     ],
   },
