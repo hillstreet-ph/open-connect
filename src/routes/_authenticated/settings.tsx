@@ -5,6 +5,7 @@ import {
   Bell,
   Building2,
   Database,
+  KeyRound,
   Loader2,
   Network,
   Save,
