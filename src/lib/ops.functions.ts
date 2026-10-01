@@ -279,7 +279,12 @@ export const runAutomation = createServerFn({ method: "POST" })
         goal: prompt,
         environment: "production",
         state: "running",
-        plan: { action: "model", model: "openrouter/free" },
+        plan: {
+          action: "model",
+          model: String(
+            (automation.config as Record<string, unknown>)?.model ?? "poolside/laguna-s-2.1:free",
+          ),
+        },
         evidence,
         rollback: { available: false },
         correlation_id: runId,
@@ -288,7 +293,14 @@ export const runAutomation = createServerFn({ method: "POST" })
       let result: { text: string; model: string } | null = null;
       let failure: string | null = null;
       try {
-        result = await generateAutomationResponse(prompt, upstream);
+        result = await generateAutomationResponse(
+          prompt,
+          upstream,
+          fetch,
+          String(
+            (automation.config as Record<string, unknown>)?.model ?? "poolside/laguna-s-2.1:free",
+          ),
+        );
       } catch (error) {
         failure = error instanceof Error ? error.message : "AI request failed.";
       }

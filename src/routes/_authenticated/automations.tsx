@@ -46,6 +46,7 @@ function AutomationsPage() {
   const [triggerType, setTriggerType] = useState<TriggerType>("manual");
   const [actionType, setActionType] = useState<ActionType>("model");
   const [prompt, setPrompt] = useState("");
+  const [model, setModel] = useState("poolside/laguna-s-2.1:free");
 
   const rows = useQuery({ queryKey: ["automations"], queryFn: () => list({}) });
 
@@ -62,6 +63,7 @@ function AutomationsPage() {
             source: "open-connect",
             plane: "operations",
             prompt,
+            model,
             ...(prompt.trim() ? { goal: prompt.trim() } : {}),
           },
         },
@@ -202,6 +204,22 @@ function AutomationsPage() {
             </Button>
           </div>
           <div className="space-y-2 sm:col-span-3">
+            {actionType === "model" ? (
+              <div className="space-y-2">
+                <Label htmlFor="auto-model">Free model</Label>
+                <select
+                  id="auto-model"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={model}
+                  onChange={(e) => setModel(e.target.value)}
+                >
+                  <option value="poolside/laguna-s-2.1:free">
+                    Poolside Laguna · general assistant
+                  </option>
+                  <option value="openrouter/free">Automatic router · model varies</option>
+                </select>
+              </div>
+            ) : null}
             <Label htmlFor="auto-prompt">{actionType === "model" ? "AI prompt" : "Goal"}</Label>
             <Textarea
               id="auto-prompt"

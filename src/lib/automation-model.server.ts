@@ -10,8 +10,11 @@ export async function generateAutomationResponse(
   prompt: string,
   upstream: { baseUrl: string; headers: Record<string, string> },
   request: typeof fetch = fetch,
+  model = "poolside/laguna-s-2.1:free",
 ) {
   automationPrompt({ prompt });
+  if (!["poolside/laguna-s-2.1:free", "openrouter/free"].includes(model))
+    throw new Error("Choose a supported free model.");
   // Credentials must never follow a redirect or a configurable destination.
   if (upstream.baseUrl !== "https://openrouter.ai/api/v1")
     throw new Error("OpenRouter endpoint is not supported.");
@@ -23,7 +26,7 @@ export async function generateAutomationResponse(
       signal: AbortSignal.timeout(60000),
       headers: upstream.headers,
       body: JSON.stringify({
-        model: "openrouter/free",
+        model,
         messages: [{ role: "user", content: prompt }],
         max_tokens: 2048,
       }),
@@ -45,5 +48,5 @@ export async function generateAutomationResponse(
   if (typeof text !== "string" || !text.trim())
     throw new Error("AI provider returned no text. Retry the run.");
   if (text.length > 50000) throw new Error("AI response exceeded the storage limit.");
-  return { text, model: typeof data.model === "string" ? data.model : "openrouter/free" };
+  return { text, model: typeof data.model === "string" ? data.model : model };
 }
