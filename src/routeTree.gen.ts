@@ -31,6 +31,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedGuidesRouteImport } from './routes/_authenticated/guides'
 import { Route as AuthenticatedIntegrationsRouteImport } from './routes/_authenticated/integrations'
 import { Route as AuthenticatedKnowledgeRouteImport } from './routes/_authenticated/knowledge'
+import { Route as AuthenticatedLibraryRouteImport } from './routes/_authenticated/library'
 import { Route as AuthenticatedMemoryRouteImport } from './routes/_authenticated/memory'
 import { Route as AuthenticatedModelsRouteImport } from './routes/_authenticated/models'
 import { Route as AuthenticatedOrgsRouteImport } from './routes/_authenticated/orgs'
@@ -174,6 +175,11 @@ const AuthenticatedIntegrationsRoute =
 const AuthenticatedKnowledgeRoute = AuthenticatedKnowledgeRouteImport.update({
   id: '/knowledge',
   path: '/knowledge',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedLibraryRoute = AuthenticatedLibraryRouteImport.update({
+  id: '/library',
+  path: '/library',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedMemoryRoute = AuthenticatedMemoryRouteImport.update({
@@ -341,6 +347,7 @@ export interface FileRoutesByFullPath {
   '/guides': typeof AuthenticatedGuidesRoute
   '/integrations': typeof AuthenticatedIntegrationsRoute
   '/knowledge': typeof AuthenticatedKnowledgeRoute
+  '/library': typeof AuthenticatedLibraryRoute
   '/memory': typeof AuthenticatedMemoryRoute
   '/models': typeof AuthenticatedModelsRoute
   '/orgs': typeof AuthenticatedOrgsRoute
@@ -392,6 +399,7 @@ export interface FileRoutesByTo {
   '/guides': typeof AuthenticatedGuidesRoute
   '/integrations': typeof AuthenticatedIntegrationsRoute
   '/knowledge': typeof AuthenticatedKnowledgeRoute
+  '/library': typeof AuthenticatedLibraryRoute
   '/memory': typeof AuthenticatedMemoryRoute
   '/models': typeof AuthenticatedModelsRoute
   '/orgs': typeof AuthenticatedOrgsRoute
@@ -445,6 +453,7 @@ export interface FileRoutesById {
   '/_authenticated/guides': typeof AuthenticatedGuidesRoute
   '/_authenticated/integrations': typeof AuthenticatedIntegrationsRoute
   '/_authenticated/knowledge': typeof AuthenticatedKnowledgeRoute
+  '/_authenticated/library': typeof AuthenticatedLibraryRoute
   '/_authenticated/memory': typeof AuthenticatedMemoryRoute
   '/_authenticated/models': typeof AuthenticatedModelsRoute
   '/_authenticated/orgs': typeof AuthenticatedOrgsRoute
@@ -498,6 +507,7 @@ export interface FileRouteTypes {
     | '/guides'
     | '/integrations'
     | '/knowledge'
+    | '/library'
     | '/memory'
     | '/models'
     | '/orgs'
@@ -549,6 +559,7 @@ export interface FileRouteTypes {
     | '/guides'
     | '/integrations'
     | '/knowledge'
+    | '/library'
     | '/memory'
     | '/models'
     | '/orgs'
@@ -601,6 +612,7 @@ export interface FileRouteTypes {
     | '/_authenticated/guides'
     | '/_authenticated/integrations'
     | '/_authenticated/knowledge'
+    | '/_authenticated/library'
     | '/_authenticated/memory'
     | '/_authenticated/models'
     | '/_authenticated/orgs'
@@ -808,6 +820,13 @@ declare module '@tanstack/react-router' {
       path: '/knowledge'
       fullPath: '/knowledge'
       preLoaderRoute: typeof AuthenticatedKnowledgeRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/library': {
+      id: '/_authenticated/library'
+      path: '/library'
+      fullPath: '/library'
+      preLoaderRoute: typeof AuthenticatedLibraryRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/memory': {
@@ -1052,6 +1071,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedGuidesRoute: typeof AuthenticatedGuidesRoute
   AuthenticatedIntegrationsRoute: typeof AuthenticatedIntegrationsRoute
   AuthenticatedKnowledgeRoute: typeof AuthenticatedKnowledgeRoute
+  AuthenticatedLibraryRoute: typeof AuthenticatedLibraryRoute
   AuthenticatedMemoryRoute: typeof AuthenticatedMemoryRoute
   AuthenticatedModelsRoute: typeof AuthenticatedModelsRoute
   AuthenticatedOrgsRoute: typeof AuthenticatedOrgsRoute
@@ -1083,6 +1103,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedGuidesRoute: AuthenticatedGuidesRoute,
   AuthenticatedIntegrationsRoute: AuthenticatedIntegrationsRoute,
   AuthenticatedKnowledgeRoute: AuthenticatedKnowledgeRoute,
+  AuthenticatedLibraryRoute: AuthenticatedLibraryRoute,
   AuthenticatedMemoryRoute: AuthenticatedMemoryRoute,
   AuthenticatedModelsRoute: AuthenticatedModelsRoute,
   AuthenticatedOrgsRoute: AuthenticatedOrgsRoute,

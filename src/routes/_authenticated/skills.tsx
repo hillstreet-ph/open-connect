@@ -17,7 +17,7 @@ function SkillsPage() {
     <ResourceLibraryPage
       resourceType="skill"
       title="Skills"
-      description="All skills you uploaded in Studio or added from Marketplace. Share each skill with one or more projects here."
+      description="All skills you uploaded in Studio or added from Marketplace. Available across all your projects. Credentials are selected per project."
     />
   );
 }

@@ -1,3 +1,5 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { ProjectResourceRow } from "@/lib/resource-categories";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
@@ -9,6 +11,14 @@ export const listProjectResources = createServerFn({ method: "GET" })
   }))
   .handler(async ({ data, context }) => {
     if (!data.projectId) throw new Error("projectId required");
+    // Project tables are migration-backed and absent from the legacy generated schema.
+    const projectDb = context.supabase as SupabaseClient;
+    const { data: project, error: projectError } = await projectDb
+      .from("projects")
+      .select("id")
+      .eq("id", data.projectId)
+      .maybeSingle();
+    if (projectError || !project) throw new Error("Project unavailable or access denied");
     const { data: rows, error } = await context.supabase
       .from("project_resources")
       .select(
@@ -17,7 +27,10 @@ export const listProjectResources = createServerFn({ method: "GET" })
       .eq("project_id", data.projectId)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
-    return rows ?? [];
+    const { readWorkspaceLibrary } = await import("@/lib/workspace-library.server");
+    const { mergeSharedProjectResources } = await import("@/lib/shared-resources");
+    const library = await readWorkspaceLibrary(context);
+    return mergeSharedProjectResources((rows ?? []) as unknown as ProjectResourceRow[], library);
   });
 
 export const addResourceToProject = createServerFn({ method: "POST" })

@@ -17,7 +17,7 @@ function AgentsPage() {
     <ResourceLibraryPage
       resourceType="agent"
       title="Agents"
-      description="All AI agents you uploaded in Studio or added from Marketplace. Share each agent with one or more projects here."
+      description="All AI agents you uploaded in Studio or added from Marketplace. Available across all your projects. Credentials are selected per project."
     />
   );
 }

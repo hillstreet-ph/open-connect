@@ -948,36 +948,21 @@ export const Route = createFileRoute("/mcp")({
                 const resource = item.resources as unknown as Record<string, unknown> | null;
                 return resource ? [resource] : [];
               });
-            } else {
-              const { data: library } = await supabaseAdmin
-                .from("toolkits")
-                .select("id")
-                .eq("user_id", key.userId)
-                .eq("slug", "open-connect-personal-library")
-                .maybeSingle();
-              const owned = await supabaseAdmin
-                .from("resources")
-                .select("id,slug,name,description,resource_type,version,verified")
-                .eq("owner_id", key.userId);
-              if (owned.error) throw new Error(owned.error.message);
-              rows = (owned.data ?? []) as Array<Record<string, unknown>>;
-              if (library?.id) {
-                const installed = await supabaseAdmin
-                  .from("toolkit_items")
-                  .select("resources(id,slug,name,description,resource_type,version,verified)")
-                  .eq("toolkit_id", library.id);
-                if (installed.error) throw new Error(installed.error.message);
-                rows.push(
-                  ...(installed.data ?? []).flatMap((item) => {
-                    const resource = item.resources as unknown as Record<string, unknown> | null;
-                    return resource ? [resource] : [];
-                  }),
-                );
-              }
             }
-            const unique = [...new Map(rows.map((item) => [String(item["id"]), item])).values()]
-              .filter((item) => !type || item["resource_type"] === type)
-              .slice(0, 200);
+            const { readWorkspaceLibrary } = await import("@/lib/workspace-library.server");
+            const { isSharedLibraryRow } = await import("@/lib/shared-resources");
+            const library = await readWorkspaceLibrary({
+              supabase: supabaseAdmin,
+              userId: key.userId,
+            });
+            rows.push(
+              ...library
+                .filter((row) => !requestedProject || isSharedLibraryRow(row))
+                .flatMap((row) => (row.resources ? [row.resources] : [])),
+            );
+            const unique = [
+              ...new Map(rows.map((item) => [String(item["id"]), item])).values(),
+            ].filter((item) => !type || item["resource_type"] === type);
             result = textResult({ resources: unique, project_id: requestedProject || null });
           } else if (name === "inspect_connections") {
             const provider = String(args["provider"] ?? "").trim();

@@ -17,7 +17,7 @@ function PluginsPage() {
     <ResourceLibraryPage
       resourceType="plugin"
       title="Plugins"
-      description="All plugins you uploaded in Studio or added from Marketplace. Share each plugin with one or more projects here."
+      description="All plugins you uploaded in Studio or added from Marketplace. Available across all your projects. Credentials are selected per project."
     />
   );
 }
