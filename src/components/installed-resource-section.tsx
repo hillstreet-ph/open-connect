@@ -58,17 +58,19 @@ export function InstalledResourceSection({
           packages are available across all your projects.
         </p>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {items.map((resource) => (
           <Card key={resource.id} className="shadow-panel">
-            <CardHeader className="p-4 pb-2">
+            <CardHeader className="p-3 pb-1">
               <Badge variant="secondary" className="w-fit text-[10px] uppercase">
                 {resource.resource_type}
               </Badge>
-              <CardTitle className="text-base">{resource.name}</CardTitle>
-              <CardDescription className="line-clamp-2">{resource.description}</CardDescription>
+              <CardTitle className="text-sm leading-snug">{resource.name}</CardTitle>
+              <CardDescription className="line-clamp-2 text-xs">
+                {resource.description}
+              </CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-wrap items-center gap-2 p-4 pt-2">
+            <CardContent className="flex flex-wrap items-center gap-1.5 p-3 pt-1">
               <Badge variant="secondary">
                 {resource.shared ? "All projects" : "Private context"}
               </Badge>
