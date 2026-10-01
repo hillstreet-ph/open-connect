@@ -233,6 +233,34 @@ export function resolveUpstreams(): Upstream[] {
   return list;
 }
 
+export async function resolveUserUpstreams(userId: string): Promise<Upstream[]> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { savedOpenRouter } = await import("./model-connection.server");
+  const saved = await savedOpenRouter(userId, {
+    find: async (id) => {
+      const { data, error } = await supabaseAdmin
+        .from("app_connections")
+        .select("status,credential_reference")
+        .eq("user_id", id)
+        .eq("provider", "openrouter")
+        .is("provider_account_id", null)
+        .maybeSingle();
+      if (error) throw new Error("Unable to read model connection.");
+      return data;
+    },
+    resolve: async (id, credentialId) => {
+      const { data, error } = await supabaseAdmin.rpc("resolve_connection_credential", {
+        p_user_id: id,
+        p_credential_id: credentialId,
+      });
+      if (error || typeof data !== "string") throw new Error("Unable to resolve model credential.");
+      return data;
+    },
+  });
+  // A saved personal connection is authoritative: no silent fallback to a different account.
+  return saved ? [saved] : resolveUpstreams();
+}
+
 export function resolveUpstream(): Upstream | null {
   return resolveUpstreams()[0] ?? null;
 }
@@ -337,12 +365,12 @@ export function gatewayError(message: string, status: number, code: string): Res
 }
 
 /** Full catalog: managed aliases + every model from connected upstream credentials. */
-export async function fetchMergedModelCatalog(): Promise<{
+export async function fetchMergedModelCatalog(configured?: Upstream[]): Promise<{
   ids: string[];
   upstreams: string[];
   providers: string[];
 }> {
-  const upstreams = resolveUpstreams();
+  const upstreams = configured ?? resolveUpstreams();
   const ids = new Set<string>(MANAGED_MODEL_IDS);
   const names: string[] = [];
   const providers = new Set<string>();
