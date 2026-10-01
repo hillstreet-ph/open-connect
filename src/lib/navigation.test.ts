@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import { isAppPath } from "./shell.ts";
 import { appCategories, flatAppNav, flatPublicNav, publicCategories } from "./nav.ts";
 import { groupProjectResources, groupResourcesByPurpose } from "./resource-categories.ts";
 
@@ -255,4 +256,48 @@ test("resource purposes combine catalog aliases without mixing types or losing u
     ],
   );
   assert.deepEqual(groupResourcesByPurpose([]), []);
+});
+
+test("every sidebar destination uses workspace chrome and matches page search labels", () => {
+  const sidebar = readFileSync(
+    path.resolve(process.cwd(), "src/components/app-sidebar.tsx"),
+    "utf8",
+  );
+  const items = [...sidebar.matchAll(/to: "([^"\n]+)", label: "([^"\n]+)"/g)].map((match) => ({
+    to: match[1],
+    label: match[2],
+  }));
+  assert.ok(items.length > 20);
+  assert.deepEqual(
+    items.map((item) => item.to).sort(),
+    flatAppNav()
+      .map((item) => item.to)
+      .sort(),
+  );
+  for (const item of items) {
+    assert.ok(isAppPath(item.to), `${item.to} must not show duplicate public chrome`);
+    assert.equal(flatAppNav().find((nav) => nav.to === item.to)?.label, item.label);
+  }
+  assert.equal(isAppPath("/mcp"), false, "MCP protocol endpoint is not a workspace page");
+  assert.equal(isAppPath("/tools-unrelated"), false);
+});
+
+test("Discover order includes dedicated MCP and Tools routes", () => {
+  assert.deepEqual(
+    appCategories.find((group) => group.id === "discover")?.items.map((item) => item.label),
+    [
+      "Marketplace",
+      "Resources",
+      "Plugins",
+      "Agents",
+      "Skills",
+      "MCP",
+      "Tools",
+      "Toolkits",
+      "Prompts",
+      "Memory",
+      "Knowledge",
+      "Others",
+    ],
+  );
 });

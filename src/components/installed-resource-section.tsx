@@ -13,8 +13,10 @@ type InstalledResourceType = "toolkit" | "memory" | "knowledge";
 
 export function InstalledResourceSection({
   resourceType,
+  search = "",
 }: {
   resourceType: InstalledResourceType;
+  search?: string;
 }) {
   const queryClient = useQueryClient();
   const list = useServerFn(listLibraryResources);
@@ -34,7 +36,10 @@ export function InstalledResourceSection({
       toast.error(error instanceof Error ? error.message : "Could not remove package"),
   });
   const items = (resources.data ?? []).flatMap((row) =>
-    row.resources
+    row.resources &&
+    `${row.resources.name} ${row.resources.description ?? ""}`
+      .toLowerCase()
+      .includes(search.toLowerCase().trim())
       ? [
           {
             ...row.resources,
@@ -45,7 +50,17 @@ export function InstalledResourceSection({
       : [],
   );
 
-  if (!resources.isLoading && items.length === 0) return null;
+  if (resources.isError)
+    return (
+      <p role="alert">
+        Could not load installed packages.{" "}
+        <Button variant="link" onClick={() => void resources.refetch()}>
+          Retry
+        </Button>
+      </p>
+    );
+  if (resources.isLoading) return <p role="status">Loading installed packages…</p>;
+  if (items.length === 0) return null;
 
   return (
     <section className="space-y-3" aria-label={`Installed ${resourceType} packages`}>
