@@ -1,6 +1,11 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   Bot,
+  Monitor,
+  Globe,
+  Terminal,
+  Smartphone,
+  Puzzle,
   BookOpen,
   Brain,
   Boxes,
@@ -64,11 +69,19 @@ const WORK: Item[] = [
 const BUILD: Item[] = [
   { to: "/studio", label: "Studio", icon: Sparkles },
   { to: "/agents", label: "Agents", icon: Bot },
+  { to: "/plugins", label: "Plugins", icon: Puzzle },
   { to: "/skills", label: "Skills", icon: Wrench },
   { to: "/prompts", label: "Prompts", icon: ScrollText },
   { to: "/memory", label: "Memory", icon: Brain },
   { to: "/knowledge", label: "Knowledge", icon: BookOpen },
   { capability: "manage_toolkits", to: "/toolkits", label: "Toolkits", icon: Wrench },
+];
+
+const CLOUD: Item[] = [
+  { to: "/cloud-computer", label: "Cloud Computer", icon: Monitor },
+  { to: "/cloud-browser", label: "Cloud Browser", icon: Globe },
+  { to: "/cloud-terminal", label: "Cloud Terminal", icon: Terminal },
+  { to: "/cloud-phone", label: "Cloud Phone", icon: Smartphone },
 ];
 
 const DISCOVER: Item[] = [{ to: "/resources", label: "Marketplace", icon: Boxes }];
@@ -124,6 +137,7 @@ export function AppSidebar() {
           items={BUILD.filter((item) => !item.capability || can(item.capability))}
           pathname={pathname}
         />
+        <NavGroup label="Cloud" items={CLOUD} pathname={pathname} />
         <NavGroup label="Discover" items={DISCOVER} pathname={pathname} />
         <NavGroup label="Connections" items={CONNECTIONS} pathname={pathname} />
       </SidebarContent>

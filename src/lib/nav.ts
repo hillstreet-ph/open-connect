@@ -58,7 +58,18 @@ export const appCategories: NavCategory[] = [
       { to: "/resources", label: "Marketplace", description: "Download skills" },
       { to: "/connections", label: "Connectors", description: "Connect apps and custom MCP" },
       { to: "/models", label: "AI Gateway", description: "Provider credentials and models" },
+      { to: "/plugins", label: "Plugins", description: "Installed plugin library" },
       { to: "/toolkits", label: "Toolkits", description: "Developer+" },
+    ],
+  },
+  {
+    id: "cloud",
+    label: "Cloud",
+    items: [
+      { to: "/cloud-computer", label: "Cloud Computer" },
+      { to: "/cloud-browser", label: "Cloud Browser" },
+      { to: "/cloud-terminal", label: "Cloud Terminal" },
+      { to: "/cloud-phone", label: "Cloud Phone" },
     ],
   },
   {

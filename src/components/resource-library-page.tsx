@@ -13,7 +13,7 @@ export function ResourceLibraryPage({
   title,
   description,
 }: {
-  resourceType: "agent" | "skill" | "prompt";
+  resourceType: "agent" | "skill" | "prompt" | "plugin";
   title: string;
   description: string;
 }) {
@@ -72,7 +72,10 @@ export function ResourceLibraryPage({
         ))}
       </div>
 
-      {!resources.isLoading && items.length === 0 ? (
+      {resources.isError ? (
+        <p role="alert">Could not load your library. Please try again.</p>
+      ) : null}
+      {!resources.isLoading && !resources.isError && items.length === 0 ? (
         <Card className="shadow-panel">
           <CardContent className="p-6 text-sm text-muted-foreground">
             No {title.toLowerCase()} added yet. Upload one in Studio or add one from Marketplace.
