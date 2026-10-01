@@ -17,7 +17,7 @@ export const testFreeModel = createServerFn({ method: "POST" })
       body: JSON.stringify({
         model: "openrouter/free",
         messages: [{ role: "user", content: "Reply with OK." }],
-        max_tokens: 32,
+        max_tokens: 1024,
       }),
     });
     if (!response.ok)
