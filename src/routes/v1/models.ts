@@ -6,7 +6,7 @@ import {
   hasScope,
   json,
   logGatewayRequest,
-  resolveUpstream,
+  resolveUserUpstreams,
 } from "@/lib/gateway.server";
 
 export const Route = createFileRoute("/v1/models")({
@@ -21,12 +21,13 @@ export const Route = createFileRoute("/v1/models")({
           return gatewayError("Key is missing the models:read scope.", 403, "insufficient_scope");
         }
 
-        const primary = resolveUpstream();
+        const configured = await resolveUserUpstreams(key.userId);
+        const primary = configured[0];
         if (!primary) {
           return gatewayError("Model gateway is not configured.", 503, "upstream_unavailable");
         }
 
-        const { ids, upstreams, providers } = await fetchMergedModelCatalog();
+        const { ids, upstreams, providers } = await fetchMergedModelCatalog(configured);
 
         const payload = {
           object: "list",
