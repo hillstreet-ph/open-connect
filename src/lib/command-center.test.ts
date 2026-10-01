@@ -3,13 +3,21 @@ import assert from "node:assert/strict";
 import vm from "node:vm";
 import { COMMAND_CENTER_HTML } from "./command-center.ts";
 
+type ElementStub = {
+  textContent: string;
+  className: string;
+  style: object;
+  children: ElementStub[];
+  append(...nodes: ElementStub[]): void;
+  replaceChildren(): void;
+};
 function widget() {
-  const element = () => ({
+  const element = (): ElementStub => ({
     textContent: "",
     className: "",
     style: {},
-    children: [] as any[],
-    append(...nodes: any[]) {
+    children: [] as ElementStub[],
+    append(...nodes: ElementStub[]) {
       this.children.push(...nodes);
     },
     replaceChildren() {
@@ -18,7 +26,7 @@ function widget() {
   });
   const grid = element(),
     access = element();
-  let receive: (event: any) => void = () => {};
+  let receive: (event: { data: { method: string; params: unknown } }) => void = () => {};
   vm.runInNewContext(COMMAND_CENTER_HTML.match(/<script>([\s\S]*?)<\/script>/)![1], {
     document: {
       getElementById: (id: string) => (id === "grid" ? grid : access),
