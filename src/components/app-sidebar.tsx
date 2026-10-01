@@ -48,7 +48,7 @@ type Item = {
 
 /**
  * Primary IA (locked):
- * Workspace switcher → Dashboard → Projects → Work → Build → Marketplace → Connections →
+ * Workspace switcher → Dashboard → Projects → Work → Build → Cloud → Discover → Connections →
  * Connectors, Credentials, and AI Gateway. Integrations, API keys, and settings live in the user avatar menu.
  *
  * Organization settings live in the user menu; workspaces manage projects and environments.
@@ -66,17 +66,7 @@ const WORK: Item[] = [
   { to: "/schedule", label: "Schedules", icon: CalendarClock },
 ];
 
-const BUILD: Item[] = [
-  { to: "/library", label: "Resources", icon: Boxes },
-  { to: "/studio", label: "Studio", icon: Sparkles },
-  { to: "/agents", label: "Agents", icon: Bot },
-  { to: "/plugins", label: "Plugins", icon: Puzzle },
-  { to: "/skills", label: "Skills", icon: Wrench },
-  { to: "/prompts", label: "Prompts", icon: ScrollText },
-  { to: "/memory", label: "Memory", icon: Brain },
-  { to: "/knowledge", label: "Knowledge", icon: BookOpen },
-  { capability: "manage_toolkits", to: "/toolkits", label: "Toolkits", icon: Wrench },
-];
+const BUILD: Item[] = [{ to: "/studio", label: "Studio", icon: Sparkles }];
 
 const CLOUD: Item[] = [
   { to: "/cloud-computer", label: "Cloud Computer", icon: Monitor },
@@ -85,7 +75,17 @@ const CLOUD: Item[] = [
   { to: "/cloud-phone", label: "Cloud Phone", icon: Smartphone },
 ];
 
-const DISCOVER: Item[] = [{ to: "/resources", label: "Marketplace", icon: Boxes }];
+const DISCOVER: Item[] = [
+  { to: "/resources", label: "Marketplace", icon: Boxes },
+  { to: "/library", label: "Resources", icon: Boxes },
+  { to: "/plugins", label: "Plugins", icon: Puzzle },
+  { to: "/agents", label: "Agents", icon: Bot },
+  { to: "/skills", label: "Skills", icon: Wrench },
+  { capability: "manage_toolkits", to: "/toolkits", label: "Toolkits", icon: Wrench },
+  { to: "/prompts", label: "Prompts", icon: ScrollText },
+  { to: "/memory", label: "Memory", icon: Brain },
+  { to: "/knowledge", label: "Knowledge", icon: BookOpen },
+];
 
 const CONNECTIONS: Item[] = [
   { to: "/connections", label: "Connectors", icon: Plug },
@@ -146,7 +146,11 @@ export function AppSidebar() {
           pathname={pathname}
         />
         <NavGroup label="Cloud" items={CLOUD} pathname={pathname} />
-        <NavGroup label="Discover" items={DISCOVER} pathname={pathname} />
+        <NavGroup
+          label="Discover"
+          items={DISCOVER.filter((item) => !item.capability || can(item.capability))}
+          pathname={pathname}
+        />
         <NavGroup label="Connections" items={CONNECTIONS} pathname={pathname} />
       </SidebarContent>
 
