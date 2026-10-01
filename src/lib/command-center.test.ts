@@ -27,7 +27,7 @@ function widget() {
   const grid = element(),
     access = element();
   let receive: (event: { data: { method: string; params: unknown } }) => void = () => {};
-  vm.runInNewContext(COMMAND_CENTER_HTML.match(/<script>([\s\S]*?)<\/script>/)![1], {
+  vm.runInNewContext(COMMAND_CENTER_HTML.match(/<script>([\s\S]*?)<\/script>/i)![1], {
     document: {
       getElementById: (id: string) => (id === "grid" ? grid : access),
       createElement: element,
