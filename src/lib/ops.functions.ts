@@ -7,7 +7,7 @@ export type TaskStatus = "todo" | "in_progress" | "blocked" | "done" | "cancelle
 export type TaskPriority = "low" | "medium" | "high" | "urgent";
 export type ScheduleStatus = "active" | "paused" | "completed" | "failed";
 export type TriggerType = "manual" | "schedule" | "webhook" | "event";
-export type ActionType = "notify" | "webhook" | "mcp" | "agent" | "pipeline";
+export type ActionType = "notify" | "webhook" | "mcp" | "agent" | "pipeline" | "model";
 
 /* ─── Tasks ─────────────────────────────────────────────── */
 
@@ -199,6 +199,12 @@ export const createAutomation = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     if (!data.name) throw new Error("Automation name required");
+    if (data.actionType === "model") {
+      const { automationPrompt } = await import("@/lib/automation-model.server");
+      automationPrompt(data.config);
+      if (data.triggerType !== "manual")
+        throw new Error("AI response automations currently support manual runs only.");
+    }
     const { data: row, error } = await context.supabase
       .from("automations")
       .insert({
@@ -246,6 +252,77 @@ export const runAutomation = createServerFn({ method: "POST" })
       .single();
     if (automationError) throw new Error(automationError.message);
     assertAutomationRunnable(automation);
+
+    if (automation.action_type === "model") {
+      const { automationPrompt, generateAutomationResponse } =
+        await import("@/lib/automation-model.server");
+      const prompt = automationPrompt((automation.config ?? {}) as Record<string, unknown>);
+      const { resolveUserUpstreams } = await import("@/lib/gateway.server");
+      const upstream = (await resolveUserUpstreams(context.userId)).find(
+        (u) => u.name === "openrouter",
+      );
+      if (!upstream)
+        throw new Error("Connect OpenRouter in AI Gateway before running this automation.");
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      // Generated database types lag the deployed control-plane schema.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const db = supabaseAdmin as any;
+      const runId = crypto.randomUUID();
+      const evidence = {
+        automation_id: automation.id,
+        project_id: automation.project_id,
+        executor: "model",
+      };
+      const { error: startError } = await db.from("autonomous_runs").insert({
+        id: runId,
+        user_id: context.userId,
+        goal: prompt,
+        environment: "production",
+        state: "running",
+        plan: { action: "model", model: "openrouter/free" },
+        evidence,
+        rollback: { available: false },
+        correlation_id: runId,
+      });
+      if (startError) throw new Error("Could not save the run. No AI request was sent.");
+      let result: { text: string; model: string } | null = null;
+      let failure: string | null = null;
+      try {
+        result = await generateAutomationResponse(prompt, upstream);
+      } catch (error) {
+        failure = error instanceof Error ? error.message : "AI request failed.";
+      }
+      const status = result ? "succeeded" : "failed";
+      const finishedAt = new Date().toISOString();
+      const { error: saveError } = await db
+        .from("autonomous_runs")
+        .update({
+          state: status,
+          updated_at: finishedAt,
+          evidence: {
+            ...evidence,
+            output: result?.text ?? null,
+            model: result?.model ?? null,
+            error: failure,
+          },
+        })
+        .eq("id", runId)
+        .eq("user_id", context.userId);
+      if (saveError)
+        throw new Error(
+          `Run ${runId} finished, but its result could not be saved. Check run history before retrying.`,
+        );
+      const { data: row, error: updateError } = await context.supabase
+        .from("automations")
+        .update({ last_run_at: now, last_status: status, updated_at: finishedAt })
+        .eq("id", data.id)
+        .select("id,name,last_run_at,last_status")
+        .single();
+      if (updateError)
+        throw new Error("Run result saved, but the automation summary could not be updated.");
+      if (failure) throw new Error(failure);
+      return { ...row, correlation_id: runId };
+    }
 
     let correlationId: string | null = null;
     let status = "planned";
@@ -329,4 +406,31 @@ export const runAutomation = createServerFn({ method: "POST" })
       .single();
     if (error) throw new Error(error.message);
     return { ...row, correlation_id: correlationId };
+  });
+
+/** RLS and an explicit user filter keep prompt/output history private to its owner. */
+export const listAutomationRuns = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = context.supabase as any;
+    const { data, error } = await db
+      .from("autonomous_runs")
+      .select("id,state,evidence,created_at")
+      .eq("user_id", context.userId)
+      .contains("evidence", { executor: "model" })
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (error) throw new Error("Could not load AI run history.");
+    return (data ?? []) as {
+      id: string;
+      state: string;
+      created_at: string;
+      evidence: {
+        automation_id: string;
+        output?: string;
+        model?: string;
+        error?: string;
+      };
+    }[];
   });
