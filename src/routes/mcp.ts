@@ -517,14 +517,23 @@ function toolTitle(name: string) {
     .join(" ");
 }
 
-function chatGptTools(key: AuthedKey) {
+function chatGptTools() {
   // Marketplace resources are intentionally accessed through list_resources,
   // search, and fetch. Publishing every catalog row as another MCP tool creates
   // duplicate capabilities and makes ChatGPT's plugin scan brittle.
-  return PLATFORM_TOOLS.filter((tool) => canUseTool(key, tool.name)).map((tool) => ({
-    ...tool,
-    title: tool.title ?? toolTitle(tool.name),
-  }));
+  // Discovery describes capabilities; execution still enforces token scopes and roles.
+  // Hiding write tools here prevents clients from discovering their OAuth requirements.
+  return PLATFORM_TOOLS.map((tool) => {
+    const securitySchemes = [
+      { type: "oauth2", scopes: [TOOL_SCOPES[tool.name] ?? "tools:invoke"] },
+    ];
+    return {
+      ...tool,
+      title: tool.title ?? toolTitle(tool.name),
+      securitySchemes,
+      _meta: { ...tool._meta, securitySchemes },
+    };
+  });
 }
 
 async function getCatalog(force = false) {
@@ -740,7 +749,7 @@ export const Route = createFileRoute("/mcp")({
               "Use read-only discovery tools before write tools. Hubstaff, E2B, connection, and credential actions are scoped to the authenticated Open-Connect account and role.",
           };
         } else if (body.method === "tools/list") {
-          result = { tools: chatGptTools(key) };
+          result = { tools: chatGptTools() };
         } else if (body.method === "resources/list") {
           result = {
             resources: [
