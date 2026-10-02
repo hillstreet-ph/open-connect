@@ -164,3 +164,15 @@ test("unverified catalog entries remain ineligible for installation", async () =
   );
   expect(tables).not.toContain("capability_installations");
 });
+
+test("read tokens discover write scope requirements without gaining execution rights", async () => {
+  scopes = ["mcp:connect", "resources:read"];
+  const response = await listTools();
+  const { result } = await response.json();
+  const tool = result.tools.find((item: { name: string }) => item.name === "call_connection_tool");
+  expect(tool.securitySchemes).toEqual([{ type: "oauth2", scopes: ["connections:invoke"] }]);
+  expect(tool._meta.securitySchemes).toEqual(tool.securitySchemes);
+  const denied = await call("call_connection_tool", {});
+  expect(denied.status).toBe(403);
+  expect(tables).not.toContain("app_connections");
+});
