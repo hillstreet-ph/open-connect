@@ -4,7 +4,22 @@ import {
   managedConnectorReady,
   connectionMethod,
   listOwnedManagedConnections,
+  managedIdentityIds,
 } from "./managed-connectors.server.ts";
+
+test("identity aliases are scoped to one explicitly configured application user", () => {
+  const original = process.env["COMPOSIO_USER_MAPPINGS"];
+  try {
+    process.env["COMPOSIO_USER_MAPPINGS"] = JSON.stringify({ owner: ["broker-owner"] });
+    assert.deepEqual(managedIdentityIds("owner"), ["owner", "broker-owner"]);
+    assert.deepEqual(managedIdentityIds("other"), ["other"]);
+    process.env["COMPOSIO_USER_MAPPINGS"] = JSON.stringify({ owner: [null] });
+    assert.throws(() => managedIdentityIds("owner"), /Invalid Composio user mapping/);
+  } finally {
+    if (original === undefined) delete process.env["COMPOSIO_USER_MAPPINGS"];
+    else process.env["COMPOSIO_USER_MAPPINGS"] = original;
+  }
+});
 
 test("managed connectors require both a broker key and provider auth config", () => {
   const originalKey = process.env["COMPOSIO_API_KEY"];
