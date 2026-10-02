@@ -513,7 +513,6 @@ export const listAppConnections = createServerFn({ method: "GET" })
     );
   });
 
-
 export const syncComposioConnections = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
