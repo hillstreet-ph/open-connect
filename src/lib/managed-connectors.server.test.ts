@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { managedConnectorReady, connectionMethod, listOwnedManagedConnections } from "./managed-connectors.server.ts";
+import {
+  managedConnectorReady,
+  connectionMethod,
+  listOwnedManagedConnections,
+} from "./managed-connectors.server.ts";
 
 test("managed connectors require both a broker key and provider auth config", () => {
   const originalKey = process.env["COMPOSIO_API_KEY"];
@@ -61,16 +65,22 @@ test("account sync filters ownership, config, and status and deduplicates pages"
     const url = new URL(String(input));
     assert.equal(url.searchParams.get("user_ids"), "user-a");
     calls++;
-    return new Response(JSON.stringify({
-      items: calls === 1 ? [
-        good,
-        { ...good, id: "ca_other", user_id: "user-b" },
-        { ...good, id: "ca_pending", status: "INITIATED" },
-        { ...good, id: "ca_disabled", is_disabled: true },
-        { ...good, id: "ca_unknown", auth_config: { id: "ac_other" } },
-      ] : [good],
-      next_cursor: calls === 1 ? "next-page" : null,
-    }), { status: 200 });
+    return new Response(
+      JSON.stringify({
+        items:
+          calls === 1
+            ? [
+                good,
+                { ...good, id: "ca_other", user_id: "user-b" },
+                { ...good, id: "ca_pending", status: "INITIATED" },
+                { ...good, id: "ca_disabled", is_disabled: true },
+                { ...good, id: "ca_unknown", auth_config: { id: "ac_other" } },
+              ]
+            : [good],
+        next_cursor: calls === 1 ? "next-page" : null,
+      }),
+      { status: 200 },
+    );
   };
   try {
     assert.deepEqual(await listOwnedManagedConnections("user-a"), [
