@@ -8,6 +8,77 @@ import { normalizeConnectionSetup, type ConnectionSetupInput } from "@/lib/conne
  * Agents never receive provider tokens; they present oc_live_ keys only.
  */
 const CATALOG = [
+  {
+    provider: "anthropic_administrator",
+    display_name: "Anthropic Administration",
+    category: "AI",
+    scopes: [],
+    oauth: true,
+  },
+  { provider: "apify_mcp", display_name: "Apify MCP", category: "Data", scopes: [], oauth: true },
+  {
+    provider: "cloudflare_api_key",
+    display_name: "Cloudflare API",
+    category: "Infrastructure",
+    scopes: [],
+    oauth: true,
+  },
+  {
+    provider: "cloudflare_browser_rendering",
+    display_name: "Cloudflare Browser Rendering",
+    category: "Infrastructure",
+    scopes: [],
+    oauth: true,
+  },
+  {
+    provider: "cloudflare_mcp",
+    display_name: "Cloudflare MCP",
+    category: "Infrastructure",
+    scopes: [],
+    oauth: true,
+  },
+  {
+    provider: "custom_tinyfish_mcp",
+    display_name: "TinyFish MCP",
+    category: "Data",
+    scopes: [],
+    oauth: true,
+  },
+  {
+    provider: "notion_mcp",
+    display_name: "Notion MCP",
+    category: "Productivity",
+    scopes: [],
+    oauth: true,
+  },
+  {
+    provider: "railway",
+    display_name: "Railway",
+    category: "Infrastructure",
+    scopes: [],
+    oauth: true,
+  },
+  {
+    provider: "sentry_mcp",
+    display_name: "Sentry MCP",
+    category: "Development",
+    scopes: [],
+    oauth: true,
+  },
+  {
+    provider: "supabase_mcp",
+    display_name: "Supabase MCP",
+    category: "Data",
+    scopes: [],
+    oauth: true,
+  },
+  {
+    provider: "supabase_read_mcp",
+    display_name: "Supabase MCP (Read Only)",
+    category: "Data",
+    scopes: [],
+    oauth: true,
+  },
   // Existing Composio toolkits use hosted authorization when configured.
   {
     provider: "google_sheets",
