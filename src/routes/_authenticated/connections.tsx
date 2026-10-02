@@ -127,7 +127,7 @@ function ConnectionsPage() {
       configureFn({
         data: {
           provider: selectedApp?.provider ?? "",
-          display_name: selectedApp?.display_name,
+          display_name: selectedApp?.display_name ?? "",
           account_label: accountLabel,
           endpoint_url: endpointUrl,
           api_key: apiKey,
