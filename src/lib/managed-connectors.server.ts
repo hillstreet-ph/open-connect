@@ -131,7 +131,8 @@ export async function listOwnedManagedConnections(userId: string) {
         account.is_disabled ||
         account.auth_config?.is_disabled ||
         !account.id
-      ) continue;
+      )
+        continue;
       accounts.set(account.id, { id: account.id, provider });
     }
     cursor = page.next_cursor ?? "";
