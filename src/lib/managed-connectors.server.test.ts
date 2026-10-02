@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { managedConnectorReady } from "./managed-connectors.server.ts";
+import { managedConnectorReady, connectionMethod } from "./managed-connectors.server.ts";
 
 test("managed connectors require both a broker key and provider auth config", () => {
   const originalKey = process.env["COMPOSIO_API_KEY"];
@@ -33,4 +33,13 @@ test("invalid broker configuration never enables a connector", () => {
     else process.env["COMPOSIO_AUTH_CONFIGS"] = original;
     delete process.env["COMPOSIO_API_KEY"];
   }
+});
+
+test("configured broker supports native OAuth and API-key catalog providers", () => {
+  assert.equal(connectionMethod("github", true, true), "managed_oauth");
+  assert.equal(connectionMethod("supabase", false, true), "managed_oauth");
+  assert.equal(connectionMethod("cloudflare", false, true), "managed_oauth");
+  assert.equal(connectionMethod("github", true, false), "native_oauth");
+  assert.equal(connectionMethod("supabase", false, false), "api_key");
+  assert.equal(connectionMethod("gmail", true, false), "managed_oauth");
 });
