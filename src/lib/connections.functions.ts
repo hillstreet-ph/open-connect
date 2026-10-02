@@ -770,6 +770,7 @@ export const disconnectApp = createServerFn({ method: "POST" })
     const { data: connection, error: readError } = await context.supabase
       .from("app_connections")
       .select("provider,credential_reference,metadata")
+      .eq("user_id", context.userId)
       .eq("id", data.id)
       .maybeSingle();
     if (readError) throw new Error(readError.message);
@@ -777,12 +778,16 @@ export const disconnectApp = createServerFn({ method: "POST" })
       /^composio:\/\/connected-account\/([^/]+)$/,
     )?.[1];
     const imported =
-      (connection?.metadata as Record<string, unknown> | null)?.source === "composio-sync";
+      (connection?.metadata as Record<string, unknown> | null)?.["source"] === "composio-sync";
     if (managedAccountId && connection?.provider && !imported) {
       const { deleteManagedConnection } = await import("@/lib/managed-connectors.server");
       await deleteManagedConnection(connection.provider, managedAccountId);
     }
-    const { error } = await context.supabase.from("app_connections").delete().eq("id", data.id);
+    const { error } = await context.supabase
+      .from("app_connections")
+      .delete()
+      .eq("user_id", context.userId)
+      .eq("id", data.id);
     if (error) throw new Error(error.message);
     const secretId = connection?.credential_reference?.match(
       /^credential:\/\/[^/]+\/([0-9a-f-]{36})$/i,
@@ -800,17 +805,6 @@ export const configureAppConnection = createServerFn({ method: "POST" })
     const setup = normalizeConnectionSetup(data, app);
     const { validateConnectionCredential } = await import("@/lib/connection-validation.server");
     const validation = await validateConnectionCredential(setup);
-    const existing =
-      setup.provider === "custom_mcp"
-        ? null
-        : await context.supabase
-            .from("app_connections")
-            .select("id,credential_reference")
-            .eq("user_id", context.userId)
-            .eq("provider", setup.provider)
-            .is("provider_account_id", null)
-            .maybeSingle();
-    if (existing?.error) throw new Error(existing.error.message);
     let secretId = "";
     if (setup.apiKey) {
       const secretPayload = JSON.stringify({
@@ -831,10 +825,7 @@ export const configureAppConnection = createServerFn({ method: "POST" })
       secretId = String((secret as { id?: string } | null)?.id ?? "");
       if (!secretId) throw new Error("Credential vault did not return a reference");
     }
-    const accountId =
-      setup.provider === "custom_mcp"
-        ? `${setup.accountLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${(secretId || crypto.randomUUID()).slice(0, 8)}`
-        : null;
+    const accountId = `credential-${crypto.randomUUID()}`;
     const record = {
       user_id: context.userId,
       provider: setup.provider,
@@ -859,9 +850,7 @@ export const configureAppConnection = createServerFn({ method: "POST" })
       },
     };
 
-    const query = existing?.data?.id
-      ? context.supabase.from("app_connections").update(record).eq("id", existing.data.id)
-      : context.supabase.from("app_connections").insert(record);
+    const query = context.supabase.from("app_connections").insert(record);
     const { data: connection, error } = await query
       .select("id, provider, display_name, status, scopes, provider_account_id, created_at")
       .single();
@@ -870,12 +859,6 @@ export const configureAppConnection = createServerFn({ method: "POST" })
         await context.supabase.rpc("delete_credential_secret", { p_id: secretId });
       }
       throw new Error(error.message);
-    }
-    const oldSecretId = existing?.data?.credential_reference?.match(
-      /^credential:\/\/[^/]+\/([0-9a-f-]{36})$/i,
-    )?.[1];
-    if (oldSecretId && oldSecretId !== secretId) {
-      await context.supabase.rpc("delete_credential_secret", { p_id: oldSecretId });
     }
     return { ...connection, validation };
   });
