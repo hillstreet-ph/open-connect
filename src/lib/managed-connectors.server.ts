@@ -100,12 +100,41 @@ export function connectionMethod(provider: string, oauth: boolean, managedReady:
   return oauth ? "managed_oauth" : "api_key";
 }
 
-/** Match only active accounts owned by the signed-in Open-Connect user. */
+/** Identity aliases are provisioned by the deployment administrator, never by client input. */
+export function managedIdentityIds(userId: string): string[] {
+  const raw = process.env["COMPOSIO_USER_MAPPINGS"];
+  if (!raw) return [userId];
+  const mappings = JSON.parse(raw) as Record<string, unknown>;
+  const mapped = mappings[userId];
+  if (mapped === undefined) return [userId];
+  if (!Array.isArray(mapped) || mapped.some((id) => typeof id !== "string" || !id.trim())) {
+    throw new Error("Invalid Composio user mapping.");
+  }
+  return [...new Set([userId, ...(mapped as string[])])];
+}
+
 export async function listOwnedManagedConnections(userId: string) {
+  const accounts = new Map<string, { id: string; provider: string }>();
+  for (const identity of managedIdentityIds(userId)) {
+    for (const account of await listManagedIdentityConnections(identity)) {
+      accounts.set(account.id, account);
+    }
+  }
+  return [...accounts.values()];
+}
+
+async function listManagedIdentityConnections(userId: string) {
   const apiKey = process.env["COMPOSIO_API_KEY"]?.trim();
   if (!apiKey) throw new Error("Composio is not configured.");
   if (!userId.trim()) throw new Error("A signed-in user is required.");
   const providers = new Map(Object.entries(authConfigs()).map(([provider, id]) => [id, provider]));
+  const aliases = JSON.parse(process.env["COMPOSIO_AUTH_CONFIG_ALIASES"] || "{}") as Record<
+    string,
+    string
+  >;
+  for (const [id, provider] of Object.entries(aliases)) {
+    if (id.startsWith("ac_") && authConfigs()[provider]) providers.set(id, provider);
+  }
   const accounts = new Map<string, { id: string; provider: string }>();
   const cursors = new Set<string>();
   let cursor = "";
