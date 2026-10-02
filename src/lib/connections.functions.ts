@@ -8,6 +8,36 @@ import { normalizeConnectionSetup, type ConnectionSetupInput } from "@/lib/conne
  * Agents never receive provider tokens; they present oc_live_ keys only.
  */
 const CATALOG = [
+  // Existing Composio toolkits use hosted authorization when configured.
+  {
+    provider: "google_sheets",
+    display_name: "Google Sheets",
+    category: "Productivity",
+    scopes: [],
+    oauth: true,
+  },
+  {
+    provider: "google_docs",
+    display_name: "Google Docs",
+    category: "Productivity",
+    scopes: [],
+    oauth: true,
+  },
+  {
+    provider: "google_photos",
+    display_name: "Google Photos",
+    category: "Productivity",
+    scopes: [],
+    oauth: true,
+  },
+  {
+    provider: "google_super",
+    display_name: "Google Workspace",
+    category: "Productivity",
+    scopes: [],
+    oauth: true,
+  },
+  { provider: "firecrawl", display_name: "Firecrawl", category: "Data", scopes: [], oauth: true },
   // Development
   {
     provider: "github",
@@ -331,19 +361,23 @@ const CATALOG = [
 ] as const;
 
 export const listConnectionCatalog = createServerFn({ method: "GET" }).handler(async () => {
-  const { managedConnectorReady } = await import("@/lib/managed-connectors.server");
+  const { managedConnectorReady, connectionMethod } =
+    await import("@/lib/managed-connectors.server");
   const githubReady = Boolean(
     process.env["GITHUB_CLIENT_ID"]?.trim() && process.env["GITHUB_CLIENT_SECRET"]?.trim(),
   );
   return CATALOG.map((item) => {
-    const method =
-      item.provider === "github" ? "native_oauth" : item.oauth ? "managed_oauth" : "api_key";
+    const method = connectionMethod(
+      item.provider,
+      item.oauth,
+      managedConnectorReady(item.provider),
+    );
     return {
       provider: item.provider,
       display_name: item.display_name,
       category: item.category,
       scopes: [...item.scopes],
-      oauth: item.oauth,
+      oauth: method !== "api_key",
       connection_method: method,
       oauth_ready:
         method === "native_oauth"
@@ -379,10 +413,7 @@ export const listAppConnections = createServerFn({ method: "GET" })
           try {
             const remote = await getManagedConnection(connection.provider, accountId);
             if (remote.status?.toUpperCase() !== "ACTIVE") return;
-            connection.status = "connected";
-            connection.provider_account_id = remote.id || accountId;
-            connection.scopes = [];
-            await context.supabase
+            const { error: updateError } = await context.supabase
               .from("app_connections")
               .update({
                 status: "connected",
@@ -396,6 +427,10 @@ export const listAppConnections = createServerFn({ method: "GET" })
                 },
               })
               .eq("id", connection.id);
+            if (updateError) throw new Error("Could not save verified connection status");
+            connection.status = "connected";
+            connection.provider_account_id = remote.id || accountId;
+            connection.scopes = [];
           } catch {
             // Keep pending. The broker may still be waiting for the user to finish authorization.
           }
@@ -415,9 +450,13 @@ export const connectApp = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const app = CATALOG.find((item) => item.provider === data.provider);
     if (!app) throw new Error("Unknown application");
-    if (!app.oauth) throw new Error("This provider uses a verified API key or token connection.");
+    const { managedConnectorReady, connectionMethod } =
+      await import("@/lib/managed-connectors.server");
+    const method = connectionMethod(app.provider, app.oauth, managedConnectorReady(app.provider));
+    if (method === "api_key")
+      throw new Error("This provider uses a verified API key or token connection.");
 
-    if (app.provider !== "github") {
+    if (method === "managed_oauth") {
       const { createManagedConnectionLink } = await import("@/lib/managed-connectors.server");
       const callbackUrl = `${(process.env["VITE_APP_URL"] || "https://open-connect.site").replace(
         /\/$/,

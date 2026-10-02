@@ -92,3 +92,10 @@ export async function deleteManagedConnection(provider: string, connectedAccount
     { method: "DELETE" },
   );
 }
+
+/** Prefer an explicitly configured broker, retaining native/key fallbacks. */
+export function connectionMethod(provider: string, oauth: boolean, managedReady: boolean) {
+  if (managedReady) return "managed_oauth";
+  if (provider === "github") return "native_oauth";
+  return oauth ? "managed_oauth" : "api_key";
+}
