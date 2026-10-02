@@ -8,6 +8,107 @@ import { normalizeConnectionSetup, type ConnectionSetupInput } from "@/lib/conne
  * Agents never receive provider tokens; they present oc_live_ keys only.
  */
 const CATALOG = [
+  {
+    provider: "anthropic_administrator",
+    display_name: "Anthropic Administration",
+    category: "AI",
+    scopes: [],
+    oauth: true,
+  },
+  { provider: "apify_mcp", display_name: "Apify MCP", category: "Data", scopes: [], oauth: true },
+  {
+    provider: "cloudflare_api_key",
+    display_name: "Cloudflare API",
+    category: "Infrastructure",
+    scopes: [],
+    oauth: true,
+  },
+  {
+    provider: "cloudflare_browser_rendering",
+    display_name: "Cloudflare Browser Rendering",
+    category: "Infrastructure",
+    scopes: [],
+    oauth: true,
+  },
+  {
+    provider: "cloudflare_mcp",
+    display_name: "Cloudflare MCP",
+    category: "Infrastructure",
+    scopes: [],
+    oauth: true,
+  },
+  {
+    provider: "custom_tinyfish_mcp",
+    display_name: "TinyFish MCP",
+    category: "Data",
+    scopes: [],
+    oauth: true,
+  },
+  {
+    provider: "notion_mcp",
+    display_name: "Notion MCP",
+    category: "Productivity",
+    scopes: [],
+    oauth: true,
+  },
+  {
+    provider: "railway",
+    display_name: "Railway",
+    category: "Infrastructure",
+    scopes: [],
+    oauth: true,
+  },
+  {
+    provider: "sentry_mcp",
+    display_name: "Sentry MCP",
+    category: "Development",
+    scopes: [],
+    oauth: true,
+  },
+  {
+    provider: "supabase_mcp",
+    display_name: "Supabase MCP",
+    category: "Data",
+    scopes: [],
+    oauth: true,
+  },
+  {
+    provider: "supabase_read_mcp",
+    display_name: "Supabase MCP (Read Only)",
+    category: "Data",
+    scopes: [],
+    oauth: true,
+  },
+  // Existing Composio toolkits use hosted authorization when configured.
+  {
+    provider: "google_sheets",
+    display_name: "Google Sheets",
+    category: "Productivity",
+    scopes: [],
+    oauth: true,
+  },
+  {
+    provider: "google_docs",
+    display_name: "Google Docs",
+    category: "Productivity",
+    scopes: [],
+    oauth: true,
+  },
+  {
+    provider: "google_photos",
+    display_name: "Google Photos",
+    category: "Productivity",
+    scopes: [],
+    oauth: true,
+  },
+  {
+    provider: "google_super",
+    display_name: "Google Workspace",
+    category: "Productivity",
+    scopes: [],
+    oauth: true,
+  },
+  { provider: "firecrawl", display_name: "Firecrawl", category: "Data", scopes: [], oauth: true },
   // Development
   {
     provider: "github",
@@ -331,19 +432,23 @@ const CATALOG = [
 ] as const;
 
 export const listConnectionCatalog = createServerFn({ method: "GET" }).handler(async () => {
-  const { managedConnectorReady } = await import("@/lib/managed-connectors.server");
+  const { managedConnectorReady, connectionMethod } =
+    await import("@/lib/managed-connectors.server");
   const githubReady = Boolean(
     process.env["GITHUB_CLIENT_ID"]?.trim() && process.env["GITHUB_CLIENT_SECRET"]?.trim(),
   );
   return CATALOG.map((item) => {
-    const method =
-      item.provider === "github" ? "native_oauth" : item.oauth ? "managed_oauth" : "api_key";
+    const method = connectionMethod(
+      item.provider,
+      item.oauth,
+      managedConnectorReady(item.provider),
+    );
     return {
       provider: item.provider,
       display_name: item.display_name,
       category: item.category,
       scopes: [...item.scopes],
-      oauth: item.oauth,
+      oauth: method !== "api_key",
       connection_method: method,
       oauth_ready:
         method === "native_oauth"
@@ -379,10 +484,7 @@ export const listAppConnections = createServerFn({ method: "GET" })
           try {
             const remote = await getManagedConnection(connection.provider, accountId);
             if (remote.status?.toUpperCase() !== "ACTIVE") return;
-            connection.status = "connected";
-            connection.provider_account_id = remote.id || accountId;
-            connection.scopes = [];
-            await context.supabase
+            const { error: updateError } = await context.supabase
               .from("app_connections")
               .update({
                 status: "connected",
@@ -396,6 +498,10 @@ export const listAppConnections = createServerFn({ method: "GET" })
                 },
               })
               .eq("id", connection.id);
+            if (updateError) throw new Error("Could not save verified connection status");
+            connection.status = "connected";
+            connection.provider_account_id = remote.id || accountId;
+            connection.scopes = [];
           } catch {
             // Keep pending. The broker may still be waiting for the user to finish authorization.
           }
@@ -407,6 +513,55 @@ export const listAppConnections = createServerFn({ method: "GET" })
     );
   });
 
+export const syncComposioConnections = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { listOwnedManagedConnections } = await import("@/lib/managed-connectors.server");
+    const accounts = await listOwnedManagedConnections(context.userId);
+    const { data: saved, error: readError } = await context.supabase
+      .from("app_connections")
+      .select("provider,provider_account_id")
+      .eq("user_id", context.userId);
+    if (readError) throw new Error(readError.message);
+    const keys = new Set(
+      (saved ?? []).map((item) => `${item.provider}:${item.provider_account_id}`),
+    );
+    const records = accounts.flatMap((account) => {
+      const app = CATALOG.find((item) => item.provider === account.provider);
+      if (!app || keys.has(`${account.provider}:${account.id}`)) return [];
+      return [
+        {
+          user_id: context.userId,
+          provider: account.provider,
+          provider_account_id: account.id,
+          display_name: app.display_name,
+          status: "connected",
+          scopes: [] as string[],
+          credential_reference: `composio://connected-account/${account.id}`,
+          metadata: {
+            source: "composio-sync",
+            mode: "managed_oauth",
+            broker: "composio",
+            validation: { verified: true, checked_at: new Date().toISOString() },
+            full_scopes: false,
+          },
+        },
+      ];
+    });
+    if (records.length) {
+      const { error } = await context.supabase.from("app_connections").insert(records);
+      if (error?.code === "23505") {
+        throw new Error("Another sync updated these accounts. Run sync again to refresh.");
+      }
+      if (error) throw new Error(error.message);
+    }
+    return {
+      imported: records.length,
+      existing: accounts.length - records.length,
+      matched: accounts.length,
+    };
+  });
+
 export const connectApp = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: { provider: string }) => ({
@@ -415,9 +570,13 @@ export const connectApp = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const app = CATALOG.find((item) => item.provider === data.provider);
     if (!app) throw new Error("Unknown application");
-    if (!app.oauth) throw new Error("This provider uses a verified API key or token connection.");
+    const { managedConnectorReady, connectionMethod } =
+      await import("@/lib/managed-connectors.server");
+    const method = connectionMethod(app.provider, app.oauth, managedConnectorReady(app.provider));
+    if (method === "api_key")
+      throw new Error("This provider uses a verified API key or token connection.");
 
-    if (app.provider !== "github") {
+    if (method === "managed_oauth") {
       const { createManagedConnectionLink } = await import("@/lib/managed-connectors.server");
       const callbackUrl = `${(process.env["VITE_APP_URL"] || "https://open-connect.site").replace(
         /\/$/,
@@ -610,18 +769,25 @@ export const disconnectApp = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: connection, error: readError } = await context.supabase
       .from("app_connections")
-      .select("provider,credential_reference")
+      .select("provider,credential_reference,metadata")
+      .eq("user_id", context.userId)
       .eq("id", data.id)
       .maybeSingle();
     if (readError) throw new Error(readError.message);
     const managedAccountId = connection?.credential_reference?.match(
       /^composio:\/\/connected-account\/([^/]+)$/,
     )?.[1];
-    if (managedAccountId && connection?.provider) {
+    const imported =
+      (connection?.metadata as Record<string, unknown> | null)?.["source"] === "composio-sync";
+    if (managedAccountId && connection?.provider && !imported) {
       const { deleteManagedConnection } = await import("@/lib/managed-connectors.server");
       await deleteManagedConnection(connection.provider, managedAccountId);
     }
-    const { error } = await context.supabase.from("app_connections").delete().eq("id", data.id);
+    const { error } = await context.supabase
+      .from("app_connections")
+      .delete()
+      .eq("user_id", context.userId)
+      .eq("id", data.id);
     if (error) throw new Error(error.message);
     const secretId = connection?.credential_reference?.match(
       /^credential:\/\/[^/]+\/([0-9a-f-]{36})$/i,
@@ -639,17 +805,6 @@ export const configureAppConnection = createServerFn({ method: "POST" })
     const setup = normalizeConnectionSetup(data, app);
     const { validateConnectionCredential } = await import("@/lib/connection-validation.server");
     const validation = await validateConnectionCredential(setup);
-    const existing =
-      setup.provider === "custom_mcp"
-        ? null
-        : await context.supabase
-            .from("app_connections")
-            .select("id,credential_reference")
-            .eq("user_id", context.userId)
-            .eq("provider", setup.provider)
-            .is("provider_account_id", null)
-            .maybeSingle();
-    if (existing?.error) throw new Error(existing.error.message);
     let secretId = "";
     if (setup.apiKey) {
       const secretPayload = JSON.stringify({
@@ -670,10 +825,7 @@ export const configureAppConnection = createServerFn({ method: "POST" })
       secretId = String((secret as { id?: string } | null)?.id ?? "");
       if (!secretId) throw new Error("Credential vault did not return a reference");
     }
-    const accountId =
-      setup.provider === "custom_mcp"
-        ? `${setup.accountLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${(secretId || crypto.randomUUID()).slice(0, 8)}`
-        : null;
+    const accountId = `credential-${crypto.randomUUID()}`;
     const record = {
       user_id: context.userId,
       provider: setup.provider,
@@ -698,9 +850,7 @@ export const configureAppConnection = createServerFn({ method: "POST" })
       },
     };
 
-    const query = existing?.data?.id
-      ? context.supabase.from("app_connections").update(record).eq("id", existing.data.id)
-      : context.supabase.from("app_connections").insert(record);
+    const query = context.supabase.from("app_connections").insert(record);
     const { data: connection, error } = await query
       .select("id, provider, display_name, status, scopes, provider_account_id, created_at")
       .single();
@@ -709,12 +859,6 @@ export const configureAppConnection = createServerFn({ method: "POST" })
         await context.supabase.rpc("delete_credential_secret", { p_id: secretId });
       }
       throw new Error(error.message);
-    }
-    const oldSecretId = existing?.data?.credential_reference?.match(
-      /^credential:\/\/[^/]+\/([0-9a-f-]{36})$/i,
-    )?.[1];
-    if (oldSecretId && oldSecretId !== secretId) {
-      await context.supabase.rpc("delete_credential_secret", { p_id: oldSecretId });
     }
     return { ...connection, validation };
   });

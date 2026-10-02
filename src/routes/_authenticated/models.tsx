@@ -1,3 +1,4 @@
+import { testFreeModel } from "@/lib/model-check.functions";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -54,6 +55,10 @@ const aliases = [
 function ModelsPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const testFn = useServerFn(testFreeModel);
+  const modelTest = useMutation({
+    mutationFn: () => testFn({}),
+  });
   const listFn = useServerFn(listAppConnections);
   const configureFn = useServerFn(configureAppConnection);
   const [activeProvider, setActiveProvider] = useState<string | null>(null);
@@ -156,10 +161,34 @@ function ModelsPage() {
         ))}
       </div>
 
+      <Card className="mt-8">
+        <CardHeader>
+          <CardTitle>Test free inference</CardTitle>
+          <CardDescription>
+            Send a short test through your saved OpenRouter connection. Free models are subject to
+            provider quotas and availability.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button disabled={modelTest.isPending} onClick={() => modelTest.mutate()}>
+            {modelTest.isPending ? "Testing…" : "Test free model"}
+          </Button>
+          {modelTest.data && (
+            <p role="status" className="mt-3 text-sm">
+              Inference verified: {modelTest.data.model}
+            </p>
+          )}
+          {modelTest.error && (
+            <p role="alert" className="mt-3 text-sm text-destructive">
+              {modelTest.error.message}
+            </p>
+          )}
+        </CardContent>
+      </Card>
       <h2 className="mt-14 text-xl font-semibold">AI provider credentials</h2>
       <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-        Add each provider key once. Open‑Connect stores it in Vault and routes requests through the
-        same LiteLLM-compatible gateway.
+        OpenRouter keys saved here are used by your model gateway. Other provider keys are stored
+        for integrations; direct gateway adapters must be configured separately.
       </p>
       <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {providers.map((provider) => (

@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { KeyRound, Link2, Loader2, Lock, Search } from "lucide-react";
+import { KeyRound, Link2, Loader2, Lock, Search, Plus, X, Unplug } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -10,6 +10,7 @@ import {
   disconnectApp,
   listAppConnections,
   listConnectionCatalog,
+  syncComposioConnections,
 } from "@/lib/connections.functions";
 import { useAuth } from "@/hooks/use-auth";
 import { connectionCategories } from "@/lib/nav";
@@ -34,6 +35,7 @@ type CatalogApp = {
   scopes: string[];
   oauth: boolean;
   oauth_ready: boolean;
+  connection_method?: string;
 };
 
 function connectionStatusLabel(status: string) {
@@ -70,6 +72,8 @@ function ConnectionsPage() {
   const connectFn = useServerFn(connectApp);
   const disconnectFn = useServerFn(disconnectApp);
   const configureFn = useServerFn(configureAppConnection);
+  const syncFn = useServerFn(syncComposioConnections);
+  const [managedApp, setManagedApp] = useState<CatalogApp | null>(null);
   const [selectedApp, setSelectedApp] = useState<CatalogApp | null>(null);
   const [accountLabel, setAccountLabel] = useState("");
   const [endpointUrl, setEndpointUrl] = useState("");
@@ -82,6 +86,19 @@ function ConnectionsPage() {
     queryKey: ["app-connections"],
     queryFn: () => listFn({}),
     enabled: Boolean(user),
+  });
+
+  const syncMutation = useMutation({
+    mutationFn: () => syncFn({}),
+    onSuccess: (result) => {
+      toast.success(
+        result.matched
+          ? `${result.imported} accounts synced; ${result.existing} already linked`
+          : "No authorized accounts match your Open-Connect user. Connect an app to authorize it.",
+      );
+      void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Composio sync failed"),
   });
 
   const connectMutation = useMutation({
@@ -100,9 +117,10 @@ function ConnectionsPage() {
   const disconnectMutation = useMutation({
     mutationFn: (id: string) => disconnectFn({ data: { id } }),
     onSuccess: () => {
-      toast.success("Disconnected");
+      toast.success("Connection removed");
       void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
     },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not remove connection"),
   });
 
   const configureMutation = useMutation({
@@ -110,7 +128,7 @@ function ConnectionsPage() {
       configureFn({
         data: {
           provider: selectedApp?.provider ?? "",
-          display_name: selectedApp?.display_name,
+          display_name: selectedApp?.display_name ?? "",
           account_label: accountLabel,
           endpoint_url: endpointUrl,
           api_key: apiKey,
@@ -159,7 +177,13 @@ function ConnectionsPage() {
       .map((c) => ({ category: c, apps: map.get(c)! }));
   }, [results]);
 
-  const connectionsByProvider = new Map((mine.data ?? []).map((item) => [item.provider, item]));
+  const connectionsByProvider = new Map<string, NonNullable<typeof mine.data>[number]>();
+  for (const item of mine.data ?? []) {
+    const current = connectionsByProvider.get(item.provider);
+    if (!current || (item.status === "connected" && current.status !== "connected")) {
+      connectionsByProvider.set(item.provider, item);
+    }
+  }
   const catOptions = ["All", ...connectionCategories];
 
   return (
@@ -174,6 +198,24 @@ function ConnectionsPage() {
       </p>
 
       <div className="mt-6 flex flex-wrap gap-2">
+        {user && (
+          <>
+            <Button
+              variant="outline"
+              disabled={syncMutation.isPending}
+              onClick={() => syncMutation.mutate()}
+            >
+              {syncMutation.isPending ? "Syncing…" : "Sync Composio accounts"}
+            </Button>
+            <Button
+              variant="outline"
+              disabled={mine.isFetching}
+              onClick={() => void mine.refetch()}
+            >
+              Refresh status
+            </Button>
+          </>
+        )}
         <Button
           type="button"
           onClick={() => {
@@ -210,6 +252,7 @@ function ConnectionsPage() {
           {catOptions.map((c) => (
             <button
               key={c}
+              aria-pressed={category === c}
               type="button"
               onClick={() => setCategory(c)}
               className={
@@ -224,31 +267,11 @@ function ConnectionsPage() {
         </div>
       </div>
 
-      {user && (mine.data?.length ?? 0) > 0 ? (
-        <div className="mt-8 space-y-2">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Your connections
-          </h2>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {mine.data?.map((c) => (
-              <Card key={c.id} className="flex flex-row items-center justify-between gap-3 p-4">
-                <div className="flex min-w-0 items-center gap-3">
-                  <BrandLogo provider={c.provider} name={c.display_name} size="sm" />
-                  <div className="min-w-0">
-                    <p className="truncate font-medium">{c.display_name}</p>
-                    <Badge variant="outline" className="mt-1 text-xs">
-                      {connectionStatusLabel(c.status)}
-                    </Badge>
-                  </div>
-                </div>
-                <Button size="sm" variant="ghost" onClick={() => disconnectMutation.mutate(c.id)}>
-                  Disconnect
-                </Button>
-              </Card>
-            ))}
-          </div>
-        </div>
-      ) : null}
+      {(catalog.isError || mine.isError) && (
+        <p role="alert" className="mt-4 text-sm text-destructive">
+          Could not load connectors. Refresh status or reload the page to retry.
+        </p>
+      )}
 
       <div className="mt-10 space-y-8">
         {grouped.map((group) => (
@@ -256,22 +279,19 @@ function ConnectionsPage() {
             <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               {group.category}
             </h2>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {group.apps.map((app) => {
                 const connection = connectionsByProvider.get(app.provider);
                 return (
-                  <Card
-                    key={app.provider}
-                    className="flex flex-row items-center justify-between gap-3 p-4"
-                  >
+                  <Card key={app.provider} className="flex flex-col gap-4 p-5">
                     <div className="flex min-w-0 items-center gap-3">
                       <BrandLogo provider={app.provider} name={app.display_name} />
                       <div className="min-w-0">
-                        <p className="truncate font-semibold">{app.display_name}</p>
+                        <p className="font-semibold leading-snug">{app.display_name}</p>
                         <p className="text-xs text-muted-foreground">
                           {app.provider === "custom_mcp"
                             ? "Custom MCP endpoint"
-                            : `${app.category} · Official provider`}
+                            : `${app.category} · ${app.connection_method === "managed_oauth" && app.oauth_ready ? "Composio" : "Official provider"}`}
                         </p>
                       </div>
                     </div>
@@ -279,35 +299,57 @@ function ConnectionsPage() {
                       <Button asChild size="sm" variant="outline" className="shrink-0">
                         <Link to="/auth">Sign in</Link>
                       </Button>
-                    ) : connection ? (
-                      <Badge variant="secondary" className="shrink-0">
-                        {connectionStatusLabel(connection.status)}
-                      </Badge>
                     ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="shrink-0"
-                        disabled={connectMutation.isPending || (app.oauth && !app.oauth_ready)}
-                        title={
-                          app.oauth && !app.oauth_ready
-                            ? "Official provider OAuth setup is not available yet"
-                            : undefined
-                        }
-                        onClick={() =>
-                          app.oauth
-                            ? connectMutation.mutate(app.provider)
-                            : setSelectedApp(app as CatalogApp)
-                        }
-                      >
-                        {app.oauth
-                          ? app.oauth_ready
-                            ? "Sign in"
-                            : "Setup required"
-                          : app.provider === "custom_mcp"
-                            ? "Add MCP"
-                            : "Add key"}
-                      </Button>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        {connection && (
+                          <Badge variant="outline">
+                            {
+                              (mine.data ?? []).filter(
+                                (c) => c.provider === app.provider && c.status === "connected",
+                              ).length
+                            }{" "}
+                            connected ·{" "}
+                            {
+                              (mine.data ?? []).filter(
+                                (c) => c.provider === app.provider && c.status === "pending",
+                              ).length
+                            }{" "}
+                            pending
+                          </Badge>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="shrink-0 border-blue-600 bg-blue-700 text-white hover:bg-blue-800 hover:text-white focus-visible:ring-2 focus-visible:ring-blue-400"
+                          disabled={
+                            !connection &&
+                            (connectMutation.isPending || (app.oauth && !app.oauth_ready))
+                          }
+                          title={
+                            app.oauth && !app.oauth_ready
+                              ? "Official provider OAuth setup is not available yet"
+                              : undefined
+                          }
+                          onClick={() =>
+                            connection
+                              ? setManagedApp(app as CatalogApp)
+                              : app.oauth
+                                ? connectMutation.mutate(app.provider)
+                                : setSelectedApp(app as CatalogApp)
+                          }
+                        >
+                          <Plus className="size-4" aria-hidden="true" />
+                          {connection
+                            ? "Manage accounts"
+                            : app.oauth
+                              ? app.oauth_ready
+                                ? "Connect"
+                                : "Setup required"
+                              : app.provider === "custom_mcp"
+                                ? "Add MCP"
+                                : "Add key"}
+                        </Button>
+                      </div>
                     )}
                   </Card>
                 );
@@ -331,6 +373,68 @@ function ConnectionsPage() {
           </CardDescription>
         </CardHeader>
       </Card>
+
+      <Dialog open={Boolean(managedApp)} onOpenChange={(open) => !open && setManagedApp(null)}>
+        <DialogContent className="sm:max-w-xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{managedApp?.display_name} accounts</DialogTitle>
+            <DialogDescription>
+              Manage each account separately. Adding an account keeps your existing connections.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            {(mine.data ?? [])
+              .filter((c) => c.provider === managedApp?.provider)
+              .map((c, index) => (
+                <div key={c.id} className="rounded-lg border border-border p-4 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="font-medium">Account {index + 1}</p>
+                    <Badge variant="outline">{connectionStatusLabel(c.status)}</Badge>
+                  </div>
+                  <details className="text-xs text-muted-foreground">
+                    <summary className="cursor-pointer">Account details</summary>
+                    <p className="mt-2 break-all">Reference: {c.provider_account_id || c.id}</p>
+                  </details>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-amber-300 bg-amber-100 text-amber-950 hover:bg-amber-200 hover:text-amber-950 focus-visible:ring-2 focus-visible:ring-amber-400"
+                    disabled={disconnectMutation.isPending}
+                    onClick={() => disconnectMutation.mutate(c.id)}
+                  >
+                    {c.status === "pending" ? (
+                      <X aria-hidden="true" className="size-4" />
+                    ) : (
+                      <Unplug aria-hidden="true" className="size-4" />
+                    )}
+                    {c.status === "pending" ? "Cancel verification" : "Disconnect"}
+                  </Button>
+                </div>
+              ))}
+          </div>
+          <Button
+            className="bg-blue-700 text-white hover:bg-blue-800 hover:text-white"
+            disabled={
+              !managedApp ||
+              connectMutation.isPending ||
+              (managedApp.oauth && !managedApp.oauth_ready)
+            }
+            onClick={() => {
+              if (!managedApp) return;
+              if (managedApp.oauth) connectMutation.mutate(managedApp.provider);
+              else {
+                setSelectedApp(managedApp);
+                setManagedApp(null);
+              }
+            }}
+          >
+            <Plus aria-hidden="true" className="size-4" />
+            {managedApp?.oauth && !managedApp.oauth_ready
+              ? "Provider setup required"
+              : "Add another account"}
+          </Button>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={Boolean(selectedApp)} onOpenChange={(open) => !open && setSelectedApp(null)}>
         <DialogContent className="sm:max-w-lg">

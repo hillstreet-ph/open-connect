@@ -1,4 +1,11 @@
 const READ_ACTIONS = [
+  "list_personal_resources",
+  "list_workspace_projects",
+  "list_credential_metadata",
+  "list_connection_tools",
+  "e2b_health",
+  "e2b_list_sandboxes",
+
   "search",
   "fetch",
   "open_connect_status",
@@ -12,6 +19,10 @@ const READ_ACTIONS = [
 ] as const;
 
 const WRITE_ACTIONS = [
+  "call_connection_tool",
+  "e2b_create_sandbox",
+  "e2b_kill_sandbox",
+
   "execute_plan",
   "create_capability_draft",
   "record_run_outcome",
@@ -95,7 +106,7 @@ export async function forwardChatGptAction(request: Request, mode: ChatGptAction
   });
   const payload = (await upstream.json().catch(() => null)) as {
     error?: unknown;
-    result?: { content?: Array<{ type?: string; text?: string }> };
+    result?: { isError?: boolean; content?: Array<{ type?: string; text?: string }> };
   } | null;
 
   if (!upstream.ok || payload?.error) {
@@ -114,5 +125,6 @@ export async function forwardChatGptAction(request: Request, mode: ChatGptAction
       result = { text };
     }
   }
+  if (payload?.result?.isError) return json({ ok: false, action, mode, result }, 502);
   return json({ ok: true, action, mode, result });
 }

@@ -11,8 +11,9 @@ export function AddToLibraryButton({ resourceId }: { resourceId: string }) {
   const mutation = useMutation({
     mutationFn: () => add({ data: { resourceId } }),
     onSuccess: () => {
-      toast.success("Added to your library");
+      toast.success("Installed — available across all your projects");
       void qc.invalidateQueries({ queryKey: ["resource-library"] });
+      void qc.invalidateQueries({ queryKey: ["project-resources"] });
     },
     onError: (error) =>
       toast.error(error instanceof Error ? error.message : "Could not add to library"),

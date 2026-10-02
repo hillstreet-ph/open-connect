@@ -1,6 +1,11 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   Bot,
+  Monitor,
+  Globe,
+  Terminal,
+  Smartphone,
+  Puzzle,
   BookOpen,
   Brain,
   Boxes,
@@ -43,7 +48,7 @@ type Item = {
 
 /**
  * Primary IA (locked):
- * Workspace switcher → Dashboard → Projects → Work → Build → Marketplace → Connections →
+ * Workspace switcher → Dashboard → Projects → Work → Discover → Cloud → Connections →
  * Connectors, Credentials, and AI Gateway. Integrations, API keys, and settings live in the user avatar menu.
  *
  * Organization settings live in the user menu; workspaces manage projects and environments.
@@ -56,22 +61,33 @@ const PRIMARY: Item[] = [
 ];
 
 const WORK: Item[] = [
-  { to: "/tasks", label: "Tasks", icon: ListTodo },
-  { to: "/automations", label: "Automations", icon: Workflow },
+  { to: "/studio", label: "Studio", icon: Sparkles },
+  { to: "/tasks", label: "Task", icon: ListTodo },
   { to: "/schedule", label: "Schedules", icon: CalendarClock },
+  { to: "/automations", label: "Automations", icon: Workflow },
 ];
 
-const BUILD: Item[] = [
-  { to: "/studio", label: "Studio", icon: Sparkles },
+const CLOUD: Item[] = [
+  { to: "/cloud-phone", label: "Cloud Phone", icon: Smartphone },
+  { to: "/cloud-browser", label: "Cloud Browser", icon: Globe },
+  { to: "/cloud-terminal", label: "Cloud Terminal", icon: Terminal },
+  { to: "/cloud-computer", label: "Cloud Computer", icon: Monitor },
+];
+
+const DISCOVER: Item[] = [
+  { to: "/resources", label: "Marketplace", icon: Boxes },
+  { to: "/library", label: "Resources", icon: Boxes },
+  { to: "/plugins", label: "Plugins", icon: Puzzle },
   { to: "/agents", label: "Agents", icon: Bot },
   { to: "/skills", label: "Skills", icon: Wrench },
+  { to: "/mcp-servers", label: "MCP", icon: Plug },
+  { to: "/tools", label: "Tools", icon: Wrench },
+  { capability: "manage_toolkits", to: "/toolkits", label: "Toolkits", icon: Wrench },
   { to: "/prompts", label: "Prompts", icon: ScrollText },
   { to: "/memory", label: "Memory", icon: Brain },
   { to: "/knowledge", label: "Knowledge", icon: BookOpen },
-  { capability: "manage_toolkits", to: "/toolkits", label: "Toolkits", icon: Wrench },
+  { to: "/others", label: "Others", icon: Boxes },
 ];
-
-const DISCOVER: Item[] = [{ to: "/resources", label: "Marketplace", icon: Boxes }];
 
 const CONNECTIONS: Item[] = [
   { to: "/connections", label: "Connectors", icon: Plug },
@@ -82,17 +98,24 @@ const CONNECTIONS: Item[] = [
 function NavGroup({ label, items, pathname }: { label: string; items: Item[]; pathname: string }) {
   if (!items.length) return null;
   return (
-    <SidebarGroup>
-      <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.12em] text-sidebar-foreground/50">
-        {label}
-      </SidebarGroupLabel>
+    <SidebarGroup className="py-1">
+      {label ? (
+        <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.12em] text-sidebar-foreground/50">
+          {label}
+        </SidebarGroupLabel>
+      ) : null}
       <SidebarGroupContent>
         <SidebarMenu>
           {items.map((item) => {
             const active = pathname === item.to || pathname.startsWith(item.to + "/");
             return (
               <SidebarMenuItem key={label + item.to + item.label}>
-                <SidebarMenuButton asChild isActive={active} tooltip={item.label}>
+                <SidebarMenuButton
+                  asChild
+                  className="h-8 text-xs"
+                  isActive={active}
+                  tooltip={item.label}
+                >
                   <Link to={item.to}>
                     <item.icon className="size-4" />
                     <span>{item.label}</span>
@@ -116,15 +139,15 @@ export function AppSidebar() {
         <WorkspaceSwitcher />
       </SidebarHeader>
 
-      <SidebarContent className="px-1 py-2">
+      <SidebarContent className="gap-1 px-1 py-1">
         <NavGroup label="" items={PRIMARY} pathname={pathname} />
         <NavGroup label="Work" items={WORK} pathname={pathname} />
         <NavGroup
-          label="Build"
-          items={BUILD.filter((item) => !item.capability || can(item.capability))}
+          label="Discover"
+          items={DISCOVER.filter((item) => !item.capability || can(item.capability))}
           pathname={pathname}
         />
-        <NavGroup label="Discover" items={DISCOVER} pathname={pathname} />
+        <NavGroup label="Cloud" items={CLOUD} pathname={pathname} />
         <NavGroup label="Connections" items={CONNECTIONS} pathname={pathname} />
       </SidebarContent>
 

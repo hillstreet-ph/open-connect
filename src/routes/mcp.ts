@@ -1,3 +1,4 @@
+import { COMMAND_CENTER_HTML } from "@/lib/command-center";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   authenticateKey,
@@ -58,17 +59,6 @@ type McpTool = {
 };
 
 const COMMAND_CENTER_URI = "ui://open-connect/command-center-v1.html";
-
-const COMMAND_CENTER_HTML = `<!doctype html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<style>body{font:14px system-ui;margin:0;background:#08111f;color:#e5eefb}.app{padding:18px}.head{display:flex;justify-content:space-between;gap:12px;align-items:center}.badge{padding:5px 9px;border-radius:999px;background:#12315c;color:#8fd3ff}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:14px}.card{border:1px solid #24415f;border-radius:12px;padding:13px;background:#0d1b2d}.muted{color:#91a6bd}.ok{color:#6ee7a8}</style></head>
-<body><main class="app"><div class="head"><div><strong>Open-Connect Command Center</strong><div class="muted">Autonomous control with governed writes</div></div><span class="badge">owners + admins</span></div><section id="grid" class="grid"><div class="card">Waiting for Open-Connect status…</div></section></main>
-<script>
-const grid=document.getElementById('grid');
-function render(data){const d=data||{};const items=[['Gateway',d.gateway||'open-connect.site'],['Resources',d.planes?.resources?.published??'—'],['Connections',d.planes?.connections?.connected??'—'],['Policy','Protected actions gated']];grid.innerHTML=items.map(([k,v])=>'<div class="card"><div class="muted">'+k+'</div><div class="ok">'+v+'</div></div>').join('')}
-window.addEventListener('message',e=>{const m=e.data;if(m?.method==='ui/notifications/tool-result')render(m.params?.structuredContent||m.params?.content?.[0]?.text)});
-if(window.openai?.toolOutput)render(window.openai.toolOutput);
-</script></body></html>`;
 
 /** Isolate-level cache (Cloudflare warm isolates reuse this). */
 let catalogCache: {
@@ -527,14 +517,23 @@ function toolTitle(name: string) {
     .join(" ");
 }
 
-function chatGptTools(key: AuthedKey) {
+function chatGptTools() {
   // Marketplace resources are intentionally accessed through list_resources,
   // search, and fetch. Publishing every catalog row as another MCP tool creates
   // duplicate capabilities and makes ChatGPT's plugin scan brittle.
-  return PLATFORM_TOOLS.filter((tool) => canUseTool(key, tool.name)).map((tool) => ({
-    ...tool,
-    title: tool.title ?? toolTitle(tool.name),
-  }));
+  // Discovery describes capabilities; execution still enforces token scopes and roles.
+  // Hiding write tools here prevents clients from discovering their OAuth requirements.
+  return PLATFORM_TOOLS.map((tool) => {
+    const securitySchemes = [
+      { type: "oauth2", scopes: [TOOL_SCOPES[tool.name] ?? "tools:invoke"] },
+    ];
+    return {
+      ...tool,
+      title: tool.title ?? toolTitle(tool.name),
+      securitySchemes,
+      _meta: { ...tool._meta, securitySchemes },
+    };
+  });
 }
 
 async function getCatalog(force = false) {
@@ -750,7 +749,7 @@ export const Route = createFileRoute("/mcp")({
               "Use read-only discovery tools before write tools. Hubstaff, E2B, connection, and credential actions are scoped to the authenticated Open-Connect account and role.",
           };
         } else if (body.method === "tools/list") {
-          result = { tools: chatGptTools(key) };
+          result = { tools: chatGptTools() };
         } else if (body.method === "resources/list") {
           result = {
             resources: [
@@ -948,36 +947,21 @@ export const Route = createFileRoute("/mcp")({
                 const resource = item.resources as unknown as Record<string, unknown> | null;
                 return resource ? [resource] : [];
               });
-            } else {
-              const { data: library } = await supabaseAdmin
-                .from("toolkits")
-                .select("id")
-                .eq("user_id", key.userId)
-                .eq("slug", "open-connect-personal-library")
-                .maybeSingle();
-              const owned = await supabaseAdmin
-                .from("resources")
-                .select("id,slug,name,description,resource_type,version,verified")
-                .eq("owner_id", key.userId);
-              if (owned.error) throw new Error(owned.error.message);
-              rows = (owned.data ?? []) as Array<Record<string, unknown>>;
-              if (library?.id) {
-                const installed = await supabaseAdmin
-                  .from("toolkit_items")
-                  .select("resources(id,slug,name,description,resource_type,version,verified)")
-                  .eq("toolkit_id", library.id);
-                if (installed.error) throw new Error(installed.error.message);
-                rows.push(
-                  ...(installed.data ?? []).flatMap((item) => {
-                    const resource = item.resources as unknown as Record<string, unknown> | null;
-                    return resource ? [resource] : [];
-                  }),
-                );
-              }
             }
-            const unique = [...new Map(rows.map((item) => [String(item["id"]), item])).values()]
-              .filter((item) => !type || item["resource_type"] === type)
-              .slice(0, 200);
+            const { readWorkspaceLibrary } = await import("@/lib/workspace-library.server");
+            const { isSharedLibraryRow } = await import("@/lib/shared-resources");
+            const library = await readWorkspaceLibrary({
+              supabase: supabaseAdmin,
+              userId: key.userId,
+            });
+            rows.push(
+              ...library
+                .filter((row) => !requestedProject || isSharedLibraryRow(row))
+                .flatMap((row) => (row.resources ? [row.resources] : [])),
+            );
+            const unique = [
+              ...new Map(rows.map((item) => [String(item["id"]), item])).values(),
+            ].filter((item) => !type || item["resource_type"] === type);
             result = textResult({ resources: unique, project_id: requestedProject || null });
           } else if (name === "inspect_connections") {
             const provider = String(args["provider"] ?? "").trim();

@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import { isAppPath } from "./shell.ts";
 import { appCategories, flatAppNav, flatPublicNav, publicCategories } from "./nav.ts";
-import { groupProjectResources } from "./resource-categories.ts";
+import { groupProjectResources, groupResourcesByPurpose } from "./resource-categories.ts";
 
 function routePaths() {
   const routesRoot = path.resolve(process.cwd(), "src/routes");
@@ -145,7 +146,7 @@ test("Projects can only select resources from the installed workspace library", 
     "utf8",
   );
 
-  assert.match(projectPage, /Add from workspace library/);
+  assert.match(projectPage, /Shared workspace library/);
   assert.doesNotMatch(projectPage, /Add from marketplace catalog/);
   assert.match(workspaceFunctions, /open-connect-personal-library/);
   assert.match(workspaceFunctions, /Install this resource into your workspace library first/);
@@ -230,8 +231,73 @@ test("installed project resources are grouped into professional categories", () 
     [
       ["Agents", 1],
       ["Skills", 1],
+      ["MCP Servers", 1],
       ["Memory", 1],
-      ["Other", 1],
+    ],
+  );
+});
+
+test("resource purposes combine catalog aliases without mixing types or losing uncategorized items", () => {
+  const rows = [
+    { id: "a", resources: { resource_type: "skill", category_slug: "development" } },
+    { id: "b", resources: { resource_type: "plugin", category_slug: "developer" } },
+    { id: "c", resources: { resource_type: "skill", category_slug: "business" } },
+    { id: "d", resources: { resource_type: "mcp", category_slug: null } },
+    { id: "e", resources: null },
+    { id: "f", resources: { resource_type: "agent", category_slug: "customer-support" } },
+  ];
+  assert.deepEqual(
+    groupResourcesByPurpose(rows).map(({ label, items }) => [label, items.map((row) => row.id)]),
+    [
+      ["Business", ["c"]],
+      ["Customer Support", ["f"]],
+      ["Developer", ["a", "b"]],
+      ["General", ["d"]],
+    ],
+  );
+  assert.deepEqual(groupResourcesByPurpose([]), []);
+});
+
+test("every sidebar destination uses workspace chrome and matches page search labels", () => {
+  const sidebar = readFileSync(
+    path.resolve(process.cwd(), "src/components/app-sidebar.tsx"),
+    "utf8",
+  );
+  const items = [...sidebar.matchAll(/to: "([^"\n]+)", label: "([^"\n]+)"/g)].map((match) => ({
+    to: match[1],
+    label: match[2],
+  }));
+  assert.ok(items.length > 20);
+  assert.deepEqual(
+    items.map((item) => item.to).sort(),
+    flatAppNav()
+      .map((item) => item.to)
+      .sort(),
+  );
+  for (const item of items) {
+    assert.ok(isAppPath(item.to), `${item.to} must not show duplicate public chrome`);
+    assert.equal(flatAppNav().find((nav) => nav.to === item.to)?.label, item.label);
+  }
+  assert.equal(isAppPath("/mcp"), false, "MCP protocol endpoint is not a workspace page");
+  assert.equal(isAppPath("/tools-unrelated"), false);
+});
+
+test("Discover order includes dedicated MCP and Tools routes", () => {
+  assert.deepEqual(
+    appCategories.find((group) => group.id === "discover")?.items.map((item) => item.label),
+    [
+      "Marketplace",
+      "Resources",
+      "Plugins",
+      "Agents",
+      "Skills",
+      "MCP",
+      "Tools",
+      "Toolkits",
+      "Prompts",
+      "Memory",
+      "Knowledge",
+      "Others",
     ],
   );
 });

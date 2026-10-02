@@ -3,9 +3,13 @@
   "info": {
     "title": "Open-Connect ChatGPT Actions",
     "description": "Governed access to Open-Connect resources, connections, models, capability planning, and owner-approved control operations.",
-    "version": "1.0.0"
+    "version": "1.1.0"
   },
-  "servers": [{ "url": "https://open-connect.site" }],
+  "servers": [
+    {
+      "url": "https://open-connect.site"
+    }
+  ],
   "paths": {
     "/api/v1/actions/read": {
       "post": {
@@ -14,8 +18,12 @@
         "description": "Run a non-consequential Open-Connect discovery, inspection, recommendation, or planning action. Call list_connections before recommending an operation that needs a provider connection.",
         "x-openai-isConsequential": false,
         "security": [
-          { "OAuth2": ["mcp:connect", "resources:read", "connections:read", "models:read"] },
-          { "BearerAuth": [] }
+          {
+            "OAuth2": ["mcp:connect", "resources:read", "connections:read", "models:read"]
+          },
+          {
+            "BearerAuth": []
+          }
         ],
         "requestBody": {
           "required": true,
@@ -38,7 +46,13 @@
                       "inspect_connections",
                       "plan_goal",
                       "recommend_toolchain",
-                      "resolve_capability"
+                      "resolve_capability",
+                      "list_personal_resources",
+                      "list_workspace_projects",
+                      "list_credential_metadata",
+                      "list_connection_tools",
+                      "e2b_health",
+                      "e2b_list_sandboxes"
                     ]
                   },
                   "input": {
@@ -52,10 +66,18 @@
           }
         },
         "responses": {
-          "200": { "$ref": "#/components/responses/ActionResult" },
-          "400": { "$ref": "#/components/responses/Error" },
-          "401": { "$ref": "#/components/responses/Error" },
-          "403": { "$ref": "#/components/responses/Error" }
+          "200": {
+            "$ref": "#/components/responses/ActionResult"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
         }
       }
     },
@@ -66,8 +88,12 @@
         "description": "Run a consequential owner/admin action. Open-Connect still enforces role, scope, approval, credential-reference, and production-policy checks. Never submit raw credentials.",
         "x-openai-isConsequential": true,
         "security": [
-          { "OAuth2": ["mcp:connect", "resources:write", "tools:invoke", "connections:invoke"] },
-          { "BearerAuth": [] }
+          {
+            "OAuth2": ["mcp:connect", "resources:write", "tools:invoke", "connections:invoke"]
+          },
+          {
+            "BearerAuth": []
+          }
         ],
         "requestBody": {
           "required": true,
@@ -85,7 +111,10 @@
                       "create_capability_draft",
                       "record_run_outcome",
                       "install_capability",
-                      "configure_connection"
+                      "configure_connection",
+                      "call_connection_tool",
+                      "e2b_create_sandbox",
+                      "e2b_kill_sandbox"
                     ]
                   },
                   "input": {
@@ -99,10 +128,18 @@
           }
         },
         "responses": {
-          "200": { "$ref": "#/components/responses/ActionResult" },
-          "400": { "$ref": "#/components/responses/Error" },
-          "401": { "$ref": "#/components/responses/Error" },
-          "403": { "$ref": "#/components/responses/Error" }
+          "200": {
+            "$ref": "#/components/responses/ActionResult"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          }
         }
       }
     }
@@ -122,12 +159,19 @@
               "connections:read": "Inspect connection grants",
               "connections:invoke": "Use connected provider capabilities",
               "models:read": "Read model aliases",
-              "tools:invoke": "Invoke governed tools"
+              "tools:invoke": "Invoke governed tools",
+              "secrets:read": "Read credential metadata; values remain server-side",
+              "models:invoke": "Invoke model aliases",
+              "agents:invoke": "Invoke agent capabilities"
             }
           }
         }
       },
-      "BearerAuth": { "type": "http", "scheme": "bearer", "bearerFormat": "oc_live_..." }
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "oc_live_..."
+      }
     },
     "responses": {
       "ActionResult": {
@@ -138,9 +182,16 @@
               "type": "object",
               "required": ["ok", "action", "mode", "result"],
               "properties": {
-                "ok": { "type": "boolean" },
-                "action": { "type": "string" },
-                "mode": { "type": "string", "enum": ["read", "write"] },
+                "ok": {
+                  "type": "boolean"
+                },
+                "action": {
+                  "type": "string"
+                },
+                "mode": {
+                  "type": "string",
+                  "enum": ["read", "write"]
+                },
                 "result": {}
               }
             }
@@ -153,7 +204,9 @@
           "application/json": {
             "schema": {
               "type": "object",
-              "properties": { "error": {} }
+              "properties": {
+                "error": {}
+              }
             }
           }
         }

@@ -13,23 +13,31 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as ARouteImport } from './routes/a'
 import { Route as AuthRouteImport } from './routes/auth'
-import { Route as ConnectionsRouteImport } from './routes/connections'
 import { Route as ExploreRouteImport } from './routes/explore'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as McpRouteImport } from './routes/mcp'
-import { Route as ModelsRouteImport } from './routes/models'
 import { Route as ResourcesRouteImport } from './routes/resources'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedAgentsRouteImport } from './routes/_authenticated/agents'
 import { Route as AuthenticatedApiKeysRouteImport } from './routes/_authenticated/api-keys'
 import { Route as AuthenticatedAutomationsRouteImport } from './routes/_authenticated/automations'
 import { Route as AuthenticatedCampaignStudioRouteImport } from './routes/_authenticated/campaign-studio'
+import { Route as AuthenticatedCloudBrowserRouteImport } from './routes/_authenticated/cloud-browser'
+import { Route as AuthenticatedCloudComputerRouteImport } from './routes/_authenticated/cloud-computer'
+import { Route as AuthenticatedCloudPhoneRouteImport } from './routes/_authenticated/cloud-phone'
+import { Route as AuthenticatedCloudTerminalRouteImport } from './routes/_authenticated/cloud-terminal'
+import { Route as AuthenticatedConnectionsRouteImport } from './routes/_authenticated/connections'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedGuidesRouteImport } from './routes/_authenticated/guides'
 import { Route as AuthenticatedIntegrationsRouteImport } from './routes/_authenticated/integrations'
 import { Route as AuthenticatedKnowledgeRouteImport } from './routes/_authenticated/knowledge'
+import { Route as AuthenticatedLibraryRouteImport } from './routes/_authenticated/library'
+import { Route as AuthenticatedMcpServersRouteImport } from './routes/_authenticated/mcp-servers'
 import { Route as AuthenticatedMemoryRouteImport } from './routes/_authenticated/memory'
+import { Route as AuthenticatedModelsRouteImport } from './routes/_authenticated/models'
 import { Route as AuthenticatedOrgsRouteImport } from './routes/_authenticated/orgs'
+import { Route as AuthenticatedOthersRouteImport } from './routes/_authenticated/others'
+import { Route as AuthenticatedPluginsRouteImport } from './routes/_authenticated/plugins'
 import { Route as AuthenticatedProjectsRouteImport } from './routes/_authenticated/projects'
 import { Route as AuthenticatedPromptsRouteImport } from './routes/_authenticated/prompts'
 import { Route as AuthenticatedRolesRouteImport } from './routes/_authenticated/roles'
@@ -40,6 +48,7 @@ import { Route as AuthenticatedSkillsRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedStudioRouteImport } from './routes/_authenticated/studio'
 import { Route as AuthenticatedTasksRouteImport } from './routes/_authenticated/tasks'
 import { Route as AuthenticatedToolkitsRouteImport } from './routes/_authenticated/toolkits'
+import { Route as AuthenticatedToolsRouteImport } from './routes/_authenticated/tools'
 import { Route as ApiCampaignStudioRouteImport } from './routes/api/campaign-studio'
 import { Route as OauthAuthorizeRouteImport } from './routes/oauth/authorize'
 import { Route as OauthRegisterRouteImport } from './routes/oauth/register'
@@ -51,6 +60,7 @@ import { Route as ApiV1DatabricksRouteImport } from './routes/api/v1/databricks'
 import { Route as ApiV1HealthRouteImport } from './routes/api/v1/health'
 import { Route as ApiV1ResourcesRouteImport } from './routes/api/v1/resources'
 import { Route as V1ChatCompletionsRouteImport } from './routes/v1/chat/completions'
+import { Route as AuthenticatedConnectionsOauthCallbackRouteImport } from './routes/_authenticated/connections.oauth.callback'
 import { Route as ApiV1ActionsReadRouteImport } from './routes/api/v1/actions.read'
 import { Route as ApiV1ActionsWriteRouteImport } from './routes/api/v1/actions.write'
 
@@ -73,11 +83,6 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ConnectionsRoute = ConnectionsRouteImport.update({
-  id: '/connections',
-  path: '/connections',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ExploreRoute = ExploreRouteImport.update({
   id: '/explore',
   path: '/explore',
@@ -91,11 +96,6 @@ const LoginRoute = LoginRouteImport.update({
 const McpRoute = McpRouteImport.update({
   id: '/mcp',
   path: '/mcp',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ModelsRoute = ModelsRouteImport.update({
-  id: '/models',
-  path: '/models',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResourcesRoute = ResourcesRouteImport.update({
@@ -130,6 +130,35 @@ const AuthenticatedCampaignStudioRoute =
     path: '/campaign-studio',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedCloudBrowserRoute =
+  AuthenticatedCloudBrowserRouteImport.update({
+    id: '/cloud-browser',
+    path: '/cloud-browser',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedCloudComputerRoute =
+  AuthenticatedCloudComputerRouteImport.update({
+    id: '/cloud-computer',
+    path: '/cloud-computer',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedCloudPhoneRoute = AuthenticatedCloudPhoneRouteImport.update({
+  id: '/cloud-phone',
+  path: '/cloud-phone',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedCloudTerminalRoute =
+  AuthenticatedCloudTerminalRouteImport.update({
+    id: '/cloud-terminal',
+    path: '/cloud-terminal',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedConnectionsRoute =
+  AuthenticatedConnectionsRouteImport.update({
+    id: '/connections',
+    path: '/connections',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -151,14 +180,39 @@ const AuthenticatedKnowledgeRoute = AuthenticatedKnowledgeRouteImport.update({
   path: '/knowledge',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedLibraryRoute = AuthenticatedLibraryRouteImport.update({
+  id: '/library',
+  path: '/library',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedMcpServersRoute = AuthenticatedMcpServersRouteImport.update({
+  id: '/mcp-servers',
+  path: '/mcp-servers',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedMemoryRoute = AuthenticatedMemoryRouteImport.update({
   id: '/memory',
   path: '/memory',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedModelsRoute = AuthenticatedModelsRouteImport.update({
+  id: '/models',
+  path: '/models',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedOrgsRoute = AuthenticatedOrgsRouteImport.update({
   id: '/orgs',
   path: '/orgs',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedOthersRoute = AuthenticatedOthersRouteImport.update({
+  id: '/others',
+  path: '/others',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedPluginsRoute = AuthenticatedPluginsRouteImport.update({
+  id: '/plugins',
+  path: '/plugins',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedProjectsRoute = AuthenticatedProjectsRouteImport.update({
@@ -209,6 +263,11 @@ const AuthenticatedTasksRoute = AuthenticatedTasksRouteImport.update({
 const AuthenticatedToolkitsRoute = AuthenticatedToolkitsRouteImport.update({
   id: '/toolkits',
   path: '/toolkits',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedToolsRoute = AuthenticatedToolsRouteImport.update({
+  id: '/tools',
+  path: '/tools',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const ApiCampaignStudioRoute = ApiCampaignStudioRouteImport.update({
@@ -267,6 +326,12 @@ const V1ChatCompletionsRoute = V1ChatCompletionsRouteImport.update({
   path: '/v1/chat/completions',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedConnectionsOauthCallbackRoute =
+  AuthenticatedConnectionsOauthCallbackRouteImport.update({
+    id: '/oauth/callback',
+    path: '/oauth/callback',
+    getParentRoute: () => AuthenticatedConnectionsRoute,
+  } as any)
 const ApiV1ActionsReadRoute = ApiV1ActionsReadRouteImport.update({
   id: '/api/v1/actions/read',
   path: '/api/v1/actions/read',
@@ -282,23 +347,31 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/a': typeof ARoute
   '/auth': typeof AuthRoute
-  '/connections': typeof ConnectionsRoute
   '/explore': typeof ExploreRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
-  '/models': typeof ModelsRoute
   '/resources': typeof ResourcesRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/agents': typeof AuthenticatedAgentsRoute
   '/api-keys': typeof AuthenticatedApiKeysRoute
   '/automations': typeof AuthenticatedAutomationsRoute
   '/campaign-studio': typeof AuthenticatedCampaignStudioRoute
+  '/cloud-browser': typeof AuthenticatedCloudBrowserRoute
+  '/cloud-computer': typeof AuthenticatedCloudComputerRoute
+  '/cloud-phone': typeof AuthenticatedCloudPhoneRoute
+  '/cloud-terminal': typeof AuthenticatedCloudTerminalRoute
+  '/connections': typeof AuthenticatedConnectionsRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/guides': typeof AuthenticatedGuidesRoute
   '/integrations': typeof AuthenticatedIntegrationsRoute
   '/knowledge': typeof AuthenticatedKnowledgeRoute
+  '/library': typeof AuthenticatedLibraryRoute
+  '/mcp-servers': typeof AuthenticatedMcpServersRoute
   '/memory': typeof AuthenticatedMemoryRoute
+  '/models': typeof AuthenticatedModelsRoute
   '/orgs': typeof AuthenticatedOrgsRoute
+  '/others': typeof AuthenticatedOthersRoute
+  '/plugins': typeof AuthenticatedPluginsRoute
   '/projects': typeof AuthenticatedProjectsRouteWithChildren
   '/prompts': typeof AuthenticatedPromptsRoute
   '/roles': typeof AuthenticatedRolesRoute
@@ -309,6 +382,7 @@ export interface FileRoutesByFullPath {
   '/studio': typeof AuthenticatedStudioRoute
   '/tasks': typeof AuthenticatedTasksRoute
   '/toolkits': typeof AuthenticatedToolkitsRoute
+  '/tools': typeof AuthenticatedToolsRoute
   '/api/campaign-studio': typeof ApiCampaignStudioRoute
   '/oauth/authorize': typeof OauthAuthorizeRoute
   '/oauth/register': typeof OauthRegisterRoute
@@ -320,6 +394,7 @@ export interface FileRoutesByFullPath {
   '/api/v1/health': typeof ApiV1HealthRoute
   '/api/v1/resources': typeof ApiV1ResourcesRoute
   '/v1/chat/completions': typeof V1ChatCompletionsRoute
+  '/connections/oauth/callback': typeof AuthenticatedConnectionsOauthCallbackRoute
   '/api/v1/actions/read': typeof ApiV1ActionsReadRoute
   '/api/v1/actions/write': typeof ApiV1ActionsWriteRoute
 }
@@ -327,23 +402,31 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/a': typeof ARoute
   '/auth': typeof AuthRoute
-  '/connections': typeof ConnectionsRoute
   '/explore': typeof ExploreRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
-  '/models': typeof ModelsRoute
   '/resources': typeof ResourcesRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/agents': typeof AuthenticatedAgentsRoute
   '/api-keys': typeof AuthenticatedApiKeysRoute
   '/automations': typeof AuthenticatedAutomationsRoute
   '/campaign-studio': typeof AuthenticatedCampaignStudioRoute
+  '/cloud-browser': typeof AuthenticatedCloudBrowserRoute
+  '/cloud-computer': typeof AuthenticatedCloudComputerRoute
+  '/cloud-phone': typeof AuthenticatedCloudPhoneRoute
+  '/cloud-terminal': typeof AuthenticatedCloudTerminalRoute
+  '/connections': typeof AuthenticatedConnectionsRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/guides': typeof AuthenticatedGuidesRoute
   '/integrations': typeof AuthenticatedIntegrationsRoute
   '/knowledge': typeof AuthenticatedKnowledgeRoute
+  '/library': typeof AuthenticatedLibraryRoute
+  '/mcp-servers': typeof AuthenticatedMcpServersRoute
   '/memory': typeof AuthenticatedMemoryRoute
+  '/models': typeof AuthenticatedModelsRoute
   '/orgs': typeof AuthenticatedOrgsRoute
+  '/others': typeof AuthenticatedOthersRoute
+  '/plugins': typeof AuthenticatedPluginsRoute
   '/projects': typeof AuthenticatedProjectsRouteWithChildren
   '/prompts': typeof AuthenticatedPromptsRoute
   '/roles': typeof AuthenticatedRolesRoute
@@ -354,6 +437,7 @@ export interface FileRoutesByTo {
   '/studio': typeof AuthenticatedStudioRoute
   '/tasks': typeof AuthenticatedTasksRoute
   '/toolkits': typeof AuthenticatedToolkitsRoute
+  '/tools': typeof AuthenticatedToolsRoute
   '/api/campaign-studio': typeof ApiCampaignStudioRoute
   '/oauth/authorize': typeof OauthAuthorizeRoute
   '/oauth/register': typeof OauthRegisterRoute
@@ -365,6 +449,7 @@ export interface FileRoutesByTo {
   '/api/v1/health': typeof ApiV1HealthRoute
   '/api/v1/resources': typeof ApiV1ResourcesRoute
   '/v1/chat/completions': typeof V1ChatCompletionsRoute
+  '/connections/oauth/callback': typeof AuthenticatedConnectionsOauthCallbackRoute
   '/api/v1/actions/read': typeof ApiV1ActionsReadRoute
   '/api/v1/actions/write': typeof ApiV1ActionsWriteRoute
 }
@@ -374,23 +459,31 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/a': typeof ARoute
   '/auth': typeof AuthRoute
-  '/connections': typeof ConnectionsRoute
   '/explore': typeof ExploreRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
-  '/models': typeof ModelsRoute
   '/resources': typeof ResourcesRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/agents': typeof AuthenticatedAgentsRoute
   '/_authenticated/api-keys': typeof AuthenticatedApiKeysRoute
   '/_authenticated/automations': typeof AuthenticatedAutomationsRoute
   '/_authenticated/campaign-studio': typeof AuthenticatedCampaignStudioRoute
+  '/_authenticated/cloud-browser': typeof AuthenticatedCloudBrowserRoute
+  '/_authenticated/cloud-computer': typeof AuthenticatedCloudComputerRoute
+  '/_authenticated/cloud-phone': typeof AuthenticatedCloudPhoneRoute
+  '/_authenticated/cloud-terminal': typeof AuthenticatedCloudTerminalRoute
+  '/_authenticated/connections': typeof AuthenticatedConnectionsRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/guides': typeof AuthenticatedGuidesRoute
   '/_authenticated/integrations': typeof AuthenticatedIntegrationsRoute
   '/_authenticated/knowledge': typeof AuthenticatedKnowledgeRoute
+  '/_authenticated/library': typeof AuthenticatedLibraryRoute
+  '/_authenticated/mcp-servers': typeof AuthenticatedMcpServersRoute
   '/_authenticated/memory': typeof AuthenticatedMemoryRoute
+  '/_authenticated/models': typeof AuthenticatedModelsRoute
   '/_authenticated/orgs': typeof AuthenticatedOrgsRoute
+  '/_authenticated/others': typeof AuthenticatedOthersRoute
+  '/_authenticated/plugins': typeof AuthenticatedPluginsRoute
   '/_authenticated/projects': typeof AuthenticatedProjectsRouteWithChildren
   '/_authenticated/prompts': typeof AuthenticatedPromptsRoute
   '/_authenticated/roles': typeof AuthenticatedRolesRoute
@@ -401,6 +494,7 @@ export interface FileRoutesById {
   '/_authenticated/studio': typeof AuthenticatedStudioRoute
   '/_authenticated/tasks': typeof AuthenticatedTasksRoute
   '/_authenticated/toolkits': typeof AuthenticatedToolkitsRoute
+  '/_authenticated/tools': typeof AuthenticatedToolsRoute
   '/api/campaign-studio': typeof ApiCampaignStudioRoute
   '/oauth/authorize': typeof OauthAuthorizeRoute
   '/oauth/register': typeof OauthRegisterRoute
@@ -412,6 +506,7 @@ export interface FileRoutesById {
   '/api/v1/health': typeof ApiV1HealthRoute
   '/api/v1/resources': typeof ApiV1ResourcesRoute
   '/v1/chat/completions': typeof V1ChatCompletionsRoute
+  '/_authenticated/connections/oauth/callback': typeof AuthenticatedConnectionsOauthCallbackRoute
   '/api/v1/actions/read': typeof ApiV1ActionsReadRoute
   '/api/v1/actions/write': typeof ApiV1ActionsWriteRoute
 }
@@ -421,23 +516,31 @@ export interface FileRouteTypes {
     | '/'
     | '/a'
     | '/auth'
-    | '/connections'
     | '/explore'
     | '/login'
     | '/mcp'
-    | '/models'
     | '/resources'
     | '/admin'
     | '/agents'
     | '/api-keys'
     | '/automations'
     | '/campaign-studio'
+    | '/cloud-browser'
+    | '/cloud-computer'
+    | '/cloud-phone'
+    | '/cloud-terminal'
+    | '/connections'
     | '/dashboard'
     | '/guides'
     | '/integrations'
     | '/knowledge'
+    | '/library'
+    | '/mcp-servers'
     | '/memory'
+    | '/models'
     | '/orgs'
+    | '/others'
+    | '/plugins'
     | '/projects'
     | '/prompts'
     | '/roles'
@@ -448,6 +551,7 @@ export interface FileRouteTypes {
     | '/studio'
     | '/tasks'
     | '/toolkits'
+    | '/tools'
     | '/api/campaign-studio'
     | '/oauth/authorize'
     | '/oauth/register'
@@ -459,6 +563,7 @@ export interface FileRouteTypes {
     | '/api/v1/health'
     | '/api/v1/resources'
     | '/v1/chat/completions'
+    | '/connections/oauth/callback'
     | '/api/v1/actions/read'
     | '/api/v1/actions/write'
   fileRoutesByTo: FileRoutesByTo
@@ -466,23 +571,31 @@ export interface FileRouteTypes {
     | '/'
     | '/a'
     | '/auth'
-    | '/connections'
     | '/explore'
     | '/login'
     | '/mcp'
-    | '/models'
     | '/resources'
     | '/admin'
     | '/agents'
     | '/api-keys'
     | '/automations'
     | '/campaign-studio'
+    | '/cloud-browser'
+    | '/cloud-computer'
+    | '/cloud-phone'
+    | '/cloud-terminal'
+    | '/connections'
     | '/dashboard'
     | '/guides'
     | '/integrations'
     | '/knowledge'
+    | '/library'
+    | '/mcp-servers'
     | '/memory'
+    | '/models'
     | '/orgs'
+    | '/others'
+    | '/plugins'
     | '/projects'
     | '/prompts'
     | '/roles'
@@ -493,6 +606,7 @@ export interface FileRouteTypes {
     | '/studio'
     | '/tasks'
     | '/toolkits'
+    | '/tools'
     | '/api/campaign-studio'
     | '/oauth/authorize'
     | '/oauth/register'
@@ -504,6 +618,7 @@ export interface FileRouteTypes {
     | '/api/v1/health'
     | '/api/v1/resources'
     | '/v1/chat/completions'
+    | '/connections/oauth/callback'
     | '/api/v1/actions/read'
     | '/api/v1/actions/write'
   id:
@@ -512,23 +627,31 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/a'
     | '/auth'
-    | '/connections'
     | '/explore'
     | '/login'
     | '/mcp'
-    | '/models'
     | '/resources'
     | '/_authenticated/admin'
     | '/_authenticated/agents'
     | '/_authenticated/api-keys'
     | '/_authenticated/automations'
     | '/_authenticated/campaign-studio'
+    | '/_authenticated/cloud-browser'
+    | '/_authenticated/cloud-computer'
+    | '/_authenticated/cloud-phone'
+    | '/_authenticated/cloud-terminal'
+    | '/_authenticated/connections'
     | '/_authenticated/dashboard'
     | '/_authenticated/guides'
     | '/_authenticated/integrations'
     | '/_authenticated/knowledge'
+    | '/_authenticated/library'
+    | '/_authenticated/mcp-servers'
     | '/_authenticated/memory'
+    | '/_authenticated/models'
     | '/_authenticated/orgs'
+    | '/_authenticated/others'
+    | '/_authenticated/plugins'
     | '/_authenticated/projects'
     | '/_authenticated/prompts'
     | '/_authenticated/roles'
@@ -539,6 +662,7 @@ export interface FileRouteTypes {
     | '/_authenticated/studio'
     | '/_authenticated/tasks'
     | '/_authenticated/toolkits'
+    | '/_authenticated/tools'
     | '/api/campaign-studio'
     | '/oauth/authorize'
     | '/oauth/register'
@@ -550,6 +674,7 @@ export interface FileRouteTypes {
     | '/api/v1/health'
     | '/api/v1/resources'
     | '/v1/chat/completions'
+    | '/_authenticated/connections/oauth/callback'
     | '/api/v1/actions/read'
     | '/api/v1/actions/write'
   fileRoutesById: FileRoutesById
@@ -559,11 +684,9 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   ARoute: typeof ARoute
   AuthRoute: typeof AuthRoute
-  ConnectionsRoute: typeof ConnectionsRoute
   ExploreRoute: typeof ExploreRoute
   LoginRoute: typeof LoginRoute
   McpRoute: typeof McpRoute
-  ModelsRoute: typeof ModelsRoute
   ResourcesRoute: typeof ResourcesRoute
   ApiCampaignStudioRoute: typeof ApiCampaignStudioRoute
   OauthAuthorizeRoute: typeof OauthAuthorizeRoute
@@ -609,13 +732,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/connections': {
-      id: '/connections'
-      path: '/connections'
-      fullPath: '/connections'
-      preLoaderRoute: typeof ConnectionsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/explore': {
       id: '/explore'
       path: '/explore'
@@ -635,13 +751,6 @@ declare module '@tanstack/react-router' {
       path: '/mcp'
       fullPath: '/mcp'
       preLoaderRoute: typeof McpRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/models': {
-      id: '/models'
-      path: '/models'
-      fullPath: '/models'
-      preLoaderRoute: typeof ModelsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/resources': {
@@ -686,6 +795,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCampaignStudioRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/cloud-browser': {
+      id: '/_authenticated/cloud-browser'
+      path: '/cloud-browser'
+      fullPath: '/cloud-browser'
+      preLoaderRoute: typeof AuthenticatedCloudBrowserRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/cloud-computer': {
+      id: '/_authenticated/cloud-computer'
+      path: '/cloud-computer'
+      fullPath: '/cloud-computer'
+      preLoaderRoute: typeof AuthenticatedCloudComputerRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/cloud-phone': {
+      id: '/_authenticated/cloud-phone'
+      path: '/cloud-phone'
+      fullPath: '/cloud-phone'
+      preLoaderRoute: typeof AuthenticatedCloudPhoneRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/cloud-terminal': {
+      id: '/_authenticated/cloud-terminal'
+      path: '/cloud-terminal'
+      fullPath: '/cloud-terminal'
+      preLoaderRoute: typeof AuthenticatedCloudTerminalRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/connections': {
+      id: '/_authenticated/connections'
+      path: '/connections'
+      fullPath: '/connections'
+      preLoaderRoute: typeof AuthenticatedConnectionsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -714,6 +858,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedKnowledgeRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/library': {
+      id: '/_authenticated/library'
+      path: '/library'
+      fullPath: '/library'
+      preLoaderRoute: typeof AuthenticatedLibraryRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/mcp-servers': {
+      id: '/_authenticated/mcp-servers'
+      path: '/mcp-servers'
+      fullPath: '/mcp-servers'
+      preLoaderRoute: typeof AuthenticatedMcpServersRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/memory': {
       id: '/_authenticated/memory'
       path: '/memory'
@@ -721,11 +879,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMemoryRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/models': {
+      id: '/_authenticated/models'
+      path: '/models'
+      fullPath: '/models'
+      preLoaderRoute: typeof AuthenticatedModelsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/orgs': {
       id: '/_authenticated/orgs'
       path: '/orgs'
       fullPath: '/orgs'
       preLoaderRoute: typeof AuthenticatedOrgsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/others': {
+      id: '/_authenticated/others'
+      path: '/others'
+      fullPath: '/others'
+      preLoaderRoute: typeof AuthenticatedOthersRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/plugins': {
+      id: '/_authenticated/plugins'
+      path: '/plugins'
+      fullPath: '/plugins'
+      preLoaderRoute: typeof AuthenticatedPluginsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/projects': {
@@ -796,6 +975,13 @@ declare module '@tanstack/react-router' {
       path: '/toolkits'
       fullPath: '/toolkits'
       preLoaderRoute: typeof AuthenticatedToolkitsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/tools': {
+      id: '/_authenticated/tools'
+      path: '/tools'
+      fullPath: '/tools'
+      preLoaderRoute: typeof AuthenticatedToolsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/api/campaign-studio': {
@@ -875,6 +1061,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof V1ChatCompletionsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/connections/oauth/callback': {
+      id: '/_authenticated/connections/oauth/callback'
+      path: '/oauth/callback'
+      fullPath: '/connections/oauth/callback'
+      preLoaderRoute: typeof AuthenticatedConnectionsOauthCallbackRouteImport
+      parentRoute: typeof AuthenticatedConnectionsRoute
+    }
     '/api/v1/actions/read': {
       id: '/api/v1/actions/read'
       path: '/api/v1/actions/read'
@@ -891,6 +1084,21 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface AuthenticatedConnectionsRouteChildren {
+  AuthenticatedConnectionsOauthCallbackRoute: typeof AuthenticatedConnectionsOauthCallbackRoute
+}
+
+const AuthenticatedConnectionsRouteChildren: AuthenticatedConnectionsRouteChildren =
+  {
+    AuthenticatedConnectionsOauthCallbackRoute:
+      AuthenticatedConnectionsOauthCallbackRoute,
+  }
+
+const AuthenticatedConnectionsRouteWithChildren =
+  AuthenticatedConnectionsRoute._addFileChildren(
+    AuthenticatedConnectionsRouteChildren,
+  )
 
 interface AuthenticatedProjectsRouteChildren {
   AuthenticatedProjectsProjectIdRoute: typeof AuthenticatedProjectsProjectIdRoute
@@ -911,12 +1119,22 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedApiKeysRoute: typeof AuthenticatedApiKeysRoute
   AuthenticatedAutomationsRoute: typeof AuthenticatedAutomationsRoute
   AuthenticatedCampaignStudioRoute: typeof AuthenticatedCampaignStudioRoute
+  AuthenticatedCloudBrowserRoute: typeof AuthenticatedCloudBrowserRoute
+  AuthenticatedCloudComputerRoute: typeof AuthenticatedCloudComputerRoute
+  AuthenticatedCloudPhoneRoute: typeof AuthenticatedCloudPhoneRoute
+  AuthenticatedCloudTerminalRoute: typeof AuthenticatedCloudTerminalRoute
+  AuthenticatedConnectionsRoute: typeof AuthenticatedConnectionsRouteWithChildren
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedGuidesRoute: typeof AuthenticatedGuidesRoute
   AuthenticatedIntegrationsRoute: typeof AuthenticatedIntegrationsRoute
   AuthenticatedKnowledgeRoute: typeof AuthenticatedKnowledgeRoute
+  AuthenticatedLibraryRoute: typeof AuthenticatedLibraryRoute
+  AuthenticatedMcpServersRoute: typeof AuthenticatedMcpServersRoute
   AuthenticatedMemoryRoute: typeof AuthenticatedMemoryRoute
+  AuthenticatedModelsRoute: typeof AuthenticatedModelsRoute
   AuthenticatedOrgsRoute: typeof AuthenticatedOrgsRoute
+  AuthenticatedOthersRoute: typeof AuthenticatedOthersRoute
+  AuthenticatedPluginsRoute: typeof AuthenticatedPluginsRoute
   AuthenticatedProjectsRoute: typeof AuthenticatedProjectsRouteWithChildren
   AuthenticatedPromptsRoute: typeof AuthenticatedPromptsRoute
   AuthenticatedRolesRoute: typeof AuthenticatedRolesRoute
@@ -927,6 +1145,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedStudioRoute: typeof AuthenticatedStudioRoute
   AuthenticatedTasksRoute: typeof AuthenticatedTasksRoute
   AuthenticatedToolkitsRoute: typeof AuthenticatedToolkitsRoute
+  AuthenticatedToolsRoute: typeof AuthenticatedToolsRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -935,12 +1154,22 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedApiKeysRoute: AuthenticatedApiKeysRoute,
   AuthenticatedAutomationsRoute: AuthenticatedAutomationsRoute,
   AuthenticatedCampaignStudioRoute: AuthenticatedCampaignStudioRoute,
+  AuthenticatedCloudBrowserRoute: AuthenticatedCloudBrowserRoute,
+  AuthenticatedCloudComputerRoute: AuthenticatedCloudComputerRoute,
+  AuthenticatedCloudPhoneRoute: AuthenticatedCloudPhoneRoute,
+  AuthenticatedCloudTerminalRoute: AuthenticatedCloudTerminalRoute,
+  AuthenticatedConnectionsRoute: AuthenticatedConnectionsRouteWithChildren,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedGuidesRoute: AuthenticatedGuidesRoute,
   AuthenticatedIntegrationsRoute: AuthenticatedIntegrationsRoute,
   AuthenticatedKnowledgeRoute: AuthenticatedKnowledgeRoute,
+  AuthenticatedLibraryRoute: AuthenticatedLibraryRoute,
+  AuthenticatedMcpServersRoute: AuthenticatedMcpServersRoute,
   AuthenticatedMemoryRoute: AuthenticatedMemoryRoute,
+  AuthenticatedModelsRoute: AuthenticatedModelsRoute,
   AuthenticatedOrgsRoute: AuthenticatedOrgsRoute,
+  AuthenticatedOthersRoute: AuthenticatedOthersRoute,
+  AuthenticatedPluginsRoute: AuthenticatedPluginsRoute,
   AuthenticatedProjectsRoute: AuthenticatedProjectsRouteWithChildren,
   AuthenticatedPromptsRoute: AuthenticatedPromptsRoute,
   AuthenticatedRolesRoute: AuthenticatedRolesRoute,
@@ -951,6 +1180,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedStudioRoute: AuthenticatedStudioRoute,
   AuthenticatedTasksRoute: AuthenticatedTasksRoute,
   AuthenticatedToolkitsRoute: AuthenticatedToolkitsRoute,
+  AuthenticatedToolsRoute: AuthenticatedToolsRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -961,11 +1191,9 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   ARoute: ARoute,
   AuthRoute: AuthRoute,
-  ConnectionsRoute: ConnectionsRoute,
   ExploreRoute: ExploreRoute,
   LoginRoute: LoginRoute,
   McpRoute: McpRoute,
-  ModelsRoute: ModelsRoute,
   ResourcesRoute: ResourcesRoute,
   ApiCampaignStudioRoute: ApiCampaignStudioRoute,
   OauthAuthorizeRoute: OauthAuthorizeRoute,

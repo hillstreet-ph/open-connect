@@ -92,3 +92,82 @@ export async function deleteManagedConnection(provider: string, connectedAccount
     { method: "DELETE" },
   );
 }
+
+/** Prefer an explicitly configured broker, retaining native/key fallbacks. */
+export function connectionMethod(provider: string, oauth: boolean, managedReady: boolean) {
+  if (managedReady) return "managed_oauth";
+  if (provider === "github") return "native_oauth";
+  return oauth ? "managed_oauth" : "api_key";
+}
+
+/** Identity aliases are provisioned by the deployment administrator, never by client input. */
+export function managedIdentityIds(userId: string): string[] {
+  const raw = process.env["COMPOSIO_USER_MAPPINGS"];
+  if (!raw) return [userId];
+  const mappings = JSON.parse(raw) as Record<string, unknown>;
+  const mapped = mappings[userId];
+  if (mapped === undefined) return [userId];
+  if (!Array.isArray(mapped) || mapped.some((id) => typeof id !== "string" || !id.trim())) {
+    throw new Error("Invalid Composio user mapping.");
+  }
+  return [...new Set([userId, ...(mapped as string[])])];
+}
+
+export async function listOwnedManagedConnections(userId: string) {
+  const accounts = new Map<string, { id: string; provider: string }>();
+  for (const identity of managedIdentityIds(userId)) {
+    for (const account of await listManagedIdentityConnections(identity)) {
+      accounts.set(account.id, account);
+    }
+  }
+  return [...accounts.values()];
+}
+
+async function listManagedIdentityConnections(userId: string) {
+  const apiKey = process.env["COMPOSIO_API_KEY"]?.trim();
+  if (!apiKey) throw new Error("Composio is not configured.");
+  if (!userId.trim()) throw new Error("A signed-in user is required.");
+  const providers = new Map(Object.entries(authConfigs()).map(([provider, id]) => [id, provider]));
+  const aliases = JSON.parse(process.env["COMPOSIO_AUTH_CONFIG_ALIASES"] || "{}") as Record<
+    string,
+    string
+  >;
+  for (const [id, provider] of Object.entries(aliases)) {
+    if (id.startsWith("ac_") && authConfigs()[provider]) providers.set(id, provider);
+  }
+  const accounts = new Map<string, { id: string; provider: string }>();
+  const cursors = new Set<string>();
+  let cursor = "";
+  do {
+    const query = new URLSearchParams({ user_ids: userId, statuses: "ACTIVE", limit: "100" });
+    if (cursor) query.set("cursor", cursor);
+    const page = await composioRequest<{
+      items?: Array<{
+        id: string;
+        user_id?: string;
+        status?: string;
+        is_disabled?: boolean;
+        auth_config?: { id?: string; is_disabled?: boolean };
+      }>;
+      next_cursor?: string;
+    }>(`/connected_accounts?${query}`, apiKey);
+    for (const account of page.items ?? []) {
+      const provider = providers.get(account.auth_config?.id ?? "");
+      if (
+        !provider ||
+        account.user_id !== userId ||
+        account.status !== "ACTIVE" ||
+        account.is_disabled ||
+        account.auth_config?.is_disabled ||
+        !account.id
+      )
+        continue;
+      accounts.set(account.id, { id: account.id, provider });
+    }
+    cursor = page.next_cursor ?? "";
+    if (cursor && cursors.has(cursor)) throw new Error("Composio pagination did not advance.");
+    cursors.add(cursor);
+    if (cursors.size > 100) throw new Error("Composio account pagination limit reached.");
+  } while (cursor);
+  return [...accounts.values()];
+}

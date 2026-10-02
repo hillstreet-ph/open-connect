@@ -6,7 +6,7 @@ import {
   json,
   logGatewayRequest,
   resolveModelId,
-  resolveUpstreams,
+  resolveUserUpstreams,
 } from "@/lib/gateway.server";
 
 export const Route = createFileRoute("/v1/chat/completions")({
@@ -21,7 +21,7 @@ export const Route = createFileRoute("/v1/chat/completions")({
           return gatewayError("Key is missing the models:invoke scope.", 403, "insufficient_scope");
         }
 
-        const upstreams = resolveUpstreams();
+        const upstreams = await resolveUserUpstreams(key.userId);
         if (upstreams.length === 0) {
           return gatewayError("Model gateway is not configured.", 503, "upstream_unavailable");
         }

@@ -15,9 +15,20 @@ test("validates a custom MCP server with initialize", async () => {
     { provider: "custom_mcp", endpoint_url: "https://mcp.example/mcp", api_key: "test-secret" },
     app("custom_mcp"),
   );
-  const result = await validateConnectionCredential(setup, async () =>
-    Response.json({ jsonrpc: "2.0", id: 1, result: { serverInfo: { name: "fixture" } } }),
-  );
+  const result = await validateConnectionCredential(setup, async (_url, init) => {
+    if (init?.method === "GET") return new Response(null, { status: 405 });
+    const message = JSON.parse(String(init?.body));
+    if (!message.id && message.id !== 0) return new Response(null, { status: 202 });
+    return Response.json({
+      jsonrpc: "2.0",
+      id: message.id,
+      result: {
+        protocolVersion: "2025-06-18",
+        capabilities: {},
+        serverInfo: { name: "fixture", version: "1" },
+      },
+    });
+  });
   assert.equal(result.verified, true);
   assert.equal(result.accountId, "fixture");
 });

@@ -1,4 +1,4 @@
-type JsonRpcResponse = { result?: unknown; error?: { code?: number; message?: string } };
+import { fetchMcpTools, withMcpClient } from "./mcp-client.server.ts";
 
 export function connectionAuthHeaders(authType: string, credential: string) {
   if (!credential || authType === "none") return {};
@@ -27,32 +27,6 @@ async function resolveCredential(userId: string, reference: string | null) {
   }
 }
 
-async function rpc(
-  endpoint: string,
-  headers: Record<string, string>,
-  id: number,
-  method: string,
-  params?: unknown,
-) {
-  const response = await fetch(endpoint, {
-    method: "POST",
-    cache: "no-store",
-    redirect: "error",
-    signal: AbortSignal.timeout(20_000),
-    headers: {
-      ...headers,
-      Accept: "application/json, text/event-stream",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ jsonrpc: "2.0", id, method, ...(params ? { params } : {}) }),
-  });
-  if (!response.ok) throw new Error(`Connected MCP request failed (HTTP ${response.status}).`);
-  const payload = (await response.json().catch(() => null)) as JsonRpcResponse | null;
-  if (!payload) throw new Error("Connected MCP returned invalid JSON.");
-  if (payload.error) throw new Error(payload.error.message || "Connected MCP returned an error.");
-  return payload.result;
-}
-
 export async function getCustomMcpConnection(userId: string, connectionId: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data, error } = await supabaseAdmin
@@ -79,15 +53,8 @@ export async function getCustomMcpConnection(userId: string, connectionId: strin
 
 export async function listCustomMcpTools(userId: string, connectionId: string) {
   const connection = await getCustomMcpConnection(userId, connectionId);
-  await rpc(connection.endpoint, connection.headers, 1, "initialize", {
-    protocolVersion: "2025-06-18",
-    capabilities: {},
-    clientInfo: { name: "open-connect-broker", version: "1.0.0" },
-  });
-  const result = (await rpc(connection.endpoint, connection.headers, 2, "tools/list")) as {
-    tools?: Array<Record<string, unknown>>;
-  };
-  return { connection: { id: connection.id, name: connection.name }, tools: result.tools ?? [] };
+  const tools = await fetchMcpTools(connection.endpoint, connection.headers);
+  return { connection: { id: connection.id, name: connection.name }, tools };
 }
 
 export async function callCustomMcpTool(
@@ -97,8 +64,7 @@ export async function callCustomMcpTool(
   args: Record<string, unknown>,
 ) {
   const connection = await getCustomMcpConnection(userId, connectionId);
-  return rpc(connection.endpoint, connection.headers, 3, "tools/call", {
-    name: toolName,
-    arguments: args,
-  });
+  return withMcpClient(connection.endpoint, connection.headers, (client) =>
+    client.callTool({ name: toolName, arguments: args }, undefined, { timeout: 30000 }),
+  );
 }

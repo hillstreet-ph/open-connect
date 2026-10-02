@@ -6,7 +6,7 @@ import {
   json,
   logGatewayRequest,
   MODEL_ALIASES,
-  resolveUpstream,
+  resolveUserUpstreams,
 } from "@/lib/gateway.server";
 
 /**
@@ -25,7 +25,7 @@ export const Route = createFileRoute("/v1/")({
           return gatewayError("Key is missing the models:read scope.", 403, "insufficient_scope");
         }
 
-        const upstream = resolveUpstream();
+        const upstream = (await resolveUserUpstreams(key.userId))[0];
 
         await logGatewayRequest({
           key,

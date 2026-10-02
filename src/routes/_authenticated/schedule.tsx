@@ -42,7 +42,7 @@ function SchedulePage() {
       create({
         data: {
           name,
-          cronExpr: cron || undefined,
+          cronExpr: runAt ? undefined : cron || undefined,
           runAt: runAt ? new Date(runAt).toISOString() : undefined,
         },
       }),
@@ -68,7 +68,8 @@ function SchedulePage() {
         </Badge>
         <h1 className="font-display text-xl font-semibold tracking-tight sm:text-2xl">Schedule</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Cron or one-shot run times for maintenance, agent jobs, and syncs.
+          Save cron or one-shot schedules. Automatic execution requires a connected scheduling
+          worker.
         </p>
       </div>
 
@@ -122,7 +123,16 @@ function SchedulePage() {
       </Card>
 
       <div className="space-y-2">
-        {(schedules.data ?? []).length === 0 ? (
+        {schedules.isLoading ? <p role="status">Loading schedules…</p> : null}
+        {schedules.isError ? (
+          <p role="alert">
+            Could not load schedules.{" "}
+            <Button variant="link" onClick={() => void schedules.refetch()}>
+              Retry
+            </Button>
+          </p>
+        ) : null}
+        {!schedules.isLoading && !schedules.isError && (schedules.data ?? []).length === 0 ? (
           <p className="text-sm text-muted-foreground">No schedules yet.</p>
         ) : (
           schedules.data?.map((s) => (
