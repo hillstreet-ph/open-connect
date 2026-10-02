@@ -10,6 +10,7 @@ import {
   disconnectApp,
   listAppConnections,
   listConnectionCatalog,
+  syncComposioConnections,
 } from "@/lib/connections.functions";
 import { useAuth } from "@/hooks/use-auth";
 import { connectionCategories } from "@/lib/nav";
@@ -34,6 +35,7 @@ type CatalogApp = {
   scopes: string[];
   oauth: boolean;
   oauth_ready: boolean;
+  connection_method?: string;
 };
 
 function connectionStatusLabel(status: string) {
@@ -70,6 +72,7 @@ function ConnectionsPage() {
   const connectFn = useServerFn(connectApp);
   const disconnectFn = useServerFn(disconnectApp);
   const configureFn = useServerFn(configureAppConnection);
+  const syncFn = useServerFn(syncComposioConnections);
   const [selectedApp, setSelectedApp] = useState<CatalogApp | null>(null);
   const [accountLabel, setAccountLabel] = useState("");
   const [endpointUrl, setEndpointUrl] = useState("");
@@ -82,6 +85,19 @@ function ConnectionsPage() {
     queryKey: ["app-connections"],
     queryFn: () => listFn({}),
     enabled: Boolean(user),
+  });
+
+  const syncMutation = useMutation({
+    mutationFn: () => syncFn({}),
+    onSuccess: (result) => {
+      toast.success(
+        result.matched
+          ? `${result.imported} accounts synced; ${result.existing} already linked`
+          : "No authorized accounts match your Open-Connect user. Connect an app to authorize it.",
+      );
+      void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Composio sync failed"),
   });
 
   const connectMutation = useMutation({
@@ -159,7 +175,13 @@ function ConnectionsPage() {
       .map((c) => ({ category: c, apps: map.get(c)! }));
   }, [results]);
 
-  const connectionsByProvider = new Map((mine.data ?? []).map((item) => [item.provider, item]));
+  const connectionsByProvider = new Map<string, NonNullable<typeof mine.data>[number]>();
+  for (const item of mine.data ?? []) {
+    const current = connectionsByProvider.get(item.provider);
+    if (!current || (item.status === "connected" && current.status !== "connected")) {
+      connectionsByProvider.set(item.provider, item);
+    }
+  }
   const catOptions = ["All", ...connectionCategories];
 
   return (
@@ -174,6 +196,24 @@ function ConnectionsPage() {
       </p>
 
       <div className="mt-6 flex flex-wrap gap-2">
+        {user && (
+          <>
+            <Button
+              variant="outline"
+              disabled={syncMutation.isPending}
+              onClick={() => syncMutation.mutate()}
+            >
+              {syncMutation.isPending ? "Syncing…" : "Sync Composio accounts"}
+            </Button>
+            <Button
+              variant="outline"
+              disabled={mine.isFetching}
+              onClick={() => void mine.refetch()}
+            >
+              Refresh status
+            </Button>
+          </>
+        )}
         <Button
           type="button"
           onClick={() => {
@@ -224,6 +264,12 @@ function ConnectionsPage() {
         </div>
       </div>
 
+      {(catalog.isError || mine.isError) && (
+        <p role="alert" className="mt-4 text-sm text-destructive">
+          Could not load connectors. Refresh status or reload the page to retry.
+        </p>
+      )}
+
       {user && (mine.data?.length ?? 0) > 0 ? (
         <div className="mt-8 space-y-2">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -271,7 +317,7 @@ function ConnectionsPage() {
                         <p className="text-xs text-muted-foreground">
                           {app.provider === "custom_mcp"
                             ? "Custom MCP endpoint"
-                            : `${app.category} · Official provider`}
+                            : `${app.category} · ${app.connection_method === "managed_oauth" && app.oauth_ready ? "Composio" : "Official provider"}`}
                         </p>
                       </div>
                     </div>
@@ -302,7 +348,7 @@ function ConnectionsPage() {
                       >
                         {app.oauth
                           ? app.oauth_ready
-                            ? "Sign in"
+                            ? "Connect"
                             : "Setup required"
                           : app.provider === "custom_mcp"
                             ? "Add MCP"

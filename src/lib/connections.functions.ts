@@ -513,6 +513,52 @@ export const listAppConnections = createServerFn({ method: "GET" })
     );
   });
 
+export const syncComposioConnections = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { listOwnedManagedConnections } = await import("@/lib/managed-connectors.server");
+    const accounts = await listOwnedManagedConnections(context.userId);
+    let imported = 0;
+    let existing = 0;
+    for (const account of accounts) {
+      const app = CATALOG.find((item) => item.provider === account.provider);
+      if (!app) continue;
+      const { data: found, error: readError } = await context.supabase
+        .from("app_connections")
+        .select("id")
+        .eq("user_id", context.userId)
+        .eq("provider", account.provider)
+        .eq("provider_account_id", account.id)
+        .maybeSingle();
+      if (readError) throw new Error(readError.message);
+      if (found) {
+        existing++;
+        continue;
+      }
+      const { error } = await context.supabase.from("app_connections").insert({
+        user_id: context.userId,
+        provider: account.provider,
+        provider_account_id: account.id,
+        display_name: app.display_name,
+        status: "connected",
+        scopes: [],
+        credential_reference: `composio://connected-account/${account.id}`,
+        metadata: {
+          source: "composio-sync",
+          mode: "managed_oauth",
+          broker: "composio",
+          validation: { verified: true, checked_at: new Date().toISOString() },
+          full_scopes: false,
+        },
+      });
+      // The unique account index also protects concurrent sync requests.
+      if (error && error.code !== "23505") throw new Error(error.message);
+      if (error) existing++;
+      else imported++;
+    }
+    return { imported, existing, matched: accounts.length };
+  });
+
 export const connectApp = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: { provider: string }) => ({

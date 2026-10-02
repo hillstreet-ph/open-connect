@@ -99,3 +99,46 @@ export function connectionMethod(provider: string, oauth: boolean, managedReady:
   if (provider === "github") return "native_oauth";
   return oauth ? "managed_oauth" : "api_key";
 }
+
+/** Match only active accounts owned by the signed-in Open-Connect user. */
+export async function listOwnedManagedConnections(userId: string) {
+  const apiKey = process.env["COMPOSIO_API_KEY"]?.trim();
+  if (!apiKey) throw new Error("Composio is not configured.");
+  if (!userId.trim()) throw new Error("A signed-in user is required.");
+  const providers = new Map(Object.entries(authConfigs()).map(([provider, id]) => [id, provider]));
+  const accounts = new Map<string, { id: string; provider: string }>();
+  const cursors = new Set<string>();
+  let cursor = "";
+  do {
+    const query = new URLSearchParams({ user_ids: userId, statuses: "ACTIVE", limit: "100" });
+    if (cursor) query.set("cursor", cursor);
+    const page = await composioRequest<{
+      items?: Array<{
+        id: string;
+        user_id?: string;
+        status?: string;
+        is_disabled?: boolean;
+        auth_config?: { id?: string; is_disabled?: boolean };
+      }>;
+      next_cursor?: string;
+    }>(`/connected_accounts?${query}`, apiKey);
+    for (const account of page.items ?? []) {
+      const provider = providers.get(account.auth_config?.id ?? "");
+      if (
+        !provider ||
+        account.user_id !== userId ||
+        account.status !== "ACTIVE" ||
+        account.is_disabled ||
+        account.auth_config?.is_disabled ||
+        !account.id
+      )
+        continue;
+      accounts.set(account.id, { id: account.id, provider });
+    }
+    cursor = page.next_cursor ?? "";
+    if (cursor && cursors.has(cursor)) throw new Error("Composio pagination did not advance.");
+    cursors.add(cursor);
+    if (cursors.size > 100) throw new Error("Composio account pagination limit reached.");
+  } while (cursor);
+  return [...accounts.values()];
+}
