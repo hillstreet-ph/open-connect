@@ -766,14 +766,16 @@ export const disconnectApp = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: connection, error: readError } = await context.supabase
       .from("app_connections")
-      .select("provider,credential_reference")
+      .select("provider,credential_reference,metadata")
       .eq("id", data.id)
       .maybeSingle();
     if (readError) throw new Error(readError.message);
     const managedAccountId = connection?.credential_reference?.match(
       /^composio:\/\/connected-account\/([^/]+)$/,
     )?.[1];
-    if (managedAccountId && connection?.provider) {
+    const imported =
+      (connection?.metadata as Record<string, unknown> | null)?.source === "composio-sync";
+    if (managedAccountId && connection?.provider && !imported) {
       const { deleteManagedConnection } = await import("@/lib/managed-connectors.server");
       await deleteManagedConnection(connection.provider, managedAccountId);
     }
