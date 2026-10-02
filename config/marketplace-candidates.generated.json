@@ -14,7 +14,7 @@
       "canonicalUrl": "https://github.com/0xPlaygrounds/rig",
       "description": "⚙️🦀 Build modular and scalable LLM Applications in Rust",
       "license": "MIT",
-      "updatedAt": "2026-10-01T07:28:48Z",
+      "updatedAt": "2026-10-02T07:02:27Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -30,11 +30,11 @@
         "scalable-ai"
       ],
       "slug": "open-0xplaygrounds-rig",
-      "fingerprint": "6580cefe",
+      "fingerprint": "9ba9e3b6",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "0xPlaygrounds/rig",
-        "stars": 8784,
+        "stars": 8793,
         "topics": [
           "agent",
           "ai",
@@ -54,39 +54,13 @@
       }
     },
     {
-      "sourceId": "openclaw-discovery",
-      "externalId": "1399397008",
-      "name": "openclaw-josedanielguzman-colaboraci-n",
-      "canonicalUrl": "https://github.com/4GeeksAcademy/openclaw-josedanielguzman-colaboraci-n",
-      "description": "Configurando  Agente de IA Personal con OpenClaw, un asistente de IA propio — autoalojado en un VPS, privado, configurable",
-      "license": null,
-      "updatedAt": "2026-10-01T10:13:17Z",
-      "trust": "untrusted_discovery",
-      "categories": [
-        "agents",
-        "tools"
-      ],
-      "slug": "open-4geeksacademy-openclaw-josedanielguzman-colaboraci-n",
-      "fingerprint": "d1143f3b",
-      "reviewState": "pending_license_review",
-      "metadata": {
-        "full_name": "4GeeksAcademy/openclaw-josedanielguzman-colaboraci-n",
-        "stars": 0,
-        "topics": [],
-        "default_branch": "main",
-        "archived": false,
-        "fork": false,
-        "owner": "4GeeksAcademy"
-      }
-    },
-    {
       "sourceId": "mlops-discovery",
       "externalId": "201403923",
       "name": "deeplake",
       "canonicalUrl": "https://github.com/activeloopai/deeplake",
       "description": "Deeplake is AI Data Runtime for Agents. It provides serverless postgres with a multimodal datalake, enabling scalable retrieval and training.",
       "license": "Apache-2.0",
-      "updatedAt": "2026-09-30T01:00:28Z",
+      "updatedAt": "2026-10-02T09:37:33Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -103,11 +77,11 @@
         "llm"
       ],
       "slug": "open-activeloopai-deeplake",
-      "fingerprint": "6ecfabb6",
+      "fingerprint": "75dadae7",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "activeloopai/deeplake",
-        "stars": 9245,
+        "stars": 9247,
         "topics": [
           "agent",
           "agentic-rag",
@@ -136,13 +110,70 @@
       }
     },
     {
+      "sourceId": "openclaw-discovery",
+      "externalId": "1186874679",
+      "name": "skills",
+      "canonicalUrl": "https://github.com/agentskillexchange/skills",
+      "description": "Curated, trusted open catalog of AI agent skills for OpenClaw, Claude Code, Codex, GitHub Copilot, Gemini, Cursor, MCP, LangChain, and more. Browse, install, and verify reusable agent workflows.",
+      "license": "MIT",
+      "updatedAt": "2026-10-02T09:47:49Z",
+      "trust": "untrusted_discovery",
+      "categories": [
+        "agents",
+        "tools",
+        "agent-marketplace",
+        "agent-skills",
+        "agent-tools",
+        "ai-agents",
+        "ai-tools",
+        "awesome-list",
+        "claude-agents",
+        "claude-code",
+        "codex",
+        "coding-agents"
+      ],
+      "slug": "open-agentskillexchange-skills",
+      "fingerprint": "9039c59c",
+      "reviewState": "pending_security_review",
+      "metadata": {
+        "full_name": "agentskillexchange/skills",
+        "stars": 47,
+        "topics": [
+          "agent-marketplace",
+          "agent-skills",
+          "agent-tools",
+          "ai-agents",
+          "ai-tools",
+          "awesome-list",
+          "claude-agents",
+          "claude-code",
+          "codex",
+          "coding-agents",
+          "cursor",
+          "gemini-cli",
+          "github-copilot",
+          "mcp",
+          "mcp-server",
+          "npx-skills",
+          "openai-codex",
+          "openclaw",
+          "skill-library",
+          "skills-catalog"
+        ],
+        "default_branch": "main",
+        "archived": false,
+        "fork": false,
+        "owner": "agentskillexchange"
+      }
+    },
+    {
       "sourceId": "data-engineering-discovery",
       "externalId": "283046497",
       "name": "airbyte",
       "canonicalUrl": "https://github.com/airbytehq/airbyte",
       "description": "Open-source data movement for ELT pipelines and AI agents — from APIs, databases & files to warehouses, lakes, and AI applications. Both self-hosted and Cloud.",
       "license": "NOASSERTION",
-      "updatedAt": "2026-10-01T09:29:33Z",
+      "updatedAt": "2026-10-02T09:35:32Z",
       "trust": "untrusted_discovery",
       "categories": [
         "data-engineering",
@@ -159,11 +190,11 @@
         "mssql"
       ],
       "slug": "open-airbytehq-airbyte",
-      "fingerprint": "59c0e072",
+      "fingerprint": "c9f75d85",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "airbytehq/airbyte",
-        "stars": 22158,
+        "stars": 22160,
         "topics": [
           "bigquery",
           "change-data-capture",
@@ -225,7 +256,7 @@
       "canonicalUrl": "https://github.com/alirezadir/AIMLInterviews",
       "description": "This repo is meant to serve as a guide for Machine Learning/AI technical interviews. ",
       "license": "MIT",
-      "updatedAt": "2026-10-01T06:44:07Z",
+      "updatedAt": "2026-10-02T09:46:28Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -242,11 +273,11 @@
         "scalable-applications"
       ],
       "slug": "open-alirezadir-aimlinterviews",
-      "fingerprint": "45f9940b",
+      "fingerprint": "66d862e8",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "alirezadir/AIMLInterviews",
-        "stars": 9761,
+        "stars": 9771,
         "topics": [
           "agentic",
           "ai",
@@ -275,7 +306,7 @@
       "canonicalUrl": "https://github.com/amitshekhariitbhu/ai-engineer-roadmap",
       "description": "AI Engineer Roadmap - A step-by-step AI Engineering roadmap to become an AI Engineer, with a blog for every topic.",
       "license": "Apache-2.0",
-      "updatedAt": "2026-10-01T05:54:15Z",
+      "updatedAt": "2026-10-02T05:04:02Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -284,11 +315,11 @@
         "ai-engineering-roadmap"
       ],
       "slug": "open-amitshekhariitbhu-ai-engineer-roadmap",
-      "fingerprint": "2d7ebf99",
+      "fingerprint": "879dba95",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "amitshekhariitbhu/ai-engineer-roadmap",
-        "stars": 227,
+        "stars": 231,
         "topics": [
           "ai-engineer",
           "ai-engineer-roadmap",
@@ -308,7 +339,7 @@
       "canonicalUrl": "https://github.com/amitshekhariitbhu/ai-engineering-course",
       "description": "AI Engineering Course - A free and complete AI Engineering Course to learn AI Engineering step by step - from Machine Learning, Neural Networks, and Transformers to LLMs, Fine-Tuning, RAG, AI Agents, LLM Inference, Evaluation, AI Safety, and AI System Design.",
       "license": "Apache-2.0",
-      "updatedAt": "2026-10-01T09:04:02Z",
+      "updatedAt": "2026-10-02T08:48:24Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -318,11 +349,11 @@
         "large-language-models"
       ],
       "slug": "open-amitshekhariitbhu-ai-engineering-course",
-      "fingerprint": "7e4fcdda",
+      "fingerprint": "95e1145a",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "amitshekhariitbhu/ai-engineering-course",
-        "stars": 466,
+        "stars": 481,
         "topics": [
           "ai-course",
           "ai-engineering",
@@ -343,7 +374,7 @@
       "canonicalUrl": "https://github.com/amitshekhariitbhu/ai-engineering-interview-questions",
       "description": "Your Cheat Sheet for AI Engineering Interview – Questions and Answers.",
       "license": "Apache-2.0",
-      "updatedAt": "2026-10-01T10:20:01Z",
+      "updatedAt": "2026-10-02T00:45:18Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -360,11 +391,11 @@
         "quantization"
       ],
       "slug": "open-amitshekhariitbhu-ai-engineering-interview-questions",
-      "fingerprint": "c60afb70",
+      "fingerprint": "29ee5931",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "amitshekhariitbhu/ai-engineering-interview-questions",
-        "stars": 3263,
+        "stars": 3271,
         "topics": [
           "agents",
           "ai",
@@ -394,7 +425,7 @@
       "canonicalUrl": "https://github.com/amitshekhariitbhu/ai-system-design",
       "description": "AI System Design - Learn how to design AI systems built on LLMs, RAG, and AI Agents step by step.",
       "license": "Apache-2.0",
-      "updatedAt": "2026-10-01T08:59:29Z",
+      "updatedAt": "2026-10-02T10:01:58Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -409,11 +440,11 @@
         "system-design-interview"
       ],
       "slug": "open-amitshekhariitbhu-ai-system-design",
-      "fingerprint": "06b8c0d4",
+      "fingerprint": "4b4784a7",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "amitshekhariitbhu/ai-system-design",
-        "stars": 483,
+        "stars": 567,
         "topics": [
           "ai",
           "ai-agents",
@@ -439,7 +470,7 @@
       "canonicalUrl": "https://github.com/andkret/Cookbook",
       "description": "The Data Engineering Cookbook",
       "license": "Apache-2.0",
-      "updatedAt": "2026-10-01T09:54:10Z",
+      "updatedAt": "2026-10-02T03:56:34Z",
       "trust": "untrusted_discovery",
       "categories": [
         "data-engineering",
@@ -449,11 +480,11 @@
         "data-engineer"
       ],
       "slug": "open-andkret-cookbook",
-      "fingerprint": "ab757638",
+      "fingerprint": "1cdcc017",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "andkret/Cookbook",
-        "stars": 15453,
+        "stars": 15455,
         "topics": [
           "best-practices",
           "big-data",
@@ -474,7 +505,7 @@
       "canonicalUrl": "https://github.com/apache/airflow",
       "description": "Apache Airflow - A platform to programmatically author, schedule, and monitor workflows",
       "license": "Apache-2.0",
-      "updatedAt": "2026-10-01T10:09:57Z",
+      "updatedAt": "2026-10-02T09:50:47Z",
       "trust": "untrusted_discovery",
       "categories": [
         "data-engineering",
@@ -491,11 +522,11 @@
         "etl"
       ],
       "slug": "open-apache-airflow",
-      "fingerprint": "a6faf4ab",
+      "fingerprint": "17e9eae1",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "apache/airflow",
-        "stars": 47016,
+        "stars": 47032,
         "topics": [
           "airflow",
           "apache",
@@ -531,7 +562,7 @@
       "canonicalUrl": "https://github.com/apache/superset",
       "description": "Apache Superset is a Data Visualization and Data Exploration Platform",
       "license": "Apache-2.0",
-      "updatedAt": "2026-10-01T10:06:06Z",
+      "updatedAt": "2026-10-02T07:57:52Z",
       "trust": "untrusted_discovery",
       "categories": [
         "data-engineering",
@@ -548,11 +579,11 @@
         "data-visualization"
       ],
       "slug": "open-apache-superset",
-      "fingerprint": "fa03421e",
+      "fingerprint": "ecb21c26",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "apache/superset",
-        "stars": 74993,
+        "stars": 75007,
         "topics": [
           "analytics",
           "apache",
@@ -586,7 +617,7 @@
       "canonicalUrl": "https://github.com/argoproj/argo-workflows",
       "description": "Workflow Engine for Kubernetes",
       "license": "Apache-2.0",
-      "updatedAt": "2026-10-01T08:33:32Z",
+      "updatedAt": "2026-10-02T05:34:45Z",
       "trust": "untrusted_discovery",
       "categories": [
         "data-engineering",
@@ -603,11 +634,11 @@
         "knative"
       ],
       "slug": "open-argoproj-argo-workflows",
-      "fingerprint": "50ed8cf6",
+      "fingerprint": "9390211b",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "argoproj/argo-workflows",
-        "stars": 17016,
+        "stars": 17017,
         "topics": [
           "airflow",
           "argo",
@@ -641,7 +672,7 @@
       "canonicalUrl": "https://github.com/Arize-ai/phoenix",
       "description": "AI Observability & Evaluation",
       "license": "NOASSERTION",
-      "updatedAt": "2026-10-01T09:24:11Z",
+      "updatedAt": "2026-10-02T09:03:21Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -658,11 +689,11 @@
         "llm-eval"
       ],
       "slug": "open-arize-ai-phoenix",
-      "fingerprint": "8804f64c",
+      "fingerprint": "6e4864f1",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "Arize-ai/phoenix",
-        "stars": 11669,
+        "stars": 11679,
         "topics": [
           "agents",
           "ai-monitoring",
@@ -688,52 +719,13 @@
       }
     },
     {
-      "sourceId": "openclaw-discovery",
-      "externalId": "1192011237",
-      "name": "openclaw-max",
-      "canonicalUrl": "https://github.com/aspalagin/openclaw-max",
-      "description": "MAX messenger (max.ru) channel plugin for OpenClaw",
-      "license": "NOASSERTION",
-      "updatedAt": "2026-10-01T10:23:50Z",
-      "trust": "untrusted_discovery",
-      "categories": [
-        "agents",
-        "tools",
-        "ai-agent",
-        "max",
-        "max-messenger",
-        "messenger",
-        "openclaw",
-        "openclaw-plugin"
-      ],
-      "slug": "open-aspalagin-openclaw-max",
-      "fingerprint": "098748ed",
-      "reviewState": "pending_license_review",
-      "metadata": {
-        "full_name": "aspalagin/openclaw-max",
-        "stars": 7,
-        "topics": [
-          "ai-agent",
-          "max",
-          "max-messenger",
-          "messenger",
-          "openclaw",
-          "openclaw-plugin"
-        ],
-        "default_branch": "main",
-        "archived": false,
-        "fork": false,
-        "owner": "aspalagin"
-      }
-    },
-    {
       "sourceId": "data-engineering-discovery",
       "externalId": "460914281",
       "name": "taipy",
       "canonicalUrl": "https://github.com/Avaiga/taipy",
       "description": "Turns Data and AI algorithms into production-ready web applications in no time.",
       "license": "Apache-2.0",
-      "updatedAt": "2026-10-01T08:38:17Z",
+      "updatedAt": "2026-10-01T23:19:22Z",
       "trust": "untrusted_discovery",
       "categories": [
         "data-engineering",
@@ -750,7 +742,7 @@
         "orchestration"
       ],
       "slug": "open-avaiga-taipy",
-      "fingerprint": "f8f788da",
+      "fingerprint": "4e6617d2",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "Avaiga/taipy",
@@ -784,13 +776,70 @@
       }
     },
     {
+      "sourceId": "openclaw-discovery",
+      "externalId": "1157705791",
+      "name": "memorix",
+      "canonicalUrl": "https://github.com/AVIDS2/memorix",
+      "description": "Open-source cross-agent memory layer for coding agents via MCP. Compatible with Claude Code, Codex, Cursor, Windsurf, Gemini CLI, Antigravity, OpenClaw, Hermes Agent, Oh-my-Pi, Pi, Copilot, Kiro, OpenCode, and Trae.",
+      "license": "Apache-2.0",
+      "updatedAt": "2026-10-02T09:57:12Z",
+      "trust": "untrusted_discovery",
+      "categories": [
+        "agents",
+        "tools",
+        "agent-memory",
+        "ai-coding",
+        "antigravity",
+        "claude-code",
+        "codex",
+        "coding-agents",
+        "copilot",
+        "cross-agent-memory",
+        "cursor",
+        "gemini-cli"
+      ],
+      "slug": "open-avids2-memorix",
+      "fingerprint": "bca8cba0",
+      "reviewState": "pending_security_review",
+      "metadata": {
+        "full_name": "AVIDS2/memorix",
+        "stars": 824,
+        "topics": [
+          "agent-memory",
+          "ai-coding",
+          "antigravity",
+          "claude-code",
+          "codex",
+          "coding-agents",
+          "copilot",
+          "cross-agent-memory",
+          "cursor",
+          "gemini-cli",
+          "hermes-agent",
+          "local-first",
+          "mcp",
+          "mcp-server",
+          "model-context-protocol",
+          "oh-my-pi",
+          "openclaw",
+          "opencode",
+          "typescript",
+          "windsurf"
+        ],
+        "default_branch": "main",
+        "archived": false,
+        "fork": false,
+        "owner": "AVIDS2"
+      }
+    },
+    {
       "sourceId": "mlops-discovery",
       "externalId": "107937815",
       "name": "amazon-sagemaker-examples",
       "canonicalUrl": "https://github.com/aws/amazon-sagemaker-examples",
       "description": "Example 📓 Jupyter notebooks that demonstrate how to build, train, and deploy machine learning models using 🧠 Amazon SageMaker. ",
       "license": "Apache-2.0",
-      "updatedAt": "2026-09-29T09:59:49Z",
+      "updatedAt": "2026-10-01T18:14:06Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -807,11 +856,11 @@
         "training"
       ],
       "slug": "open-aws-amazon-sagemaker-examples",
-      "fingerprint": "b95cd80c",
+      "fingerprint": "3cb20312",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "aws/amazon-sagemaker-examples",
-        "stars": 10987,
+        "stars": 10988,
         "topics": [
           "aws",
           "data-science",
@@ -838,7 +887,7 @@
       "canonicalUrl": "https://github.com/bentoml/BentoML",
       "description": "The easiest way to serve AI apps and models - Build Model Inference APIs, Job queues, LLM apps, Multi-model pipelines, and more!",
       "license": "Apache-2.0",
-      "updatedAt": "2026-09-30T12:31:33Z",
+      "updatedAt": "2026-10-02T05:07:18Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -855,11 +904,11 @@
         "mlops"
       ],
       "slug": "open-bentoml-bentoml",
-      "fingerprint": "52abe848",
+      "fingerprint": "6ce26147",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "bentoml/BentoML",
-        "stars": 8869,
+        "stars": 8871,
         "topics": [
           "ai-inference",
           "deep-learning",
@@ -890,7 +939,7 @@
       "canonicalUrl": "https://github.com/bentoml/OpenLLM",
       "description": "Run any open-source LLMs, such as DeepSeek and Llama, as OpenAI compatible API endpoint in the cloud.",
       "license": "Apache-2.0",
-      "updatedAt": "2026-10-01T03:21:11Z",
+      "updatedAt": "2026-10-02T09:16:41Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -907,11 +956,11 @@
         "llm-ops"
       ],
       "slug": "open-bentoml-openllm",
-      "fingerprint": "40a3dcef",
+      "fingerprint": "fc9b236d",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "bentoml/OpenLLM",
-        "stars": 12550,
+        "stars": 12553,
         "topics": [
           "bentoml",
           "fine-tuning",
@@ -945,7 +994,7 @@
       "canonicalUrl": "https://github.com/BerriAI/litellm",
       "description": "The fastest, litest AI Gateway. Rust core with Python SDK. Call 100+ LLM APIs in OpenAI (or native) format with cost tracking, guardrails, load balancing, and logging [Bedrock, Azure, OpenAI, Anthropic, OpenAI, VertexAI, vLLM, Nvidia NIM]",
       "license": "NOASSERTION",
-      "updatedAt": "2026-10-01T10:16:53Z",
+      "updatedAt": "2026-10-02T09:47:55Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -962,11 +1011,11 @@
         "mcp-gateway"
       ],
       "slug": "open-berriai-litellm",
-      "fingerprint": "7808046b",
+      "fingerprint": "1fcdd66c",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "BerriAI/litellm",
-        "stars": 59976,
+        "stars": 60032,
         "topics": [
           "ai-gateway",
           "anthropic",
@@ -998,7 +1047,7 @@
       "canonicalUrl": "https://github.com/best-of-ai/best-of-ai",
       "description": "A curated list of best ai tools",
       "license": null,
-      "updatedAt": "2026-09-30T11:25:00Z",
+      "updatedAt": "2026-10-02T03:03:05Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -1015,11 +1064,11 @@
         "awesome-ai-tools"
       ],
       "slug": "open-best-of-ai-best-of-ai",
-      "fingerprint": "1184843f",
+      "fingerprint": "889cdb56",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "best-of-ai/best-of-ai",
-        "stars": 731,
+        "stars": 733,
         "topics": [
           "ai",
           "ai-agent",
@@ -1054,7 +1103,7 @@
       "canonicalUrl": "https://github.com/business-science/ai-data-science-team",
       "description": "An AI-powered data science team of agents to help you perform common data science tasks 10X faster.",
       "license": "MIT",
-      "updatedAt": "2026-09-30T13:17:27Z",
+      "updatedAt": "2026-10-01T18:56:53Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -1071,11 +1120,11 @@
         "ml-engineering"
       ],
       "slug": "open-business-science-ai-data-science-team",
-      "fingerprint": "7965ab0a",
+      "fingerprint": "702f0277",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "business-science/ai-data-science-team",
-        "stars": 5430,
+        "stars": 5431,
         "topics": [
           "agents",
           "ai",
@@ -1104,7 +1153,7 @@
       "canonicalUrl": "https://github.com/calmrocks/ai-engineer-notebooks",
       "description": "Hands-on, framework-free Colab notebooks for the AI Engineer / Forward Deployed Engineer (FDE) skill set — model APIs, structured output, tool calling, RAG, evals-as-the-spine, agents (loop from scratch, tool design, guardrails, MCP, Skills), fine-tuning vs LoRA, prompt-injection/security, LLMOps, and customer craft. Runs on the free Groq API.",
       "license": "MIT",
-      "updatedAt": "2026-10-01T10:13:57Z",
+      "updatedAt": "2026-10-02T02:13:45Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -1121,11 +1170,11 @@
         "llm-as-judge"
       ],
       "slug": "open-calmrocks-ai-engineer-notebooks",
-      "fingerprint": "2be1cdda",
+      "fingerprint": "aa7f3dc5",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "calmrocks/ai-engineer-notebooks",
-        "stars": 669,
+        "stars": 675,
         "topics": [
           "agents",
           "ai-engineer",
@@ -1153,13 +1202,96 @@
       }
     },
     {
+      "sourceId": "openclaw-discovery",
+      "externalId": "306366900",
+      "name": "casdoor",
+      "canonicalUrl": "https://github.com/casdoor/casdoor",
+      "description": "An open-source Agent-first Identity and Access Management (IAM) /LLM MCP & agent gateway and auth server with web UI supporting OpenClaw, MCP, OAuth, OIDC, SAML, CAS, LDAP, SCIM, WebAuthn, TOTP, MFA, Face ID, Google Workspace, Azure AD",
+      "license": "Apache-2.0",
+      "updatedAt": "2026-10-02T09:55:26Z",
+      "trust": "untrusted_discovery",
+      "categories": [
+        "agents",
+        "tools",
+        "agent",
+        "agentic-ai",
+        "agi",
+        "ai-gateway",
+        "auth",
+        "authentication",
+        "iam",
+        "llm",
+        "mcp",
+        "mcp-gateway"
+      ],
+      "slug": "open-casdoor-casdoor",
+      "fingerprint": "12ebe925",
+      "reviewState": "pending_security_review",
+      "metadata": {
+        "full_name": "casdoor/casdoor",
+        "stars": 14506,
+        "topics": [
+          "agent",
+          "agentic-ai",
+          "agi",
+          "ai-gateway",
+          "auth",
+          "authentication",
+          "iam",
+          "llm",
+          "mcp",
+          "mcp-gateway",
+          "mfa",
+          "oauth",
+          "oidc",
+          "openclaw",
+          "radius",
+          "saml",
+          "scim",
+          "single-sign-on",
+          "sso",
+          "webauthn"
+        ],
+        "default_branch": "master",
+        "archived": false,
+        "fork": false,
+        "owner": "casdoor"
+      }
+    },
+    {
+      "sourceId": "openclaw-discovery",
+      "externalId": "1401413259",
+      "name": "tria-orchestrator",
+      "canonicalUrl": "https://github.com/CesarCabrera85/tria-orchestrator",
+      "description": "Local Codex CLI, Claude Code and OpenClaw orchestration with a live web dashboard and SSH deployment.",
+      "license": "MIT",
+      "updatedAt": "2026-10-02T09:50:59Z",
+      "trust": "untrusted_discovery",
+      "categories": [
+        "agents",
+        "tools"
+      ],
+      "slug": "open-cesarcabrera85-tria-orchestrator",
+      "fingerprint": "5e0b70f3",
+      "reviewState": "pending_security_review",
+      "metadata": {
+        "full_name": "CesarCabrera85/tria-orchestrator",
+        "stars": 0,
+        "topics": [],
+        "default_branch": "main",
+        "archived": false,
+        "fork": false,
+        "owner": "CesarCabrera85"
+      }
+    },
+    {
       "sourceId": "mlops-discovery",
       "externalId": "223824546",
       "name": "machine-learning-systems-design",
       "canonicalUrl": "https://github.com/chiphuyen/machine-learning-systems-design",
       "description": "A booklet on machine learning systems design with exercises. NOT the repo for the book \"Designing Machine Learning Systems\", which is `dmls-book`",
       "license": null,
-      "updatedAt": "2026-10-01T09:33:46Z",
+      "updatedAt": "2026-10-02T06:44:50Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -1168,11 +1300,11 @@
         "machine-learning-production"
       ],
       "slug": "open-chiphuyen-machine-learning-systems-design",
-      "fingerprint": "d36edaa2",
+      "fingerprint": "80c4f8cb",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "chiphuyen/machine-learning-systems-design",
-        "stars": 10686,
+        "stars": 10690,
         "topics": [
           "data-science",
           "machine-learning-production",
@@ -1191,7 +1323,7 @@
       "canonicalUrl": "https://github.com/clearml/clearml",
       "description": "ClearML - Auto-Magical CI/CD to streamline your AI workload. Experiment Management, Data Management, Pipeline, Orchestration, Scheduling & Serving in one MLOps/LLMOps solution",
       "license": "Apache-2.0",
-      "updatedAt": "2026-09-30T20:02:52Z",
+      "updatedAt": "2026-10-02T08:02:21Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -1208,11 +1340,11 @@
         "machine-learning"
       ],
       "slug": "open-clearml-clearml",
-      "fingerprint": "c52086ca",
+      "fingerprint": "cac0b6a5",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "clearml/clearml",
-        "stars": 6896,
+        "stars": 6897,
         "topics": [
           "ai",
           "clearml",
@@ -1243,7 +1375,7 @@
       "canonicalUrl": "https://github.com/cloudquery/cloudquery",
       "description": "Data pipelines for cloud config and security data. Build cloud asset inventory, CSPM, FinOps, and vulnerability management solutions. Extract from AWS, Azure, GCP, and 70+ cloud and SaaS sources.",
       "license": "MPL-2.0",
-      "updatedAt": "2026-10-01T06:42:40Z",
+      "updatedAt": "2026-10-02T00:42:20Z",
       "trust": "untrusted_discovery",
       "categories": [
         "data-engineering",
@@ -1260,7 +1392,7 @@
         "elt"
       ],
       "slug": "open-cloudquery-cloudquery",
-      "fingerprint": "ee3672a8",
+      "fingerprint": "d5ea5fef",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "cloudquery/cloudquery",
@@ -1300,7 +1432,7 @@
       "canonicalUrl": "https://github.com/cocoindex-io/cocoindex",
       "description": "Incremental engine for long horizon agents 🌟 Star if you like it!",
       "license": "Apache-2.0",
-      "updatedAt": "2026-10-01T10:23:01Z",
+      "updatedAt": "2026-10-02T08:38:36Z",
       "trust": "untrusted_discovery",
       "categories": [
         "data-engineering",
@@ -1317,11 +1449,11 @@
         "indexing"
       ],
       "slug": "open-cocoindex-io-cocoindex",
-      "fingerprint": "3b39a083",
+      "fingerprint": "e869d243",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "cocoindex-io/cocoindex",
-        "stars": 11638,
+        "stars": 11639,
         "topics": [
           "agentic-data-framework",
           "ai",
@@ -1357,7 +1489,7 @@
       "canonicalUrl": "https://github.com/comet-ml/opik",
       "description": "Debug, evaluate, and monitor your LLM applications, RAG systems, and agentic workflows with comprehensive tracing, automated evaluations, and production-ready dashboards.",
       "license": "Apache-2.0",
-      "updatedAt": "2026-10-01T10:20:36Z",
+      "updatedAt": "2026-10-02T09:37:00Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -1374,11 +1506,11 @@
         "openai"
       ],
       "slug": "open-comet-ml-opik",
-      "fingerprint": "2e9b75f4",
+      "fingerprint": "0e2fba20",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "comet-ml/opik",
-        "stars": 22316,
+        "stars": 22333,
         "topics": [
           "evaluation",
           "hacktoberfest",
@@ -1407,7 +1539,7 @@
       "canonicalUrl": "https://github.com/ComposioHQ/composio",
       "description": "Composio powers 1000+ toolkits, tool search, context management, authentication, and a sandboxed workbench to help you build AI agents that turn intent into action.",
       "license": "MIT",
-      "updatedAt": "2026-10-01T10:01:55Z",
+      "updatedAt": "2026-10-02T08:20:29Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -1424,11 +1556,11 @@
         "js"
       ],
       "slug": "open-composiohq-composio",
-      "fingerprint": "4e6b0453",
+      "fingerprint": "762fbbc1",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "ComposioHQ/composio",
-        "stars": 30386,
+        "stars": 30395,
         "topics": [
           "agentic-ai",
           "agents",
@@ -1455,56 +1587,13 @@
       }
     },
     {
-      "sourceId": "openclaw-discovery",
-      "externalId": "1193086141",
-      "name": "m365-copilot-proxy",
-      "canonicalUrl": "https://github.com/cramt/m365-copilot-proxy",
-      "description": "OpenAI-compatible proxy for Microsoft 365 Copilot — use the Copilot licence you already have as a backend for pi, openclaw and other coding agents. Prompt-emulated tool calling, no extra licence, no MCP.",
-      "license": "MIT",
-      "updatedAt": "2026-10-01T10:22:40Z",
-      "trust": "untrusted_discovery",
-      "categories": [
-        "agents",
-        "tools",
-        "coding-agent",
-        "llm",
-        "m365-copilot",
-        "microsoft-copilot",
-        "openai-compatible-api",
-        "proxy",
-        "reverse-engineering",
-        "typescript"
-      ],
-      "slug": "open-cramt-m365-copilot-proxy",
-      "fingerprint": "428cc257",
-      "reviewState": "pending_security_review",
-      "metadata": {
-        "full_name": "cramt/m365-copilot-proxy",
-        "stars": 117,
-        "topics": [
-          "coding-agent",
-          "llm",
-          "m365-copilot",
-          "microsoft-copilot",
-          "openai-compatible-api",
-          "proxy",
-          "reverse-engineering",
-          "typescript"
-        ],
-        "default_branch": "main",
-        "archived": false,
-        "fork": false,
-        "owner": "cramt"
-      }
-    },
-    {
       "sourceId": "data-engineering-discovery",
       "externalId": "131619646",
       "name": "dagster",
       "canonicalUrl": "https://github.com/dagster-io/dagster",
       "description": "An orchestration platform for the development, production, and observation of data assets.",
       "license": "Apache-2.0",
-      "updatedAt": "2026-10-01T09:47:59Z",
+      "updatedAt": "2026-10-02T07:15:42Z",
       "trust": "untrusted_discovery",
       "categories": [
         "data-engineering",
@@ -1521,11 +1610,11 @@
         "python"
       ],
       "slug": "open-dagster-io-dagster",
-      "fingerprint": "8d402818",
+      "fingerprint": "166da3ec",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "dagster-io/dagster",
-        "stars": 16229,
+        "stars": 16231,
         "topics": [
           "analytics",
           "dagster",
@@ -1556,7 +1645,7 @@
       "canonicalUrl": "https://github.com/dataelement/bisheng",
       "description": "BISHENG is an open LLM devops platform for next generation Enterprise AI applications. Powerful and comprehensive features include: GenAI workflow, RAG, Agent, Unified model management, Evaluation, SFT, Dataset Management, Enterprise-level System Management, Observability and more.",
       "license": "Apache-2.0",
-      "updatedAt": "2026-10-01T09:55:13Z",
+      "updatedAt": "2026-10-02T08:37:21Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -1573,11 +1662,11 @@
         "llm"
       ],
       "slug": "open-dataelement-bisheng",
-      "fingerprint": "61dfe6a1",
+      "fingerprint": "dd2c7e50",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "dataelement/bisheng",
-        "stars": 12019,
+        "stars": 12021,
         "topics": [
           "agent",
           "ai",
@@ -1613,7 +1702,7 @@
       "canonicalUrl": "https://github.com/datastacktv/data-engineer-roadmap",
       "description": "Roadmap to becoming a data engineer in 2021",
       "license": null,
-      "updatedAt": "2026-10-01T03:08:38Z",
+      "updatedAt": "2026-10-01T19:49:24Z",
       "trust": "untrusted_discovery",
       "categories": [
         "data-engineering",
@@ -1622,11 +1711,11 @@
         "roadmap"
       ],
       "slug": "open-datastacktv-data-engineer-roadmap",
-      "fingerprint": "1006b51a",
+      "fingerprint": "5e0f50e9",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "datastacktv/data-engineer-roadmap",
-        "stars": 12762,
+        "stars": 12759,
         "topics": [
           "cloud",
           "data-engineer-roadmap",
@@ -1646,7 +1735,7 @@
       "canonicalUrl": "https://github.com/DataTalksClub/data-engineering-zoomcamp",
       "description": "Data Engineering Zoomcamp is a free 9-week course on building production-ready data pipelines. Join the course here 👇🏼",
       "license": null,
-      "updatedAt": "2026-10-01T10:17:03Z",
+      "updatedAt": "2026-10-02T09:46:21Z",
       "trust": "untrusted_discovery",
       "categories": [
         "data-engineering",
@@ -1659,11 +1748,11 @@
         "spark"
       ],
       "slug": "open-datatalksclub-data-engineering-zoomcamp",
-      "fingerprint": "54f48585",
+      "fingerprint": "d119e13e",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "DataTalksClub/data-engineering-zoomcamp",
-        "stars": 45931,
+        "stars": 45956,
         "topics": [
           "course",
           "data-engineering",
@@ -1687,7 +1776,7 @@
       "canonicalUrl": "https://github.com/DataTalksClub/mlops-zoomcamp",
       "description": "Free MLOps course from DataTalks.Club. Register here 👇🏼 to get notified about the next cohort",
       "license": null,
-      "updatedAt": "2026-10-01T10:14:02Z",
+      "updatedAt": "2026-10-01T14:36:56Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -1698,11 +1787,11 @@
         "workflow-orchestration"
       ],
       "slug": "open-datatalksclub-mlops-zoomcamp",
-      "fingerprint": "f70bb8a8",
+      "fingerprint": "66d3f5e1",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "DataTalksClub/mlops-zoomcamp",
-        "stars": 15364,
+        "stars": 15366,
         "topics": [
           "machine-learning",
           "mlops",
@@ -1752,13 +1841,39 @@
       }
     },
     {
+      "sourceId": "openclaw-discovery",
+      "externalId": "1240034542",
+      "name": "openclaw-config-dj",
+      "canonicalUrl": "https://github.com/djpadz-openclaw-repos/openclaw-config-dj",
+      "description": null,
+      "license": null,
+      "updatedAt": "2026-10-02T10:01:56Z",
+      "trust": "untrusted_discovery",
+      "categories": [
+        "agents",
+        "tools"
+      ],
+      "slug": "open-djpadz-openclaw-repos-openclaw-config-dj",
+      "fingerprint": "9a46644a",
+      "reviewState": "pending_license_review",
+      "metadata": {
+        "full_name": "djpadz-openclaw-repos/openclaw-config-dj",
+        "stars": 0,
+        "topics": [],
+        "default_branch": "main",
+        "archived": false,
+        "fork": false,
+        "owner": "djpadz-openclaw-repos"
+      }
+    },
+    {
       "sourceId": "data-engineering-discovery",
       "externalId": "452221115",
       "name": "dlt",
       "canonicalUrl": "https://github.com/dlt-hub/dlt",
       "description": "data load tool (dlt) is an open source Python library that makes data loading easy 🛠️ ",
       "license": "Apache-2.0",
-      "updatedAt": "2026-10-01T09:47:39Z",
+      "updatedAt": "2026-10-02T09:13:32Z",
       "trust": "untrusted_discovery",
       "categories": [
         "data-engineering",
@@ -1773,11 +1888,11 @@
         "transform"
       ],
       "slug": "open-dlt-hub-dlt",
-      "fingerprint": "d690bf67",
+      "fingerprint": "bea0c074",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "dlt-hub/dlt",
-        "stars": 5916,
+        "stars": 5924,
         "topics": [
           "data",
           "data-engineering",
@@ -1798,64 +1913,12 @@
     },
     {
       "sourceId": "openclaw-discovery",
-      "externalId": "1202270532",
-      "name": "openclaw-shared-docs",
-      "canonicalUrl": "https://github.com/dnd5fj5gjy-bit/openclaw-shared-docs",
-      "description": "Auto-published docs from OpenClaw agent workspaces",
-      "license": null,
-      "updatedAt": "2026-10-01T10:20:41Z",
-      "trust": "untrusted_discovery",
-      "categories": [
-        "agents",
-        "tools"
-      ],
-      "slug": "open-dnd5fj5gjy-bit-openclaw-shared-docs",
-      "fingerprint": "d0f8c529",
-      "reviewState": "pending_license_review",
-      "metadata": {
-        "full_name": "dnd5fj5gjy-bit/openclaw-shared-docs",
-        "stars": 0,
-        "topics": [],
-        "default_branch": "master",
-        "archived": false,
-        "fork": false,
-        "owner": "dnd5fj5gjy-bit"
-      }
-    },
-    {
-      "sourceId": "openclaw-discovery",
-      "externalId": "1340972773",
-      "name": "bbx-paw-openclaw",
-      "canonicalUrl": "https://github.com/dpkchohan/bbx-paw-openclaw",
-      "description": "a open claw based platform for automation ",
-      "license": null,
-      "updatedAt": "2026-10-01T10:21:47Z",
-      "trust": "untrusted_discovery",
-      "categories": [
-        "agents",
-        "tools"
-      ],
-      "slug": "open-dpkchohan-bbx-paw-openclaw",
-      "fingerprint": "1c1c350c",
-      "reviewState": "pending_license_review",
-      "metadata": {
-        "full_name": "dpkchohan/bbx-paw-openclaw",
-        "stars": 0,
-        "topics": [],
-        "default_branch": "main",
-        "archived": false,
-        "fork": false,
-        "owner": "dpkchohan"
-      }
-    },
-    {
-      "sourceId": "openclaw-discovery",
       "externalId": "1177380251",
       "name": "openclaw-docker",
       "canonicalUrl": "https://github.com/dr34m-cn/openclaw-docker",
       "description": "Automatically sync from ghcr.io/openclaw/openclaw to Docker Hub every 10 minutes. 官方实时同步镜像",
       "license": "MIT",
-      "updatedAt": "2026-10-01T10:25:18Z",
+      "updatedAt": "2026-10-02T09:55:18Z",
       "trust": "untrusted_discovery",
       "categories": [
         "agents",
@@ -1864,7 +1927,7 @@
         "openclaw"
       ],
       "slug": "open-dr34m-cn-openclaw-docker",
-      "fingerprint": "7e14c1a1",
+      "fingerprint": "3ad2f0cd",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "dr34m-cn/openclaw-docker",
@@ -1886,7 +1949,7 @@
       "canonicalUrl": "https://github.com/EthicalML/awesome-production-machine-learning",
       "description": "A curated list of awesome open source libraries to deploy, monitor, version and scale your machine learning",
       "license": "MIT",
-      "updatedAt": "2026-10-01T05:48:36Z",
+      "updatedAt": "2026-10-02T08:29:00Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -1903,11 +1966,11 @@
         "machine-learning-operations"
       ],
       "slug": "open-ethicalml-awesome-production-machine-learning",
-      "fingerprint": "756806e6",
+      "fingerprint": "c716f228",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "EthicalML/awesome-production-machine-learning",
-        "stars": 20963,
+        "stars": 20967,
         "topics": [
           "awesome",
           "awesome-list",
@@ -1942,7 +2005,7 @@
       "canonicalUrl": "https://github.com/eugeneyan/applied-ml",
       "description": "📚 Papers & tech blogs by companies sharing their work on data science & machine learning in production.",
       "license": "MIT",
-      "updatedAt": "2026-10-01T10:22:42Z",
+      "updatedAt": "2026-10-02T09:38:14Z",
       "trust": "untrusted_discovery",
       "categories": [
         "data-engineering",
@@ -1959,11 +2022,11 @@
         "recsys"
       ],
       "slug": "open-eugeneyan-applied-ml",
-      "fingerprint": "be74a1b2",
+      "fingerprint": "49294a79",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "eugeneyan/applied-ml",
-        "stars": 30470,
+        "stars": 30474,
         "topics": [
           "applied-data-science",
           "applied-machine-learning",
@@ -2049,7 +2112,7 @@
       "canonicalUrl": "https://github.com/evidence-dev/evidence",
       "description": "Business intelligence as code: build fast, interactive data visualizations in SQL and markdown",
       "license": "MIT",
-      "updatedAt": "2026-10-01T10:16:34Z",
+      "updatedAt": "2026-10-02T07:42:38Z",
       "trust": "untrusted_discovery",
       "categories": [
         "data-engineering",
@@ -2066,11 +2129,11 @@
         "svelte"
       ],
       "slug": "open-evidence-dev-evidence",
-      "fingerprint": "46c3377e",
+      "fingerprint": "99d6ede6",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "evidence-dev/evidence",
-        "stars": 6967,
+        "stars": 6972,
         "topics": [
           "analytics",
           "business-intelligence",
@@ -2100,7 +2163,7 @@
       "canonicalUrl": "https://github.com/evidentlyai/evidently",
       "description": "Evidently is ​​an open-source ML and LLM observability framework. Evaluate, test, and monitor any AI-powered system or data pipeline. From tabular data to Gen AI. 100+ metrics.",
       "license": "Apache-2.0",
-      "updatedAt": "2026-10-01T04:35:34Z",
+      "updatedAt": "2026-10-01T20:14:15Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -2117,11 +2180,11 @@
         "machine-learning"
       ],
       "slug": "open-evidentlyai-evidently",
-      "fingerprint": "ac88b68c",
+      "fingerprint": "2af0097c",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "evidentlyai/evidently",
-        "stars": 7952,
+        "stars": 7956,
         "topics": [
           "data-drift",
           "data-quality",
@@ -2151,7 +2214,7 @@
       "canonicalUrl": "https://github.com/fancyboi999/ai-engineering-from-scratch-zh",
       "description": "Agent工程师最全学习路径 · 从零精通 AI 工程 · 20 阶段 503 课 · 中文全量翻译 + 配套站点 + 动画讲解视频 · 如何成为 AI Agent 工程师的修成指南",
       "license": "MIT",
-      "updatedAt": "2026-10-01T08:46:32Z",
+      "updatedAt": "2026-10-02T05:48:18Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -2168,11 +2231,11 @@
         "learn-ai"
       ],
       "slug": "open-fancyboi999-ai-engineering-from-scratch-zh",
-      "fingerprint": "ed07f853",
+      "fingerprint": "71424e19",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "fancyboi999/ai-engineering-from-scratch-zh",
-        "stars": 1146,
+        "stars": 1150,
         "topics": [
           "agents",
           "ai",
@@ -2202,96 +2265,13 @@
       }
     },
     {
-      "sourceId": "openclaw-discovery",
-      "externalId": "1031912724",
-      "name": "cc-switch",
-      "canonicalUrl": "https://github.com/farion1231/cc-switch",
-      "description": "A cross-platform desktop All-in-One assistant for Claude Code, Codex, OpenCode, OpenClaw, Grok Build & Hermes Agent. Only official website: ccswitch.io",
-      "license": "MIT",
-      "updatedAt": "2026-10-01T10:25:50Z",
-      "trust": "untrusted_discovery",
-      "categories": [
-        "agents",
-        "tools",
-        "ai-tools",
-        "claude-code",
-        "codex",
-        "desktop-app",
-        "grok",
-        "grokbuild",
-        "hermes",
-        "hermes-agent",
-        "mcp",
-        "open-source"
-      ],
-      "slug": "open-farion1231-cc-switch",
-      "fingerprint": "d28ba9e2",
-      "reviewState": "pending_security_review",
-      "metadata": {
-        "full_name": "farion1231/cc-switch",
-        "stars": 139278,
-        "topics": [
-          "ai-tools",
-          "claude-code",
-          "codex",
-          "desktop-app",
-          "grok",
-          "grokbuild",
-          "hermes",
-          "hermes-agent",
-          "mcp",
-          "open-source",
-          "openclaw",
-          "openclaw-ui",
-          "opencode",
-          "pi",
-          "provider-management",
-          "rust",
-          "skills",
-          "skills-management",
-          "tauri",
-          "wsl-support"
-        ],
-        "default_branch": "main",
-        "archived": false,
-        "fork": false,
-        "owner": "farion1231"
-      }
-    },
-    {
-      "sourceId": "openclaw-discovery",
-      "externalId": "1399711440",
-      "name": "openclaw-windows-toolkit",
-      "canonicalUrl": "https://github.com/fasteddie2/openclaw-windows-toolkit",
-      "description": "Discord latency diagnostic skill and a verified Windows workspace-policy installer with guarded rollback.",
-      "license": "MIT",
-      "updatedAt": "2026-10-01T10:09:55Z",
-      "trust": "untrusted_discovery",
-      "categories": [
-        "agents",
-        "tools"
-      ],
-      "slug": "open-fasteddie2-openclaw-windows-toolkit",
-      "fingerprint": "bb5be9a1",
-      "reviewState": "pending_security_review",
-      "metadata": {
-        "full_name": "fasteddie2/openclaw-windows-toolkit",
-        "stars": 0,
-        "topics": [],
-        "default_branch": "main",
-        "archived": false,
-        "fork": false,
-        "owner": "fasteddie2"
-      }
-    },
-    {
       "sourceId": "data-engineering-discovery",
       "externalId": "161133770",
       "name": "feast",
       "canonicalUrl": "https://github.com/feast-dev/feast",
       "description": "The Open Source Feature Store for AI/ML",
       "license": "Apache-2.0",
-      "updatedAt": "2026-10-01T09:54:56Z",
+      "updatedAt": "2026-10-02T09:37:14Z",
       "trust": "untrusted_discovery",
       "categories": [
         "data-engineering",
@@ -2306,11 +2286,11 @@
         "python"
       ],
       "slug": "open-feast-dev-feast",
-      "fingerprint": "6eb72fdd",
+      "fingerprint": "1e1f0bfd",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "feast-dev/feast",
-        "stars": 7318,
+        "stars": 7319,
         "topics": [
           "big-data",
           "data-engineering",
@@ -2336,7 +2316,7 @@
       "canonicalUrl": "https://github.com/fivetran/great_expectations",
       "description": "Always know what to expect from your data.",
       "license": "Apache-2.0",
-      "updatedAt": "2026-09-30T12:45:45Z",
+      "updatedAt": "2026-10-02T09:54:30Z",
       "trust": "untrusted_discovery",
       "categories": [
         "data-engineering",
@@ -2353,11 +2333,11 @@
         "eda"
       ],
       "slug": "open-fivetran-great-expectations",
-      "fingerprint": "5904d314",
+      "fingerprint": "9eda869b",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "fivetran/great_expectations",
-        "stars": 11851,
+        "stars": 11854,
         "topics": [
           "cleandata",
           "data-engineering",
@@ -2387,13 +2367,39 @@
       }
     },
     {
+      "sourceId": "openclaw-discovery",
+      "externalId": "1351859560",
+      "name": "openclaw-webhook",
+      "canonicalUrl": "https://github.com/fluentwithkyle/openclaw-webhook",
+      "description": null,
+      "license": null,
+      "updatedAt": "2026-10-02T09:49:09Z",
+      "trust": "untrusted_discovery",
+      "categories": [
+        "agents",
+        "tools"
+      ],
+      "slug": "open-fluentwithkyle-openclaw-webhook",
+      "fingerprint": "c7d3c91e",
+      "reviewState": "pending_license_review",
+      "metadata": {
+        "full_name": "fluentwithkyle/openclaw-webhook",
+        "stars": 0,
+        "topics": [],
+        "default_branch": "main",
+        "archived": false,
+        "fork": false,
+        "owner": "fluentwithkyle"
+      }
+    },
+    {
       "sourceId": "mlops-discovery",
       "externalId": "216628419",
       "name": "flyte",
       "canonicalUrl": "https://github.com/flyteorg/flyte",
       "description": "Dynamic, resilient AI orchestration. Coordinate data, models, and compute as you build AI workflows.",
       "license": "Apache-2.0",
-      "updatedAt": "2026-10-01T10:22:21Z",
+      "updatedAt": "2026-10-01T18:05:05Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -2410,11 +2416,11 @@
         "grpc"
       ],
       "slug": "open-flyteorg-flyte",
-      "fingerprint": "a191a396",
+      "fingerprint": "c11b9ad1",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "flyteorg/flyte",
-        "stars": 7609,
+        "stars": 7595,
         "topics": [
           "agentic",
           "ai-agents",
@@ -2444,39 +2450,13 @@
       }
     },
     {
-      "sourceId": "openclaw-discovery",
-      "externalId": "1230985758",
-      "name": "github-agent-bridge",
-      "canonicalUrl": "https://github.com/gisce/github-agent-bridge",
-      "description": "GitHub notification to OpenClaw agent bridge",
-      "license": null,
-      "updatedAt": "2026-10-01T10:26:10Z",
-      "trust": "untrusted_discovery",
-      "categories": [
-        "agents",
-        "tools"
-      ],
-      "slug": "open-gisce-github-agent-bridge",
-      "fingerprint": "6af1f555",
-      "reviewState": "pending_license_review",
-      "metadata": {
-        "full_name": "gisce/github-agent-bridge",
-        "stars": 4,
-        "topics": [],
-        "default_branch": "main",
-        "archived": false,
-        "fork": false,
-        "owner": "gisce"
-      }
-    },
-    {
       "sourceId": "llmops-discovery",
       "externalId": "466864356",
       "name": "giskard-oss",
       "canonicalUrl": "https://github.com/Giskard-AI/giskard-oss",
       "description": "🐢 Open-Source Evaluation & Testing library for LLM Agents",
       "license": "Apache-2.0",
-      "updatedAt": "2026-10-01T03:48:17Z",
+      "updatedAt": "2026-10-02T09:36:59Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -2493,11 +2473,11 @@
         "ml-testing"
       ],
       "slug": "open-giskard-ai-giskard-oss",
-      "fingerprint": "25f2576f",
+      "fingerprint": "ca156e3f",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "Giskard-AI/giskard-oss",
-        "stars": 5847,
+        "stars": 5851,
         "topics": [
           "agent-evaluation",
           "ai-red-team",
@@ -2530,7 +2510,7 @@
       "canonicalUrl": "https://github.com/global-fde/awesome-fde-resources",
       "description": "A curated collection of resources, tools, practices, case studies, and opportunities for Forward Deployed Engineers.",
       "license": "CC-BY-4.0",
-      "updatedAt": "2026-09-29T09:15:17Z",
+      "updatedAt": "2026-10-02T08:50:35Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -2544,11 +2524,11 @@
         "production-ai"
       ],
       "slug": "open-global-fde-awesome-fde-resources",
-      "fingerprint": "96fc608a",
+      "fingerprint": "acfa0acd",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "global-fde/awesome-fde-resources",
-        "stars": 285,
+        "stars": 287,
         "topics": [
           "ai-agents",
           "ai-engineering",
@@ -2622,7 +2602,7 @@
       "canonicalUrl": "https://github.com/GokuMohandas/Made-With-ML",
       "description": "Learn how to develop, deploy and iterate on production-grade ML applications.",
       "license": "MIT",
-      "updatedAt": "2026-10-01T09:56:36Z",
+      "updatedAt": "2026-10-01T20:45:07Z",
       "trust": "untrusted_discovery",
       "categories": [
         "data-engineering",
@@ -2639,11 +2619,11 @@
         "python"
       ],
       "slug": "open-gokumohandas-made-with-ml",
-      "fingerprint": "b2f3d2ce",
+      "fingerprint": "1c90cc4b",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "GokuMohandas/Made-With-ML",
-        "stars": 49668,
+        "stars": 49672,
         "topics": [
           "data-engineering",
           "data-quality",
@@ -2673,7 +2653,7 @@
       "canonicalUrl": "https://github.com/GoogleCloudPlatform/agent-starter-pack",
       "description": "Ship AI Agents to Google Cloud in minutes, not months. Production-ready templates with built-in CI/CD, evaluation, and observability.",
       "license": "Apache-2.0",
-      "updatedAt": "2026-09-30T23:15:36Z",
+      "updatedAt": "2026-10-02T02:28:41Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -2687,11 +2667,11 @@
         "observability"
       ],
       "slug": "open-googlecloudplatform-agent-starter-pack",
-      "fingerprint": "b1d828a9",
+      "fingerprint": "10ae266f",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "GoogleCloudPlatform/agent-starter-pack",
-        "stars": 6563,
+        "stars": 6568,
         "topics": [
           "agents",
           "gcp",
@@ -2715,7 +2695,7 @@
       "canonicalUrl": "https://github.com/growthbook/growthbook",
       "description": "Open Source Feature Flags, Experimentation, and Product Analytics",
       "license": "NOASSERTION",
-      "updatedAt": "2026-10-01T05:27:45Z",
+      "updatedAt": "2026-10-02T08:12:47Z",
       "trust": "untrusted_discovery",
       "categories": [
         "data-engineering",
@@ -2732,11 +2712,11 @@
         "experimentation"
       ],
       "slug": "open-growthbook-growthbook",
-      "fingerprint": "38df2b0d",
+      "fingerprint": "629c63bf",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "growthbook/growthbook",
-        "stars": 8462,
+        "stars": 8465,
         "topics": [
           "ab-testing",
           "abtest",
@@ -2772,14 +2752,14 @@
       "canonicalUrl": "https://github.com/hartra344/pincer",
       "description": "Native macOS/iOS client for OpenClaw: Discord-style chat organization with thinking, tool activity and inline images",
       "license": "MIT",
-      "updatedAt": "2026-10-01T10:24:04Z",
+      "updatedAt": "2026-10-02T09:54:39Z",
       "trust": "untrusted_discovery",
       "categories": [
         "agents",
         "tools"
       ],
       "slug": "open-hartra344-pincer",
-      "fingerprint": "1d406ac3",
+      "fingerprint": "9332044b",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "hartra344/pincer",
@@ -2798,7 +2778,7 @@
       "canonicalUrl": "https://github.com/Helicone/helicone",
       "description": "🧊 Open source LLM observability platform. One line of code to monitor, evaluate, and experiment. YC W23 🍓",
       "license": "Apache-2.0",
-      "updatedAt": "2026-09-30T15:14:45Z",
+      "updatedAt": "2026-10-01T21:27:01Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -2815,11 +2795,11 @@
         "llm-evaluation"
       ],
       "slug": "open-helicone-helicone",
-      "fingerprint": "6b3bdf5f",
+      "fingerprint": "3441f8b6",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "Helicone/helicone",
-        "stars": 6190,
+        "stars": 6193,
         "topics": [
           "agent-monitoring",
           "analytics",
@@ -2880,7 +2860,7 @@
       "canonicalUrl": "https://github.com/HumanSignal/label-studio",
       "description": "Label Studio is a multi-type data labeling and annotation tool with standardized output format",
       "license": "Apache-2.0",
-      "updatedAt": "2026-10-01T09:31:46Z",
+      "updatedAt": "2026-10-02T09:59:08Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -2897,11 +2877,11 @@
         "image-annotation"
       ],
       "slug": "open-humansignal-label-studio",
-      "fingerprint": "ec76f491",
+      "fingerprint": "bb264838",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "HumanSignal/label-studio",
-        "stars": 28387,
+        "stars": 28397,
         "topics": [
           "annotation",
           "annotation-tool",
@@ -2932,19 +2912,45 @@
     },
     {
       "sourceId": "openclaw-discovery",
+      "externalId": "1230655525",
+      "name": "open-second-brain",
+      "canonicalUrl": "https://github.com/itechmeat/open-second-brain",
+      "description": "Local-first 🧠 memory for Hermes Agent that lives in your Obsidian vault and remembers project context. Nightly 😴 dream passes turn repeat corrections into confirmed preferences with measurable confidence. Adapters ship for Claude Code, Codex, and OpenClaw, with an MCP server for anything else.",
+      "license": "MIT",
+      "updatedAt": "2026-10-02T10:01:01Z",
+      "trust": "untrusted_discovery",
+      "categories": [
+        "agents",
+        "tools"
+      ],
+      "slug": "open-itechmeat-open-second-brain",
+      "fingerprint": "5efd5675",
+      "reviewState": "pending_security_review",
+      "metadata": {
+        "full_name": "itechmeat/open-second-brain",
+        "stars": 428,
+        "topics": [],
+        "default_branch": "main",
+        "archived": false,
+        "fork": false,
+        "owner": "itechmeat"
+      }
+    },
+    {
+      "sourceId": "openclaw-discovery",
       "externalId": "1248701946",
       "name": "volta-stats",
       "canonicalUrl": "https://github.com/Jason-Vaughan/volta-stats",
       "description": "Volta (OpenClaw) self-published status + token-usage stats. Read by Monad-1 publish.py for monad-stats.json composition, by portfolio for hero cards, by future Tangle Bay aggregator. Auto-updated hourly by Volta itself.",
       "license": null,
-      "updatedAt": "2026-10-01T10:15:08Z",
+      "updatedAt": "2026-10-02T10:00:08Z",
       "trust": "untrusted_discovery",
       "categories": [
         "agents",
         "tools"
       ],
       "slug": "open-jason-vaughan-volta-stats",
-      "fingerprint": "bb94e1ba",
+      "fingerprint": "4f068da7",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "Jason-Vaughan/volta-stats",
@@ -2957,70 +2963,13 @@
       }
     },
     {
-      "sourceId": "openclaw-discovery",
-      "externalId": "1243377527",
-      "name": "token-monitor",
-      "canonicalUrl": "https://github.com/Javis603/token-monitor",
-      "description": "Local-first desktop widget for tracking token usage, costs, and limits across 43+ AI coding tools—including Claude Code, Codex, Cursor, OpenCode, OpenClaw, and more—with multi-device sync.",
-      "license": "MIT",
-      "updatedAt": "2026-10-01T10:09:28Z",
-      "trust": "untrusted_discovery",
-      "categories": [
-        "agents",
-        "tools",
-        "ai",
-        "ai-tools",
-        "antigravity",
-        "claude-code",
-        "codex",
-        "cursor",
-        "deepseek",
-        "deepseek-harness",
-        "dsh",
-        "hermes-agent"
-      ],
-      "slug": "open-javis603-token-monitor",
-      "fingerprint": "cd4d1f15",
-      "reviewState": "pending_security_review",
-      "metadata": {
-        "full_name": "Javis603/token-monitor",
-        "stars": 2533,
-        "topics": [
-          "ai",
-          "ai-tools",
-          "antigravity",
-          "claude-code",
-          "codex",
-          "cursor",
-          "deepseek",
-          "deepseek-harness",
-          "dsh",
-          "hermes-agent",
-          "linux",
-          "llm",
-          "local-first",
-          "macos",
-          "openclaw",
-          "opencode",
-          "self-hosted",
-          "token-tracker",
-          "token-usage",
-          "windows"
-        ],
-        "default_branch": "main",
-        "archived": false,
-        "fork": false,
-        "owner": "Javis603"
-      }
-    },
-    {
       "sourceId": "llmops-discovery",
       "externalId": "240315046",
       "name": "serve",
       "canonicalUrl": "https://github.com/jina-ai/serve",
       "description": "☁️ Build multimodal AI applications with cloud-native stack",
       "license": "Apache-2.0",
-      "updatedAt": "2026-09-29T08:33:27Z",
+      "updatedAt": "2026-10-01T18:37:55Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -3037,11 +2986,11 @@
         "kubernetes"
       ],
       "slug": "open-jina-ai-serve",
-      "fingerprint": "140939a7",
+      "fingerprint": "51fa301b",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "jina-ai/serve",
-        "stars": 21864,
+        "stars": 21865,
         "topics": [
           "cloud-native",
           "cncf",
@@ -3072,12 +3021,38 @@
     },
     {
       "sourceId": "openclaw-discovery",
+      "externalId": "1201403970",
+      "name": "evoclaw",
+      "canonicalUrl": "https://github.com/johnwuming/evoclaw",
+      "description": "进化中的爪子 — OpenClaw 多Agent交付物仓库",
+      "license": null,
+      "updatedAt": "2026-10-02T10:00:22Z",
+      "trust": "untrusted_discovery",
+      "categories": [
+        "agents",
+        "tools"
+      ],
+      "slug": "open-johnwuming-evoclaw",
+      "fingerprint": "eb3c202a",
+      "reviewState": "pending_license_review",
+      "metadata": {
+        "full_name": "johnwuming/evoclaw",
+        "stars": 0,
+        "topics": [],
+        "default_branch": "main",
+        "archived": false,
+        "fork": false,
+        "owner": "johnwuming"
+      }
+    },
+    {
+      "sourceId": "openclaw-discovery",
       "externalId": "1178536012",
       "name": "openclaw-autotrader",
       "canonicalUrl": "https://github.com/JokerJohn/openclaw-autotrader",
       "description": "A 30-day public U.S. stock challenge: follow a 5000 HKD 🦞 claw through live market days.",
       "license": null,
-      "updatedAt": "2026-10-01T10:12:27Z",
+      "updatedAt": "2026-10-02T09:56:18Z",
       "trust": "untrusted_discovery",
       "categories": [
         "agents",
@@ -3094,7 +3069,7 @@
         "trader"
       ],
       "slug": "open-jokerjohn-openclaw-autotrader",
-      "fingerprint": "6e641917",
+      "fingerprint": "56518ea4",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "JokerJohn/openclaw-autotrader",
@@ -3163,13 +3138,39 @@
       }
     },
     {
+      "sourceId": "openclaw-discovery",
+      "externalId": "1400989688",
+      "name": "dsh-phone-bridge",
+      "canonicalUrl": "https://github.com/KaiyeZeng/dsh-phone-bridge",
+      "description": "在手机微信里接着电脑上正在聊的 DeepSeek Harness (DSH) 会话：共用同一段上下文，不是新建机器人。经 OpenClaw 连微信/元宝。Drive your existing DSH desktop session from WeChat: same thread, not a new bot.",
+      "license": "MIT",
+      "updatedAt": "2026-10-02T10:01:27Z",
+      "trust": "untrusted_discovery",
+      "categories": [
+        "agents",
+        "tools"
+      ],
+      "slug": "open-kaiyezeng-dsh-phone-bridge",
+      "fingerprint": "06dca509",
+      "reviewState": "pending_security_review",
+      "metadata": {
+        "full_name": "KaiyeZeng/dsh-phone-bridge",
+        "stars": 1,
+        "topics": [],
+        "default_branch": "main",
+        "archived": false,
+        "fork": false,
+        "owner": "KaiyeZeng"
+      }
+    },
+    {
       "sourceId": "llmops-discovery",
       "externalId": "826498000",
       "name": "plano",
       "canonicalUrl": "https://github.com/katanemo/plano",
       "description": "Plano is an AI-native proxy server and data plane for agentic apps. Smart LLM routing, observability, agent orchestration, and guardrails so you stay focused on your agents core logic.",
       "license": "Apache-2.0",
-      "updatedAt": "2026-10-01T02:37:54Z",
+      "updatedAt": "2026-10-01T20:30:39Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -3186,11 +3187,11 @@
         "llm-routing"
       ],
       "slug": "open-katanemo-plano",
-      "fingerprint": "e8337cba",
+      "fingerprint": "f2e0fac0",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "katanemo/plano",
-        "stars": 7075,
+        "stars": 7079,
         "topics": [
           "ai-gateway",
           "ai-gateway-support",
@@ -3223,7 +3224,7 @@
       "canonicalUrl": "https://github.com/kedro-org/kedro",
       "description": "Kedro is a toolbox for production-ready data science. It uses software engineering best practices to help you create data engineering and data science pipelines that are reproducible, maintainable, and modular.",
       "license": "NOASSERTION",
-      "updatedAt": "2026-09-30T12:58:12Z",
+      "updatedAt": "2026-10-02T09:20:57Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -3238,11 +3239,11 @@
         "python"
       ],
       "slug": "open-kedro-org-kedro",
-      "fingerprint": "01c2cb61",
+      "fingerprint": "6a174176",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "kedro-org/kedro",
-        "stars": 11014,
+        "stars": 11013,
         "topics": [
           "agentic-ai",
           "agentic-workflow",
@@ -3261,13 +3262,70 @@
       }
     },
     {
+      "sourceId": "openclaw-discovery",
+      "externalId": "1219253756",
+      "name": "izzi-ai",
+      "canonicalUrl": "https://github.com/kentzu213/izzi-ai",
+      "description": "Izzi AI — Desktop AI Agent Hub for Windows & macOS. Run OpenClaw, HyperFrames, F5 TTS and the IzziAPI Marketing Room from one app.",
+      "license": null,
+      "updatedAt": "2026-10-02T09:51:42Z",
+      "trust": "untrusted_discovery",
+      "categories": [
+        "agents",
+        "tools",
+        "agent-orchestration",
+        "ai-agent",
+        "ai-assistant",
+        "ai-gateway",
+        "autogpt",
+        "claude",
+        "desktop-app",
+        "electron",
+        "gemini",
+        "glassmorphism"
+      ],
+      "slug": "open-kentzu213-izzi-ai",
+      "fingerprint": "6f729e04",
+      "reviewState": "pending_license_review",
+      "metadata": {
+        "full_name": "kentzu213/izzi-ai",
+        "stars": 0,
+        "topics": [
+          "agent-orchestration",
+          "ai-agent",
+          "ai-assistant",
+          "ai-gateway",
+          "autogpt",
+          "claude",
+          "desktop-app",
+          "electron",
+          "gemini",
+          "glassmorphism",
+          "gpt",
+          "hermes",
+          "izziapi",
+          "llm",
+          "multi-agent",
+          "openclaw",
+          "react",
+          "telegram-bot",
+          "typescript",
+          "zalo"
+        ],
+        "default_branch": "main",
+        "archived": false,
+        "fork": false,
+        "owner": "kentzu213"
+      }
+    },
+    {
       "sourceId": "data-engineering-discovery",
       "externalId": "204164353",
       "name": "kestra",
       "canonicalUrl": "https://github.com/kestra-io/kestra",
       "description": "Event Driven Orchestration & Scheduling Platform for Mission Critical Applications",
       "license": "Apache-2.0",
-      "updatedAt": "2026-10-01T10:21:46Z",
+      "updatedAt": "2026-10-02T09:59:51Z",
       "trust": "untrusted_discovery",
       "categories": [
         "data-engineering",
@@ -3284,11 +3342,11 @@
         "infra-ops"
       ],
       "slug": "open-kestra-io-kestra",
-      "fingerprint": "3b4108b2",
+      "fingerprint": "464fa63e",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "kestra-io/kestra",
-        "stars": 28582,
+        "stars": 28761,
         "topics": [
           "ai-agents",
           "automation",
@@ -3324,7 +3382,7 @@
       "canonicalUrl": "https://github.com/kimtth/azure-openai-llm-notes",
       "description": "A curated collection of resources for 🌌 Azure OpenAI, 🦙 LLMs (+RAG, Agents). Monthly Updates.",
       "license": null,
-      "updatedAt": "2026-09-29T20:02:22Z",
+      "updatedAt": "2026-10-02T06:07:32Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -3341,7 +3399,7 @@
         "large-language-models"
       ],
       "slug": "open-kimtth-azure-openai-llm-notes",
-      "fingerprint": "77c8250b",
+      "fingerprint": "9a433c6c",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "kimtth/azure-openai-llm-notes",
@@ -3437,7 +3495,7 @@
       "canonicalUrl": "https://github.com/langfuse/langfuse",
       "description": "🪢 Open source agent evals & observability: Trace, evaluate, and improve LLM applications with one open platform.",
       "license": "NOASSERTION",
-      "updatedAt": "2026-10-01T10:08:09Z",
+      "updatedAt": "2026-10-02T09:40:34Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -3454,11 +3512,11 @@
         "monitoring"
       ],
       "slug": "open-langfuse-langfuse",
-      "fingerprint": "aa529222",
+      "fingerprint": "f51a0d2b",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "langfuse/langfuse",
-        "stars": 35259,
+        "stars": 35298,
         "topics": [
           "analytics",
           "autogen",
@@ -3487,13 +3545,39 @@
       }
     },
     {
+      "sourceId": "openclaw-discovery",
+      "externalId": "1162874444",
+      "name": "openclaw-skills",
+      "canonicalUrl": "https://github.com/LeoSaucedo/openclaw-skills",
+      "description": "A collection of OpenClaw skills I've written.",
+      "license": null,
+      "updatedAt": "2026-10-02T10:01:39Z",
+      "trust": "untrusted_discovery",
+      "categories": [
+        "agents",
+        "tools"
+      ],
+      "slug": "open-leosaucedo-openclaw-skills",
+      "fingerprint": "41900345",
+      "reviewState": "pending_license_review",
+      "metadata": {
+        "full_name": "LeoSaucedo/openclaw-skills",
+        "stars": 2,
+        "topics": [],
+        "default_branch": "master",
+        "archived": false,
+        "fork": false,
+        "owner": "LeoSaucedo"
+      }
+    },
+    {
       "sourceId": "llmops-discovery",
       "externalId": "644235905",
       "name": "llm-action",
       "canonicalUrl": "https://github.com/liguodongiot/llm-action",
       "description": "本项目旨在分享大模型相关技术原理以及实战经验（大模型工程化、大模型应用落地）",
       "license": "Apache-2.0",
-      "updatedAt": "2026-10-01T08:09:44Z",
+      "updatedAt": "2026-10-01T13:39:03Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -3504,11 +3588,11 @@
         "llm-training"
       ],
       "slug": "open-liguodongiot-llm-action",
-      "fingerprint": "76939bdd",
+      "fingerprint": "28890291",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "liguodongiot/llm-action",
-        "stars": 25125,
+        "stars": 25127,
         "topics": [
           "llm",
           "llm-inference",
@@ -3524,28 +3608,28 @@
     },
     {
       "sourceId": "openclaw-discovery",
-      "externalId": "1377031616",
-      "name": "LKM-bot",
-      "canonicalUrl": "https://github.com/LKM-AHZ/LKM-bot",
-      "description": "AI Agent Assistant & development framework that integrates lots of IM platforms, LLMs, plugins and AI feature, and can be your openclaw alternative. ✨",
-      "license": "AGPL-3.0",
-      "updatedAt": "2026-10-01T10:20:43Z",
+      "externalId": "1187718039",
+      "name": "openclaw-quant-system",
+      "canonicalUrl": "https://github.com/liuxing5/openclaw-quant-system",
+      "description": "Professional quant trading system with dual data sources (Baostock+AKShare), walk-forward backtesting, multi-factor regression, and self-evolution capability",
+      "license": "MIT",
+      "updatedAt": "2026-10-02T09:55:26Z",
       "trust": "untrusted_discovery",
       "categories": [
         "agents",
         "tools"
       ],
-      "slug": "open-lkm-ahz-lkm-bot",
-      "fingerprint": "7a28e205",
+      "slug": "open-liuxing5-openclaw-quant-system",
+      "fingerprint": "51155db4",
       "reviewState": "pending_security_review",
       "metadata": {
-        "full_name": "LKM-AHZ/LKM-bot",
-        "stars": 0,
+        "full_name": "liuxing5/openclaw-quant-system",
+        "stars": 2,
         "topics": [],
         "default_branch": "master",
         "archived": false,
         "fork": false,
-        "owner": "LKM-AHZ"
+        "owner": "liuxing5"
       }
     },
     {
@@ -3586,7 +3670,7 @@
       "canonicalUrl": "https://github.com/lobehub/acceptance",
       "description": "✅ Acceptance is open-source e2e testing for Agents. Your coding agent turns a prompt into observable checks, runs the real product, and publishes a report with screenshots, recordings, and logs attached to each check. You can accept the work, or send individual checks back.",
       "license": "Apache-2.0",
-      "updatedAt": "2026-10-01T09:17:31Z",
+      "updatedAt": "2026-10-02T04:48:38Z",
       "trust": "upstream_metadata",
       "categories": [
         "ai-engineering",
@@ -3601,7 +3685,7 @@
         "verification"
       ],
       "slug": "open-lobehub-acceptance",
-      "fingerprint": "7debadc3",
+      "fingerprint": "6c66613a",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "lobehub/acceptance",
@@ -3629,7 +3713,7 @@
       "canonicalUrl": "https://github.com/lobehub/awesome-rsi",
       "description": "A curated research map of Recursive Self-Improvement (RSI): models, agents, harnesses, embodied systems, automated AI R&D, benchmarks, and safety.",
       "license": "CC0-1.0",
-      "updatedAt": "2026-10-01T10:16:24Z",
+      "updatedAt": "2026-10-02T06:32:33Z",
       "trust": "upstream_metadata",
       "categories": [
         "ai-engineering",
@@ -3646,11 +3730,11 @@
         "awesome-lists"
       ],
       "slug": "open-lobehub-awesome-rsi",
-      "fingerprint": "1ba4cd66",
+      "fingerprint": "3e408124",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "lobehub/awesome-rsi",
-        "stars": 374,
+        "stars": 380,
         "topics": [
           "agi",
           "ai",
@@ -4161,7 +4245,7 @@
       "canonicalUrl": "https://github.com/lobehub/lobe-editor",
       "description": "✒️ Lobe Editor - a modern, extensible rich text editor built on Meta's Lexical framework with dual-architecture design, featuring both a powerful kernel and React integration. Optimized for AI applications and chat interfaces.",
       "license": "MIT",
-      "updatedAt": "2026-10-01T05:01:10Z",
+      "updatedAt": "2026-10-01T11:14:40Z",
       "trust": "upstream_metadata",
       "categories": [
         "ai-engineering",
@@ -4171,7 +4255,7 @@
         "lobehub"
       ],
       "slug": "open-lobehub-lobe-editor",
-      "fingerprint": "52512daf",
+      "fingerprint": "d8d07d2d",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "lobehub/lobe-editor",
@@ -4233,7 +4317,7 @@
       "canonicalUrl": "https://github.com/lobehub/lobe-icons",
       "description": "🥨 Lobe Icons - Brings AI/LLM brand logos to your React & React Native apps — static SVG/PNG/WebP, no dependencies.",
       "license": "MIT",
-      "updatedAt": "2026-10-01T05:07:12Z",
+      "updatedAt": "2026-10-02T05:00:45Z",
       "trust": "upstream_metadata",
       "categories": [
         "ai-engineering",
@@ -4250,11 +4334,11 @@
         "icon-packs"
       ],
       "slug": "open-lobehub-lobe-icons",
-      "fingerprint": "20b25b67",
+      "fingerprint": "a824bd93",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "lobehub/lobe-icons",
-        "stars": 2557,
+        "stars": 2561,
         "topics": [
           "ai",
           "ai-brands",
@@ -4435,7 +4519,7 @@
       "canonicalUrl": "https://github.com/lobehub/lobe-ui",
       "description": "🍭  Lobe UI - an open-source UI component library for building AIGC web apps",
       "license": "MIT",
-      "updatedAt": "2026-10-01T02:34:43Z",
+      "updatedAt": "2026-10-01T17:49:59Z",
       "trust": "upstream_metadata",
       "categories": [
         "ai-engineering",
@@ -4452,7 +4536,7 @@
         "ui-components"
       ],
       "slug": "open-lobehub-lobe-ui",
-      "fingerprint": "e241f7f5",
+      "fingerprint": "dead8a2e",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "lobehub/lobe-ui",
@@ -4483,7 +4567,7 @@
       "canonicalUrl": "https://github.com/lobehub/lobehub",
       "description": "🤯 LobeHub is your Chief Agent Operator, organizing your agents into 7×24 operations by hiring, scheduling, and reporting on your entire AI team.",
       "license": "NOASSERTION",
-      "updatedAt": "2026-10-01T10:08:49Z",
+      "updatedAt": "2026-10-02T08:56:37Z",
       "trust": "upstream_metadata",
       "categories": [
         "ai-engineering",
@@ -4500,11 +4584,11 @@
         "fable"
       ],
       "slug": "open-lobehub-lobehub",
-      "fingerprint": "1a62feae",
+      "fingerprint": "bd771404",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "lobehub/lobehub",
-        "stars": 82939,
+        "stars": 82955,
         "topics": [
           "agent",
           "agent-collaboration",
@@ -4707,7 +4791,7 @@
       "canonicalUrl": "https://github.com/louisfb01/ai-engineering-cheatsheets",
       "description": "Give you decision-ready references for the most common AI engineering problems",
       "license": null,
-      "updatedAt": "2026-09-27T06:37:51Z",
+      "updatedAt": "2026-10-01T22:51:38Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -4722,11 +4806,11 @@
         "llm-agent"
       ],
       "slug": "open-louisfb01-ai-engineering-cheatsheets",
-      "fingerprint": "e8c1fc26",
+      "fingerprint": "f84de003",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "louisfb01/ai-engineering-cheatsheets",
-        "stars": 351,
+        "stars": 352,
         "topics": [
           "agent",
           "agentic-ai",
@@ -4743,6 +4827,32 @@
         "archived": false,
         "fork": false,
         "owner": "louisfb01"
+      }
+    },
+    {
+      "sourceId": "openclaw-discovery",
+      "externalId": "1396610751",
+      "name": "openclaw-france-communaute",
+      "canonicalUrl": "https://github.com/mael-ctrl/openclaw-france-communaute",
+      "description": "🦀 La Communauté — le média d'actualité IA 100 % écrit, publié et maintenu par une IA. Site : communaute-ia.fr",
+      "license": "NOASSERTION",
+      "updatedAt": "2026-10-02T09:50:43Z",
+      "trust": "untrusted_discovery",
+      "categories": [
+        "agents",
+        "tools"
+      ],
+      "slug": "open-mael-ctrl-openclaw-france-communaute",
+      "fingerprint": "969abe5b",
+      "reviewState": "pending_license_review",
+      "metadata": {
+        "full_name": "mael-ctrl/openclaw-france-communaute",
+        "stars": 0,
+        "topics": [],
+        "default_branch": "main",
+        "archived": false,
+        "fork": false,
+        "owner": "mael-ctrl"
       }
     },
     {
@@ -4807,7 +4917,7 @@
       "canonicalUrl": "https://github.com/MakazhanAlpamys/Soup",
       "description": "Fine-tune LLMs from one YAML. Layer streaming trains an 8B model on a 4 GB laptop GPU.",
       "license": "Apache-2.0",
-      "updatedAt": "2026-10-01T10:15:56Z",
+      "updatedAt": "2026-10-02T10:02:00Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -4824,11 +4934,11 @@
         "lora"
       ],
       "slug": "open-makazhanalpamys-soup",
-      "fingerprint": "41ab93ce",
+      "fingerprint": "f97c26a2",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "MakazhanAlpamys/Soup",
-        "stars": 7901,
+        "stars": 7989,
         "topics": [
           "cli",
           "consumer-gpu",
@@ -4864,7 +4974,7 @@
       "canonicalUrl": "https://github.com/maximhq/bifrost",
       "description": "Fastest enterprise AI gateway (50x faster than LiteLLM) with adaptive load balancer, cluster mode, guardrails, 1000+ models support & <100 µs overhead at 5k RPS.",
       "license": "Apache-2.0",
-      "updatedAt": "2026-10-01T10:25:12Z",
+      "updatedAt": "2026-10-02T09:50:39Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -4881,11 +4991,11 @@
         "load-balancing"
       ],
       "slug": "open-maximhq-bifrost",
-      "fingerprint": "b877b00f",
+      "fingerprint": "a64550a9",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "maximhq/bifrost",
-        "stars": 8496,
+        "stars": 8516,
         "topics": [
           "ai-gateway",
           "gateway",
@@ -4911,39 +5021,13 @@
       }
     },
     {
-      "sourceId": "openclaw-discovery",
-      "externalId": "1378382556",
-      "name": "VibeCodedApps",
-      "canonicalUrl": "https://github.com/melihkarasu/VibeCodedApps",
-      "description": "Yalnızca OpenClaw ajanına Telegram üzerinden mesaj gönderilerek oluşturulmuş, ücretsiz servisler ile çalışan, uzaydan moleküllere, coğrafyadan finans ve kelime düellolarına kadar bağımsız mikro web uygulamaları.",
-      "license": null,
-      "updatedAt": "2026-10-01T10:24:43Z",
-      "trust": "untrusted_discovery",
-      "categories": [
-        "agents",
-        "tools"
-      ],
-      "slug": "open-melihkarasu-vibecodedapps",
-      "fingerprint": "6d946d1d",
-      "reviewState": "pending_license_review",
-      "metadata": {
-        "full_name": "melihkarasu/VibeCodedApps",
-        "stars": 0,
-        "topics": [],
-        "default_branch": "main",
-        "archived": false,
-        "fork": false,
-        "owner": "melihkarasu"
-      }
-    },
-    {
       "sourceId": "mlops-discovery",
       "externalId": "1004147641",
       "name": "agent-lightning",
       "canonicalUrl": "https://github.com/microsoft/agent-lightning",
       "description": "The absolute trainer to light up AI agents.",
       "license": "MIT",
-      "updatedAt": "2026-10-01T10:24:00Z",
+      "updatedAt": "2026-10-02T07:48:07Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -4954,11 +5038,11 @@
         "reinforcement-learning"
       ],
       "slug": "open-microsoft-agent-lightning",
-      "fingerprint": "0e0a8788",
+      "fingerprint": "4f89f088",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "microsoft/agent-lightning",
-        "stars": 18543,
+        "stars": 18549,
         "topics": [
           "agent",
           "agentic-ai",
@@ -4970,6 +5054,32 @@
         "archived": false,
         "fork": false,
         "owner": "microsoft"
+      }
+    },
+    {
+      "sourceId": "openclaw-discovery",
+      "externalId": "1161789061",
+      "name": "miko-openclaw.github.io",
+      "canonicalUrl": "https://github.com/miko-openclaw/miko-openclaw.github.io",
+      "description": "Miko AI Agent - Personal website",
+      "license": null,
+      "updatedAt": "2026-10-02T09:50:14Z",
+      "trust": "untrusted_discovery",
+      "categories": [
+        "agents",
+        "tools"
+      ],
+      "slug": "open-miko-openclaw-miko-openclaw-github-io",
+      "fingerprint": "2ab16f39",
+      "reviewState": "pending_license_review",
+      "metadata": {
+        "full_name": "miko-openclaw/miko-openclaw.github.io",
+        "stars": 0,
+        "topics": [],
+        "default_branch": "master",
+        "archived": false,
+        "fork": false,
+        "owner": "miko-openclaw"
       }
     },
     {
@@ -5005,7 +5115,7 @@
       "canonicalUrl": "https://github.com/mlflow/mlflow",
       "description": "The open source AI engineering platform for agents, LLMs, and ML models. MLflow enables teams of all sizes to debug, evaluate, monitor, and optimize production-quality AI applications while controlling costs and managing access to models and data.",
       "license": "Apache-2.0",
-      "updatedAt": "2026-10-01T09:57:43Z",
+      "updatedAt": "2026-10-02T10:02:00Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -5022,11 +5132,11 @@
         "ml"
       ],
       "slug": "open-mlflow-mlflow",
-      "fingerprint": "a600f840",
+      "fingerprint": "999b9cd2",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "mlflow/mlflow",
-        "stars": 28209,
+        "stars": 28231,
         "topics": [
           "agentops",
           "agents",
@@ -5117,14 +5227,14 @@
       "canonicalUrl": "https://github.com/modelcontextprotocol/conformance",
       "description": "Conformance Tests for MCP",
       "license": "NOASSERTION",
-      "updatedAt": "2026-09-18T16:25:27Z",
+      "updatedAt": "2026-10-01T14:45:11Z",
       "trust": "official_upstream",
       "categories": [
         "mcp",
         "ai-engineering"
       ],
       "slug": "open-modelcontextprotocol-conformance",
-      "fingerprint": "ccfa2343",
+      "fingerprint": "16eb9b32",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "modelcontextprotocol/conformance",
@@ -5143,7 +5253,7 @@
       "canonicalUrl": "https://github.com/modelcontextprotocol/csharp-sdk",
       "description": "The official C# SDK for Model Context Protocol servers and clients. Maintained in collaboration with Microsoft.",
       "license": "NOASSERTION",
-      "updatedAt": "2026-10-01T02:30:32Z",
+      "updatedAt": "2026-10-02T00:22:36Z",
       "trust": "official_upstream",
       "categories": [
         "mcp",
@@ -5155,11 +5265,11 @@
         "modelcontextprotocol"
       ],
       "slug": "open-modelcontextprotocol-csharp-sdk",
-      "fingerprint": "e6ee4082",
+      "fingerprint": "c15c4faa",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "modelcontextprotocol/csharp-sdk",
-        "stars": 4556,
+        "stars": 4557,
         "topics": [
           "csharp",
           "dotnet",
@@ -5295,18 +5405,18 @@
       "canonicalUrl": "https://github.com/modelcontextprotocol/experimental-ext-triggers-events",
       "description": "Incubation space for the MCP Triggers & Events Working Group",
       "license": "Apache-2.0",
-      "updatedAt": "2026-09-30T02:26:26Z",
+      "updatedAt": "2026-10-01T16:33:45Z",
       "trust": "official_upstream",
       "categories": [
         "mcp",
         "ai-engineering"
       ],
       "slug": "open-modelcontextprotocol-experimental-ext-triggers-events",
-      "fingerprint": "627a34f8",
+      "fingerprint": "229ab60a",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "modelcontextprotocol/experimental-ext-triggers-events",
-        "stars": 27,
+        "stars": 30,
         "topics": [],
         "default_branch": "main",
         "archived": false,
@@ -5352,7 +5462,7 @@
       "canonicalUrl": "https://github.com/modelcontextprotocol/ext-apps",
       "description": "Official repo for spec & SDK of MCP Apps protocol - standard for UIs embedded AI chatbots, served by MCP servers",
       "license": "NOASSERTION",
-      "updatedAt": "2026-10-01T10:11:58Z",
+      "updatedAt": "2026-10-02T07:10:40Z",
       "trust": "official_upstream",
       "categories": [
         "mcp",
@@ -5364,11 +5474,11 @@
         "ui"
       ],
       "slug": "open-modelcontextprotocol-ext-apps",
-      "fingerprint": "3eba7132",
+      "fingerprint": "0d68193b",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "modelcontextprotocol/ext-apps",
-        "stars": 2887,
+        "stars": 2890,
         "topics": [
           "ai",
           "apps",
@@ -5420,18 +5530,18 @@
       "canonicalUrl": "https://github.com/modelcontextprotocol/ext-skills",
       "description": "MCP Extension for Skills discovery and distribution through MCP primitives. Maintained by the Skills Over MCP Working Group.",
       "license": "Apache-2.0",
-      "updatedAt": "2026-10-01T00:55:36Z",
+      "updatedAt": "2026-10-01T20:21:45Z",
       "trust": "official_upstream",
       "categories": [
         "mcp",
         "ai-engineering"
       ],
       "slug": "open-modelcontextprotocol-ext-skills",
-      "fingerprint": "e5ee6f97",
+      "fingerprint": "81b936ca",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "modelcontextprotocol/ext-skills",
-        "stars": 714,
+        "stars": 717,
         "topics": [],
         "default_branch": "main",
         "archived": false,
@@ -5498,7 +5608,7 @@
       "canonicalUrl": "https://github.com/modelcontextprotocol/go-sdk",
       "description": "The official Go SDK for Model Context Protocol servers and clients. Maintained in collaboration with Google.",
       "license": "NOASSERTION",
-      "updatedAt": "2026-10-01T08:01:55Z",
+      "updatedAt": "2026-10-01T19:19:07Z",
       "trust": "official_upstream",
       "categories": [
         "mcp",
@@ -5506,11 +5616,11 @@
         "go"
       ],
       "slug": "open-modelcontextprotocol-go-sdk",
-      "fingerprint": "87479cbc",
+      "fingerprint": "a79477e2",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "modelcontextprotocol/go-sdk",
-        "stars": 5174,
+        "stars": 5178,
         "topics": [
           "go",
           "mcp"
@@ -5528,7 +5638,7 @@
       "canonicalUrl": "https://github.com/modelcontextprotocol/inspector",
       "description": "Visual testing tool for MCP servers",
       "license": "NOASSERTION",
-      "updatedAt": "2026-10-01T10:23:02Z",
+      "updatedAt": "2026-10-02T10:01:01Z",
       "trust": "official_upstream",
       "categories": [
         "mcp",
@@ -5540,11 +5650,11 @@
         "web"
       ],
       "slug": "open-modelcontextprotocol-inspector",
-      "fingerprint": "7de970c0",
+      "fingerprint": "ed418aaa",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "modelcontextprotocol/inspector",
-        "stars": 10996,
+        "stars": 11006,
         "topics": [
           "cli",
           "debug",
@@ -5566,7 +5676,7 @@
       "canonicalUrl": "https://github.com/modelcontextprotocol/java-sdk",
       "description": "The official Java SDK for Model Context Protocol servers and clients. Maintained in collaboration with Spring AI",
       "license": "MIT",
-      "updatedAt": "2026-10-01T04:24:06Z",
+      "updatedAt": "2026-10-02T04:12:09Z",
       "trust": "official_upstream",
       "categories": [
         "mcp",
@@ -5576,11 +5686,11 @@
         "mcp-server"
       ],
       "slug": "open-modelcontextprotocol-java-sdk",
-      "fingerprint": "b4281860",
+      "fingerprint": "e0e20c03",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "modelcontextprotocol/java-sdk",
-        "stars": 3716,
+        "stars": 3718,
         "topics": [
           "java",
           "mcp",
@@ -5630,7 +5740,7 @@
       "canonicalUrl": "https://github.com/modelcontextprotocol/modelcontextprotocol",
       "description": "Specification and documentation for the Model Context Protocol",
       "license": "NOASSERTION",
-      "updatedAt": "2026-10-01T10:22:37Z",
+      "updatedAt": "2026-10-02T01:25:20Z",
       "trust": "official_upstream",
       "categories": [
         "mcp",
@@ -5640,11 +5750,11 @@
         "standard"
       ],
       "slug": "open-modelcontextprotocol-modelcontextprotocol",
-      "fingerprint": "40cf6af0",
+      "fingerprint": "b6eec232",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "modelcontextprotocol/modelcontextprotocol",
-        "stars": 9355,
+        "stars": 9361,
         "topics": [
           "docs",
           "mcp",
@@ -5724,7 +5834,7 @@
       "canonicalUrl": "https://github.com/modelcontextprotocol/python-sdk",
       "description": "The official Python SDK for Model Context Protocol servers and clients",
       "license": "MIT",
-      "updatedAt": "2026-10-01T09:54:52Z",
+      "updatedAt": "2026-10-02T09:42:26Z",
       "trust": "official_upstream",
       "categories": [
         "mcp",
@@ -5734,11 +5844,11 @@
         "python"
       ],
       "slug": "open-modelcontextprotocol-python-sdk",
-      "fingerprint": "b09f192c",
+      "fingerprint": "11b8eec3",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "modelcontextprotocol/python-sdk",
-        "stars": 24447,
+        "stars": 24452,
         "topics": [
           "mcp",
           "mcp-client",
@@ -5758,18 +5868,18 @@
       "canonicalUrl": "https://github.com/modelcontextprotocol/quickstart-resources",
       "description": "A repository of servers and clients from the Model Context Protocol tutorials",
       "license": "NOASSERTION",
-      "updatedAt": "2026-09-30T07:19:15Z",
+      "updatedAt": "2026-10-01T22:25:52Z",
       "trust": "official_upstream",
       "categories": [
         "mcp",
         "ai-engineering"
       ],
       "slug": "open-modelcontextprotocol-quickstart-resources",
-      "fingerprint": "c9ffec7e",
+      "fingerprint": "59725a5d",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "modelcontextprotocol/quickstart-resources",
-        "stars": 1210,
+        "stars": 1211,
         "topics": [],
         "default_branch": "main",
         "archived": false,
@@ -5784,7 +5894,7 @@
       "canonicalUrl": "https://github.com/modelcontextprotocol/registry",
       "description": "A community driven registry service for Model Context Protocol (MCP) servers.",
       "license": "NOASSERTION",
-      "updatedAt": "2026-10-01T09:30:12Z",
+      "updatedAt": "2026-10-02T06:12:04Z",
       "trust": "official_upstream",
       "categories": [
         "mcp",
@@ -5792,11 +5902,11 @@
         "mcp-servers"
       ],
       "slug": "open-modelcontextprotocol-registry",
-      "fingerprint": "40a88886",
+      "fingerprint": "237869eb",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "modelcontextprotocol/registry",
-        "stars": 7306,
+        "stars": 7307,
         "topics": [
           "mcp",
           "mcp-servers"
@@ -5814,7 +5924,7 @@
       "canonicalUrl": "https://github.com/modelcontextprotocol/ruby-sdk",
       "description": "The official Ruby SDK for the Model Context Protocol servers and clients.",
       "license": "NOASSERTION",
-      "updatedAt": "2026-10-01T04:25:43Z",
+      "updatedAt": "2026-10-01T17:50:03Z",
       "trust": "official_upstream",
       "categories": [
         "mcp",
@@ -5824,7 +5934,7 @@
         "ruby"
       ],
       "slug": "open-modelcontextprotocol-ruby-sdk",
-      "fingerprint": "d0657540",
+      "fingerprint": "19051c4c",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "modelcontextprotocol/ruby-sdk",
@@ -5848,7 +5958,7 @@
       "canonicalUrl": "https://github.com/modelcontextprotocol/rust-sdk",
       "description": "The official Rust SDK for the Model Context Protocol",
       "license": "NOASSERTION",
-      "updatedAt": "2026-10-01T09:20:26Z",
+      "updatedAt": "2026-10-02T02:52:13Z",
       "trust": "official_upstream",
       "categories": [
         "mcp",
@@ -5858,11 +5968,11 @@
         "rust"
       ],
       "slug": "open-modelcontextprotocol-rust-sdk",
-      "fingerprint": "7ffbb55d",
+      "fingerprint": "2c79440e",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "modelcontextprotocol/rust-sdk",
-        "stars": 3963,
+        "stars": 3970,
         "topics": [
           "mcp",
           "mcp-client",
@@ -5882,18 +5992,18 @@
       "canonicalUrl": "https://github.com/modelcontextprotocol/servers",
       "description": "Model Context Protocol Servers",
       "license": "NOASSERTION",
-      "updatedAt": "2026-10-01T10:18:34Z",
+      "updatedAt": "2026-10-02T09:42:23Z",
       "trust": "official_upstream",
       "categories": [
         "mcp",
         "ai-engineering"
       ],
       "slug": "open-modelcontextprotocol-servers",
-      "fingerprint": "fc7f2fa9",
+      "fingerprint": "284a3cdd",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "modelcontextprotocol/servers",
-        "stars": 90902,
+        "stars": 90950,
         "topics": [],
         "default_branch": "main",
         "archived": false,
@@ -5934,7 +6044,7 @@
       "canonicalUrl": "https://github.com/modelcontextprotocol/typescript-sdk",
       "description": "The official TypeScript SDK for Model Context Protocol servers and clients",
       "license": "NOASSERTION",
-      "updatedAt": "2026-10-01T08:30:19Z",
+      "updatedAt": "2026-10-02T09:01:31Z",
       "trust": "official_upstream",
       "categories": [
         "mcp",
@@ -5944,11 +6054,11 @@
         "typescript"
       ],
       "slug": "open-modelcontextprotocol-typescript-sdk",
-      "fingerprint": "d8e60abb",
+      "fingerprint": "eecf2c35",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "modelcontextprotocol/typescript-sdk",
-        "stars": 13495,
+        "stars": 13501,
         "topics": [
           "mcp",
           "mcp-client",
@@ -5968,7 +6078,7 @@
       "canonicalUrl": "https://github.com/Netflix/metaflow",
       "description": "Build, Manage and Deploy AI/ML Systems",
       "license": "Apache-2.0",
-      "updatedAt": "2026-09-30T12:21:28Z",
+      "updatedAt": "2026-10-02T09:51:37Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -5985,11 +6095,11 @@
         "high-performance-computing"
       ],
       "slug": "open-netflix-metaflow",
-      "fingerprint": "43673352",
+      "fingerprint": "8c0d691a",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "Netflix/metaflow",
-        "stars": 10286,
+        "stars": 10288,
         "topics": [
           "agents",
           "ai",
@@ -6025,7 +6135,7 @@
       "canonicalUrl": "https://github.com/NirDiamant/agents-towards-production",
       "description": "End-to-end, code-first tutorials for building production-grade GenAI agents. From prototype to enterprise deployment.",
       "license": "NOASSERTION",
-      "updatedAt": "2026-10-01T09:32:56Z",
+      "updatedAt": "2026-10-02T09:50:00Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -6042,11 +6152,11 @@
         "llm"
       ],
       "slug": "open-nirdiamant-agents-towards-production",
-      "fingerprint": "6f1ca9ab",
+      "fingerprint": "3c2fbd9f",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "NirDiamant/agents-towards-production",
-        "stars": 21518,
+        "stars": 21523,
         "topics": [
           "agent",
           "agent-framework",
@@ -6081,18 +6191,18 @@
       "canonicalUrl": "https://github.com/open-mercato/skills",
       "description": "Enterprise AI Engineering skills we coined at Open Mercato (1.2M+ lines of code ERP built with AI)",
       "license": "MIT",
-      "updatedAt": "2026-09-30T09:39:19Z",
+      "updatedAt": "2026-10-02T08:36:12Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
         "ai-skills"
       ],
       "slug": "open-mercato-skills",
-      "fingerprint": "0a73df75",
+      "fingerprint": "171348ed",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "open-mercato/skills",
-        "stars": 210,
+        "stars": 213,
         "topics": [
           "ai-engineering",
           "ai-skills"
@@ -6221,18 +6331,18 @@
       "canonicalUrl": "https://github.com/open-webui/computer",
       "description": "Your Computer. Anywhere.",
       "license": "NOASSERTION",
-      "updatedAt": "2026-10-01T04:50:54Z",
+      "updatedAt": "2026-10-01T17:25:57Z",
       "trust": "upstream_metadata",
       "categories": [
         "ai-engineering",
         "tools"
       ],
       "slug": "open-webui-computer",
-      "fingerprint": "13465f4c",
+      "fingerprint": "70541545",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "open-webui/computer",
-        "stars": 625,
+        "stars": 626,
         "topics": [],
         "default_branch": "main",
         "archived": false,
@@ -6299,7 +6409,7 @@
       "canonicalUrl": "https://github.com/open-webui/desktop",
       "description": "Open WebUI Desktop 🌐",
       "license": "AGPL-3.0",
-      "updatedAt": "2026-10-01T09:19:18Z",
+      "updatedAt": "2026-10-01T20:18:45Z",
       "trust": "upstream_metadata",
       "categories": [
         "ai-engineering",
@@ -6309,11 +6419,11 @@
         "open-webui"
       ],
       "slug": "open-webui-desktop",
-      "fingerprint": "6e6b788e",
+      "fingerprint": "dee5d22c",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "open-webui/desktop",
-        "stars": 2859,
+        "stars": 2858,
         "topics": [
           "app",
           "desktop",
@@ -6332,7 +6442,7 @@
       "canonicalUrl": "https://github.com/open-webui/docs",
       "description": "https://docs.openwebui.com",
       "license": null,
-      "updatedAt": "2026-10-01T10:21:36Z",
+      "updatedAt": "2026-10-02T06:59:36Z",
       "trust": "upstream_metadata",
       "categories": [
         "ai-engineering",
@@ -6340,11 +6450,11 @@
         "open-webui"
       ],
       "slug": "open-webui-docs",
-      "fingerprint": "764408e8",
+      "fingerprint": "1c0f084f",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "open-webui/docs",
-        "stars": 885,
+        "stars": 884,
         "topics": [
           "open-webui"
         ],
@@ -6531,7 +6641,7 @@
       "canonicalUrl": "https://github.com/open-webui/open-terminal",
       "description": "A computer you can curl ⚡",
       "license": "MIT",
-      "updatedAt": "2026-09-30T13:21:34Z",
+      "updatedAt": "2026-10-02T07:51:30Z",
       "trust": "upstream_metadata",
       "categories": [
         "ai-engineering",
@@ -6543,11 +6653,11 @@
         "open-webui"
       ],
       "slug": "open-webui-open-terminal",
-      "fingerprint": "a4aa28c8",
+      "fingerprint": "c19e12e5",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "open-webui/open-terminal",
-        "stars": 3252,
+        "stars": 3259,
         "topics": [
           "agentic-ai",
           "ai",
@@ -6568,7 +6678,7 @@
       "canonicalUrl": "https://github.com/open-webui/open-webui",
       "description": "User-friendly AI Interface (Supports Ollama, OpenAI API, ...)",
       "license": "NOASSERTION",
-      "updatedAt": "2026-10-01T10:25:43Z",
+      "updatedAt": "2026-10-02T09:47:25Z",
       "trust": "upstream_metadata",
       "categories": [
         "ai-engineering",
@@ -6585,11 +6695,11 @@
         "openai"
       ],
       "slug": "open-webui-open-webui",
-      "fingerprint": "d8c838e6",
+      "fingerprint": "574a168d",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "open-webui/open-webui",
-        "stars": 153696,
+        "stars": 153788,
         "topics": [
           "ai",
           "llm",
@@ -6653,7 +6763,7 @@
       "canonicalUrl": "https://github.com/open-webui/pipelines",
       "description": "Pipelines: Versatile, UI-Agnostic OpenAI-Compatible Plugin Framework ",
       "license": "MIT",
-      "updatedAt": "2026-09-30T20:43:20Z",
+      "updatedAt": "2026-10-01T13:47:53Z",
       "trust": "upstream_metadata",
       "categories": [
         "ai-engineering",
@@ -6661,11 +6771,11 @@
         "open-webui"
       ],
       "slug": "open-webui-pipelines",
-      "fingerprint": "0d36458e",
+      "fingerprint": "6cae0048",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "open-webui/pipelines",
-        "stars": 2436,
+        "stars": 2435,
         "topics": [
           "open-webui"
         ],
@@ -6755,24 +6865,33 @@
     },
     {
       "sourceId": "openclaw-discovery",
-      "externalId": "1285835794",
-      "name": "babelfish",
-      "canonicalUrl": "https://github.com/openclaw/babelfish",
-      "description": "Use plugins from supported coding and agent apps in OpenClaw",
+      "externalId": "1219446293",
+      "name": "clawsweeper",
+      "canonicalUrl": "https://github.com/openclaw/clawsweeper",
+      "description": "ClawSweeper scans all issues and PRs and suggest what we can close, and why. It runs every PR / Issue once a week.",
       "license": "MIT",
-      "updatedAt": "2026-10-01T10:14:04Z",
+      "updatedAt": "2026-10-02T09:51:49Z",
       "trust": "untrusted_discovery",
       "categories": [
         "agents",
-        "tools"
+        "tools",
+        "ai",
+        "bot",
+        "openclaw",
+        "review"
       ],
-      "slug": "open-openclaw-babelfish",
-      "fingerprint": "7c12cbc4",
+      "slug": "open-openclaw-clawsweeper",
+      "fingerprint": "1f51cfce",
       "reviewState": "pending_security_review",
       "metadata": {
-        "full_name": "openclaw/babelfish",
-        "stars": 1,
-        "topics": [],
+        "full_name": "openclaw/clawsweeper",
+        "stars": 1994,
+        "topics": [
+          "ai",
+          "bot",
+          "openclaw",
+          "review"
+        ],
         "default_branch": "main",
         "archived": false,
         "fork": false,
@@ -6786,14 +6905,14 @@
       "canonicalUrl": "https://github.com/openclaw/clawsweeper-state",
       "description": "ClawSweeper operational state; canonical records and ledgers are stored in the Worker/R2.",
       "license": "MIT",
-      "updatedAt": "2026-10-01T10:13:40Z",
+      "updatedAt": "2026-10-02T09:51:45Z",
       "trust": "untrusted_discovery",
       "categories": [
         "agents",
         "tools"
       ],
       "slug": "open-openclaw-clawsweeper-state",
-      "fingerprint": "6f996f05",
+      "fingerprint": "3ec85841",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "openclaw/clawsweeper-state",
@@ -6812,14 +6931,14 @@
       "canonicalUrl": "https://github.com/openclaw/clownfish",
       "description": "Clownfish is a maintainer codex harness for resolving clusters of issues identified in bulk at scale. 🐠",
       "license": "MIT",
-      "updatedAt": "2026-10-01T10:12:39Z",
+      "updatedAt": "2026-10-02T09:57:07Z",
       "trust": "untrusted_discovery",
       "categories": [
         "agents",
         "tools"
       ],
       "slug": "open-openclaw-clownfish",
-      "fingerprint": "3cd57f4a",
+      "fingerprint": "87a3a037",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "openclaw/clownfish",
@@ -6833,28 +6952,30 @@
     },
     {
       "sourceId": "openclaw-discovery",
-      "externalId": "1201825573",
-      "name": "docs",
-      "canonicalUrl": "https://github.com/openclaw/docs",
-      "description": "OpenClaw docs + translation",
+      "externalId": "1225688424",
+      "name": "crabbox",
+      "canonicalUrl": "https://github.com/openclaw/crabbox",
+      "description": "Crabbox: warm a box, sync the diff, run the suite.",
       "license": "MIT",
-      "updatedAt": "2026-10-01T10:23:52Z",
+      "updatedAt": "2026-10-02T09:53:30Z",
       "trust": "untrusted_discovery",
       "categories": [
         "agents",
         "tools",
-        "docs",
-        "openclaw"
+        "agent-skills",
+        "herdr-plugin",
+        "remote-test-runner"
       ],
-      "slug": "open-openclaw-docs",
-      "fingerprint": "7b9353ee",
+      "slug": "open-openclaw-crabbox",
+      "fingerprint": "7e5bc7c0",
       "reviewState": "pending_security_review",
       "metadata": {
-        "full_name": "openclaw/docs",
-        "stars": 76,
+        "full_name": "openclaw/crabbox",
+        "stars": 1440,
         "topics": [
-          "docs",
-          "openclaw"
+          "agent-skills",
+          "herdr-plugin",
+          "remote-test-runner"
         ],
         "default_branch": "main",
         "archived": false,
@@ -6869,7 +6990,7 @@
       "canonicalUrl": "https://github.com/openclaw/openclaw",
       "description": "The AI that really does things. Any OS. Any Platform. The lobster way. 🦞 ",
       "license": "NOASSERTION",
-      "updatedAt": "2026-10-01T10:26:06Z",
+      "updatedAt": "2026-10-02T10:01:59Z",
       "trust": "untrusted_discovery",
       "categories": [
         "agents",
@@ -6883,11 +7004,11 @@
         "personal"
       ],
       "slug": "open-openclaw-openclaw",
-      "fingerprint": "62601c4b",
+      "fingerprint": "f12e232d",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "openclaw/openclaw",
-        "stars": 391105,
+        "stars": 391194,
         "topics": [
           "ai",
           "assistant",
@@ -6910,44 +7031,18 @@
       "canonicalUrl": "https://github.com/openclaw/openclaw-enterprise",
       "description": "The Enterprise-grade Control Plane for modern agentic workloads",
       "license": "MIT",
-      "updatedAt": "2026-10-01T10:25:29Z",
+      "updatedAt": "2026-10-02T09:54:19Z",
       "trust": "untrusted_discovery",
       "categories": [
         "agents",
         "tools"
       ],
       "slug": "open-openclaw-openclaw-enterprise",
-      "fingerprint": "2e844a86",
+      "fingerprint": "e9224134",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "openclaw/openclaw-enterprise",
-        "stars": 252,
-        "topics": [],
-        "default_branch": "main",
-        "archived": false,
-        "fork": false,
-        "owner": "openclaw"
-      }
-    },
-    {
-      "sourceId": "openclaw-discovery",
-      "externalId": "1221809102",
-      "name": "plugin-inspector",
-      "canonicalUrl": "https://github.com/openclaw/plugin-inspector",
-      "description": " Offline compatibility inspector for mocking OpenClaw and testing plugins 💊",
-      "license": "MIT",
-      "updatedAt": "2026-10-01T10:26:05Z",
-      "trust": "untrusted_discovery",
-      "categories": [
-        "agents",
-        "tools"
-      ],
-      "slug": "open-openclaw-plugin-inspector",
-      "fingerprint": "dcdb4cd9",
-      "reviewState": "pending_security_review",
-      "metadata": {
-        "full_name": "openclaw/plugin-inspector",
-        "stars": 25,
+        "stars": 302,
         "topics": [],
         "default_branch": "main",
         "archived": false,
@@ -6962,7 +7057,7 @@
       "canonicalUrl": "https://github.com/openlit/openlit",
       "description": "OpenLIT is the open-source agent harness engineering platform: trace, evaluate, guard, and improve everything around the model in your AI agents, on OTEL.",
       "license": "Apache-2.0",
-      "updatedAt": "2026-10-01T06:35:38Z",
+      "updatedAt": "2026-10-02T01:33:04Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -6979,11 +7074,11 @@
         "genai"
       ],
       "slug": "open-openlit-openlit",
-      "fingerprint": "ce13d091",
+      "fingerprint": "02af64ee",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "openlit/openlit",
-        "stars": 2809,
+        "stars": 2812,
         "topics": [
           "agent-harness",
           "agent-harness-engineering",
@@ -7013,39 +7108,13 @@
       }
     },
     {
-      "sourceId": "openclaw-discovery",
-      "externalId": "1365963094",
-      "name": "openclaw-workspace",
-      "canonicalUrl": "https://github.com/orisispmp-ship-it/openclaw-workspace",
-      "description": "20260911생성",
-      "license": null,
-      "updatedAt": "2026-10-01T10:11:51Z",
-      "trust": "untrusted_discovery",
-      "categories": [
-        "agents",
-        "tools"
-      ],
-      "slug": "open-orisispmp-ship-it-openclaw-workspace",
-      "fingerprint": "cbbcf09f",
-      "reviewState": "pending_license_review",
-      "metadata": {
-        "full_name": "orisispmp-ship-it/openclaw-workspace",
-        "stars": 0,
-        "topics": [],
-        "default_branch": "main",
-        "archived": false,
-        "fork": false,
-        "owner": "orisispmp-ship-it"
-      }
-    },
-    {
       "sourceId": "ai-engineering-discovery",
       "externalId": "1159910897",
       "name": "grace-marketplace",
       "canonicalUrl": "https://github.com/osovv/grace-marketplace",
       "description": " GRACE (Graph-RAG Anchored Code Engineering): open Agent Skills for contract-driven AI code generation with semantic markup, knowledge graphs, and support for Claude   Code, Codex CLI, and Kilo Code.",
       "license": "MIT",
-      "updatedAt": "2026-09-30T12:31:46Z",
+      "updatedAt": "2026-10-01T16:14:39Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -7062,11 +7131,11 @@
         "knowledge-graph"
       ],
       "slug": "open-osovv-grace-marketplace",
-      "fingerprint": "d47a29e9",
+      "fingerprint": "7e0220a6",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "osovv/grace-marketplace",
-        "stars": 248,
+        "stars": 249,
         "topics": [
           "agent-skills",
           "ai-code-generation",
@@ -7096,7 +7165,7 @@
       "canonicalUrl": "https://github.com/owainlewis/youtube-tutorials",
       "description": "All my YouTube tutorials. Everything here is free - but please follow me on YouTube if you find these helpful.",
       "license": "MIT",
-      "updatedAt": "2026-10-01T05:57:10Z",
+      "updatedAt": "2026-10-02T02:01:15Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -7109,11 +7178,11 @@
         "python"
       ],
       "slug": "open-owainlewis-youtube-tutorials",
-      "fingerprint": "69f681e6",
+      "fingerprint": "d3efcfc6",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "owainlewis/youtube-tutorials",
-        "stars": 398,
+        "stars": 399,
         "topics": [
           "agent-skills",
           "agentic-coding",
@@ -7137,7 +7206,7 @@
       "canonicalUrl": "https://github.com/pallavi-shekhar/ai-engineering-interview-questions-company-wise",
       "description": "Your Cheat Sheet For AI Engineering Interviews at Top AI Companies - Questions and Answers.",
       "license": "Apache-2.0",
-      "updatedAt": "2026-10-01T10:06:16Z",
+      "updatedAt": "2026-10-02T05:57:33Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -7152,11 +7221,11 @@
         "questions-and-answers"
       ],
       "slug": "open-pallavi-shekhar-ai-engineering-interview-questions-company-wise",
-      "fingerprint": "9200f1e3",
+      "fingerprint": "e3198519",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "pallavi-shekhar/ai-engineering-interview-questions-company-wise",
-        "stars": 1603,
+        "stars": 1607,
         "topics": [
           "ai",
           "ai-engineering",
@@ -7182,7 +7251,7 @@
       "canonicalUrl": "https://github.com/pathwaycom/llm-app",
       "description": "Ready-to-run cloud templates for RAG, AI pipelines, and enterprise search with live data. 🐳Docker-friendly.⚡Always in sync with Sharepoint, Google Drive, S3, Kafka, PostgreSQL, real-time data APIs, and more.",
       "license": "MIT",
-      "updatedAt": "2026-10-01T09:11:37Z",
+      "updatedAt": "2026-10-02T07:31:18Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -7199,11 +7268,11 @@
         "rag"
       ],
       "slug": "open-pathwaycom-llm-app",
-      "fingerprint": "c49c44a9",
+      "fingerprint": "23d698c1",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "pathwaycom/llm-app",
-        "stars": 58864,
+        "stars": 58861,
         "topics": [
           "chatbot",
           "hugging-face",
@@ -7234,7 +7303,7 @@
       "canonicalUrl": "https://github.com/PeonPing/peon-ping",
       "description": "Warcraft III Peon voice notifications (+ more!) for Claude Code, Codex, IDEs, and any AI agent. Stop babysitting your terminal. Employ a Peon today.",
       "license": "MIT",
-      "updatedAt": "2026-10-01T04:23:19Z",
+      "updatedAt": "2026-10-02T07:52:39Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -7247,7 +7316,7 @@
         "terminal"
       ],
       "slug": "open-peonping-peon-ping",
-      "fingerprint": "edffa412",
+      "fingerprint": "b5a378a6",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "PeonPing/peon-ping",
@@ -7275,7 +7344,7 @@
       "canonicalUrl": "https://github.com/Portkey-AI/gateway",
       "description": "A blazing fast AI Gateway with integrated guardrails. Route to 1,600+ LLMs, 50+ AI Guardrails with 1 fast & friendly API.",
       "license": "MIT",
-      "updatedAt": "2026-10-01T10:23:16Z",
+      "updatedAt": "2026-10-02T09:32:06Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -7292,7 +7361,7 @@
         "mcp-client"
       ],
       "slug": "open-portkey-ai-gateway",
-      "fingerprint": "a0a4dc29",
+      "fingerprint": "89958f13",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "Portkey-AI/gateway",
@@ -7327,7 +7396,7 @@
       "canonicalUrl": "https://github.com/PrefectHQ/prefect",
       "description": "Prefect is a workflow orchestration framework for building resilient data pipelines in Python.",
       "license": "Apache-2.0",
-      "updatedAt": "2026-10-01T07:14:55Z",
+      "updatedAt": "2026-10-02T08:18:38Z",
       "trust": "untrusted_discovery",
       "categories": [
         "data-engineering",
@@ -7344,11 +7413,11 @@
         "python"
       ],
       "slug": "open-prefecthq-prefect",
-      "fingerprint": "69888616",
+      "fingerprint": "120f271d",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "PrefectHQ/prefect",
-        "stars": 23959,
+        "stars": 23964,
         "topics": [
           "automation",
           "data",
@@ -7378,7 +7447,7 @@
       "canonicalUrl": "https://github.com/promptfoo/promptfoo",
       "description": "Test your prompts, agents, and RAGs. Red teaming/pentesting/vulnerability scanning for AI. Compare performance of GPT, Claude, Gemini, DeepSeek, and more. Simple declarative configs with command line and CI/CD integration.  Used by OpenAI and Anthropic.",
       "license": "MIT",
-      "updatedAt": "2026-10-01T10:22:36Z",
+      "updatedAt": "2026-10-02T09:48:50Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -7395,11 +7464,11 @@
         "pentesting"
       ],
       "slug": "open-promptfoo-promptfoo",
-      "fingerprint": "ce438d0b",
+      "fingerprint": "d35941a4",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "promptfoo/promptfoo",
-        "stars": 25611,
+        "stars": 25638,
         "topics": [
           "ci",
           "ci-cd",
@@ -7485,7 +7554,7 @@
       "canonicalUrl": "https://github.com/qdrant/qdrant",
       "description": "Qdrant - High-performance, massive-scale Vector Database and Vector Search Engine for the next generation of AI. Also available in the cloud https://cloud.qdrant.io/",
       "license": "Apache-2.0",
-      "updatedAt": "2026-10-01T10:22:49Z",
+      "updatedAt": "2026-10-02T08:00:57Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -7502,11 +7571,11 @@
         "neural-network"
       ],
       "slug": "open-qdrant-qdrant",
-      "fingerprint": "3d63a7ce",
+      "fingerprint": "9ef005f5",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "qdrant/qdrant",
-        "stars": 34894,
+        "stars": 34901,
         "topics": [
           "ai-search",
           "ai-search-engine",
@@ -7617,7 +7686,7 @@
       "canonicalUrl": "https://github.com/redpanda-data/connect",
       "description": "Fancy stream processing made operationally mundane",
       "license": null,
-      "updatedAt": "2026-10-01T09:45:31Z",
+      "updatedAt": "2026-10-02T08:45:03Z",
       "trust": "untrusted_discovery",
       "categories": [
         "data-engineering",
@@ -7634,11 +7703,11 @@
         "message-queue"
       ],
       "slug": "open-redpanda-data-connect",
-      "fingerprint": "567de1a9",
+      "fingerprint": "d3e82bc6",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "redpanda-data/connect",
-        "stars": 8773,
+        "stars": 8774,
         "topics": [
           "amqp",
           "cqrs",
@@ -7712,13 +7781,39 @@
       }
     },
     {
+      "sourceId": "openclaw-discovery",
+      "externalId": "1150644493",
+      "name": "my-openclaw-page",
+      "canonicalUrl": "https://github.com/rogerli007/my-openclaw-page",
+      "description": null,
+      "license": null,
+      "updatedAt": "2026-10-02T09:47:17Z",
+      "trust": "untrusted_discovery",
+      "categories": [
+        "agents",
+        "tools"
+      ],
+      "slug": "open-rogerli007-my-openclaw-page",
+      "fingerprint": "53e4a0cd",
+      "reviewState": "pending_license_review",
+      "metadata": {
+        "full_name": "rogerli007/my-openclaw-page",
+        "stars": 0,
+        "topics": [],
+        "default_branch": "main",
+        "archived": false,
+        "fork": false,
+        "owner": "rogerli007"
+      }
+    },
+    {
       "sourceId": "ai-engineering-discovery",
       "externalId": "1185590488",
       "name": "ai-engineering-from-scratch",
       "canonicalUrl": "https://github.com/rohitg00/ai-engineering-from-scratch",
       "description": "Learn it. Build it. Ship it for others.",
       "license": "MIT",
-      "updatedAt": "2026-10-01T10:11:11Z",
+      "updatedAt": "2026-10-02T09:49:49Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -7735,11 +7830,11 @@
         "mcp"
       ],
       "slug": "open-rohitg00-ai-engineering-from-scratch",
-      "fingerprint": "fde857bc",
+      "fingerprint": "c48c4415",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "rohitg00/ai-engineering-from-scratch",
-        "stars": 62245,
+        "stars": 62543,
         "topics": [
           "agents",
           "ai",
@@ -7832,7 +7927,7 @@
       "canonicalUrl": "https://github.com/rudderlabs/rudder-server",
       "description": "Privacy and Security focused Segment-alternative, in Golang and React  ",
       "license": "NOASSERTION",
-      "updatedAt": "2026-09-29T14:20:54Z",
+      "updatedAt": "2026-10-02T00:43:18Z",
       "trust": "untrusted_discovery",
       "categories": [
         "data-engineering",
@@ -7849,11 +7944,11 @@
         "elt"
       ],
       "slug": "open-rudderlabs-rudder-server",
-      "fingerprint": "5062fd24",
+      "fingerprint": "e1c176a5",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "rudderlabs/rudder-server",
-        "stars": 4495,
+        "stars": 4494,
         "topics": [
           "bigquery",
           "cdp",
@@ -7883,13 +7978,70 @@
       }
     },
     {
+      "sourceId": "openclaw-discovery",
+      "externalId": "817326197",
+      "name": "screenpipe",
+      "canonicalUrl": "https://github.com/screenpipe/screenpipe",
+      "description": "YC (S26) | Open Computer History | Record your screen continuously locally and provide context to your agents (Claude, Codex, Openclaw, Hermes, Runner...)",
+      "license": "NOASSERTION",
+      "updatedAt": "2026-10-02T09:59:01Z",
+      "trust": "untrusted_discovery",
+      "categories": [
+        "agents",
+        "tools",
+        "agi",
+        "ai",
+        "ai-memory",
+        "audio-recording",
+        "computer-vision",
+        "hermes",
+        "hermes-agent",
+        "llm",
+        "local-ai",
+        "local-first"
+      ],
+      "slug": "open-screenpipe-screenpipe",
+      "fingerprint": "116175a1",
+      "reviewState": "pending_license_review",
+      "metadata": {
+        "full_name": "screenpipe/screenpipe",
+        "stars": 21796,
+        "topics": [
+          "agents",
+          "agi",
+          "ai",
+          "ai-memory",
+          "audio-recording",
+          "computer-vision",
+          "hermes",
+          "hermes-agent",
+          "llm",
+          "local-ai",
+          "local-first",
+          "machine-learning",
+          "mcp",
+          "multimodal",
+          "openclaw",
+          "privacy",
+          "rewind",
+          "screen-recording",
+          "speech-to-text",
+          "ycombinator"
+        ],
+        "default_branch": "main",
+        "archived": false,
+        "fork": false,
+        "owner": "screenpipe"
+      }
+    },
+    {
       "sourceId": "data-engineering-discovery",
       "externalId": "1008304614",
       "name": "semantica",
       "canonicalUrl": "https://github.com/semantica-agi/semantica",
       "description": "Graph-Native Infrastructure for Context and Accountable AI Systems",
       "license": "MIT",
-      "updatedAt": "2026-10-01T10:03:11Z",
+      "updatedAt": "2026-10-02T09:15:52Z",
       "trust": "untrusted_discovery",
       "categories": [
         "data-engineering",
@@ -7906,11 +8058,11 @@
         "generative-ai"
       ],
       "slug": "open-semantica-agi-semantica",
-      "fingerprint": "c3cd7b86",
+      "fingerprint": "882425af",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "semantica-agi/semantica",
-        "stars": 13603,
+        "stars": 13612,
         "topics": [
           "agent-memory",
           "ai",
@@ -7941,47 +8093,28 @@
     },
     {
       "sourceId": "openclaw-discovery",
-      "externalId": "1343291616",
-      "name": "ai-passport-openclaw-android",
-      "canonicalUrl": "https://github.com/Shinku-Chen/ai-passport-openclaw-android",
-      "description": "AI Passport 随身 AI 对讲机 · Pocket Intercom —— Android App + 设备固件：按住 OK 说话，接你自己的 OpenClaw / OpenAI 兼容网关。Pocket AI intercom for AI Passport (Android app + firmware).",
+      "externalId": "1288798614",
+      "name": "openclaw-research",
+      "canonicalUrl": "https://github.com/Seokhyun0079/openclaw-research",
+      "description": "OpenClaw research reports (GitHub Pages)",
       "license": null,
-      "updatedAt": "2026-10-01T10:19:31Z",
+      "updatedAt": "2026-10-02T10:00:31Z",
       "trust": "untrusted_discovery",
       "categories": [
         "agents",
-        "tools",
-        "ai-passport",
-        "android",
-        "ble",
-        "firmware",
-        "intercom",
-        "kotlin",
-        "openai-compatible",
-        "openclaw",
-        "voice-assistant"
+        "tools"
       ],
-      "slug": "open-shinku-chen-ai-passport-openclaw-android",
-      "fingerprint": "22848981",
+      "slug": "open-seokhyun0079-openclaw-research",
+      "fingerprint": "d74343d3",
       "reviewState": "pending_license_review",
       "metadata": {
-        "full_name": "Shinku-Chen/ai-passport-openclaw-android",
+        "full_name": "Seokhyun0079/openclaw-research",
         "stars": 0,
-        "topics": [
-          "ai-passport",
-          "android",
-          "ble",
-          "firmware",
-          "intercom",
-          "kotlin",
-          "openai-compatible",
-          "openclaw",
-          "voice-assistant"
-        ],
+        "topics": [],
         "default_branch": "main",
         "archived": false,
         "fork": false,
-        "owner": "Shinku-Chen"
+        "owner": "Seokhyun0079"
       }
     },
     {
@@ -8022,48 +8155,13 @@
       }
     },
     {
-      "sourceId": "openclaw-discovery",
-      "externalId": "1164783254",
-      "name": "agentpit",
-      "canonicalUrl": "https://github.com/skalenetwork/agentpit",
-      "description": "Polymarket sandbox for OpenClaw agents. Full trading engine, real market data, simulated USDC. One argument from live trading. No real money at risk.",
-      "license": "MIT",
-      "updatedAt": "2026-10-01T10:25:52Z",
-      "trust": "untrusted_discovery",
-      "categories": [
-        "agents",
-        "tools",
-        "ai",
-        "ai-agent",
-        "openclaw",
-        "polymarket"
-      ],
-      "slug": "open-skalenetwork-agentpit",
-      "fingerprint": "0fbe5638",
-      "reviewState": "pending_security_review",
-      "metadata": {
-        "full_name": "skalenetwork/agentpit",
-        "stars": 5,
-        "topics": [
-          "ai",
-          "ai-agent",
-          "openclaw",
-          "polymarket"
-        ],
-        "default_branch": "main",
-        "archived": false,
-        "fork": false,
-        "owner": "skalenetwork"
-      }
-    },
-    {
       "sourceId": "mlops-discovery",
       "externalId": "395140743",
       "name": "skypilot",
       "canonicalUrl": "https://github.com/skypilot-org/skypilot",
       "description": "The AI Compute Platform for frontier teams. SkyPilot turns fragmented AI compute into one AI supercomputer, so frontier AI teams build custom intelligence faster.",
       "license": "Apache-2.0",
-      "updatedAt": "2026-10-01T03:27:27Z",
+      "updatedAt": "2026-10-02T08:56:58Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -8080,11 +8178,11 @@
         "llm-serving"
       ],
       "slug": "open-skypilot-org-skypilot",
-      "fingerprint": "eb14452c",
+      "fingerprint": "5e4a5714",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "skypilot-org/skypilot",
-        "stars": 10673,
+        "stars": 10674,
         "topics": [
           "cloud-computing",
           "cloud-management",
@@ -8110,58 +8208,6 @@
         "archived": false,
         "fork": false,
         "owner": "skypilot-org"
-      }
-    },
-    {
-      "sourceId": "openclaw-discovery",
-      "externalId": "1399717354",
-      "name": "openclaw-offline-assistant",
-      "canonicalUrl": "https://github.com/sparebrain-dev/openclaw-offline-assistant",
-      "description": "MiniMind 64M 离线应急助手：让便携 OpenClaw 断网时优雅降级为本地小模型（CPU 推理 / OpenAI 兼容接口 / 懒加载闲置自动释放）",
-      "license": "Apache-2.0",
-      "updatedAt": "2026-10-01T10:25:40Z",
-      "trust": "untrusted_discovery",
-      "categories": [
-        "agents",
-        "tools"
-      ],
-      "slug": "open-sparebrain-dev-openclaw-offline-assistant",
-      "fingerprint": "f0ad4614",
-      "reviewState": "pending_security_review",
-      "metadata": {
-        "full_name": "sparebrain-dev/openclaw-offline-assistant",
-        "stars": 0,
-        "topics": [],
-        "default_branch": "main",
-        "archived": false,
-        "fork": false,
-        "owner": "sparebrain-dev"
-      }
-    },
-    {
-      "sourceId": "openclaw-discovery",
-      "externalId": "1399731997",
-      "name": "portable-openclaw-kit",
-      "canonicalUrl": "https://github.com/sparebrain-dev/portable-openclaw-kit",
-      "description": "u盘随身AI组装套件：断网自动接管的离线小模型 + 保姆级小白组装说明书",
-      "license": "Apache-2.0",
-      "updatedAt": "2026-10-01T10:25:50Z",
-      "trust": "untrusted_discovery",
-      "categories": [
-        "agents",
-        "tools"
-      ],
-      "slug": "open-sparebrain-dev-portable-openclaw-kit",
-      "fingerprint": "50f9099b",
-      "reviewState": "pending_security_review",
-      "metadata": {
-        "full_name": "sparebrain-dev/portable-openclaw-kit",
-        "stars": 0,
-        "topics": [],
-        "default_branch": "main",
-        "archived": false,
-        "fork": false,
-        "owner": "sparebrain-dev"
       }
     },
     {
@@ -8191,39 +8237,13 @@
       }
     },
     {
-      "sourceId": "openclaw-discovery",
-      "externalId": "1147067091",
-      "name": "starflytesla",
-      "canonicalUrl": "https://github.com/starflytesla-cpu/starflytesla",
-      "description": "openclaw-project",
-      "license": null,
-      "updatedAt": "2026-10-01T10:20:59Z",
-      "trust": "untrusted_discovery",
-      "categories": [
-        "agents",
-        "tools"
-      ],
-      "slug": "open-starflytesla-cpu-starflytesla",
-      "fingerprint": "53a807a5",
-      "reviewState": "pending_license_review",
-      "metadata": {
-        "full_name": "starflytesla-cpu/starflytesla",
-        "stars": 1,
-        "topics": [],
-        "default_branch": "claude/exciting-fermi-nad1gj",
-        "archived": false,
-        "fork": false,
-        "owner": "starflytesla-cpu"
-      }
-    },
-    {
       "sourceId": "mlops-discovery",
       "externalId": "292374787",
       "name": "ml-engineering",
       "canonicalUrl": "https://github.com/stas00/ml-engineering",
       "description": "Machine Learning Engineering Open Book",
       "license": "CC-BY-SA-4.0",
-      "updatedAt": "2026-10-01T10:09:13Z",
+      "updatedAt": "2026-10-02T08:39:15Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -8240,11 +8260,11 @@
         "pytorch"
       ],
       "slug": "open-stas00-ml-engineering",
-      "fingerprint": "42a22810",
+      "fingerprint": "0327e095",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "stas00/ml-engineering",
-        "stars": 19071,
+        "stars": 19077,
         "topics": [
           "ai",
           "debugging",
@@ -8276,7 +8296,7 @@
       "canonicalUrl": "https://github.com/Sumanth077/Hands-On-AI-Engineering",
       "description": "A curated collection of practical AI projects implementing OCR systems, RAG, AI agents, and other AI use cases.",
       "license": null,
-      "updatedAt": "2026-10-01T09:56:33Z",
+      "updatedAt": "2026-10-02T08:21:04Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -8291,11 +8311,11 @@
         "rag"
       ],
       "slug": "open-sumanth077-hands-on-ai-engineering",
-      "fingerprint": "519c518b",
+      "fingerprint": "a782127f",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "Sumanth077/Hands-On-AI-Engineering",
-        "stars": 3814,
+        "stars": 3828,
         "topics": [
           "agents",
           "ai",
@@ -8463,69 +8483,13 @@
       }
     },
     {
-      "sourceId": "openclaw-discovery",
-      "externalId": "1106975320",
-      "name": "tale",
-      "canonicalUrl": "https://github.com/tale-project/tale",
-      "description": "The Orchestrator for AI Agents — Connect OpenClaw, Hermes Agent, Claude Code, Codex, Cursor, Gemini CLI, OpenCode, Pi, and Qwen Code. Pool their knowledge, delegate tasks, and build your swarm of agents.",
-      "license": "MIT",
-      "updatedAt": "2026-10-01T10:11:20Z",
-      "trust": "untrusted_discovery",
-      "categories": [
-        "agents",
-        "tools",
-        "agent-skills",
-        "agentic-ai",
-        "agentic-workflow",
-        "ai",
-        "ai-agents",
-        "automation",
-        "automations",
-        "genai",
-        "hermes-agent",
-        "llm"
-      ],
-      "slug": "open-tale-project-tale",
-      "fingerprint": "4b8ed15d",
-      "reviewState": "pending_security_review",
-      "metadata": {
-        "full_name": "tale-project/tale",
-        "stars": 29,
-        "topics": [
-          "agent-skills",
-          "agentic-ai",
-          "agentic-workflow",
-          "ai",
-          "ai-agents",
-          "automation",
-          "automations",
-          "genai",
-          "hermes-agent",
-          "llm",
-          "low-code",
-          "mcp",
-          "models",
-          "no-code",
-          "openclaw",
-          "rag",
-          "skills",
-          "typescript",
-          "voice-assistant"
-        ],
-        "default_branch": "main",
-        "archived": false,
-        "fork": false,
-        "owner": "tale-project"
-      }
-    },
-    {
       "sourceId": "llmops-discovery",
       "externalId": "481805419",
       "name": "Awesome-LLMOps",
       "canonicalUrl": "https://github.com/tensorchord/Awesome-LLMOps",
       "description": "An awesome & curated list of best LLMOps tools for developers",
       "license": "CC0-1.0",
-      "updatedAt": "2026-09-29T16:08:48Z",
+      "updatedAt": "2026-10-02T07:12:02Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -8535,7 +8499,7 @@
         "mlops"
       ],
       "slug": "open-tensorchord-awesome-llmops",
-      "fingerprint": "66fd10ce",
+      "fingerprint": "f3d232fc",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "tensorchord/Awesome-LLMOps",
@@ -8598,7 +8562,7 @@
       "canonicalUrl": "https://github.com/traceloop/openllmetry",
       "description": "Open-source observability for your GenAI or LLM application, based on OpenTelemetry",
       "license": "Apache-2.0",
-      "updatedAt": "2026-09-30T20:32:58Z",
+      "updatedAt": "2026-10-02T07:51:23Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -8615,11 +8579,11 @@
         "model-monitoring"
       ],
       "slug": "open-traceloop-openllmetry",
-      "fingerprint": "6807669b",
+      "fingerprint": "33098824",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "traceloop/openllmetry",
-        "stars": 7463,
+        "stars": 7466,
         "topics": [
           "artifical-intelligence",
           "datascience",
@@ -8653,7 +8617,7 @@
       "canonicalUrl": "https://github.com/TransformerOptimus/SuperAGI",
       "description": "<⚡️> SuperAGI - A dev-first open source autonomous AI agent framework. Enabling developers to build, manage & run useful autonomous agents quickly and reliably.",
       "license": "MIT",
-      "updatedAt": "2026-09-30T20:39:25Z",
+      "updatedAt": "2026-10-02T07:35:41Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -8670,7 +8634,7 @@
         "nextjs"
       ],
       "slug": "open-transformeroptimus-superagi",
-      "fingerprint": "a49ff2f5",
+      "fingerprint": "59a7721d",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "TransformerOptimus/SuperAGI",
@@ -8705,7 +8669,7 @@
       "canonicalUrl": "https://github.com/treeverse/lakeFS",
       "description": "lakeFS - Data version control for your data lake | Git for data",
       "license": "NOASSERTION",
-      "updatedAt": "2026-10-01T09:55:35Z",
+      "updatedAt": "2026-10-02T06:26:21Z",
       "trust": "untrusted_discovery",
       "categories": [
         "data-engineering",
@@ -8722,11 +8686,11 @@
         "datalakes"
       ],
       "slug": "open-treeverse-lakefs",
-      "fingerprint": "ecccf7be",
+      "fingerprint": "2e75658b",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "treeverse/lakeFS",
-        "stars": 5546,
+        "stars": 5549,
         "topics": [
           "apache-spark",
           "apache-sparksql",
@@ -8752,32 +8716,6 @@
         "archived": false,
         "fork": false,
         "owner": "treeverse"
-      }
-    },
-    {
-      "sourceId": "openclaw-discovery",
-      "externalId": "1170267375",
-      "name": "openclaw-onboarding",
-      "canonicalUrl": "https://github.com/trevorotts1/openclaw-onboarding",
-      "description": "Complete 14-skill onboarding package for OpenClaw AI assistants. Download the ZIP, share Start Here.md with your AI, and it handles the rest.",
-      "license": null,
-      "updatedAt": "2026-10-01T10:12:14Z",
-      "trust": "untrusted_discovery",
-      "categories": [
-        "agents",
-        "tools"
-      ],
-      "slug": "open-trevorotts1-openclaw-onboarding",
-      "fingerprint": "bfed5648",
-      "reviewState": "pending_license_review",
-      "metadata": {
-        "full_name": "trevorotts1/openclaw-onboarding",
-        "stars": 3,
-        "topics": [],
-        "default_branch": "main",
-        "archived": false,
-        "fork": false,
-        "owner": "trevorotts1"
       }
     },
     {
@@ -8813,7 +8751,7 @@
       "canonicalUrl": "https://github.com/vibrantlabsai/ragas",
       "description": "Supercharge Your LLM Application Evaluations 🚀",
       "license": "Apache-2.0",
-      "updatedAt": "2026-10-01T09:24:14Z",
+      "updatedAt": "2026-10-02T09:15:02Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -8822,11 +8760,11 @@
         "llm"
       ],
       "slug": "open-vibrantlabsai-ragas",
-      "fingerprint": "4ff2f4ab",
+      "fingerprint": "e561cc1f",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "vibrantlabsai/ragas",
-        "stars": 15895,
+        "stars": 15903,
         "topics": [
           "evaluation",
           "llm",
@@ -8839,13 +8777,61 @@
       }
     },
     {
+      "sourceId": "openclaw-discovery",
+      "externalId": "1159738101",
+      "name": "dotskills",
+      "canonicalUrl": "https://github.com/vincentkoc/dotskills",
+      "description": "🐙 A curated set of Codex and OpenClaw skills for workflow automation, technical debugging, and agent-assisted development patterns.",
+      "license": "MIT",
+      "updatedAt": "2026-10-02T09:54:54Z",
+      "trust": "untrusted_discovery",
+      "categories": [
+        "agents",
+        "tools",
+        "agentic-workflows",
+        "ai-assistant",
+        "automation",
+        "codex",
+        "developer-tools",
+        "llm",
+        "opik",
+        "productivity",
+        "prompt-engineering",
+        "python"
+      ],
+      "slug": "open-vincentkoc-dotskills",
+      "fingerprint": "3f9ba92a",
+      "reviewState": "pending_security_review",
+      "metadata": {
+        "full_name": "vincentkoc/dotskills",
+        "stars": 108,
+        "topics": [
+          "agentic-workflows",
+          "ai-assistant",
+          "automation",
+          "codex",
+          "developer-tools",
+          "llm",
+          "opik",
+          "productivity",
+          "prompt-engineering",
+          "python",
+          "skill-system"
+        ],
+        "default_branch": "main",
+        "archived": false,
+        "fork": false,
+        "owner": "vincentkoc"
+      }
+    },
+    {
       "sourceId": "mlops-discovery",
       "externalId": "244620269",
       "name": "awesome-mlops",
       "canonicalUrl": "https://github.com/visenger/awesome-mlops",
       "description": "A curated list of references for MLOps ",
       "license": null,
-      "updatedAt": "2026-09-29T16:18:21Z",
+      "updatedAt": "2026-10-01T20:44:47Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -8860,7 +8846,7 @@
         "software-engineering"
       ],
       "slug": "open-visenger-awesome-mlops",
-      "fingerprint": "972db645",
+      "fingerprint": "d6df37cb",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "visenger/awesome-mlops",
@@ -8928,7 +8914,7 @@
       "canonicalUrl": "https://github.com/wandb/wandb",
       "description": "The AI developer platform. Use Weights & Biases to train and fine-tune models, and manage models from experimentation to production.",
       "license": "MIT",
-      "updatedAt": "2026-10-01T06:11:35Z",
+      "updatedAt": "2026-10-01T21:49:31Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -8945,7 +8931,7 @@
         "jax"
       ],
       "slug": "open-wandb-wandb",
-      "fingerprint": "2b91da59",
+      "fingerprint": "89f8bf11",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "wandb/wandb",
@@ -8984,7 +8970,7 @@
       "canonicalUrl": "https://github.com/weaviate/weaviate",
       "description": "Weaviate is an open-source vector database that stores both objects and vectors, allowing for the combination of vector search with structured filtering with the fault tolerance and scalability of a cloud-native database​.",
       "license": "NOASSERTION",
-      "updatedAt": "2026-10-01T10:22:44Z",
+      "updatedAt": "2026-10-02T05:44:58Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -9001,11 +8987,11 @@
         "recommender-system"
       ],
       "slug": "open-weaviate-weaviate",
-      "fingerprint": "66bbf6f0",
+      "fingerprint": "037498a0",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "weaviate/weaviate",
-        "stars": 16859,
+        "stars": 16858,
         "topics": [
           "approximate-nearest-neighbor-search",
           "generative-search",
@@ -9041,7 +9027,7 @@
       "canonicalUrl": "https://github.com/wquguru/harness-books",
       "description": "📚 Two books on harness engineering — the design philosophies behind Claude Code & Codex: constraints, query loops, context governance, multi-agent verification. harness-books.agentway.dev",
       "license": null,
-      "updatedAt": "2026-10-01T03:15:57Z",
+      "updatedAt": "2026-10-01T12:09:51Z",
       "trust": "untrusted_discovery",
       "categories": [
         "ai-engineering",
@@ -9055,11 +9041,11 @@
         "prompt-engineering"
       ],
       "slug": "open-wquguru-harness-books",
-      "fingerprint": "405a87e4",
+      "fingerprint": "93f61d53",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "wquguru/harness-books",
-        "stars": 3158,
+        "stars": 3159,
         "topics": [
           "agentic-ai",
           "ai-agents",
@@ -9084,7 +9070,7 @@
       "canonicalUrl": "https://github.com/xonsh/xonsh",
       "description": "🐚 Python-powered shell. Full-featured, cross-platform and AI-friendly.",
       "license": "NOASSERTION",
-      "updatedAt": "2026-10-01T09:53:59Z",
+      "updatedAt": "2026-10-02T04:26:17Z",
       "trust": "untrusted_discovery",
       "categories": [
         "data-engineering",
@@ -9101,11 +9087,11 @@
         "nix"
       ],
       "slug": "open-xonsh-xonsh",
-      "fingerprint": "6d84cdb1",
+      "fingerprint": "ce7cf7a7",
       "reviewState": "pending_license_review",
       "metadata": {
         "full_name": "xonsh/xonsh",
-        "stars": 9658,
+        "stars": 9660,
         "topics": [
           "anthropic",
           "claude",
@@ -9191,13 +9177,68 @@
       }
     },
     {
+      "sourceId": "openclaw-discovery",
+      "externalId": "1343703890",
+      "name": "yotta-memory",
+      "canonicalUrl": "https://github.com/YottaMeta/yotta-memory",
+      "description": "File-based cross-agent memory standard for AI agents. Zero-dependency CLI (init/remember/recall/forget/archive/export/import), 4-type memory (FACT/PREF/BOUND/COMMIT), user-level + project-level scopes. Works with any Agent Skills-compatible agent (Claude Code, Codex, Cursor, OpenClaw, 78+).",
+      "license": "MIT",
+      "updatedAt": "2026-10-02T09:50:54Z",
+      "trust": "untrusted_discovery",
+      "categories": [
+        "agents",
+        "tools",
+        "yottaskills"
+      ],
+      "slug": "open-yottameta-yotta-memory",
+      "fingerprint": "c1f6e64a",
+      "reviewState": "pending_security_review",
+      "metadata": {
+        "full_name": "YottaMeta/yotta-memory",
+        "stars": 2,
+        "topics": [
+          "yottaskills"
+        ],
+        "default_branch": "main",
+        "archived": false,
+        "fork": false,
+        "owner": "YottaMeta"
+      }
+    },
+    {
+      "sourceId": "openclaw-discovery",
+      "externalId": "1275076061",
+      "name": "cyy-writing",
+      "canonicalUrl": "https://github.com/YShenc233/cyy-writing",
+      "description": "Codex/OpenClaw skill for WeChat Official Account article writing",
+      "license": null,
+      "updatedAt": "2026-10-02T09:48:28Z",
+      "trust": "untrusted_discovery",
+      "categories": [
+        "agents",
+        "tools"
+      ],
+      "slug": "open-yshenc233-cyy-writing",
+      "fingerprint": "ce5c4948",
+      "reviewState": "pending_license_review",
+      "metadata": {
+        "full_name": "YShenc233/cyy-writing",
+        "stars": 0,
+        "topics": [],
+        "default_branch": "main",
+        "archived": false,
+        "fork": false,
+        "owner": "YShenc233"
+      }
+    },
+    {
       "sourceId": "data-engineering-discovery",
       "externalId": "761150311",
       "name": "unstract",
       "canonicalUrl": "https://github.com/Zipstack/unstract",
       "description": "LLM-Driven Extraction of Unstructured Data — Built for API Deployments & ETL Pipeline Workflows",
       "license": "AGPL-3.0",
-      "updatedAt": "2026-10-01T06:18:17Z",
+      "updatedAt": "2026-10-02T05:44:44Z",
       "trust": "untrusted_discovery",
       "categories": [
         "data-engineering",
@@ -9214,11 +9255,11 @@
         "structured-output"
       ],
       "slug": "open-zipstack-unstract",
-      "fingerprint": "b77e4756",
+      "fingerprint": "c5438769",
       "reviewState": "pending_security_review",
       "metadata": {
         "full_name": "Zipstack/unstract",
-        "stars": 7267,
+        "stars": 7270,
         "topics": [
           "ai-agents",
           "data-engineering",
