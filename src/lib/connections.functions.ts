@@ -778,7 +778,7 @@ export const disconnectApp = createServerFn({ method: "POST" })
       /^composio:\/\/connected-account\/([^/]+)$/,
     )?.[1];
     const imported =
-      (connection?.metadata as Record<string, unknown> | null)?.source === "composio-sync";
+      (connection?.metadata as Record<string, unknown> | null)?.["source"] === "composio-sync";
     if (managedAccountId && connection?.provider && !imported) {
       const { deleteManagedConnection } = await import("@/lib/managed-connectors.server");
       await deleteManagedConnection(connection.provider, managedAccountId);
