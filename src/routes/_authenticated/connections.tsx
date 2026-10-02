@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { KeyRound, Link2, Loader2, Lock, Search } from "lucide-react";
+import { KeyRound, Link2, Loader2, Lock, Search, Plus, X, Unplug } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -116,9 +116,10 @@ function ConnectionsPage() {
   const disconnectMutation = useMutation({
     mutationFn: (id: string) => disconnectFn({ data: { id } }),
     onSuccess: () => {
-      toast.success("Disconnected");
+      toast.success("Connection removed");
       void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
     },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not remove connection"),
   });
 
   const configureMutation = useMutation({
@@ -250,6 +251,7 @@ function ConnectionsPage() {
           {catOptions.map((c) => (
             <button
               key={c}
+              aria-pressed={category === c}
               type="button"
               onClick={() => setCategory(c)}
               className={
@@ -276,22 +278,39 @@ function ConnectionsPage() {
             Your connections
           </h2>
           <div className="grid gap-2 sm:grid-cols-2">
-            {mine.data?.map((c) => (
-              <Card key={c.id} className="flex flex-row items-center justify-between gap-3 p-4">
-                <div className="flex min-w-0 items-center gap-3">
-                  <BrandLogo provider={c.provider} name={c.display_name} size="sm" />
-                  <div className="min-w-0">
-                    <p className="truncate font-medium">{c.display_name}</p>
-                    <Badge variant="outline" className="mt-1 text-xs">
-                      {connectionStatusLabel(c.status)}
-                    </Badge>
+            {mine.data
+              ?.filter((c) => results.some((app) => app.provider === c.provider))
+              .map((c) => (
+                <Card key={c.id} className="flex flex-row items-center justify-between gap-3 p-4">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <BrandLogo provider={c.provider} name={c.display_name} size="sm" />
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">{c.display_name}</p>
+                      <p className="text-xs text-muted-foreground break-all">
+                        {String(c.provider_account_id || c.id)}
+                      </p>
+                      <Badge variant="outline" className="mt-1 text-xs">
+                        {connectionStatusLabel(c.status)}
+                      </Badge>
+                    </div>
                   </div>
-                </div>
-                <Button size="sm" variant="ghost" onClick={() => disconnectMutation.mutate(c.id)}>
-                  Disconnect
-                </Button>
-              </Card>
-            ))}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-amber-500 text-amber-950 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-950"
+                    disabled={disconnectMutation.isPending}
+                    aria-label={`${c.status === "pending" ? "Cancel verification for" : "Disconnect"} ${c.display_name}`}
+                    onClick={() => disconnectMutation.mutate(c.id)}
+                  >
+                    {c.status === "pending" ? (
+                      <X aria-hidden="true" className="size-4" />
+                    ) : (
+                      <Unplug aria-hidden="true" className="size-4" />
+                    )}
+                    {c.status === "pending" ? "Cancel verification" : "Disconnect"}
+                  </Button>
+                </Card>
+              ))}
           </div>
         </div>
       ) : null}
@@ -325,35 +344,41 @@ function ConnectionsPage() {
                       <Button asChild size="sm" variant="outline" className="shrink-0">
                         <Link to="/auth">Sign in</Link>
                       </Button>
-                    ) : connection ? (
-                      <Badge variant="secondary" className="shrink-0">
-                        {connectionStatusLabel(connection.status)}
-                      </Badge>
                     ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="shrink-0"
-                        disabled={connectMutation.isPending || (app.oauth && !app.oauth_ready)}
-                        title={
-                          app.oauth && !app.oauth_ready
-                            ? "Official provider OAuth setup is not available yet"
-                            : undefined
-                        }
-                        onClick={() =>
-                          app.oauth
-                            ? connectMutation.mutate(app.provider)
-                            : setSelectedApp(app as CatalogApp)
-                        }
-                      >
-                        {app.oauth
-                          ? app.oauth_ready
-                            ? "Connect"
-                            : "Setup required"
-                          : app.provider === "custom_mcp"
-                            ? "Add MCP"
-                            : "Add key"}
-                      </Button>
+                      <div className="flex shrink-0 flex-col items-end gap-2">
+                        {connection && (
+                          <Badge variant="outline">
+                            {connectionStatusLabel(connection.status)}
+                          </Badge>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="shrink-0 border-blue-600 bg-blue-700 text-white hover:bg-blue-800 hover:text-white focus-visible:ring-2 focus-visible:ring-blue-400"
+                          disabled={connectMutation.isPending || (app.oauth && !app.oauth_ready)}
+                          title={
+                            app.oauth && !app.oauth_ready
+                              ? "Official provider OAuth setup is not available yet"
+                              : undefined
+                          }
+                          onClick={() =>
+                            app.oauth
+                              ? connectMutation.mutate(app.provider)
+                              : setSelectedApp(app as CatalogApp)
+                          }
+                        >
+                          <Plus className="size-4" aria-hidden="true" />
+                          {connection && (!app.oauth || app.oauth_ready)
+                            ? "Add account"
+                            : app.oauth
+                              ? app.oauth_ready
+                                ? "Connect"
+                                : "Setup required"
+                              : app.provider === "custom_mcp"
+                                ? "Add MCP"
+                                : "Add key"}
+                        </Button>
+                      </div>
                     )}
                   </Card>
                 );
