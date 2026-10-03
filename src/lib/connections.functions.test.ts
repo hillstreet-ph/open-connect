@@ -56,6 +56,22 @@ test("rejects an insecure remote MCP endpoint", () => {
   );
 });
 
+test("rejects an insecure localhost MCP endpoint", () => {
+  assert.throws(
+    () =>
+      normalizeConnectionSetup(
+        {
+          provider: "custom_mcp",
+          endpoint_url: "http://localhost:3000/mcp",
+          api_key: "",
+          auth_type: "none",
+        },
+        app("custom_mcp"),
+      ),
+    /must use HTTPS/,
+  );
+});
+
 test("rejects private-network MCP endpoints", () => {
   assert.throws(
     () =>
