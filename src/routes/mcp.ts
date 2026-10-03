@@ -75,21 +75,44 @@ const PLATFORM_TOOLS: McpTool[] = [
     name: "search",
     description:
       "Use this when searching Open-Connect projects, providers, plugins, skills, MCP servers, tools, or runs.",
-    inputSchema: { type: "object", properties: { query: { type: "string" } }, required: ["query"] },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    inputSchema: {
+      type: "object",
+      properties: { query: { type: "string" } },
+      required: ["query"],
+    },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
   },
   {
     name: "fetch",
     description: "Use this when retrieving one Open-Connect catalog item by its exact id or slug.",
-    inputSchema: { type: "object", properties: { id: { type: "string" } }, required: ["id"] },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    inputSchema: {
+      type: "object",
+      properties: { id: { type: "string" } },
+      required: ["id"],
+    },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
   },
   {
     name: "open_connect_status",
     description: "Gateway status: resources, connections, models",
     inputSchema: { type: "object", properties: {} },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
-    _meta: { "ui/resourceUri": COMMAND_CENTER_URI, "openai/outputTemplate": COMMAND_CENTER_URI },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
+    _meta: {
+      "ui/resourceUri": COMMAND_CENTER_URI,
+      "openai/outputTemplate": COMMAND_CENTER_URI,
+    },
   },
   {
     name: "list_resources",
@@ -114,20 +137,32 @@ const PLATFORM_TOOLS: McpTool[] = [
       type: "object",
       properties: { type: { type: "string" }, project_id: { type: "string" } },
     },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
   },
   {
     name: "list_workspace_projects",
     description: "List workspaces and projects permitted by this API key's organization scope.",
     inputSchema: { type: "object", properties: {} },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
   },
   {
     name: "list_credential_metadata",
     description:
       "List owned credential metadata and availability. Secret values and TOTP seeds are never returned.",
     inputSchema: { type: "object", properties: {} },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
   },
   {
     name: "calculate",
@@ -137,7 +172,11 @@ const PLATFORM_TOOLS: McpTool[] = [
       properties: { expression: { type: "string", maxLength: 240 } },
       required: ["expression"],
     },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
   },
   {
     name: "list_connections",
@@ -153,8 +192,15 @@ const PLATFORM_TOOLS: McpTool[] = [
     name: "inspect_connections",
     description:
       "Use this when validating connection health, scopes, and opaque credential bindings.",
-    inputSchema: { type: "object", properties: { provider: { type: "string" } } },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+    inputSchema: {
+      type: "object",
+      properties: { provider: { type: "string" } },
+    },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: true,
+    },
   },
   {
     name: "list_connection_tools",
@@ -164,7 +210,11 @@ const PLATFORM_TOOLS: McpTool[] = [
       properties: { connection_id: { type: "string" } },
       required: ["connection_id"],
     },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: true,
+    },
   },
   {
     name: "call_connection_tool",
@@ -191,7 +241,11 @@ const PLATFORM_TOOLS: McpTool[] = [
     name: "e2b_health",
     description: "Check whether the configured E2B sandbox API is reachable.",
     inputSchema: { type: "object", properties: {} },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: true,
+    },
   },
   {
     name: "e2b_list_sandboxes",
@@ -200,7 +254,11 @@ const PLATFORM_TOOLS: McpTool[] = [
       type: "object",
       properties: { limit: { type: "integer", minimum: 1, maximum: 100 } },
     },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: true,
+    },
   },
   {
     name: "e2b_create_sandbox",
@@ -208,7 +266,10 @@ const PLATFORM_TOOLS: McpTool[] = [
     inputSchema: {
       type: "object",
       properties: {
-        template: { type: "string", description: "E2B template id or alias; defaults to base." },
+        template: {
+          type: "string",
+          description: "E2B template id or alias; defaults to base.",
+        },
         timeout: { type: "integer", minimum: 30, maximum: 3600 },
         metadata: { type: "object", additionalProperties: { type: "string" } },
       },
@@ -228,7 +289,10 @@ const PLATFORM_TOOLS: McpTool[] = [
       type: "object",
       properties: {
         sandbox_id: { type: "string" },
-        confirm: { type: "boolean", description: "Must be true to terminate the sandbox." },
+        confirm: {
+          type: "boolean",
+          description: "Must be true to terminate the sandbox.",
+        },
       },
       required: ["sandbox_id", "confirm"],
     },
@@ -243,13 +307,21 @@ const PLATFORM_TOOLS: McpTool[] = [
     name: "hubstaff_admin_identity",
     description: "Validate the configured Hubstaff Admin identity and granted account access.",
     inputSchema: { type: "object", properties: {} },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: true,
+    },
   },
   {
     name: "hubstaff_admin_list_organizations",
     description: "List Hubstaff organizations available to the configured administrator.",
     inputSchema: { type: "object", properties: {} },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: true,
+    },
   },
   {
     name: "hubstaff_admin_request",
@@ -258,10 +330,19 @@ const PLATFORM_TOOLS: McpTool[] = [
     inputSchema: {
       type: "object",
       properties: {
-        method: { type: "string", enum: ["GET", "POST", "PUT", "PATCH", "DELETE"] },
-        path: { type: "string", description: "Hubstaff v2 path beginning with /v2/." },
+        method: {
+          type: "string",
+          enum: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+        },
+        path: {
+          type: "string",
+          description: "Hubstaff v2 path beginning with /v2/.",
+        },
         body: { type: "object", additionalProperties: true },
-        confirm: { type: "boolean", description: "Required for DELETE requests." },
+        confirm: {
+          type: "boolean",
+          description: "Required for DELETE requests.",
+        },
       },
       required: ["method", "path"],
     },
@@ -280,11 +361,18 @@ const PLATFORM_TOOLS: McpTool[] = [
       type: "object",
       properties: {
         goal: { type: "string" },
-        environment: { type: "string", enum: ["development", "staging", "production"] },
+        environment: {
+          type: "string",
+          enum: ["development", "staging", "production"],
+        },
       },
       required: ["goal"],
     },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
   },
   {
     name: "execute_plan",
@@ -294,7 +382,10 @@ const PLATFORM_TOOLS: McpTool[] = [
       type: "object",
       properties: {
         goal: { type: "string" },
-        environment: { type: "string", enum: ["development", "staging", "production"] },
+        environment: {
+          type: "string",
+          enum: ["development", "staging", "production"],
+        },
       },
       required: ["goal"],
     },
@@ -317,7 +408,11 @@ const PLATFORM_TOOLS: McpTool[] = [
       },
       required: ["goal"],
     },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
   },
   {
     name: "resolve_capability",
@@ -328,7 +423,11 @@ const PLATFORM_TOOLS: McpTool[] = [
       properties: { capability: { type: "string" } },
       required: ["capability"],
     },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
   },
   {
     name: "create_capability_draft",
@@ -339,7 +438,10 @@ const PLATFORM_TOOLS: McpTool[] = [
       properties: {
         capability: { type: "string" },
         goal: { type: "string" },
-        environment: { type: "string", enum: ["development", "staging", "production"] },
+        environment: {
+          type: "string",
+          enum: ["development", "staging", "production"],
+        },
       },
       required: ["capability", "goal"],
     },
@@ -380,7 +482,10 @@ const PLATFORM_TOOLS: McpTool[] = [
       type: "object",
       properties: {
         resource_id: { type: "string" },
-        environment: { type: "string", enum: ["development", "staging", "production"] },
+        environment: {
+          type: "string",
+          enum: ["development", "staging", "production"],
+        },
       },
       required: ["resource_id"],
     },
@@ -493,7 +598,11 @@ function executionUnavailable(operation: "invoke" | "install", resource: Resourc
       status: "unsupported",
       code: "provider_executor_unavailable",
       operation,
-      resource: { slug: resource.slug, name: resource.name, type: resource.resource_type },
+      resource: {
+        slug: resource.slug,
+        name: resource.name,
+        type: resource.resource_type,
+      },
       execution: {
         verified: false,
         performed: false,
@@ -543,17 +652,22 @@ async function getCatalog(force = false) {
   }
 
   const { oauthDatabase } = await import("@/lib/oauth-client.server");
-  const { data, error } = await oauthDatabase()
-    .from("resources")
-    .select(
-      "id, slug, name, description, resource_type, installation_type, installation_config, verified",
-    )
-    .eq("published", true)
-    .order("featured", { ascending: false })
-    .limit(100);
-
-  if (error) throw new Error("Resource catalog unavailable");
-  const rows = (data ?? []) as ResourceRow[];
+  const rows: ResourceRow[] = [];
+  const pageSize = 200;
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await oauthDatabase()
+      .from("resources")
+      .select(
+        "id, slug, name, description, resource_type, installation_type, installation_config, verified",
+      )
+      .eq("published", true)
+      .order("featured", { ascending: false })
+      .order("id", { ascending: true })
+      .range(offset, offset + pageSize - 1);
+    if (error) throw new Error("Resource catalog unavailable");
+    rows.push(...((data ?? []) as ResourceRow[]));
+    if ((data?.length ?? 0) < pageSize) break;
+  }
   const bySlug = new Map<string, ResourceRow>();
   const byId = new Map<string, ResourceRow>();
   const byToolName = new Map<string, ResourceRow>();
@@ -802,21 +916,24 @@ export const Route = createFileRoute("/mcp")({
           if (name === "search") {
             const query = String(args["query"] ?? "").trim();
             const catalog = await getCatalog();
-            const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
-            const results = [...catalog.bySlug.values()]
-              .filter((item) =>
-                terms.every((term) =>
-                  `${item.slug} ${item.name} ${item.description ?? ""} ${item.resource_type}`
-                    .toLowerCase()
-                    .includes(term),
-                ),
-              )
-              .slice(0, 20)
-              .map((item) => ({
-                id: item.slug,
-                title: item.name,
-                url: `https://open-connect.site/resources/${item.slug}`,
-              }));
+            const ranked = rankCapabilities(
+              query,
+              [...catalog.bySlug.values()].map((item) => ({
+                slug: item.slug,
+                name: item.name,
+                description: item.description,
+                resourceType: item.resource_type,
+                installationType: item.installation_type,
+              })),
+              10,
+            );
+            const results = ranked.map((item) => ({
+              id: item.slug,
+              title: item.name,
+              url: `https://open-connect.site/resources/${item.slug}`,
+              score: item.score,
+              matched_terms: item.matchedTerms,
+            }));
             result = textResult({ results });
           } else if (name === "fetch") {
             const id = String(args["id"] ?? "").trim();
@@ -863,7 +980,10 @@ export const Route = createFileRoute("/mcp")({
               gateway: "open-connect.site",
               planes: {
                 resources: { published: catalog.count },
-                connections: { connected: connections, available: connections !== null },
+                connections: {
+                  connected: connections,
+                  available: connections !== null,
+                },
                 models: {
                   endpoint: "https://open-connect.site/v1",
                   aliases: MODEL_ALIASES.map((a) => a.id),
@@ -874,7 +994,10 @@ export const Route = createFileRoute("/mcp")({
             });
           } else if (name === "calculate") {
             const expression = String(args["expression"] ?? "");
-            result = textResult({ expression, result: calculateExpression(expression) });
+            result = textResult({
+              expression,
+              result: calculateExpression(expression),
+            });
           } else if (name === "list_workspace_projects") {
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
             const organizationIds = await loadAuthorizedOrganizationIds(key);
@@ -962,7 +1085,10 @@ export const Route = createFileRoute("/mcp")({
             const unique = [
               ...new Map(rows.map((item) => [String(item["id"]), item])).values(),
             ].filter((item) => !type || item["resource_type"] === type);
-            result = textResult({ resources: unique, project_id: requestedProject || null });
+            result = textResult({
+              resources: unique,
+              project_id: requestedProject || null,
+            });
           } else if (name === "inspect_connections") {
             const provider = String(args["provider"] ?? "").trim();
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -1006,7 +1132,11 @@ export const Route = createFileRoute("/mcp")({
           } else if (name === "e2b_health") {
             const { e2bConfig, e2bHealth } = await import("@/lib/e2b.server");
             if (!e2bConfig().configured) throw new Error("E2B is not configured");
-            result = textResult({ configured: true, reachable: true, health: await e2bHealth() });
+            result = textResult({
+              configured: true,
+              reachable: true,
+              health: await e2bHealth(),
+            });
           } else if (name === "e2b_list_sandboxes") {
             const { e2bConfig, listE2bSandboxes } = await import("@/lib/e2b.server");
             if (!e2bConfig().configured) throw new Error("E2B is not configured");
@@ -1230,7 +1360,11 @@ export const Route = createFileRoute("/mcp")({
               .select("id,requested_capability,state,created_at")
               .single();
             if (error) throw new Error(error.message);
-            result = textResult({ draft: data, executable: false, values_exposed: false });
+            result = textResult({
+              draft: data,
+              executable: false,
+              values_exposed: false,
+            });
           } else if (name === "record_run_outcome") {
             await requireControlWrite(key);
             const correlationId = String(args["correlation_id"] ?? "").trim();
@@ -1296,7 +1430,10 @@ export const Route = createFileRoute("/mcp")({
                   source_type: "api",
                   status: "ready",
                   tags: ["verified-procedure", ...capabilitySlugs].slice(0, 20),
-                  metadata: { promoted_from_run: run.id, verified_successes: 3 },
+                  metadata: {
+                    promoted_from_run: run.id,
+                    verified_successes: 3,
+                  },
                 });
                 knowledgePromoted = true;
               }
@@ -1420,7 +1557,11 @@ export const Route = createFileRoute("/mcp")({
             } else if (action === "invoke" && !isExecutable(match)) {
               result = textResult({
                 status: reviewState(match),
-                resource: { slug: match.slug, name: match.name, type: match.resource_type },
+                resource: {
+                  slug: match.slug,
+                  name: match.name,
+                  type: match.resource_type,
+                },
                 risk: match.installation_config?.["risk"] ?? null,
                 message:
                   "Metadata-only resource cannot be invoked until review and approval are complete.",
@@ -1435,7 +1576,11 @@ export const Route = createFileRoute("/mcp")({
               });
             }
           } else {
-            result = textResult({ gateway: "open-connect.site", scopes: key.scopes, tool: name });
+            result = textResult({
+              gateway: "open-connect.site",
+              scopes: key.scopes,
+              tool: name,
+            });
           }
         } else if (body.method === "ping") {
           result = {};
