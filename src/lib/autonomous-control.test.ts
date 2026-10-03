@@ -74,3 +74,22 @@ describe("autonomous control policy", () => {
     assert.deepEqual(record.evidence, { token: "[REDACTED]", status: 504 });
   });
 });
+
+describe("capability discovery relevance", () => {
+  const candidates = [
+    { slug: "browser", name: "Browser", description: "Website extraction", resourceType: "skill" },
+    { slug: "github-issue", name: "GitHub issue", description: "Create an issue in a connected repository", resourceType: "tool" },
+    { slug: "terminal", name: "Terminal", description: "Run sandbox commands", resourceType: "tool" },
+  ];
+  it("ignores filler words that previously matched unrelated tools", () => {
+    assert.deepEqual(rankCapabilities("please find tools for browsing websites", candidates).map(c => c.slug), ["browser"]);
+    assert.deepEqual(rankCapabilities("create tools for all my needs", candidates), []);
+  });
+  it("matches common runtime aliases and resource categories", () => {
+    assert.equal(rankCapabilities("shell", candidates)[0]?.slug, "terminal");
+    assert.equal(rankCapabilities("skills", [{...candidates[0], resourceType: "skills"}])[0]?.slug, "browser");
+  });
+  it("does not lose a relevant match because a query includes extra words", () => {
+    assert.equal(rankCapabilities("browser for previously unknown workflow", candidates)[0]?.slug, "browser");
+  });
+});
