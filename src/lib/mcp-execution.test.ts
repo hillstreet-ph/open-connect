@@ -53,7 +53,7 @@ mock.module("@/lib/oauth-client.server", () => ({
       if (table !== "resources") throw new Error(`Unexpected public query: ${table}`);
       return {
         select: () => ({
-          eq: () => ({ order: () => ({ limit: async () => ({ data: [resource], error: null }) }) }),
+          eq: () => ({ order: () => ({ order: () => ({ range: async () => ({ data: [resource], error: null }) }) }) }),
         }),
       };
     },
