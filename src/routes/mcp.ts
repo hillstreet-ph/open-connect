@@ -543,17 +543,22 @@ async function getCatalog(force = false) {
   }
 
   const { oauthDatabase } = await import("@/lib/oauth-client.server");
-  const { data, error } = await oauthDatabase()
-    .from("resources")
-    .select(
-      "id, slug, name, description, resource_type, installation_type, installation_config, verified",
-    )
-    .eq("published", true)
-    .order("featured", { ascending: false })
-    .limit(100);
-
-  if (error) throw new Error("Resource catalog unavailable");
-  const rows = (data ?? []) as ResourceRow[];
+  const rows: ResourceRow[] = [];
+  const pageSize = 200;
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await oauthDatabase()
+      .from("resources")
+      .select(
+        "id, slug, name, description, resource_type, installation_type, installation_config, verified",
+      )
+      .eq("published", true)
+      .order("featured", { ascending: false })
+      .order("id", { ascending: true })
+      .range(offset, offset + pageSize - 1);
+    if (error) throw new Error("Resource catalog unavailable");
+    rows.push(...((data ?? []) as ResourceRow[]));
+    if ((data?.length ?? 0) < pageSize) break;
+  }
   const bySlug = new Map<string, ResourceRow>();
   const byId = new Map<string, ResourceRow>();
   const byToolName = new Map<string, ResourceRow>();
@@ -802,21 +807,20 @@ export const Route = createFileRoute("/mcp")({
           if (name === "search") {
             const query = String(args["query"] ?? "").trim();
             const catalog = await getCatalog();
-            const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
-            const results = [...catalog.bySlug.values()]
-              .filter((item) =>
-                terms.every((term) =>
-                  `${item.slug} ${item.name} ${item.description ?? ""} ${item.resource_type}`
-                    .toLowerCase()
-                    .includes(term),
-                ),
-              )
-              .slice(0, 20)
-              .map((item) => ({
-                id: item.slug,
-                title: item.name,
-                url: `https://open-connect.site/resources/${item.slug}`,
-              }));
+            const ranked = rankCapabilities(query, [...catalog.bySlug.values()].map((item) => ({
+              slug: item.slug,
+              name: item.name,
+              description: item.description,
+              resourceType: item.resource_type,
+              installationType: item.installation_type,
+            })), 10);
+            const results = ranked.map((item) => ({
+              id: item.slug,
+              title: item.name,
+              url: `https://open-connect.site/resources/${item.slug}`,
+              score: item.score,
+              matched_terms: item.matchedTerms,
+            }));
             result = textResult({ results });
           } else if (name === "fetch") {
             const id = String(args["id"] ?? "").trim();
