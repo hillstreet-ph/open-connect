@@ -84,22 +84,41 @@ export function buildControlPlan(goal: string, environment = "production") {
 }
 
 const DISCOVERY_STOP_WORDS = new Set(
-  "a an the and or for from with without into to of in on all any my me our your this that these those is are be can could should would need needs use using find search discover tool tools capability capabilities resource resources create setup set please".split(" "),
+  "a an the and or for from with without into to of in on all any my me our your this that these those is are be can could should would need needs use using find search discover tool tools capability capabilities resource resources create setup set please".split(
+    " ",
+  ),
 );
 const DISCOVERY_ALIASES: Record<string, string> = {
-  browsers: "browser", browsing: "browser",
-  scraping: "scrape", extraction: "scrape",
-  websites: "website", webpages: "website", webpage: "website",
-  terminals: "terminal", shell: "terminal",
-  computers: "computer", desktop: "computer",
-  phones: "phone", mobile: "phone", android: "phone",
-  repositories: "repository", repos: "repository", repo: "repository",
+  browsers: "browser",
+  browsing: "browser",
+  scraping: "scrape",
+  extraction: "scrape",
+  websites: "website",
+  webpages: "website",
+  webpage: "website",
+  terminals: "terminal",
+  shell: "terminal",
+  computers: "computer",
+  desktop: "computer",
+  phones: "phone",
+  mobile: "phone",
+  android: "phone",
+  repositories: "repository",
+  repos: "repository",
+  repo: "repository",
 };
 
 function terms(value: string): string[] {
-  return [...new Set(value.toLowerCase().replace(/[^a-z0-9]+/g, " ").split(" ")
-    .filter((term) => term.length > 2 && !DISCOVERY_STOP_WORDS.has(term))
-    .map((term) => DISCOVERY_ALIASES[term] ?? term))];
+  return [
+    ...new Set(
+      value
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, " ")
+        .split(" ")
+        .filter((term) => term.length > 2 && !DISCOVERY_STOP_WORDS.has(term))
+        .map((term) => DISCOVERY_ALIASES[term] ?? term),
+    ),
+  ];
 }
 
 export function rankCapabilities(
@@ -110,7 +129,9 @@ export function rankCapabilities(
   const goalTerms = terms(goal);
   return candidates
     .map((candidate) => {
-      const nameTerms = new Set(terms(`${candidate.slug} ${candidate.name} ${candidate.resourceType}`));
+      const nameTerms = new Set(
+        terms(`${candidate.slug} ${candidate.name} ${candidate.resourceType}`),
+      );
       const descriptionTerms = new Set(terms(candidate.description ?? ""));
       const matchedTerms = goalTerms.filter(
         (term) => nameTerms.has(term) || descriptionTerms.has(term),
