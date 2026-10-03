@@ -31,10 +31,16 @@ describe("autonomous control policy", () => {
   });
 
   it("redacts nested evidence", () => {
-    assert.deepEqual(redactEvidence({ token: "secret", nested: { apiKey: "secret", ok: true } }), {
-      token: "[REDACTED]",
-      nested: { apiKey: "[REDACTED]", ok: true },
-    });
+    assert.deepEqual(
+      redactEvidence({
+        token: "secret",
+        nested: { apiKey: "secret", ok: true },
+      }),
+      {
+        token: "[REDACTED]",
+        nested: { apiKey: "[REDACTED]", ok: true },
+      },
+    );
   });
 
   it("ranks the smallest relevant capability set", () => {
@@ -77,19 +83,43 @@ describe("autonomous control policy", () => {
 
 describe("capability discovery relevance", () => {
   const candidates = [
-    { slug: "browser", name: "Browser", description: "Website extraction", resourceType: "skill" },
-    { slug: "github-issue", name: "GitHub issue", description: "Create an issue in a connected repository", resourceType: "tool" },
-    { slug: "terminal", name: "Terminal", description: "Run sandbox commands", resourceType: "tool" },
+    {
+      slug: "browser",
+      name: "Browser",
+      description: "Website extraction",
+      resourceType: "skill",
+    },
+    {
+      slug: "github-issue",
+      name: "GitHub issue",
+      description: "Create an issue in a connected repository",
+      resourceType: "tool",
+    },
+    {
+      slug: "terminal",
+      name: "Terminal",
+      description: "Run sandbox commands",
+      resourceType: "tool",
+    },
   ];
   it("ignores filler words that previously matched unrelated tools", () => {
-    assert.deepEqual(rankCapabilities("please find tools for browsing websites", candidates).map(c => c.slug), ["browser"]);
+    assert.deepEqual(
+      rankCapabilities("please find tools for browsing websites", candidates).map((c) => c.slug),
+      ["browser"],
+    );
     assert.deepEqual(rankCapabilities("create tools for all my needs", candidates), []);
   });
   it("matches common runtime aliases and resource categories", () => {
     assert.equal(rankCapabilities("shell", candidates)[0]?.slug, "terminal");
-    assert.equal(rankCapabilities("skills", [{...candidates[0], resourceType: "skills"}])[0]?.slug, "browser");
+    assert.equal(
+      rankCapabilities("skills", [{ ...candidates[0], resourceType: "skills" }])[0]?.slug,
+      "browser",
+    );
   });
   it("does not lose a relevant match because a query includes extra words", () => {
-    assert.equal(rankCapabilities("browser for previously unknown workflow", candidates)[0]?.slug, "browser");
+    assert.equal(
+      rankCapabilities("browser for previously unknown workflow", candidates)[0]?.slug,
+      "browser",
+    );
   });
 });
