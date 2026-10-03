@@ -1385,16 +1385,25 @@ export const Route = createFileRoute("/mcp")({
             result = textResult({ data, count: data.length });
           } else if (name === "list_connections") {
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-            const { data: conns } = await supabaseAdmin
-              .from("app_connections")
-              .select("provider, display_name, status, scopes")
-              .eq("user_id", key.userId)
-              .eq("status", "connected")
-              .order("created_at", { ascending: false })
-              .limit(50);
+            const connections: Array<Record<string, unknown>> = [];
+            const pageSize = 200;
+            for (let offset = 0; ; offset += pageSize) {
+              const { data: page, error } = await supabaseAdmin
+                .from("app_connections")
+                .select("id, provider, display_name, status, scopes")
+                .eq("user_id", key.userId)
+                .eq("status", "connected")
+                .order("created_at", { ascending: false })
+                .order("id", { ascending: true })
+                .range(offset, offset + pageSize - 1);
+              if (error) throw new Error("Could not list connected apps.");
+              connections.push(...(page ?? []));
+              if ((page?.length ?? 0) < pageSize) break;
+            }
             result = textResult({
-              data: conns ?? [],
-              note: "Capability grants only",
+              data: connections,
+              count: connections.length,
+              note: "Use id with list_connection_tools and call_connection_tool for Custom MCP connections. Credential values are never returned.",
             });
           } else if (name === "list_models") {
             result = textResult({
