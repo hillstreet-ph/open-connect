@@ -35,12 +35,16 @@ mock.module("@/integrations/supabase/client.server", () => ({
       if (table === "resources")
         return {
           select: () => ({
-            eq: () => ({ order: () => ({ limit: async () => ({ data: [resource] }) }) }),
+            eq: () => ({
+              order: () => ({ limit: async () => ({ data: [resource] }) }),
+            }),
           }),
         };
       if (table === "user_roles")
         return {
-          select: () => ({ eq: async () => ({ data: roles.map((role) => ({ role })) }) }),
+          select: () => ({
+            eq: async () => ({ data: roles.map((role) => ({ role })) }),
+          }),
         };
       throw new Error(`Unexpected database access: ${table}`);
     },
@@ -53,7 +57,13 @@ mock.module("@/lib/oauth-client.server", () => ({
       if (table !== "resources") throw new Error(`Unexpected public query: ${table}`);
       return {
         select: () => ({
-          eq: () => ({ order: () => ({ order: () => ({ range: async () => ({ data: [resource], error: null }) }) }) }),
+          eq: () => ({
+            order: () => ({
+              order: () => ({
+                range: async () => ({ data: [resource], error: null }),
+              }),
+            }),
+          }),
         }),
       };
     },
@@ -95,7 +105,12 @@ function listTools() {
         accept: "application/json, text/event-stream",
         "content-type": "application/json",
       },
-      body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} }),
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 2,
+        method: "tools/list",
+        params: {},
+      }),
     }),
   });
 }
@@ -115,7 +130,9 @@ test("tool discovery exposes a stable titled platform catalog without duplicate 
 });
 
 test("approved resource invocation is an explicit tool error without an executor", async () => {
-  const response = await call("resource_fixture_approved_tool", { action: "invoke" });
+  const response = await call("resource_fixture_approved_tool", {
+    action: "invoke",
+  });
   const { result } = await response.json();
   expect(result.isError).toBe(true);
   expect(JSON.parse(result.content[0].text)).toMatchObject({
@@ -128,7 +145,9 @@ test("approved resource invocation is an explicit tool error without an executor
 });
 
 test("installation does not write a fabricated installed record", async () => {
-  const response = await call("install_capability", { resource_id: resource.slug });
+  const response = await call("install_capability", {
+    resource_id: resource.slug,
+  });
   const { result } = await response.json();
   expect(result.isError).toBe(true);
   expect(JSON.parse(result.content[0].text)).toMatchObject({
