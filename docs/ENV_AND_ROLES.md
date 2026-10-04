@@ -36,13 +36,13 @@ Human access uses three separate scopes:
 
 | Scope | Roles | Purpose |
 |------|------|------|
-| Platform | **Member**, **Admin**, **Owner** | Member is the standard signed-in role. Admin manages permitted platform and organization settings. Owner retains full platform and organization control. |
+| Platform | **Member**, **Developer**, **Admin** | Member is the standard signed-in role. Developer manages toolkits. Admin verifies resources and manages platform roles. These roles do not grant organization ownership or project membership. |
 | Organization | **Member**, **Admin**, **Owner** | Admins manage organization people, groups, and settings. Owners manage ownership and appoint admins. |
 | Project | **Viewer**, **Developer**, **Manager** | Viewer reads an assigned project. Developer builds within an assigned project. Manager manages that project's members, installs, and environments. |
 
 Project membership is independent for every project. Organization Members only see projects explicitly shared with them. Project resources, environments, and memberships follow that same project boundary. Machine principals such as agents and API clients use scoped credentials and never receive human Owner or Admin roles.
 
-Legacy platform role records remain readable for existing data, but new platform assignments are limited to Member, Admin, and Owner. Assign people by account email in System administration; invite new people through Organization settings.
+Legacy Owner and Publisher platform records remain readable for migration and audit purposes, but they cannot be newly assigned. New platform assignments are limited to Member, Developer, and Admin. Assign people by account email in System administration; invite new people through Organization settings. Organization ownership remains a separate organization role.
 
 Upload adoption is available to every signed-in Member (minimum platform role: user).
 

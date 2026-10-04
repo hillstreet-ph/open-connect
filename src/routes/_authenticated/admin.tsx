@@ -73,7 +73,7 @@ function AdminPage() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Revoke failed"),
   });
 
-  const grantable: AppRole[] = isOwner ? ["user", "admin", "owner"] : ["user", "admin"];
+  const grantable: AppRole[] = ["user", "developer", "admin"];
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-14">
@@ -93,8 +93,8 @@ function AdminPage() {
         <CardHeader>
           <CardTitle className="text-base">Assign role</CardTitle>
           <CardDescription>
-            Assign Member, Admin, or Owner to existing accounts by email. Organization membership
-            and project access are managed separately. Only owners can grant or revoke Owner.
+            Assign Member, Developer, or Admin to existing accounts by email. Organization
+            membership and project access are managed separately.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
