@@ -1059,7 +1059,7 @@ export const Route = createFileRoute("/mcp")({
                   .eq("user_id", key.userId)
                   .eq("role", "admin")
                   .in("organization_id", organizationIds),
-                ]);
+              ]);
               if (assignedError) throw new Error(assignedError.message);
               if (adminError) throw new Error(adminError.message);
               const assignedIds = new Set((assignedProjects ?? []).map((row) => row.project_id));
