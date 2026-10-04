@@ -19,7 +19,9 @@ async function findUserIdByEmail(email: string): Promise<string> {
   const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
   if (error) throw new Error(error.message);
   const user = data.users.find((candidate) => candidate.email?.toLowerCase() === normalized);
-  if (!user) throw new Error("No account found for that email. Invite them to the organization first.");
+  if (!user) {
+    throw new Error("No account found for that email. Invite them to the organization first.");
+  }
   return user.id;
 }
 
@@ -83,7 +85,9 @@ export const revokeRole = createServerFn({ method: "POST" })
     const mine = await loadRoles(context.supabase, context.userId);
     if (!hasRole(mine, "admin")) throw new Error("Forbidden: admin required");
     if (!data.user_id || !data.role) throw new Error("user_id and role required");
-    if (!ASSIGNABLE_ROLES.includes(data.role)) throw new Error("Only canonical roles can be managed here");
+    if (!ASSIGNABLE_ROLES.includes(data.role)) {
+      throw new Error("Only canonical roles can be managed here");
+    }
     if (data.role === "owner" && !hasRole(mine, "owner")) {
       throw new Error("Only owners can revoke the owner role");
     }
