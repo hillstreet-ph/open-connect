@@ -142,7 +142,9 @@ function AdminPage() {
       <Card className="mt-6 shadow-panel">
         <CardHeader>
           <CardTitle className="text-base">Current assignments</CardTitle>
-          <CardDescription>Up to 200 recent assignments. Email is shown so UUIDs do not need to be copied.</CardDescription>
+          <CardDescription>
+            Up to 200 recent assignments. Email is shown so UUIDs do not need to be copied.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {assignments.isLoading ? (
@@ -168,7 +170,9 @@ function AdminPage() {
                       <Badge variant="secondary" className="mr-2">
                         {roleLabel(row.role as AppRole)}
                       </Badge>
-                      <span className="text-xs text-muted-foreground">{row.email || "Account email unavailable"}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {row.email || "Account email unavailable"}
+                      </span>
                     </div>
                     <Button
                       size="sm"
