@@ -73,10 +73,7 @@ function AdminPage() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Revoke failed"),
   });
 
-  const grantable = ALL_ROLES.filter((r) => {
-    if (r === "owner") return isOwner;
-    return true;
-  });
+  const grantable: AppRole[] = isOwner ? ["user", "admin", "owner"] : ["user", "admin"];
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-14">
@@ -106,10 +103,11 @@ function AdminPage() {
             <Label htmlFor="target-user">Account email</Label>
             <Input
               id="target-user"
-              className="font-mono text-sm"
-              placeholder="Account UUID"
-              value={userId}
-              onChange={(e) => setUserId(e.target.value)}
+              type="email"
+              autoComplete="email"
+              placeholder="teammate@company.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
             />
           </div>
           <div className="space-y-2">
