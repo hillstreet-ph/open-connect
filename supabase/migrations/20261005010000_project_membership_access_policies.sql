@@ -98,15 +98,38 @@ create policy "Project members view project resources"
   using (public.can_access_project(project_id));
 
 drop policy if exists "Managers manage project resources" on public.project_resources;
-create policy "Project managers manage project resources"
-  on public.project_resources for all to authenticated
-  using (public.can_manage_project(project_id))
+create policy "Project managers add project resources"
+  on public.project_resources for insert to authenticated
   with check (
     added_by = auth.uid()
     and public.can_manage_project(project_id)
   );
+create policy "Project managers update project resources"
+  on public.project_resources for update to authenticated
+  using (public.can_manage_project(project_id))
+  with check (public.can_manage_project(project_id));
+create policy "Project managers remove project resources"
+  on public.project_resources for delete to authenticated
+  using (public.can_manage_project(project_id));
 
 drop policy if exists "Members read project resources" on public.resources;
 create policy "Assigned members read project resources"
   on public.resources for select to authenticated
   using (public.can_access_project_resource(id));
+
+-- Close stale invitations only when the invited account has verified its email and
+-- already has the corresponding organization membership. Unverified invites stay pending.
+update public.organization_invitations invitation
+set status = 'accepted',
+    updated_at = now()
+where invitation.status = 'pending'
+  and invitation.invited_user_id is not null
+  and exists (
+    select 1
+    from auth.users auth_user
+    join public.organization_members membership
+      on membership.user_id = auth_user.id
+     and membership.organization_id = invitation.organization_id
+    where auth_user.id = invitation.invited_user_id
+      and auth_user.email_confirmed_at is not null
+  );
