@@ -135,7 +135,9 @@ export const listOrganizationPeople = createServerFn({ method: "GET" })
         ...member,
         profile: profilesById.get(member.user_id) ?? null,
         email: emailsById.get(member.user_id) ?? "",
-        groupIds: (groupMembers.data ?? []).filter((item) => item.user_id === member.user_id).map((item) => item.group_id),
+        groupIds: (groupMembers.data ?? [])
+          .filter((item) => item.user_id === member.user_id)
+          .map((item) => item.group_id),
       })),
       groups: (groups.data ?? []).map((group) => ({
         ...group,
@@ -471,20 +473,33 @@ export const deleteProject = createServerFn({ method: "POST" })
     return { id: project.id, name: project.name };
   });
 
-
 async function requireProjectScopeAdmin(
   supabase: SupabaseClient,
   projectId: string,
   userId: string,
 ) {
-  const { data: project } = await supabase.from("projects").select("organization_id").eq("id", projectId).maybeSingle();
+  const { data: project } = await supabase
+    .from("projects")
+    .select("organization_id")
+    .eq("id", projectId)
+    .maybeSingle();
   if (!project) throw new Error("Project not found or access denied");
-  const { data: orgMembership } = await supabase.from("organization_members").select("role")
-    .eq("organization_id", project.organization_id).eq("user_id", userId).maybeSingle();
+  const { data: orgMembership } = await supabase
+    .from("organization_members")
+    .select("role")
+    .eq("organization_id", project.organization_id)
+    .eq("user_id", userId)
+    .maybeSingle();
   if (orgMembership?.role === "admin") return;
-  const { data: projectMembership } = await supabase.from("project_members").select("role")
-    .eq("project_id", projectId).eq("user_id", userId).maybeSingle();
-  if (projectMembership?.role !== "admin") throw new Error("Project admin or organization admin required");
+  const { data: projectMembership } = await supabase
+    .from("project_members")
+    .select("role")
+    .eq("project_id", projectId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (projectMembership?.role !== "admin") {
+    throw new Error("Project admin or organization admin required");
+  }
 }
 
 export const renameProject = createServerFn({ method: "POST" })
@@ -523,7 +538,6 @@ export const renameProject = createServerFn({ method: "POST" })
     });
     return updated;
   });
-
 
 export const updateOrganizationMemberRole = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -669,7 +683,12 @@ export const setOrganizationMemberGroups = createServerFn({ method: "POST" })
       const { error } = await context.supabase
         .from("organization_group_members")
         .upsert(
-          { organization_id: data.organizationId, group_id: groupId, user_id: data.userId, added_by: context.userId },
+          {
+            organization_id: data.organizationId,
+            group_id: groupId,
+            user_id: data.userId,
+            added_by: context.userId,
+          },
           { onConflict: "group_id,user_id" },
         );
       if (error) throw new Error(error.message);
