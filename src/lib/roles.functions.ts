@@ -36,6 +36,7 @@ export const listRoleAssignments = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("user_roles")
       .select("id, user_id, role, created_at")
+      .in("role", ASSIGNABLE_ROLES)
       .order("created_at", { ascending: false })
       .limit(200);
     if (error) throw new Error(error.message);
