@@ -171,8 +171,8 @@ function RolesAccessPage() {
               </div>
             ))}
             <p className="pt-1 text-[11px]">
-              Same person can have different roles in each project. Project access is
-              assigned explicitly. See{" "}
+              Same person can have different roles in each project. Project access is assigned
+              explicitly. See{" "}
               <Link to="/orgs" className="text-primary underline-offset-2 hover:underline">
                 Organizations
               </Link>
