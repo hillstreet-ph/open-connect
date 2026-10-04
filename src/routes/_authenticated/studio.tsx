@@ -24,8 +24,8 @@ export const Route = createFileRoute("/_authenticated/studio")({
   component: StudioPage,
 });
 
-const packageTypes = ["AI Agent", "Skill", "Prompt", "Plugin", "Custom MCP", "Tool"];
-const publishablePackageTypes = ["agent", "skill", "prompt", "plugin", "mcp", "tool"] as const;
+const packageTypes = ["AI Agent", "Skill", "Prompt", "Plugin", "Custom MCP", "Tool", "Guide"];
+const publishablePackageTypes = ["agent", "skill", "prompt", "plugin", "mcp", "tool", "guide"] as const;
 
 function SectionHeading({
   icon: Icon,
@@ -118,7 +118,7 @@ function StudioPage() {
             <ResourceLibraryCard
               allowedTypes={publishablePackageTypes}
               title="Upload package"
-              cardDescription="Agents, skills, prompts, plugins, MCP, and tools publish to Marketplace and enter your personal library. Memory and Knowledge stay private in their Studio section below."
+              cardDescription="Agents, skills, prompts, plugins, MCP, tools, and guides publish to Marketplace and enter your personal library. Memory and Knowledge stay private in their Studio section below."
               showResourceList={false}
             />
           </div>
