@@ -61,9 +61,8 @@ export const assignRole = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const mine = await loadRoles(context.supabase, context.userId);
     if (!hasRole(mine, "admin")) throw new Error("Forbidden: admin required");
-    if (!ASSIGNABLE_ROLES.includes(data.role)) throw new Error("Choose Member, Developer, or Admin");
-    if (data.role === "owner" && !hasRole(mine, "owner")) {
-      throw new Error("Only owners can assign the owner role");
+    if (!ASSIGNABLE_ROLES.includes(data.role)) {
+      throw new Error("Choose Member, Developer, or Admin");
     }
 
     const userId = await findUserIdByEmail(data.email);
