@@ -49,7 +49,7 @@ async function collectGitHubSource(source) {
     .map((item) => {
       const description = item.description ? String(item.description).slice(0, 500) : null;
       const hasLicense = item.license?.spdx_id && item.license.spdx_id !== "NOASSERTION";
-      const suspicious = hasSuspiciousMetadata(`${item.name || ""}\\n${description || ""}`);
+      const suspicious = hasSuspiciousMetadata(`${item.name || ""}\n${description || ""}`);
       return {
         sourceId: source.id,
         externalId: String(item.id),
@@ -192,7 +192,7 @@ async function collectFirecrawlSource(source) {
       if (!resourceType) continue;
       const description = item.description ? String(item.description).slice(0, 500) : null;
       const license = item.license ? String(item.license).slice(0, 120) : null;
-      const suspicious = hasSuspiciousMetadata(`${name}\\n${description || ""}`);
+      const suspicious = hasSuspiciousMetadata(`${name}\n${description || ""}`);
       candidates.push({
         sourceId: source.id,
         externalId: canonicalizeUrl(canonicalUrl),
@@ -290,7 +290,7 @@ await writeFile(
     },
     null,
     2,
-  )}\\n`,
+  )}\n`,
 );
 
 if (
@@ -304,12 +304,6 @@ if (
     `incomplete collection: ${successfulSources}/${enabledSources} sources, ${successfulFirecrawlSources}/${firecrawlSources.length} Firecrawl sources, ${candidates.length} candidates`,
   );
 }
-await mkdir(outputDir, { recursive: true });
-await writeFile(
-  resolve(outputDir, "candidates.json"),
-  `${JSON.stringify({ generatedAt: new Date().toISOString(), candidates, failures }, null, 2)}\n`,
-);
-
 if (writeCatalog) {
   const catalogPath = resolve(root, "config/marketplace-candidates.generated.json");
   await writeFile(
@@ -403,5 +397,5 @@ if (publish) {
 }
 
 console.log(
-  JSON.stringify({ candidates: candidates.length, failures, published: publish }, null, 2),
+  JSON.stringify({ candidates: candidates.length, failures, successfulSources, successfulFirecrawlSources, published: publish }, null, 2),
 );
