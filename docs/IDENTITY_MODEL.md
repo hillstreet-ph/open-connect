@@ -1,91 +1,44 @@
 # Open Connect — Canonical Identity Model
 
-**Product:** AI Resource Gateway + Integration Control Plane  
-**Rule:** Independent apps consume Open Connect; they are not absorbed into it.
+**Product:** HillStreet's shared AI resource gateway and integration control plane. ChatGPT plugins and other AI clients connect to this Open-Connect installation; teams use one account surface across multiple projects.
 
-Do **not** rebuild the app from scratch. Refactor existing routes into three surfaces after the authorization layer is complete.
+## Human roles
 
-## Locked naming
+The same three role names apply at platform, organization, and project scope. Scope determines what each role can do.
 
-### Human (organization)
+| Role | Organization access | Project access |
+|---|---|---|
+| **Admin** | Manage members, groups, settings, and sharing. Organization admins can manage every project in the organization. | Manage collaborators, installs, settings, and environments for an explicitly assigned project. |
+| **Developer** | Develop, publish, and verify resources; use organization resources and projects they are assigned to. | Build and manage resources, tools, and project-scoped keys. |
+| **Member** | Use the workspace, marketplace, resources, and assigned projects. | Use resources and features explicitly shared with that project. |
 
-| Role | Meaning |
-|------|---------|
-| **Owner** | Root governance (few people). Ownership transfer, org delete, appoint Admins, global security, org-wide provider credentials |
-| **Admin** | Administration Console — members, projects, access, registry, gateway, vault metadata, ops, audit. **Not** Owner: no ownership transfer, no org delete, no unrestricted secret export |
-| **Member** | Workspace only — projects they belong to, marketplace, resources, connections, models, files, personal API keys. Permission-aware UI (hide, do not only disable) |
+A person may have a different role for each project. Organization membership does not automatically grant access to project folders or resources. Admins grant and remove access from each project's access screen. Groups organize people; group membership alone does not grant project access.
 
-> Prefer **Member** over generic “User” at org level. A Member can be Manager on one project and Viewer on another.
+## Machine principals
 
-### Project
+AI Client · AI Agent · Service Account · API Client · MCP Client
 
-| Role | Meaning |
-|------|---------|
-| **Manager** | Project access, members, installs, environments |
-| **Developer** | Build: resources, tools, keys in project scopes |
-| **Viewer** | Read-only project surface |
+Machine principals use scoped keys and policies. They are not human role assignments, and they never receive provider master credentials.
 
-### Machine principals (not human roles)
+## Authorization
 
-`AI Client` · `AI Agent` · `Service Account` · `API Client` · `MCP Client`
+Permission = principal + platform role + organization role + project role + project + environment + scope + policy + resource.
 
-Stored in `principals` (and related key tables), never as org “admin” labels.
+Navigation visibility is not an authorization boundary. Server functions and database policies enforce permissions. Keep API keys and connections scoped; secrets flow through the server-side credential broker.
 
-## Authorization equation
+## Canonical database roles
 
-```text
-Permission =
-  Principal
-  + Organization Role
-  + Project Role
-  + Project
-  + Environment
-  + Scope
-  + Policy
-  + Resource
-```
+| Table | Allowed human roles |
+|---|---|
+| user_roles.role | user (Member) · developer · admin |
+| organization_members.role | member · developer · admin |
+| organization_invitations.role | member · developer · admin |
+| project_members.role | member · developer · admin |
 
-Do **not** invent superadmin / client-admin / publisher-admin global roles. Use org + project + scopes + policies.
+Historical organizations.owner_id is retained as record metadata; it is not an authorization shortcut. Legacy Owner and Publisher platform values are migrated to Admin and Developer and are not offered for new assignments.
 
-## Secrets
+## Resources and projects
 
-```text
-Vault → Credential Broker → Capability execution
-```
+The organization is the shared connection point for approved resources, skills, tools, prompts, agents, MCP servers, and other integrations. Projects group work by purpose and apply explicit collaboration boundaries. An AI client can use a resource only when its credentials, scopes, and project or organization policies allow the operation.
 
-Clients and agents receive **capability execution**, never provider master credentials. UI shows metadata only (configured / valid / last validated).
-
-## Role-aware settings navigation
-
-Members use the daily workspace sidebar and the shared user avatar menu.
-Admins and owners get a single System administration submenu. Owner permissions
-remain within the shared pages; no duplicate Owner Console is shown.
-Existing routes and server-side permission checks are preserved. Navigation visibility
-is not an authorization boundary.
-
-## Implementation order (mandatory)
-
-1. Identity / RLS  
-2. Organization roles (Owner / Admin / Member)  
-3. Project membership / roles (Manager / Developer / Viewer)  
-4. Environments  
-5. Scopes / policies  
-6. Credential broker  
-7. API / MCP credentials (personal vs project vs service account)  
-8. Route guards  
-9. Permission-aware navigation  
-10. Admin / Owner UI polish  
-
-## Schema notes (current)
-
-| Table | Role |
-|-------|------|
-| `organization_members.role` | `owner` \| `admin` \| `member` |
-| `project_members.role` | `manager` \| `developer` \| `viewer` |
-| `user_roles.role` (`app_role`) | Legacy platform enum — map `user` → Member in product language; keep until cutover |
-| `principals` | Machine identities |
-| `environments` | development / staging / production per project |
-
-## Credential hygiene
-
-Never place provider secrets in prompts, screenshots, Git, or resource manifests. Treat any leaked values as exposed and rotate at the provider.
+Never put provider secrets in prompts, screenshots, Git, or resource manifests. Clients and agents receive capability execution through the credential broker, never provider master credentials.
