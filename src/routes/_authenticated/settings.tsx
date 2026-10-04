@@ -334,7 +334,7 @@ function SettingsPage() {
               to="/roles"
               icon={UsersRound}
               title="Roles & permissions"
-              description="Review owner, admin, member, manager, developer, and viewer access."
+              description="Review Admin, Developer, and Member permissions at each scope."
             />
             <SettingsLinkCard
               to="/projects"
@@ -346,7 +346,7 @@ function SettingsPage() {
               to="/admin"
               icon={ShieldCheck}
               title="System administration"
-              description="Owner and administrator controls for platform-wide access."
+              description="Administrator controls for platform-wide access."
             />
           </div>
         </TabsContent>
