@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Boxes, Brain, Building2, Layers3, LibraryBig, PackageOpen } from "lucide-react";
+import { Boxes, Brain, Building2, Layers3, LibraryBig, PackageOpen, ShieldCheck } from "lucide-react";
 import { ResourceLibraryCard } from "@/components/resource-library-card";
+import { ResourceReviewPanel } from "@/components/resource-review-panel";
 import { ToolkitCreator } from "@/components/toolkit-creator";
 import { MemoryKnowledgePage } from "./memory";
 import { useRoles } from "@/hooks/use-roles";
@@ -86,6 +87,14 @@ function StudioPage() {
               Packages
             </a>
           </Button>
+          {can("verify_resources") ? (
+            <Button asChild size="sm" variant="outline">
+              <a href="#review">
+                <ShieldCheck className="size-3.5" />
+                Resource review
+              </a>
+            </Button>
+          ) : null}
           <Button asChild size="sm" variant="outline">
             <a href="#context">
               <Brain className="size-3.5" />
@@ -138,6 +147,18 @@ function StudioPage() {
           </Card>
         )}
       </section>
+
+      {can("verify_resources") ? (
+        <section id="review" className="scroll-mt-6 space-y-5">
+          <SectionHeading
+            icon={ShieldCheck}
+            label="Marketplace review"
+            title="Verify and publish resources"
+            description="Check each package’s source and license before verifying it. Only verified packages can be published."
+          />
+          <ResourceReviewPanel />
+        </section>
+      ) : null}
 
       <section id="context" className="scroll-mt-6 space-y-5">
         <SectionHeading
