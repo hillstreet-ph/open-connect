@@ -96,7 +96,12 @@ export async function getCustomMcpConnection(
   const authType = String(metadata["auth_type"] ?? "none");
   if (!endpoint.startsWith("https://")) throw new Error("Connection endpoint is not valid.");
   const credential = await resolveCredential(data.user_id, data.credential_reference);
-  return { id: data.id, name: data.display_name, endpoint, headers: connectionAuthHeaders(authType, credential) };
+  return {
+    id: data.id,
+    name: data.display_name,
+    endpoint,
+    headers: connectionAuthHeaders(authType, credential),
+  };
 }
 
 export async function listCustomMcpTools(userId: string, connectionId: string, projectId?: string) {
@@ -146,7 +151,11 @@ export async function callCustomMcpTool(
     if (auditId) {
       await supabaseAdmin
         .from("project_connection_audit")
-        .update({ outcome: "failed", error_kind: "provider_action_failed", completed_at: new Date().toISOString() })
+        .update({
+          outcome: "failed",
+          error_kind: "provider_action_failed",
+          completed_at: new Date().toISOString(),
+        })
         .eq("id", auditId);
     }
     throw error;
