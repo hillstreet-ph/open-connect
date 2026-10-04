@@ -30,7 +30,17 @@ function headers() {
   };
 }
 
-const RESOURCE_TYPES = ["agent", "skill", "plugin", "mcp", "tool", "toolkit", "app", "prompt", "guide"];
+const RESOURCE_TYPES = [
+  "agent",
+  "skill",
+  "plugin",
+  "mcp",
+  "tool",
+  "toolkit",
+  "app",
+  "prompt",
+  "guide",
+];
 
 async function collectGitHubSource(source) {
   const response = await fetch(source.url, {
@@ -42,11 +52,7 @@ async function collectGitHubSource(source) {
   const allowedHosts = source.allowed_result_hosts || registry.default_policy.allowed_hosts;
   return (payload.items || [])
     .slice(0, registry.default_policy.max_items_per_source)
-    .filter(
-      (item) =>
-        !item.archived &&
-        isAllowedCatalogUrl(String(item.html_url), allowedHosts),
-    )
+    .filter((item) => !item.archived && isAllowedCatalogUrl(String(item.html_url), allowedHosts))
     .map((item) => {
       const description = item.description ? String(item.description).slice(0, 500) : null;
       const hasLicense = item.license?.spdx_id && item.license.spdx_id !== "NOASSERTION";
@@ -60,7 +66,10 @@ async function collectGitHubSource(source) {
         license: item.license?.spdx_id || null,
         updatedAt: item.updated_at || null,
         trust: source.trust,
-        categories: [...new Set([...(source.categories || []), ...(item.topics || [])])].slice(0, 12),
+        categories: [...new Set([...(source.categories || []), ...(item.topics || [])])].slice(
+          0,
+          12,
+        ),
         slug: normalizeOpenSlug(item.full_name || item.name),
         fingerprint: "",
         reviewState: suspicious
@@ -90,7 +99,8 @@ async function firecrawlJson(url, options) {
   const response = await fetch(url, options);
   if (!response.ok) {
     const error = new Error(`Firecrawl returned HTTP ${response.status}`);
-    error.code = response.status === 402 ? "FIRECRAWL_CREDITS" : `FIRECRAWL_HTTP_${response.status}`;
+    error.code =
+      response.status === 402 ? "FIRECRAWL_CREDITS" : `FIRECRAWL_HTTP_${response.status}`;
     throw error;
   }
   const payload = await response.json();
@@ -242,7 +252,10 @@ if (fromCatalog) {
   for (const source of registry.sources) {
     if (!source.enabled) continue;
     if (source.adapter === "firecrawl_crawl" && stopFirecrawl) {
-      failures.push({ sourceId: source.id, error: "skipped after Firecrawl configuration or credit failure" });
+      failures.push({
+        sourceId: source.id,
+        error: "skipped after Firecrawl configuration or credit failure",
+      });
       continue;
     }
     try {
@@ -398,5 +411,15 @@ if (publish) {
 }
 
 console.log(
-  JSON.stringify({ candidates: candidates.length, failures, successfulSources, successfulFirecrawlSources, published: publish }, null, 2),
+  JSON.stringify(
+    {
+      candidates: candidates.length,
+      failures,
+      successfulSources,
+      successfulFirecrawlSources,
+      published: publish,
+    },
+    null,
+    2,
+  ),
 );
