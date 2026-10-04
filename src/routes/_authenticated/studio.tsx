@@ -1,5 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Boxes, Brain, Building2, Layers3, LibraryBig, PackageOpen, ShieldCheck } from "lucide-react";
+import {
+  Boxes,
+  Brain,
+  Building2,
+  Layers3,
+  LibraryBig,
+  PackageOpen,
+  ShieldCheck,
+} from "lucide-react";
 import { ResourceLibraryCard } from "@/components/resource-library-card";
 import { ResourceReviewPanel } from "@/components/resource-review-panel";
 import { ToolkitCreator } from "@/components/toolkit-creator";
@@ -17,7 +25,8 @@ export const Route = createFileRoute("/_authenticated/studio")({
       { title: "Studio — Open-Connect" },
       {
         name: "description",
-        content: "Create packages, prepare reusable context, review resources, and build Toolkits in Open-Connect.",
+        content:
+          "Create packages, prepare reusable context, review resources, and build Toolkits in Open-Connect.",
       },
       { name: "robots", content: "noindex" },
     ],
