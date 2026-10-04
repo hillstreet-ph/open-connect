@@ -3056,7 +3056,7 @@ Public catalog is read-only for normal users.
 
 
 
-Publisher operations require publisher/admin authorization.
+Marketplace publishing and verification require Developer/Admin authorization.
 
 
 

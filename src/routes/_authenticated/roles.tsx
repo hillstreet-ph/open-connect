@@ -51,7 +51,7 @@ const MATRIX: { capability: string; levels: Record<AppRole, "full" | "scoped" | 
     capability: "Publish resources",
     levels: {
       user: "denied",
-      developer: "denied",
+      developer: "full",
       publisher: "full",
       admin: "full",
       owner: "full",
@@ -61,8 +61,8 @@ const MATRIX: { capability: string; levels: Record<AppRole, "full" | "scoped" | 
     capability: "Verify resources",
     levels: {
       user: "denied",
-      developer: "denied",
-      publisher: "denied",
+      developer: "full",
+      publisher: "full",
       admin: "full",
       owner: "full",
     },
@@ -187,9 +187,10 @@ function RolesAccessPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="px-4 pb-4 text-sm text-muted-foreground">
-          Open your user avatar menu for personal settings, organizations, and credentials. Admins
-          and owners also have System administration for members and permissions. Owners retain
-          their additional permissions within the same pages.
+          Open your user avatar menu for personal settings, organizations, and credentials. Platform
+          roles are Member, Developer, and Admin. Developers can publish and verify marketplace
+          resources; platform Admins manage platform roles. Organization and project access remain
+          separately scoped, so an organization Owner keeps ownership controls there.
         </CardContent>
       </Card>
 

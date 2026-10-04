@@ -61,7 +61,7 @@ export function useMarketplace() {
 function ExplorePage() {
   const [type, setType] = useState<string>("all");
   const [query, setQuery] = useState("");
-  const { data, isLoading } = useMarketplace();
+  const { data, isLoading, isError, refetch } = useMarketplace();
 
   const results = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -85,9 +85,14 @@ function ExplorePage() {
             and bundle it into a Toolkit.
           </p>
         </div>
-        <Button asChild>
-          <Link to="/toolkits">Build a Toolkit</Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline">
+            <Link to="/resources">Browse Marketplace</Link>
+          </Button>
+          <Button asChild>
+            <Link to="/toolkits">Build a Toolkit</Link>
+          </Button>
+        </div>
       </div>
 
       <div className="mt-8 flex flex-col gap-4">
@@ -105,6 +110,8 @@ function ExplorePage() {
           {EXPLORE_TABS.map((tab) => (
             <button
               key={tab.value}
+              type="button"
+              aria-pressed={type === tab.value}
               onClick={() => setType(tab.value)}
               className={cn(
                 "rounded-full border border-border/70 px-3 py-1.5 text-xs transition-colors",
@@ -118,6 +125,24 @@ function ExplorePage() {
           ))}
         </div>
       </div>
+
+      {!isLoading && !isError ? (
+        <p className="mt-5 text-xs text-muted-foreground" role="status">
+          Showing {results.length} of {(data ?? []).length} resources
+        </p>
+      ) : null}
+
+      {isError ? (
+        <div
+          role="alert"
+          className="mt-8 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm"
+        >
+          <p>Marketplace resources could not be loaded.</p>
+          <Button className="mt-3" size="sm" variant="outline" onClick={() => void refetch()}>
+            Try again
+          </Button>
+        </div>
+      ) : null}
 
       <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {isLoading
@@ -149,7 +174,17 @@ function ExplorePage() {
 
       {!isLoading && results.length === 0 ? (
         <p className="mt-12 text-center text-sm text-muted-foreground">
-          Nothing matches that search yet.
+          Nothing matches that search yet.{" "}
+          <button
+            type="button"
+            className="text-primary underline underline-offset-4"
+            onClick={() => {
+              setType("all");
+              setQuery("");
+            }}
+          >
+            Clear filters
+          </button>
         </p>
       ) : null}
     </div>

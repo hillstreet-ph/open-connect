@@ -36,7 +36,7 @@ Human access uses three separate scopes:
 
 | Scope | Roles | Purpose |
 |------|------|------|
-| Platform | **Member**, **Developer**, **Admin** | Member is the standard signed-in role. Developer manages toolkits. Admin verifies resources and manages platform roles. These roles do not grant organization ownership or project membership. |
+| Platform | **Member**, **Developer**, **Admin** | Member is the standard signed-in role and can upload private drafts. Developer manages toolkits and can verify and publish marketplace resources. Admin includes Developer capabilities and manages platform roles. Platform roles do not grant organization ownership or project membership. |
 | Organization | **Member**, **Admin**, **Owner** | Admins manage organization people, groups, and settings. Owners manage ownership and appoint admins. |
 | Project | **Viewer**, **Developer**, **Manager** | Viewer reads an assigned project. Developer builds within an assigned project. Manager manages that project's members, installs, and environments. |
 
