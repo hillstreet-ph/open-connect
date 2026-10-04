@@ -133,7 +133,10 @@ function ExplorePage() {
       ) : null}
 
       {isError ? (
-        <div role="alert" className="mt-8 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm">
+        <div
+          role="alert"
+          className="mt-8 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm"
+        >
           <p>Marketplace resources could not be loaded.</p>
           <Button className="mt-3" size="sm" variant="outline" onClick={() => void refetch()}>
             Try again
