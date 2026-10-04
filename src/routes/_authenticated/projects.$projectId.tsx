@@ -442,8 +442,7 @@ function ProjectWorkspacePage() {
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Connections · MCP · AI Gateway</CardTitle>
           <CardDescription>
-            The account owner explicitly shares this connection with the project. Members can
-            invoke its provider tools through the broker; credentials and connection settings stay
+            The account owner explicitly shares this connection with the project. Members can invoke its provider tools through the broker; credentials and connection settings stay
             private.
           </CardDescription>
         </CardHeader>
@@ -508,9 +507,7 @@ function ProjectWorkspacePage() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          aria-label={
-                            `Remove ${c?.display_name || c?.provider || "connection"} from project`
-                          }
+                          aria-label={`Remove ${c?.display_name || c?.provider || "connection"} from project`}
                           onClick={() => row.connection_id && remConnMut.mutate(row.connection_id)}
                         >
                           <Trash2 className="size-3.5" />
