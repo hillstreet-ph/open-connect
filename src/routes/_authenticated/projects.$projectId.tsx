@@ -9,6 +9,7 @@ import {
   deleteProject,
   listProjectEnvironments,
   listProjects,
+  listMyProjectMemberships,
   renameProject,
 } from "@/lib/orgs.functions";
 import {
@@ -63,6 +64,7 @@ function ProjectWorkspacePage() {
   const { isAdmin } = useRoles();
 
   const listProj = useServerFn(listProjects);
+  const listMemberships = useServerFn(listMyProjectMemberships);
   const listEnvs = useServerFn(listProjectEnvironments);
   const ensureEnvs = useServerFn(ensureProjectEnvironments);
   const deleteProj = useServerFn(deleteProject);
@@ -87,6 +89,14 @@ function ProjectWorkspacePage() {
 
   const projects = useQuery({ queryKey: ["projects"], queryFn: () => listProj({}) });
   const project = (projects.data ?? []).find((p) => p.id === projectId);
+  const memberships = useQuery({
+    queryKey: ["my-project-memberships"],
+    queryFn: () => listMemberships(),
+  });
+  const hasProjectAdmin = (memberships.data ?? []).some(
+    (membership) => membership.project_id === projectId && membership.role === "admin",
+  );
+  const canManageProjectSettings = isAdmin || hasProjectAdmin;
 
   const environments = useQuery({
     queryKey: ["project-environments", projectId],
@@ -235,7 +245,7 @@ function ProjectWorkspacePage() {
           <Button asChild size="sm" variant="outline">
             <Link to="/secrets">Vault</Link>
           </Button>
-          {isAdmin ? (
+          {canManageProjectSettings ? (
             <>
               <Button
                 size="sm"
@@ -247,9 +257,11 @@ function ProjectWorkspacePage() {
               >
                 <Pencil className="size-3.5" /> Rename
               </Button>
-              <Button size="sm" variant="destructive" onClick={() => setDeleteOpen(true)}>
-                <Trash2 className="size-3.5" /> Delete project
-              </Button>
+              {isAdmin ? (
+                <Button size="sm" variant="destructive" onClick={() => setDeleteOpen(true)}>
+                  <Trash2 className="size-3.5" /> Delete project
+                </Button>
+              ) : null}
             </>
           ) : null}
         </div>
