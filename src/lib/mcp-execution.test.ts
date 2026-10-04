@@ -163,10 +163,10 @@ test("anonymous invocation remains rejected before catalog access", async () => 
   expect(tables).toEqual([]);
 });
 
-test("installation still requires owner or admin plus write scope", async () => {
+test("installation requires admin plus write scope", async () => {
   roles = ["member"];
   await expect(call("install_capability", { resource_id: resource.slug })).rejects.toThrow(
-    "Owner/admin role",
+    "Admin role",
   );
   roles = ["owner"];
   scopes = ["mcp:connect"];
