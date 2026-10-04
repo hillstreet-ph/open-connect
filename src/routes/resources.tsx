@@ -25,7 +25,7 @@ export const Route = createFileRoute("/resources")({
       {
         name: "description",
         content:
-          "Marketplace for skills, MCP servers, tools, plugins, agents and prompts. Sign in to download or add to a project.",
+          "Marketplace for guides, skills, MCP servers, tools, plugins, agents and prompts. Sign in to download or add to a project.",
       },
       { property: "og:title", content: "Marketplace — Open-Connect" },
     ],
@@ -45,6 +45,7 @@ const PACKAGE_TYPES = new Set([
   "toolkit",
   "memory",
   "knowledge",
+  "guide",
 ]);
 
 function triggerBlobDownload(filename: string, content: string, mime: string) {
@@ -162,7 +163,7 @@ function MarketplaceContent() {
           </Badge>
           <h1 className="text-xl font-semibold">Marketplace</h1>
           <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-            Browse skills, MCP, tools, plugins, agents, and prompts. Add packages to your personal
+            Browse guides, skills, MCP, tools, plugins, agents, and prompts. Add packages to your personal
             library, then share them with projects from the matching sidebar page.
           </p>
         </div>
