@@ -147,7 +147,7 @@ export function ResourceLibraryCard({
         package_filename: fileObj.name,
         package_size: fileObj.size,
         package_mime: fileObj.type || "application/octet-stream",
-        published: true,
+        published: false,
         version: "1.0.0",
       },
     });
@@ -163,7 +163,7 @@ export function ResourceLibraryCard({
         description: description || "",
         resource_type: resourceType,
       });
-      toast.success("Published to catalog");
+      toast.success("Saved as a draft for review");
       setFile(null);
       setName("");
       setSlug("");
@@ -198,7 +198,7 @@ export function ResourceLibraryCard({
     }
     setBulkProgress("");
     setBusy(false);
-    toast.success(`Bulk done · ${ok} published${fail ? ` · ${fail} failed` : ""}`);
+    toast.success(`Bulk done · ${ok} drafts saved${fail ? ` · ${fail} failed` : ""}`);
     void queryClient.invalidateQueries({ queryKey: ["my-resources"] });
     if (fileRef.current) fileRef.current.value = "";
   }
@@ -310,7 +310,7 @@ export function ResourceLibraryCard({
           ) : (
             <Upload className="mr-2 size-4" />
           )}
-          Upload & publish
+          Upload package
         </Button>
 
         <div className="space-y-2">
@@ -330,6 +330,10 @@ export function ResourceLibraryCard({
                       <Badge variant="secondary" className="mr-2 uppercase">
                         {r.resource_type}
                       </Badge>
+                      <Badge variant={r.published ? "default" : "outline"} className="mr-2">
+                        {r.published ? "Published" : "Draft"}
+                      </Badge>
+                      {r.verified ? <Badge variant="outline">Verified</Badge> : null}
                       {r.package_filename || r.slug || "untitled"}
                       {typeof r.package_size === "number" && r.package_size > 0
                         ? ` · ${formatBytes(r.package_size)}`
