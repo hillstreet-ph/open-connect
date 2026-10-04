@@ -1053,12 +1053,12 @@ export const Route = createFileRoute("/mcp")({
                   .from("project_members")
                   .select("project_id")
                   .eq("user_id", key.userId),
-                  supabaseAdmin
-                    .from("organization_members")
-                    .select("organization_id")
-                    .eq("user_id", key.userId)
-                    .eq("role", "admin")
-                    .in("organization_id", organizationIds),
+                supabaseAdmin
+                  .from("organization_members")
+                  .select("organization_id")
+                  .eq("user_id", key.userId)
+                  .eq("role", "admin")
+                  .in("organization_id", organizationIds),
                 ]);
               if (assignedError) throw new Error(assignedError.message);
               if (adminError) throw new Error(adminError.message);
