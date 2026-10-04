@@ -86,13 +86,15 @@ export const listProjectAccess = createServerFn({ method: "GET" })
     ]);
     if (profilesResult.error) throw new Error(profilesResult.error.message);
     const profiles = new Map(
-      (profilesResult.data ?? []).map((row: { id: string; display_name: string | null; avatar_url: string | null }) => [
-        row.id,
-        row,
-      ] as const),
+      (profilesResult.data ?? []).map(
+        (row: { id: string; display_name: string | null; avatar_url: string | null }) =>
+          [row.id, row] as const,
+      ),
     );
     const roles = new Map(
-      (assigned ?? []).map((row: { user_id: string; role: ProjectRole }) => [row.user_id, row.role] as const),
+      (assigned ?? []).map(
+        (row: { user_id: string; role: ProjectRole }) => [row.user_id, row.role] as const,
+      ),
     );
     return {
       project,
@@ -127,10 +129,12 @@ export const setProjectMemberRole = createServerFn({ method: "POST" })
     if (memberError) throw new Error(memberError.message);
     if (!member) throw new Error("Project collaborators must be active organization members");
 
-    const { error } = await context.supabase.from("project_members").upsert(
-      { project_id: project.id, user_id: data.userId, role: data.role },
-      { onConflict: "project_id,user_id" },
-    );
+    const { error } = await context.supabase
+      .from("project_members")
+      .upsert(
+        { project_id: project.id, user_id: data.userId, role: data.role },
+        { onConflict: "project_id,user_id" },
+      );
     if (error) throw new Error(error.message);
     return { ok: true, projectId: project.id, userId: data.userId, role: data.role };
   });
