@@ -153,9 +153,7 @@ export function ResourceReviewPanel() {
                 }
                 disabled={update.isPending || (!resource.verified && !resource.published)}
                 title={
-                  !resource.verified && !resource.published
-                    ? "Verify before publishing"
-                    : undefined
+                  !resource.verified && !resource.published ? "Verify before publishing" : undefined
                 }
               >
                 {resource.published ? (
