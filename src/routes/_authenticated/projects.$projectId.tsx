@@ -271,7 +271,7 @@ function ProjectWorkspacePage() {
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Memory · Knowledge</CardTitle>
           <CardDescription>
-            Shared project context assigned from Studio for this project's members. These records
+            Private context assigned from Studio is shared with this project's members. These records
             never publish to Marketplace.
           </CardDescription>
         </CardHeader>
@@ -524,7 +524,7 @@ function ProjectWorkspacePage() {
 
       <Card className="shadow-panel">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Vault credential references</CardTitle>
+          <CardTitle className="text-base">Shared credentials · Vault references</CardTitle>
           <CardDescription>
             These references show metadata only and do not grant access to a connected account.
             Secret values and TOTP seeds remain private to their owner.
