@@ -25,7 +25,15 @@ export const Route = createFileRoute("/_authenticated/studio")({
 });
 
 const packageTypes = ["AI Agent", "Skill", "Prompt", "Plugin", "Custom MCP", "Tool", "Guide"];
-const publishablePackageTypes = ["agent", "skill", "prompt", "plugin", "mcp", "tool", "guide"] as const;
+const publishablePackageTypes = [
+  "agent",
+  "skill",
+  "prompt",
+  "plugin",
+  "mcp",
+  "tool",
+  "guide",
+] as const;
 
 function SectionHeading({
   icon: Icon,
@@ -122,52 +130,18 @@ function StudioPage() {
               showResourceList={false}
             />
           </div>
-        ) : (
-          <Card>
-            <CardContent className="p-5 text-sm text-muted-foreground">
-              Your role cannot upload packages. Contact an administrator to raise permissions.
-            </CardContent>
-          </Card>
-        )}
+        ) : null}
       </section>
 
-      <section id="context" className="scroll-mt-6 space-y-5">
-        <SectionHeading
-          icon={LibraryBig}
-          label="Context & data"
-          title="Create Memory or Knowledge"
-          description="Use one focused form at a time. Memory stores durable instructions and decisions; Knowledge stores reusable documents, sources, and reference material."
-        />
-        <Tabs defaultValue="memory" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="memory">
-              <Brain className="mr-2 size-4" />
-              Memory
-            </TabsTrigger>
-            <TabsTrigger value="knowledge">
-              <LibraryBig className="mr-2 size-4" />
-              Knowledge
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="memory" className="mt-4">
-            <MemoryKnowledgePage defaultSection="memory" studioMode />
-          </TabsContent>
-          <TabsContent value="knowledge" className="mt-4">
-            <MemoryKnowledgePage defaultSection="knowledge" studioMode />
-          </TabsContent>
-        </Tabs>
-      </section>
-
+      <MemoryKnowledgePage />
       <section id="toolkits" className="scroll-mt-6 space-y-5">
         <SectionHeading
           icon={Layers3}
-          label="Bundles"
-          title="Build a Toolkit"
-          description="Combine capabilities already in your personal library into one reusable bundle, then publish it for project assignment."
+          label="Compositions"
+          title="Toolkits"
+          description="Combine reviewed resources into reusable collections."
         />
-        <div className="max-w-3xl">
-          <ToolkitCreator />
-        </div>
+        <ToolkitCreator />
       </section>
 
       <Card className="bg-pillar">
