@@ -62,10 +62,7 @@ Open Connect is the gateway and control plane. Independent applications consume 
 | Owner role management | Platform owner only | Within the shared User roles page |
 | Organizations and projects | Existing membership policies | Organizations & workspaces; Projects |
 
-System administration manages platform roles, not tenant membership. Organization
-owner/admin/member and project manager/developer/viewer are separate contexts.
-No additional access is granted by navigation. Clients are Members, not a new database role.
-Owner-role revocation and self-admin revocation controls mirror existing server denials.
+System administration manages platform roles; Organization settings manages HillStreet membership and groups; each project controls its own collaboration grants. Admin, Developer, and Member are the only human role labels across those scopes. Navigation adds no access. Clients use Member-level human identity plus their own scoped machine credentials.
 
 ## Account menu placement and MCP verification
 
