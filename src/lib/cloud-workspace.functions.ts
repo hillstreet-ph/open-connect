@@ -2,14 +2,17 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const connectionInput = z.object({ connectionId: z.string().uuid() });
+const connectionInput = z.object({
+  projectId: z.string().uuid(),
+  connectionId: z.string().uuid(),
+});
 
 export const discoverCloudTools = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator(connectionInput)
   .handler(async ({ data, context }) => {
     const { listCustomMcpTools } = await import("@/lib/custom-mcp.server");
-    const catalog = await listCustomMcpTools(context.userId, data.connectionId);
+    const catalog = await listCustomMcpTools(context.userId, data.connectionId, data.projectId);
     return {
       tools: catalog.tools.map((tool) => ({
         name: String(tool["name"] ?? ""),
@@ -32,15 +35,8 @@ export const runCloudTool = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data, context }) => {
-    const { data: roles, error } = await context.supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", context.userId);
-    if (error || !roles?.some(({ role }) => role === "admin")) {
-      throw new Error("Admin access is required to run cloud tools.");
-    }
     const { listCustomMcpTools, callCustomMcpTool } = await import("@/lib/custom-mcp.server");
-    const catalog = await listCustomMcpTools(context.userId, data.connectionId);
+    const catalog = await listCustomMcpTools(context.userId, data.connectionId, data.projectId);
     const tool = catalog.tools.find((item) => item["name"] === data.toolName);
     if (!tool) throw new Error("Tool is no longer available. Refresh the connection.");
     const annotations = (tool["annotations"] ?? {}) as Record<string, unknown>;
@@ -49,7 +45,13 @@ export const runCloudTool = createServerFn({ method: "POST" })
     }
     return {
       result: JSON.stringify(
-        await callCustomMcpTool(context.userId, data.connectionId, data.toolName, data.arguments),
+        await callCustomMcpTool(
+          context.userId,
+          data.connectionId,
+          data.toolName,
+          data.arguments,
+          data.projectId,
+        ),
         null,
         2,
       ),
