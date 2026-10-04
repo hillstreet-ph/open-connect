@@ -93,9 +93,8 @@ function AdminPage() {
         <CardHeader>
           <CardTitle className="text-base">Assign role</CardTitle>
           <CardDescription>
-            Assign Member, Admin, or Owner to existing accounts by email. Organization
-            membership and project access are managed separately. Only owners can grant or revoke
-            Owner.
+            Assign Member, Admin, or Owner to existing accounts by email. Organization membership
+            and project access are managed separately. Only owners can grant or revoke Owner.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
