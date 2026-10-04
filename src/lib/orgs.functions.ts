@@ -680,17 +680,15 @@ export const setOrganizationMemberGroups = createServerFn({ method: "POST" })
     if (existingError) throw new Error(existingError.message);
     const desired = new Set(data.groupIds);
     for (const groupId of data.groupIds) {
-      const { error } = await context.supabase
-        .from("organization_group_members")
-        .upsert(
-          {
-            organization_id: data.organizationId,
-            group_id: groupId,
-            user_id: data.userId,
-            added_by: context.userId,
-          },
-          { onConflict: "group_id,user_id" },
-        );
+      const { error } = await context.supabase.from("organization_group_members").upsert(
+        {
+          organization_id: data.organizationId,
+          group_id: groupId,
+          user_id: data.userId,
+          added_by: context.userId,
+        },
+        { onConflict: "group_id,user_id" },
+      );
       if (error) throw new Error(error.message);
     }
     for (const row of existing ?? []) {
