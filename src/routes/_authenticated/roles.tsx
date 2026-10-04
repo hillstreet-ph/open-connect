@@ -51,7 +51,7 @@ const MATRIX: { capability: string; levels: Record<AppRole, "full" | "scoped" | 
     capability: "Publish resources",
     levels: {
       user: "denied",
-      developer: "denied",
+      developer: "full",
       publisher: "full",
       admin: "full",
       owner: "full",
@@ -61,8 +61,8 @@ const MATRIX: { capability: string; levels: Record<AppRole, "full" | "scoped" | 
     capability: "Verify resources",
     levels: {
       user: "denied",
-      developer: "denied",
-      publisher: "denied",
+      developer: "full",
+      publisher: "full",
       admin: "full",
       owner: "full",
     },
