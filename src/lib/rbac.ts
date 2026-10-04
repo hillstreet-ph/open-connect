@@ -68,7 +68,7 @@ export const ROLE_SCOPE_MATRIX: {
   },
   {
     role: "developer",
-    summary: "Everything user has, plus toolkits",
+    summary: "Everything a Member has, plus toolkit management",
     can: ["Manage toolkits", "Bundle capabilities for agents"],
   },
   {
@@ -79,7 +79,7 @@ export const ROLE_SCOPE_MATRIX: {
   {
     role: "admin",
     summary:
-      "Manage organization members and permitted settings; verify packages and manage platform roles",
+      "Verify resources, manage platform roles, and access system administration",
     can: ["Verify resources", "Manage roles", "Admin panel"],
   },
   {
