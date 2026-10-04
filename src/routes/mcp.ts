@@ -570,7 +570,11 @@ async function assertProjectAccess(key: AuthedKey, projectId: string) {
       .eq("role", "admin")
       .maybeSingle(),
   ]);
-  if (membership.error || organizationAdmin.error || (!membership.data && !organizationAdmin.data)) {
+  if (
+    membership.error ||
+    organizationAdmin.error ||
+    (!membership.data && !organizationAdmin.data)
+  ) {
     throw new Error("Project is unavailable to this API key.");
   }
   return project;
@@ -1041,9 +1045,14 @@ export const Route = createFileRoute("/mcp")({
               const [workspaces, projects] = await Promise.all([workspaceQuery, projectQuery]);
               if (workspaces.error) throw new Error(workspaces.error.message);
               if (projects.error) throw new Error(projects.error.message);
-              const [{ data: assignedProjects, error: assignedError }, { data: adminMemberships, error: adminError }] =
-                await Promise.all([
-                  supabaseAdmin.from("project_members").select("project_id").eq("user_id", key.userId),
+              const [
+                { data: assignedProjects, error: assignedError },
+                { data: adminMemberships, error: adminError },
+              ] = await Promise.all([
+                supabaseAdmin
+                  .from("project_members")
+                  .select("project_id")
+                  .eq("user_id", key.userId),
                   supabaseAdmin
                     .from("organization_members")
                     .select("organization_id")
@@ -1211,7 +1220,9 @@ export const Route = createFileRoute("/mcp")({
             const annotations = (tool["annotations"] ?? {}) as Record<string, unknown>;
             if (annotations["readOnlyHint"] !== true) {
               if (!key.projectId) {
-                throw new Error("Write-capable connection actions require a project-scoped API key.");
+                throw new Error(
+                  "Write-capable connection actions require a project-scoped API key.",
+                );
               }
               if (!hasScope(key, "connections:invoke")) {
                 throw new Error("Key cannot invoke write-capable connection actions.");
