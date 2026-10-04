@@ -222,6 +222,11 @@ function ProjectWorkspacePage() {
             <Link to="/projects">All projects</Link>
           </Button>
           <Button asChild size="sm" variant="outline">
+            <Link to="/project-access/$projectId" params={{ projectId }}>
+              Manage access
+            </Link>
+          </Button>
+          <Button asChild size="sm" variant="outline">
             <Link to="/resources">Marketplace</Link>
           </Button>
           <Button asChild size="sm" variant="outline">

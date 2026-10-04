@@ -30,17 +30,21 @@ Optional later:
 
 After changing secrets: **Retry deployment** on the latest production deploy so runtime and build pick up values.
 
-## Roles (workspace)
+## Roles and access scope
 
-| Role | Can |
-|------|-----|
-| **user** | Dashboard, Studio, Orgs, upload/download, API keys, connections, secrets, guides |
-| **developer** | + manage toolkits |
-| **publisher** | + publish to marketplace |
-| **admin** | + verify packages, manage roles |
-| **owner** | all |
+Human access uses three separate scopes:
 
-Upload adoption is available to **every signed-in user** (`upload_resources` min role = `user`).
+| Scope | Roles | Purpose |
+|------|------|------|
+| Platform | **Member**, **Admin**, **Owner** | Member is the standard signed-in role. Admin manages permitted platform and organization settings. Owner retains full platform and organization control. |
+| Organization | **Member**, **Admin**, **Owner** | Admins manage organization people, groups, and settings. Owners manage ownership and appoint admins. |
+| Project | **Viewer**, **Developer**, **Manager** | Viewer reads an assigned project. Developer builds within an assigned project. Manager manages that project's members, installs, and environments. |
+
+Project membership is independent for every project. Organization Members only see projects explicitly shared with them. Project resources, environments, and memberships follow that same project boundary. Machine principals such as agents and API clients use scoped credentials and never receive human Owner or Admin roles.
+
+Legacy platform role records remain readable for existing data, but new platform assignments are limited to Member, Admin, and Owner. Assign people by account email in System administration; invite new people through Organization settings.
+
+Upload adoption is available to every signed-in Member (minimum platform role: user).
 
 ## API key scopes (all accounts / new keys)
 

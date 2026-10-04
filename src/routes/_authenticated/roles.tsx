@@ -89,7 +89,7 @@ const MATRIX: { capability: string; levels: Record<AppRole, "full" | "scoped" | 
   },
 ];
 
-const ROLES: AppRole[] = ["user", "developer", "publisher", "admin", "owner"];
+const ROLES: AppRole[] = ["user", "admin", "owner"];
 
 function Cell({ level }: { level: "full" | "scoped" | "denied" }) {
   if (level === "full") {
@@ -122,7 +122,7 @@ function RolesAccessPage() {
             Access reference
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Review platform access alongside organization and project roles.
+            Review the canonical platform, organization, and project access roles.
           </p>
         </div>
         <Badge variant="secondary" className="uppercase">
@@ -277,11 +277,11 @@ function RolesAccessPage() {
 
       <Card className="shadow-panel">
         <CardHeader className="p-4 pb-2">
-          <CardTitle className="text-base">Platform role summaries</CardTitle>
+          <CardTitle className="text-base">Canonical platform role summaries</CardTitle>
           <CardDescription>Capabilities by platform role</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 p-4 pt-2 sm:grid-cols-2 lg:grid-cols-3">
-          {ROLE_SCOPE_MATRIX.map((row) => (
+          {ROLE_SCOPE_MATRIX.filter((row) => ROLES.includes(row.role)).map((row) => (
             <div
               key={row.role}
               className={
