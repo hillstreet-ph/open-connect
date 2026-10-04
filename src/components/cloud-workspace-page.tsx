@@ -107,7 +107,9 @@ export function CloudWorkspacePage({ kind }: { kind: keyof typeof descriptions }
           >
             <option value="">Select a project</option>
             {(projects.data ?? []).map((item) => (
-              <option key={item.id} value={item.id}>{item.name}</option>
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
             ))}
           </select>
 
@@ -195,7 +197,9 @@ export function CloudWorkspacePage({ kind }: { kind: keyof typeof descriptions }
             >
               <option value="">Select a tool ({catalog.data.tools.length} available)</option>
               {catalog.data.tools.map((tool) => (
-                <option key={tool.name} value={tool.name}>{tool.name}</option>
+                <option key={tool.name} value={tool.name}>
+                  {tool.name}
+                </option>
               ))}
             </select>
             {selectedTool ? (
