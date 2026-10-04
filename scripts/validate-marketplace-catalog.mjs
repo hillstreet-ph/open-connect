@@ -20,15 +20,17 @@ if (catalog.candidates.length < registry.default_policy.minimum_candidates) {
 }
 
 const urls = new Set();
-const sourceIds = new Set(registry.sources.map((source) => source.id));
+const sourcesById = new Map(registry.sources.map((source) => [source.id, source]));
 const allowedReviewStates = new Set([
   "pending_license_review",
   "pending_security_review",
   "quarantined_metadata",
 ]);
 for (const candidate of catalog.candidates) {
-  if (!sourceIds.has(candidate.sourceId)) throw new Error(`unknown source: ${candidate.sourceId}`);
-  if (!isAllowedCatalogUrl(candidate.canonicalUrl, registry.default_policy.allowed_hosts)) {
+  const source = sourcesById.get(candidate.sourceId);
+  if (!source) throw new Error(`unknown source: ${candidate.sourceId}`);
+  const allowedHosts = source.allowed_result_hosts || registry.default_policy.allowed_hosts;
+  if (!isAllowedCatalogUrl(candidate.canonicalUrl, allowedHosts)) {
     throw new Error(`disallowed catalog URL: ${candidate.canonicalUrl}`);
   }
   if (!allowedReviewStates.has(candidate.reviewState)) {
