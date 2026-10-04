@@ -271,7 +271,7 @@ function ProjectWorkspacePage() {
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Memory · Knowledge</CardTitle>
           <CardDescription>
-            Private context assigned from Studio. These records never publish to Marketplace.
+            Shared project context assigned from Studio for this project's members. These records never publish to Marketplace.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-5 lg:grid-cols-2">
