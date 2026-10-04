@@ -33,24 +33,37 @@ export function ResourceReviewPanel() {
       void queryClient.invalidateQueries({ queryKey: ["marketplace"] });
       void queryClient.invalidateQueries({ queryKey: ["resources-marketplace"] });
     },
-    onError: (error) => toast.error(error instanceof Error ? error.message : "Resource review failed"),
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Resource review failed"),
   });
 
   if (queue.isLoading) {
-    return <div className="h-24 animate-pulse rounded-xl border border-border bg-muted/20" aria-label="Loading resources for review" />;
+    return (
+      <div
+        className="h-24 animate-pulse rounded-xl border border-border bg-muted/20"
+        aria-label="Loading resources for review"
+      />
+    );
   }
+
   if (queue.isError) {
     return (
       <Card>
         <CardContent className="p-5 text-sm">
           <p role="alert">The review queue could not be loaded.</p>
-          <Button className="mt-3" size="sm" variant="outline" onClick={() => void queue.refetch()}>
+          <Button
+            className="mt-3"
+            size="sm"
+            variant="outline"
+            onClick={() => void queue.refetch()}
+          >
             Try again
           </Button>
         </CardContent>
       </Card>
     );
   }
+
   if (!queue.data?.length) {
     return (
       <Card>
@@ -69,7 +82,9 @@ export function ResourceReviewPanel() {
             <div className="min-w-0 space-y-2">
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="font-medium">{resource.name}</h3>
-                <Badge variant="secondary" className="uppercase">{resource.resource_type}</Badge>
+                <Badge variant="secondary" className="uppercase">
+                  {resource.resource_type}
+                </Badge>
                 <Badge variant={resource.verified ? "default" : "outline"}>
                   {resource.verified ? "Verified" : "Needs verification"}
                 </Badge>
@@ -77,20 +92,33 @@ export function ResourceReviewPanel() {
                   {resource.published ? "Published" : "Draft"}
                 </Badge>
               </div>
-              <p className="text-sm text-muted-foreground">{resource.description || "No description"}</p>
+              <p className="text-sm text-muted-foreground">
+                {resource.description || "No description"}
+              </p>
               <p className="text-xs text-muted-foreground">
-                {resource.source || "Source not listed"} · {resource.license || "License not listed"}
+                {resource.source || "Source not listed"}{" "}
+                · {resource.license || "License not listed"}
                 {resource.version ? ` · v${resource.version}` : ""}
               </p>
               {resource.source_url || resource.repository_url ? (
                 <div className="flex flex-wrap gap-3 text-sm">
                   {resource.source_url ? (
-                    <a className="text-primary underline underline-offset-4" href={resource.source_url} target="_blank" rel="noopener noreferrer">
+                    <a
+                      className="text-primary underline underline-offset-4"
+                      href={resource.source_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
                       Source
                     </a>
                   ) : null}
                   {resource.repository_url ? (
-                    <a className="text-primary underline underline-offset-4" href={resource.repository_url} target="_blank" rel="noopener noreferrer">
+                    <a
+                      className="text-primary underline underline-offset-4"
+                      href={resource.repository_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
                       Repository
                     </a>
                   ) : null}
@@ -101,20 +129,44 @@ export function ResourceReviewPanel() {
               <Button
                 size="sm"
                 variant={resource.verified ? "outline" : "default"}
-                onClick={() => update.mutate({ id: resource.id, action: resource.verified ? "unverify" : "verify" })}
+                onClick={() =>
+                  update.mutate({
+                    id: resource.id,
+                    action: resource.verified ? "unverify" : "verify",
+                  })
+                }
                 disabled={update.isPending}
               >
-                {update.isPending ? <Loader2 className="mr-2 size-4 animate-spin" /> : resource.verified ? <ShieldOff className="mr-2 size-4" /> : <ShieldCheck className="mr-2 size-4" />}
+                {update.isPending ? (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                ) : resource.verified ? (
+                  <ShieldOff className="mr-2 size-4" />
+                ) : (
+                  <ShieldCheck className="mr-2 size-4" />
+                )}
                 {resource.verified ? "Remove verification" : "Verify"}
               </Button>
               <Button
                 size="sm"
                 variant={resource.published ? "outline" : "default"}
-                onClick={() => update.mutate({ id: resource.id, action: resource.published ? "unpublish" : "publish" })}
+                onClick={() =>
+                  update.mutate({
+                    id: resource.id,
+                    action: resource.published ? "unpublish" : "publish",
+                  })
+                }
                 disabled={update.isPending || (!resource.verified && !resource.published)}
-                title={!resource.verified && !resource.published ? "Verify before publishing" : undefined}
+                title={
+                  !resource.verified && !resource.published
+                    ? "Verify before publishing"
+                    : undefined
+                }
               >
-                {resource.published ? <ShieldOff className="mr-2 size-4" /> : <Send className="mr-2 size-4" />}
+                {resource.published ? (
+                  <ShieldOff className="mr-2 size-4" />
+                ) : (
+                  <Send className="mr-2 size-4" />
+                )}
                 {resource.published ? "Unpublish" : "Publish"}
               </Button>
             </div>
