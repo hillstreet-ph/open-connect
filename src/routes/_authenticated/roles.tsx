@@ -141,9 +141,12 @@ function RolesAccessPage() {
               <div key={r} className="rounded-lg border border-border/60 px-3 py-2">
                 <span className="font-medium text-foreground">{ORG_ROLE_LABEL[r]}</span>
                 <p className="mt-0.5">
-                  {r === "admin" && "Manage people, groups, settings, and project sharing within the organization."}
-                  {r === "developer" && "Build, publish, and verify shared resources and develop assigned projects."}
-                  {r === "member" && "Use the workspace, resources, and projects explicitly shared with you."}
+                  {r === "admin" &&
+                    "Manage people, groups, settings, and project sharing within the organization."}
+                  {r === "developer" &&
+                    "Build, publish, and verify shared resources and develop assigned projects."}
+                  {r === "member" &&
+                    "Use the workspace, resources, and projects explicitly shared with you."}
                 </p>
               </div>
             ))}
@@ -159,14 +162,17 @@ function RolesAccessPage() {
               <div key={r} className="rounded-lg border border-border/60 px-3 py-2">
                 <span className="font-medium text-foreground">{PROJECT_ROLE_LABEL[r]}</span>
                 <p className="mt-0.5">
-                  {r === "admin" && "Manage this project, its collaborators, installs, and environments."}
+                  {r === "admin" &&
+                    "Manage this project, its collaborators, installs, and environments."}
                   {r === "developer" && "Build project resources, tools, and project-scoped keys."}
-                  {r === "member" && "Use resources and features explicitly shared with this project."}
+                  {r === "member" &&
+                    "Use resources and features explicitly shared with this project."}
                 </p>
               </div>
             ))}
             <p className="pt-1 text-[11px]">
-              Same person can have different roles in each project. Project access is assigned explicitly. See{" "}
+              Same person can have different roles in each project. Project access is
+              assigned explicitly. See{" "}
               <Link to="/orgs" className="text-primary underline-offset-2 hover:underline">
                 Organizations
               </Link>
@@ -276,7 +282,10 @@ function RolesAccessPage() {
       <Card className="shadow-panel">
         <CardHeader className="p-4 pb-2">
           <CardTitle className="text-base">Canonical role summaries</CardTitle>
-          <CardDescription>Platform capabilities; organization and project roles apply within their respective scope.</CardDescription>
+          <CardDescription>
+            Platform capabilities; organization and project roles apply within their respective
+            scope.
+          </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 p-4 pt-2 sm:grid-cols-2 lg:grid-cols-3">
           {ROLE_SCOPE_MATRIX.filter((row) => ROLES.includes(row.role)).map((row) => (
