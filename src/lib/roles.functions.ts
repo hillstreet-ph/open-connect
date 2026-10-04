@@ -2,10 +2,10 @@ import { createServerFn } from "@tanstack/react-start";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { hasRole, ROLE_RANK, type AppRole } from "@/lib/rbac";
+import { hasRole, type AppRole } from "@/lib/rbac";
 
 const ASSIGNABLE_ROLES: AppRole[] = ["user", "developer", "admin"];
-const MANAGEABLE_ROLES: AppRole[] = [...ASSIGNABLE_ROLES, "publisher", "owner"];
+const MANAGEABLE_ROLES: AppRole[] = ASSIGNABLE_ROLES;
 
 async function loadRoles(supabase: SupabaseClient, userId: string): Promise<AppRole[]> {
   const { data, error } = await supabase.from("user_roles").select("role").eq("user_id", userId);
@@ -70,8 +70,14 @@ export const assignRole = createServerFn({ method: "POST" })
       .from("user_roles")
       .upsert({ user_id: userId, role: data.role }, { onConflict: "user_id,role" })
       .select("id, user_id, role, created_at")
-      .maybeSingle();
+      .single();
     if (error) throw new Error(error.message);
+    const { error: cleanupError } = await context.supabase
+      .from("user_roles")
+      .delete()
+      .eq("user_id", userId)
+      .in("role", ASSIGNABLE_ROLES.filter((role) => role !== data.role));
+    if (cleanupError) throw new Error(cleanupError.message);
     return { ...row, email: data.email };
   });
 
@@ -88,11 +94,16 @@ export const revokeRole = createServerFn({ method: "POST" })
     if (!MANAGEABLE_ROLES.includes(data.role)) {
       throw new Error("This platform role cannot be managed here");
     }
-    if (data.role === "owner" && !hasRole(mine, "owner")) {
-      throw new Error("Only owners can revoke the owner role");
+    if (data.user_id === context.userId && data.role === "admin") {
+      throw new Error("You cannot revoke your own admin role");
     }
-    if (data.user_id === context.userId && data.role === "admin" && !hasRole(mine, "owner")) {
-      throw new Error("Admins cannot revoke their own admin role");
+    if (data.role === "admin") {
+      const { count, error: countError } = await context.supabase
+        .from("user_roles")
+        .select("id", { count: "exact", head: true })
+        .eq("role", "admin");
+      if (countError) throw new Error(countError.message);
+      if ((count ?? 0) <= 1) throw new Error("The platform must keep at least one admin");
     }
 
     const { error } = await context.supabase
