@@ -89,7 +89,7 @@ const MATRIX: { capability: string; levels: Record<AppRole, "full" | "scoped" | 
   },
 ];
 
-const ROLES: AppRole[] = ["user", "admin", "owner"];
+const ROLES: AppRole[] = ["user", "developer", "admin"];
 
 function Cell({ level }: { level: "full" | "scoped" | "denied" }) {
   if (level === "full") {
