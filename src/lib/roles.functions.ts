@@ -4,7 +4,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { hasRole, ROLE_RANK, type AppRole } from "@/lib/rbac";
 
-const ASSIGNABLE_ROLES: AppRole[] = ["user", "admin", "owner"];
+const ASSIGNABLE_ROLES: AppRole[] = ["user", "developer", "admin"];
+const MANAGEABLE_ROLES: AppRole[] = [...ASSIGNABLE_ROLES, "publisher", "owner"];
 
 async function loadRoles(supabase: SupabaseClient, userId: string): Promise<AppRole[]> {
   const { data, error } = await supabase.from("user_roles").select("role").eq("user_id", userId);
@@ -38,7 +39,7 @@ export const listRoleAssignments = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("user_roles")
       .select("id, user_id, role, created_at")
-      .in("role", ASSIGNABLE_ROLES)
+      .in("role", MANAGEABLE_ROLES)
       .order("created_at", { ascending: false })
       .limit(200);
     if (error) throw new Error(error.message);
@@ -60,7 +61,7 @@ export const assignRole = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const mine = await loadRoles(context.supabase, context.userId);
     if (!hasRole(mine, "admin")) throw new Error("Forbidden: admin required");
-    if (!ASSIGNABLE_ROLES.includes(data.role)) throw new Error("Choose Member, Admin, or Owner");
+    if (!ASSIGNABLE_ROLES.includes(data.role)) throw new Error("Choose Member, Developer, or Admin");
     if (data.role === "owner" && !hasRole(mine, "owner")) {
       throw new Error("Only owners can assign the owner role");
     }
@@ -85,8 +86,8 @@ export const revokeRole = createServerFn({ method: "POST" })
     const mine = await loadRoles(context.supabase, context.userId);
     if (!hasRole(mine, "admin")) throw new Error("Forbidden: admin required");
     if (!data.user_id || !data.role) throw new Error("user_id and role required");
-    if (!ASSIGNABLE_ROLES.includes(data.role)) {
-      throw new Error("Only canonical roles can be managed here");
+    if (!MANAGEABLE_ROLES.includes(data.role)) {
+      throw new Error("This platform role cannot be managed here");
     }
     if (data.role === "owner" && !hasRole(mine, "owner")) {
       throw new Error("Only owners can revoke the owner role");
