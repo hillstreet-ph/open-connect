@@ -41,4 +41,8 @@ Historical organizations.owner_id is retained as record metadata; it is not an a
 
 The organization is the shared connection point for approved resources, skills, tools, prompts, agents, MCP servers, and other integrations. Projects group work by purpose and apply explicit collaboration boundaries. An AI client can use a resource only when its credentials, scopes, and project or organization policies allow the operation.
 
+Personal app connections remain private to their owner by default. An owner can explicitly share a connection with a project; assigned project members may invoke it through the server-side broker without receiving its credential or connection-management access. Organization or project administration can revoke the project grant but cannot expose the owner’s secret. Cloud tools follow the same project grant. Project-scoped API keys are required for write-capable connector actions, and project connector calls are audit logged without storing arguments or results.
+
+Project memory and knowledge are shared context for assigned project members. Personal memory and personal connections remain private. Groups organize people; group membership does not itself grant project or connector access.
+
 Never put provider secrets in prompts, screenshots, Git, or resource manifests. Clients and agents receive capability execution through the credential broker, never provider master credentials.
