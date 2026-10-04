@@ -100,7 +100,8 @@ create or replace function public.list_project_credentials(p_project_id uuid)
 returns jsonb language sql security definer set search_path = public, pg_temp as $$
   select coalesce(jsonb_agg(jsonb_build_object(
     'id', pc.id, 'credential_id', cs.id, 'name', cs.name,
-    'secret_type', cs.secret_type, 'scopes', cs.scopes, 'created_at', pc.created_at
+    'secret_type', cs.secret_type, 'scopes', cs.scopes,
+    'can_remove', (cs.user_id = auth.uid() or public.can_manage_project(pc.project_id)), 'created_at', pc.created_at
   ) order by pc.created_at desc), '[]'::jsonb)
   from public.project_credentials pc
   join public.credential_secrets cs on cs.id = pc.credential_id
