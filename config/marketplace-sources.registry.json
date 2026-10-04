@@ -160,9 +160,6 @@
         "chatgpt"
       ],
       "trust": "official_platform",
-      "hosts": [
-        "chatgpt.com"
-      ],
       "adapter": "firecrawl_crawl",
       "allowed_result_hosts": [
         "chatgpt.com"
@@ -190,10 +187,6 @@
         "apps"
       ],
       "trust": "official_documentation",
-      "hosts": [
-        "help.openai.com",
-        "openai.com"
-      ],
       "adapter": "firecrawl_crawl",
       "allowed_result_hosts": [
         "help.openai.com",
@@ -221,11 +214,6 @@
         "registry"
       ],
       "trust": "official_registry",
-      "hosts": [
-        "registry.modelcontextprotocol.io",
-        "modelcontextprotocol.io",
-        "github.com"
-      ],
       "adapter": "firecrawl_crawl",
       "allowed_result_hosts": [
         "registry.modelcontextprotocol.io",
@@ -254,10 +242,6 @@
         "skills"
       ],
       "trust": "community_directory",
-      "hosts": [
-        "mcp.directory",
-        "github.com"
-      ],
       "adapter": "firecrawl_crawl",
       "allowed_result_hosts": [
         "mcp.directory",
@@ -284,10 +268,6 @@
         "mcp"
       ],
       "trust": "community_directory",
-      "hosts": [
-        "mcpservers.org",
-        "github.com"
-      ],
       "adapter": "firecrawl_crawl",
       "allowed_result_hosts": [
         "mcpservers.org",
@@ -315,10 +295,6 @@
         "integrations"
       ],
       "trust": "community_platform",
-      "hosts": [
-        "smithery.ai",
-        "github.com"
-      ],
       "adapter": "firecrawl_crawl",
       "allowed_result_hosts": [
         "smithery.ai",
@@ -345,10 +321,6 @@
         "mcp"
       ],
       "trust": "community_directory",
-      "hosts": [
-        "glama.ai",
-        "github.com"
-      ],
       "adapter": "firecrawl_crawl",
       "allowed_result_hosts": [
         "glama.ai",
@@ -376,11 +348,6 @@
         "community"
       ],
       "trust": "community_directory",
-      "hosts": [
-        "www.pulsemcp.com",
-        "pulsemcp.com",
-        "github.com"
-      ],
       "adapter": "firecrawl_crawl",
       "allowed_result_hosts": [
         "www.pulsemcp.com",
@@ -408,10 +375,6 @@
         "skills"
       ],
       "trust": "community_directory",
-      "hosts": [
-        "skills.sh",
-        "github.com"
-      ],
       "adapter": "firecrawl_crawl",
       "allowed_result_hosts": [
         "skills.sh",
@@ -438,10 +401,6 @@
         "skills"
       ],
       "trust": "community_aggregation",
-      "hosts": [
-        "officialskills.sh",
-        "github.com"
-      ],
       "adapter": "firecrawl_crawl",
       "allowed_result_hosts": [
         "officialskills.sh",
@@ -469,9 +428,6 @@
         "business-operations"
       ],
       "trust": "source_repository",
-      "hosts": [
-        "github.com"
-      ],
       "adapter": "firecrawl_crawl",
       "allowed_result_hosts": [
         "github.com"
@@ -499,9 +455,6 @@
         "business-operations"
       ],
       "trust": "official_vendor_repository",
-      "hosts": [
-        "github.com"
-      ],
       "adapter": "firecrawl_crawl",
       "allowed_result_hosts": [
         "github.com"
@@ -529,9 +482,6 @@
         "business-operations"
       ],
       "trust": "official_vendor_repository",
-      "hosts": [
-        "github.com"
-      ],
       "adapter": "firecrawl_crawl",
       "allowed_result_hosts": [
         "github.com"
@@ -559,10 +509,6 @@
         "sdk"
       ],
       "trust": "official_vendor_catalog",
-      "hosts": [
-        "microsoft.github.io",
-        "github.com"
-      ],
       "adapter": "firecrawl_crawl",
       "allowed_result_hosts": [
         "microsoft.github.io",
@@ -591,9 +537,6 @@
         "github"
       ],
       "trust": "official_vendor_marketplace",
-      "hosts": [
-        "github.com"
-      ],
       "adapter": "firecrawl_crawl",
       "allowed_result_hosts": [
         "github.com"
@@ -621,10 +564,6 @@
         "composio"
       ],
       "trust": "vendor_catalog",
-      "hosts": [
-        "composio.dev",
-        "github.com"
-      ],
       "adapter": "firecrawl_crawl",
       "allowed_result_hosts": [
         "composio.dev",
@@ -653,10 +592,6 @@
         "business-operations"
       ],
       "trust": "vendor_platform",
-      "hosts": [
-        "zapier.com",
-        "github.com"
-      ],
       "adapter": "firecrawl_crawl",
       "allowed_result_hosts": [
         "zapier.com",
@@ -685,9 +620,6 @@
         "plugins"
       ],
       "trust": "community_index",
-      "hosts": [
-        "github.com"
-      ],
       "adapter": "firecrawl_crawl",
       "allowed_result_hosts": [
         "github.com"
@@ -715,10 +647,6 @@
         "developer-tools"
       ],
       "trust": "official_vendor_repository",
-      "hosts": [
-        "github.com",
-        "hub.docker.com"
-      ],
       "adapter": "firecrawl_crawl",
       "allowed_result_hosts": [
         "github.com",
@@ -748,10 +676,6 @@
         "developer-tools"
       ],
       "trust": "official_vendor_documentation",
-      "hosts": [
-        "supabase.com",
-        "github.com"
-      ],
       "adapter": "firecrawl_crawl",
       "allowed_result_hosts": [
         "supabase.com",
@@ -781,9 +705,6 @@
         "agents-sdk"
       ],
       "trust": "official_vendor_repository",
-      "hosts": [
-        "github.com"
-      ],
       "adapter": "firecrawl_crawl",
       "allowed_result_hosts": [
         "github.com"
@@ -812,9 +733,6 @@
         "developer-tools"
       ],
       "trust": "official_vendor_repository",
-      "hosts": [
-        "github.com"
-      ],
       "adapter": "firecrawl_crawl",
       "allowed_result_hosts": [
         "github.com"
@@ -842,10 +760,6 @@
         "deployment"
       ],
       "trust": "official_vendor_catalog",
-      "hosts": [
-        "zeabur.com",
-        "github.com"
-      ],
       "adapter": "firecrawl_crawl",
       "allowed_result_hosts": [
         "zeabur.com",
@@ -876,9 +790,6 @@
         "google-docs"
       ],
       "trust": "official_vendor_repository",
-      "hosts": [
-        "github.com"
-      ],
       "adapter": "firecrawl_crawl",
       "allowed_result_hosts": [
         "github.com"
@@ -907,11 +818,6 @@
         "sdk"
       ],
       "trust": "official_vendor_documentation",
-      "hosts": [
-        "google.github.io",
-        "github.com",
-        "cloud.google.com"
-      ],
       "adapter": "firecrawl_crawl",
       "allowed_result_hosts": [
         "google.github.io",
@@ -942,9 +848,6 @@
         "mcp"
       ],
       "trust": "official_upstream",
-      "hosts": [
-        "github.com"
-      ],
       "adapter": "firecrawl_crawl",
       "allowed_result_hosts": [
         "github.com"
@@ -972,10 +875,6 @@
         "proton-pass"
       ],
       "trust": "official_vendor_documentation",
-      "hosts": [
-        "protonpass.github.io",
-        "github.com"
-      ],
       "adapter": "firecrawl_crawl",
       "allowed_result_hosts": [
         "protonpass.github.io",
