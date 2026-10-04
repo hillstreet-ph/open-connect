@@ -3,10 +3,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-const PROJECT_ROLES = ["manager", "developer", "viewer"] as const;
+const PROJECT_ROLES = ["admin", "developer", "member"] as const;
 type ProjectRole = (typeof PROJECT_ROLES)[number];
 
-async function requireProjectManager(supabase: SupabaseClient, userId: string, projectId: string) {
+async function requireProjectAdmin(supabase: SupabaseClient, userId: string, projectId: string) {
   if (!projectId) throw new Error("projectId required");
 
   const { data: project, error: projectError } = await supabase
@@ -16,24 +16,14 @@ async function requireProjectManager(supabase: SupabaseClient, userId: string, p
     .single();
   if (projectError || !project) throw new Error("Project not found or access denied");
 
-  const [{ data: membership }, { data: organization }] = await Promise.all([
-    supabase
-      .from("organization_members")
-      .select("role")
-      .eq("organization_id", project.organization_id)
-      .eq("user_id", userId)
-      .maybeSingle(),
-    supabase
-      .from("organizations")
-      .select("owner_id")
-      .eq("id", project.organization_id)
-      .maybeSingle(),
-  ]);
+  const { data: membership } = await supabase
+    .from("organization_members")
+    .select("role")
+    .eq("organization_id", project.organization_id)
+    .eq("user_id", userId)
+    .maybeSingle();
 
-  const isOrgManager =
-    ["owner", "admin"].includes((membership as { role?: string } | null)?.role ?? "") ||
-    (organization as { owner_id?: string } | null)?.owner_id === userId;
-  if (isOrgManager) return project;
+  if ((membership as { role?: string } | null)?.role === "admin") return project;
 
   const { data: projectMembership } = await supabase
     .from("project_members")
@@ -41,8 +31,8 @@ async function requireProjectManager(supabase: SupabaseClient, userId: string, p
     .eq("project_id", projectId)
     .eq("user_id", userId)
     .maybeSingle();
-  if ((projectMembership as { role?: string } | null)?.role !== "manager") {
-    throw new Error("Project manager or organization admin required");
+  if ((projectMembership as { role?: string } | null)?.role !== "admin") {
+    throw new Error("Project admin or organization admin required");
   }
   return project;
 }
@@ -118,7 +108,7 @@ export const setProjectMemberRole = createServerFn({ method: "POST" })
   }))
   .handler(async ({ data, context }) => {
     if (!data.userId) throw new Error("Choose an organization member");
-    if (!PROJECT_ROLES.includes(data.role)) throw new Error("Choose Manager, Developer, or Viewer");
+    if (!PROJECT_ROLES.includes(data.role)) throw new Error("Choose Admin, Developer, or Member");
     const project = await requireProjectManager(context.supabase, context.userId, data.projectId);
     const { data: member, error: memberError } = await context.supabase
       .from("organization_members")
