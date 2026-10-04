@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { hasRole, type AppRole } from "@/lib/rbac";
 
 const BUCKET = "resource-packages";
 
@@ -50,7 +51,7 @@ export const listMyResources = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("resources")
       .select(
-        "id, slug, name, description, resource_type, version, published, package_path, package_filename, package_size, package_mime, created_at, updated_at",
+        "id, slug, name, description, resource_type, version, published, verified, package_path, package_filename, package_size, package_mime, created_at, updated_at",
       )
       .eq("owner_id", context.userId)
       .order("created_at", { ascending: false });
@@ -86,13 +87,24 @@ export const registerResourcePackage = createServerFn({ method: "POST" })
       package_filename: input?.package_filename ?? "",
       package_size: input?.package_size ?? null,
       package_mime: input?.package_mime ?? null,
-      published: input?.published !== false,
+      published: input?.published === true,
       version: (input?.version ?? "1.0.0").trim() || "1.0.0",
     }),
   )
   .handler(async ({ data, context }) => {
     if (!data.slug) throw new Error("Invalid slug");
     if (!data.package_path) throw new Error("package_path required");
+    if (data.published) {
+      const { data: roleRows, error: rolesError } = await context.supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", context.userId);
+      if (rolesError) throw new Error(rolesError.message);
+      const roles = (roleRows ?? []).map((row: { role: AppRole }) => row.role);
+      if (!hasRole(roles, "developer")) {
+        throw new Error("Only Developers and Admins can publish marketplace resources");
+      }
+    }
 
     const row = {
       name: data.name,
