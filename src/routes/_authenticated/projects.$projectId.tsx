@@ -150,7 +150,7 @@ function ProjectWorkspacePage() {
   const addConnMut = useMutation({
     mutationFn: () => addConn({ data: { projectId, connectionId: pickConnection } }),
     onSuccess: () => {
-      toast.success("Connection scoped to project");
+      toast.success("Connection shared with project");
       setPickConnection("");
       void qc.invalidateQueries({ queryKey: ["project-connections", projectId] });
     },
@@ -441,8 +441,8 @@ function ProjectWorkspacePage() {
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Connections · MCP · AI Gateway</CardTitle>
           <CardDescription>
-            Share a general sidebar connection or AI provider with this project. Secrets remain in
-            Vault and only the opaque broker reference is scoped.
+            The account owner explicitly shares this connection with the project. Members can invoke its
+            provider tools through the broker; credentials and connection settings stay private.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -470,7 +470,7 @@ function ProjectWorkspacePage() {
               onClick={() => addConnMut.mutate()}
             >
               {addConnMut.isPending ? <Loader2 className="mr-1 size-3.5 animate-spin" /> : null}
-              Scope to project
+              Share connection
             </Button>
           </div>
           <div className="space-y-2">
@@ -483,6 +483,7 @@ function ProjectWorkspacePage() {
                 (row: {
                   id: string;
                   connection_id?: string;
+                  can_revoke?: boolean;
                   app_connections?: {
                     display_name?: string;
                     provider?: string;
@@ -501,13 +502,16 @@ function ProjectWorkspacePage() {
                           {c?.provider} · {c?.status}
                         </p>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => row.connection_id && remConnMut.mutate(row.connection_id)}
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
+                      {row.can_revoke ? (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          aria-label={`Remove ${c?.display_name || c?.provider || "connection"} from project`}
+                          onClick={() => row.connection_id && remConnMut.mutate(row.connection_id)}
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      ) : null}
                     </div>
                   );
                 },
@@ -519,16 +523,16 @@ function ProjectWorkspacePage() {
 
       <Card className="shadow-panel">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Shared credentials</CardTitle>
+          <CardTitle className="text-base">Vault credential references</CardTitle>
           <CardDescription>
-            Select credentials from the general sidebar Vault. Project pages show metadata only;
-            saved passwords, tokens, and TOTP seeds are never exposed here.
+            These references show metadata only and do not grant access to a connected account. Secret
+            values and TOTP seeds remain private to their owner.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap items-end gap-2">
             <div className="min-w-[220px] flex-1 space-y-1">
-              <Label htmlFor="pick-credential">General Vault credential</Label>
+              <Label htmlFor="pick-credential">Personal Vault credential reference</Label>
               <select
                 id="pick-credential"
                 className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
@@ -566,6 +570,7 @@ function ProjectWorkspacePage() {
                   name?: string;
                   secret_type?: string;
                   scopes?: string[];
+                  can_remove?: boolean;
                 }) => (
                   <div
                     key={credential.id}
@@ -578,14 +583,16 @@ function ProjectWorkspacePage() {
                         {(credential.scopes ?? []).join(", ") || "general"}
                       </p>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      aria-label={`Remove ${credential.name ?? "credential"} from project`}
-                      onClick={() => remCredMut.mutate(credential.credential_id)}
-                    >
-                      <Trash2 className="size-3.5" />
-                    </Button>
+                    {credential.can_remove ? (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        aria-label={`Remove ${credential.name ?? "credential"} from project`}
+                        onClick={() => remCredMut.mutate(credential.credential_id)}
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    ) : null}
                   </div>
                 ),
               )
