@@ -103,6 +103,7 @@ export const resourceCategories = [
   { value: "skill", label: "Skills" },
   { value: "mcp", label: "MCP" },
   { value: "tool", label: "Tools" },
+  { value: "guide", label: "Guides" },
   { value: "plugin", label: "Plugins" },
   { value: "agent", label: "Agents" },
   { value: "prompt", label: "Prompts" },
