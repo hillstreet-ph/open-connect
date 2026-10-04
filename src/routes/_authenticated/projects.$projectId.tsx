@@ -442,8 +442,8 @@ function ProjectWorkspacePage() {
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Connections · MCP · AI Gateway</CardTitle>
           <CardDescription>
-            The account owner explicitly shares this connection with the project. Members can invoke its provider tools through the broker; credentials and connection settings stay
-            private.
+            The account owner explicitly shares this connection with the project. Members can invoke
+            its provider tools through the broker; credentials and connection settings stay private.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
