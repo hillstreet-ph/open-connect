@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, Loader2, Send, ShieldCheck, ShieldOff } from "lucide-react";
+import { Loader2, Send, ShieldCheck, ShieldOff } from "lucide-react";
 import { toast } from "sonner";
 import { listResourcesForReview, updateResourceReview } from "@/lib/resource-review.functions";
 import { Badge } from "@/components/ui/badge";
