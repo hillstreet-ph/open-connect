@@ -92,8 +92,7 @@ function OrgsPage() {
   });
 
   const removeMutation = useMutation({
-    mutationFn: (userId: string) =>
-      removeMember({ data: { organizationId: activeOrgId, userId } }),
+    mutationFn: (userId: string) => removeMember({ data: { organizationId: activeOrgId, userId } }),
     onSuccess: () => {
       toast.success("Organization and project access removed");
       void qc.invalidateQueries({ queryKey: ["organization-people", activeOrgId] });
@@ -213,7 +212,8 @@ function OrgsPage() {
                 <div>
                   <h3 className="font-medium">Groups</h3>
                   <p className="text-xs text-muted-foreground">
-                    Use groups to organize teams. Project access is shared separately; group membership does not grant it.
+                    Use groups to organize teams. Project access is shared separately; group
+                    membership does not grant it.
                   </p>
                 </div>
                 <div className="flex gap-2">
