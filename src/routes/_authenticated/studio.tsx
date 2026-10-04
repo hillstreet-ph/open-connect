@@ -17,7 +17,7 @@ export const Route = createFileRoute("/_authenticated/studio")({
       { title: "Studio — Open-Connect" },
       {
         name: "description",
-        content: "Create and publish Open-Connect packages, context, and Toolkits.",
+        content: "Create packages, prepare reusable context, review resources, and build Toolkits in Open-Connect.",
       },
       { name: "robots", content: "noindex" },
     ],
@@ -74,11 +74,11 @@ function StudioPage() {
             {roleLabel(primary)}
           </Badge>
         </div>
-        <h1 className="mt-3 text-2xl font-semibold sm:text-3xl">Create and publish</h1>
+        <h1 className="mt-3 text-2xl font-semibold sm:text-3xl">Studio</h1>
         <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-          Studio is the single creation workspace. Upload packages, create reusable context, and
-          assemble Toolkits here. Manage published items and assign them to projects from their
-          sidebar library pages.
+          Create package drafts, reusable context, and Toolkits here. Developers and Admins can
+          review resources before they are verified and published. Manage library items and assign
+          them to projects from their library pages.
         </p>
         <div className="mt-5 flex flex-wrap gap-2">
           <Button asChild size="sm" variant="outline">
@@ -121,7 +121,7 @@ function StudioPage() {
           icon={PackageOpen}
           label="Packages & capabilities"
           title="Upload once, publish once"
-          description="One uploader handles every package type. Automatic detection fills the metadata, while the catalog type remains editable before publishing."
+          description="Upload a package draft. Automatic detection fills the metadata, and the catalog type remains editable before review and publishing."
         />
         <div className="flex flex-wrap gap-2">
           {packageTypes.map((type) => (
