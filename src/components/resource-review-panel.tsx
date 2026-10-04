@@ -51,12 +51,7 @@ export function ResourceReviewPanel() {
       <Card>
         <CardContent className="p-5 text-sm">
           <p role="alert">The review queue could not be loaded.</p>
-          <Button
-            className="mt-3"
-            size="sm"
-            variant="outline"
-            onClick={() => void queue.refetch()}
-          >
+          <Button className="mt-3" size="sm" variant="outline" onClick={() => void queue.refetch()}>
             Try again
           </Button>
         </CardContent>
@@ -96,8 +91,9 @@ export function ResourceReviewPanel() {
                 {resource.description || "No description"}
               </p>
               <p className="text-xs text-muted-foreground">
-                {resource.source || "Source not listed"}{" "}
-                · {resource.license || "License not listed"}
+                {resource.source || "Source not listed"}
+                {" · "}
+                {resource.license || "License not listed"}
                 {resource.version ? ` · v${resource.version}` : ""}
               </p>
               {resource.source_url || resource.repository_url ? (
@@ -156,11 +152,7 @@ export function ResourceReviewPanel() {
                   })
                 }
                 disabled={update.isPending || (!resource.verified && !resource.published)}
-                title={
-                  !resource.verified && !resource.published
-                    ? "Verify before publishing"
-                    : undefined
-                }
+                title={!resource.verified && !resource.published ? "Verify before publishing" : undefined}
               >
                 {resource.published ? (
                   <ShieldOff className="mr-2 size-4" />
