@@ -86,9 +86,9 @@ function ProjectAccessPage() {
         <CardHeader>
           <CardTitle className="text-base">Project collaborators</CardTitle>
           <CardDescription>
-            Assign only active HillStreet organization members. Member can use resources explicitly shared
-            with the project. Developer can build project resources and tools. Admin can manage
-            project access, installs, and environments.
+            Assign only active HillStreet organization members. Member can use resources explicitly
+            shared with the project. Developer can build project resources and tools. Admin can
+            manage project access, installs, and environments.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
