@@ -1,11 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const PROJECT_ROLES = ["manager", "developer", "viewer"] as const;
 type ProjectRole = (typeof PROJECT_ROLES)[number];
 
-async function requireProjectManager(supabase: any, userId: string, projectId: string) {
+async function requireProjectManager(supabase: SupabaseClient, userId: string, projectId: string) {
   if (!projectId) throw new Error("projectId required");
 
   const { data: project, error: projectError } = await supabase
@@ -88,10 +89,10 @@ export const listProjectAccess = createServerFn({ method: "GET" })
       (profilesResult.data ?? []).map((row: { id: string; display_name: string | null; avatar_url: string | null }) => [
         row.id,
         row,
-      ]),
+      ] as const),
     );
     const roles = new Map(
-      (assigned ?? []).map((row: { user_id: string; role: ProjectRole }) => [row.user_id, row.role]),
+      (assigned ?? []).map((row: { user_id: string; role: ProjectRole }) => [row.user_id, row.role] as const),
     );
     return {
       project,
