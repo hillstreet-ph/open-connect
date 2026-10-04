@@ -161,7 +161,14 @@ export const listProjectCloudConnections = createServerFn({ method: "GET" })
     if (ownResult.error) throw new Error(ownResult.error.message);
     const available = new Map<
       string,
-      { id: string; provider: string; display_name: string; status: string; scopes: string[]; access: string }
+      {
+        id: string;
+        provider: string;
+        display_name: string;
+        status: string;
+        scopes: string[];
+        access: string;
+      }
     >();
     for (const connection of ownResult.data ?? []) {
       available.set(connection.id, { ...connection, access: "Personal" });
