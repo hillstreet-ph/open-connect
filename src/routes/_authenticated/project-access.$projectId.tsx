@@ -86,9 +86,9 @@ function ProjectAccessPage() {
         <CardHeader>
           <CardTitle className="text-base">Project collaborators</CardTitle>
           <CardDescription>
-            Assign only active HillStreet organization members. Viewer is read-only, Developer can
-            build project resources and tools, and Manager can manage project members, installs, and
-            environments.
+            Assign only active HillStreet organization members. Member can use resources explicitly
+            shared with the project. Developer can build project resources and tools. Admin can
+            manage project access, installs, and environments.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -98,7 +98,7 @@ function ProjectAccessPage() {
             <div role="alert" className="rounded-md border border-destructive/30 p-3 text-sm">
               <p>Could not load project access.</p>
               <p className="mt-1 text-muted-foreground">
-                Project managers and organization admins can manage collaborators.
+                Project admins and organization admins can manage collaborators.
               </p>
             </div>
           ) : (access.data?.members.length ?? 0) === 0 ? (
@@ -132,9 +132,9 @@ function ProjectAccessPage() {
                     }
                   >
                     <option value="">No project access</option>
-                    <option value="viewer">Viewer</option>
+                    <option value="member">Member</option>
                     <option value="developer">Developer</option>
-                    <option value="manager">Manager</option>
+                    <option value="admin">Admin</option>
                   </select>
                   <div className="flex gap-2">
                     <Button

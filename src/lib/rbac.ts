@@ -2,7 +2,7 @@ import type { Database } from "@/integrations/supabase/types";
 
 export type AppRole = Database["public"]["Enums"]["app_role"];
 
-/** Higher index = more privilege. Owner and Publisher remain only for legacy data. */
+/** Higher index = more privilege. Legacy Owner and Publisher values are converted during migration. */
 export const ROLE_RANK: Record<AppRole, number> = {
   user: 1,
   developer: 2,
@@ -104,7 +104,7 @@ export const KEY_SCOPE_DOCS: { scope: string; meaning: string }[] = [
   { scope: "agents:invoke", meaning: "Run agent sessions and toolkits" },
   {
     scope: "control:write",
-    meaning: "Run owner/admin autonomous control operations with policy gates",
+    meaning: "Run Admin-authorized control operations with policy gates",
   },
 ];
 
@@ -122,7 +122,10 @@ export function can(roles: AppRole[], capability: Capability): boolean {
 }
 
 export function roleLabel(role: AppRole): string {
-  return role === "user" ? "Member" : role.charAt(0).toUpperCase() + role.slice(1);
+  if (role === "user") return "Member";
+  if (role === "owner") return "Admin";
+  if (role === "publisher") return "Developer";
+  return role.charAt(0).toUpperCase() + role.slice(1);
 }
 
 /** UI mirrors existing server revoke rules; the server remains authoritative. */
@@ -133,7 +136,6 @@ export function canRevokeRole(
   targetRole: AppRole,
 ): boolean {
   if (!hasRole(roles, "admin")) return false;
-  if (targetRole === "owner" && !hasRole(roles, "owner")) return false;
-  if (actorId === targetId && targetRole === "admin" && !hasRole(roles, "owner")) return false;
+  if (actorId === targetId && targetRole === "admin") return false;
   return true;
 }

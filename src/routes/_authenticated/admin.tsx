@@ -32,7 +32,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
       .select("role")
       .eq("user_id", data.user.id);
     const list = (roles ?? []).map((r) => r.role as AppRole);
-    const ok = list.includes("admin") || list.includes("owner");
+    const ok = list.includes("admin");
     if (!ok) throw redirect({ to: "/dashboard" });
   },
   component: AdminPage,
@@ -40,7 +40,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
 
 function AdminPage() {
   const queryClient = useQueryClient();
-  const { primary, isOwner, roles } = useRoles();
+  const { primary, roles } = useRoles();
   const { user } = useAuth();
   const listFn = useServerFn(listRoleAssignments);
   const assignFn = useServerFn(assignRole);
@@ -186,11 +186,9 @@ function AdminPage() {
                       }
                       aria-label={`Revoke ${roleLabel(row.role as AppRole)} role for ${row.email || "account"}`}
                       title={
-                        row.role === "owner" && !isOwner
-                          ? "Only owners can revoke this role"
-                          : row.user_id === user?.id && row.role === "admin" && !isOwner
-                            ? "You cannot revoke your own admin role"
-                            : "Revoke role"
+                        row.user_id === user?.id && row.role === "admin"
+                          ? "You cannot revoke your own admin role"
+                          : "Revoke role"
                       }
                     >
                       <Trash2 className="size-3.5" />

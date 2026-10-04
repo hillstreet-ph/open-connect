@@ -85,7 +85,7 @@
       "post": {
         "operationId": "writeOpenConnect",
         "summary": "Request an Open-Connect control operation",
-        "description": "Run a consequential owner/admin action. Open-Connect still enforces role, scope, approval, credential-reference, and production-policy checks. Never submit raw credentials.",
+        "description": "Run a consequential Admin action. Open-Connect still enforces role, scope, approval, credential-reference, and production-policy checks. Never submit raw credentials.",
         "x-openai-isConsequential": true,
         "security": [
           {

@@ -36,8 +36,8 @@ export const runCloudTool = createServerFn({ method: "POST" })
       .from("user_roles")
       .select("role")
       .eq("user_id", context.userId);
-    if (error || !roles?.some(({ role }) => role === "owner" || role === "admin")) {
-      throw new Error("Owner or administrator access is required to run cloud tools.");
+    if (error || !roles?.some(({ role }) => role === "admin")) {
+      throw new Error("Admin access is required to run cloud tools.");
     }
     const { listCustomMcpTools, callCustomMcpTool } = await import("@/lib/custom-mcp.server");
     const catalog = await listCustomMcpTools(context.userId, data.connectionId);

@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
@@ -77,8 +78,8 @@ async function requireOrganizationManager(
     .eq("user_id", userId)
     .maybeSingle();
   const role = (data as { role?: string } | null)?.role;
-  if (role !== "owner" && role !== "admin") {
-    throw new Error("Only organization owners and admins can manage people");
+  if (role !== "admin") {
+    throw new Error("Organization admin access is required to manage people");
   }
 }
 
@@ -87,6 +88,7 @@ export const listOrganizationPeople = createServerFn({ method: "GET" })
   .validator((input: { organizationId: string }) => ({ organizationId: input.organizationId }))
   .handler(async ({ data, context }) => {
     if (!data.organizationId) throw new Error("organizationId required");
+    await requireOrganizationManager(context.supabase, data.organizationId, context.userId);
     const [members, groups, groupMembers, invitations] = await Promise.all([
       context.supabase
         .from("organization_members")
@@ -113,6 +115,13 @@ export const listOrganizationPeople = createServerFn({ method: "GET" })
       if (result.error) throw new Error(result.error.message);
     }
     const memberIds = (members.data ?? []).map((member) => member.user_id);
+    const memberEmails = await Promise.all(
+      memberIds.map(async (userId) => {
+        const { data } = await supabaseAdmin.auth.admin.getUserById(userId);
+        return [userId, data.user?.email ?? ""] as const;
+      }),
+    );
+    const emailsById = new Map(memberEmails);
     const profiles = memberIds.length
       ? await context.supabase
           .from("profiles")
@@ -125,6 +134,10 @@ export const listOrganizationPeople = createServerFn({ method: "GET" })
       members: (members.data ?? []).map((member) => ({
         ...member,
         profile: profilesById.get(member.user_id) ?? null,
+        email: emailsById.get(member.user_id) ?? "",
+        groupIds: (groupMembers.data ?? [])
+          .filter((item) => item.user_id === member.user_id)
+          .map((item) => item.group_id),
       })),
       groups: (groups.data ?? []).map((group) => ({
         ...group,
@@ -164,7 +177,7 @@ export const inviteOrganizationMember = createServerFn({ method: "POST" })
     (input: {
       organizationId: string;
       email: string;
-      role: "admin" | "member";
+      role: "admin" | "developer" | "member";
       groupId?: string;
     }) => ({
       organizationId: input.organizationId,
@@ -213,6 +226,14 @@ export const inviteOrganizationMember = createServerFn({ method: "POST" })
     if (memberError) throw new Error(memberError.message);
 
     if (data.groupId) {
+      const { data: group, error: lookupGroupError } = await context.supabase
+        .from("organization_groups")
+        .select("id")
+        .eq("id", data.groupId)
+        .eq("organization_id", data.organizationId)
+        .maybeSingle();
+      if (lookupGroupError) throw new Error(lookupGroupError.message);
+      if (!group) throw new Error("Choose a group from this organization");
       const { error: groupError } = await context.supabase
         .from("organization_group_members")
         .upsert(
@@ -390,7 +411,7 @@ export const createProject = createServerFn({ method: "POST" })
     await context.supabase.from("project_members").insert({
       project_id: project.id,
       user_id: context.userId,
-      role: "manager",
+      role: "admin",
     });
 
     await context.supabase.from("environments").insert(
@@ -452,6 +473,35 @@ export const deleteProject = createServerFn({ method: "POST" })
     return { id: project.id, name: project.name };
   });
 
+async function requireProjectScopeAdmin(
+  supabase: SupabaseClient,
+  projectId: string,
+  userId: string,
+) {
+  const { data: project } = await supabase
+    .from("projects")
+    .select("organization_id")
+    .eq("id", projectId)
+    .maybeSingle();
+  if (!project) throw new Error("Project not found or access denied");
+  const { data: orgMembership } = await supabase
+    .from("organization_members")
+    .select("role")
+    .eq("organization_id", project.organization_id)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (orgMembership?.role === "admin") return;
+  const { data: projectMembership } = await supabase
+    .from("project_members")
+    .select("role")
+    .eq("project_id", projectId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (projectMembership?.role !== "admin") {
+    throw new Error("Project admin or organization admin required");
+  }
+}
+
 export const renameProject = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: { projectId: string; name: string }) => ({
@@ -466,7 +516,7 @@ export const renameProject = createServerFn({ method: "POST" })
       .eq("id", data.projectId)
       .single();
     if (projectError || !project) throw new Error("Project not found or access denied");
-    await requireOrganizationManager(context.supabase, project.organization_id, context.userId);
+    await requireProjectScopeAdmin(context.supabase, project.id, context.userId);
 
     const { data: updated, error } = await context.supabase
       .from("projects")
@@ -487,4 +537,205 @@ export const renameProject = createServerFn({ method: "POST" })
       evidence: { previous_name: project.name, new_name: data.name },
     });
     return updated;
+  });
+
+export const updateOrganizationMemberRole = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { organizationId: string; userId: string; role: string }) => ({
+    organizationId: input.organizationId,
+    userId: input.userId,
+    role: input.role as "admin" | "developer" | "member",
+  }))
+  .handler(async ({ data, context }) => {
+    if (!data.organizationId || !data.userId) throw new Error("Organization and member required");
+    if (!["admin", "developer", "member"].includes(data.role)) {
+      throw new Error("Choose Admin, Developer, or Member");
+    }
+    await requireOrganizationManager(context.supabase, data.organizationId, context.userId);
+    const { data: current, error: currentError } = await context.supabase
+      .from("organization_members")
+      .select("role")
+      .eq("organization_id", data.organizationId)
+      .eq("user_id", data.userId)
+      .maybeSingle();
+    if (currentError) throw new Error(currentError.message);
+    if (!current) throw new Error("Organization member not found");
+    if (current.role === "admin" && data.role !== "admin") {
+      const { count, error } = await context.supabase
+        .from("organization_members")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", data.organizationId)
+        .eq("role", "admin");
+      if (error) throw new Error(error.message);
+      if ((count ?? 0) <= 1) throw new Error("The organization must keep at least one admin");
+    }
+    const { error } = await context.supabase
+      .from("organization_members")
+      .update({ role: data.role })
+      .eq("organization_id", data.organizationId)
+      .eq("user_id", data.userId);
+    if (error) throw new Error(error.message);
+    await context.supabase
+      .from("organization_invitations")
+      .update({ role: data.role, updated_at: new Date().toISOString() })
+      .eq("organization_id", data.organizationId)
+      .eq("invited_user_id", data.userId);
+    return { ok: true };
+  });
+
+export const removeOrganizationMember = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { organizationId: string; userId: string }) => ({
+    organizationId: input.organizationId,
+    userId: input.userId,
+  }))
+  .handler(async ({ data, context }) => {
+    if (!data.organizationId || !data.userId) throw new Error("Organization and member required");
+    await requireOrganizationManager(context.supabase, data.organizationId, context.userId);
+    const { data: member, error: memberError } = await context.supabase
+      .from("organization_members")
+      .select("role")
+      .eq("organization_id", data.organizationId)
+      .eq("user_id", data.userId)
+      .maybeSingle();
+    if (memberError) throw new Error(memberError.message);
+    if (!member) throw new Error("Organization member not found");
+    if (member.role === "admin") {
+      const { count, error } = await context.supabase
+        .from("organization_members")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", data.organizationId)
+        .eq("role", "admin");
+      if (error) throw new Error(error.message);
+      if ((count ?? 0) <= 1) throw new Error("The organization must keep at least one admin");
+    }
+    const { data: projects, error: projectsError } = await context.supabase
+      .from("projects")
+      .select("id")
+      .eq("organization_id", data.organizationId);
+    if (projectsError) throw new Error(projectsError.message);
+    const projectIds = (projects ?? []).map((project) => project.id);
+    if (projectIds.length) {
+      const { error } = await context.supabase
+        .from("project_members")
+        .delete()
+        .eq("user_id", data.userId)
+        .in("project_id", projectIds);
+      if (error) throw new Error(error.message);
+    }
+    const { error: groupError } = await context.supabase
+      .from("organization_group_members")
+      .delete()
+      .eq("organization_id", data.organizationId)
+      .eq("user_id", data.userId);
+    if (groupError) throw new Error(groupError.message);
+    const { error: invitationError } = await context.supabase
+      .from("organization_invitations")
+      .delete()
+      .eq("organization_id", data.organizationId)
+      .eq("invited_user_id", data.userId)
+      .eq("status", "pending");
+    if (invitationError) throw new Error(invitationError.message);
+    const { error } = await context.supabase
+      .from("organization_members")
+      .delete()
+      .eq("organization_id", data.organizationId)
+      .eq("user_id", data.userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const setOrganizationMemberGroups = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { organizationId: string; userId: string; groupIds: string[] }) => ({
+    organizationId: input.organizationId,
+    userId: input.userId,
+    groupIds: [...new Set(input.groupIds ?? [])],
+  }))
+  .handler(async ({ data, context }) => {
+    if (!data.organizationId || !data.userId) throw new Error("Organization and member required");
+    await requireOrganizationManager(context.supabase, data.organizationId, context.userId);
+    const { data: member, error: memberError } = await context.supabase
+      .from("organization_members")
+      .select("user_id")
+      .eq("organization_id", data.organizationId)
+      .eq("user_id", data.userId)
+      .maybeSingle();
+    if (memberError) throw new Error(memberError.message);
+    if (!member) throw new Error("Group assignment requires an active organization member");
+    const { data: groups, error: groupsError } = await context.supabase
+      .from("organization_groups")
+      .select("id")
+      .eq("organization_id", data.organizationId)
+      .in("id", data.groupIds.length ? data.groupIds : ["00000000-0000-0000-0000-000000000000"]);
+    if (groupsError) throw new Error(groupsError.message);
+    if ((groups ?? []).length !== data.groupIds.length) {
+      throw new Error("One or more selected groups are outside this organization");
+    }
+    const { data: existing, error: existingError } = await context.supabase
+      .from("organization_group_members")
+      .select("group_id")
+      .eq("organization_id", data.organizationId)
+      .eq("user_id", data.userId);
+    if (existingError) throw new Error(existingError.message);
+    const desired = new Set(data.groupIds);
+    for (const groupId of data.groupIds) {
+      const { error } = await context.supabase.from("organization_group_members").upsert(
+        {
+          organization_id: data.organizationId,
+          group_id: groupId,
+          user_id: data.userId,
+          added_by: context.userId,
+        },
+        { onConflict: "group_id,user_id" },
+      );
+      if (error) throw new Error(error.message);
+    }
+    for (const row of existing ?? []) {
+      if (desired.has(row.group_id)) continue;
+      const { error } = await context.supabase
+        .from("organization_group_members")
+        .delete()
+        .eq("organization_id", data.organizationId)
+        .eq("group_id", row.group_id)
+        .eq("user_id", data.userId);
+      if (error) throw new Error(error.message);
+    }
+    return { ok: true };
+  });
+
+export const renameOrganizationGroup = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { organizationId: string; groupId: string; name: string }) => ({
+    organizationId: input.organizationId,
+    groupId: input.groupId,
+    name: input.name.trim().slice(0, 80),
+  }))
+  .handler(async ({ data, context }) => {
+    if (!data.name) throw new Error("Group name required");
+    await requireOrganizationManager(context.supabase, data.organizationId, context.userId);
+    const { error } = await context.supabase
+      .from("organization_groups")
+      .update({ name: data.name })
+      .eq("organization_id", data.organizationId)
+      .eq("id", data.groupId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const deleteOrganizationGroup = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { organizationId: string; groupId: string }) => ({
+    organizationId: input.organizationId,
+    groupId: input.groupId,
+  }))
+  .handler(async ({ data, context }) => {
+    await requireOrganizationManager(context.supabase, data.organizationId, context.userId);
+    const { error } = await context.supabase
+      .from("organization_groups")
+      .delete()
+      .eq("organization_id", data.organizationId)
+      .eq("id", data.groupId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });

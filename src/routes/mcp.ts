@@ -262,7 +262,7 @@ const PLATFORM_TOOLS: McpTool[] = [
   },
   {
     name: "e2b_create_sandbox",
-    description: "Create an isolated E2B sandbox. Owner/admin and tools:invoke are required.",
+    description: "Create an isolated E2B sandbox. Admin and tools:invoke are required.",
     inputSchema: {
       type: "object",
       properties: {
@@ -284,7 +284,7 @@ const PLATFORM_TOOLS: McpTool[] = [
   {
     name: "e2b_kill_sandbox",
     description:
-      "Terminate one E2B sandbox. Requires explicit confirm=true and owner/admin write access.",
+      "Terminate one E2B sandbox. Requires explicit confirm=true and admin write access.",
     inputSchema: {
       type: "object",
       properties: {
@@ -326,7 +326,7 @@ const PLATFORM_TOOLS: McpTool[] = [
   {
     name: "hubstaff_admin_request",
     description:
-      "Call an authorized Hubstaff v2 endpoint. Writes require owner/admin access; DELETE also requires confirm=true.",
+      "Call an authorized Hubstaff v2 endpoint. Writes require admin access; DELETE also requires confirm=true.",
     inputSchema: {
       type: "object",
       properties: {
@@ -477,7 +477,7 @@ const PLATFORM_TOOLS: McpTool[] = [
   {
     name: "install_capability",
     description:
-      "Request installation of an approved capability as owner/admin. Returns unsupported until a verified provider executor is available.",
+      "Request installation of an approved capability as admin. Returns unsupported until a verified provider executor is available.",
     inputSchema: {
       type: "object",
       properties: {
@@ -559,13 +559,13 @@ async function assertProjectAccess(key: AuthedKey, projectId: string) {
 
 async function requireControlWrite(key: AuthedKey) {
   const roles = await loadRoles(key.userId);
-  const authorizedRole = roles.includes("owner") || roles.includes("admin");
+  const authorizedRole = roles.includes("admin");
   const authorizedScope =
     hasScope(key, "control:write") ||
     hasScope(key, "tools:invoke") ||
     hasScope(key, "connections:invoke");
   if (!authorizedRole || !authorizedScope)
-    throw new Error("Owner/admin role and control write scope required.");
+    throw new Error("Admin role and control write scope required.");
   return roles;
 }
 
