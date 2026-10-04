@@ -57,7 +57,7 @@ function AdminPage() {
   const assignMutation = useMutation({
     mutationFn: () => assignFn({ data: { email, role } }),
     onSuccess: () => {
-      toast.success(`Assigned ${role}`);
+      toast.success(`Assigned ${roleLabel(role)}`);
       setEmail("");
       void queryClient.invalidateQueries({ queryKey: ["role-assignments"] });
     },
@@ -93,9 +93,8 @@ function AdminPage() {
         <CardHeader>
           <CardTitle className="text-base">Assign role</CardTitle>
           <CardDescription>
-            Manage platform access for members, developers, publishers, admins, and owners.
-            Organization and project memberships are managed separately. Only owners can manage the
-            owner role.
+            Assign Member, Admin, or Owner to existing accounts by email. Organization membership
+            and project access are managed separately. Only owners can grant or revoke Owner.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
