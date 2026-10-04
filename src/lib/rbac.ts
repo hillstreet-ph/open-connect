@@ -55,7 +55,7 @@ export const ROLE_SCOPE_MATRIX: {
 }[] = [
   {
     role: "user",
-    summary: "Client workspace — download, upload, keys, agents, orgs, full API surface",
+    summary: "Standard signed-in access to the workspace, personal resources, and assigned organization and project areas",
     can: [
       "Dashboard · Studio · Organizations",
       "Download / view marketplace skills",
@@ -77,7 +77,7 @@ export const ROLE_SCOPE_MATRIX: {
   },
   {
     role: "admin",
-    summary: "Verify packages and manage roles",
+    summary: "Manage organization members and permitted settings; verify packages and manage platform roles",
     can: ["Verify resources", "Manage roles", "Admin panel"],
   },
   {
