@@ -99,7 +99,12 @@ const megaFeatures = [
         to: "/integrations" as const,
       },
       { icon: Sparkles, title: "Models /v1", body: "OpenAI-compatible", to: "/models" as const },
-      { icon: Shield, title: "Role scopes", body: "Member · Developer · Admin", to: "/dashboard" as const },
+      {
+        icon: Shield,
+        title: "Role scopes",
+        body: "Member · Developer · Admin",
+        to: "/dashboard" as const,
+      },
       { icon: Wrench, title: "API keys", body: "Full autonomous scopes", to: "/api-keys" as const },
     ],
   },
