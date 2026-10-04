@@ -76,7 +76,10 @@ export const assignRole = createServerFn({ method: "POST" })
       .from("user_roles")
       .delete()
       .eq("user_id", userId)
-      .in("role", ASSIGNABLE_ROLES.filter((role) => role !== data.role));
+      .in(
+        "role",
+        ASSIGNABLE_ROLES.filter((role) => role !== data.role),
+      );
     if (cleanupError) throw new Error(cleanupError.message);
     return { ...row, email: data.email };
   });
