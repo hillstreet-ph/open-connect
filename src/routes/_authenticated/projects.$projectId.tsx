@@ -271,7 +271,8 @@ function ProjectWorkspacePage() {
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Memory · Knowledge</CardTitle>
           <CardDescription>
-            Shared project context assigned from Studio for this project's members. These records never publish to Marketplace.
+            Shared project context assigned from Studio for this project's members. These records
+            never publish to Marketplace.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-5 lg:grid-cols-2">
@@ -441,8 +442,9 @@ function ProjectWorkspacePage() {
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Connections · MCP · AI Gateway</CardTitle>
           <CardDescription>
-            The account owner explicitly shares this connection with the project. Members can invoke its
-            provider tools through the broker; credentials and connection settings stay private.
+            The account owner explicitly shares this connection with the project. Members can
+            invoke its provider tools through the broker; credentials and connection settings stay
+            private.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -506,7 +508,9 @@ function ProjectWorkspacePage() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          aria-label={`Remove ${c?.display_name || c?.provider || "connection"} from project`}
+                          aria-label={
+                            `Remove ${c?.display_name || c?.provider || "connection"} from project`
+                          }
                           onClick={() => row.connection_id && remConnMut.mutate(row.connection_id)}
                         >
                           <Trash2 className="size-3.5" />
@@ -525,8 +529,8 @@ function ProjectWorkspacePage() {
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Vault credential references</CardTitle>
           <CardDescription>
-            These references show metadata only and do not grant access to a connected account. Secret
-            values and TOTP seeds remain private to their owner.
+            These references show metadata only and do not grant access to a connected account.
+            Secret values and TOTP seeds remain private to their owner.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
