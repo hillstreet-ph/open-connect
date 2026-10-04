@@ -163,8 +163,8 @@ function MarketplaceContent() {
           </Badge>
           <h1 className="text-xl font-semibold">Marketplace</h1>
           <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-            Browse guides, skills, MCP, tools, plugins, agents, and prompts. Add packages to your personal
-            library, then share them with projects from the matching sidebar page.
+            Browse guides, skills, MCP, tools, plugins, agents, and prompts. Add packages to your
+            personal library, then share them with projects from the matching sidebar page.
           </p>
         </div>
         {!user ? (
