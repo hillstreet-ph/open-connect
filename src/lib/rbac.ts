@@ -78,8 +78,7 @@ export const ROLE_SCOPE_MATRIX: {
   },
   {
     role: "admin",
-    summary:
-      "Verify resources, manage platform roles, and access system administration",
+    summary: "Verify resources, manage platform roles, and access system administration",
     can: ["Verify resources", "Manage roles", "Admin panel"],
   },
   {
