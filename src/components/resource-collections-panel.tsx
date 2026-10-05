@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { FolderPlus, FolderOpen, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
-import { listProjects } from "@/lib/orgs.functions";
+import { listAssignableProjects } from "@/lib/resource-collections.functions";
 import {
   addResourcesToCollection,
   assignResourcesToProjects,
@@ -31,12 +31,12 @@ export function ResourceCollectionsPanel({
   const removeFromCollection = useServerFn(removeResourceFromCollection);
   const deleteCollection = useServerFn(deleteResourceCollection);
   const assign = useServerFn(assignResourcesToProjects);
-  const list = useServerFn(listProjects);
+  const list = useServerFn(listAssignableProjects);
   const collections = useQuery({
     queryKey: ["resource-collections"],
     queryFn: () => listCollections({}),
   });
-  const projects = useQuery({ queryKey: ["projects"], queryFn: () => list({}) });
+  const projects = useQuery({ queryKey: ["assignable-projects"], queryFn: () => list({}) });
   const [name, setName] = useState("");
   const [targetCollection, setTargetCollection] = useState("");
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
