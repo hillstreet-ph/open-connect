@@ -108,4 +108,6 @@ export const connectionCategories = [
   "Infrastructure",
   "Data",
   "Business",
+  "Automation",
+  "Security",
 ] as const;

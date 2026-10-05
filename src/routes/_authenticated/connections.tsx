@@ -154,8 +154,7 @@ function ConnectionsPage() {
   const results = useMemo(() => {
     const term = query.trim().toLowerCase();
     return (catalog.data ?? []).filter((app) => {
-      const hasWorkingConnection = !app.oauth || app.oauth_ready;
-      const matchesCat = (category === "All" || app.category === category) && hasWorkingConnection;
+      const matchesCat = category === "All" || app.category === category;
       const matchesTerm =
         !term ||
         app.display_name.toLowerCase().includes(term) ||
@@ -172,7 +171,10 @@ function ConnectionsPage() {
       list.push(app);
       map.set(app.category, list);
     }
-    const order = ["All", ...connectionCategories];
+    const order = [
+      "All",
+      ...new Set([...connectionCategories, ...results.map((app) => app.category)]),
+    ];
     return order
       .filter((c) => c !== "All" && map.has(c))
       .map((c) => ({ category: c, apps: map.get(c)! }));
@@ -229,7 +231,7 @@ function ConnectionsPage() {
             setQuery("");
           }}
         >
-          Browse app connectors
+          Show all connectors
         </Button>
       </div>
 
@@ -284,7 +286,7 @@ function ConnectionsPage() {
                       <div className="min-w-0">
                         <p className="font-semibold leading-snug">{app.display_name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {`${app.category} · ${app.connection_method === "managed_oauth" && app.oauth_ready ? "Composio" : "Official provider"}`}
+                          {`${app.category} · ${app.connection_method === "managed_oauth" ? "Composio" : app.connection_method === "native_oauth" ? "Official provider" : "API key"}`}
                         </p>
                       </div>
                     </div>
