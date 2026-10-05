@@ -131,8 +131,8 @@ function IntegrationsPage() {
       <section>
         <h2 className="text-lg font-semibold">AI clients and agents</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Connect agent clients to approved Open-Connect capabilities. Model providers are configured
-          separately.
+          Connect agent clients to approved Open-Connect capabilities. Model providers are
+          configured separately.
         </p>
         <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {aiClients.map((client) => (
