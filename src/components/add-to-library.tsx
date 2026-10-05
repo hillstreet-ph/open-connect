@@ -9,9 +9,11 @@ export function AddToLibraryButton({
   resourceId,
   collectionId,
   alreadyInLibrary = false,
+  resourceType,
 }: {
   resourceId: string;
   collectionId?: string;
+  resourceType?: string;
   alreadyInLibrary?: boolean;
 }) {
   const qc = useQueryClient();
@@ -19,7 +21,13 @@ export function AddToLibraryButton({
   const mutation = useMutation({
     mutationFn: () => add({ data: { resourceId, collectionId: collectionId || undefined } }),
     onSuccess: () => {
-      toast.success(collectionId ? "Added to Library and collection" : "Added to your Library");
+      toast.success(
+        resourceType === "skill"
+          ? "Added to your Library and Skills collection"
+          : collectionId
+            ? "Added to Library and collection"
+            : "Added to your Library",
+      );
       void qc.invalidateQueries({ queryKey: ["resource-library"] });
       void qc.invalidateQueries({ queryKey: ["project-resources"] });
       void qc.invalidateQueries({ queryKey: ["resource-collections"] });
