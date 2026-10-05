@@ -35,7 +35,7 @@ export function normalizeConnectionSetup(input: ConnectionSetupInput, app: Conne
   if (provider === "custom_mcp") {
     if (!endpointUrl) throw new Error("MCP endpoint URL is required");
     const parsed = new URL(endpointUrl);
-    if (parsed.protocol !== "https:" && parsed.hostname !== "localhost") {
+    if (parsed.protocol !== "https:") {
       throw new Error("MCP endpoint must use HTTPS");
     }
     const hostname = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, "");
