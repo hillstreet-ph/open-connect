@@ -57,7 +57,6 @@ export const appCategories: NavCategory[] = [
     items: [
       { to: "/resources", label: "Marketplace" },
       { to: "/library", label: "Resources" },
-      { to: "/others", label: "Others" },
     ],
   },
   {

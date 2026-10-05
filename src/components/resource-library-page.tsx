@@ -77,6 +77,8 @@ export function ResourceLibraryPage({
     const type = row.resources?.resource_type ?? "";
     return (
       type !== "guide" &&
+      type !== "app" &&
+      type !== "model" &&
       (!otherTypesOnly ||
         ![
           "plugin",
@@ -119,6 +121,14 @@ export function ResourceLibraryPage({
       <div>
         <h1 className="font-display text-lg font-semibold tracking-tight sm:text-xl">{title}</h1>
         <p className="mt-1 max-w-3xl text-xs text-muted-foreground">{description}</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button asChild size="sm" variant="outline">
+            <Link to="/connections">Connect apps</Link>
+          </Button>
+          <Button asChild size="sm" variant="outline">
+            <Link to="/models">AI Gateway</Link>
+          </Button>
+        </div>
       </div>
 
       {canManageCollections ? (

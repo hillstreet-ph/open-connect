@@ -294,10 +294,14 @@ test("every sidebar destination uses workspace chrome and matches page search la
   assert.equal(isAppPath("/tools-unrelated"), false);
 });
 
-test("Discover keeps only Marketplace, Resources, and other resource types", () => {
+test("Discover keeps Marketplace and Resources while resource types stay in the library", () => {
   assert.deepEqual(
     appCategories.find((group) => group.id === "discover")?.items.map((item) => item.label),
-    ["Marketplace", "Resources", "Others"],
+    ["Marketplace", "Resources"],
+  );
+  assert.equal(
+    flatAppNav().some((item) => item.to === "/others"),
+    false,
   );
 });
 
@@ -372,4 +376,22 @@ test("Resources provides Library, Collections, Memory, and Knowledge views", () 
   assert.match(source, /aria-pressed=\{category === filter\.value\}/);
   assert.match(source, /rounded-full border px-3 py-1\.5 text-xs transition-colors/);
   assert.doesNotMatch(source, /<select[\s\S]*?aria-label="Resource category"/);
+});
+
+test("selected library resources can be added while creating a collection", () => {
+  const sourceRoot = path.resolve(process.cwd(), "src");
+  const panel = readFileSync(
+    path.join(sourceRoot, "components/resource-collections-panel.tsx"),
+    "utf8",
+  );
+  const functions = readFileSync(
+    path.join(sourceRoot, "lib/resource-collections.functions.ts"),
+    "utf8",
+  );
+
+  assert.match(panel, /resourceIds: selectedResourceIds/);
+  assert.match(panel, /will be added to this collection/);
+  assert.match(panel, /Create & add/);
+  assert.ok(functions.includes("data.resourceIds.map"));
+  assert.match(functions, /const newIds/);
 });

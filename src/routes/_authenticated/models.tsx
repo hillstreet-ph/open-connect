@@ -265,7 +265,7 @@ function ModelsPage() {
               ) : (
                 <p className="text-sm text-muted-foreground">
                   {reconnectProviders.size > 0
-                    ? `A connected gateway is missing its saved credential reference (${[...reconnectProviders].join(", ")}). Reconnect its key below, then refresh the list.`
+                    ? `A connected gateway is missing its saved credential reference (${[...reconnectProviders].join(", ")}). Reconnect its credential below, then refresh the list.`
                     : "No individually priced free models were found. Auto still uses the OpenRouter free router when that connection is available. Connect OpenRouter or configure free pricing on your LiteLLM proxy, then refresh."}
                 </p>
               )}
@@ -361,10 +361,10 @@ function ModelsPage() {
                 }}
               >
                 {reconnectProviders.has(provider.id)
-                  ? "Reconnect key"
+                  ? "Connect again"
                   : connectedProviders.has(provider.id)
-                    ? "Update key"
-                    : "Add key"}
+                    ? "Manage connection"
+                    : "Connect"}
               </Button>
             </div>
             {activeProvider === provider.id ? (
@@ -380,14 +380,16 @@ function ModelsPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor={`provider-key-${provider.id}`}>Provider API key</Label>
+                  <Label htmlFor={`provider-key-${provider.id}`}>
+                    Provider API key or access token
+                  </Label>
                   <Input
                     id={`provider-key-${provider.id}`}
                     type="password"
                     autoComplete="off"
                     value={providerKey}
                     onChange={(event) => setProviderKey(event.target.value)}
-                    placeholder="Paste provider key"
+                    placeholder="Paste provider API key or token"
                     className="font-mono"
                   />
                 </div>
