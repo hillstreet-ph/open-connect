@@ -1,3 +1,5 @@
+import { resourceCategories } from "./nav.ts";
+
 export const RESOURCE_CATEGORIES = [
   { type: "agent", label: "Agents" },
   { type: "skill", label: "Skills" },
@@ -56,4 +58,23 @@ export function groupResourcesByPurpose<T extends ProjectResourceRow>(rows: T[])
   return [...groups.values()].sort((a, b) =>
     a.type === "general" ? 1 : b.type === "general" ? -1 : a.label.localeCompare(b.label),
   );
+}
+
+/** Maps every library item into the same ordered type buckets used by Marketplace. */
+export function resourceCategoryForType(type: string | null | undefined) {
+  const category = resourceCategories.find((item) => item.value === type);
+  return category && category.value !== "all" ? category.value : "other";
+}
+
+export function groupResourcesByType<T extends ProjectResourceRow>(rows: T[]) {
+  return resourceCategories
+    .filter((category) => category.value !== "all")
+    .map((category) => ({
+      type: category.value,
+      label: category.label,
+      items: rows.filter(
+        (row) => resourceCategoryForType(row.resources?.resource_type) === category.value,
+      ),
+    }))
+    .filter((group) => group.items.length > 0);
 }

@@ -1,4 +1,8 @@
-import { groupResourcesByPurpose, resourcePurpose } from "@/lib/resource-categories";
+import {
+  groupResourcesByPurpose,
+  resourceCategoryForType,
+  resourcePurpose,
+} from "@/lib/resource-categories";
 import { WorkspaceShell } from "@/components/workspace-shell";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -32,21 +36,6 @@ export const Route = createFileRoute("/resources")({
   }),
   component: ResourcesPage,
 });
-
-const PACKAGE_TYPES = new Set([
-  "skill",
-  "mcp",
-  "tool",
-  "plugin",
-  "agent",
-  "prompt",
-  "app",
-  "model",
-  "toolkit",
-  "memory",
-  "knowledge",
-  "guide",
-]);
 
 function triggerBlobDownload(filename: string, content: string, mime: string) {
   const blob = new Blob([content], { type: mime });
@@ -94,7 +83,7 @@ function MarketplaceContent() {
         .order("featured", { ascending: false })
         .order("name");
       if (error) throw error;
-      return (data ?? []).filter((item) => PACKAGE_TYPES.has(item.resource_type));
+      return data ?? [];
     },
   });
 
@@ -132,7 +121,7 @@ function MarketplaceContent() {
   const results = useMemo(() => {
     const term = query.trim().toLowerCase();
     return (data ?? []).filter((item) => {
-      const matchesType = type === "all" || item.resource_type === type;
+      const matchesType = type === "all" || resourceCategoryForType(item.resource_type) === type;
       const matchesTerm =
         !term ||
         item.name.toLowerCase().includes(term) ||
