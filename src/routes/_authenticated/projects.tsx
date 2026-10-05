@@ -138,66 +138,59 @@ function ProjectsIndex() {
         </CardContent>
       </Card>
 
-      {access.isLoading ? (
-        <Card className="shadow-panel">
-          <CardContent className="py-6 text-sm text-muted-foreground">
-            Checking project permissions…
+      <div className={`grid gap-4 lg:grid-cols-2 ${access.data?.isAdmin ? "" : "hidden"}`}>
+        <Card className="shadow-panel lg:col-span-1">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">New project</CardTitle>
+            <CardDescription>e.g. Development · Business · Client X</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-2">
+              <Label>Organization</Label>
+              <Input value="hillstreet-ph" readOnly />
+            </div>
+            <div className="space-y-2">
+              <Label>Workspace</Label>
+              <Input value={activeWorkspace?.name ?? "HillStreet"} readOnly />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="proj-name">Project name</Label>
+              <Input
+                id="proj-name"
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+                placeholder="Development"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="proj-desc">Description (optional)</Label>
+              <Input
+                id="proj-desc"
+                value={projectDesc}
+                onChange={(e) => setProjectDesc(e.target.value)}
+                placeholder="Dev agents, sandbox OAuth, test vault"
+              />
+            </div>
+            <Button
+              disabled={
+                !organization.data?.id ||
+                !activeWorkspace?.id ||
+                !projectName.trim() ||
+                projectMutation.isPending
+              }
+              onClick={() => projectMutation.mutate()}
+            >
+              {projectMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <FolderKanban className="size-4" />
+              )}
+              Create project
+            </Button>
           </CardContent>
         </Card>
-      ) : access.data?.isAdmin ? (
-        <div className="grid gap-4 lg:grid-cols-2">
-          <Card className="shadow-panel lg:col-span-1">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">New project</CardTitle>
-              <CardDescription>e.g. Development · Business · Client X</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-2">
-                <Label>Organization</Label>
-                <Input value="hillstreet-ph" readOnly />
-              </div>
-              <div className="space-y-2">
-                <Label>Workspace</Label>
-                <Input value={activeWorkspace?.name ?? "HillStreet"} readOnly />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="proj-name">Project name</Label>
-                <Input
-                  id="proj-name"
-                  value={projectName}
-                  onChange={(e) => setProjectName(e.target.value)}
-                  placeholder="Development"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="proj-desc">Description (optional)</Label>
-                <Input
-                  id="proj-desc"
-                  value={projectDesc}
-                  onChange={(e) => setProjectDesc(e.target.value)}
-                  placeholder="Dev agents, sandbox OAuth, test vault"
-                />
-              </div>
-              <Button
-                disabled={
-                  !organization.data?.id ||
-                  !activeWorkspace?.id ||
-                  !projectName.trim() ||
-                  projectMutation.isPending
-                }
-                onClick={() => projectMutation.mutate()}
-              >
-                {projectMutation.isPending ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <FolderKanban className="size-4" />
-                )}
-                Create project
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      ) : (
+      </div>
+      {!access.isLoading && !access.data?.isAdmin ? (
         <Card className="shadow-panel">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Project creation is admin-managed</CardTitle>
@@ -207,7 +200,7 @@ function ProjectsIndex() {
             </CardDescription>
           </CardHeader>
         </Card>
-      )}
+      ) : null}
 
       <div>
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
