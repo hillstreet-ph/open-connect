@@ -145,6 +145,40 @@ const PLATFORM_TOOLS: McpTool[] = [
     },
   },
   {
+    name: "list_my_memory",
+    description:
+      "Read the authenticated user's private Memory library. When project_id is supplied, also include that user's memory explicitly stored in that accessible project. Without project_id, only personal memory is returned.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        project_id: { type: "string" },
+        limit: { type: "integer", minimum: 1, maximum: 200 },
+      },
+    },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
+  },
+  {
+    name: "list_my_knowledge",
+    description:
+      "Read the authenticated user's private Knowledge library. When project_id is supplied, also include that user's knowledge explicitly stored in that accessible project. Without project_id, only personal knowledge is returned.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        project_id: { type: "string" },
+        limit: { type: "integer", minimum: 1, maximum: 200 },
+      },
+    },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
+  },
+  {
     name: "list_workspace_projects",
     description: "List workspaces and projects permitted by this API key's organization scope.",
     inputSchema: { type: "object", properties: {} },
@@ -763,6 +797,8 @@ const TOOL_SCOPES: Record<string, string> = {
   open_connect_status: "mcp:connect",
   list_resources: "resources:read",
   list_personal_resources: "resources:read",
+  list_my_memory: "memory:read",
+  list_my_knowledge: "knowledge:read",
   list_workspace_projects: "resources:read",
   list_credential_metadata: "secrets:read",
   calculate: "mcp:connect",
@@ -1099,6 +1135,44 @@ export const Route = createFileRoute("/mcp")({
                 updated_at: item.updated_at,
               })),
               secret_values_exposed: false,
+            });
+          } else if (name === "list_my_memory" || name === "list_my_knowledge") {
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const requestedProject = String(args["project_id"] ?? key.projectId ?? "").trim();
+            if (key.projectId && requestedProject && requestedProject !== key.projectId) {
+              throw new Error("Key is restricted to a different project.");
+            }
+            if (requestedProject) await assertProjectAccess(key, requestedProject);
+            const limit = Math.min(200, Math.max(1, Math.floor(Number(args["limit"]) || 50)));
+            const isMemory = name === "list_my_memory";
+            const table = isMemory ? "memory_records" : "knowledge_items";
+            const select = isMemory
+              ? "id,project_id,title,content,memory_type,importance,pinned,tags,expires_at,created_at,updated_at"
+              : "id,project_id,title,content,source_type,source_url,status,tags,created_at,updated_at";
+            const readRows = async (projectId: string | null) => {
+              // Table names and selected columns are fixed above; the API key user id scopes every query.
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              let query = (supabaseAdmin as any)
+                .from(table)
+                .select(select)
+                .eq("user_id", key.userId)
+                .order("updated_at", { ascending: false })
+                .limit(limit);
+              query = projectId ? query.eq("project_id", projectId) : query.is("project_id", null);
+              if (!isMemory) query = query.neq("status", "archived");
+              const { data, error } = await query;
+              if (error) throw new Error(error.message);
+              return data ?? [];
+            };
+            const [personal, project] = await Promise.all([
+              readRows(null),
+              requestedProject ? readRows(requestedProject) : Promise.resolve([]),
+            ]);
+            result = textResult({
+              personal,
+              project,
+              project_id: requestedProject || null,
+              user_owned_only: true,
             });
           } else if (name === "list_personal_resources") {
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -1662,10 +1736,17 @@ export const Route = createFileRoute("/mcp")({
               note: "Use id with list_connection_tools and call_connection_tool for Custom MCP connections. Credential values are never returned.",
             });
           } else if (name === "list_models") {
+            const { resolveUserUpstreams, fetchMergedModelCatalog } =
+              await import("@/lib/gateway.server");
+            const configured = await resolveUserUpstreams(key.userId, false);
+            const { ids, upstreams, providers } = await fetchMergedModelCatalog(configured);
             result = textResult({
               endpoint: "https://open-connect.site/v1",
-              aliases: MODEL_ALIASES,
-              auth: "Bearer oc_live_…",
+              models: ids,
+              providers,
+              upstreams,
+              count: ids.length,
+              note: "Catalog uses the authenticated user's AI Gateway connections. Credential values are never returned.",
             });
           } else if (name?.startsWith("resource_")) {
             const match = await findResourceByToolName(name);
