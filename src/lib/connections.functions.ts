@@ -147,13 +147,6 @@ const CATALOG = [
     scopes: ["read:jira-work", "write:jira-work"],
     oauth: true,
   },
-  {
-    provider: "cursor",
-    display_name: "Cursor",
-    category: "Development",
-    scopes: ["mcp"],
-    oauth: false,
-  },
   // Communication
   {
     provider: "telegram",
