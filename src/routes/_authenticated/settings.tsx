@@ -25,13 +25,7 @@ import { ProfileAvatarBadge } from "@/components/user-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { profileDraftValue } from "@/lib/react-compat";
@@ -87,28 +81,16 @@ function SettingsPage() {
         userId: user.id,
         email: user.email ?? "",
         displayName:
-          profile?.display_name ||
-          (user.user_metadata?.display_name as string | undefined) ||
-          "",
+          profile?.display_name || (user.user_metadata?.display_name as string | undefined) || "",
         avatarUrl:
-          profile?.avatar_url ||
-          (user.user_metadata?.avatar_url as string | undefined) ||
-          "",
+          profile?.avatar_url || (user.user_metadata?.avatar_url as string | undefined) || "",
       };
     },
   });
 
   // Query refreshes must not overwrite an in-progress edit, and drafts belong to one user.
-  const displayName = profileDraftValue(
-    nameDraft,
-    data?.userId,
-    data?.displayName ?? "",
-  );
-  const avatarUrl = profileDraftValue(
-    avatarDraft,
-    data?.userId,
-    data?.avatarUrl ?? "",
-  );
+  const displayName = profileDraftValue(nameDraft, data?.userId, data?.displayName ?? "");
+  const avatarUrl = profileDraftValue(avatarDraft, data?.userId, data?.avatarUrl ?? "");
   function setDisplayName(value: string) {
     if (data?.userId) setNameDraft({ userId: data.userId, value });
   }
@@ -129,24 +111,15 @@ function SettingsPage() {
 
     setUploading(true);
     try {
-      const ext =
-        file.type === "image/png"
-          ? "png"
-          : file.type === "image/webp"
-            ? "webp"
-            : "jpg";
+      const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
       const path = `${data.userId}/avatar.${ext}`;
-      const { error: upError } = await supabase.storage
-        .from(AVATAR_BUCKET)
-        .upload(path, file, {
-          contentType: file.type,
-          upsert: true,
-        });
+      const { error: upError } = await supabase.storage.from(AVATAR_BUCKET).upload(path, file, {
+        contentType: file.type,
+        upsert: true,
+      });
       if (upError) throw upError;
 
-      const { data: pub } = supabase.storage
-        .from(AVATAR_BUCKET)
-        .getPublicUrl(path);
+      const { data: pub } = supabase.storage.from(AVATAR_BUCKET).getPublicUrl(path);
       setAvatarUrl(`${pub.publicUrl}?t=${Date.now()}`);
       toast.success("Photo uploaded — click Save changes");
     } catch (e) {
@@ -171,9 +144,7 @@ function SettingsPage() {
         avatar_url: avatarUrl.trim() || null,
         updated_at: new Date().toISOString(),
       };
-      const { error } = await supabase
-        .from("profiles")
-        .upsert(payload, { onConflict: "id" });
+      const { error } = await supabase.from("profiles").upsert(payload, { onConflict: "id" });
       if (error) throw error;
       await supabase.auth.updateUser({
         data: {
@@ -188,17 +159,14 @@ function SettingsPage() {
       void queryClient.invalidateQueries({ queryKey: ["header-profile"] });
       void queryClient.invalidateQueries({ queryKey: ["profile-dashboard"] });
     },
-    onError: (e) =>
-      toast.error(e instanceof Error ? e.message : "Could not save"),
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not save"),
   });
 
   const passwordMutation = useMutation({
     mutationFn: async () => {
       if (!data?.email) throw new Error("No email on account");
-      if (newPassword.length < 8)
-        throw new Error("New password must be at least 8 characters");
-      if (newPassword !== confirmPassword)
-        throw new Error("New passwords do not match");
+      if (newPassword.length < 8) throw new Error("New password must be at least 8 characters");
+      if (newPassword !== confirmPassword) throw new Error("New passwords do not match");
       if (!currentPassword) throw new Error("Enter your current password");
 
       const { error: verifyError } = await supabase.auth.signInWithPassword({
@@ -218,16 +186,14 @@ function SettingsPage() {
       setNewPassword("");
       setConfirmPassword("");
     },
-    onError: (e) =>
-      toast.error(e instanceof Error ? e.message : "Could not update password"),
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not update password"),
   });
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-14">
       <h1 className="text-3xl font-semibold">Settings</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Manage your profile, workspace access, connected apps, data, and
-        security.
+        Manage your profile, workspace access, connected apps, data, and security.
       </p>
 
       <Tabs defaultValue="profile" className="mt-8">
@@ -246,9 +212,7 @@ function SettingsPage() {
           <Card className="shadow-panel">
             <CardHeader>
               <CardTitle className="text-base">Profile</CardTitle>
-              <CardDescription>
-                Photo and display name shown in the account menu.
-              </CardDescription>
+              <CardDescription>Photo and display name shown in the account menu.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {isLoading || !data ? (
@@ -262,18 +226,14 @@ function SettingsPage() {
                       avatarUrl={avatarUrl}
                     />
                     <div className="min-w-0 flex-1 space-y-2">
-                      <p className="text-sm text-muted-foreground">
-                        {data.email}
-                      </p>
+                      <p className="text-sm text-muted-foreground">{data.email}</p>
                       <div className="flex flex-wrap gap-2">
                         <input
                           ref={fileRef}
                           type="file"
                           accept="image/png,image/jpeg,image/webp"
                           className="hidden"
-                          onChange={(e) =>
-                            void onPickPhoto(e.target.files?.[0] ?? null)
-                          }
+                          onChange={(e) => void onPickPhoto(e.target.files?.[0] ?? null)}
                         />
                         <Button
                           type="button"
@@ -290,12 +250,7 @@ function SettingsPage() {
                           {avatarUrl ? "Change photo" : "Upload photo"}
                         </Button>
                         {avatarUrl ? (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={removePhoto}
-                          >
+                          <Button type="button" variant="ghost" size="sm" onClick={removePhoto}>
                             <Trash2 className="mr-2 size-4" />
                             Remove photo
                           </Button>
@@ -315,10 +270,7 @@ function SettingsPage() {
                     />
                   </div>
 
-                  <Button
-                    onClick={() => saveMutation.mutate()}
-                    disabled={saveMutation.isPending}
-                  >
+                  <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
                     {saveMutation.isPending ? (
                       <Loader2 className="mr-2 size-4 animate-spin" />
                     ) : (
@@ -338,8 +290,8 @@ function SettingsPage() {
                 <KeyRound className="size-4" /> Change password
               </CardTitle>
               <CardDescription>
-                For email/password accounts. OAuth-only users should change
-                password with their provider.
+                For email/password accounts. OAuth-only users should change password with their
+                provider.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -377,9 +329,7 @@ function SettingsPage() {
               </div>
               <Button
                 onClick={() => passwordMutation.mutate()}
-                disabled={
-                  passwordMutation.isPending || !currentPassword || !newPassword
-                }
+                disabled={passwordMutation.isPending || !currentPassword || !newPassword}
               >
                 {passwordMutation.isPending ? (
                   <Loader2 className="mr-2 size-4 animate-spin" />

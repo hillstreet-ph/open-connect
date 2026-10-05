@@ -31,11 +31,7 @@ function routePaths() {
 
   return new Set(
     files
-      .filter(
-        (file) =>
-          /\.(ts|tsx)$/.test(file) &&
-          !["__root.tsx", "route.tsx"].includes(file),
-      )
+      .filter((file) => /\.(ts|tsx)$/.test(file) && !["__root.tsx", "route.tsx"].includes(file))
       .map((file) => file.replace(/\.(ts|tsx)$/, ""))
       .filter((file) => !file.includes("$") && file !== "README")
       .map((file) => (file === "index" ? "/" : `/${file}`)),
@@ -52,18 +48,13 @@ test("all navigation entries resolve to application routes", () => {
   ];
 
   for (const link of links) {
-    assert.ok(
-      routes.has(link.to),
-      `${link.label} points to missing route ${link.to}`,
-    );
+    assert.ok(routes.has(link.to), `${link.label} points to missing route ${link.to}`);
   }
 });
 
 test("category navigation has no duplicate destinations", () => {
   for (const categories of [publicCategories, appCategories]) {
-    const destinations = categories.flatMap((category) =>
-      category.items.map((item) => item.to),
-    );
+    const destinations = categories.flatMap((category) => category.items.map((item) => item.to));
     assert.equal(new Set(destinations).size, destinations.length);
   }
 });
@@ -80,14 +71,8 @@ test("Dashboard links to the canonical Studio uploader without duplicating it", 
 
 test("connection surfaces remain internal and separate from Marketplace", () => {
   const sourceRoot = path.resolve(process.cwd(), "src");
-  const sidebar = readFileSync(
-    path.join(sourceRoot, "components/app-sidebar.tsx"),
-    "utf8",
-  );
-  const userMenu = readFileSync(
-    path.join(sourceRoot, "components/user-menu.tsx"),
-    "utf8",
-  );
+  const sidebar = readFileSync(path.join(sourceRoot, "components/app-sidebar.tsx"), "utf8");
+  const userMenu = readFileSync(path.join(sourceRoot, "components/user-menu.tsx"), "utf8");
 
   for (const route of ["/connections", "/secrets", "/models"]) {
     assert.ok(sidebar.includes(route), "Missing connection route " + route);
@@ -113,62 +98,32 @@ test("connection surfaces remain internal and separate from Marketplace", () => 
   assert.ok(integrations.includes("inbound-integrations.functions"));
   assert.ok(integrations.includes("connections.functions"));
   assert.ok(integrations.includes("Remote MCP servers"));
-  assert.ok(
-    integrations.includes(
-      "section: integrationSections.includes(search.section",
-    ),
-  );
+  assert.ok(integrations.includes("section: integrationSections.includes(search.section"));
   for (const section of ["api-key", "apps", "ai-agents", "custom-mcp"]) {
     assert.ok(
       integrations.includes('integrationSection === "' + section + '"'),
       "Integration detail view is not isolated: " + section,
     );
   }
-  for (const section of [
-    'id="api-key"',
-    'id="apps"',
-    'id="ai-agents"',
-    'id="custom-mcp"',
-  ]) {
-    assert.ok(
-      integrations.includes(section),
-      "Missing integration section " + section,
-    );
+  for (const section of ['id="api-key"', 'id="apps"', 'id="ai-agents"', 'id="custom-mcp"']) {
+    assert.ok(integrations.includes(section), "Missing integration section " + section);
   }
 
   const inboundMigration = readFileSync(
-    path.resolve(
-      process.cwd(),
-      "supabase/migrations/20261005050000_inbound_integrations.sql",
-    ),
+    path.resolve(process.cwd(), "supabase/migrations/20261005050000_inbound_integrations.sql"),
     "utf8",
   );
-  assert.ok(
-    inboundMigration.includes(
-      "CREATE TABLE IF NOT EXISTS public.inbound_integrations",
-    ),
-  );
+  assert.ok(inboundMigration.includes("CREATE TABLE IF NOT EXISTS public.inbound_integrations"));
   assert.ok(inboundMigration.includes("Users manage own inbound integrations"));
   assert.ok(!inboundMigration.includes("REFERENCES public.app_connections"));
-  for (const route of [
-    "/resources",
-    "/connections",
-    "/mcp-servers",
-    "/api-keys",
-  ]) {
-    assert.ok(
-      !integrations.includes('to="' + route + '"'),
-      "Unexpected redirect to " + route,
-    );
+  for (const route of ["/resources", "/connections", "/mcp-servers", "/api-keys"]) {
+    assert.ok(!integrations.includes('to="' + route + '"'), "Unexpected redirect to " + route);
   }
 });
 
 test("Integrations follows Data & privacy in Settings and includes account keys", () => {
   const sourceRoot = path.resolve(process.cwd(), "src");
-  const userMenu = readFileSync(
-    path.join(sourceRoot, "components/user-menu.tsx"),
-    "utf8",
-  );
+  const userMenu = readFileSync(path.join(sourceRoot, "components/user-menu.tsx"), "utf8");
   const settings = readFileSync(
     path.join(sourceRoot, "routes/_authenticated/settings.tsx"),
     "utf8",
@@ -190,10 +145,7 @@ test("Integrations follows Data & privacy in Settings and includes account keys"
     ["AI Agents", "ai-agents"],
     ["Custom MCP", "custom-mcp"],
   ]) {
-    assert.ok(
-      settings.includes('title="' + title + '"'),
-      "Missing integration card " + title,
-    );
+    assert.ok(settings.includes('title="' + title + '"'), "Missing integration card " + title);
     assert.ok(
       settings.includes('section="' + hash + '"'),
       "Missing integration section selection " + hash,
@@ -221,10 +173,7 @@ test("Open-Connect exposes one HillStreet workspace with project-only creation",
     path.join(sourceRoot, "routes/_authenticated/projects.tsx"),
     "utf8",
   );
-  const switcher = readFileSync(
-    path.join(sourceRoot, "components/workspace-switcher.tsx"),
-    "utf8",
-  );
+  const switcher = readFileSync(path.join(sourceRoot, "components/workspace-switcher.tsx"), "utf8");
   const organizationFunctions = readFileSync(
     path.join(sourceRoot, "lib/orgs.functions.ts"),
     "utf8",
@@ -251,10 +200,7 @@ test("Projects can only select resources from the installed workspace library", 
   assert.match(projectPage, /Shared workspace library/);
   assert.doesNotMatch(projectPage, /Add from marketplace catalog/);
   assert.match(workspaceFunctions, /open-connect-personal-library/);
-  assert.match(
-    workspaceFunctions,
-    /Install this resource into your workspace library first/,
-  );
+  assert.match(workspaceFunctions, /Install this resource into your workspace library first/);
   assert.doesNotMatch(workspaceFunctions, /\.eq\("published", true\)/);
 });
 
@@ -270,10 +216,7 @@ test("Project deletion is confirmed, privileged, audited, and keeps library reso
   );
 
   assert.match(projectPage, /Delete project permanently\?/);
-  assert.match(
-    projectPage,
-    /Installed workspace-library resources are\s+not deleted/,
-  );
+  assert.match(projectPage, /Installed workspace-library resources are\s+not deleted/);
   assert.match(projectPage, /isAdmin/);
   assert.match(organizationFunctions, /requireOrganizationManager/);
   assert.match(organizationFunctions, /projects\.delete/);
@@ -291,10 +234,7 @@ test("Projects support audited renaming and metadata-only shared credentials", (
     "utf8",
   );
   const migration = readFileSync(
-    path.resolve(
-      process.cwd(),
-      "supabase/migrations/20260924040000_project_credential_scopes.sql",
-    ),
+    path.resolve(process.cwd(), "supabase/migrations/20260924040000_project_credential_scopes.sql"),
     "utf8",
   );
 
@@ -308,10 +248,7 @@ test("Projects support audited renaming and metadata-only shared credentials", (
 
 test("Memory and Knowledge stay private, searchable, and project-organized", () => {
   const sourceRoot = path.resolve(process.cwd(), "src");
-  const studio = readFileSync(
-    path.join(sourceRoot, "routes/_authenticated/studio.tsx"),
-    "utf8",
-  );
+  const studio = readFileSync(path.join(sourceRoot, "routes/_authenticated/studio.tsx"), "utf8");
   const memoryPage = readFileSync(
     path.join(sourceRoot, "routes/_authenticated/memory.tsx"),
     "utf8",
@@ -376,10 +313,7 @@ test("resource purposes combine catalog aliases without mixing types or losing u
     },
   ];
   assert.deepEqual(
-    groupResourcesByPurpose(rows).map(({ label, items }) => [
-      label,
-      items.map((row) => row.id),
-    ]),
+    groupResourcesByPurpose(rows).map(({ label, items }) => [label, items.map((row) => row.id)]),
     [
       ["Business", ["c"]],
       ["Customer Support", ["f"]],
@@ -395,9 +329,7 @@ test("every sidebar destination uses workspace chrome and matches page search la
     path.resolve(process.cwd(), "src/components/app-sidebar.tsx"),
     "utf8",
   );
-  const items = [
-    ...sidebar.matchAll(/to: "([^"\n]+)", label: "([^"\n]+)"/g),
-  ].map((match) => ({
+  const items = [...sidebar.matchAll(/to: "([^"\n]+)", label: "([^"\n]+)"/g)].map((match) => ({
     to: match[1],
     label: match[2],
   }));
@@ -409,28 +341,16 @@ test("every sidebar destination uses workspace chrome and matches page search la
       .sort(),
   );
   for (const item of items) {
-    assert.ok(
-      isAppPath(item.to),
-      `${item.to} must not show duplicate public chrome`,
-    );
-    assert.equal(
-      flatAppNav().find((nav) => nav.to === item.to)?.label,
-      item.label,
-    );
+    assert.ok(isAppPath(item.to), `${item.to} must not show duplicate public chrome`);
+    assert.equal(flatAppNav().find((nav) => nav.to === item.to)?.label, item.label);
   }
-  assert.equal(
-    isAppPath("/mcp"),
-    false,
-    "MCP protocol endpoint is not a workspace page",
-  );
+  assert.equal(isAppPath("/mcp"), false, "MCP protocol endpoint is not a workspace page");
   assert.equal(isAppPath("/tools-unrelated"), false);
 });
 
 test("Discover keeps Marketplace and Resources while resource types stay in the library", () => {
   assert.deepEqual(
-    appCategories
-      .find((group) => group.id === "discover")
-      ?.items.map((item) => item.label),
+    appCategories.find((group) => group.id === "discover")?.items.map((item) => item.label),
     ["Marketplace", "Resources"],
   );
   assert.equal(
@@ -441,9 +361,7 @@ test("Discover keeps Marketplace and Resources while resource types stay in the 
 
 test("Connections keeps Connectors, Credentials, and AI Gateway", () => {
   assert.deepEqual(
-    appCategories
-      .find((group) => group.id === "connections")
-      ?.items.map((item) => item.label),
+    appCategories.find((group) => group.id === "connections")?.items.map((item) => item.label),
     ["Connectors", "Credentials", "AI Gateway"],
   );
 });
@@ -451,17 +369,7 @@ test("Connections keeps Connectors, Credentials, and AI Gateway", () => {
 test("Marketplace and Resources expose only installable package categories", () => {
   assert.deepEqual(
     resourceCategories.map((category) => category.label),
-    [
-      "All",
-      "Skills",
-      "MCP",
-      "Tools",
-      "Plugins",
-      "Agents",
-      "Prompts",
-      "Toolkits",
-      "Others",
-    ],
+    ["All", "Skills", "MCP", "Tools", "Plugins", "Agents", "Prompts", "Toolkits", "Others"],
   );
 
   const groups = groupResourcesByType([
@@ -479,19 +387,13 @@ test("Marketplace and Resources expose only installable package categories", () 
 });
 
 test("Guides, apps, models, memory, and knowledge are excluded from Marketplace and the library list", () => {
-  const marketplace = readFileSync(
-    path.resolve(process.cwd(), "src/routes/resources.tsx"),
-    "utf8",
-  );
+  const marketplace = readFileSync(path.resolve(process.cwd(), "src/routes/resources.tsx"), "utf8");
   const library = readFileSync(
     path.resolve(process.cwd(), "src/components/resource-library-page.tsx"),
     "utf8",
   );
 
-  assert.match(
-    marketplace,
-    /\["guide", "app", "model", "memory", "knowledge"\]/,
-  );
+  assert.match(marketplace, /\["guide", "app", "model", "memory", "knowledge"\]/);
   assert.match(library, /\["guide", "app", "model", "memory", "knowledge"\]/);
   for (const type of ["guide", "app", "model", "memory", "knowledge"]) {
     assert.equal(
@@ -513,10 +415,7 @@ test("Resources provides Library, Collections, Memory, and Knowledge views", () 
   assert.match(source, /resourceCategories\.map\(\(filter\) =>/);
   assert.match(source, /aria-label="Filter resources by category"/);
   assert.match(source, /aria-pressed=\{category === filter\.value\}/);
-  assert.match(
-    source,
-    /rounded-full border px-3 py-1\.5 text-xs transition-colors/,
-  );
+  assert.match(source, /rounded-full border px-3 py-1\.5 text-xs transition-colors/);
   assert.doesNotMatch(source, /<select[\s\S]*?aria-label="Resource category"/);
 });
 
@@ -540,15 +439,9 @@ test("selected library resources can be added while creating a collection", () =
 
 test("Marketplace installs stay in the personal library and agent context reads are user scoped", () => {
   const sourceRoot = path.resolve(process.cwd(), "src");
-  const library = readFileSync(
-    path.join(sourceRoot, "lib/library.functions.ts"),
-    "utf8",
-  );
+  const library = readFileSync(path.join(sourceRoot, "lib/library.functions.ts"), "utf8");
   const mcp = readFileSync(path.join(sourceRoot, "routes/mcp.ts"), "utf8");
-  const scopes = readFileSync(
-    path.join(sourceRoot, "lib/access-profiles.ts"),
-    "utf8",
-  );
+  const scopes = readFileSync(path.join(sourceRoot, "lib/access-profiles.ts"), "utf8");
   const install = library.slice(
     library.indexOf("export const addResourceToLibrary"),
     library.indexOf("export const removeResourceFromLibrary"),
