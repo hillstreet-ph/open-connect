@@ -120,7 +120,6 @@ export const removeResourceFromLibrary = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-
 export const listResourceProjectAssignments = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
