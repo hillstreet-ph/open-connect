@@ -234,11 +234,13 @@ export function ResourceLibraryPage({
                         collection.toolkit_items.some((item) => item.resource_id === resource.id),
                       )
                       .map((collection) => collection.name);
-                    const projectNames = [...new Set(
-                      (assignments.data ?? [])
-                        .filter((assignment) => assignment.resourceId === resource.id)
-                        .map((assignment) => assignment.projectName),
-                    )];
+                    const projectNames = [
+                      ...new Set(
+                        (assignments.data ?? [])
+                          .filter((assignment) => assignment.resourceId === resource.id)
+                          .map((assignment) => assignment.projectName),
+                      ),
+                    ];
                     return (
                       <Card
                         key={resource.id}
