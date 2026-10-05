@@ -79,8 +79,8 @@ function ExplorePage() {
         <div>
           <h1 className="text-3xl font-semibold sm:text-4xl">Explore</h1>
           <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
-            Browse agent resources and tools, then bundle what your projects need into a Toolkit. Apps
-            and AI models are managed in their dedicated connection pages.
+            Browse agent resources and tools, then bundle what your projects need into a Toolkit.
+            Apps and AI models are managed in their dedicated connection pages.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
