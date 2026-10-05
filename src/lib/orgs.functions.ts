@@ -42,6 +42,25 @@ export const getCanonicalOrganization = createServerFn({ method: "GET" })
     return data;
   });
 
+/** Return the signed-in user's role in one organization for matching UI access gates. */
+export const getOrganizationAccess = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { organizationId: string }) => ({
+    organizationId: input.organizationId,
+  }))
+  .handler(async ({ data, context }) => {
+    if (!data.organizationId) throw new Error("organizationId required");
+    const { data: membership, error } = await context.supabase
+      .from("organization_members")
+      .select("role")
+      .eq("organization_id", data.organizationId)
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    const role = (membership as { role?: string } | null)?.role ?? null;
+    return { role, isAdmin: role === "admin" };
+  });
+
 export const createOrganization = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: { name: string }) => ({
