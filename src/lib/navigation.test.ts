@@ -321,24 +321,10 @@ test("Connections keeps Connectors, Credentials, and AI Gateway", () => {
   );
 });
 
-test("Marketplace and Resources retain resource types as ordered library categories", () => {
+test("Marketplace and Resources expose only installable package categories", () => {
   assert.deepEqual(
     resourceCategories.map((category) => category.label),
-    [
-      "All",
-      "Skills",
-      "MCP",
-      "Tools",
-      "Plugins",
-      "Agents",
-      "Prompts",
-      "Toolkits",
-      "Memory",
-      "Knowledge",
-      "Apps",
-      "Models",
-      "Others",
-    ],
+    ["All", "Skills", "MCP", "Tools", "Plugins", "Agents", "Prompts", "Toolkits", "Others"],
   );
 
   const groups = groupResourcesByType([
@@ -350,25 +336,26 @@ test("Marketplace and Resources retain resource types as ordered library categor
     groups.map((group) => [group.label, group.items.length]),
     [
       ["Skills", 1],
-      ["Models", 1],
-      ["Others", 1],
+      ["Others", 2],
     ],
   );
 });
 
-test("Guides are excluded from Marketplace and Resources", () => {
+test("Guides, apps, models, memory, and knowledge are excluded from Marketplace and the library list", () => {
   const marketplace = readFileSync(path.resolve(process.cwd(), "src/routes/resources.tsx"), "utf8");
   const library = readFileSync(
     path.resolve(process.cwd(), "src/components/resource-library-page.tsx"),
     "utf8",
   );
 
-  assert.match(marketplace, /item\.resource_type !== "guide"/);
-  assert.match(library, /type !== "guide"/);
-  assert.equal(
-    resourceCategories.some((category) => category.value === "guide"),
-    false,
-  );
+  assert.match(marketplace, /\["guide", "app", "model", "memory", "knowledge"\]/);
+  assert.match(library, /\["guide", "app", "model", "memory", "knowledge"\]/);
+  for (const type of ["guide", "app", "model", "memory", "knowledge"]) {
+    assert.equal(
+      resourceCategories.some((category) => category.value === type),
+      false,
+    );
+  }
 });
 
 test("Resources provides Library, Collections, Memory, and Knowledge views", () => {

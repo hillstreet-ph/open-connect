@@ -116,7 +116,9 @@ function MarketplaceContent() {
         .order("featured", { ascending: false })
         .order("name");
       if (error) throw error;
-      return (data ?? []).filter((item) => item.resource_type !== "guide");
+      return (data ?? []).filter(
+        (item) => !["guide", "app", "model", "memory", "knowledge"].includes(item.resource_type),
+      );
     },
   });
 
