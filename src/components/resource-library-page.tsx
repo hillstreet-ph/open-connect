@@ -7,10 +7,12 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Input } from "@/components/ui/input";
 import { groupResourcesByType, resourceCategoryForType } from "@/lib/resource-categories";
+import { resourceCategories } from "@/lib/nav";
 import { isSharedLibraryRow } from "@/lib/shared-resources";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 export function ResourceLibraryPage({
   resourceType,
@@ -57,7 +59,15 @@ export function ResourceLibraryPage({
         "knowledge",
       ].includes(row.resources?.resource_type ?? ""),
   );
-  const categories = groupResourcesByType(rows);
+  const counts: Record<string, number> = {
+    all: rows.filter((row) => row.resources).length,
+  };
+  for (const row of rows) {
+    if (!row.resources) continue;
+    const type = resourceCategoryForType(row.resources.resource_type);
+    counts[type] = (counts[type] ?? 0) + 1;
+  }
+
   const filtered = rows.filter((row) => {
     const resource = row.resources;
     return (
@@ -77,30 +87,44 @@ export function ResourceLibraryPage({
         <p className="mt-1 max-w-3xl text-xs text-muted-foreground">{description}</p>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Input
-          aria-label="Search resources"
-          placeholder="Search resources…"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          className="h-9 max-w-xs text-sm"
-        />
-        <select
-          aria-label="Resource category"
-          className="rounded-md border bg-background p-2 text-sm"
-          value={category}
-          onChange={(event) => setCategory(event.target.value)}
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <Input
+            aria-label="Search resources"
+            placeholder="Search resources…"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            className="h-9 max-w-xs text-sm"
+          />
+          <Button asChild size="sm" variant="outline">
+            <Link to="/resources">Browse Marketplace</Link>
+          </Button>
+        </div>
+        <div
+          role="group"
+          aria-label="Filter resources by category"
+          className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0"
         >
-          <option value="all">All categories ({rows.length})</option>
-          {categories.map((group) => (
-            <option key={group.type} value={group.type}>
-              {group.label} ({group.items.length})
-            </option>
+          {resourceCategories.map((filter) => (
+            <button
+              key={filter.value}
+              type="button"
+              aria-pressed={category === filter.value}
+              onClick={() => setCategory(filter.value)}
+              className={cn(
+                "shrink-0 rounded-full border px-3 py-1.5 text-xs transition-colors",
+                category === filter.value
+                  ? "border-primary/50 bg-primary/15 text-primary"
+                  : "border-border/70 text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {filter.label}
+              {counts[filter.value] != null ? (
+                <span className="ml-1 opacity-60">{counts[filter.value]}</span>
+              ) : null}
+            </button>
           ))}
-        </select>
-        <Button asChild size="sm" variant="outline">
-          <Link to="/resources">Browse Marketplace</Link>
-        </Button>
+        </div>
       </div>
       {resources.isLoading ? <p role="status">Loading resources…</p> : null}
       {groups.map((group) => (
