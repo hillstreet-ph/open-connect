@@ -1,13 +1,9 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
-  Bot,
   Monitor,
   Globe,
   Terminal,
   Smartphone,
-  Puzzle,
-  BookOpen,
-  Brain,
   Boxes,
   CalendarClock,
   FolderKanban,
@@ -16,9 +12,7 @@ import {
   LockKeyhole,
   Plug,
   Sparkles,
-  ScrollText,
   Workflow,
-  Wrench,
 } from "lucide-react";
 import {
   Sidebar,
@@ -48,8 +42,8 @@ type Item = {
 
 /**
  * Primary IA (locked):
- * Workspace switcher → Dashboard → Projects → Work → Discover → Cloud → Connections →
- * Plugins, Connectors, Credentials, and AI Gateway. Integrations are in Settings; API keys and account settings are in the user menu.
+ * Workspace switcher → Dashboard → Projects → Work → Marketplace/Resources → Cloud → Connections.
+ * Resource types and Memory/Knowledge are organized inside Resources; Integrations are in Settings.
  *
  * Organization settings live in the user menu; workspaces manage projects and environments.
  * System administration appears once for privileged roles in the shared menu.
@@ -77,19 +71,10 @@ const CLOUD: Item[] = [
 const DISCOVER: Item[] = [
   { to: "/resources", label: "Marketplace", icon: Boxes },
   { to: "/library", label: "Resources", icon: Boxes },
-  { to: "/agents", label: "Agents", icon: Bot },
-  { to: "/skills", label: "Skills", icon: Wrench },
-  { to: "/mcp-servers", label: "MCP", icon: Plug },
-  { to: "/tools", label: "Tools", icon: Wrench },
-  { capability: "manage_toolkits", to: "/toolkits", label: "Toolkits", icon: Wrench },
-  { to: "/prompts", label: "Prompts", icon: ScrollText },
-  { to: "/memory", label: "Memory", icon: Brain },
-  { to: "/knowledge", label: "Knowledge", icon: BookOpen },
   { to: "/others", label: "Others", icon: Boxes },
 ];
 
 const CONNECTIONS: Item[] = [
-  { to: "/plugins", label: "Plugins", icon: Puzzle },
   { to: "/connections", label: "Connectors", icon: Plug },
   { to: "/secrets", label: "Credentials", icon: LockKeyhole },
   { to: "/models", label: "AI Gateway", icon: Sparkles },
