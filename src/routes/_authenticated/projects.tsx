@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import {
   createProject,
   getCanonicalOrganization,
+  getOrganizationAccess,
   listProjects,
   listWorkspaces,
 } from "@/lib/orgs.functions";
@@ -45,6 +46,7 @@ function ProjectsIndex() {
   const listProj = useServerFn(listProjects);
   const createProj = useServerFn(createProject);
   const listWs = useServerFn(listWorkspaces);
+  const getOrgAccess = useServerFn(getOrganizationAccess);
 
   const [projectName, setProjectName] = useState("");
   const [projectDesc, setProjectDesc] = useState("");
@@ -53,6 +55,11 @@ function ProjectsIndex() {
   const organization = useQuery({
     queryKey: ["organization", "hillstreet-ph"],
     queryFn: () => getOrganization(),
+  });
+  const access = useQuery({
+    queryKey: ["organization-access", organization.data?.id],
+    queryFn: () => getOrgAccess({ data: { organizationId: organization.data!.id } }),
+    enabled: Boolean(organization.data?.id),
   });
   const projects = useQuery({
     queryKey: ["projects", organization.data?.id],
@@ -131,58 +138,76 @@ function ProjectsIndex() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="shadow-panel lg:col-span-1">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">New project</CardTitle>
-            <CardDescription>e.g. Development · Business · Client X</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="space-y-2">
-              <Label>Organization</Label>
-              <Input value="hillstreet-ph" readOnly />
-            </div>
-            <div className="space-y-2">
-              <Label>Workspace</Label>
-              <Input value={activeWorkspace?.name ?? "HillStreet"} readOnly />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="proj-name">Project name</Label>
-              <Input
-                id="proj-name"
-                value={projectName}
-                onChange={(e) => setProjectName(e.target.value)}
-                placeholder="Development"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="proj-desc">Description (optional)</Label>
-              <Input
-                id="proj-desc"
-                value={projectDesc}
-                onChange={(e) => setProjectDesc(e.target.value)}
-                placeholder="Dev agents, sandbox OAuth, test vault"
-              />
-            </div>
-            <Button
-              disabled={
-                !organization.data?.id ||
-                !activeWorkspace?.id ||
-                !projectName.trim() ||
-                projectMutation.isPending
-              }
-              onClick={() => projectMutation.mutate()}
-            >
-              {projectMutation.isPending ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <FolderKanban className="size-4" />
-              )}
-              Create project
-            </Button>
+      {access.isLoading ? (
+        <Card className="shadow-panel">
+          <CardContent className="py-6 text-sm text-muted-foreground">
+            Checking project permissions…
           </CardContent>
         </Card>
-      </div>
+      ) : access.data?.isAdmin ? (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Card className="shadow-panel lg:col-span-1">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">New project</CardTitle>
+              <CardDescription>e.g. Development · Business · Client X</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="space-y-2">
+                <Label>Organization</Label>
+                <Input value="hillstreet-ph" readOnly />
+              </div>
+              <div className="space-y-2">
+                <Label>Workspace</Label>
+                <Input value={activeWorkspace?.name ?? "HillStreet"} readOnly />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="proj-name">Project name</Label>
+                <Input
+                  id="proj-name"
+                  value={projectName}
+                  onChange={(e) => setProjectName(e.target.value)}
+                  placeholder="Development"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="proj-desc">Description (optional)</Label>
+                <Input
+                  id="proj-desc"
+                  value={projectDesc}
+                  onChange={(e) => setProjectDesc(e.target.value)}
+                  placeholder="Dev agents, sandbox OAuth, test vault"
+                />
+              </div>
+              <Button
+                disabled={
+                  !organization.data?.id ||
+                  !activeWorkspace?.id ||
+                  !projectName.trim() ||
+                  projectMutation.isPending
+                }
+                onClick={() => projectMutation.mutate()}
+              >
+                {projectMutation.isPending ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <FolderKanban className="size-4" />
+                )}
+                Create project
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        <Card className="shadow-panel">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Project creation is admin-managed</CardTitle>
+            <CardDescription>
+              Ask an organization Admin to create a project and share it with you. You can work in
+              projects assigned to you.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )}
 
       <div>
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
