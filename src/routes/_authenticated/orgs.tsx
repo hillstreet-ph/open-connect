@@ -60,13 +60,13 @@ function OrgsPage() {
   const access = useQuery({
     queryKey: ["organization-access", activeOrgId],
     queryFn: () => getOrgAccess({ data: { organizationId: activeOrgId } }),
-    enabled: Boolean(activeOrgId && isAdmin),
+    enabled: Boolean(activeOrgId),
   });
   const isAdmin = access.data?.isAdmin === true;
   const people = useQuery({
     queryKey: ["organization-people", activeOrgId],
     queryFn: () => listPeople({ data: { organizationId: activeOrgId } }),
-    enabled: Boolean(activeOrgId),
+    enabled: Boolean(activeOrgId && isAdmin),
   });
 
   const groupMutation = useMutation({
