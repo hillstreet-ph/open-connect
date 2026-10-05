@@ -8,7 +8,8 @@ function authConfigs(): AuthConfigMap {
     if (!value || typeof value !== "object" || Array.isArray(value)) return {};
     return Object.fromEntries(
       Object.entries(value).filter(
-        ([provider, id]) => provider.length > 0 && typeof id === "string" && id.startsWith("ac_"),
+        ([provider, id]) =>
+          provider.length > 0 && typeof id === "string" && id.startsWith("ac_"),
       ),
     );
   } catch {
@@ -24,7 +25,6 @@ export function managedConnectorReady(provider: string): boolean {
   return Boolean(composioApiKey() && authConfigs()[provider]);
 }
 
-
 export type ComposioToolkit = {
   slug: string;
   name: string;
@@ -32,26 +32,57 @@ export type ComposioToolkit = {
   authMethods: string[];
 };
 
-let toolkitCatalogCache: { expiresAt: number; items: ComposioToolkit[] } | undefined;
+let toolkitCatalogCache:
+  { expiresAt: number; items: ComposioToolkit[] } | undefined;
 
 function toolkitCategory(value: unknown): string {
   const categories = Array.isArray(value) ? value : [];
-  const name = categories.map((item) => typeof item === "string" ? item : (item as { name?: string })?.name)
-    .find((item): item is string => typeof item === "string" && item.trim().length > 0);
-  return name ? name.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()) : "Composio";
+  const name = categories
+    .map((item) =>
+      typeof item === "string" ? item : (item as { name?: string })?.name,
+    )
+    .find(
+      (item): item is string =>
+        typeof item === "string" && item.trim().length > 0,
+    );
+  return name
+    ? name
+        .replaceAll("_", " ")
+        .replace(/\b\w/g, (letter) => letter.toUpperCase())
+    : "Composio";
 }
 
 function toolkitAuthMethods(toolkit: Record<string, unknown>): string[] {
-  const value = toolkit["composio_managed_auth_schemes"] ?? toolkit["auth_schemes"] ?? toolkit["authSchemes"];
-  const schemes = Array.isArray(value) ? value : value && typeof value === "object" ? Object.keys(value) : [];
-  return [...new Set(schemes.map((item) => typeof item === "string" ? item : (item as { auth_scheme?: string; name?: string })?.auth_scheme ?? (item as { name?: string })?.name)
-    .filter((item): item is string => typeof item === "string" && item.length > 0)
-    .map((item) => item.toUpperCase()))];
+  const value =
+    toolkit["composio_managed_auth_schemes"] ??
+    toolkit["auth_schemes"] ??
+    toolkit["authSchemes"];
+  const schemes = Array.isArray(value)
+    ? value
+    : value && typeof value === "object"
+      ? Object.keys(value)
+      : [];
+  return [
+    ...new Set(
+      schemes
+        .map((item) =>
+          typeof item === "string"
+            ? item
+            : ((item as { auth_scheme?: string; name?: string })?.auth_scheme ??
+              (item as { name?: string })?.name),
+        )
+        .filter(
+          (item): item is string => typeof item === "string" && item.length > 0,
+        )
+        .map((item) => item.toUpperCase()),
+    ),
+  ];
 }
 
 export async function listComposioToolkits(): Promise<ComposioToolkit[]> {
   if (!composioApiKey()) return [];
-  if (toolkitCatalogCache && toolkitCatalogCache.expiresAt > Date.now()) return toolkitCatalogCache.items;
+  if (toolkitCatalogCache && toolkitCatalogCache.expiresAt > Date.now())
+    return toolkitCatalogCache.items;
   const apiKey = composioApiKey();
   const items: ComposioToolkit[] = [];
   const cursors = new Set<string>();
@@ -59,11 +90,21 @@ export async function listComposioToolkits(): Promise<ComposioToolkit[]> {
   do {
     const query = new URLSearchParams({ managed_by: "all", limit: "1000" });
     if (cursor) query.set("cursor", cursor);
-    const page = await composioRequest<{ items?: Array<Record<string, unknown>>; next_cursor?: string | null }>(`/toolkits?${query}`, apiKey);
+    const page = await composioRequest<{
+      items?: Array<Record<string, unknown>>;
+      next_cursor?: string | null;
+    }>(`/toolkits?${query}`, apiKey);
     for (const raw of page.items ?? []) {
-      const slug = typeof raw["slug"] === "string" ? raw["slug"].trim().toLowerCase() : "";
+      const slug =
+        typeof raw["slug"] === "string" ? raw["slug"].trim().toLowerCase() : "";
       const name = typeof raw["name"] === "string" ? raw["name"].trim() : "";
-      if (!slug || !name || raw["is_enabled"] === false || raw["enabled"] === false) continue;
+      if (
+        !slug ||
+        !name ||
+        raw["is_enabled"] === false ||
+        raw["enabled"] === false
+      )
+        continue;
       items.push({
         slug,
         name,
@@ -72,29 +113,63 @@ export async function listComposioToolkits(): Promise<ComposioToolkit[]> {
       });
     }
     cursor = page.next_cursor ?? "";
-    if (cursor && cursors.has(cursor)) throw new Error("Composio toolkit pagination did not advance.");
+    if (cursor && cursors.has(cursor))
+      throw new Error("Composio toolkit pagination did not advance.");
     if (cursor) cursors.add(cursor);
-    if (cursors.size > 100) throw new Error("Composio toolkit pagination limit reached.");
+    if (cursors.size > 100)
+      throw new Error("Composio toolkit pagination limit reached.");
   } while (cursor);
   const unique = [...new Map(items.map((item) => [item.slug, item])).values()];
   toolkitCatalogCache = { expiresAt: Date.now() + 15 * 60_000, items: unique };
   return unique;
 }
 
-async function authConfigForToolkit(toolkitSlug: string, apiKey: string): Promise<string> {
-  const query = new URLSearchParams({ toolkit_slug: toolkitSlug, is_composio_managed: "true", limit: "50" });
-  const listed = await composioRequest<{ items?: Array<{ id?: string; toolkit?: { slug?: string }; is_composio_managed?: boolean }> }>(`/auth_configs?${query}`, apiKey);
-  const existing = (listed.items ?? []).find((item) => item.id?.startsWith("ac_") && item.toolkit?.slug?.toLowerCase() === toolkitSlug.toLowerCase() && item.is_composio_managed !== false);
-  if (existing?.id) return existing.id;
-  const created = await composioRequest<{ auth_config?: { id?: string } }>("/auth_configs", apiKey, {
-    method: "POST",
-    body: JSON.stringify({ toolkit: { slug: toolkitSlug }, auth_config: { type: "use_composio_managed_auth" } }),
+async function authConfigForToolkit(
+  toolkitSlug: string,
+  apiKey: string,
+): Promise<string> {
+  const query = new URLSearchParams({
+    toolkit_slug: toolkitSlug,
+    is_composio_managed: "true",
+    limit: "50",
   });
-  if (!created.auth_config?.id?.startsWith("ac_")) throw new Error(`Could not create Composio authorization config for ${toolkitSlug}.`);
+  const listed = await composioRequest<{
+    items?: Array<{
+      id?: string;
+      toolkit?: { slug?: string };
+      is_composio_managed?: boolean;
+    }>;
+  }>(`/auth_configs?${query}`, apiKey);
+  const existing = (listed.items ?? []).find(
+    (item) =>
+      item.id?.startsWith("ac_") &&
+      item.toolkit?.slug?.toLowerCase() === toolkitSlug.toLowerCase() &&
+      item.is_composio_managed !== false,
+  );
+  if (existing?.id) return existing.id;
+  const created = await composioRequest<{ auth_config?: { id?: string } }>(
+    "/auth_configs",
+    apiKey,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        toolkit: { slug: toolkitSlug },
+        auth_config: { type: "use_composio_managed_auth" },
+      }),
+    },
+  );
+  if (!created.auth_config?.id?.startsWith("ac_"))
+    throw new Error(
+      `Could not create Composio authorization config for ${toolkitSlug}.`,
+    );
   return created.auth_config.id;
 }
 
-async function composioRequest<T>(path: string, apiKey: string, init?: RequestInit): Promise<T> {
+async function composioRequest<T>(
+  path: string,
+  apiKey: string,
+  init?: RequestInit,
+): Promise<T> {
   const response = await fetch(`https://backend.composio.dev/api/v3.1${path}`, {
     ...init,
     headers: {
@@ -110,7 +185,10 @@ async function composioRequest<T>(path: string, apiKey: string, init?: RequestIn
     error?: { message?: string };
   };
   if (!response.ok) {
-    throw new Error(payload.error?.message || `Connector broker failed (HTTP ${response.status}).`);
+    throw new Error(
+      payload.error?.message ||
+        `Connector broker failed (HTTP ${response.status}).`,
+    );
   }
   return payload as T;
 }
@@ -124,7 +202,9 @@ export async function createManagedConnectionLink(input: {
 }) {
   const apiKey = composioApiKey();
   if (!apiKey) throw new Error("Composio is not configured.");
-  const authConfigId = authConfigs()[input.provider] ?? await authConfigForToolkit(input.toolkitSlug || input.provider, apiKey);
+  const authConfigId =
+    authConfigs()[input.provider] ??
+    (await authConfigForToolkit(input.toolkitSlug || input.provider, apiKey));
   return composioRequest<{
     redirect_url: string;
     connected_account_id: string;
@@ -141,7 +221,10 @@ export async function createManagedConnectionLink(input: {
   });
 }
 
-export async function getManagedConnection(_provider: string, connectedAccountId: string) {
+export async function getManagedConnection(
+  _provider: string,
+  connectedAccountId: string,
+) {
   const apiKey = composioApiKey();
   if (!apiKey) throw new Error("Composio is not configured.");
   return composioRequest<{
@@ -151,7 +234,10 @@ export async function getManagedConnection(_provider: string, connectedAccountId
   }>(`/connected_accounts/${encodeURIComponent(connectedAccountId)}`, apiKey);
 }
 
-export async function deleteManagedConnection(_provider: string, connectedAccountId: string) {
+export async function deleteManagedConnection(
+  _provider: string,
+  connectedAccountId: string,
+) {
   const apiKey = composioApiKey();
   if (!apiKey) throw new Error("Composio is not configured.");
   await composioRequest<unknown>(
@@ -162,7 +248,11 @@ export async function deleteManagedConnection(_provider: string, connectedAccoun
 }
 
 /** Prefer an explicitly configured broker, retaining native/key fallbacks. */
-export function connectionMethod(provider: string, oauth: boolean, managedReady: boolean) {
+export function connectionMethod(
+  provider: string,
+  oauth: boolean,
+  managedReady: boolean,
+) {
   if (managedReady) return "managed_oauth";
   if (provider === "github") return "native_oauth";
   return oauth ? "managed_oauth" : "api_key";
@@ -175,7 +265,10 @@ export function managedIdentityIds(userId: string): string[] {
   const mappings = JSON.parse(raw) as Record<string, unknown>;
   const mapped = mappings[userId];
   if (mapped === undefined) return [userId];
-  if (!Array.isArray(mapped) || mapped.some((id) => typeof id !== "string" || !id.trim())) {
+  if (
+    !Array.isArray(mapped) ||
+    mapped.some((id) => typeof id !== "string" || !id.trim())
+  ) {
     throw new Error("Invalid Composio user mapping.");
   }
   return [...new Set([userId, ...(mapped as string[])])];
@@ -195,19 +288,25 @@ async function listManagedIdentityConnections(userId: string) {
   const apiKey = process.env["COMPOSIO_API_KEY"]?.trim();
   if (!apiKey) throw new Error("Composio is not configured.");
   if (!userId.trim()) throw new Error("A signed-in user is required.");
-  const providers = new Map(Object.entries(authConfigs()).map(([provider, id]) => [id, provider]));
-  const aliases = JSON.parse(process.env["COMPOSIO_AUTH_CONFIG_ALIASES"] || "{}") as Record<
-    string,
-    string
-  >;
+  const providers = new Map(
+    Object.entries(authConfigs()).map(([provider, id]) => [id, provider]),
+  );
+  const aliases = JSON.parse(
+    process.env["COMPOSIO_AUTH_CONFIG_ALIASES"] || "{}",
+  ) as Record<string, string>;
   for (const [id, provider] of Object.entries(aliases)) {
-    if (id.startsWith("ac_") && authConfigs()[provider]) providers.set(id, provider);
+    if (id.startsWith("ac_") && authConfigs()[provider])
+      providers.set(id, provider);
   }
   const accounts = new Map<string, { id: string; provider: string }>();
   const cursors = new Set<string>();
   let cursor = "";
   do {
-    const query = new URLSearchParams({ user_ids: userId, statuses: "ACTIVE", limit: "100" });
+    const query = new URLSearchParams({
+      user_ids: userId,
+      statuses: "ACTIVE",
+      limit: "100",
+    });
     if (cursor) query.set("cursor", cursor);
     const page = await composioRequest<{
       items?: Array<{
@@ -221,7 +320,9 @@ async function listManagedIdentityConnections(userId: string) {
       next_cursor?: string;
     }>(`/connected_accounts?${query}`, apiKey);
     for (const account of page.items ?? []) {
-      const provider = account.toolkit?.slug?.toLowerCase() || providers.get(account.auth_config?.id ?? "");
+      const provider =
+        account.toolkit?.slug?.toLowerCase() ||
+        providers.get(account.auth_config?.id ?? "");
       if (
         !provider ||
         account.user_id !== userId ||
@@ -234,9 +335,11 @@ async function listManagedIdentityConnections(userId: string) {
       accounts.set(account.id, { id: account.id, provider });
     }
     cursor = page.next_cursor ?? "";
-    if (cursor && cursors.has(cursor)) throw new Error("Composio pagination did not advance.");
+    if (cursor && cursors.has(cursor))
+      throw new Error("Composio pagination did not advance.");
     cursors.add(cursor);
-    if (cursors.size > 100) throw new Error("Composio account pagination limit reached.");
+    if (cursors.size > 100)
+      throw new Error("Composio account pagination limit reached.");
   } while (cursor);
   return [...accounts.values()];
 }
