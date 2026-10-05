@@ -14,6 +14,7 @@
  *   OPENROUTER_BASE_URL optional override
  */
 import { createHash, randomBytes } from "crypto";
+import { fetchFreeModelCatalog, isAutoFreeModel } from "./model-catalog";
 
 export const KEY_PREFIX = "oc_live_";
 
@@ -59,6 +60,8 @@ export function nextFreeModel(preferAutoRouter = true): string {
 
 export const MODEL_ALIASES: Record<string, string> = {
   // Free tier (OpenRouter)
+  auto: "openrouter/free",
+  "open-connect/auto": "openrouter/free",
   "open-connect/free": "openrouter/free",
   "open-connect/auto-free": "openrouter/free",
   free: "openrouter/free",
@@ -238,23 +241,25 @@ export async function resolveUserUpstreams(
   allowPlatformFallback = true,
 ): Promise<Upstream[]> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { savedOpenRouter } = await import("./model-connection.server");
-  const saved = await savedOpenRouter(userId, {
+  const { savedModelUpstreams } = await import("./model-connection.server");
+  // Generated database types lag the deployed credential resolver RPC.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = supabaseAdmin as any;
+  const saved = await savedModelUpstreams(userId, {
     find: async (id) => {
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await db
         .from("app_connections")
-        .select("status,credential_reference")
+        .select("provider,status,credential_reference,metadata")
         .eq("user_id", id)
-        .eq("provider", "openrouter")
+        .in("provider", ["openrouter", "litellm"])
         .eq("status", "connected")
         .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .limit(10);
       if (error) throw new Error("Unable to read model connection.");
-      return data;
+      return data ?? [];
     },
     resolve: async (id, credentialId) => {
-      const { data, error } = await supabaseAdmin.rpc("resolve_connection_credential", {
+      const { data, error } = await db.rpc("resolve_connection_credential", {
         p_user_id: id,
         p_credential_id: credentialId,
       });
@@ -263,8 +268,37 @@ export async function resolveUserUpstreams(
     },
   });
   // A saved personal connection is authoritative: no silent fallback to a different account.
-  return saved ? [saved] : allowPlatformFallback ? resolveUpstreams() : [];
+  return saved.length > 0 ? saved : allowPlatformFallback ? resolveUpstreams() : [];
 }
+
+export type AutoFreeRoute = { upstream: Upstream; model: string };
+
+const AUTO_FREE_CATALOG_TTL_MS = 60_000;
+const autoFreeCatalogCache = new Map<string, { expiresAt: number; ids: string[] }>();
+
+/** Build free-only fallback routes from the current user's connected model gateways. */
+export async function resolveAutoFreeRoutes(upstreams: Upstream[]): Promise<AutoFreeRoute[]> {
+  const routes: AutoFreeRoute[] = [];
+  for (const upstream of upstreams) {
+    const cacheKey = createHash("sha256")
+      .update(`${upstream.name}\n${upstream.baseUrl}\n${upstream.headers.Authorization ?? ""}`)
+      .digest("hex");
+    let catalog = autoFreeCatalogCache.get(cacheKey);
+    if (!catalog || catalog.expiresAt <= Date.now()) {
+      const models = await fetchFreeModelCatalog([upstream]);
+      catalog = {
+        expiresAt: Date.now() + AUTO_FREE_CATALOG_TTL_MS,
+        ids: models.map((model) => model.id),
+      };
+      autoFreeCatalogCache.set(cacheKey, catalog);
+    }
+    if (upstream.name === "openrouter") routes.push({ upstream, model: "openrouter/free" });
+    for (const id of catalog.ids) routes.push({ upstream, model: id });
+  }
+  return routes;
+}
+
+export { isAutoFreeModel };
 export function resolveUpstream(): Upstream | null {
   return resolveUpstreams()[0] ?? null;
 }

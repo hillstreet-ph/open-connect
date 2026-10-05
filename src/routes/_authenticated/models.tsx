@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { BrandLogo } from "@/components/brand-logo";
 import { useAuth } from "@/hooks/use-auth";
 import { configureAppConnection, listAppConnections } from "@/lib/connections.functions";
+import { listFreeModels } from "@/lib/model-catalog.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,6 +41,7 @@ const providers = [
 ];
 
 const aliases = [
+  { alias: "open-connect/auto", body: "Free-only · routes across connected OpenRouter / LiteLLM" },
   { alias: "open-connect/fast", body: "Low latency · gpt-4o-mini" },
   { alias: "open-connect/coding", body: "Code · gpt-4o" },
   { alias: "open-connect/reasoning", body: "Reasoning · gpt-4o" },
@@ -60,6 +62,7 @@ function ModelsPage() {
     mutationFn: () => testFn({}),
   });
   const listFn = useServerFn(listAppConnections);
+  const freeModelsFn = useServerFn(listFreeModels);
   const configureFn = useServerFn(configureAppConnection);
   const [activeProvider, setActiveProvider] = useState<string | null>(null);
   const [providerKey, setProviderKey] = useState("");
@@ -67,6 +70,11 @@ function ModelsPage() {
   const connections = useQuery({
     queryKey: ["app-connections"],
     queryFn: () => listFn({}),
+    enabled: Boolean(user),
+  });
+  const freeModels = useQuery({
+    queryKey: ["free-model-catalog", user?.id],
+    queryFn: () => freeModelsFn({}),
     enabled: Boolean(user),
   });
   const connectedProviders = new Set(
@@ -151,6 +159,83 @@ function ModelsPage() {
         </CardContent>
       </Card>
 
+      <Card className="mt-6 shadow-panel" id="free-models">
+        <CardHeader className="pb-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <List className="size-4" /> Free models · Auto default
+              </CardTitle>
+              <CardDescription className="mt-1 max-w-3xl">
+                Use <span className="font-mono text-primary">open-connect/auto</span> for all
+                projects and clients. It routes through your connected OpenRouter free-model router,
+                then tries LiteLLM models that explicitly report zero input and output cost.
+              </CardDescription>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => void freeModels.refetch()}
+              disabled={freeModels.isFetching || !user}
+            >
+              {freeModels.isFetching ? <Loader2 className="mr-1 size-3.5 animate-spin" /> : null}
+              Refresh list
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {!user ? (
+            <p className="text-sm text-muted-foreground">
+              Sign in to view your connected free models.
+            </p>
+          ) : freeModels.isLoading ? (
+            <p className="text-sm text-muted-foreground">Loading your free model catalog…</p>
+          ) : freeModels.error ? (
+            <p role="alert" className="text-sm text-destructive">
+              {freeModels.error.message}
+            </p>
+          ) : (
+            <>
+              <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                <Badge variant="secondary">Auto · open-connect/auto</Badge>
+                {(freeModels.data?.providers ?? []).map((provider) => (
+                  <Badge key={provider} variant="outline">
+                    {provider}
+                  </Badge>
+                ))}
+              </div>
+              {freeModels.data?.models.length ? (
+                <div className="max-h-80 overflow-auto rounded-lg border border-border/70">
+                  <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-3 border-b bg-muted/30 px-3 py-2 text-xs font-medium text-muted-foreground">
+                    <span>Model</span>
+                    <span>Provider</span>
+                    <span>Catalog</span>
+                  </div>
+                  {freeModels.data.models.map((model) => (
+                    <div
+                      key={`${model.source}:${model.id}`}
+                      className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 border-b px-3 py-2 last:border-b-0"
+                    >
+                      <span className="break-all font-mono text-xs">{model.id}</span>
+                      <span className="text-xs text-muted-foreground">{model.provider}</span>
+                      <Badge variant="outline" className="text-[10px]">
+                        {model.source === "openrouter" ? "OpenRouter" : "LiteLLM"}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No individually priced free models were found. Auto still uses the OpenRouter free
+                  router when that connection is available. Connect OpenRouter or configure free
+                  pricing on your LiteLLM proxy, then refresh.
+                </p>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+
       <h2 className="mt-14 text-xl font-semibold">Stable aliases</h2>
       <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {aliases.map((item) => (
@@ -187,8 +272,9 @@ function ModelsPage() {
       </Card>
       <h2 className="mt-14 text-xl font-semibold">AI provider credentials</h2>
       <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-        OpenRouter keys saved here are used by your model gateway. Other provider keys are stored
-        for integrations; direct gateway adapters must be configured separately.
+        OpenRouter and LiteLLM connections are available to your model gateway. Connect OpenRouter
+        for its free catalog across providers, or configure zero-cost model pricing in LiteLLM.
+        Other provider keys remain available for integrations.
       </p>
       <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {providers.map((provider) => (

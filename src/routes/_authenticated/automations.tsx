@@ -46,7 +46,7 @@ function AutomationsPage() {
   const [triggerType, setTriggerType] = useState<TriggerType>("manual");
   const [actionType, setActionType] = useState<ActionType>("model");
   const [prompt, setPrompt] = useState("");
-  const [model, setModel] = useState("poolside/laguna-s-2.1:free");
+  const [model, setModel] = useState("open-connect/auto");
 
   const rows = useQuery({ queryKey: ["automations"], queryFn: () => list({}) });
 
@@ -213,10 +213,11 @@ function AutomationsPage() {
                   value={model}
                   onChange={(e) => setModel(e.target.value)}
                 >
+                  <option value="open-connect/auto">Auto · connected free models</option>
+                  <option value="openrouter/free">Automatic router · model varies</option>
                   <option value="poolside/laguna-s-2.1:free">
                     Poolside Laguna · general assistant
                   </option>
-                  <option value="openrouter/free">Automatic router · model varies</option>
                 </select>
               </div>
             ) : null}

@@ -257,12 +257,23 @@ export const runAutomation = createServerFn({ method: "POST" })
       const { automationPrompt, generateAutomationResponse } =
         await import("@/lib/automation-model.server");
       const prompt = automationPrompt((automation.config ?? {}) as Record<string, unknown>);
-      const { resolveUserUpstreams } = await import("@/lib/gateway.server");
-      const upstream = (await resolveUserUpstreams(context.userId)).find(
-        (u) => u.name === "openrouter",
+      const { isAutoFreeModel, resolveAutoFreeRoutes, resolveUserUpstreams } =
+        await import("@/lib/gateway.server");
+      const availableRoutes = await resolveAutoFreeRoutes(
+        await resolveUserUpstreams(context.userId),
       );
-      if (!upstream)
-        throw new Error("Connect OpenRouter in AI Gateway before running this automation.");
+      const selectedModel = String(
+        (automation.config as Record<string, unknown>)?.model ?? "open-connect/auto",
+      );
+      const routes = isAutoFreeModel(selectedModel)
+        ? availableRoutes
+        : availableRoutes.filter((route) => route.model === selectedModel);
+      if (!routes.length)
+        throw new Error(
+          isAutoFreeModel(selectedModel)
+            ? "Connect a free model provider in AI Gateway before running this automation."
+            : "The selected model is not available as a free model from a connected provider.",
+        );
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       // Generated database types lag the deployed control-plane schema.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -282,7 +293,7 @@ export const runAutomation = createServerFn({ method: "POST" })
         plan: {
           action: "model",
           model: String(
-            (automation.config as Record<string, unknown>)?.model ?? "poolside/laguna-s-2.1:free",
+            (automation.config as Record<string, unknown>)?.model ?? "open-connect/auto",
           ),
         },
         evidence,
@@ -293,14 +304,14 @@ export const runAutomation = createServerFn({ method: "POST" })
       let result: { text: string; model: string } | null = null;
       let failure: string | null = null;
       try {
-        result = await generateAutomationResponse(
-          prompt,
-          upstream,
-          fetch,
-          String(
-            (automation.config as Record<string, unknown>)?.model ?? "poolside/laguna-s-2.1:free",
-          ),
-        );
+        for (const route of routes) {
+          try {
+            result = await generateAutomationResponse(prompt, route.upstream, fetch, route.model);
+            break;
+          } catch (error) {
+            failure = error instanceof Error ? error.message : "AI request failed.";
+          }
+        }
       } catch (error) {
         failure = error instanceof Error ? error.message : "AI request failed.";
       }
