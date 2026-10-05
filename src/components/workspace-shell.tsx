@@ -7,6 +7,7 @@ import { roleLabel } from "@/lib/rbac";
 import { Badge } from "@/components/ui/badge";
 import { WorkspaceSearch } from "@/components/workspace-search";
 import { flatAppNav } from "@/lib/nav";
+import { AgentHelper } from "@/components/agent-helper";
 
 export function WorkspaceShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -35,6 +36,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
           <div className="flex-1 overflow-auto">{children}</div>
         </SidebarInset>
       </div>
+      <AgentHelper />
     </SidebarProvider>
   );
 }
