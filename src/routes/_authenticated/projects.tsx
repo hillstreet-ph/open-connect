@@ -16,6 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useWorkspaceContext } from "@/hooks/use-workspace-context";
+import { useRoles } from "@/hooks/use-roles";
 
 export const Route = createFileRoute("/_authenticated/projects")({
   head: () => ({
@@ -49,6 +50,7 @@ function ProjectsIndex() {
   const [projectName, setProjectName] = useState("");
   const [projectDesc, setProjectDesc] = useState("");
   const { workspaceId: activeWorkspaceId } = useWorkspaceContext();
+  const { isAdmin, loading: rolesLoading } = useRoles();
 
   const organization = useQuery({
     queryKey: ["organization", "hillstreet-ph"],
@@ -131,58 +133,76 @@ function ProjectsIndex() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="shadow-panel lg:col-span-1">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">New project</CardTitle>
-            <CardDescription>e.g. Development · Business · Client X</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="space-y-2">
-              <Label>Organization</Label>
-              <Input value="hillstreet-ph" readOnly />
-            </div>
-            <div className="space-y-2">
-              <Label>Workspace</Label>
-              <Input value={activeWorkspace?.name ?? "HillStreet"} readOnly />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="proj-name">Project name</Label>
-              <Input
-                id="proj-name"
-                value={projectName}
-                onChange={(e) => setProjectName(e.target.value)}
-                placeholder="Development"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="proj-desc">Description (optional)</Label>
-              <Input
-                id="proj-desc"
-                value={projectDesc}
-                onChange={(e) => setProjectDesc(e.target.value)}
-                placeholder="Dev agents, sandbox OAuth, test vault"
-              />
-            </div>
-            <Button
-              disabled={
-                !organization.data?.id ||
-                !activeWorkspace?.id ||
-                !projectName.trim() ||
-                projectMutation.isPending
-              }
-              onClick={() => projectMutation.mutate()}
-            >
-              {projectMutation.isPending ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <FolderKanban className="size-4" />
-              )}
-              Create project
-            </Button>
+      {rolesLoading ? (
+        <Card className="shadow-panel">
+          <CardContent className="py-6 text-sm text-muted-foreground">
+            Checking project permissions…
           </CardContent>
         </Card>
-      </div>
+      ) : isAdmin ? (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Card className="shadow-panel lg:col-span-1">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">New project</CardTitle>
+              <CardDescription>e.g. Development · Business · Client X</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="space-y-2">
+                <Label>Organization</Label>
+                <Input value="hillstreet-ph" readOnly />
+              </div>
+              <div className="space-y-2">
+                <Label>Workspace</Label>
+                <Input value={activeWorkspace?.name ?? "HillStreet"} readOnly />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="proj-name">Project name</Label>
+                <Input
+                  id="proj-name"
+                  value={projectName}
+                  onChange={(e) => setProjectName(e.target.value)}
+                  placeholder="Development"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="proj-desc">Description (optional)</Label>
+                <Input
+                  id="proj-desc"
+                  value={projectDesc}
+                  onChange={(e) => setProjectDesc(e.target.value)}
+                  placeholder="Dev agents, sandbox OAuth, test vault"
+                />
+              </div>
+              <Button
+                disabled={
+                  !organization.data?.id ||
+                  !activeWorkspace?.id ||
+                  !projectName.trim() ||
+                  projectMutation.isPending
+                }
+                onClick={() => projectMutation.mutate()}
+              >
+                {projectMutation.isPending ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <FolderKanban className="size-4" />
+                )}
+                Create project
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        <Card className="shadow-panel">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Project creation is admin-managed</CardTitle>
+            <CardDescription>
+              Ask an organization Admin to create a project and share it with you. You can work in
+              projects assigned to you.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )}
 
       <div>
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
