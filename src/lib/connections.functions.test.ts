@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { normalizeConnectionSetup, type ConnectionSetupApp } from "./connection-setup.ts";
+import { AI_GATEWAY_PROVIDERS } from "./ai-gateway-providers.ts";
 
 const app = (provider: string, oauth = false): ConnectionSetupApp => ({
   provider,
@@ -96,4 +97,26 @@ test("accepts an AI provider key with its HTTPS endpoint", () => {
 
   assert.equal(setup.provider, "anthropic");
   assert.equal(setup.endpointUrl, "https://api.anthropic.com/");
+});
+
+test("AI Gateway providers accept provider API credentials through the gateway registry", () => {
+  for (const provider of AI_GATEWAY_PROVIDERS) {
+    const setup = normalizeConnectionSetup(
+      {
+        provider: provider.id,
+        endpoint_url: provider.baseUrl,
+        api_key: "provider-secret-for-test",
+        auth_type: "api_key",
+      },
+      {
+        provider: provider.id,
+        display_name: provider.name,
+        scopes: [],
+        oauth: false,
+      },
+    );
+
+    assert.equal(setup.provider, provider.id);
+    assert.equal(new URL(setup.endpointUrl).protocol, "https:");
+  }
 });
