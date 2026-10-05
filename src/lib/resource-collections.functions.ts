@@ -94,7 +94,7 @@ export const listAssignableProjects = createServerFn({ method: "GET" })
         .from("project_members")
         .select("project_id")
         .eq("user_id", context.userId)
-        .eq("role", "manager"),
+        .eq("role", "admin"),
     ]);
     if (projectError) throw new Error(projectError.message);
     if (orgError) throw new Error(orgError.message);
@@ -172,6 +172,18 @@ export const addResourcesToCollection = createServerFn({ method: "POST" })
     }
     await ownedCollection(context, data.collectionId);
     await verifyLibraryResources(context, data.resourceIds);
+    const { data: currentItems, error: currentItemsError } = await context.supabase
+      .from("toolkit_items")
+      .select("resource_id")
+      .eq("toolkit_id", data.collectionId);
+    if (currentItemsError) throw new Error(currentItemsError.message);
+    const resultingSize = new Set([
+      ...(currentItems ?? []).map((item) => item.resource_id),
+      ...data.resourceIds,
+    ]).size;
+    if (resultingSize > 100) {
+      throw new Error("Collections can contain up to 100 resources. Remove items before adding more.");
+    }
     const { error } = await context.supabase.from("toolkit_items").upsert(
       data.resourceIds.map((resourceId, position) => ({
         toolkit_id: data.collectionId,
