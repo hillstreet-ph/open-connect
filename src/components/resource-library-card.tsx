@@ -117,7 +117,13 @@ export function ResourceLibraryCard({
 
   async function uploadOne(
     fileObj: File,
-    override?: { name: string; slug: string; description: string; resource_type: string; license: string },
+    override?: {
+      name: string;
+      slug: string;
+      description: string;
+      resource_type: string;
+      license: string;
+    },
   ) {
     if (fileObj.size > MAX_BYTES) throw new Error(`${fileObj.name} exceeds 50MB`);
     const detected = override ?? (await detectFromFile(fileObj));
@@ -305,7 +311,8 @@ export function ResourceLibraryCard({
               ))}
             </select>
             <p className="text-xs text-muted-foreground">
-              Verify the source license and include its notice before selecting a non-proprietary license.
+              Verify the source license and include its notice before selecting a non-proprietary
+              license.
             </p>
           </div>
           <div className="space-y-2 sm:col-span-2">
