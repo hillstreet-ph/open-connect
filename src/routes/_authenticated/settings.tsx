@@ -329,7 +329,7 @@ function SettingsPage() {
             <SettingsLinkCard
               to="/orgs"
               icon={Building2}
-              title="Organizations & workspaces"
+              title="Organization & workspace"
               description="Admin-managed organization membership, groups, and role assignments."
             />
             <SettingsLinkCard
@@ -342,7 +342,7 @@ function SettingsPage() {
               to="/projects"
               icon={Network}
               title="Projects & environments"
-              description="Open projects you can access and manage their development, staging, and production environments."
+              description="Open assigned projects and access project-scoped environments."
             />
             {isAdmin ? (
               <SettingsLinkCard
