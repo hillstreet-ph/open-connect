@@ -759,7 +759,7 @@ function SecretsPage() {
                       <Button
                         size="sm"
                         variant="ghost"
-                        aria-label={\`Delete folder \${folder.name}\`}
+                        aria-label={`Delete folder ${folder.name}`}
                         onClick={() => setPendingDeleteFolder({ id: folder.id, name: folder.name })}
                       >
                         <Trash2 className="size-3.5" />
@@ -769,9 +769,9 @@ function SecretsPage() {
                   {editingFolderId === folder.id ? (
                     <div className="mt-4 space-y-4 rounded-lg border border-border bg-muted/20 p-3">
                       <div className="space-y-1.5">
-                        <Label htmlFor={\`folder-name-\${folder.id}\`}>Folder name</Label>
+                        <Label htmlFor={`folder-name-${folder.id}`}>Folder name</Label>
                         <Input
-                          id={\`folder-name-\${folder.id}\`}
+                          id={`folder-name-${folder.id}`}
                           maxLength={80}
                           value={editFolderName}
                           onChange={(event) => setEditFolderName(event.target.value)}
