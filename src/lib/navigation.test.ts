@@ -79,7 +79,6 @@ test("connection surfaces remain internal and separate from Marketplace", () => 
   assert.match(sidebar, /<NavGroup label="Connections" items={CONNECTIONS}/);
   assert.match(connectGroup, /to: "\/connections", label: "Connectors"/);
   assert.doesNotMatch(connectGroup, /\/resources|\/integrations|\/api-keys/);
-  assert.match(userMenu, /to="\/integrations"/);
   assert.match(userMenu, /to="\/api-keys"/);
 
   const models = readFileSync(path.join(sourceRoot, "routes/_authenticated/models.tsx"), "utf8");
@@ -102,19 +101,22 @@ test("connection surfaces remain internal and separate from Marketplace", () => 
   assert.doesNotMatch(integrations, /(?:to|href)=["']\/resources["']/);
 });
 
-test("AI control integrations and API keys only appear in the avatar menu", () => {
+test("Integrations is configured under Settings and stays separate from account API keys", () => {
   const sourceRoot = path.resolve(process.cwd(), "src");
-  const duplicateSurfaces = [
-    "components/app-sidebar.tsx",
-    "components/site-footer.tsx",
-    "routes/_authenticated/projects.$projectId.tsx",
-    "routes/_authenticated/settings.tsx",
-  ];
+  const userMenu = readFileSync(path.join(sourceRoot, "components/user-menu.tsx"), "utf8");
+  const settings = readFileSync(
+    path.join(sourceRoot, "routes/_authenticated/settings.tsx"),
+    "utf8",
+  );
 
-  for (const sourceFile of duplicateSurfaces) {
-    const source = readFileSync(path.join(sourceRoot, sourceFile), "utf8");
-    assert.doesNotMatch(source, /(?:to|href)=["']\/(?:integrations|api-keys)["']/);
-  }
+  assert.match(userMenu, /to="\/settings"/);
+  assert.doesNotMatch(userMenu, /to="\/integrations"/);
+  assert.match(userMenu, /to="\/api-keys"/);
+  assert.match(settings, /to="\/integrations"/);
+  assert.match(settings, /title="Integrations"/);
+  assert.match(settings, /title="Connectors"/);
+  assert.match(settings, /title="AI Gateway"/);
+  assert.doesNotMatch(settings, /to="\/api-keys"/);
 });
 
 test("Toolkit creation reads from the personal library, not the Marketplace catalog", () => {
