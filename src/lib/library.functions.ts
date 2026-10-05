@@ -66,5 +66,21 @@ export const removeResourceFromLibrary = createServerFn({ method: "POST" })
       .eq("toolkit_id", libraryId)
       .eq("resource_id", data.resourceId);
     if (error) throw new Error(error.message);
+
+    const { data: collections, error: collectionsError } = await context.supabase
+      .from("toolkits")
+      .select("id")
+      .eq("user_id", context.userId)
+      .like("slug", "collection-%");
+    if (collectionsError) throw new Error(collectionsError.message);
+    const collectionIds = (collections ?? []).map((collection) => collection.id);
+    if (collectionIds.length) {
+      const { error: collectionItemsError } = await context.supabase
+        .from("toolkit_items")
+        .delete()
+        .in("toolkit_id", collectionIds)
+        .eq("resource_id", data.resourceId);
+      if (collectionItemsError) throw new Error(collectionItemsError.message);
+    }
     return { ok: true };
   });
