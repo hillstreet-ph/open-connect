@@ -77,10 +77,10 @@ function IntegrationsPage() {
           Integrations
         </h1>
         <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-          Integrations are Open-Connect entry points for AI agents, MCP clients, and Telegram. Open-Connect
-          owns the integration definitions; each user owns their setup and grants access to projects
-          explicitly. Resources, external app connectors, and AI model providers are managed
-          separately.
+          Integrations are Open-Connect entry points for AI agents, MCP clients, and Telegram.
+          Open-Connect owns the integration definitions; each user owns their setup and grants
+          access to projects explicitly. Resources, external app connectors, and AI model providers
+          are managed separately.
         </p>
         {user ? (
           <div className="mt-6 flex flex-wrap gap-2">
@@ -109,17 +109,30 @@ function IntegrationsPage() {
             grants so clients only see approved capabilities.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-3 text-sm">
-          <p><strong>Integrations</strong><br />AI clients, MCP clients, and Telegram entry points.</p>
-          <p><strong>Connectors</strong><br />Owner-controlled accounts Open-Connect uses with external apps.</p>
-          <p><strong>AI Gateway</strong><br />Model providers, provider keys, and routing.</p>
+        <CardContent className="grid gap-3 text-sm sm:grid-cols-3">
+          <p>
+            <strong>Integrations</strong>
+            <br />
+            AI clients, MCP clients, and Telegram entry points.
+          </p>
+          <p>
+            <strong>Connectors</strong>
+            <br />
+            Owner-controlled accounts Open-Connect uses with external apps.
+          </p>
+          <p>
+            <strong>AI Gateway</strong>
+            <br />
+            Model providers, provider keys, and routing.
+          </p>
         </CardContent>
       </Card>
 
       <section>
         <h2 className="text-lg font-semibold">AI clients and agents</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Connect agent clients to approved Open-Connect capabilities. Model providers are configured separately.
+          Connect agent clients to approved Open-Connect capabilities. Model providers are configured
+          separately.
         </p>
         <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {aiClients.map((client) => (
@@ -211,8 +224,8 @@ function IntegrationsPage() {
             </div>
             <CardTitle className="mt-3 text-sm">Telegram connections</CardTitle>
             <CardDescription className="text-xs">
-              This bot integration belongs to your account. Grant only the project capabilities required for
-              Telegram messaging; bot credentials stay private to you.
+              This bot integration belongs to your account. Grant only the project capabilities
+              required for Telegram messaging; bot credentials stay private to you.
             </CardDescription>
           </CardHeader>
           <CardContent className="px-4 pb-4">
