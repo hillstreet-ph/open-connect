@@ -68,9 +68,9 @@ test("Agent-Helper gives a verified fallback after a completed write", () => {
     describeAgentHelperToolResult("create_schedule", {
       saved: true,
       schedule: { name: "Monday review" },
-      execution: "not_available",
+      execution: "background_ai_response",
     }),
-    /does not currently run scheduled jobs/,
+    /background runner checks every five minutes/,
   );
   assert.match(
     describeAgentHelperToolResult("create_task", { error: "Project unavailable." }),

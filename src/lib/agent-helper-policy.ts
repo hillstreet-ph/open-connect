@@ -119,7 +119,7 @@ export function describeAgentHelperToolResult(
   }
   if (name === "list_schedules") {
     const schedules = Array.isArray(result["schedules"]) ? result["schedules"] : [];
-    return `Loaded ${schedules.length} schedule definition${schedules.length === 1 ? "" : "s"}. Scheduled execution availability depends on the workspace runner.`;
+    return `Loaded ${schedules.length} schedule${schedules.length === 1 ? "" : "s"}. Linked AI response schedules run through the background runner.`;
   }
   if (name === "list_automations") {
     const automations = Array.isArray(result["automations"]) ? result["automations"] : [];
@@ -133,7 +133,7 @@ export function describeAgentHelperToolResult(
     return `Created the task “${String(task?.title ?? "New task")}”.`;
   }
   if (name === "create_schedule") {
-    return `Saved the schedule definition “${String((result["schedule"] as { name?: unknown } | undefined)?.name ?? "New schedule")}”. Open Schedules to review it. Open-Connect does not currently run scheduled jobs.`;
+    return `Scheduled “${String((result["schedule"] as { name?: unknown } | undefined)?.name ?? "the AI response")}”. The background runner checks every five minutes and uses connected free models.`;
   }
   return `Created the manual AI automation “${String((result["automation"] as { name?: unknown } | undefined)?.name ?? "New automation")}”. It will run only after a user selects Run in Automations.`;
 }
