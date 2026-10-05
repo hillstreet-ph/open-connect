@@ -123,7 +123,7 @@ export function ResourceLibraryPage({
             </div>
             <div
               role="group"
-              aria-label="Filter resources by type"
+              aria-label="Filter resources by category"
               className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0"
             >
               {resourceCategories.map((filter) => (
