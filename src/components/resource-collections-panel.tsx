@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { FolderPlus, FolderOpen, Trash2, X } from "lucide-react";
@@ -7,7 +7,7 @@ import { listAssignableProjects } from "@/lib/resource-collections.functions";
 import { listResourceProjectAssignments } from "@/lib/library.functions";
 import { useAuth } from "@/hooks/use-auth";
 import {
-  getDefaultMarketplaceCollection,
+  resolveDefaultMarketplaceCollection,
   setDefaultMarketplaceCollection,
 } from "@/lib/resource-library-preferences";
 import {
@@ -53,27 +53,18 @@ export function ResourceCollectionsPanel({
   const [targetCollection, setTargetCollection] = useState("");
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
   const [assigningCollection, setAssigningCollection] = useState<string | null>(null);
-  const [defaultCollectionId, setDefaultCollectionId] = useState("");
+  const [defaultCollectionOverride, setDefaultCollectionOverride] = useState<string | null>(null);
   const [createAsDefault, setCreateAsDefault] = useState(false);
-
-  useEffect(() => {
-    if (!user?.id || !collections.data) return;
-    const valid = new Set(collections.data.map((collection) => collection.id));
-    const saved = getDefaultMarketplaceCollection(user.id);
-    if (saved && valid.has(saved)) {
-      setDefaultCollectionId(saved);
-      return;
-    }
-    const kobeplay = collections.data.find(
-      (collection) => collection.name.trim().toLowerCase() === "kobeplay",
+  const defaultCollectionId =
+    defaultCollectionOverride ??
+    resolveDefaultMarketplaceCollection(
+      user?.id,
+      collections.data?.map(({ id, name }) => ({ id, name })),
+      defaultCollectionOverride,
     );
-    const fallback = kobeplay?.id ?? "";
-    setDefaultCollectionId(fallback);
-    setDefaultMarketplaceCollection(user.id, fallback);
-  }, [user?.id, collections.data]);
 
   function chooseDefaultCollection(collectionId: string) {
-    setDefaultCollectionId(collectionId);
+    setDefaultCollectionOverride(collectionId);
     if (user?.id) setDefaultMarketplaceCollection(user.id, collectionId);
   }
 
@@ -162,7 +153,8 @@ export function ResourceCollectionsPanel({
           Default collection for Marketplace
         </label>
         <p className="mb-2 text-xs text-muted-foreground">
-          New Marketplace installs go to Library and this collection. Existing items are marked as already added.
+          New Marketplace installs go to Library and this collection. Existing items are marked as
+          already added.
         </p>
         <select
           id="default-marketplace-collection"
@@ -173,7 +165,9 @@ export function ResourceCollectionsPanel({
         >
           <option value="">Library only</option>
           {(collections.data ?? []).map((collection) => (
-            <option key={collection.id} value={collection.id}>{collection.name}</option>
+            <option key={collection.id} value={collection.id}>
+              {collection.name}
+            </option>
           ))}
         </select>
       </div>
@@ -381,9 +375,14 @@ export function ResourceCollectionsPanel({
                     ) : null}
                   </div>
                   {assignedProjectNames.size ? (
-                    <div className="flex flex-wrap gap-1" aria-label="Projects using this collection">
+                    <div
+                      className="flex flex-wrap gap-1"
+                      aria-label="Projects using this collection"
+                    >
                       {[...assignedProjectNames].map((projectName) => (
-                        <Badge key={projectName} variant="outline">Project: {projectName}</Badge>
+                        <Badge key={projectName} variant="outline">
+                          Project: {projectName}
+                        </Badge>
                       ))}
                     </div>
                   ) : null}
