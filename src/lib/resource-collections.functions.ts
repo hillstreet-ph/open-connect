@@ -79,8 +79,11 @@ async function ownedCollection(context: CollectionContext, id: string) {
 export const listAssignableProjects = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const [{ data: projects, error: projectError }, { data: orgRoles, error: orgError }, { data: memberships, error: membershipError }] =
-      await Promise.all([
+    const [
+      { data: projects, error: projectError },
+      { data: orgRoles, error: orgError },
+      { data: memberships, error: membershipError },
+    ] = await Promise.all([
         context.supabase.from("projects").select("id, name, organization_id"),
         context.supabase
           .from("organization_members")
