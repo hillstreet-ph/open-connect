@@ -48,8 +48,7 @@ export function ResourceCollectionsPanel({
     void qc.invalidateQueries({ queryKey: ["toolkits"] });
   };
   const createMutation = useMutation({
-    mutationFn: () =>
-      createCollection({ data: { name, resourceIds: selectedResourceIds } }),
+    mutationFn: () => createCollection({ data: { name, resourceIds: selectedResourceIds } }),
     onSuccess: () => {
       toast.success("Collection created");
       setName("");
@@ -244,9 +243,7 @@ export function ResourceCollectionsPanel({
                         <FolderOpen className="size-4 text-primary" />
                         <span className="truncate">{collection.name}</span>
                       </CardTitle>
-                      <CardDescription>
-                        {collection.toolkit_items.length} resources
-                      </CardDescription>
+                      <CardDescription>{collection.toolkit_items.length} resources</CardDescription>
                     </div>
                     <Button
                       size="icon"
@@ -290,12 +287,20 @@ export function ResourceCollectionsPanel({
                     <div className="flex flex-wrap items-center gap-2">
                       <Button
                         size="sm"
-                        disabled={!selectedProjects.length || !resourceIds.length || assignMutation.isPending}
+                        disabled={
+                          !selectedProjects.length ||
+                          !resourceIds.length ||
+                          assignMutation.isPending
+                        }
                         onClick={() => assignMutation.mutate(resourceIds)}
                       >
                         Assign folder ({resourceIds.length})
                       </Button>
-                      <Button size="sm" variant="ghost" onClick={() => setAssigningCollection(null)}>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setAssigningCollection(null)}
+                      >
                         Cancel
                       </Button>
                     </div>

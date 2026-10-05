@@ -8,11 +8,13 @@ const COLLECTION_PREFIX = "collection-";
 type CollectionContext = { supabase: SupabaseClient<Database>; userId: string };
 
 function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 48) || "collection";
+  return (
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 48) || "collection"
+  );
 }
 
 function resourceIds(input: string[] | undefined) {
@@ -146,7 +148,9 @@ export const removeResourceFromCollection = createServerFn({ method: "POST" })
     resourceId: input?.resourceId ?? "",
   }))
   .handler(async ({ data, context }) => {
-    if (!data.collectionId || !data.resourceId) throw new Error("Collection and resource required.");
+    if (!data.collectionId || !data.resourceId) {
+      throw new Error("Collection and resource required.");
+    }
     await ownedCollection(context, data.collectionId);
     const { error } = await context.supabase
       .from("toolkit_items")
@@ -177,7 +181,9 @@ export const assignResourcesToProjects = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: { resourceIds: string[]; projectIds: string[] }) => ({
     resourceIds: resourceIds(input?.resourceIds),
-    projectIds: [...new Set(Array.isArray(input?.projectIds) ? input.projectIds.filter(Boolean) : [])].slice(0, 50),
+    projectIds: [
+      ...new Set(Array.isArray(input?.projectIds) ? input.projectIds.filter(Boolean) : []),
+    ].slice(0, 50),
   }))
   .handler(async ({ data, context }) => {
     if (!data.resourceIds.length || !data.projectIds.length) {
