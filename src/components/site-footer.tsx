@@ -8,7 +8,7 @@ export function SiteFooter() {
     <footer className="border-t border-border/70 bg-surface/40">
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:grid-cols-2 lg:grid-cols-4">
         <div className="sm:col-span-2 lg:col-span-1">
-          <p className="font-display text-sm font-semibold">Open-Connect</p>
+          <div className="flex items-center gap-3"><img src="/open-connect-logo.webp" alt="" width={40} height={40} className="size-10 rounded-lg object-cover" /><p className="font-display text-sm font-semibold">Open-Connect</p></div>
           <p className="mt-2 text-sm text-muted-foreground">
             Resources · Connections · Models — one account, one key, one gateway.
           </p>
