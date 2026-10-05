@@ -12,11 +12,16 @@ import {
 test("identity aliases are scoped to one explicitly configured application user", () => {
   const original = process.env["COMPOSIO_USER_MAPPINGS"];
   try {
-    process.env["COMPOSIO_USER_MAPPINGS"] = JSON.stringify({ owner: ["broker-owner"] });
+    process.env["COMPOSIO_USER_MAPPINGS"] = JSON.stringify({
+      owner: ["broker-owner"],
+    });
     assert.deepEqual(managedIdentityIds("owner"), ["owner", "broker-owner"]);
     assert.deepEqual(managedIdentityIds("other"), ["other"]);
     process.env["COMPOSIO_USER_MAPPINGS"] = JSON.stringify({ owner: [null] });
-    assert.throws(() => managedIdentityIds("owner"), /Invalid Composio user mapping/);
+    assert.throws(
+      () => managedIdentityIds("owner"),
+      /Invalid Composio user mapping/,
+    );
   } finally {
     if (original === undefined) delete process.env["COMPOSIO_USER_MAPPINGS"];
     else process.env["COMPOSIO_USER_MAPPINGS"] = original;
@@ -32,13 +37,16 @@ test("managed connectors require both a broker key and provider auth config", ()
     assert.equal(managedConnectorReady("slack"), false);
 
     process.env["COMPOSIO_API_KEY"] = "test-key";
-    process.env["COMPOSIO_AUTH_CONFIGS"] = JSON.stringify({ slack: "ac_slack" });
+    process.env["COMPOSIO_AUTH_CONFIGS"] = JSON.stringify({
+      slack: "ac_slack",
+    });
     assert.equal(managedConnectorReady("slack"), true);
     assert.equal(managedConnectorReady("github"), false);
   } finally {
     if (originalKey === undefined) delete process.env["COMPOSIO_API_KEY"];
     else process.env["COMPOSIO_API_KEY"] = originalKey;
-    if (originalConfigs === undefined) delete process.env["COMPOSIO_AUTH_CONFIGS"];
+    if (originalConfigs === undefined)
+      delete process.env["COMPOSIO_AUTH_CONFIGS"];
     else process.env["COMPOSIO_AUTH_CONFIGS"] = originalConfigs;
   }
 });
@@ -108,11 +116,11 @@ test("account sync filters ownership, config, and status and deduplicates pages"
     globalThis.fetch = originalFetch;
     if (originalKey === undefined) delete process.env["COMPOSIO_API_KEY"];
     else process.env["COMPOSIO_API_KEY"] = originalKey;
-    if (originalConfigs === undefined) delete process.env["COMPOSIO_AUTH_CONFIGS"];
+    if (originalConfigs === undefined)
+      delete process.env["COMPOSIO_AUTH_CONFIGS"];
     else process.env["COMPOSIO_AUTH_CONFIGS"] = originalConfigs;
   }
 });
-
 
 test("managed toolkit authorization is created on demand and reused by the connection link", async () => {
   const originalFetch = globalThis.fetch;
@@ -124,32 +132,54 @@ test("managed toolkit authorization is created on demand and reused by the conne
   globalThis.fetch = async (input, init) => {
     const url = new URL(String(input));
     const method = init?.method ?? "GET";
-    const body = typeof init?.body === "string" ? JSON.parse(init.body) : undefined;
+    const body =
+      typeof init?.body === "string" ? JSON.parse(init.body) : undefined;
     calls.push({ path: url.pathname + url.search, method, body });
     if (url.pathname.endsWith("/auth_configs") && method === "GET") {
       return new Response(JSON.stringify({ items: [] }), { status: 200 });
     }
     if (url.pathname.endsWith("/auth_configs") && method === "POST") {
-      return new Response(JSON.stringify({ auth_config: { id: "ac_dynamic" } }), { status: 201 });
+      return new Response(
+        JSON.stringify({ auth_config: { id: "ac_dynamic" } }),
+        { status: 201 },
+      );
     }
-    return new Response(JSON.stringify({ redirect_url: "https://auth.example.test/", connected_account_id: "ca_dynamic", expires_at: "2026-01-01T00:00:00Z" }), { status: 200 });
+    return new Response(
+      JSON.stringify({
+        redirect_url: "https://auth.example.test/",
+        connected_account_id: "ca_dynamic",
+        expires_at: "2026-01-01T00:00:00Z",
+      }),
+      { status: 200 },
+    );
   };
   try {
-    const link = await createManagedConnectionLink({ provider: "dynamic_app", toolkitSlug: "dynamic_app", userId: "user-a", callbackUrl: "https://open-connect.site/connections" });
+    const link = await createManagedConnectionLink({
+      provider: "dynamic_app",
+      toolkitSlug: "dynamic_app",
+      userId: "user-a",
+      callbackUrl: "https://open-connect.site/connections",
+    });
     assert.equal(link.connected_account_id, "ca_dynamic");
     assert.equal(calls[0].method, "GET");
     assert.equal(calls[1].method, "POST");
-    assert.deepEqual(calls[1].body, { toolkit: { slug: "dynamic_app" }, auth_config: { type: "use_composio_managed_auth" } });
-    assert.equal((calls[2].body as { auth_config_id?: string }).auth_config_id, "ac_dynamic");
+    assert.deepEqual(calls[1].body, {
+      toolkit: { slug: "dynamic_app" },
+      auth_config: { type: "use_composio_managed_auth" },
+    });
+    assert.equal(
+      (calls[2].body as { auth_config_id?: string }).auth_config_id,
+      "ac_dynamic",
+    );
   } finally {
     globalThis.fetch = originalFetch;
     if (originalKey === undefined) delete process.env["COMPOSIO_API_KEY"];
     else process.env["COMPOSIO_API_KEY"] = originalKey;
-    if (originalConfigs === undefined) delete process.env["COMPOSIO_AUTH_CONFIGS"];
+    if (originalConfigs === undefined)
+      delete process.env["COMPOSIO_AUTH_CONFIGS"];
     else process.env["COMPOSIO_AUTH_CONFIGS"] = originalConfigs;
   }
 });
-
 
 test("Composio toolkit discovery follows cursors and exposes supported auth methods", async () => {
   const originalFetch = globalThis.fetch;
@@ -160,14 +190,35 @@ test("Composio toolkit discovery follows cursors and exposes supported auth meth
     const url = new URL(String(input));
     assert.equal(url.searchParams.get("managed_by"), "all");
     calls++;
-    const items = calls === 1
-      ? [{ slug: "sample_oauth", name: "Sample OAuth", categories: [{ name: "productivity" }], composio_managed_auth_schemes: ["OAUTH2", "API_KEY"] }]
-      : [{ slug: "sample_key", name: "Sample Key", categories: ["data"], auth_schemes: ["API_KEY"] }];
-    return new Response(JSON.stringify({ items, next_cursor: calls === 1 ? "next" : null }), { status: 200 });
+    const items =
+      calls === 1
+        ? [
+            {
+              slug: "sample_oauth",
+              name: "Sample OAuth",
+              categories: [{ name: "productivity" }],
+              composio_managed_auth_schemes: ["OAUTH2", "API_KEY"],
+            },
+          ]
+        : [
+            {
+              slug: "sample_key",
+              name: "Sample Key",
+              categories: ["data"],
+              auth_schemes: ["API_KEY"],
+            },
+          ];
+    return new Response(
+      JSON.stringify({ items, next_cursor: calls === 1 ? "next" : null }),
+      { status: 200 },
+    );
   };
   try {
     const toolkits = await listComposioToolkits();
-    assert.deepEqual(toolkits.map(({ slug }) => slug), ["sample_oauth", "sample_key"]);
+    assert.deepEqual(
+      toolkits.map(({ slug }) => slug),
+      ["sample_oauth", "sample_key"],
+    );
     assert.deepEqual(toolkits[0].authMethods, ["OAUTH2", "API_KEY"]);
     assert.equal(toolkits[0].category, "Productivity");
     assert.equal(calls, 2);
