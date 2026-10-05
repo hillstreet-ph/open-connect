@@ -9,6 +9,7 @@ def healthy_payload():
         "status": "ok",
         "model_upstream": "openrouter",
         "model_upstreams": ["openrouter"],
+        "model_gateway": {"user_connections_supported": True},
         "kv": {"bound": True, "writable": True},
         "env": {
             "SUPABASE_URL": True,
@@ -26,13 +27,24 @@ class ProductionHealthContractTests(unittest.TestCase):
         payload = healthy_payload()
         payload["model_upstream"] = None
         payload["model_upstreams"] = []
+        payload["model_gateway"] = {"user_connections_supported": False}
         payload["databricks"] = {"configured": False}
 
         failures = validate_health(payload)
 
-        self.assertIn("model_upstream must be configured", failures)
-        self.assertIn("model_upstreams must contain at least one provider", failures)
+        self.assertIn(
+            "model gateway must have a platform provider or support user-scoped connections",
+            failures,
+        )
         self.assertNotIn("Databricks must be configured", failures)
+
+    def test_user_scoped_model_connections_do_not_require_platform_keys(self):
+        payload = healthy_payload()
+        payload["model_upstream"] = None
+        payload["model_upstreams"] = []
+        payload["model_gateway"] = {"user_connections_supported": True}
+
+        self.assertEqual(validate_health(payload), [])
 
     def test_databricks_is_optional(self):
         payload = healthy_payload()
