@@ -167,7 +167,10 @@ const PLATFORM_TOOLS: McpTool[] = [
       "Read the authenticated user's private Knowledge library. When project_id is supplied, also include that user's knowledge explicitly stored in that accessible project. Without project_id, only personal knowledge is returned.",
     inputSchema: {
       type: "object",
-      properties: { project_id: { type: "string" }, limit: { type: "integer", minimum: 1, maximum: 200 } },
+      properties: {
+        project_id: { type: "string" },
+        limit: { type: "integer", minimum: 1, maximum: 200 },
+      },
     },
     annotations: {
       readOnlyHint: true,
