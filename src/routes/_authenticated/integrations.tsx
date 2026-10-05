@@ -78,26 +78,26 @@ function IntegrationsPage() {
     <div className="mx-auto max-w-6xl space-y-10 px-4 py-10 sm:px-6 sm:py-14">
       <header>
         <Badge variant="outline" className="border-primary/40 text-primary">
-          AI · MCP · Telegram
+          External clients → Open-Connect
         </Badge>
         <h1 className="mt-4 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-          Integrate AI clients, MCP, and Telegram
+          Integrations
         </h1>
         <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-          Connect ChatGPT, Claude, Grok, AI agents, MCP-compatible tools, and Telegram through
-          Open-Connect. Project access stays scoped, and provider credentials remain protected by
-          the connection and credential controls.
+          Bring ChatGPT, Claude, Grok, other AI agents, MCP clients, and Telegram into Open-Connect.
+          Each user manages their own client keys and authorizations; projects receive only
+          explicitly granted access. Connectors and AI Gateway settings remain separate.
         </p>
         {user ? (
           <div className="mt-6 flex flex-wrap gap-2">
             <Button asChild>
-              <Link to="/api-keys">API keys</Link>
+              <Link to="/api-keys">Client API keys</Link>
             </Button>
             <Button asChild variant="outline">
-              <Link to="/mcp-servers">MCP catalog</Link>
+              <Link to="/mcp-servers">MCP tools</Link>
             </Button>
             <Button asChild variant="outline">
-              <Link to="/connections">Telegram connections</Link>
+              <Link to="/connections">Telegram bot connection</Link>
             </Button>
           </div>
         ) : (
@@ -225,7 +225,7 @@ function IntegrationsPage() {
           <CardContent className="px-4 pb-4">
             {user ? (
               <Button asChild size="sm">
-                <Link to="/connections">Manage Telegram connections</Link>
+                <Link to="/connections">Set up my Telegram bot</Link>
               </Button>
             ) : null}
           </CardContent>

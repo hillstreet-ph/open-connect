@@ -358,16 +358,22 @@ function SettingsPage() {
         <TabsContent value="integrations">
           <div className="grid gap-4 md:grid-cols-2">
             <SettingsLinkCard
+              to="/integrations"
+              icon={Network}
+              title="Integrations"
+              description="Connect external AI clients, MCP servers, and Telegram to Open-Connect. Integration access is owned and configured separately for each account."
+            />
+            <SettingsLinkCard
               to="/models"
               icon={Sparkles}
-              title="AI Gateway & provider keys"
-              description="Add or update your OpenRouter or other provider key. Keys are stored in the credential vault and never sent to Agent-Helper chat."
+              title="AI Gateway"
+              description="Configure model providers and routing. Provider keys are managed separately from client integrations."
             />
             <SettingsLinkCard
               to="/connections"
               icon={Network}
-              title="Connected apps"
-              description="Manage OAuth providers, apps, MCP servers, and connection health."
+              title="Connectors"
+              description="Connect Open-Connect to external app accounts. Connections belong to their owner and are shared with projects explicitly."
             />
             <SettingsLinkCard
               to="/secrets"
@@ -410,6 +416,7 @@ function SettingsLinkCard({
     | "/projects"
     | "/admin"
     | "/models"
+    | "/integrations"
     | "/connections"
     | "/secrets"
     | "/automations"
