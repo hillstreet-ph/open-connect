@@ -2,35 +2,34 @@
  * Canonical identity helpers for Open Connect.
  * See docs/IDENTITY_MODEL.md
  *
- * Org roles:  owner | admin | member
- * Project:    manager | developer | viewer
+ * Human roles: admin | developer | member across organization and projects
  * Machine:    ai_client | ai_agent | service_account | api_client | mcp_client
  *
  * Legacy platform app_role (user/developer/publisher/admin/owner) remains for
  * route guards until full cutover — map product language via these helpers.
  */
 
-export type OrgRole = "owner" | "admin" | "member";
-export type ProjectRole = "manager" | "developer" | "viewer";
+export type OrgRole = "admin" | "developer" | "member";
+export type ProjectRole = "admin" | "developer" | "member";
 export type PrincipalType =
   "human" | "ai_client" | "ai_agent" | "service_account" | "api_client" | "mcp_client";
 
 export const ORG_ROLE_RANK: Record<OrgRole, number> = {
   member: 1,
-  admin: 2,
-  owner: 3,
+  developer: 2,
+  admin: 3,
 };
 
 export const PROJECT_ROLE_RANK: Record<ProjectRole, number> = {
-  viewer: 1,
+  member: 1,
   developer: 2,
-  manager: 3,
+  admin: 3,
 };
 
 /** Map legacy app_role labels into org vocabulary for UI copy. */
 export function appRoleToOrgRole(role: string): OrgRole {
-  if (role === "owner") return "owner";
-  if (role === "admin") return "admin";
+  if (role === "owner" || role === "admin") return "admin";
+  if (role === "developer") return "developer";
   return "member";
 }
 
@@ -56,22 +55,21 @@ export function highestProjectRole(roles: ProjectRole[]): ProjectRole {
 }
 
 /** Surfaces for permission-aware navigation (target IA). */
-export type ProductSurface = "member_workspace" | "admin_console" | "owner_console";
+export type ProductSurface = "member_workspace" | "admin_console";
 
 export function surfacesForOrgRole(role: OrgRole): ProductSurface[] {
-  if (role === "owner") return ["member_workspace", "admin_console", "owner_console"];
   if (role === "admin") return ["member_workspace", "admin_console"];
   return ["member_workspace"];
 }
 
 export const ORG_ROLE_LABEL: Record<OrgRole, string> = {
-  owner: "Owner",
   admin: "Admin",
+  developer: "Developer",
   member: "Member",
 };
 
 export const PROJECT_ROLE_LABEL: Record<ProjectRole, string> = {
-  manager: "Manager",
+  admin: "Admin",
   developer: "Developer",
-  viewer: "Viewer",
+  member: "Member",
 };

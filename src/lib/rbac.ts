@@ -2,7 +2,7 @@ import type { Database } from "@/integrations/supabase/types";
 
 export type AppRole = Database["public"]["Enums"]["app_role"];
 
-/** Higher index = more privilege. owner supersedes all. */
+/** Higher index = more privilege. Legacy Owner and Publisher values are converted during migration. */
 export const ROLE_RANK: Record<AppRole, number> = {
   user: 1,
   developer: 2,
@@ -11,7 +11,8 @@ export const ROLE_RANK: Record<AppRole, number> = {
   owner: 5,
 };
 
-export const ALL_ROLES: AppRole[] = ["user", "developer", "publisher", "admin", "owner"];
+export const ALL_ROLES: AppRole[] = ["user", "developer", "admin"];
+export const LEGACY_ROLES: AppRole[] = ["publisher", "owner"];
 
 export type Capability =
   | "dashboard"
@@ -41,8 +42,8 @@ export const CAPABILITY_MIN_ROLE: Record<Capability, AppRole> = {
   upload_resources: "user",
   secrets: "user",
   manage_toolkits: "developer",
-  publish_resources: "publisher",
-  verify_resources: "admin",
+  publish_resources: "developer",
+  verify_resources: "developer",
   manage_roles: "admin",
   admin_panel: "admin",
 };
@@ -55,7 +56,8 @@ export const ROLE_SCOPE_MATRIX: {
 }[] = [
   {
     role: "user",
-    summary: "Client workspace — download, upload, keys, agents, orgs, full API surface",
+    summary:
+      "Standard signed-in access to the workspace, personal resources, and assigned organization and project areas",
     can: [
       "Dashboard · Studio · Organizations",
       "Download / view marketplace skills",
@@ -67,23 +69,20 @@ export const ROLE_SCOPE_MATRIX: {
   },
   {
     role: "developer",
-    summary: "Everything user has, plus toolkits",
-    can: ["Manage toolkits", "Bundle capabilities for agents"],
-  },
-  {
-    role: "publisher",
-    summary: "Marketplace publishing controls",
-    can: ["Publish resources to catalog", "Featured package workflow"],
+    summary:
+      "Everything a Member has, plus toolkit management, resource publishing, and resource verification",
+    can: [
+      "Manage toolkits",
+      "Bundle capabilities for agents",
+      "Publish marketplace resources",
+      "Verify marketplace resources",
+    ],
   },
   {
     role: "admin",
-    summary: "Verify packages and manage roles",
-    can: ["Verify resources", "Manage roles", "Admin panel"],
-  },
-  {
-    role: "owner",
-    summary: "Full platform control",
-    can: ["All admin capabilities", "Owner supersedes every role"],
+    summary:
+      "Everything a Developer can do, plus manage platform roles and access system administration",
+    can: ["Manage roles", "Admin panel"],
   },
 ];
 
@@ -105,7 +104,7 @@ export const KEY_SCOPE_DOCS: { scope: string; meaning: string }[] = [
   { scope: "agents:invoke", meaning: "Run agent sessions and toolkits" },
   {
     scope: "control:write",
-    meaning: "Run owner/admin autonomous control operations with policy gates",
+    meaning: "Run Admin-authorized control operations with policy gates",
   },
 ];
 
@@ -123,7 +122,10 @@ export function can(roles: AppRole[], capability: Capability): boolean {
 }
 
 export function roleLabel(role: AppRole): string {
-  return role === "user" ? "Member" : role.charAt(0).toUpperCase() + role.slice(1);
+  if (role === "user") return "Member";
+  if (role === "owner") return "Admin";
+  if (role === "publisher") return "Developer";
+  return role.charAt(0).toUpperCase() + role.slice(1);
 }
 
 /** UI mirrors existing server revoke rules; the server remains authoritative. */
@@ -134,7 +136,6 @@ export function canRevokeRole(
   targetRole: AppRole,
 ): boolean {
   if (!hasRole(roles, "admin")) return false;
-  if (targetRole === "owner" && !hasRole(roles, "owner")) return false;
-  if (actorId === targetId && targetRole === "admin" && !hasRole(roles, "owner")) return false;
+  if (actorId === targetId && targetRole === "admin") return false;
   return true;
 }

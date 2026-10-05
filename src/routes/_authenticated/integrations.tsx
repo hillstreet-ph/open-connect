@@ -1,377 +1,640 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { useState } from "react";
 import {
   Bot,
-  Cloud,
-  Globe,
-  KeyRound,
-  Link2,
-  Monitor,
-  Plug,
-  Shield,
-  Sparkles,
-  Terminal,
+  Copy,
+  ExternalLink,
+  Loader2,
+  MessageCircle,
+  Server,
+  ShieldCheck,
+  Trash2,
 } from "lucide-react";
+import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { BrandLogo } from "@/components/brand-logo";
+import { ApiKeysCard } from "@/components/api-keys-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  configureAppConnection,
+  disconnectApp,
+  listAppConnections,
+} from "@/lib/connections.functions";
+import {
+  configureTelegramIntegration,
+  deleteInboundIntegration,
+  listInboundIntegrations,
+} from "@/lib/inbound-integrations.functions";
+
+const integrationSections = ["api-key", "apps", "ai-agents", "custom-mcp"] as const;
+type IntegrationSection = (typeof integrationSections)[number];
+
+function parseIntegrationSection(value: unknown): IntegrationSection {
+  return typeof value === "string" && integrationSections.includes(value as IntegrationSection)
+    ? (value as IntegrationSection)
+    : "ai-agents";
+}
 
 export const Route = createFileRoute("/_authenticated/integrations")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    section: parseIntegrationSection(search.section),
+  }),
   head: () => ({
     meta: [
-      { title: "Single gateway — Open-Connect" },
+      { title: "Integrations — Open-Connect" },
       {
         name: "description",
         content:
-          "Connect approved AI clients to Open-Connect projects, resources, and actions through scoped API keys and MCP.",
+          "Manage separate API Key, Apps, AI Agents, and Custom MCP integrations for Open-Connect.",
       },
     ],
   }),
   component: IntegrationsPage,
 });
 
-const clients = [
-  {
-    provider: "grok",
-    name: "Grok / xAI",
-    body: "Primary client. /v1 models + MCP tools, browser skills, MultiOn autonomy.",
-    endpoints: ["/v1", "/mcp", "oc_live_ key"],
-    to: "/models" as const,
-  },
+const MCP_ENDPOINT = "https://open-connect.site/mcp";
+
+const aiClients = [
   {
     provider: "chatgpt",
-    name: "ChatGPT · Custom GPTs",
-    body: "Plugins / Actions / MCP via OAuth PKCE S256 and scoped API key.",
-    endpoints: ["/oauth", "/v1", "/mcp"],
-    to: "/api-keys" as const,
+    name: "ChatGPT",
+    description:
+      "Connect ChatGPT using OAuth. ChatGPT signs in and requests approval when it connects.",
+    action: "Connect with OAuth",
   },
   {
     provider: "claude",
-    name: "Claude / Anthropic",
-    body: "Claude Desktop & API clients — MCP URL + Bearer key for skills & tools.",
-    endpoints: ["/mcp", "/v1"],
-    to: "/api-keys" as const,
+    name: "Claude",
+    description: "Connect a compatible Claude client to your Open-Connect MCP server.",
+    action: "View MCP setup",
+  },
+  {
+    provider: "grok",
+    name: "Grok / xAI API",
+    description:
+      "Use xAI API remote MCP tools with Open-Connect. This connects through the xAI API, not Grok.com sign-in.",
+    action: "View MCP setup",
   },
   {
     provider: "openwebui",
     name: "Open WebUI",
-    body: "Rebrand path: set OpenAI base to open-connect.site/v1 + oc_live_ key.",
-    endpoints: ["OPENAI_API_BASE=/v1", "OPENAI_API_KEY=oc_live_…"],
-    to: "/models" as const,
+    description: "Connect your own Open WebUI client with a scoped key.",
+    action: "View MCP setup",
   },
   {
     provider: "hermes",
     name: "Hermes Agent",
-    body: "Agent runtime with MCP tools from the Open-Connect catalog.",
-    endpoints: ["https://open-connect.site/mcp"],
-    to: "/api-keys" as const,
-  },
-  {
-    provider: "mistral",
-    name: "Mistral / others",
-    body: "Any OpenAI-compatible chat (Mistral, Groq, Ollama frontends) via /v1.",
-    endpoints: ["Base URL · /v1", "Bearer oc_live_…"],
-    to: "/models" as const,
-  },
-  {
-    provider: "cursor",
-    name: "Cursor · IDEs",
-    body: "MCP-capable IDEs: one URL, one key, tools/list from marketplace.",
-    endpoints: ["MCP · /mcp"],
-    to: "/api-keys" as const,
-  },
-  {
-    provider: "telegram",
-    name: "Telegram",
-    body: "Connect Telegram bots/channels as app connections for agent messaging.",
-    endpoints: ["/connections", "capability grants"],
-    to: "/connections" as const,
+    description: "Give your agent access to tools allowed for your account and projects.",
+    action: "View MCP setup",
   },
   {
     provider: "manus",
-    name: "Manus AI · internal agents",
-    body: "Give autonomous and internal AI clients scoped access to projects, resources, and tools.",
-    endpoints: ["/mcp", "/v1", "oc_live_ key"],
-    to: "/api-keys" as const,
+    name: "Manus",
+    description: "Connect a supported agent through the Open-Connect MCP endpoint.",
+    action: "View MCP setup",
   },
-];
-
-const credentials = [
-  {
-    provider: "pipedream",
-    name: "Pipedream",
-    body: "Workflow automation connectors — grant via Connections, secrets server-side.",
-    to: "/connections" as const,
-  },
-  {
-    provider: "composio",
-    name: "Composio",
-    body: "Toolkits & auth for 100s of apps — use with agents through Open-Connect.",
-    to: "/connections" as const,
-  },
-  {
-    provider: "onepassword",
-    name: "1Password",
-    body: "Credential vault pattern — store references in Secrets, never in client prompts.",
-    to: "/secrets" as const,
-  },
-  {
-    provider: "proton_pass",
-    name: "Proton Pass",
-    body: "Password-manager integration pattern with opaque vault references and no prompt exposure.",
-    to: "/secrets" as const,
-  },
-  {
-    provider: "litellm",
-    name: "LiteLLM · OpenRouter",
-    body: "Multi-provider model router behind /v1 — OpenAI-compatible aliases.",
-    to: "/models" as const,
-  },
-];
-
-const autonomy = [
-  {
-    icon: Globe,
-    title: "MultiOn autonomous browser",
-    body: "Natural-language browse, cloud or local. Store multion_api_key in Secrets.",
-    skill: "multion-autonomous",
-  },
-  {
-    icon: Monitor,
-    title: "Cloud browser (CDP)",
-    body: "Cloudflare Browser Rendering — headless Chrome, screenshots, navigate, scrape.",
-    skill: "cloudflare-browser",
-  },
-  {
-    icon: Terminal,
-    title: "Cloud terminal · agent-browser",
-    body: "CLI automation & terminal-style control for agent verification loops.",
-    skill: "agent-browser",
-  },
-  {
-    icon: Cloud,
-    title: "Cloud computer pattern",
-    body: "Pair browser + terminal skills with MCP tools for Manus-style compute sessions.",
-    skill: "marketplace",
-  },
-];
-
-const catalog = [
-  { icon: Sparkles, label: "Skills", hint: "Agent skill packages" },
-  { icon: Plug, label: "Plugins", hint: "ChatGPT / client plugins" },
-  { icon: Bot, label: "Agents · MCP", hint: "Servers & agent defs" },
-  { icon: Link2, label: "Connectors", hint: "App capability grants" },
-  { icon: Shield, label: "Prompts · tools", hint: "Reusable packages" },
 ];
 
 function IntegrationsPage() {
   const { user } = useAuth();
+  const { section } = Route.useSearch();
+  const sectionTitles: Record<IntegrationSection, string> = {
+    "api-key": "API Key",
+    apps: "Apps",
+    "ai-agents": "AI Agents",
+    "custom-mcp": "Custom MCP",
+  };
+  const queryClient = useQueryClient();
+  const listFn = useServerFn(listInboundIntegrations);
+  const configureFn = useServerFn(configureTelegramIntegration);
+  const disconnectFn = useServerFn(deleteInboundIntegration);
+  const customMcpListFn = useServerFn(listAppConnections);
+  const customMcpConfigureFn = useServerFn(configureAppConnection);
+  const customMcpDisconnectFn = useServerFn(disconnectApp);
+  const [oauthOpen, setOauthOpen] = useState(false);
+  const [mcpOpen, setMcpOpen] = useState(false);
+  const [telegramOpen, setTelegramOpen] = useState(false);
+  const [botLabel, setBotLabel] = useState("");
+  const [botToken, setBotToken] = useState("");
+  const [mcpName, setMcpName] = useState("");
+  const [mcpUrl, setMcpUrl] = useState("");
+  const [mcpAuthType, setMcpAuthType] = useState<
+    "none" | "bearer" | "api_key" | "personal_access_token"
+  >("none");
+  const [mcpCredential, setMcpCredential] = useState("");
 
-  return (
-    <div className="mx-auto max-w-6xl px-4 py-12 sm:py-16">
-      <Badge variant="outline" className="border-primary/40 text-primary">
-        Single gateway · open-connect.site
-      </Badge>
-      <h1 className="mt-4 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-        One access point for every AI client
-      </h1>
-      <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-        Open-Connect is the professional control plane for{" "}
-        <strong className="text-foreground">ChatGPT</strong>,{" "}
-        <strong className="text-foreground">Claude</strong>,{" "}
-        <strong className="text-foreground">Grok</strong>,{" "}
-        <strong className="text-foreground">Open WebUI</strong>,{" "}
-        <strong className="text-foreground">Hermes</strong>,{" "}
-        <strong className="text-foreground">Mistral</strong>, and more — plugins, skills, MCP,
-        connectors, credentials (Pipedream · Composio · 1Password), LiteLLM models, Telegram, and
-        autonomous browser / terminal compute. External AI clients receive governed control of
-        approved projects, resources, and actions through scoped API keys; ownership boundaries,
-        approvals, audits, and secret protections always remain enforced.
-      </p>
+  const connections = useQuery({
+    queryKey: ["inbound-integrations"],
+    queryFn: () => listFn({}),
+    enabled: Boolean(user) && section === "apps",
+  });
 
-      <div className="mt-6 flex flex-wrap gap-2">
-        {user ? (
-          <>
-            <Button asChild>
-              <Link to="/studio">Studio · create & upload</Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link to="/api-keys">API keys</Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link to="/connections">Connectors</Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link to="/secrets">Secrets</Link>
-            </Button>
-          </>
-        ) : (
-          <Button asChild>
-            <Link to="/auth">Sign in to connect</Link>
-          </Button>
-        )}
-      </div>
+  const telegramItems = (connections.data ?? []).filter((item) => item.provider === "telegram");
 
-      {/* Gateway endpoints */}
-      <Card className="mt-10 bg-pillar shadow-panel">
-        <CardHeader>
-          <CardTitle className="text-base">Gateway endpoints</CardTitle>
-          <CardDescription>Point every client here — never scatter vendor keys.</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-2 font-mono text-xs text-primary sm:grid-cols-2">
-          <p>Models · https://open-connect.site/v1</p>
-          <p>MCP · https://open-connect.site/mcp</p>
-          <p>API · https://open-connect.site/api/v1</p>
-          <p>OAuth · https://open-connect.site/oauth</p>
-          <p className="sm:col-span-2">Authorization: Bearer oc_live_…</p>
-        </CardContent>
-      </Card>
+  const customMcpConnections = useQuery({
+    queryKey: ["app-connections"],
+    queryFn: () => customMcpListFn({}),
+    enabled: Boolean(user) && section === "custom-mcp",
+  });
+  const customMcpItems = (customMcpConnections.data ?? []).filter(
+    (item) => item.provider === "custom_mcp",
+  );
 
-      <h2 className="mt-14 text-lg font-semibold">AI chat clients</h2>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Plugins, skills, and connectors for each surface through the same gateway.
-      </p>
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {clients.map((c) => (
-          <Card key={c.name} className="shadow-panel">
-            <CardHeader className="p-4">
-              <BrandLogo provider={c.provider} name={c.name} size="lg" />
-              <CardTitle className="mt-3 text-sm">{c.name}</CardTitle>
-              <CardDescription className="text-xs">{c.body}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-1 px-4 pb-4 font-mono text-[11px] text-primary">
-              {c.endpoints.map((e) => (
-                <p key={e}>{e}</p>
-              ))}
-              <Button asChild size="sm" variant="outline" className="mt-3 w-full font-sans">
-                <Link to={c.to}>Configure</Link>
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+  const saveTelegram = useMutation({
+    mutationFn: () =>
+      configureFn({
+        data: {
+          display_name: botLabel.trim() || "Telegram bot",
+          token: botToken,
+        },
+      }),
+    onSuccess: (result) => {
+      toast.success("Telegram bot verified and saved securely");
+      setBotLabel("");
+      setBotToken("");
+      setTelegramOpen(false);
+      void queryClient.invalidateQueries({ queryKey: ["inbound-integrations"] });
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Could not set up Telegram"),
+  });
 
-      <h2 className="mt-14 text-lg font-semibold">Credentials & model providers</h2>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Server-side capability grants — clients only see oc_live_ keys and MCP tools.
-      </p>
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {credentials.map((c) => (
-          <Card key={c.name} className="shadow-panel">
-            <CardHeader className="p-4">
-              <BrandLogo provider={c.provider} name={c.name} size="lg" />
-              <CardTitle className="mt-3 text-sm">{c.name}</CardTitle>
-              <CardDescription className="text-xs">{c.body}</CardDescription>
-            </CardHeader>
-            <CardContent className="px-4 pb-4">
-              <Button asChild size="sm" variant="outline" className="w-full">
-                <Link to={c.to}>Configure</Link>
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+  const removeTelegram = useMutation({
+    mutationFn: (id: string) => disconnectFn({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Telegram integration removed");
+      void queryClient.invalidateQueries({ queryKey: ["inbound-integrations"] });
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Could not remove Telegram"),
+  });
 
-      <h2 className="mt-14 text-lg font-semibold">Autonomous control</h2>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Cloud browser, cloud terminal, MultiOn autonomous sessions — Manus-style compute via skills.
-      </p>
-      <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {autonomy.map((a) => (
-          <Card key={a.title} className="shadow-panel">
-            <CardHeader className="p-4">
-              <a.icon className="size-5 text-primary" />
-              <CardTitle className="mt-2 text-sm">{a.title}</CardTitle>
-              <CardDescription className="text-xs">{a.body}</CardDescription>
-            </CardHeader>
-            <CardContent className="px-4 pb-4 text-[11px] font-mono text-primary">
-              skill · {a.skill}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+  const saveCustomMcp = useMutation({
+    mutationFn: () =>
+      customMcpConfigureFn({
+        data: {
+          provider: "custom_mcp",
+          display_name: mcpName.trim() || "Custom MCP server",
+          account_label: mcpName.trim() || mcpUrl.trim(),
+          endpoint_url: mcpUrl.trim(),
+          api_key: mcpCredential,
+          auth_type: mcpAuthType,
+        },
+      }),
+    onSuccess: (result) => {
+      toast.success(
+        result.validation.verified
+          ? "MCP server verified and saved"
+          : "MCP server saved for review",
+      );
+      setMcpName("");
+      setMcpUrl("");
+      setMcpCredential("");
+      setMcpAuthType("none");
+      void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Could not save MCP server"),
+  });
 
-      <h2 className="mt-14 text-lg font-semibold">Unified resource catalog</h2>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Create, upload, download — zip / markdown auto-detected into skills, plugins, agents,
-        prompts, MCP, tools. Bulk upload from Studio.
-      </p>
-      <div className="mt-6 grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {catalog.map((c) => (
-          <Card key={c.label} className="p-4 shadow-panel">
-            <c.icon className="size-4 text-primary" />
-            <p className="mt-2 text-sm font-medium">{c.label}</p>
-            <p className="text-xs text-muted-foreground">{c.hint}</p>
-          </Card>
-        ))}
-      </div>
+  const removeCustomMcp = useMutation({
+    mutationFn: (id: string) => customMcpDisconnectFn({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Custom MCP server removed");
+      void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Could not remove MCP server"),
+  });
 
-      <div className="mt-10 grid gap-4 md:grid-cols-2">
-        <Card className="shadow-panel">
-          <CardHeader>
-            <KeyRound className="size-4 text-primary" />
-            <CardTitle className="mt-2 text-base">OAuth · PKCE S256</CardTitle>
-            <CardDescription>ChatGPT plugins and OAuth MCP clients.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-1 font-mono text-xs text-primary">
-            <p>/.well-known/oauth-authorization-server</p>
-            <p>/oauth/authorize · /oauth/token · /oauth/register</p>
-          </CardContent>
-        </Card>
-        <Card className="shadow-panel">
-          <CardHeader>
-            <Link2 className="size-4 text-primary" />
-            <CardTitle className="mt-2 text-base">Stack</CardTitle>
-            <CardDescription>GitHub · Cloudflare · Supabase only.</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-2">
-            {["github", "cloudflare", "supabase", "openai", "anthropic", "grok", "mistral"].map(
-              (p) => (
-                <BrandLogo key={p} provider={p} />
-              ),
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className="mt-12 bg-pillar">
-        <CardHeader>
-          <CardTitle className="text-base">Wire any client in 60 seconds</CardTitle>
-          <CardDescription>
-            Sign in → create oc_live_ key → point base URL or MCP → optional Secrets for MultiOn /
-            Pipedream / Composio.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <pre className="overflow-x-auto rounded-lg border border-border bg-background/80 p-4 text-xs">{`OPENAI_API_BASE=https://open-connect.site/v1
-OPENAI_API_KEY=oc_live_YOUR_KEY`}</pre>
-          <pre className="overflow-x-auto rounded-lg border border-border bg-background/80 p-4 text-xs">{`{
-  "mcpServers": {
-    "open-connect": {
-      "url": "https://open-connect.site/mcp",
-      "headers": { "Authorization": "Bearer oc_live_YOUR_KEY" }
+  async function copyEndpoint() {
+    try {
+      await navigator.clipboard.writeText(MCP_ENDPOINT);
+      toast.success("MCP endpoint copied");
+    } catch {
+      toast.error("Could not copy endpoint");
     }
   }
-}`}</pre>
-          <div className="flex flex-wrap gap-2">
+
+  return (
+    <div className="mx-auto max-w-6xl space-y-10 px-4 py-10 sm:px-6 sm:py-14">
+      <header>
+        <Badge variant="outline" className="border-primary/40 text-primary">
+          Open-Connect · inbound
+        </Badge>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+            {sectionTitles[section]}
+          </h1>
+          <Button asChild size="sm" variant="outline">
+            <Link to="/settings">Back to Settings</Link>
+          </Button>
+        </div>
+        <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground sm:text-base">
+          Connect external AI clients, MCP clients, and Telegram into Open-Connect. Each integration
+          setup belongs to your account. Connectors are for external accounts Open-Connect uses; AI
+          models and resource catalogs are managed separately.
+        </p>
+      </header>
+
+      <section id="ai-agents" hidden={section !== "ai-agents"} className="scroll-mt-6">
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold">AI Agents</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Choose a client to see its own connection flow.
+          </p>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {aiClients.map((client) => (
+            <Card key={client.provider} className="shadow-panel">
+              <CardHeader className="p-4">
+                <BrandLogo provider={client.provider} name={client.name} size="lg" />
+                <CardTitle className="mt-3 text-sm">{client.name}</CardTitle>
+                <CardDescription className="text-xs">{client.description}</CardDescription>
+              </CardHeader>
+              <CardContent className="px-4 pb-4">
+                {user ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() =>
+                      client.provider === "chatgpt" ? setOauthOpen(true) : setMcpOpen(true)
+                    }
+                  >
+                    {client.provider === "chatgpt" ? (
+                      <ShieldCheck className="mr-2 size-4" />
+                    ) : (
+                      <Bot className="mr-2 size-4" />
+                    )}
+                    {client.action}
+                  </Button>
+                ) : (
+                  <Button asChild size="sm" variant="outline" className="w-full">
+                    <Link to="/auth">Sign in</Link>
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      <section id="custom-mcp" hidden={section !== "custom-mcp"} className="scroll-mt-6">
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold">Custom MCP</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Manage account-owned remote MCP servers and the inbound endpoint AI clients use. These
+            stay separate from app Connectors and Marketplace resources.
+          </p>
+        </div>
+        <Card className="shadow-panel">
+          <CardHeader className="p-5">
+            <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Server className="size-5" />
+            </div>
+            <CardTitle className="mt-3 text-base">Remote MCP servers</CardTitle>
+            <CardDescription>
+              Add a remote MCP endpoint for your account. Any credential is validated and stored in
+              the secure vault.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 px-5 pb-5">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="mcp-name">Name</Label>
+                <Input
+                  id="mcp-name"
+                  value={mcpName}
+                  onChange={(event) => setMcpName(event.target.value)}
+                  placeholder="Team MCP server"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="mcp-url">Server URL</Label>
+                <Input
+                  id="mcp-url"
+                  type="url"
+                  value={mcpUrl}
+                  onChange={(event) => setMcpUrl(event.target.value)}
+                  placeholder="https://mcp.example.com/mcp"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="mcp-auth-type">Authentication</Label>
+                <select
+                  id="mcp-auth-type"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={mcpAuthType}
+                  onChange={(event) => setMcpAuthType(event.target.value as typeof mcpAuthType)}
+                >
+                  <option value="none">No authentication</option>
+                  <option value="bearer">Bearer token</option>
+                  <option value="api_key">API key</option>
+                  <option value="personal_access_token">Personal access token</option>
+                </select>
+              </div>
+              {mcpAuthType !== "none" ? (
+                <div className="space-y-2">
+                  <Label htmlFor="mcp-credential">Credential</Label>
+                  <Input
+                    id="mcp-credential"
+                    type="password"
+                    autoComplete="new-password"
+                    value={mcpCredential}
+                    onChange={(event) => setMcpCredential(event.target.value)}
+                    placeholder="Paste credential"
+                  />
+                </div>
+              ) : null}
+            </div>
+            <Button
+              disabled={
+                saveCustomMcp.isPending ||
+                !mcpUrl.trim() ||
+                (mcpAuthType !== "none" && mcpCredential.trim().length < 8)
+              }
+              onClick={() => saveCustomMcp.mutate()}
+            >
+              {saveCustomMcp.isPending ? (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              ) : (
+                <Server className="mr-2 size-4" />
+              )}
+              Add remote MCP server
+            </Button>
+            {customMcpItems.length ? (
+              <div className="space-y-2 border-t pt-4">
+                {customMcpItems.map((item) => {
+                  const metadata = (item.metadata ?? {}) as Record<string, unknown>;
+                  return (
+                    <div
+                      key={item.id}
+                      className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 text-sm"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-medium">{item.display_name}</p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {String(metadata.endpoint_url ?? "")} · {item.status.replaceAll("_", " ")}
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={removeCustomMcp.isPending}
+                        onClick={() => removeCustomMcp.mutate(item.id)}
+                      >
+                        <Trash2 className="mr-2 size-4" />
+                        Remove
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No remote MCP servers are configured.</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-panel">
+          <CardHeader className="p-5">
+            <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Bot className="size-5" />
+            </div>
+            <CardTitle className="mt-3 text-base">Open-Connect MCP endpoint</CardTitle>
+            <CardDescription>
+              Compatible clients connect here and receive only the capabilities allowed for your
+              account and project access.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 px-5 pb-5">
+            <div className="flex flex-wrap items-center gap-2">
+              <code className="min-w-0 flex-1 break-all rounded-md bg-muted px-3 py-2 text-sm">
+                {MCP_ENDPOINT}
+              </code>
+              <Button variant="outline" size="sm" onClick={() => void copyEndpoint()}>
+                <Copy className="mr-2 size-4" />
+                Copy URL
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+              <Badge variant="secondary">OAuth supported</Badge>
+              <Badge variant="secondary">Bearer key supported</Badge>
+              <span className="self-center">
+                OAuth clients sign in and approve in their client.
+              </span>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setMcpOpen(true)}>
+              Client setup instructions
+            </Button>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section id="apps" hidden={section !== "apps"} className="scroll-mt-6">
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold">Apps</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Set up your bot for agent messaging. This is an Open-Connect integration, separate from
+            app connectors.
+          </p>
+        </div>
+        <Card className="shadow-panel">
+          <CardHeader className="p-5">
+            <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <MessageCircle className="size-5" />
+            </div>
+            <CardTitle className="mt-3 text-base">Telegram bot</CardTitle>
+            <CardDescription>
+              Your bot token is stored securely for your account and is never displayed to
+              collaborators.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 px-5 pb-5">
+            <div className="space-y-2">
+              {telegramItems.length ? (
+                telegramItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 text-sm"
+                  >
+                    <span>
+                      {item.display_name || "Telegram"} · {item.status.replaceAll("_", " ")}
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={removeTelegram.isPending}
+                      onClick={() => removeTelegram.mutate(item.id)}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No Telegram bot is connected to this account.
+                </p>
+              )}
+            </div>
             {user ? (
-              <>
-                <Button asChild size="sm">
-                  <Link to="/studio">Open Studio</Link>
-                </Button>
-                <Button asChild size="sm" variant="outline">
-                  <Link to="/guides">Professional setup</Link>
-                </Button>
-              </>
+              <Button size="sm" onClick={() => setTelegramOpen(true)}>
+                <MessageCircle className="mr-2 size-4" />
+                Set up Telegram
+              </Button>
             ) : (
               <Button asChild size="sm">
-                <Link to="/auth">Get started</Link>
+                <Link to="/auth">Sign in</Link>
               </Button>
             )}
+          </CardContent>
+        </Card>
+      </section>
+
+      {user ? (
+        <section id="api-key" hidden={section !== "api-key"} className="scroll-mt-6">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">API Key</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Create and revoke scoped keys for clients that use bearer authentication. ChatGPT uses
+              OAuth and does not need an API key.
+            </p>
           </div>
-        </CardContent>
-      </Card>
+          <ApiKeysCard />
+        </section>
+      ) : null}
+
+      <p className="text-xs text-muted-foreground">
+        Integrations belong to the signed-in account by default. Grant project access explicitly.
+        Connector accounts, model provider keys, and resource catalog entries remain separate.
+      </p>
+
+      <Dialog open={oauthOpen} onOpenChange={setOauthOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Connect ChatGPT with OAuth</DialogTitle>
+            <DialogDescription>
+              ChatGPT starts the OAuth request and Open-Connect shows sign-in and consent when the
+              client connects. No API key is needed.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 text-sm">
+            <ol className="list-decimal space-y-2 pl-5 text-muted-foreground">
+              <li>
+                In ChatGPT on the web, enable Developer mode, then create a custom app from Settings
+                → Apps. Workspace admins can create and publish it from Workspace settings → Apps.
+              </li>
+              <li>
+                Add the remote MCP URL:{" "}
+                <code className="break-all text-primary">{MCP_ENDPOINT}</code>, choose OAuth, and
+                scan the available tools.
+              </li>
+              <li>Sign in to Open-Connect and approve the account scopes requested by ChatGPT.</li>
+              <li>Test a read action, then test only the write actions you intend to allow.</li>
+            </ol>
+            <p className="text-xs text-muted-foreground">
+              Full write-capable MCP apps are available on ChatGPT Business, Enterprise, and Edu.
+              ChatGPT Pro currently supports read and fetch access only. OAuth access expires after
+              30 days; reconnect when ChatGPT requests authorization again.
+            </p>
+            <Button asChild className="w-full">
+              <a href="https://chatgpt.com" target="_blank" rel="noreferrer">
+                Open ChatGPT <ExternalLink className="ml-2 size-4" />
+              </a>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={mcpOpen} onOpenChange={setMcpOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Connect an MCP client</DialogTitle>
+            <DialogDescription>
+              Use the Open-Connect endpoint directly. This does not browse or install marketplace
+              resources.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <p>Server URL</p>
+            <code className="block break-all rounded-md bg-muted p-3">{MCP_ENDPOINT}</code>
+            <p className="text-muted-foreground">
+              Use OAuth when supported. Otherwise create a narrowly scoped key under API keys and
+              send it as a bearer token. Allow only the tools this client needs; write access is
+              checked against the key scopes, connected account, and project grants.
+            </p>
+            <Button variant="outline" onClick={() => void copyEndpoint()}>
+              <Copy className="mr-2 size-4" />
+              Copy endpoint
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={telegramOpen}
+        onOpenChange={(open) => {
+          setTelegramOpen(open);
+          if (!open) {
+            setBotToken("");
+            setBotLabel("");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Set up Telegram</DialogTitle>
+            <DialogDescription>
+              Create a bot with Telegram’s BotFather, then add its token here. The token is stored
+              in the secure credential vault.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="telegram-label">Bot name</Label>
+              <Input
+                id="telegram-label"
+                value={botLabel}
+                onChange={(event) => setBotLabel(event.target.value)}
+                placeholder="Support bot"
+                autoComplete="off"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="telegram-token">Bot token</Label>
+              <Input
+                id="telegram-token"
+                type="password"
+                value={botToken}
+                onChange={(event) => setBotToken(event.target.value)}
+                placeholder="Paste token from BotFather"
+                autoComplete="new-password"
+              />
+            </div>
+            <Button
+              className="w-full"
+              disabled={saveTelegram.isPending || botToken.trim().length < 8}
+              onClick={() => saveTelegram.mutate()}
+            >
+              {saveTelegram.isPending ? "Verifying and saving…" : "Save Telegram integration"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

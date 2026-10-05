@@ -117,11 +117,11 @@ PKCE method: **S256** only
 ## 7. Roles (RBAC)
 
 ```text
-user → developer → publisher → admin → owner
+Member → Developer → Admin
 ```
 
 Matrix UI: **Workspace → Roles & access** (`/roles`)  
-Capabilities: dashboard, studio, download/upload, keys, connections, secrets, toolkits, publish, verify, admin
+Member: dashboard, Studio, personal resources, keys, connections, and secrets. Developer: Member access plus toolkits, resource verification, and publishing. Admin: Developer access plus platform role management.
 
 ---
 

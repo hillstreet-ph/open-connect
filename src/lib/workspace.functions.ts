@@ -127,21 +127,79 @@ export const removeResourceFromProject = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-/** OAuth / app connections scoped to a project. */
+/** Connections explicitly shared with this project. Secret references are never returned. */
 export const listProjectConnections = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((input: { projectId: string }) => ({ projectId: input?.projectId ?? "" }))
   .handler(async ({ data, context }) => {
     if (!data.projectId) throw new Error("projectId required");
-    const { data: rows, error } = await context.supabase
-      .from("project_connections")
-      .select(
-        "id, project_id, connection_id, created_at, app_connections(id, provider, display_name, status, scopes)",
-      )
-      .eq("project_id", data.projectId)
-      .order("created_at", { ascending: false });
+    const db = context.supabase as SupabaseClient;
+    const { data: rows, error } = await db.rpc("list_project_connections", {
+      p_project_id: data.projectId,
+    });
     if (error) throw new Error(error.message);
-    return rows ?? [];
+    return Array.isArray(rows) ? rows : [];
+  });
+
+/** Own connected cloud providers plus connections explicitly shared with the selected project. */
+export const listProjectCloudConnections = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { projectId: string }) => ({ projectId: input?.projectId ?? "" }))
+  .handler(async ({ data, context }) => {
+    if (!data.projectId) throw new Error("projectId required");
+    const db = context.supabase as SupabaseClient;
+    const [sharedResult, ownResult] = await Promise.all([
+      db.rpc("list_project_connections", { p_project_id: data.projectId }),
+      context.supabase
+        .from("app_connections")
+        .select("id, provider, display_name, status, scopes")
+        .eq("user_id", context.userId)
+        .eq("provider", "custom_mcp")
+        .eq("status", "connected"),
+    ]);
+    if (sharedResult.error) throw new Error(sharedResult.error.message);
+    if (ownResult.error) throw new Error(ownResult.error.message);
+    const available = new Map<
+      string,
+      {
+        id: string;
+        provider: string;
+        display_name: string;
+        status: string;
+        scopes: string[];
+        access: string;
+      }
+    >();
+    for (const connection of ownResult.data ?? []) {
+      available.set(connection.id, { ...connection, access: "Personal" });
+    }
+    const sharedRows = Array.isArray(sharedResult.data)
+      ? (sharedResult.data as Array<{
+          app_connections?: {
+            id?: string;
+            provider?: string;
+            display_name?: string;
+            status?: string;
+            scopes?: string[];
+          } | null;
+        }>)
+      : [];
+    for (const row of sharedRows) {
+      const connection = row.app_connections;
+      if (!connection?.id || connection.provider !== "custom_mcp") continue;
+      const existing = available.get(connection.id);
+      available.set(connection.id, {
+        id: connection.id,
+        provider: connection.provider,
+        display_name: connection.display_name ?? connection.provider,
+        status: connection.status ?? "unknown",
+        scopes: connection.scopes ?? [],
+        access: existing ? "Personal · shared with project" : "Shared with project",
+      });
+    }
+    return Array.from(available.values()).sort((a, b) =>
+      a.display_name.localeCompare(b.display_name),
+    );
   });
 
 export const addConnectionToProject = createServerFn({ method: "POST" })
@@ -151,26 +209,11 @@ export const addConnectionToProject = createServerFn({ method: "POST" })
     connectionId: input.connectionId,
   }))
   .handler(async ({ data, context }) => {
-    const { data: ownedConnection, error: ownershipError } = await context.supabase
-      .from("app_connections")
-      .select("id")
-      .eq("id", data.connectionId)
-      .eq("user_id", context.userId)
-      .maybeSingle();
-    if (ownershipError) throw new Error(ownershipError.message);
-    if (!ownedConnection) throw new Error("Connection not found or access denied");
-    const { data: row, error } = await context.supabase
-      .from("project_connections")
-      .upsert(
-        {
-          project_id: data.projectId,
-          connection_id: data.connectionId,
-          added_by: context.userId,
-        },
-        { onConflict: "project_id,connection_id" },
-      )
-      .select("id, project_id, connection_id")
-      .single();
+    const db = context.supabase as SupabaseClient;
+    const { data: row, error } = await db.rpc("add_project_connection", {
+      p_project_id: data.projectId,
+      p_connection_id: data.connectionId,
+    });
     if (error) throw new Error(error.message);
     return row;
   });
@@ -182,13 +225,13 @@ export const removeConnectionFromProject = createServerFn({ method: "POST" })
     connectionId: input.connectionId,
   }))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
-      .from("project_connections")
-      .delete()
-      .eq("project_id", data.projectId)
-      .eq("connection_id", data.connectionId);
+    const db = context.supabase as SupabaseClient;
+    const { data: removed, error } = await db.rpc("remove_project_connection", {
+      p_project_id: data.projectId,
+      p_connection_id: data.connectionId,
+    });
     if (error) throw new Error(error.message);
-    return { ok: true };
+    return { ok: removed };
   });
 
 /** Personal workspace library for project assignment. Public Marketplace rows are excluded. */
@@ -234,7 +277,7 @@ export const listMyConnections = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("app_connections")
-      .select("id, provider, display_name, status, project_id, organization_id, created_at")
+      .select("id, provider, display_name, status, scopes, created_at")
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return data ?? [];

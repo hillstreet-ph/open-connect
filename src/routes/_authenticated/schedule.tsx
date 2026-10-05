@@ -4,7 +4,12 @@ import { useServerFn } from "@tanstack/react-start";
 import { CalendarClock, Loader2, Pause, Play, Plus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { createSchedule, listSchedules, setScheduleStatus } from "@/lib/ops.functions";
+import {
+  createSchedule,
+  listAutomations,
+  listSchedules,
+  setScheduleStatus,
+} from "@/lib/ops.functions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,14 +33,20 @@ export const Route = createFileRoute("/_authenticated/schedule")({
 function SchedulePage() {
   const qc = useQueryClient();
   const list = useServerFn(listSchedules);
+  const listAutomation = useServerFn(listAutomations);
   const create = useServerFn(createSchedule);
   const setStatus = useServerFn(setScheduleStatus);
 
   const [name, setName] = useState("");
   const [cron, setCron] = useState("0 * * * *");
   const [runAt, setRunAt] = useState("");
+  const [automationId, setAutomationId] = useState("");
 
   const schedules = useQuery({ queryKey: ["schedules"], queryFn: () => list({}) });
+  const automations = useQuery({ queryKey: ["automations"], queryFn: () => listAutomation({}) });
+  const runnableAutomations = (automations.data ?? []).filter(
+    (item) => item.action_type === "model" && item.enabled,
+  );
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -44,11 +55,13 @@ function SchedulePage() {
           name,
           cronExpr: runAt ? undefined : cron || undefined,
           runAt: runAt ? new Date(runAt).toISOString() : undefined,
+          automationId,
         },
       }),
     onSuccess: () => {
       toast.success("Schedule created");
       setName("");
+      setAutomationId("");
       void qc.invalidateQueries({ queryKey: ["schedules"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
@@ -68,8 +81,8 @@ function SchedulePage() {
         </Badge>
         <h1 className="font-display text-xl font-semibold tracking-tight sm:text-2xl">Schedule</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Save cron or one-shot schedules. Automatic execution requires a connected scheduling
-          worker.
+          Schedule an enabled AI response automation. The background runner checks every five
+          minutes and routes through connected free models.
         </p>
       </div>
 
@@ -78,6 +91,27 @@ function SchedulePage() {
           <CardTitle className="text-base">New schedule</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-3">
+          <div className="space-y-2 sm:col-span-3">
+            <Label htmlFor="sched-automation">AI response automation</Label>
+            <select
+              id="sched-automation"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              value={automationId}
+              onChange={(event) => setAutomationId(event.target.value)}
+            >
+              <option value="">Choose an enabled automation</option>
+              {runnableAutomations.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+            {runnableAutomations.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                Create an enabled AI response automation first.
+              </p>
+            ) : null}
+          </div>
           <div className="space-y-2 sm:col-span-3">
             <Label htmlFor="sched-name">Name</Label>
             <Input
@@ -108,7 +142,7 @@ function SchedulePage() {
           </div>
           <div className="sm:col-span-3">
             <Button
-              disabled={!name.trim() || createMutation.isPending}
+              disabled={!name.trim() || !automationId || createMutation.isPending}
               onClick={() => createMutation.mutate()}
             >
               {createMutation.isPending ? (
@@ -141,7 +175,8 @@ function SchedulePage() {
                 <div>
                   <p className="font-medium">{s.name}</p>
                   <p className="mt-1 font-mono text-xs text-muted-foreground">
-                    {s.cron_expr ?? s.run_at ?? "—"} · {s.status} · {s.timezone}
+                    {s.cron_expr ?? s.run_at ?? "—"} · {s.status} · {s.timezone} · next{" "}
+                    {s.next_run_at ?? "—"}
                   </p>
                 </div>
                 <Button

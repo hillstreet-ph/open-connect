@@ -1,14 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Building2, Loader2, MailPlus, Plus, UsersRound } from "lucide-react";
+import { Building2, Loader2, MailPlus, Plus, Save, Trash2, UsersRound } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
   createOrganizationGroup,
   inviteOrganizationMember,
   getCanonicalOrganization,
+  getOrganizationAccess,
   listOrganizationPeople,
+  removeOrganizationMember,
+  setOrganizationMemberGroups,
+  updateOrganizationMemberRole,
 } from "@/lib/orgs.functions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,10 +40,16 @@ function OrgsPage() {
   const listPeople = useServerFn(listOrganizationPeople);
   const createGroup = useServerFn(createOrganizationGroup);
   const inviteMember = useServerFn(inviteOrganizationMember);
+  const updateRole = useServerFn(updateOrganizationMemberRole);
+  const removeMember = useServerFn(removeOrganizationMember);
+  const setGroups = useServerFn(setOrganizationMemberGroups);
+  const getOrgAccess = useServerFn(getOrganizationAccess);
 
   const [groupName, setGroupName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<"admin" | "member">("member");
+  const [inviteRole, setInviteRole] = useState<"admin" | "developer" | "member">("member");
+  const [roleDrafts, setRoleDrafts] = useState<Record<string, string>>({});
+  const [groupDrafts, setGroupDrafts] = useState<Record<string, string>>({});
   const [inviteGroupId, setInviteGroupId] = useState("");
 
   const organization = useQuery({
@@ -47,10 +57,16 @@ function OrgsPage() {
     queryFn: () => getOrganization(),
   });
   const activeOrgId = organization.data?.id ?? "";
+  const access = useQuery({
+    queryKey: ["organization-access", activeOrgId],
+    queryFn: () => getOrgAccess({ data: { organizationId: activeOrgId } }),
+    enabled: Boolean(activeOrgId),
+  });
+  const isAdmin = access.data?.isAdmin === true;
   const people = useQuery({
     queryKey: ["organization-people", activeOrgId],
     queryFn: () => listPeople({ data: { organizationId: activeOrgId } }),
-    enabled: Boolean(activeOrgId),
+    enabled: Boolean(activeOrgId && isAdmin),
   });
 
   const groupMutation = useMutation({
@@ -61,6 +77,35 @@ function OrgsPage() {
       void qc.invalidateQueries({ queryKey: ["organization-people", activeOrgId] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not create group"),
+  });
+
+  const roleMutation = useMutation({
+    mutationFn: (input: { userId: string; role: string }) =>
+      updateRole({ data: { organizationId: activeOrgId, ...input } }),
+    onSuccess: () => {
+      toast.success("Organization role updated");
+      void qc.invalidateQueries({ queryKey: ["organization-people", activeOrgId] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not update role"),
+  });
+
+  const groupMemberMutation = useMutation({
+    mutationFn: (input: { userId: string; groupIds: string[] }) =>
+      setGroups({ data: { organizationId: activeOrgId, ...input } }),
+    onSuccess: () => {
+      toast.success("Group membership updated");
+      void qc.invalidateQueries({ queryKey: ["organization-people", activeOrgId] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not update group"),
+  });
+
+  const removeMutation = useMutation({
+    mutationFn: (userId: string) => removeMember({ data: { organizationId: activeOrgId, userId } }),
+    onSuccess: () => {
+      toast.success("Organization and project access removed");
+      void qc.invalidateQueries({ queryKey: ["organization-people", activeOrgId] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not remove member"),
   });
 
   const inviteMutation = useMutation({
@@ -94,7 +139,7 @@ function OrgsPage() {
         project management stays under Workspaces.
       </p>
 
-      <Card className="mt-8 shadow-panel">
+      <Card className={`mt-8 shadow-panel ${isAdmin ? "" : "hidden"}`}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <UsersRound className="size-4" /> People & groups
@@ -111,7 +156,7 @@ function OrgsPage() {
                 <div>
                   <h3 className="font-medium">Invite a person</h3>
                   <p className="text-xs text-muted-foreground">
-                    Owners and admins can invite members. Owner access cannot be granted here.
+                    Organization admins can invite members, developers, and admins.
                   </p>
                 </div>
                 <div className="space-y-2">
@@ -132,9 +177,12 @@ function OrgsPage() {
                       id="invite-role"
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                       value={inviteRole}
-                      onChange={(event) => setInviteRole(event.target.value as "admin" | "member")}
+                      onChange={(event) =>
+                        setInviteRole(event.target.value as "admin" | "developer" | "member")
+                      }
                     >
                       <option value="member">Member</option>
+                      <option value="developer">Developer</option>
                       <option value="admin">Admin</option>
                     </select>
                   </div>
@@ -172,7 +220,8 @@ function OrgsPage() {
                 <div>
                   <h3 className="font-medium">Groups</h3>
                   <p className="text-xs text-muted-foreground">
-                    Use groups for departments, project teams, or operational functions.
+                    Use groups to organize teams. Project access is shared separately; group
+                    membership does not grant it.
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -220,14 +269,120 @@ function OrgsPage() {
                 <h3 className="mb-2 text-sm font-medium">Members</h3>
                 <div className="space-y-2">
                   {people.data.members.map((member) => (
-                    <div
-                      key={member.id}
-                      className="flex items-center justify-between rounded-md border px-3 py-2"
-                    >
-                      <span className="truncate text-sm">
-                        {member.profile?.display_name || "Workspace member"}
-                      </span>
-                      <Badge variant="outline">{member.role}</Badge>
+                    <div key={member.id} className="space-y-3 rounded-md border p-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <span className="block truncate text-sm font-medium">
+                            {member.profile?.display_name || member.email || "Workspace member"}
+                          </span>
+                          <span className="block truncate text-xs text-muted-foreground">
+                            {member.email}
+                          </span>
+                        </div>
+                        <Badge variant="outline" className="capitalize">
+                          {member.role}
+                        </Badge>
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label htmlFor={"member-role-" + member.user_id}>Organization role</Label>
+                          <select
+                            id={"member-role-" + member.user_id}
+                            className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                            value={roleDrafts[member.user_id] ?? member.role}
+                            onChange={(event) =>
+                              setRoleDrafts((current) => ({
+                                ...current,
+                                [member.user_id]: event.target.value,
+                              }))
+                            }
+                          >
+                            <option value="member">Member</option>
+                            <option value="developer">Developer</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={
+                              roleMutation.isPending ||
+                              (roleDrafts[member.user_id] ?? member.role) === member.role
+                            }
+                            onClick={() =>
+                              roleMutation.mutate({
+                                userId: member.user_id,
+                                role: roleDrafts[member.user_id] ?? member.role,
+                              })
+                            }
+                          >
+                            <Save className="mr-1 size-3" /> Save role
+                          </Button>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor={"member-group-" + member.user_id}>Group</Label>
+                          <select
+                            id={"member-group-" + member.user_id}
+                            className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                            value={
+                              groupDrafts[member.user_id] ??
+                              (member.groupIds.length === 1 ? member.groupIds[0] : "")
+                            }
+                            onChange={(event) =>
+                              setGroupDrafts((current) => ({
+                                ...current,
+                                [member.user_id]: event.target.value,
+                              }))
+                            }
+                          >
+                            <option value="">No group</option>
+                            {(people.data?.groups ?? []).map((group) => (
+                              <option key={group.id} value={group.id}>
+                                {group.name}
+                              </option>
+                            ))}
+                          </select>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={
+                              groupMemberMutation.isPending ||
+                              (groupDrafts[member.user_id] ??
+                                (member.groupIds.length === 1 ? member.groupIds[0] : "")) ===
+                                (member.groupIds.length === 1 ? member.groupIds[0] : "")
+                            }
+                            onClick={() => {
+                              const groupId =
+                                groupDrafts[member.user_id] ??
+                                (member.groupIds.length === 1 ? member.groupIds[0] : "");
+                              groupMemberMutation.mutate({
+                                userId: member.user_id,
+                                groupIds: groupId ? [groupId] : [],
+                              });
+                            }}
+                          >
+                            <Save className="mr-1 size-3" /> Move group
+                          </Button>
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive"
+                        disabled={removeMutation.isPending}
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              "Remove " +
+                                (member.email || "this member") +
+                                " and their HillStreet project grants?",
+                            )
+                          ) {
+                            removeMutation.mutate(member.user_id);
+                          }
+                        }}
+                      >
+                        <Trash2 className="mr-1 size-4" /> Remove
+                      </Button>
                     </div>
                   ))}
                 </div>
@@ -254,6 +409,17 @@ function OrgsPage() {
           ) : null}
         </CardContent>
       </Card>
+      {!access.isLoading && !isAdmin ? (
+        <Card className="mt-8 shadow-panel">
+          <CardHeader>
+            <CardTitle className="text-base">Organization settings are admin-managed</CardTitle>
+            <CardDescription>
+              Only organization Admins can invite people, change roles, manage groups, or update
+              organization access. Ask an Admin if you need a change.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      ) : null}
     </div>
   );
 }

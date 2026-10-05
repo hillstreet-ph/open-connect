@@ -34,7 +34,14 @@ export function BrandLogo({ provider, name, size = "md", className }: Props) {
         className={cn(IMG[size], "opacity-90 dark:invert")}
         loading="lazy"
         referrerPolicy="no-referrer"
+        onError={(event) => {
+          event.currentTarget.hidden = true;
+          event.currentTarget.nextElementSibling?.classList.remove("hidden");
+        }}
       />
+      <span className="hidden text-[10px] font-semibold uppercase text-muted-foreground">
+        {label.slice(0, 2)}
+      </span>
     </span>
   );
 }

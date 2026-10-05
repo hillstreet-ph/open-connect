@@ -2,10 +2,11 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ALL_ROLES, canRevokeRole, can, roleLabel } from "./rbac.ts";
 
-test("only owners can use owner-role revocation controls", () => {
+test("only legacy platform owners can revoke a legacy owner assignment", () => {
   for (const role of ALL_ROLES) {
-    assert.equal(canRevokeRole([role], "actor", "target", "owner"), role === "owner");
+    assert.equal(canRevokeRole([role], "actor", "target", "owner"), false);
   }
+  assert.equal(canRevokeRole(["owner"], "actor", "target", "owner"), true);
 });
 
 test("admin cannot revoke own admin role but can revoke another admin", () => {
@@ -26,7 +27,11 @@ test("non-admin roles cannot use revoke controls", () => {
 test("client label does not change stored roles or toolkit access", () => {
   assert.equal(roleLabel("user"), "Member");
   assert.equal(can(["user"], "manage_toolkits"), false);
-  for (const role of ["developer", "publisher", "admin", "owner"]) {
+  for (const role of ["developer", "admin"]) {
     assert.equal(can([role], "manage_toolkits"), true);
+    assert.equal(can([role], "publish_resources"), true);
+    assert.equal(can([role], "verify_resources"), true);
   }
+  assert.equal(can(["user"], "publish_resources"), false);
+  assert.equal(can(["user"], "verify_resources"), false);
 });

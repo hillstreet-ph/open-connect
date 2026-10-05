@@ -2,7 +2,7 @@ import { beforeEach, expect, mock, test } from "bun:test";
 
 let post: (args: { request: Request }) => Promise<Response>;
 let authenticated = true;
-let roles = ["owner"];
+let roles = ["admin"];
 let scopes = ["mcp:connect", "control:write"];
 const resource = {
   slug: "fixture-approved-tool",
@@ -73,7 +73,7 @@ await import("../routes/mcp");
 
 beforeEach(() => {
   authenticated = true;
-  roles = ["owner"];
+  roles = ["admin"];
   scopes = ["mcp:connect", "control:write"];
   tables.length = 0;
   resource.verified = true;
@@ -163,12 +163,12 @@ test("anonymous invocation remains rejected before catalog access", async () => 
   expect(tables).toEqual([]);
 });
 
-test("installation still requires owner or admin plus write scope", async () => {
+test("installation requires admin plus write scope", async () => {
   roles = ["member"];
   await expect(call("install_capability", { resource_id: resource.slug })).rejects.toThrow(
-    "Owner/admin role",
+    "Admin role",
   );
-  roles = ["owner"];
+  roles = ["admin"];
   scopes = ["mcp:connect"];
   await expect(call("install_capability", { resource_id: resource.slug })).rejects.toThrow(
     "control write scope",

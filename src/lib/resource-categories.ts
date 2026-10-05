@@ -1,10 +1,11 @@
+import { resourceCategories } from "./nav.ts";
+
 export const RESOURCE_CATEGORIES = [
   { type: "agent", label: "Agents" },
   { type: "skill", label: "Skills" },
   { type: "plugin", label: "Plugins" },
   { type: "mcp", label: "MCP Servers" },
   { type: "tool", label: "Tools" },
-  { type: "guide", label: "Guides" },
   { type: "app", label: "Apps" },
   { type: "model", label: "Models" },
   { type: "prompt", label: "Prompts" },
@@ -33,7 +34,7 @@ export function groupProjectResources<T extends ProjectResourceRow>(rows: T[]) {
   }));
   const known = new Set(RESOURCE_CATEGORIES.map((category) => category.type as string));
   const other = rows.filter((row) => !known.has(row.resources?.resource_type ?? ""));
-  if (other.length) groups.push({ type: "other" as never, label: "Other" as never, items: other });
+  if (other.length) groups.push({ type: "other" as never, label: "Others" as never, items: other });
   return groups.filter((group) => group.items.length > 0);
 }
 
@@ -56,4 +57,23 @@ export function groupResourcesByPurpose<T extends ProjectResourceRow>(rows: T[])
   return [...groups.values()].sort((a, b) =>
     a.type === "general" ? 1 : b.type === "general" ? -1 : a.label.localeCompare(b.label),
   );
+}
+
+/** Maps every library item into the same ordered type buckets used by Marketplace. */
+export function resourceCategoryForType(type: string | null | undefined) {
+  const category = resourceCategories.find((item) => item.value === type);
+  return category && category.value !== "all" ? category.value : "other";
+}
+
+export function groupResourcesByType<T extends ProjectResourceRow>(rows: T[]) {
+  return resourceCategories
+    .filter((category) => category.value !== "all")
+    .map((category) => ({
+      type: category.value,
+      label: category.label,
+      items: rows.filter(
+        (row) => resourceCategoryForType(row.resources?.resource_type) === category.value,
+      ),
+    }))
+    .filter((group) => group.items.length > 0);
 }

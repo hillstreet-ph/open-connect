@@ -5,6 +5,8 @@ import {
   hasScope,
   json,
   logGatewayRequest,
+  isAutoFreeModel,
+  resolveAutoFreeRoutes,
   resolveModelId,
   resolveUserUpstreams,
 } from "@/lib/gateway.server";
@@ -27,23 +29,36 @@ export const Route = createFileRoute("/v1/chat/completions")({
         }
 
         const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
-        if (!body || typeof body["model"] !== "string") {
-          return gatewayError("A `model` field is required.", 400, "invalid_request");
+        if (!body || (body["model"] != null && typeof body["model"] !== "string")) {
+          return gatewayError("The `model` field must be a string.", 400, "invalid_request");
         }
 
-        const requestedModel = body["model"] as string;
-        const resolvedModel = resolveModelId(requestedModel);
-        const payload = { ...body, model: resolvedModel };
+        const requestedModel =
+          typeof body["model"] === "string" && body["model"].trim()
+            ? (body["model"] as string).trim()
+            : "open-connect/auto";
+        const autoFree = isAutoFreeModel(requestedModel);
+        const routes = autoFree
+          ? await resolveAutoFreeRoutes(upstreams)
+          : upstreams.map((upstream) => ({ upstream, model: resolveModelId(requestedModel) }));
+        if (routes.length === 0) {
+          return gatewayError(
+            "No connected OpenRouter free router or zero-cost LiteLLM model is available.",
+            503,
+            "free_models_unavailable",
+          );
+        }
         const streaming = body["stream"] === true;
 
         let lastError: { status: number; body: unknown } | null = null;
 
-        for (const upstream of upstreams) {
+        for (const route of routes) {
+          const { upstream, model } = route;
           try {
             const response = await fetch(`${upstream.baseUrl}/chat/completions`, {
               method: "POST",
               headers: upstream.headers,
-              body: JSON.stringify(payload),
+              body: JSON.stringify({ ...body, model }),
               signal: AbortSignal.timeout(120_000),
             });
 
@@ -68,7 +83,7 @@ export const Route = createFileRoute("/v1/chat/completions")({
                   "content-type": response.headers.get("content-type") ?? "text/event-stream",
                   "cache-control": "no-cache",
                   "x-open-connect-upstream": upstream.name,
-                  "x-open-connect-model": resolvedModel,
+                  "x-open-connect-model": model,
                 },
               });
             }
@@ -81,7 +96,7 @@ export const Route = createFileRoute("/v1/chat/completions")({
             if (!response.ok) {
               lastError = { status: response.status, body: result };
               // try next upstream on 5xx / 404 model
-              if (response.status >= 500 || response.status === 404) continue;
+              if (autoFree || response.status >= 500 || response.status === 404) continue;
               await logGatewayRequest({
                 key,
                 endpoint: "/v1/chat/completions",
@@ -112,7 +127,7 @@ export const Route = createFileRoute("/v1/chat/completions")({
           endpoint: "/v1/chat/completions",
           model: requestedModel,
           statusCode: lastError?.status ?? 502,
-          upstream: upstreams.map((u) => u.name).join("+"),
+          upstream: routes.map((route) => route.upstream.name).join("+"),
         });
 
         return json(

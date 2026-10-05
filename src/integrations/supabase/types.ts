@@ -146,6 +146,42 @@ export type Database = {
         };
         Relationships: [];
       };
+      inbound_integrations: {
+        Row: {
+          created_at: string;
+          credential_reference: string;
+          display_name: string;
+          id: string;
+          metadata: Json;
+          provider: string;
+          status: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          credential_reference: string;
+          display_name: string;
+          id?: string;
+          metadata?: Json;
+          provider: string;
+          status?: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          credential_reference?: string;
+          display_name?: string;
+          id?: string;
+          metadata?: Json;
+          provider?: string;
+          status?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       categories: {
         Row: {
           created_at: string;
@@ -478,6 +514,31 @@ export type Database = {
       };
       reveal_credential_secret: {
         Args: { p_id: string };
+        Returns: Json;
+      };
+      create_credential_folder: {
+        Args: { p_name: string };
+        Returns: Json;
+      };
+      list_credential_folders: {
+        Args: Record<PropertyKey, never>;
+        Returns: Json;
+      };
+      update_credential_folder: {
+        Args: {
+          p_credential_ids: string[];
+          p_folder_id: string;
+          p_name: string;
+          p_project_ids: string[];
+        };
+        Returns: Json;
+      };
+      delete_credential_folder: {
+        Args: { p_folder_id: string };
+        Returns: boolean;
+      };
+      update_credential_secret_value: {
+        Args: { p_id: string; p_secret_value: string };
         Returns: Json;
       };
       get_service_credential: {

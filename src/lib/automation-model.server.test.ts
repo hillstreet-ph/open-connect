@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { automationPrompt, generateAutomationResponse } from "./automation-model.server.ts";
 const upstream = {
+  name: "openrouter" as const,
   baseUrl: "https://openrouter.ai/api/v1",
   headers: { Authorization: "Bearer test" },
 };
@@ -15,12 +16,25 @@ test("uses free model, bounded tokens and does not follow redirects or execute t
     assert.equal(url, upstream.baseUrl + "/chat/completions");
     assert.equal(options?.redirect, "manual");
     const body = JSON.parse(String(options?.body));
-    assert.equal(body.model, "poolside/laguna-s-2.1:free");
+    assert.equal(body.model, "openrouter/free");
     assert.equal(body.max_tokens, 2048);
     assert.equal(body.tools, undefined);
     return Response.json({ model: "test:free", choices: [{ message: { content: "Hello!" } }] });
   });
   assert.deepEqual(result, { text: "Hello!", model: "test:free" });
+});
+test("accepts a catalogued OpenRouter free model for Auto fallback", async () => {
+  const result = await generateAutomationResponse(
+    "Hello",
+    upstream,
+    async (_url, options) => {
+      const body = JSON.parse(String(options?.body));
+      assert.equal(body.model, "meta/free-model:free");
+      return Response.json({ choices: [{ message: { content: "Hello!" } }] });
+    },
+    "meta/free-model:free",
+  );
+  assert.equal(result.model, "meta/free-model:free");
 });
 test("rejects redirects, rate limits, missing text and malformed responses", async () => {
   for (const response of [

@@ -55,7 +55,9 @@ import { Route as OauthRegisterRouteImport } from './routes/oauth/register'
 import { Route as OauthTokenRouteImport } from './routes/oauth/token'
 import { Route as V1IndexRouteImport } from './routes/v1/index'
 import { Route as V1ModelsRouteImport } from './routes/v1/models'
+import { Route as AuthenticatedProjectAccessProjectIdRouteImport } from './routes/_authenticated/project-access.$projectId'
 import { Route as AuthenticatedProjectsProjectIdRouteImport } from './routes/_authenticated/projects.$projectId'
+import { Route as ApiInternalSchedulerRouteImport } from './routes/api/internal/scheduler'
 import { Route as ApiV1DatabricksRouteImport } from './routes/api/v1/databricks'
 import { Route as ApiV1HealthRouteImport } from './routes/api/v1/health'
 import { Route as ApiV1ResourcesRouteImport } from './routes/api/v1/resources'
@@ -300,12 +302,23 @@ const V1ModelsRoute = V1ModelsRouteImport.update({
   path: '/v1/models',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedProjectAccessProjectIdRoute =
+  AuthenticatedProjectAccessProjectIdRouteImport.update({
+    id: '/project-access/$projectId',
+    path: '/project-access/$projectId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedProjectsProjectIdRoute =
   AuthenticatedProjectsProjectIdRouteImport.update({
     id: '/$projectId',
     path: '/$projectId',
     getParentRoute: () => AuthenticatedProjectsRoute,
   } as any)
+const ApiInternalSchedulerRoute = ApiInternalSchedulerRouteImport.update({
+  id: '/api/internal/scheduler',
+  path: '/api/internal/scheduler',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiV1DatabricksRoute = ApiV1DatabricksRouteImport.update({
   id: '/api/v1/databricks',
   path: '/api/v1/databricks',
@@ -389,7 +402,9 @@ export interface FileRoutesByFullPath {
   '/oauth/token': typeof OauthTokenRoute
   '/v1/models': typeof V1ModelsRoute
   '/v1/': typeof V1IndexRoute
+  '/project-access/$projectId': typeof AuthenticatedProjectAccessProjectIdRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdRoute
+  '/api/internal/scheduler': typeof ApiInternalSchedulerRoute
   '/api/v1/databricks': typeof ApiV1DatabricksRoute
   '/api/v1/health': typeof ApiV1HealthRoute
   '/api/v1/resources': typeof ApiV1ResourcesRoute
@@ -444,7 +459,9 @@ export interface FileRoutesByTo {
   '/oauth/token': typeof OauthTokenRoute
   '/v1/models': typeof V1ModelsRoute
   '/v1': typeof V1IndexRoute
+  '/project-access/$projectId': typeof AuthenticatedProjectAccessProjectIdRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdRoute
+  '/api/internal/scheduler': typeof ApiInternalSchedulerRoute
   '/api/v1/databricks': typeof ApiV1DatabricksRoute
   '/api/v1/health': typeof ApiV1HealthRoute
   '/api/v1/resources': typeof ApiV1ResourcesRoute
@@ -501,7 +518,9 @@ export interface FileRoutesById {
   '/oauth/token': typeof OauthTokenRoute
   '/v1/models': typeof V1ModelsRoute
   '/v1/': typeof V1IndexRoute
+  '/_authenticated/project-access/$projectId': typeof AuthenticatedProjectAccessProjectIdRoute
   '/_authenticated/projects/$projectId': typeof AuthenticatedProjectsProjectIdRoute
+  '/api/internal/scheduler': typeof ApiInternalSchedulerRoute
   '/api/v1/databricks': typeof ApiV1DatabricksRoute
   '/api/v1/health': typeof ApiV1HealthRoute
   '/api/v1/resources': typeof ApiV1ResourcesRoute
@@ -558,7 +577,9 @@ export interface FileRouteTypes {
     | '/oauth/token'
     | '/v1/models'
     | '/v1/'
+    | '/project-access/$projectId'
     | '/projects/$projectId'
+    | '/api/internal/scheduler'
     | '/api/v1/databricks'
     | '/api/v1/health'
     | '/api/v1/resources'
@@ -613,7 +634,9 @@ export interface FileRouteTypes {
     | '/oauth/token'
     | '/v1/models'
     | '/v1'
+    | '/project-access/$projectId'
     | '/projects/$projectId'
+    | '/api/internal/scheduler'
     | '/api/v1/databricks'
     | '/api/v1/health'
     | '/api/v1/resources'
@@ -669,7 +692,9 @@ export interface FileRouteTypes {
     | '/oauth/token'
     | '/v1/models'
     | '/v1/'
+    | '/_authenticated/project-access/$projectId'
     | '/_authenticated/projects/$projectId'
+    | '/api/internal/scheduler'
     | '/api/v1/databricks'
     | '/api/v1/health'
     | '/api/v1/resources'
@@ -694,6 +719,7 @@ export interface RootRouteChildren {
   OauthTokenRoute: typeof OauthTokenRoute
   V1ModelsRoute: typeof V1ModelsRoute
   V1IndexRoute: typeof V1IndexRoute
+  ApiInternalSchedulerRoute: typeof ApiInternalSchedulerRoute
   ApiV1DatabricksRoute: typeof ApiV1DatabricksRoute
   ApiV1HealthRoute: typeof ApiV1HealthRoute
   ApiV1ResourcesRoute: typeof ApiV1ResourcesRoute
@@ -1026,12 +1052,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof V1ModelsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/project-access/$projectId': {
+      id: '/_authenticated/project-access/$projectId'
+      path: '/project-access/$projectId'
+      fullPath: '/project-access/$projectId'
+      preLoaderRoute: typeof AuthenticatedProjectAccessProjectIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/projects/$projectId': {
       id: '/_authenticated/projects/$projectId'
       path: '/$projectId'
       fullPath: '/projects/$projectId'
       preLoaderRoute: typeof AuthenticatedProjectsProjectIdRouteImport
       parentRoute: typeof AuthenticatedProjectsRoute
+    }
+    '/api/internal/scheduler': {
+      id: '/api/internal/scheduler'
+      path: '/api/internal/scheduler'
+      fullPath: '/api/internal/scheduler'
+      preLoaderRoute: typeof ApiInternalSchedulerRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/v1/databricks': {
       id: '/api/v1/databricks'
@@ -1146,6 +1186,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedTasksRoute: typeof AuthenticatedTasksRoute
   AuthenticatedToolkitsRoute: typeof AuthenticatedToolkitsRoute
   AuthenticatedToolsRoute: typeof AuthenticatedToolsRoute
+  AuthenticatedProjectAccessProjectIdRoute: typeof AuthenticatedProjectAccessProjectIdRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -1181,6 +1222,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedTasksRoute: AuthenticatedTasksRoute,
   AuthenticatedToolkitsRoute: AuthenticatedToolkitsRoute,
   AuthenticatedToolsRoute: AuthenticatedToolsRoute,
+  AuthenticatedProjectAccessProjectIdRoute:
+    AuthenticatedProjectAccessProjectIdRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -1201,6 +1244,7 @@ const rootRouteChildren: RootRouteChildren = {
   OauthTokenRoute: OauthTokenRoute,
   V1ModelsRoute: V1ModelsRoute,
   V1IndexRoute: V1IndexRoute,
+  ApiInternalSchedulerRoute: ApiInternalSchedulerRoute,
   ApiV1DatabricksRoute: ApiV1DatabricksRoute,
   ApiV1HealthRoute: ApiV1HealthRoute,
   ApiV1ResourcesRoute: ApiV1ResourcesRoute,
