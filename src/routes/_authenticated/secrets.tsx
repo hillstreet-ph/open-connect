@@ -851,9 +851,7 @@ function SecretsPage() {
                             })
                           }
                           disabled={
-                            !editFolderName.trim() ||
-                            updateFolderMutation.isPending ||
-                            !list.data
+                            !editFolderName.trim() || updateFolderMutation.isPending || !list.data
                           }
                         >
                           {updateFolderMutation.isPending ? (
@@ -1121,7 +1119,8 @@ function SecretsPage() {
                       </div>
                       <div className="space-y-1.5">
                         <Label htmlFor={`edit-value-${row.id}`}>
-                          {TYPE_DETAILS[row.secret_type as SecretType]?.valueLabel ?? "Secret value"}
+                          {TYPE_DETAILS[row.secret_type as SecretType]?.valueLabel ??
+                            "Secret value"}
                         </Label>
                         <div className="flex gap-2">
                           <Input
