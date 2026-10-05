@@ -3,8 +3,18 @@ import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { isAppPath } from "./shell.ts";
-import { appCategories, flatAppNav, flatPublicNav, publicCategories, resourceCategories } from "./nav.ts";
-import { groupProjectResources, groupResourcesByPurpose, groupResourcesByType } from "./resource-categories.ts";
+import {
+  appCategories,
+  flatAppNav,
+  flatPublicNav,
+  publicCategories,
+  resourceCategories,
+} from "./nav.ts";
+import {
+  groupProjectResources,
+  groupResourcesByPurpose,
+  groupResourcesByType,
+} from "./resource-categories.ts";
 
 function routePaths() {
   const routesRoot = path.resolve(process.cwd(), "src/routes");
