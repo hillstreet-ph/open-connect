@@ -10,7 +10,7 @@
 | Surface | Expect |
 |---------|--------|
 | `/` | 200 marketing home |
-| `/api/v1/health` | `status: ok`, model_upstream set |
+| `/api/v1/health` | `status: ok`, platform upstream or user-scoped model connections supported |
 | `/mcp` | 401 without key (gateway up) |
 | `/v1` | 401 without key |
 | OAuth discovery | `code_challenge_methods_supported: ["S256"]` |

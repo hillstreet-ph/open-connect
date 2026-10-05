@@ -1,7 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { hasRole, ROLE_RANK, type AppRole, ALL_ROLES } from "@/lib/rbac";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { hasRole, type AppRole } from "@/lib/rbac";
+
+const ASSIGNABLE_ROLES: AppRole[] = ["user", "developer", "admin"];
+const MANAGEABLE_ROLES: AppRole[] = ASSIGNABLE_ROLES;
 
 async function loadRoles(supabase: SupabaseClient, userId: string): Promise<AppRole[]> {
   const { data, error } = await supabase.from("user_roles").select("role").eq("user_id", userId);
@@ -10,11 +14,21 @@ async function loadRoles(supabase: SupabaseClient, userId: string): Promise<AppR
   return roles.length ? roles : (["user"] as AppRole[]);
 }
 
+async function findUserIdByEmail(email: string): Promise<string> {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized || !normalized.includes("@")) throw new Error("Enter a valid account email");
+  const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+  if (error) throw new Error(error.message);
+  const user = data.users.find((candidate) => candidate.email?.toLowerCase() === normalized);
+  if (!user) {
+    throw new Error("No account found for that email. Invite them to the organization first.");
+  }
+  return user.id;
+}
+
 export const getMyRoles = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    return loadRoles(context.supabase, context.userId);
-  });
+  .handler(async ({ context }) => loadRoles(context.supabase, context.userId));
 
 export const listRoleAssignments = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -25,42 +39,49 @@ export const listRoleAssignments = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("user_roles")
       .select("id, user_id, role, created_at")
+      .in("role", MANAGEABLE_ROLES)
       .order("created_at", { ascending: false })
       .limit(200);
     if (error) throw new Error(error.message);
-    return data ?? [];
+
+    return Promise.all(
+      (data ?? []).map(async (row) => {
+        const { data: userData } = await supabaseAdmin.auth.admin.getUserById(row.user_id);
+        return { ...row, email: userData.user?.email ?? "" };
+      }),
+    );
   });
 
 export const assignRole = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input: { user_id: string; role: string }) => ({
-    user_id: (input?.user_id ?? "").trim(),
+  .validator((input: { email: string; role: string }) => ({
+    email: (input?.email ?? "").trim().toLowerCase(),
     role: (input?.role ?? "user").trim() as AppRole,
   }))
   .handler(async ({ data, context }) => {
     const mine = await loadRoles(context.supabase, context.userId);
     if (!hasRole(mine, "admin")) throw new Error("Forbidden: admin required");
-    if (!ALL_ROLES.includes(data.role)) throw new Error("Invalid role");
-    if (!data.user_id) throw new Error("user_id required");
-
-    // Only owners may grant/revoke owner; admins may not escalate past admin
-    if (data.role === "owner" && !hasRole(mine, "owner")) {
-      throw new Error("Only owners can assign the owner role");
-    }
-    if (
-      ROLE_RANK[data.role] > ROLE_RANK[mine.includes("owner") ? "owner" : "admin"] &&
-      !hasRole(mine, "owner")
-    ) {
-      throw new Error("Cannot assign a role higher than your own");
+    if (!ASSIGNABLE_ROLES.includes(data.role)) {
+      throw new Error("Choose Member, Developer, or Admin");
     }
 
+    const userId = await findUserIdByEmail(data.email);
     const { data: row, error } = await context.supabase
       .from("user_roles")
-      .upsert({ user_id: data.user_id, role: data.role }, { onConflict: "user_id,role" })
+      .upsert({ user_id: userId, role: data.role }, { onConflict: "user_id,role" })
       .select("id, user_id, role, created_at")
-      .maybeSingle();
+      .single();
     if (error) throw new Error(error.message);
-    return row;
+    const { error: cleanupError } = await context.supabase
+      .from("user_roles")
+      .delete()
+      .eq("user_id", userId)
+      .in(
+        "role",
+        ASSIGNABLE_ROLES.filter((role) => role !== data.role),
+      );
+    if (cleanupError) throw new Error(cleanupError.message);
+    return { ...row, email: data.email };
   });
 
 export const revokeRole = createServerFn({ method: "POST" })
@@ -73,11 +94,19 @@ export const revokeRole = createServerFn({ method: "POST" })
     const mine = await loadRoles(context.supabase, context.userId);
     if (!hasRole(mine, "admin")) throw new Error("Forbidden: admin required");
     if (!data.user_id || !data.role) throw new Error("user_id and role required");
-    if (data.role === "owner" && !hasRole(mine, "owner")) {
-      throw new Error("Only owners can revoke the owner role");
+    if (!MANAGEABLE_ROLES.includes(data.role)) {
+      throw new Error("This platform role cannot be managed here");
     }
-    if (data.user_id === context.userId && data.role === "admin" && !hasRole(mine, "owner")) {
-      throw new Error("Admins cannot revoke their own admin role");
+    if (data.user_id === context.userId && data.role === "admin") {
+      throw new Error("You cannot revoke your own admin role");
+    }
+    if (data.role === "admin") {
+      const { count, error: countError } = await context.supabase
+        .from("user_roles")
+        .select("id", { count: "exact", head: true })
+        .eq("role", "admin");
+      if (countError) throw new Error(countError.message);
+      if ((count ?? 0) <= 1) throw new Error("The platform must keep at least one admin");
     }
 
     const { error } = await context.supabase

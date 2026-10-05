@@ -5,14 +5,26 @@ import { toast } from "sonner";
 import { addResourceToLibrary } from "@/lib/library.functions";
 import { Button } from "@/components/ui/button";
 
-export function AddToLibraryButton({ resourceId }: { resourceId: string }) {
+export function AddToLibraryButton({
+  resourceId,
+  collectionId,
+  alreadyInLibrary = false,
+}: {
+  resourceId: string;
+  collectionId?: string;
+  alreadyInLibrary?: boolean;
+}) {
   const qc = useQueryClient();
   const add = useServerFn(addResourceToLibrary);
   const mutation = useMutation({
-    mutationFn: () => add({ data: { resourceId } }),
+    mutationFn: () => add({ data: { resourceId, collectionId: collectionId || undefined } }),
     onSuccess: () => {
-      toast.success("Added to your library");
+      toast.success(collectionId ? "Added to Library and collection" : "Added to your Library");
       void qc.invalidateQueries({ queryKey: ["resource-library"] });
+      void qc.invalidateQueries({ queryKey: ["project-resources"] });
+      void qc.invalidateQueries({ queryKey: ["resource-collections"] });
+      void qc.invalidateQueries({ queryKey: ["resource-project-assignments"] });
+      void qc.invalidateQueries({ queryKey: ["resources-marketplace"] });
     },
     onError: (error) =>
       toast.error(error instanceof Error ? error.message : "Could not add to library"),
@@ -22,7 +34,7 @@ export function AddToLibraryButton({ resourceId }: { resourceId: string }) {
     <Button
       size="sm"
       variant="outline"
-      disabled={mutation.isPending}
+      disabled={mutation.isPending || alreadyInLibrary}
       onClick={() => mutation.mutate()}
     >
       {mutation.isPending ? (
@@ -30,7 +42,7 @@ export function AddToLibraryButton({ resourceId }: { resourceId: string }) {
       ) : (
         <Library className="mr-1 size-3.5" />
       )}
-      Add to library
+      {alreadyInLibrary ? "In Library" : "Add to Library"}
     </Button>
   );
 }

@@ -17,12 +17,12 @@ export const Route = createFileRoute("/explore")({
       {
         name: "description",
         content:
-          "Browse Skills, Apps, Models, MCP servers, Tools, Agents and Prompts in the Open-Connect marketplace and bundle them into a Toolkit.",
+          "Browse agent resources and tools in the Open-Connect Marketplace and bundle selected items into a Toolkit.",
       },
       { property: "og:title", content: "Explore the Open-Connect Marketplace" },
       {
         property: "og:description",
-        content: "Skills, Apps, Models, MCP, Tools, Agents and Prompts — one marketplace, one key.",
+        content: "Skills, MCP servers, tools, agents, and prompts for Open-Connect.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -34,8 +34,6 @@ export const Route = createFileRoute("/explore")({
 export const EXPLORE_TABS = [
   { value: "all", label: "All" },
   { value: "skill", label: "Skills" },
-  { value: "app", label: "Apps" },
-  { value: "model", label: "Models" },
   { value: "mcp", label: "MCP" },
   { value: "tool", label: "Tools" },
   { value: "agent", label: "Agents" },
@@ -53,7 +51,7 @@ export function useMarketplace() {
         .order("featured", { ascending: false })
         .order("name");
       if (error) throw error;
-      return data;
+      return (data ?? []).filter((item) => !["app", "model"].includes(item.resource_type));
     },
   });
 }
@@ -61,7 +59,7 @@ export function useMarketplace() {
 function ExplorePage() {
   const [type, setType] = useState<string>("all");
   const [query, setQuery] = useState("");
-  const { data, isLoading } = useMarketplace();
+  const { data, isLoading, isError, refetch } = useMarketplace();
 
   const results = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -81,13 +79,24 @@ function ExplorePage() {
         <div>
           <h1 className="text-3xl font-semibold sm:text-4xl">Explore</h1>
           <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
-            Skills, Apps, Models, MCP servers, Tools, Agents and Prompts. Pick what your agent needs
-            and bundle it into a Toolkit.
+            Browse agent resources and tools, then bundle what your projects need into a Toolkit.
+            Apps and AI models are managed in their dedicated connection pages.
           </p>
         </div>
-        <Button asChild>
-          <Link to="/toolkits">Build a Toolkit</Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline">
+            <Link to="/resources">Browse Marketplace</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link to="/connections">Connect apps</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link to="/models">AI Gateway</Link>
+          </Button>
+          <Button asChild>
+            <Link to="/toolkits">Build a Toolkit</Link>
+          </Button>
+        </div>
       </div>
 
       <div className="mt-8 flex flex-col gap-4">
@@ -105,6 +114,8 @@ function ExplorePage() {
           {EXPLORE_TABS.map((tab) => (
             <button
               key={tab.value}
+              type="button"
+              aria-pressed={type === tab.value}
               onClick={() => setType(tab.value)}
               className={cn(
                 "rounded-full border border-border/70 px-3 py-1.5 text-xs transition-colors",
@@ -118,6 +129,24 @@ function ExplorePage() {
           ))}
         </div>
       </div>
+
+      {!isLoading && !isError ? (
+        <p className="mt-5 text-xs text-muted-foreground" role="status">
+          Showing {results.length} of {(data ?? []).length} resources
+        </p>
+      ) : null}
+
+      {isError ? (
+        <div
+          role="alert"
+          className="mt-8 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm"
+        >
+          <p>Marketplace resources could not be loaded.</p>
+          <Button className="mt-3" size="sm" variant="outline" onClick={() => void refetch()}>
+            Try again
+          </Button>
+        </div>
+      ) : null}
 
       <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {isLoading
@@ -149,7 +178,17 @@ function ExplorePage() {
 
       {!isLoading && results.length === 0 ? (
         <p className="mt-12 text-center text-sm text-muted-foreground">
-          Nothing matches that search yet.
+          Nothing matches that search yet.{" "}
+          <button
+            type="button"
+            className="text-primary underline underline-offset-4"
+            onClick={() => {
+              setType("all");
+              setQuery("");
+            }}
+          >
+            Clear filters
+          </button>
         </p>
       ) : null}
     </div>

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import {
   createProject,
   getCanonicalOrganization,
+  getOrganizationAccess,
   listProjects,
   listWorkspaces,
 } from "@/lib/orgs.functions";
@@ -45,6 +46,7 @@ function ProjectsIndex() {
   const listProj = useServerFn(listProjects);
   const createProj = useServerFn(createProject);
   const listWs = useServerFn(listWorkspaces);
+  const getOrgAccess = useServerFn(getOrganizationAccess);
 
   const [projectName, setProjectName] = useState("");
   const [projectDesc, setProjectDesc] = useState("");
@@ -53,6 +55,11 @@ function ProjectsIndex() {
   const organization = useQuery({
     queryKey: ["organization", "hillstreet-ph"],
     queryFn: () => getOrganization(),
+  });
+  const access = useQuery({
+    queryKey: ["organization-access", organization.data?.id],
+    queryFn: () => getOrgAccess({ data: { organizationId: organization.data!.id } }),
+    enabled: Boolean(organization.data?.id),
   });
   const projects = useQuery({
     queryKey: ["projects", organization.data?.id],
@@ -131,7 +138,7 @@ function ProjectsIndex() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className={`grid gap-4 lg:grid-cols-2 ${access.data?.isAdmin ? "" : "hidden"}`}>
         <Card className="shadow-panel lg:col-span-1">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">New project</CardTitle>
@@ -183,6 +190,17 @@ function ProjectsIndex() {
           </CardContent>
         </Card>
       </div>
+      {!access.isLoading && !access.data?.isAdmin ? (
+        <Card className="shadow-panel">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Project creation is admin-managed</CardTitle>
+            <CardDescription>
+              Ask an organization Admin to create a project and share it with you. You can work in
+              projects assigned to you.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      ) : null}
 
       <div>
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">

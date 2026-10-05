@@ -124,7 +124,7 @@ Tool annotations must accurately declare read-only, destructive, idempotent, and
 - Never expose raw credentials to ChatGPT or widget code.
 - Never place credentials in repository files, skills, MCP metadata, tool results, browser logs, or artifacts.
 - Resolve `credential://...` references only within the trusted broker.
-- Enforce owner/admin RBAC and project/environment scope on every mutating call.
+- Enforce Admin RBAC and project/environment scope on every mutating call.
 - Require short-lived scoped provider tokens when supported.
 - Verify package provenance, declared permissions, tool schemas, and endpoint security before capability installation.
 - Sandboxed preflight and tests precede activation.
@@ -146,7 +146,7 @@ Tool annotations must accurately declare read-only, destructive, idempotent, and
 2. The command-center widget renders provider and capability health without exposing secrets.
 3. `search` and `fetch` satisfy the standard read-only connector contract.
 4. Airtable health and owner-authorized workspace discovery pass through the installed plugin.
-5. Mutating tools enforce owner/admin RBAC, project scope, policy, and approval gates.
+5. Mutating tools enforce Admin RBAC, project scope, policy, and approval gates.
 6. Repeated idempotent calls do not create duplicate installations or connections.
 7. Every run emits a correlation ID, redacted audit record, validation result, and rollback status.
 8. Local compile/tests, MCP initialization, tool listing, authentication rejection, and production smoke tests pass.

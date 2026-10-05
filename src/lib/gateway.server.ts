@@ -14,10 +14,21 @@
  *   OPENROUTER_BASE_URL optional override
  */
 import { createHash, randomBytes } from "crypto";
+import { fetchFreeModelCatalog, isAutoFreeModel } from "./model-catalog";
 
 export const KEY_PREFIX = "oc_live_";
 
-export type UpstreamName = "openrouter" | "litellm";
+export type UpstreamName =
+  | "openrouter"
+  | "litellm"
+  | "nvidia"
+  | "ollama_cloud"
+  | "groq"
+  | "cerebras"
+  | "openai"
+  | "xai"
+  | "mistral"
+  | "deepseek";
 
 export type Upstream = {
   name: UpstreamName;
@@ -59,6 +70,8 @@ export function nextFreeModel(preferAutoRouter = true): string {
 
 export const MODEL_ALIASES: Record<string, string> = {
   // Free tier (OpenRouter)
+  auto: "openrouter/free",
+  "open-connect/auto": "openrouter/free",
   "open-connect/free": "openrouter/free",
   "open-connect/auto-free": "openrouter/free",
   free: "openrouter/free",
@@ -233,6 +246,82 @@ export function resolveUpstreams(): Upstream[] {
   return list;
 }
 
+export async function resolveUserUpstreams(
+  userId: string,
+  allowPlatformFallback = true,
+): Promise<Upstream[]> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { savedModelUpstreams } = await import("./model-connection.server");
+  // Generated database types lag the deployed credential resolver RPC.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = supabaseAdmin as any;
+  const { data: connections, error: connectionError } = await db
+    .from("app_connections")
+    .select("provider,status,credential_reference,metadata")
+    .eq("user_id", userId)
+    .in("provider", [
+      "openrouter",
+      "litellm",
+      "nvidia",
+      "ollama_cloud",
+      "groq",
+      "cerebras",
+      "openai",
+      "xai",
+      "mistral",
+      "deepseek",
+    ])
+    .eq("status", "connected")
+    .order("created_at", { ascending: false })
+    .limit(10);
+  if (connectionError) throw new Error("Unable to read model connection.");
+  const saved = await savedModelUpstreams(userId, {
+    find: async () => connections ?? [],
+    resolve: async (id, credentialId) => {
+      const { data, error } = await db.rpc("resolve_connection_credential", {
+        p_user_id: id,
+        p_credential_id: credentialId,
+      });
+      if (error || typeof data !== "string") throw new Error("Unable to resolve model credential.");
+      return data;
+    },
+  });
+  // A saved personal connection is authoritative: no silent fallback to a different account.
+  return saved.length > 0 || (connections?.length ?? 0) > 0
+    ? saved
+    : allowPlatformFallback
+      ? resolveUpstreams()
+      : [];
+}
+
+export type AutoFreeRoute = { upstream: Upstream; model: string };
+
+const AUTO_FREE_CATALOG_TTL_MS = 60_000;
+const autoFreeCatalogCache = new Map<string, { expiresAt: number; ids: string[] }>();
+
+/** Build free-only fallback routes from the current user's connected model gateways. */
+export async function resolveAutoFreeRoutes(upstreams: Upstream[]): Promise<AutoFreeRoute[]> {
+  const routes: AutoFreeRoute[] = [];
+  for (const upstream of upstreams) {
+    const cacheKey = createHash("sha256")
+      .update(`${upstream.name}\n${upstream.baseUrl}\n${upstream.headers.Authorization ?? ""}`)
+      .digest("hex");
+    let catalog = autoFreeCatalogCache.get(cacheKey);
+    if (!catalog || catalog.expiresAt <= Date.now()) {
+      const models = await fetchFreeModelCatalog([upstream]);
+      catalog = {
+        expiresAt: Date.now() + AUTO_FREE_CATALOG_TTL_MS,
+        ids: models.map((model) => model.id),
+      };
+      autoFreeCatalogCache.set(cacheKey, catalog);
+    }
+    if (upstream.name === "openrouter") routes.push({ upstream, model: "openrouter/free" });
+    for (const id of catalog.ids) routes.push({ upstream, model: id });
+  }
+  return routes;
+}
+
+export { isAutoFreeModel };
 export function resolveUpstream(): Upstream | null {
   return resolveUpstreams()[0] ?? null;
 }
@@ -337,12 +426,12 @@ export function gatewayError(message: string, status: number, code: string): Res
 }
 
 /** Full catalog: managed aliases + every model from connected upstream credentials. */
-export async function fetchMergedModelCatalog(): Promise<{
+export async function fetchMergedModelCatalog(configured?: Upstream[]): Promise<{
   ids: string[];
   upstreams: string[];
   providers: string[];
 }> {
-  const upstreams = resolveUpstreams();
+  const upstreams = configured ?? resolveUpstreams();
   const ids = new Set<string>(MANAGED_MODEL_IDS);
   const names: string[] = [];
   const providers = new Set<string>();
@@ -365,7 +454,7 @@ export async function fetchMergedModelCatalog(): Promise<{
           if (m && typeof m.id === "string" && m.id.length > 0) {
             ids.add(m.id);
             const slash = m.id.indexOf("/");
-            if (slash > 0) providers.add(m.id.slice(0, slash));
+            providers.add(slash > 0 ? m.id.slice(0, slash) : u.name);
           }
         }
       } catch {

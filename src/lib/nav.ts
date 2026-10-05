@@ -7,6 +7,7 @@ export type NavLink = {
   to: string;
   label: string;
   description?: string;
+  capability?: "manage_toolkits";
 };
 
 export type NavCategory = {
@@ -36,37 +37,45 @@ export const appCategories: NavCategory[] = [
     id: "workspace",
     label: "Workspace",
     items: [
-      { to: "/dashboard", label: "Dashboard", description: "Hub overview" },
-      { to: "/studio", label: "Studio", description: "Create agents & skills" },
-      {
-        to: "/campaign-studio",
-        label: "Campaign Studio",
-        description: "Concepts, copy, and visuals",
-      },
-      { to: "/memory", label: "Memory", description: "Project decisions and reusable context" },
-      { to: "/knowledge", label: "Knowledge", description: "Project documents and sources" },
-      { to: "/orgs", label: "Organization", description: "People, groups, and invitations" },
-      { to: "/projects", label: "Workspaces", description: "Projects and environments" },
-      { to: "/agents", label: "Agents", description: "MCP agents and keys" },
-      { to: "/guides", label: "Professional setup", description: "E2E guides" },
+      { to: "/dashboard", label: "Dashboard" },
+      { to: "/projects", label: "Projects" },
     ],
   },
   {
-    id: "catalog",
-    label: "Catalog",
+    id: "work",
+    label: "Work",
     items: [
-      { to: "/resources", label: "Marketplace", description: "Download skills" },
-      { to: "/connections", label: "Connectors", description: "Connect apps and custom MCP" },
-      { to: "/models", label: "AI Gateway", description: "Provider credentials and models" },
-      { to: "/toolkits", label: "Toolkits", description: "Developer+" },
+      { to: "/studio", label: "Studio" },
+      { to: "/tasks", label: "Task" },
+      { to: "/schedule", label: "Schedules" },
+      { to: "/automations", label: "Automations" },
     ],
   },
   {
-    id: "security",
-    label: "Security",
+    id: "discover",
+    label: "Discover",
     items: [
-      { to: "/secrets", label: "Secrets", description: "Credential vault" },
-      { to: "/settings", label: "Settings", description: "Role & profile" },
+      { to: "/resources", label: "Marketplace" },
+      { to: "/library", label: "Resources" },
+    ],
+  },
+  {
+    id: "cloud",
+    label: "Cloud",
+    items: [
+      { to: "/cloud-phone", label: "Cloud Phone" },
+      { to: "/cloud-browser", label: "Cloud Browser" },
+      { to: "/cloud-terminal", label: "Cloud Terminal" },
+      { to: "/cloud-computer", label: "Cloud Computer" },
+    ],
+  },
+  {
+    id: "connections",
+    label: "Connections",
+    items: [
+      { to: "/connections", label: "Connectors" },
+      { to: "/secrets", label: "Credentials" },
+      { to: "/models", label: "AI Gateway" },
     ],
   },
 ];
@@ -76,17 +85,7 @@ export function flatPublicNav(): NavLink[] {
 }
 
 export function flatAppNav(): NavLink[] {
-  return [
-    { to: "/dashboard", label: "Dashboard" },
-    { to: "/studio", label: "Studio" },
-    { to: "/campaign-studio", label: "Campaign Studio" },
-    { to: "/memory", label: "Memory" },
-    { to: "/knowledge", label: "Knowledge" },
-    { to: "/orgs", label: "Organization" },
-    { to: "/projects", label: "Workspaces" },
-    { to: "/resources", label: "Marketplace" },
-    { to: "/guides", label: "Setup" },
-  ];
+  return appCategories.flatMap((category) => category.items);
 }
 
 export const resourceCategories = [
@@ -98,8 +97,7 @@ export const resourceCategories = [
   { value: "agent", label: "Agents" },
   { value: "prompt", label: "Prompts" },
   { value: "toolkit", label: "Toolkits" },
-  { value: "memory", label: "Memory" },
-  { value: "knowledge", label: "Knowledge" },
+  { value: "other", label: "Others" },
 ] as const;
 
 export const connectionCategories = [
@@ -110,4 +108,6 @@ export const connectionCategories = [
   "Infrastructure",
   "Data",
   "Business",
+  "Automation",
+  "Security",
 ] as const;

@@ -17,7 +17,7 @@ function PromptsPage() {
     <ResourceLibraryPage
       resourceType="prompt"
       title="Prompts"
-      description="All prompts you uploaded in Studio or added from Marketplace. Share each prompt with one or more projects here."
+      description="All prompts you uploaded in Studio or added from Marketplace. Available across all your projects. Credentials are selected per project."
     />
   );
 }
