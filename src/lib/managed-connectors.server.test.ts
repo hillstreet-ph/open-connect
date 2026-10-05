@@ -18,10 +18,7 @@ test("identity aliases are scoped to one explicitly configured application user"
     assert.deepEqual(managedIdentityIds("owner"), ["owner", "broker-owner"]);
     assert.deepEqual(managedIdentityIds("other"), ["other"]);
     process.env["COMPOSIO_USER_MAPPINGS"] = JSON.stringify({ owner: [null] });
-    assert.throws(
-      () => managedIdentityIds("owner"),
-      /Invalid Composio user mapping/,
-    );
+    assert.throws(() => managedIdentityIds("owner"), /Invalid Composio user mapping/);
   } finally {
     if (original === undefined) delete process.env["COMPOSIO_USER_MAPPINGS"];
     else process.env["COMPOSIO_USER_MAPPINGS"] = original;
@@ -45,8 +42,7 @@ test("managed connectors require both a broker key and provider auth config", ()
   } finally {
     if (originalKey === undefined) delete process.env["COMPOSIO_API_KEY"];
     else process.env["COMPOSIO_API_KEY"] = originalKey;
-    if (originalConfigs === undefined)
-      delete process.env["COMPOSIO_AUTH_CONFIGS"];
+    if (originalConfigs === undefined) delete process.env["COMPOSIO_AUTH_CONFIGS"];
     else process.env["COMPOSIO_AUTH_CONFIGS"] = originalConfigs;
   }
 });
@@ -116,8 +112,7 @@ test("account sync filters ownership, config, and status and deduplicates pages"
     globalThis.fetch = originalFetch;
     if (originalKey === undefined) delete process.env["COMPOSIO_API_KEY"];
     else process.env["COMPOSIO_API_KEY"] = originalKey;
-    if (originalConfigs === undefined)
-      delete process.env["COMPOSIO_AUTH_CONFIGS"];
+    if (originalConfigs === undefined) delete process.env["COMPOSIO_AUTH_CONFIGS"];
     else process.env["COMPOSIO_AUTH_CONFIGS"] = originalConfigs;
   }
 });
@@ -132,17 +127,13 @@ test("managed toolkit authorization is created on demand and reused by the conne
   globalThis.fetch = async (input, init) => {
     const url = new URL(String(input));
     const method = init?.method ?? "GET";
-    const body =
-      typeof init?.body === "string" ? JSON.parse(init.body) : undefined;
+    const body = typeof init?.body === "string" ? JSON.parse(init.body) : undefined;
     calls.push({ path: url.pathname + url.search, method, body });
     if (url.pathname.endsWith("/auth_configs") && method === "GET") {
       return new Response(JSON.stringify({ items: [] }), { status: 200 });
     }
     if (url.pathname.endsWith("/auth_configs") && method === "POST") {
-      return new Response(
-        JSON.stringify({ auth_config: { id: "ac_dynamic" } }),
-        { status: 201 },
-      );
+      return new Response(JSON.stringify({ auth_config: { id: "ac_dynamic" } }), { status: 201 });
     }
     return new Response(
       JSON.stringify({
@@ -167,16 +158,12 @@ test("managed toolkit authorization is created on demand and reused by the conne
       toolkit: { slug: "dynamic_app" },
       auth_config: { type: "use_composio_managed_auth" },
     });
-    assert.equal(
-      (calls[2].body as { auth_config_id?: string }).auth_config_id,
-      "ac_dynamic",
-    );
+    assert.equal((calls[2].body as { auth_config_id?: string }).auth_config_id, "ac_dynamic");
   } finally {
     globalThis.fetch = originalFetch;
     if (originalKey === undefined) delete process.env["COMPOSIO_API_KEY"];
     else process.env["COMPOSIO_API_KEY"] = originalKey;
-    if (originalConfigs === undefined)
-      delete process.env["COMPOSIO_AUTH_CONFIGS"];
+    if (originalConfigs === undefined) delete process.env["COMPOSIO_AUTH_CONFIGS"];
     else process.env["COMPOSIO_AUTH_CONFIGS"] = originalConfigs;
   }
 });
@@ -208,10 +195,9 @@ test("Composio toolkit discovery follows cursors and exposes supported auth meth
               auth_schemes: ["API_KEY"],
             },
           ];
-    return new Response(
-      JSON.stringify({ items, next_cursor: calls === 1 ? "next" : null }),
-      { status: 200 },
-    );
+    return new Response(JSON.stringify({ items, next_cursor: calls === 1 ? "next" : null }), {
+      status: 200,
+    });
   };
   try {
     const toolkits = await listComposioToolkits();
