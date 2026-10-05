@@ -92,6 +92,16 @@ test("connection surfaces remain internal and separate from Marketplace", () => 
   assert.ok(integrations.includes("<ApiKeysCard />"));
   assert.ok(integrations.includes("Connect ChatGPT with OAuth"));
   assert.ok(integrations.includes("setTelegramOpen(true)"));
+  assert.ok(integrations.includes("inbound-integrations.functions"));
+  assert.ok(!integrations.includes("connections.functions"));
+
+  const inboundMigration = readFileSync(
+    path.resolve(process.cwd(), "supabase/migrations/20261005050000_inbound_integrations.sql"),
+    "utf8",
+  );
+  assert.ok(inboundMigration.includes("CREATE TABLE IF NOT EXISTS public.inbound_integrations"));
+  assert.ok(inboundMigration.includes("Users manage own inbound integrations"));
+  assert.ok(!inboundMigration.includes("REFERENCES public.app_connections"));
   for (const route of ["/resources", "/connections", "/mcp-servers", "/api-keys"]) {
     assert.ok(!integrations.includes('to="' + route + '"'), "Unexpected redirect to " + route);
   }
