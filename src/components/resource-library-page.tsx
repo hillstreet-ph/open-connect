@@ -200,9 +200,9 @@ export function ResourceLibraryPage({
             </section>
           ))}
 
-      {resources.isError ? (
-        <p role="alert">Could not load your library. Please try again.</p>
-      ) : null}
+          {resources.isError ? (
+            <p role="alert">Could not load your library. Please try again.</p>
+          ) : null}
           {!resources.isLoading && !resources.isError && filtered.length === 0 ? (
             <Card className="shadow-panel">
               <CardContent className="p-6 text-sm text-muted-foreground">
