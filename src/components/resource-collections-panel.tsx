@@ -4,6 +4,12 @@ import { useServerFn } from "@tanstack/react-start";
 import { FolderPlus, FolderOpen, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { listAssignableProjects } from "@/lib/resource-collections.functions";
+import { listResourceProjectAssignments } from "@/lib/library.functions";
+import { useAuth } from "@/hooks/use-auth";
+import {
+  resolveDefaultMarketplaceCollection,
+  setDefaultMarketplaceCollection,
+} from "@/lib/resource-library-preferences";
 import {
   addResourcesToCollection,
   assignResourcesToProjects,
@@ -25,6 +31,7 @@ export function ResourceCollectionsPanel({
   onClearSelection: () => void;
 }) {
   const qc = useQueryClient();
+  const { user } = useAuth();
   const listCollections = useServerFn(listResourceCollections);
   const createCollection = useServerFn(createResourceCollection);
   const addToCollection = useServerFn(addResourcesToCollection);
@@ -32,26 +39,50 @@ export function ResourceCollectionsPanel({
   const deleteCollection = useServerFn(deleteResourceCollection);
   const assign = useServerFn(assignResourcesToProjects);
   const list = useServerFn(listAssignableProjects);
+  const listAssignments = useServerFn(listResourceProjectAssignments);
   const collections = useQuery({
     queryKey: ["resource-collections"],
     queryFn: () => listCollections({}),
   });
   const projects = useQuery({ queryKey: ["assignable-projects"], queryFn: () => list({}) });
+  const assignments = useQuery({
+    queryKey: ["resource-project-assignments"],
+    queryFn: () => listAssignments({}),
+  });
   const [name, setName] = useState("");
   const [targetCollection, setTargetCollection] = useState("");
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
   const [assigningCollection, setAssigningCollection] = useState<string | null>(null);
+  const [defaultCollectionOverride, setDefaultCollectionOverride] = useState<string | null>(null);
+  const [createAsDefault, setCreateAsDefault] = useState(false);
+  const defaultCollectionId =
+    defaultCollectionOverride ??
+    resolveDefaultMarketplaceCollection(
+      user?.id,
+      collections.data?.map(({ id, name }) => ({ id, name })),
+      defaultCollectionOverride,
+    );
+
+  function chooseDefaultCollection(collectionId: string) {
+    setDefaultCollectionOverride(collectionId);
+    if (user?.id) setDefaultMarketplaceCollection(user.id, collectionId);
+  }
 
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: ["resource-collections"] });
     void qc.invalidateQueries({ queryKey: ["project-resources"] });
     void qc.invalidateQueries({ queryKey: ["toolkits"] });
+    void qc.invalidateQueries({ queryKey: ["resource-project-assignments"] });
   };
   const createMutation = useMutation({
     mutationFn: () => createCollection({ data: { name, resourceIds: selectedResourceIds } }),
-    onSuccess: () => {
+    onSuccess: (result) => {
       toast.success("Collection created");
       setName("");
+      if (createAsDefault && user?.id) {
+        chooseDefaultCollection(result.id);
+        setCreateAsDefault(false);
+      }
       onClearSelection();
       refresh();
     },
@@ -62,8 +93,12 @@ export function ResourceCollectionsPanel({
       addToCollection({
         data: { collectionId: targetCollection, resourceIds: selectedResourceIds },
       }),
-    onSuccess: () => {
-      toast.success("Resources added to collection");
+    onSuccess: (result) => {
+      toast.success(
+        result.skipped
+          ? `${result.added} added; ${result.skipped} already in this collection`
+          : "Resources added to collection",
+      );
       setTargetCollection("");
       onClearSelection();
       refresh();
@@ -90,8 +125,12 @@ export function ResourceCollectionsPanel({
   const assignMutation = useMutation({
     mutationFn: (resourceIds: string[]) =>
       assign({ data: { resourceIds, projectIds: selectedProjects } }),
-    onSuccess: () => {
-      toast.success("Resources assigned to selected projects");
+    onSuccess: (result) => {
+      toast.success(
+        result.skipped
+          ? `${result.assigned} new assignments; ${result.skipped} already assigned`
+          : "Resources assigned to selected projects",
+      );
       setSelectedProjects([]);
       setAssigningCollection(null);
       refresh();
@@ -109,6 +148,30 @@ export function ResourceCollectionsPanel({
 
   return (
     <div className="space-y-5">
+      <div className="rounded-lg border border-border bg-muted/20 p-3">
+        <label htmlFor="default-marketplace-collection" className="text-sm font-medium">
+          Default collection for Marketplace
+        </label>
+        <p className="mb-2 text-xs text-muted-foreground">
+          New Marketplace installs go to Library and this collection. Existing items are marked as
+          already added.
+        </p>
+        <select
+          id="default-marketplace-collection"
+          aria-label="Default collection for Marketplace"
+          className="h-9 w-full max-w-sm rounded-md border bg-background px-3 text-sm"
+          value={defaultCollectionId}
+          onChange={(event) => chooseDefaultCollection(event.target.value)}
+        >
+          <option value="">Library only</option>
+          {(collections.data ?? []).map((collection) => (
+            <option key={collection.id} value={collection.id}>
+              {collection.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
         <div className="flex-1 space-y-1">
           <label htmlFor="resource-collection-name" className="text-sm font-medium">
@@ -127,13 +190,24 @@ export function ResourceCollectionsPanel({
               : "Create an empty folder, then add resources from your Library."}
           </p>
         </div>
-        <Button
-          disabled={!name.trim() || createMutation.isPending}
-          onClick={() => createMutation.mutate()}
-        >
-          <FolderPlus className="mr-2 size-4" />
-          Create collection
-        </Button>
+        <div className="flex flex-col gap-2 sm:items-end">
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={createAsDefault}
+              onChange={(event) => setCreateAsDefault(event.target.checked)}
+              className="size-4 accent-primary"
+            />
+            Make this the Marketplace default
+          </label>
+          <Button
+            disabled={!name.trim() || createMutation.isPending}
+            onClick={() => createMutation.mutate()}
+          >
+            <FolderPlus className="mr-2 size-4" />
+            Create collection
+          </Button>
+        </div>
       </div>
 
       {selectedResourceIds.length > 0 ? (
@@ -146,11 +220,18 @@ export function ResourceCollectionsPanel({
             onChange={(event) => setTargetCollection(event.target.value)}
           >
             <option value="">Add selected to collection…</option>
-            {(collections.data ?? []).map((collection) => (
-              <option key={collection.id} value={collection.id}>
-                {collection.name}
-              </option>
-            ))}
+            {(collections.data ?? []).map((collection) => {
+              const alreadyHasAll = selectedResourceIds.every((id) =>
+                collection.toolkit_items.some((item) => item.resource_id === id),
+              );
+              return (
+                <option key={collection.id} value={collection.id} disabled={alreadyHasAll}>
+                  {collection.name}
+                  {collection.id === defaultCollectionId ? " (Marketplace default)" : ""}
+                  {alreadyHasAll ? " (already added)" : ""}
+                </option>
+              );
+            })}
           </select>
           <Button
             variant="outline"
@@ -234,6 +315,11 @@ export function ResourceCollectionsPanel({
         <div className="grid gap-3 sm:grid-cols-2">
           {(collections.data ?? []).map((collection) => {
             const resourceIds = collection.toolkit_items.map((item) => item.resource_id);
+            const assignedProjectNames = new Set(
+              (assignments.data ?? [])
+                .filter((assignment) => resourceIds.includes(assignment.resourceId))
+                .map((assignment) => assignment.projectName),
+            );
             return (
               <Card key={collection.id} className="shadow-panel">
                 <CardHeader className="p-4 pb-2">
@@ -244,6 +330,11 @@ export function ResourceCollectionsPanel({
                         <span className="truncate">{collection.name}</span>
                       </CardTitle>
                       <CardDescription>{collection.toolkit_items.length} resources</CardDescription>
+                      {collection.id === defaultCollectionId ? (
+                        <Badge variant="outline" className="mt-1 border-primary/50 text-primary">
+                          Marketplace default
+                        </Badge>
+                      ) : null}
                     </div>
                     <Button
                       size="icon"
@@ -283,6 +374,18 @@ export function ResourceCollectionsPanel({
                       <p className="text-xs text-muted-foreground">This folder is empty.</p>
                     ) : null}
                   </div>
+                  {assignedProjectNames.size ? (
+                    <div
+                      className="flex flex-wrap gap-1"
+                      aria-label="Projects using this collection"
+                    >
+                      {[...assignedProjectNames].map((projectName) => (
+                        <Badge key={projectName} variant="outline">
+                          Project: {projectName}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : null}
                   {assigningCollection === collection.id ? (
                     <div className="flex flex-wrap items-center gap-2">
                       <Button

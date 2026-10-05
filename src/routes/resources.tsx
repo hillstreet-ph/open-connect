@@ -21,6 +21,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { AddToLibraryButton } from "@/components/add-to-library";
+import { listLibraryResources, listResourceProjectAssignments } from "@/lib/library.functions";
+import { listResourceCollections } from "@/lib/resource-collections.functions";
+import {
+  resolveDefaultMarketplaceCollection,
+  setDefaultMarketplaceCollection,
+} from "@/lib/resource-library-preferences";
 import { ResourcePurposeSidebar } from "@/components/resource-purpose-sidebar";
 
 export const Route = createFileRoute("/resources")({
@@ -71,6 +77,32 @@ function MarketplaceContent() {
   const [viewTitle, setViewTitle] = useState("");
   const downloadFn = useServerFn(getResourceDownloadUrl);
   const viewFn = useServerFn(getResourceView);
+  const listLibrary = useServerFn(listLibraryResources);
+  const listCollections = useServerFn(listResourceCollections);
+  const listAssignments = useServerFn(listResourceProjectAssignments);
+  const library = useQuery({
+    queryKey: ["resource-library"],
+    queryFn: () => listLibrary({ data: {} }),
+    enabled: !!user,
+  });
+  const collections = useQuery({
+    queryKey: ["resource-collections"],
+    queryFn: () => listCollections({}),
+    enabled: !!user,
+  });
+  const assignments = useQuery({
+    queryKey: ["resource-project-assignments"],
+    queryFn: () => listAssignments({}),
+    enabled: !!user,
+  });
+  const [defaultCollectionOverride, setDefaultCollectionOverride] = useState<string | null>(null);
+  const defaultCollectionId =
+    defaultCollectionOverride ??
+    resolveDefaultMarketplaceCollection(
+      user?.id,
+      collections.data?.map(({ id, name }) => ({ id, name })),
+      defaultCollectionOverride,
+    );
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["resources-marketplace"],
@@ -177,6 +209,34 @@ function MarketplaceContent() {
         </div>
       ) : null}
 
+      {user ? (
+        <div className="mt-5 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/20 p-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium">Add new Marketplace items to</p>
+            <p className="text-xs text-muted-foreground">
+              Installs always enter Library. Choose a default collection or use Library only.
+            </p>
+          </div>
+          <select
+            aria-label="Default collection for Marketplace installs"
+            className="h-9 min-w-48 rounded-md border bg-background px-3 text-sm"
+            value={defaultCollectionId}
+            onChange={(event) => {
+              const id = event.target.value;
+              setDefaultCollectionOverride(id);
+              if (user.id) setDefaultMarketplaceCollection(user.id, id);
+            }}
+          >
+            <option value="">Library only</option>
+            {(collections.data ?? []).map((collection) => (
+              <option key={collection.id} value={collection.id}>
+                {collection.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
+
       <div className="mt-8 grid gap-6 lg:grid-cols-[190px_minmax(0,1fr)]">
         <ResourcePurposeSidebar
           groups={purposes}
@@ -247,6 +307,21 @@ function MarketplaceContent() {
                   const canonicalUrl =
                     typeof config["canonical_url"] === "string" ? config["canonical_url"] : null;
                   const executable = item.verified && reviewState === "approved";
+                  const inLibrary = (library.data ?? []).some(
+                    (row) => row.resources?.id === item.id,
+                  );
+                  const collectionNames = (collections.data ?? [])
+                    .filter((collection) =>
+                      collection.toolkit_items.some((entry) => entry.resource_id === item.id),
+                    )
+                    .map((collection) => collection.name);
+                  const projectNames = [
+                    ...new Set(
+                      (assignments.data ?? [])
+                        .filter((assignment) => assignment.resourceId === item.id)
+                        .map((assignment) => assignment.projectName),
+                    ),
+                  ];
                   return (
                     <Card key={item.id} className="shadow-panel">
                       <CardHeader className="p-3 pb-1">
@@ -268,6 +343,23 @@ function MarketplaceContent() {
                             </Badge>
                           ) : null}
                         </div>
+                        {inLibrary || collectionNames.length > 0 || projectNames.length > 0 ? (
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            <Badge variant="outline" className="border-primary/50 text-primary">
+                              In Library
+                            </Badge>
+                            {collectionNames.map((name) => (
+                              <Badge key={name} variant="secondary">
+                                {name}
+                              </Badge>
+                            ))}
+                            {projectNames.map((name) => (
+                              <Badge key={name} variant="outline">
+                                Project: {name}
+                              </Badge>
+                            ))}
+                          </div>
+                        ) : null}
                         <CardTitle className="mt-1 text-sm leading-snug">{item.name}</CardTitle>
                         <CardDescription className="line-clamp-2 text-xs">
                           {item.description}
@@ -308,7 +400,13 @@ function MarketplaceContent() {
                                 {executable ? "Download" : "Metadata"}
                               </Button>
                             </div>
-                            {executable ? <AddToLibraryButton resourceId={item.id} /> : null}
+                            {executable ? (
+                              <AddToLibraryButton
+                                resourceId={item.id}
+                                collectionId={defaultCollectionId || undefined}
+                                alreadyInLibrary={inLibrary}
+                              />
+                            ) : null}
                           </div>
                         ) : (
                           <Button asChild size="sm" variant="outline">

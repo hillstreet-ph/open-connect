@@ -2,7 +2,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { listLibraryResources, removeResourceFromLibrary } from "@/lib/library.functions";
+import {
+  listLibraryResources,
+  listResourceProjectAssignments,
+  removeResourceFromLibrary,
+} from "@/lib/library.functions";
+import { listResourceCollections } from "@/lib/resource-collections.functions";
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Input } from "@/components/ui/input";
@@ -41,6 +46,17 @@ export function ResourceLibraryPage({
   const canManageCollections = !resourceType && !otherTypesOnly;
   const list = useServerFn(listLibraryResources);
   const remove = useServerFn(removeResourceFromLibrary);
+  const listCollections = useServerFn(listResourceCollections);
+  const listAssignments = useServerFn(listResourceProjectAssignments);
+  const collections = useQuery({
+    queryKey: ["resource-collections"],
+    queryFn: () => listCollections({}),
+    enabled: canManageCollections,
+  });
+  const assignments = useQuery({
+    queryKey: ["resource-project-assignments"],
+    queryFn: () => listAssignments({}),
+  });
   const resources = useQuery({
     queryKey: ["resource-library", resourceType],
     queryFn: () => list({ data: resourceType ? { resourceType } : {} }),
@@ -213,6 +229,18 @@ export function ResourceLibraryPage({
                   {group.items.map((row) => {
                     const resource = row.resources!;
                     const isSelected = selectedResourceIds.includes(resource.id);
+                    const collectionNames = (collections.data ?? [])
+                      .filter((collection) =>
+                        collection.toolkit_items.some((item) => item.resource_id === resource.id),
+                      )
+                      .map((collection) => collection.name);
+                    const projectNames = [
+                      ...new Set(
+                        (assignments.data ?? [])
+                          .filter((assignment) => assignment.resourceId === resource.id)
+                          .map((assignment) => assignment.projectName),
+                      ),
+                    ];
                     return (
                       <Card
                         key={resource.id}
@@ -245,6 +273,16 @@ export function ResourceLibraryPage({
                           <Badge variant="secondary" className="text-[10px]">
                             {isSharedLibraryRow(row) ? "All projects" : "Private context"}
                           </Badge>
+                          {collectionNames.map((name) => (
+                            <Badge key={name} variant="outline" className="text-[10px]">
+                              In {name}
+                            </Badge>
+                          ))}
+                          {projectNames.map((name) => (
+                            <Badge key={name} variant="outline" className="text-[10px]">
+                              Project: {name}
+                            </Badge>
+                          ))}
                           {!resourceType ? (
                             <Badge variant="outline" className="text-[10px]">
                               {resource.resource_type}
