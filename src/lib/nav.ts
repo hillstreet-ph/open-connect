@@ -97,10 +97,6 @@ export const resourceCategories = [
   { value: "agent", label: "Agents" },
   { value: "prompt", label: "Prompts" },
   { value: "toolkit", label: "Toolkits" },
-  { value: "memory", label: "Memory" },
-  { value: "knowledge", label: "Knowledge" },
-  { value: "app", label: "Apps" },
-  { value: "model", label: "Models" },
   { value: "other", label: "Others" },
 ] as const;
 
