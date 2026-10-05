@@ -4,7 +4,7 @@
 
 - Repository: hillstreet-ph/open-connect; default branch: main.
 - Clone the entire repository. The install script locates the root from its own path; application directory: ..
-- Runtime prerequisites: Node >=22.12 and Bun (bootstrap installs Bun 1.4.2 if absent).
+- Runtime prerequisites: Node >=22.12, npm, and Python 3. The script bootstraps and verifies pinned Bun 1.4.2 in a private cache.
 - Install command: `bash scripts/codex-setup.sh install`.
 - Validation command: `bash scripts/codex-setup.sh check`.
 - Configure these commands on a branch containing this file, or after its PR merges. A file in GitHub alone does not configure ChatGPT's environment settings.
