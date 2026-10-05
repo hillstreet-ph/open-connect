@@ -29,6 +29,8 @@ jobs:
         run: bun run test
       - name: Marketplace branch history regression tests
         run: python3 scripts/update-marketplace-branch.test.py
+      - name: Production health contract tests
+        run: python3 scripts/validate_production_health_test.py
       - name: Typecheck / build
         env:
           VITE_SUPABASE_URL: https://huadtiuuoiriqrjpjxhr.supabase.co
@@ -56,6 +58,7 @@ jobs:
     needs: validate
     timeout-minutes: 10
     steps:
+      - uses: actions/checkout@v7
       - name: Wait for Cloudflare Pages
         run: sleep 90
       - name: Health
@@ -65,8 +68,7 @@ jobs:
             code=$(curl -sS -o /tmp/health.json -w "%{http_code}" https://open-connect.site/api/v1/health || echo 000)
             echo "attempt $i -> $code"
             if [ "$code" = "200" ]; then
-              cat /tmp/health.json
-              python3 -c "import json;d=json.load(open('/tmp/health.json'));assert d.get('status')=='ok'"
+              python3 scripts/validate_production_health.py /tmp/health.json
               exit 0
             fi
             sleep 30
