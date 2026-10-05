@@ -47,7 +47,8 @@ export function ResourceLibraryPage({
   });
   const removeMutation = useMutation({
     mutationFn: (resourceId: string) => remove({ data: { resourceId } }),
-    onSuccess: () => {
+    onSuccess: (_result, resourceId) => {
+      setSelectedResourceIds((current) => current.filter((id) => id !== resourceId));
       toast.success("Removed from your library");
       void qc.invalidateQueries({ queryKey: ["resource-library"] });
       void qc.invalidateQueries({ queryKey: ["project-resources"] });
