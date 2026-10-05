@@ -189,8 +189,9 @@ function SettingsPage() {
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="security">Security & login</TabsTrigger>
           <TabsTrigger value="workspace">Workspace</TabsTrigger>
-          <TabsTrigger value="integrations">Apps & system</TabsTrigger>
+          <TabsTrigger value="apps">Apps & system</TabsTrigger>
           <TabsTrigger value="data">Data & privacy</TabsTrigger>
+          <TabsTrigger value="integrations">Integrations</TabsTrigger>
         </TabsList>
         <TabsContent value="profile">
           <Card className="shadow-panel">
@@ -355,14 +356,8 @@ function SettingsPage() {
             ) : null}
           </div>
         </TabsContent>
-        <TabsContent value="integrations">
+        <TabsContent value="apps">
           <div className="grid gap-4 md:grid-cols-2">
-            <SettingsLinkCard
-              to="/integrations"
-              icon={Network}
-              title="Integrations"
-              description="Manage Open-Connect entry points for AI clients, MCP, and Telegram. Each account owns its setup and project grants; resources, connectors, and model providers stay separate."
-            />
             <SettingsLinkCard
               to="/models"
               icon={Sparkles}
@@ -396,6 +391,16 @@ function SettingsPage() {
               icon={Database}
               title="Memory & knowledge"
               description="Manage durable project context, documents, repositories, URLs, and reusable sources."
+            />
+          </div>
+        </TabsContent>
+        <TabsContent value="integrations">
+          <div className="grid gap-4 md:grid-cols-2">
+            <SettingsLinkCard
+              to="/integrations"
+              icon={Network}
+              title="Integrations"
+              description="Manage account-owned inbound connections for AI clients, MCP, and Telegram. Resources, Connectors, and model providers stay separate."
             />
           </div>
         </TabsContent>
