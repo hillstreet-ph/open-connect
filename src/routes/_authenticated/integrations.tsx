@@ -243,7 +243,7 @@ function IntegrationsPage() {
         </p>
       </header>
 
-<section id="ai-agents" hidden={section !== "ai-agents"} className="scroll-mt-6">
+      <section id="ai-agents" hidden={section !== "ai-agents"} className="scroll-mt-6">
         <div className="mb-4">
           <h2 className="text-lg font-semibold">AI Agents</h2>
           <p className="mt-1 text-sm text-muted-foreground">
