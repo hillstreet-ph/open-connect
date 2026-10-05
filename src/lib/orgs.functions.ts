@@ -42,6 +42,25 @@ export const getCanonicalOrganization = createServerFn({ method: "GET" })
     return data;
   });
 
+/** Return the signed-in user's role in one organization for matching UI access gates. */
+export const getOrganizationAccess = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { organizationId: string }) => ({
+    organizationId: input.organizationId,
+  }))
+  .handler(async ({ data, context }) => {
+    if (!data.organizationId) throw new Error("organizationId required");
+    const { data: membership, error } = await context.supabase
+      .from("organization_members")
+      .select("role")
+      .eq("organization_id", data.organizationId)
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    const role = (membership as { role?: string } | null)?.role ?? null;
+    return { role, isAdmin: role === "admin" };
+  });
+
 export const createOrganization = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: { name: string }) => ({
@@ -50,7 +69,7 @@ export const createOrganization = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     if (!data.name) throw new Error("Organization name required");
     throw new Error(
-      "Open-Connect uses the hillstreet-ph organization. Create a workspace instead.",
+      "Open-Connect uses the canonical hillstreet-ph organization. Organization creation is disabled.",
     );
   });
 
@@ -305,7 +324,7 @@ export const createWorkspace = createServerFn({ method: "POST" })
     description: input.description?.trim() || null,
   }))
   .handler(async () => {
-    throw new Error("Open-Connect uses one HillStreet workspace. Create a project instead.");
+    throw new Error("Open-Connect uses one HillStreet workspace. Ask an organization Admin to create a project instead.");
   });
 
 /** Projects the current user can access via project_members. */
