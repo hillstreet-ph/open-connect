@@ -2,7 +2,21 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export type SecretType =
-  "api_key" | "oauth_token" | "mcp_url" | "bot_token" | "password" | "totp" | "other";
+  | "api_key"
+  | "oauth_token"
+  | "mcp_url"
+  | "bot_token"
+  | "password"
+  | "totp"
+  | "other";
+
+export type CredentialFolder = {
+  id: string;
+  name: string;
+  credential_ids: string[];
+  project_ids: string[];
+  projects: Array<{ id: string; name: string }>;
+};
 
 export const listSecrets = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -118,6 +132,89 @@ export const updateSecretOrganization = createServerFn({ method: "POST" })
     });
     if (error) throw new Error(error.message);
     return result;
+  });
+
+export const updateSecretValue = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { id: string; value: string }) => ({
+    id: (input?.id ?? "").trim(),
+    value: input?.value ?? "",
+  }))
+  .handler(async ({ data, context }) => {
+    if (!data.id) throw new Error("id required");
+    if (data.value.length < 4) throw new Error("Secret value required (min 4 characters)");
+    const { data: result, error } = await context.supabase.rpc("update_credential_secret_value", {
+      p_id: data.id,
+      p_secret_value: data.value,
+    });
+    if (error) throw new Error(error.message);
+    return result;
+  });
+
+export const listCredentialFolders = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase.rpc("list_credential_folders");
+    if (error) throw new Error(error.message);
+    return (Array.isArray(data) ? data : []) as unknown as CredentialFolder[];
+  });
+
+export const createCredentialFolder = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { name: string }) => ({
+    name: (input?.name ?? "").trim().slice(0, 80),
+  }))
+  .handler(async ({ data, context }) => {
+    if (!data.name) throw new Error("Folder name required");
+    const { data: result, error } = await context.supabase.rpc("create_credential_folder", {
+      p_name: data.name,
+    });
+    if (error) throw new Error(error.message);
+    return result;
+  });
+
+export const updateCredentialFolder = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator(
+    (input: {
+      id: string;
+      name: string;
+      credential_ids?: string[];
+      project_ids?: string[];
+    }) => ({
+      id: (input?.id ?? "").trim(),
+      name: (input?.name ?? "").trim().slice(0, 80),
+      credential_ids: Array.isArray(input?.credential_ids)
+        ? [...new Set(input.credential_ids.map((id) => id.trim()).filter(Boolean))]
+        : [],
+      project_ids: Array.isArray(input?.project_ids)
+        ? [...new Set(input.project_ids.map((id) => id.trim()).filter(Boolean))]
+        : [],
+    }),
+  )
+  .handler(async ({ data, context }) => {
+    if (!data.id) throw new Error("Folder id required");
+    if (!data.name) throw new Error("Folder name required");
+    const { data: result, error } = await context.supabase.rpc("update_credential_folder", {
+      p_folder_id: data.id,
+      p_name: data.name,
+      p_credential_ids: data.credential_ids,
+      p_project_ids: data.project_ids,
+    });
+    if (error) throw new Error(error.message);
+    return result;
+  });
+
+export const deleteCredentialFolder = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { id: string }) => ({ id: (input?.id ?? "").trim() }))
+  .handler(async ({ data, context }) => {
+    if (!data.id) throw new Error("Folder id required");
+    const { data: deleted, error } = await context.supabase.rpc("delete_credential_folder", {
+      p_folder_id: data.id,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: deleted };
   });
 
 export const revealSecret = createServerFn({ method: "POST" })
