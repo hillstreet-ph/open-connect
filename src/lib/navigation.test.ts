@@ -82,7 +82,8 @@ test("connection surfaces remain internal and separate from Marketplace", () => 
     path.join(sourceRoot, "routes/_authenticated/connections.tsx"),
     "utf8",
   );
-  assert.ok(connectors.includes("Add custom MCP"));
+  assert.ok(!connectors.includes("Add custom MCP"));
+  assert.ok(!connectors.includes("custom_mcp"));
   assert.ok(!connectors.includes('to="/resources"'));
 
   const integrations = readFileSync(
@@ -93,7 +94,11 @@ test("connection surfaces remain internal and separate from Marketplace", () => 
   assert.ok(integrations.includes("Connect ChatGPT with OAuth"));
   assert.ok(integrations.includes("setTelegramOpen(true)"));
   assert.ok(integrations.includes("inbound-integrations.functions"));
-  assert.ok(!integrations.includes("connections.functions"));
+  assert.ok(integrations.includes("connections.functions"));
+  assert.ok(integrations.includes("Remote MCP servers"));
+  for (const section of ['id="api-key"', 'id="apps"', 'id="ai-agents"', 'id="custom-mcp"']) {
+    assert.ok(integrations.includes(section), "Missing integration section " + section);
+  }
 
   const inboundMigration = readFileSync(
     path.resolve(process.cwd(), "supabase/migrations/20261005050000_inbound_integrations.sql"),
@@ -125,6 +130,9 @@ test("Integrations follows Data & privacy in Settings and includes account keys"
   assert.ok(settings.includes('to="/integrations"'));
   assert.ok(settings.includes('title="Connectors"'));
   assert.ok(settings.includes('title="AI Gateway"'));
+  assert.ok(settings.includes('title="Memory"'));
+  assert.ok(settings.includes('title="Knowledge"'));
+  assert.ok(!settings.includes('title="Memory & knowledge"'));
   assert.ok(!settings.includes('to="/api-keys"'));
 });
 
