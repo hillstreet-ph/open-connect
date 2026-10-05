@@ -240,7 +240,7 @@ function ConnectionsPage() {
           }}
           disabled={!(catalog.data ?? []).some((app) => app.provider === "custom_mcp")}
         >
-          Connect custom MCP
+          Add custom MCP
         </Button>
       </div>
 
