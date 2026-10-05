@@ -83,7 +83,8 @@ test("connection surfaces remain internal and separate from Marketplace", () => 
     "utf8",
   );
   assert.ok(!connectors.includes("Add custom MCP"));
-  assert.ok(!connectors.includes("custom_mcp"));
+  assert.ok(connectors.includes("custom_mcp"));
+  assert.ok(connectors.includes("MCP endpoint URL"));
   assert.ok(!connectors.includes('to="/resources"'));
 
   const integrations = readFileSync(
