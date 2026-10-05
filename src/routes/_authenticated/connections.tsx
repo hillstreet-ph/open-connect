@@ -154,8 +154,7 @@ function ConnectionsPage() {
   const results = useMemo(() => {
     const term = query.trim().toLowerCase();
     return (catalog.data ?? []).filter((app) => {
-      const hasWorkingConnection = !app.oauth || app.oauth_ready;
-      const matchesCat = (category === "All" || app.category === category) && hasWorkingConnection;
+      const matchesCat = category === "All" || app.category === category;
       const matchesTerm =
         !term ||
         app.display_name.toLowerCase().includes(term) ||
@@ -172,7 +171,10 @@ function ConnectionsPage() {
       list.push(app);
       map.set(app.category, list);
     }
-    const order = ["All", ...connectionCategories];
+    const order = [
+      "All",
+      ...new Set([...connectionCategories, ...results.map((app) => app.category)]),
+    ];
     return order
       .filter((c) => c !== "All" && map.has(c))
       .map((c) => ({ category: c, apps: map.get(c)! }));
@@ -229,7 +231,7 @@ function ConnectionsPage() {
             setQuery("");
           }}
         >
-          Browse app connectors
+          Show all connectors
         </Button>
       </div>
 
