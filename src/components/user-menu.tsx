@@ -102,8 +102,8 @@ export function BrandLogo() {
     <Link to="/" className="flex items-center gap-2" aria-label="Open-Connect home">
       <span className="flex size-8 items-center justify-center shadow-glow">
         <img
-          src="/open-connect-mark.svg"
-          alt="Open Connect"
+          src="/open-connect-logo.webp"
+          alt="Open-Connect logo"
           className="block size-8 object-contain"
         />
       </span>
