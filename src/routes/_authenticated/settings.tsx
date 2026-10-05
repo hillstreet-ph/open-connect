@@ -3,12 +3,16 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import {
   Bell,
+  BookOpen,
+  Bot,
+  Brain,
   Building2,
-  Database,
   KeyRound,
   Loader2,
+  MessageCircle,
   Network,
   Save,
+  Server,
   Sparkles,
   ShieldCheck,
   Trash2,
@@ -388,20 +392,86 @@ function SettingsPage() {
           <div className="grid gap-4 md:grid-cols-2">
             <SettingsLinkCard
               to="/memory"
-              icon={Database}
-              title="Memory & knowledge"
-              description="Manage durable project context, documents, repositories, URLs, and reusable sources."
+              icon={Brain}
+              title="Memory"
+              description="Manage durable project decisions, instructions, preferences, and summaries."
+            />
+            <SettingsLinkCard
+              to="/knowledge"
+              icon={BookOpen}
+              title="Knowledge"
+              description="Manage reusable documents, repositories, URLs, and other project sources."
             />
           </div>
         </TabsContent>
         <TabsContent value="integrations">
           <div className="grid gap-4 md:grid-cols-2">
-            <SettingsLinkCard
-              to="/integrations"
-              icon={Network}
-              title="Integrations"
-              description="Manage account-owned inbound connections for AI clients, MCP, and Telegram. Resources, Connectors, and model providers stay separate."
-            />
+            <a
+              href="/integrations?section=api-key"
+              className="block rounded-xl border bg-card p-5 shadow-panel transition-colors hover:bg-accent/40"
+            >
+              <div className="flex items-start gap-3">
+                <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                  <KeyRound className="size-4" />
+                </div>
+                <div>
+                  <h2 className="font-medium">API Key</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Create and manage scoped keys for clients that use bearer authentication.
+                  </p>
+                </div>
+              </div>
+            </a>
+            <a
+              href="/integrations?section=apps"
+              className="block rounded-xl border bg-card p-5 shadow-panel transition-colors hover:bg-accent/40"
+            >
+              <div className="flex items-start gap-3">
+                <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                  <MessageCircle className="size-4" />
+                </div>
+                <div>
+                  <h2 className="font-medium">Apps</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Connect account-owned apps such as Telegram and manage their credentials.
+                  </p>
+                </div>
+              </div>
+            </a>
+            <a
+              href="/integrations?section=ai-agents"
+              className="block rounded-xl border bg-card p-5 shadow-panel transition-colors hover:bg-accent/40"
+            >
+              <div className="flex items-start gap-3">
+                <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                  <Bot className="size-4" />
+                </div>
+                <div>
+                  <h2 className="font-medium">AI Agents</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Set up AI clients such as ChatGPT to connect with Open-Connect using OAuth or
+                    MCP.
+                  </p>
+                </div>
+              </div>
+            </a>
+            <a
+              href="/integrations?section=custom-mcp"
+              className="block rounded-xl border bg-card p-5 shadow-panel transition-colors hover:bg-accent/40"
+            >
+              <div className="flex items-start gap-3">
+                <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                  <Server className="size-4" />
+                </div>
+                <div>
+                  <h2 className="font-medium">Custom MCP</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Add and manage remote MCP servers separately from Connectors and Marketplace
+                    resources.
+                  </p>
+                </div>
+              </div>
+            </a>
           </div>
         </TabsContent>
       </Tabs>
@@ -414,6 +484,7 @@ function SettingsLinkCard({
   icon: Icon,
   title,
   description,
+  hash,
 }: {
   to:
     | "/orgs"
@@ -427,6 +498,7 @@ function SettingsLinkCard({
     | "/automations"
     | "/memory"
     | "/knowledge";
+  hash?: string;
   icon: typeof Building2;
   title: string;
   description: string;
@@ -434,6 +506,7 @@ function SettingsLinkCard({
   return (
     <Link
       to={to}
+      hash={hash}
       className="block rounded-xl border bg-card p-5 shadow-panel transition-colors hover:bg-accent/40"
     >
       <div className="flex items-start gap-3">

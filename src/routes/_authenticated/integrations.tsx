@@ -2,7 +2,16 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { Bot, Copy, ExternalLink, MessageCircle, ShieldCheck } from "lucide-react";
+import {
+  Bot,
+  Copy,
+  ExternalLink,
+  Loader2,
+  MessageCircle,
+  Server,
+  ShieldCheck,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { BrandLogo } from "@/components/brand-logo";
@@ -20,18 +29,36 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  configureAppConnection,
+  disconnectApp,
+  listAppConnections,
+} from "@/lib/connections.functions";
+import {
   configureTelegramIntegration,
   deleteInboundIntegration,
   listInboundIntegrations,
 } from "@/lib/inbound-integrations.functions";
 
+const integrationSections = ["api-key", "apps", "ai-agents", "custom-mcp"] as const;
+type IntegrationSection = (typeof integrationSections)[number];
+
+function parseIntegrationSection(value: unknown): IntegrationSection {
+  return typeof value === "string" && integrationSections.includes(value as IntegrationSection)
+    ? (value as IntegrationSection)
+    : "ai-agents";
+}
+
 export const Route = createFileRoute("/_authenticated/integrations")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    section: parseIntegrationSection(search.section),
+  }),
   head: () => ({
     meta: [
       { title: "Integrations — Open-Connect" },
       {
         name: "description",
-        content: "Set up inbound AI, MCP, and Telegram integrations for Open-Connect.",
+        content:
+          "Manage separate API Key, Apps, AI Agents, and Custom MCP integrations for Open-Connect.",
       },
     ],
   }),
@@ -76,23 +103,48 @@ const aiClients = [
 
 function IntegrationsPage() {
   const { user } = useAuth();
+  const { section } = Route.useSearch();
+  const sectionTitles: Record<IntegrationSection, string> = {
+    "api-key": "API Key",
+    apps: "Apps",
+    "ai-agents": "AI Agents",
+    "custom-mcp": "Custom MCP",
+  };
   const queryClient = useQueryClient();
   const listFn = useServerFn(listInboundIntegrations);
   const configureFn = useServerFn(configureTelegramIntegration);
   const disconnectFn = useServerFn(deleteInboundIntegration);
+  const customMcpListFn = useServerFn(listAppConnections);
+  const customMcpConfigureFn = useServerFn(configureAppConnection);
+  const customMcpDisconnectFn = useServerFn(disconnectApp);
   const [oauthOpen, setOauthOpen] = useState(false);
   const [mcpOpen, setMcpOpen] = useState(false);
   const [telegramOpen, setTelegramOpen] = useState(false);
   const [botLabel, setBotLabel] = useState("");
   const [botToken, setBotToken] = useState("");
+  const [mcpName, setMcpName] = useState("");
+  const [mcpUrl, setMcpUrl] = useState("");
+  const [mcpAuthType, setMcpAuthType] = useState<
+    "none" | "bearer" | "api_key" | "personal_access_token"
+  >("none");
+  const [mcpCredential, setMcpCredential] = useState("");
 
   const connections = useQuery({
     queryKey: ["inbound-integrations"],
     queryFn: () => listFn({}),
-    enabled: Boolean(user),
+    enabled: Boolean(user) && section === "apps",
   });
 
   const telegramItems = (connections.data ?? []).filter((item) => item.provider === "telegram");
+
+  const customMcpConnections = useQuery({
+    queryKey: ["app-connections"],
+    queryFn: () => customMcpListFn({}),
+    enabled: Boolean(user) && section === "custom-mcp",
+  });
+  const customMcpItems = (customMcpConnections.data ?? []).filter(
+    (item) => item.provider === "custom_mcp",
+  );
 
   const saveTelegram = useMutation({
     mutationFn: () =>
@@ -123,6 +175,44 @@ function IntegrationsPage() {
       toast.error(error instanceof Error ? error.message : "Could not remove Telegram"),
   });
 
+  const saveCustomMcp = useMutation({
+    mutationFn: () =>
+      customMcpConfigureFn({
+        data: {
+          provider: "custom_mcp",
+          display_name: mcpName.trim() || "Custom MCP server",
+          account_label: mcpName.trim() || mcpUrl.trim(),
+          endpoint_url: mcpUrl.trim(),
+          api_key: mcpCredential,
+          auth_type: mcpAuthType,
+        },
+      }),
+    onSuccess: (result) => {
+      toast.success(
+        result.validation.verified
+          ? "MCP server verified and saved"
+          : "MCP server saved for review",
+      );
+      setMcpName("");
+      setMcpUrl("");
+      setMcpCredential("");
+      setMcpAuthType("none");
+      void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Could not save MCP server"),
+  });
+
+  const removeCustomMcp = useMutation({
+    mutationFn: (id: string) => customMcpDisconnectFn({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Custom MCP server removed");
+      void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Could not remove MCP server"),
+  });
+
   async function copyEndpoint() {
     try {
       await navigator.clipboard.writeText(MCP_ENDPOINT);
@@ -138,9 +228,14 @@ function IntegrationsPage() {
         <Badge variant="outline" className="border-primary/40 text-primary">
           Open-Connect · inbound
         </Badge>
-        <h1 className="mt-4 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-          Integrations
-        </h1>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+            {sectionTitles[section]}
+          </h1>
+          <Button asChild size="sm" variant="outline">
+            <Link to="/settings">Back to Settings</Link>
+          </Button>
+        </div>
         <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground sm:text-base">
           Connect external AI clients, MCP clients, and Telegram into Open-Connect. Each integration
           setup belongs to your account. Connectors are for external accounts Open-Connect uses; AI
@@ -148,36 +243,7 @@ function IntegrationsPage() {
         </p>
       </header>
 
-      <nav aria-label="Integration setup types" className="flex flex-wrap gap-2 border-b pb-4">
-        {user ? (
-          <a
-            href="#api-key"
-            className="rounded-full border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
-          >
-            API Key
-          </a>
-        ) : null}
-        <a
-          href="#apps"
-          className="rounded-full border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
-        >
-          Apps
-        </a>
-        <a
-          href="#ai-agents"
-          className="rounded-full border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
-        >
-          AI Agents
-        </a>
-        <a
-          href="#custom-mcp"
-          className="rounded-full border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
-        >
-          Custom MCP
-        </a>
-      </nav>
-
-      <section id="ai-agents" className="scroll-mt-6">
+      <section id="ai-agents" hidden={section !== "ai-agents"} className="scroll-mt-6">
         <div className="mb-4">
           <h2 className="text-lg font-semibold">AI Agents</h2>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -220,13 +286,123 @@ function IntegrationsPage() {
         </div>
       </section>
 
-      <section id="custom-mcp" className="scroll-mt-6">
+      <section id="custom-mcp" hidden={section !== "custom-mcp"} className="scroll-mt-6">
         <div className="mb-4">
           <h2 className="text-lg font-semibold">Custom MCP</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Your inbound Open-Connect endpoint. Resource catalog MCP servers are managed separately.
+            Manage account-owned remote MCP servers and the inbound endpoint AI clients use. These
+            stay separate from app Connectors and Marketplace resources.
           </p>
         </div>
+        <Card className="shadow-panel">
+          <CardHeader className="p-5">
+            <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Server className="size-5" />
+            </div>
+            <CardTitle className="mt-3 text-base">Remote MCP servers</CardTitle>
+            <CardDescription>
+              Add a remote MCP endpoint for your account. Any credential is validated and stored in
+              the secure vault.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 px-5 pb-5">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="mcp-name">Name</Label>
+                <Input
+                  id="mcp-name"
+                  value={mcpName}
+                  onChange={(event) => setMcpName(event.target.value)}
+                  placeholder="Team MCP server"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="mcp-url">Server URL</Label>
+                <Input
+                  id="mcp-url"
+                  type="url"
+                  value={mcpUrl}
+                  onChange={(event) => setMcpUrl(event.target.value)}
+                  placeholder="https://mcp.example.com/mcp"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="mcp-auth-type">Authentication</Label>
+                <select
+                  id="mcp-auth-type"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={mcpAuthType}
+                  onChange={(event) => setMcpAuthType(event.target.value as typeof mcpAuthType)}
+                >
+                  <option value="none">No authentication</option>
+                  <option value="bearer">Bearer token</option>
+                  <option value="api_key">API key</option>
+                  <option value="personal_access_token">Personal access token</option>
+                </select>
+              </div>
+              {mcpAuthType !== "none" ? (
+                <div className="space-y-2">
+                  <Label htmlFor="mcp-credential">Credential</Label>
+                  <Input
+                    id="mcp-credential"
+                    type="password"
+                    autoComplete="new-password"
+                    value={mcpCredential}
+                    onChange={(event) => setMcpCredential(event.target.value)}
+                    placeholder="Paste credential"
+                  />
+                </div>
+              ) : null}
+            </div>
+            <Button
+              disabled={
+                saveCustomMcp.isPending ||
+                !mcpUrl.trim() ||
+                (mcpAuthType !== "none" && mcpCredential.trim().length < 8)
+              }
+              onClick={() => saveCustomMcp.mutate()}
+            >
+              {saveCustomMcp.isPending ? (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              ) : (
+                <Server className="mr-2 size-4" />
+              )}
+              Add remote MCP server
+            </Button>
+            {customMcpItems.length ? (
+              <div className="space-y-2 border-t pt-4">
+                {customMcpItems.map((item) => {
+                  const metadata = (item.metadata ?? {}) as Record<string, unknown>;
+                  return (
+                    <div
+                      key={item.id}
+                      className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 text-sm"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-medium">{item.display_name}</p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {String(metadata.endpoint_url ?? "")} · {item.status.replaceAll("_", " ")}
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={removeCustomMcp.isPending}
+                        onClick={() => removeCustomMcp.mutate(item.id)}
+                      >
+                        <Trash2 className="mr-2 size-4" />
+                        Remove
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No remote MCP servers are configured.</p>
+            )}
+          </CardContent>
+        </Card>
+
         <Card className="shadow-panel">
           <CardHeader className="p-5">
             <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -262,7 +438,7 @@ function IntegrationsPage() {
         </Card>
       </section>
 
-      <section id="apps" className="scroll-mt-6">
+      <section id="apps" hidden={section !== "apps"} className="scroll-mt-6">
         <div className="mb-4">
           <h2 className="text-lg font-semibold">Apps</h2>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -323,7 +499,7 @@ function IntegrationsPage() {
       </section>
 
       {user ? (
-        <section id="api-key" className="scroll-mt-6">
+        <section id="api-key" hidden={section !== "api-key"} className="scroll-mt-6">
           <div className="mb-4">
             <h2 className="text-lg font-semibold">API Key</h2>
             <p className="mt-1 text-sm text-muted-foreground">
