@@ -15,7 +15,9 @@ export async function generateAutomationResponse(
   automationPrompt({ prompt });
   if (
     upstream.name === "openrouter" &&
-    !["open-connect/auto", "poolside/laguna-s-2.1:free", "openrouter/free"].includes(model)
+    model !== "open-connect/auto" &&
+    model !== "openrouter/free" &&
+    !model.endsWith(":free")
   )
     throw new Error("Choose a supported free model.");
   // Credentials must never follow a redirect or a configurable destination.

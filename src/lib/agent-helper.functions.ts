@@ -311,8 +311,9 @@ async function executeInternalTool(
   }
 }
 
-async function requestOpenRouter(
-  upstream: { baseUrl: string; headers: Record<string, string> },
+async function requestFreeModel(
+  upstream: { name: "openrouter" | "litellm"; baseUrl: string; headers: Record<string, string> },
+  model: string,
   messages: Array<Record<string, unknown>>,
   includeTools: boolean,
 ) {
@@ -324,7 +325,7 @@ async function requestOpenRouter(
       signal: AbortSignal.timeout(45_000),
       headers: upstream.headers ?? {},
       body: JSON.stringify({
-        model: "openrouter/free",
+        model,
         messages,
         ...(includeTools ? { tools: TOOLS, tool_choice: "auto", parallel_tool_calls: false } : {}),
         max_tokens: 900,
@@ -338,7 +339,7 @@ async function requestOpenRouter(
   if (!response.ok) {
     throw new Error(
       response.status === 401 || response.status === 403
-        ? "OpenRouter rejected the saved credential. Update it in AI Gateway."
+        ? `${upstream.name} rejected the saved credential. Update it in AI Gateway.`
         : "Agent-Helper is temporarily unavailable. Try again in a moment.",
     );
   }
@@ -382,21 +383,30 @@ export const askAgentHelper = createServerFn({ method: "POST" })
     return { messages };
   })
   .handler(async ({ data, context }) => {
-    const { resolveUserUpstreams } = await import("@/lib/gateway.server");
-    // Agent-Helper requires the signed-in user's saved OpenRouter credential; it never
-    // falls back to a shared platform key.
-    const upstream = (await resolveUserUpstreams(context.userId, false)).find(
-      (item) => item.name === "openrouter",
-    );
-    if (!upstream) {
-      throw new Error("Connect OpenRouter in AI Gateway before using Agent-Helper.");
+    const { resolveAutoFreeRoutes, resolveUserUpstreams } = await import("@/lib/gateway.server");
+    // Keep Agent-Helper on the signed-in user's gateway and only use catalog-verified free routes.
+    const routes = await resolveAutoFreeRoutes(await resolveUserUpstreams(context.userId, false));
+    if (!routes.length) {
+      throw new Error("Connect OpenRouter or LiteLLM in AI Gateway before using Agent-Helper.");
     }
-
-    const first = await requestOpenRouter(
-      upstream,
-      [{ role: "system", content: SYSTEM_PROMPT }, ...data.messages],
-      true,
-    );
+    let first: Awaited<ReturnType<typeof requestFreeModel>> | null = null;
+    for (const route of routes) {
+      try {
+        first = await requestFreeModel(
+          route.upstream,
+          route.model,
+          [{ role: "system", content: SYSTEM_PROMPT }, ...data.messages],
+          true,
+        );
+        break;
+      } catch {
+        // Try the next model whose provider declared its cost as zero.
+      }
+    }
+    if (!first)
+      throw new Error(
+        "No connected free model is available right now. Check AI Gateway connections.",
+      );
     if (!first.message) throw new Error("Agent-Helper received an empty reply. Please try again.");
     if (first.toolCalls.length === 0) {
       if (!first.content)

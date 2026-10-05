@@ -508,9 +508,21 @@ export const listAppConnections = createServerFn({ method: "GET" })
         }),
       );
     }
-    return connections.map(
-      ({ credential_reference: _credentialReference, ...connection }) => connection,
-    );
+    return connections.map(({ credential_reference, ...connection }) => {
+      const isModelGateway =
+        connection.provider === "openrouter" || connection.provider === "litellm";
+      const hasGatewayReference = Boolean(
+        credential_reference?.match(
+          new RegExp(`^credential://${connection.provider}/([0-9a-f-]{36})$`, "i"),
+        ),
+      );
+      return {
+        ...connection,
+        ...(isModelGateway
+          ? { gateway_ready: connection.status === "connected" && hasGatewayReference }
+          : {}),
+      };
+    });
   });
 
 export const syncComposioConnections = createServerFn({ method: "POST" })

@@ -29,7 +29,7 @@ test("no connection permits configured fallback without reading secrets", async 
     null,
   );
 });
-test("unverified or mismatched connections fail closed", async () => {
+test("unverified or mismatched OpenRouter references fail closed", async () => {
   for (const connection of [
     { status: "pending", credential_reference: reference },
     { status: "connected", credential_reference: reference.replace("openrouter", "github") },
@@ -97,21 +97,19 @@ test("resolves this user's connected OpenRouter and LiteLLM model gateways", asy
   );
 });
 
-test("LiteLLM connection must use a public HTTPS endpoint and matching credential reference", async () => {
-  await assert.rejects(
-    savedModelUpstreams("user-a", {
-      find: async () => [
-        {
-          provider: "litellm",
-          status: "connected",
-          credential_reference: "credential://openrouter/11111111-1111-1111-1111-111111111111",
-          metadata: { endpoint_url: "http://proxy.example/v1" },
-        },
-      ],
-      resolve: async () => "must-not-resolve",
-    }),
-    /credential reference/,
-  );
+test("stale gateway references are skipped and valid LiteLLM endpoints must be public HTTPS", async () => {
+  const skipped = await savedModelUpstreams("user-a", {
+    find: async () => [
+      {
+        provider: "litellm",
+        status: "connected",
+        credential_reference: "credential://openrouter/11111111-1111-1111-1111-111111111111",
+        metadata: { endpoint_url: "http://proxy.example/v1" },
+      },
+    ],
+    resolve: async () => "must-not-resolve",
+  });
+  assert.deepEqual(skipped, []);
   await assert.rejects(
     savedModelUpstreams("user-a", {
       find: async () => [
