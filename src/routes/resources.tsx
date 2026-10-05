@@ -217,7 +217,8 @@ function MarketplaceContent() {
             <p className="text-sm font-medium">Add new Marketplace items to</p>
             <p className="text-xs text-muted-foreground">
               Skills are automatically added to your Library and Skills collection. Other resource
-types follow the optional default collection. Projects are never assigned automatically.
+              types follow the optional default collection. Projects are never assigned
+              automatically.
             </p>
           </div>
           <select
