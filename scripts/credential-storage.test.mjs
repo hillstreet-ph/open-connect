@@ -40,6 +40,13 @@ const projectCredentialMigration = readFileSync(
   new URL("../supabase/migrations/20260924040000_project_credential_scopes.sql", import.meta.url),
   "utf8",
 );
+const credentialFoldersMigration = readFileSync(
+  new URL(
+    "../supabase/migrations/20261005100000_credential_folders_and_value_edit.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
 
 test("moves credential values to Supabase Vault and clears plaintext", () => {
   assert.match(migration, /vault\.create_secret/);
@@ -112,4 +119,34 @@ test("organizes one Vault credential with tags and duplicate-safe project refere
   assert.match(serverFunctions, /update_credential_organization/);
   assert.match(credentialRoute, /Edit organization/);
   assert.match(credentialRoute, /Save organization/);
+});
+
+test("supports secure Vault value rotation and metadata-only folder project sharing", () => {
+  assert.match(
+    credentialFoldersMigration,
+    /create table if not exists public\.credential_folders/i,
+  );
+  assert.match(credentialFoldersMigration, /credential_folder_items/i);
+  assert.match(credentialFoldersMigration, /credential_folder_projects/i);
+  assert.match(credentialFoldersMigration, /credential\.user_id = v_owner/);
+  assert.match(credentialFoldersMigration, /vault\.create_secret/);
+  assert.match(
+    credentialFoldersMigration,
+    /delete from vault\.secrets where id = v_old_vault_id/i,
+  );
+  assert.match(credentialFoldersMigration, /user_id = auth\.uid\(\)/);
+  assert.match(credentialFoldersMigration, /project access denied/i);
+  assert.match(credentialFoldersMigration, /shared_via_folder/);
+  assert.doesNotMatch(
+    credentialFoldersMigration.match(
+      /function public\.list_project_credentials[\s\S]*?\$\$;/,
+    )?.[0] ?? "",
+    /decrypted_secret/,
+  );
+  assert.match(serverFunctions, /rpc\(["']update_credential_secret_value["']/);
+  assert.match(serverFunctions, /rpc\(["']update_credential_folder["']/);
+  assert.match(credentialRoute, /Replace encrypted value/);
+  assert.match(credentialRoute, /Credentials in this folder/);
+  assert.match(credentialRoute, /Share folder with projects/);
+  assert.match(credentialRoute, /secret values remain private to you/);
 });
