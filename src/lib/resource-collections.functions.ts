@@ -18,7 +18,19 @@ function slugify(value: string) {
 }
 
 function resourceIds(input: string[] | undefined) {
-  return [...new Set(Array.isArray(input) ? input.filter(Boolean) : [])].slice(0, 100);
+  const ids = [...new Set(Array.isArray(input) ? input.filter(Boolean) : [])];
+  if (ids.length > 100) {
+    throw new Error("Select no more than 100 resources at a time.");
+  }
+  return ids;
+}
+
+function projectIds(input: string[] | undefined) {
+  const ids = [...new Set(Array.isArray(input) ? input.filter(Boolean) : [])];
+  if (ids.length > 50) {
+    throw new Error("Select no more than 50 projects at a time.");
+  }
+  return ids;
 }
 
 async function verifyLibraryResources(context: CollectionContext, ids: string[]) {
@@ -63,6 +75,34 @@ async function ownedCollection(context: CollectionContext, id: string) {
   if (!data) throw new Error("Collection not found.");
   return data.id as string;
 }
+
+export const listAssignableProjects = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const [{ data: projects, error: projectError }, { data: orgRoles, error: orgError }, { data: memberships, error: membershipError }] =
+      await Promise.all([
+        context.supabase.from("projects").select("id, name, organization_id"),
+        context.supabase
+          .from("organization_members")
+          .select("organization_id")
+          .eq("user_id", context.userId)
+          .eq("role", "admin"),
+        context.supabase
+          .from("project_members")
+          .select("project_id")
+          .eq("user_id", context.userId)
+          .eq("role", "admin"),
+      ]);
+    if (projectError) throw new Error(projectError.message);
+    if (orgError) throw new Error(orgError.message);
+    if (membershipError) throw new Error(membershipError.message);
+    const managedOrganizations = new Set((orgRoles ?? []).map((row) => row.organization_id));
+    const managedProjects = new Set((memberships ?? []).map((row) => row.project_id));
+    return (projects ?? []).filter(
+      (project) =>
+        managedOrganizations.has(project.organization_id) || managedProjects.has(project.id),
+    );
+  });
 
 export const listResourceCollections = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -181,15 +221,17 @@ export const assignResourcesToProjects = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: { resourceIds: string[]; projectIds: string[] }) => ({
     resourceIds: resourceIds(input?.resourceIds),
-    projectIds: [
-      ...new Set(Array.isArray(input?.projectIds) ? input.projectIds.filter(Boolean) : []),
-    ].slice(0, 50),
+    projectIds: projectIds(input?.projectIds),
   }))
   .handler(async ({ data, context }) => {
     if (!data.resourceIds.length || !data.projectIds.length) {
       throw new Error("Select resources and projects.");
     }
     await verifyLibraryResources(context, data.resourceIds);
+    const totalLinks = data.projectIds.length * data.resourceIds.length;
+    if (totalLinks > 500) {
+      throw new Error("This assignment is too large. Select fewer resources or projects.");
+    }
     const links = data.projectIds.flatMap((projectId) =>
       data.resourceIds.map((resourceId) => ({
         project_id: projectId,
