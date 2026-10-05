@@ -22,13 +22,19 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import {
+  createCredentialFolder,
   createSecret,
+  deleteCredentialFolder,
   deleteSecret,
   getTotpCode,
+  listCredentialFolders,
   listSecrets,
   revealSecret,
+  type CredentialFolder,
   type SecretType,
+  updateCredentialFolder,
   updateSecretOrganization,
+  updateSecretValue,
 } from "@/lib/secrets.functions";
 import { listProjects } from "@/lib/orgs.functions";
 import { Badge } from "@/components/ui/badge";
@@ -130,6 +136,10 @@ function SecretsPage() {
   const revealFn = useServerFn(revealSecret);
   const listProjectsFn = useServerFn(listProjects);
   const updateOrganizationFn = useServerFn(updateSecretOrganization);
+  const listFoldersFn = useServerFn(listCredentialFolders);
+  const createFolderFn = useServerFn(createCredentialFolder);
+  const updateFolderFn = useServerFn(updateCredentialFolder);
+  const deleteFolderFn = useServerFn(deleteCredentialFolder);
 
   const [name, setName] = useState("");
   const [secretType, setSecretType] = useState<SecretType>("api_key");
@@ -154,6 +164,19 @@ function SecretsPage() {
   const [editTags, setEditTags] = useState("");
   const [editNotes, setEditNotes] = useState("");
   const [editProjectIds, setEditProjectIds] = useState<string[]>([]);
+  const [folderFilter, setFolderFilter] = useState("all");
+  const [newFolderName, setNewFolderName] = useState("");
+  const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
+  const [editFolderName, setEditFolderName] = useState("");
+  const [editFolderCredentialIds, setEditFolderCredentialIds] = useState<string[]>([]);
+  const [editFolderProjectIds, setEditFolderProjectIds] = useState<string[]>([]);
+  const [pendingDeleteFolder, setPendingDeleteFolder] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [editingValueId, setEditingValueId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const [showEditValue, setShowEditValue] = useState(false);
 
   const list = useQuery({
     queryKey: ["credential-secrets"],
@@ -169,6 +192,10 @@ function SecretsPage() {
   const projects = useQuery({
     queryKey: ["projects"],
     queryFn: () => listProjectsFn({ data: {} }),
+  });
+  const folders = useQuery({
+    queryKey: ["credential-folders"],
+    queryFn: () => listFoldersFn({}),
   });
 
   const availableTags = useMemo(
@@ -189,6 +216,13 @@ function SecretsPage() {
         !(row.projects ?? []).some((project: { id: string }) => project.id === projectFilter)
       )
         return false;
+      if (
+        folderFilter !== "all" &&
+        !(folders.data ?? []).some(
+          (folder) => folder.id === folderFilter && folder.credential_ids.includes(row.id),
+        )
+      )
+        return false;
       if (!query) return true;
       return [
         row.name,
@@ -202,9 +236,61 @@ function SecretsPage() {
         .filter(Boolean)
         .some((field) => String(field).toLowerCase().includes(query));
     });
-  }, [list.data, projectFilter, search, tagFilter, typeFilter]);
+  }, [folders.data, folderFilter, list.data, projectFilter, search, tagFilter, typeFilter]);
 
   const typeDetails = TYPE_DETAILS[secretType];
+
+  const createFolderMutation = useMutation({
+    mutationFn: () => createFolderFn({ data: { name: newFolderName } }),
+    onSuccess: () => {
+      setNewFolderName("");
+      toast.success("Folder created");
+      void queryClient.invalidateQueries({ queryKey: ["credential-folders"] });
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Could not create folder"),
+  });
+
+  const updateFolderMutation = useMutation({
+    mutationFn: (folder: {
+      id: string;
+      name: string;
+      credentialIds: string[];
+      projectIds: string[];
+    }) =>
+      updateFolderFn({
+        data: {
+          id: folder.id,
+          name: folder.name,
+          credential_ids: folder.credentialIds,
+          project_ids: folder.projectIds,
+        },
+      }),
+    onSuccess: () => {
+      setEditingFolderId(null);
+      toast.success("Folder updated");
+      void queryClient.invalidateQueries({ queryKey: ["credential-folders"] });
+      void queryClient.invalidateQueries({ queryKey: ["credential-secrets"] });
+      void queryClient.invalidateQueries({ queryKey: ["project-credentials"] });
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Could not update folder"),
+  });
+
+  const deleteFolderMutation = useMutation({
+    mutationFn: (id: string) => deleteFolderFn({ data: { id } }),
+    onSuccess: () => {
+      const removedId = pendingDeleteFolder?.id;
+      setPendingDeleteFolder(null);
+      if (removedId === editingFolderId) setEditingFolderId(null);
+      if (removedId === folderFilter) setFolderFilter("all");
+      toast.success("Folder deleted; credentials are still in your vault");
+      void queryClient.invalidateQueries({ queryKey: ["credential-folders"] });
+      void queryClient.invalidateQueries({ queryKey: ["project-credentials"] });
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Could not delete folder"),
+  });
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -251,6 +337,8 @@ function SecretsPage() {
       setPendingDelete(null);
       toast.success("Secret deleted");
       void queryClient.invalidateQueries({ queryKey: ["credential-secrets"] });
+      void queryClient.invalidateQueries({ queryKey: ["credential-folders"] });
+      void queryClient.invalidateQueries({ queryKey: ["project-credentials"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Delete failed"),
   });
@@ -269,10 +357,45 @@ function SecretsPage() {
       setEditingCredentialId(null);
       toast.success("Credential organization updated");
       void queryClient.invalidateQueries({ queryKey: ["credential-secrets"] });
+      void queryClient.invalidateQueries({ queryKey: ["project-credentials"] });
     },
     onError: (error) =>
       toast.error(error instanceof Error ? error.message : "Could not update credential"),
   });
+
+  const valueMutation = useMutation({
+    mutationFn: () => updateSecretValue({ data: { id: editingValueId ?? "", value: editValue } }),
+    onSuccess: () => {
+      if (editingValueId) {
+        setRevealedValues((previous) => {
+          const next = { ...previous };
+          delete next[editingValueId];
+          return next;
+        });
+      }
+      setEditingValueId(null);
+      setEditValue("");
+      setShowEditValue(false);
+      toast.success("Credential value updated securely");
+      void queryClient.invalidateQueries({ queryKey: ["credential-secrets"] });
+      void queryClient.invalidateQueries({ queryKey: ["project-credentials"] });
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Could not update credential value"),
+  });
+
+  function beginEditingFolder(folder: CredentialFolder) {
+    setEditingFolderId(folder.id);
+    setEditFolderName(folder.name);
+    setEditFolderCredentialIds(folder.credential_ids);
+    setEditFolderProjectIds(folder.project_ids);
+  }
+
+  function beginEditingValue(id: string) {
+    setEditingValueId(id);
+    setEditValue("");
+    setShowEditValue(false);
+  }
 
   function beginEditingOrganization(row: {
     id: string;
@@ -548,6 +671,216 @@ function SecretsPage() {
 
       <Card className="mt-6 shadow-panel">
         <CardHeader>
+          <CardTitle className="text-base">Credential folders</CardTitle>
+          <CardDescription>
+            Group saved logins and keys. Sharing a folder gives selected projects metadata-only
+            references to every credential inside; secret values remain private to you.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Input
+              aria-label="New credential folder name"
+              placeholder="e.g. Production accounts"
+              maxLength={80}
+              value={newFolderName}
+              onChange={(event) => setNewFolderName(event.target.value)}
+            />
+            <Button
+              className="shrink-0"
+              onClick={() => createFolderMutation.mutate()}
+              disabled={!newFolderName.trim() || createFolderMutation.isPending}
+            >
+              {createFolderMutation.isPending ? (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              ) : (
+                <FolderKanban className="mr-2 size-4" />
+              )}
+              Create folder
+            </Button>
+          </div>
+          {folders.isLoading ? <Skeleton className="h-20 w-full" /> : null}
+          {!folders.isLoading && (folders.data ?? []).length === 0 ? (
+            <p className="rounded-lg border border-dashed px-3 py-4 text-sm text-muted-foreground">
+              No folders yet. Create one, then choose credentials and projects with Manage.
+            </p>
+          ) : null}
+          <div className="space-y-3">
+            {(folders.data ?? []).map((folder) => {
+              const members = (list.data ?? []).filter((row) =>
+                folder.credential_ids.includes(row.id),
+              );
+              return (
+                <div key={folder.id} className="rounded-xl border border-border/80 p-3">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <FolderKanban className="size-4 text-primary" />
+                        <p className="font-medium">{folder.name}</p>
+                        <Badge variant="secondary">{members.length} credentials</Badge>
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {members.map((credential) => (
+                          <Badge key={credential.id} variant="outline">
+                            {credential.name}
+                          </Badge>
+                        ))}
+                        {members.length === 0 ? (
+                          <span className="text-xs text-muted-foreground">Empty folder</span>
+                        ) : null}
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {folder.projects.map((project) => (
+                          <Badge key={project.id} variant="secondary">
+                            <FolderKanban className="mr-1 size-3" />
+                            {project.name}
+                          </Badge>
+                        ))}
+                        {folder.projects.length === 0 ? (
+                          <span className="text-xs text-muted-foreground">
+                            Not shared with projects
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          editingFolderId === folder.id
+                            ? setEditingFolderId(null)
+                            : beginEditingFolder(folder)
+                        }
+                      >
+                        <Pencil className="mr-1.5 size-3.5" />
+                        {editingFolderId === folder.id ? "Close" : "Manage"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        aria-label={\`Delete folder \${folder.name}\`}
+                        onClick={() => setPendingDeleteFolder({ id: folder.id, name: folder.name })}
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                  {editingFolderId === folder.id ? (
+                    <div className="mt-4 space-y-4 rounded-lg border border-border bg-muted/20 p-3">
+                      <div className="space-y-1.5">
+                        <Label htmlFor={\`folder-name-\${folder.id}\`}>Folder name</Label>
+                        <Input
+                          id={\`folder-name-\${folder.id}\`}
+                          maxLength={80}
+                          value={editFolderName}
+                          onChange={(event) => setEditFolderName(event.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Credentials in this folder</Label>
+                        <div className="max-h-56 space-y-1 overflow-y-auto rounded-lg border bg-background p-2">
+                          {(list.data ?? []).length === 0 ? (
+                            <p className="p-2 text-xs text-muted-foreground">
+                              Add credentials to your vault first.
+                            </p>
+                          ) : (
+                            (list.data ?? []).map((credential) => (
+                              <label
+                                key={credential.id}
+                                className="flex items-center gap-2 rounded-md p-2 text-sm hover:bg-muted/50"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={editFolderCredentialIds.includes(credential.id)}
+                                  onChange={(event) =>
+                                    setEditFolderCredentialIds((current) =>
+                                      event.target.checked
+                                        ? [...new Set([...current, credential.id])]
+                                        : current.filter((id) => id !== credential.id),
+                                    )
+                                  }
+                                />
+                                <span className="min-w-0 truncate">{credential.name}</span>
+                                <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+                                  {TYPE_DETAILS[credential.secret_type as SecretType]?.label ??
+                                    credential.secret_type}
+                                </span>
+                              </label>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Share folder with projects</Label>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {(projects.data ?? []).map((project) => (
+                            <label
+                              key={project.id}
+                              className="flex items-center gap-2 rounded-lg border bg-background p-2 text-sm"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={editFolderProjectIds.includes(project.id)}
+                                onChange={(event) =>
+                                  setEditFolderProjectIds((current) =>
+                                    event.target.checked
+                                      ? [...new Set([...current, project.id])]
+                                      : current.filter((id) => id !== project.id),
+                                  )
+                                }
+                              />
+                              <span className="truncate">{project.name}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Projects see credential names and types only. They cannot reveal passwords,
+                        keys, or 2FA seeds.
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() =>
+                            updateFolderMutation.mutate({
+                              id: folder.id,
+                              name: editFolderName,
+                              credentialIds: editFolderCredentialIds,
+                              projectIds: editFolderProjectIds,
+                            })
+                          }
+                          disabled={
+                            !editFolderName.trim() ||
+                            updateFolderMutation.isPending ||
+                            !list.data
+                          }
+                        >
+                          {updateFolderMutation.isPending ? (
+                            <Loader2 className="mr-2 size-4 animate-spin" />
+                          ) : null}
+                          Save folder
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setEditingFolderId(null)}
+                          disabled={updateFolderMutation.isPending}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6 shadow-panel">
+        <CardHeader>
           <CardTitle className="text-base">Stored credentials</CardTitle>
           <CardDescription>
             Values stay hidden until you explicitly reveal them. Revealed values clear after 30
@@ -604,6 +937,19 @@ function SecretsPage() {
                 </option>
               ))}
             </select>
+            <select
+              aria-label="Filter credential folder"
+              value={folderFilter}
+              onChange={(event) => setFolderFilter(event.target.value)}
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="all">All folders</option>
+              {(folders.data ?? []).map((folder) => (
+                <option key={folder.id} value={folder.id}>
+                  {folder.name}
+                </option>
+              ))}
+            </select>
           </div>
           {list.isLoading ? (
             <Skeleton className="h-20 w-full" />
@@ -638,9 +984,24 @@ function SecretsPage() {
                             {project.name}
                           </Badge>
                         ))}
+                        {(folders.data ?? [])
+                          .filter((folder) => folder.credential_ids.includes(row.id))
+                          .map((folder) => (
+                            <Badge key={folder.id} variant="secondary" className="text-xs">
+                              {folder.name}
+                            </Badge>
+                          ))}
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-1">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-2"
+                        onClick={() => beginEditingValue(row.id)}
+                      >
+                        <Pencil className="size-3.5" /> Edit value
+                      </Button>
                       <Button
                         size="sm"
                         variant="outline"
@@ -748,6 +1109,64 @@ function SecretsPage() {
                         This is the exact value stored in Vault. It will hide automatically after 30
                         seconds.
                       </p>
+                    </div>
+                  ) : null}
+                  {editingValueId === row.id ? (
+                    <div className="mt-3 space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
+                      <div>
+                        <p className="text-sm font-medium">Replace encrypted value</p>
+                        <p className="text-xs text-muted-foreground">
+                          Enter the replacement. The current value is never loaded into this form.
+                        </p>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor={`edit-value-${row.id}`}>
+                          {TYPE_DETAILS[row.secret_type as SecretType]?.valueLabel ?? "Secret value"}
+                        </Label>
+                        <div className="flex gap-2">
+                          <Input
+                            id={`edit-value-${row.id}`}
+                            type={showEditValue ? "text" : "password"}
+                            autoComplete="new-password"
+                            value={editValue}
+                            onChange={(event) => setEditValue(event.target.value)}
+                            placeholder="Enter new value"
+                            className="min-w-0 font-mono"
+                          />
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setShowEditValue((current) => !current)}
+                          >
+                            {showEditValue ? "Hide" : "Show"}
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => valueMutation.mutate()}
+                          disabled={editValue.length < 4 || valueMutation.isPending}
+                        >
+                          {valueMutation.isPending ? (
+                            <Loader2 className="mr-2 size-4 animate-spin" />
+                          ) : null}
+                          Save new value
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setEditingValueId(null);
+                            setEditValue("");
+                            setShowEditValue(false);
+                          }}
+                          disabled={valueMutation.isPending}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
                     </div>
                   ) : null}
                   {editingCredentialId === row.id ? (
@@ -862,6 +1281,33 @@ function SecretsPage() {
               }}
             >
               {deleteMutation.isPending ? "Deleting…" : "Delete permanently"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog
+        open={Boolean(pendingDeleteFolder)}
+        onOpenChange={(open) => !open && setPendingDeleteFolder(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete credential folder?</AlertDialogTitle>
+            <AlertDialogDescription>
+              “{pendingDeleteFolder?.name}” will be removed. Credentials stay in your vault, and
+              sharing from this folder is revoked.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteFolderMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={!pendingDeleteFolder || deleteFolderMutation.isPending}
+              onClick={(event) => {
+                event.preventDefault();
+                if (pendingDeleteFolder) deleteFolderMutation.mutate(pendingDeleteFolder.id);
+              }}
+            >
+              {deleteFolderMutation.isPending ? "Deleting…" : "Delete folder"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
