@@ -361,7 +361,7 @@ function SettingsPage() {
               to="/integrations"
               icon={Network}
               title="Integrations"
-              description="Connect external AI clients, MCP servers, and Telegram to Open-Connect. Integration access is owned and configured separately for each account."
+              description="Manage Open-Connect entry points for AI clients, MCP, and Telegram. Each account owns its setup and project grants; resources, connectors, and model providers stay separate."
             />
             <SettingsLinkCard
               to="/models"
