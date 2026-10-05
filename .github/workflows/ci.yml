@@ -49,6 +49,32 @@ jobs:
           path: .output/public
           retention-days: 7
 
+  publish-required-build-status:
+    name: Publish required build status
+    if: always() && github.event_name == 'pull_request'
+    needs: [validate]
+    runs-on: ubuntu-latest
+    permissions:
+      statuses: write
+    steps:
+      - name: Publish the protected-branch status from the CI result
+        uses: actions/github-script@v9
+        env:
+          VALIDATION_RESULT: ${{ needs.validate.result }}
+        with:
+          script: |
+            const state = process.env.VALIDATION_RESULT === 'success' ? 'success' : 'failure';
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.payload.pull_request.head.sha,
+              state,
+              context: 'Build & validate',
+              description: state === 'success'
+                ? 'Lint, tests, build, and SSR validation passed.'
+                : `Validation job concluded as ${process.env.VALIDATION_RESULT}.`,
+            });
+
   smoke-production:
     name: Production smoke (post-merge)
     runs-on: ubuntu-latest
