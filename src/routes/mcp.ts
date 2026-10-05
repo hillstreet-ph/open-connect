@@ -1158,9 +1158,7 @@ export const Route = createFileRoute("/mcp")({
                 .eq("user_id", key.userId)
                 .order("updated_at", { ascending: false })
                 .limit(limit);
-              query = projectId
-                ? query.eq("project_id", projectId)
-                : query.is("project_id", null);
+              query = projectId ? query.eq("project_id", projectId) : query.is("project_id", null);
               if (!isMemory) query = query.neq("status", "archived");
               const { data, error } = await query;
               if (error) throw new Error(error.message);
