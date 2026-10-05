@@ -55,7 +55,7 @@ export const Route = createFileRoute("/_authenticated/connections")({
       {
         name: "description",
         content:
-          "Connect GitHub, Telegram, ChatGPT, Grok and more. Agents get capability, never raw credentials.",
+          "Connect external apps and accounts Open-Connect uses. AI clients and MCP entry points are managed separately in Integrations.",
       },
     ],
   }),
@@ -193,13 +193,16 @@ function ConnectionsPage() {
       </Badge>
       <h1 className="text-2xl font-semibold sm:text-4xl">Connectors</h1>
       <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-        Connect official apps or add a custom MCP endpoint. Open-Connect keeps credentials
-        server-side and gives agents only approved capabilities.
+        Connect the external app accounts Open-Connect uses. AI clients and MCP entry points are
+        managed separately in Integrations. Credentials stay server-side.
       </p>
 
       <div className="mt-6 flex flex-wrap gap-2">
         {user && (
           <>
+            <Button asChild variant="outline">
+              <Link to="/integrations">AI and MCP integrations</Link>
+            </Button>
             <Button
               variant="outline"
               disabled={syncMutation.isPending}
