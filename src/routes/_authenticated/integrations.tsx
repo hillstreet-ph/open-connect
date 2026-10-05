@@ -228,7 +228,8 @@ function IntegrationsPage() {
           <div className="mb-4">
             <h2 className="text-lg font-semibold">Custom MCP</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Your inbound Open-Connect endpoint. Resource catalog MCP servers are managed separately.
+              Your inbound Open-Connect endpoint. Resource catalog MCP servers are managed
+              separately.
             </p>
           </div>
           <Card className="shadow-panel">
@@ -272,8 +273,8 @@ function IntegrationsPage() {
           <div className="mb-4">
             <h2 className="text-lg font-semibold">Apps</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Set up your bot for agent messaging. This is an Open-Connect integration, separate from
-              app connectors.
+              Set up your bot for agent messaging. This is an Open-Connect integration, separate
+              from app connectors.
             </p>
           </div>
           <Card className="shadow-panel">
