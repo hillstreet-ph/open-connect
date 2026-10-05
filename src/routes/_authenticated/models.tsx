@@ -202,20 +202,19 @@ function ModelsPage() {
                 <Badge variant="secondary" className="gap-1">
                   <CheckCircle2 className="size-3" /> Connected
                 </Badge>
-              ) : (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={!user}
-                  onClick={() => {
-                    setActiveProvider(provider.id);
-                    setProviderUrl(provider.baseUrl);
-                    setProviderKey("");
-                  }}
-                >
-                  Add key
-                </Button>
-              )}
+              ) : null}
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!user}
+                onClick={() => {
+                  setActiveProvider(provider.id);
+                  setProviderUrl(provider.baseUrl);
+                  setProviderKey("");
+                }}
+              >
+                {connectedProviders.has(provider.id) ? "Update key" : "Add key"}
+              </Button>
             </div>
             {activeProvider === provider.id ? (
               <div className="mt-4 space-y-3 border-t border-border/70 pt-4">
@@ -252,7 +251,7 @@ function ModelsPage() {
                     ) : (
                       <KeyRound className="mr-1 size-3.5" />
                     )}
-                    Save provider
+                    {connectedProviders.has(provider.id) ? "Update provider" : "Save provider"}
                   </Button>
                   <Button size="sm" variant="ghost" onClick={() => setActiveProvider(null)}>
                     Cancel
