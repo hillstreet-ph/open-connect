@@ -395,3 +395,24 @@ test("selected library resources can be added while creating a collection", () =
   assert.ok(functions.includes("data.resourceIds.map"));
   assert.match(functions, /const newIds/);
 });
+
+test("Marketplace installs stay in the personal library and agent context reads are user scoped", () => {
+  const sourceRoot = path.resolve(process.cwd(), "src");
+  const library = readFileSync(path.join(sourceRoot, "lib/library.functions.ts"), "utf8");
+  const mcp = readFileSync(path.join(sourceRoot, "routes/mcp.ts"), "utf8");
+  const scopes = readFileSync(path.join(sourceRoot, "lib/access-profiles.ts"), "utf8");
+  const install = library.slice(
+    library.indexOf("export const addResourceToLibrary"),
+    library.indexOf("export const removeResourceFromLibrary"),
+  );
+
+  assert.match(install, /open-connect-personal-library/);
+  assert.match(install, /toolkit_items/);
+  assert.doesNotMatch(install, /project_resources/);
+  assert.match(mcp, /name === "list_my_memory"/);
+  assert.match(mcp, /name === "list_my_knowledge"/);
+  assert.match(mcp, /key.userId/);
+  assert.match(mcp, /resolveUserUpstreams/);
+  assert.match(scopes, /"memory:read"/);
+  assert.match(scopes, /"knowledge:read"/);
+});
