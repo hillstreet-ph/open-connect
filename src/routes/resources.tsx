@@ -21,6 +21,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { AddToLibraryButton } from "@/components/add-to-library";
+import { ResourcePurposeSidebar } from "@/components/resource-purpose-sidebar";
 
 export const Route = createFileRoute("/resources")({
   head: () => ({
@@ -29,7 +30,7 @@ export const Route = createFileRoute("/resources")({
       {
         name: "description",
         content:
-          "Marketplace for guides, skills, MCP servers, tools, plugins, agents and prompts. Sign in to download or add to a project.",
+          "Marketplace for skills, MCP servers, tools, plugins, agents, prompts, and more. Sign in to download or add packages to your library.",
       },
       { property: "og:title", content: "Marketplace — Open-Connect" },
     ],
@@ -152,7 +153,7 @@ function MarketplaceContent() {
           </Badge>
           <h1 className="text-xl font-semibold">Marketplace</h1>
           <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-            Browse guides, skills, MCP, tools, plugins, agents, and prompts. Add packages to your
+            Browse skills, MCP, tools, plugins, agents, prompts, and other packages. Add items to your
             personal library, then share them with projects from the matching sidebar page.
           </p>
         </div>
@@ -176,66 +177,63 @@ function MarketplaceContent() {
         </div>
       ) : null}
 
-      <div className="mt-8 space-y-3">
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search packages…"
-            className="pl-9"
-            aria-label="Search marketplace"
-          />
-        </div>
-        <select
-          aria-label="Marketplace purpose category"
-          className="h-9 rounded-md border bg-background px-2 text-sm"
-          value={purpose}
-          onChange={(event) => setPurpose(event.target.value)}
-        >
-          <option value="all">All categories</option>
-          {purposes.map((group) => (
-            <option key={group.type} value={group.type}>
-              {group.label} ({group.items.length})
-            </option>
-          ))}
-        </select>
-        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
-          {resourceCategories.map((filter) => (
-            <button
-              key={filter.value}
-              type="button"
-              onClick={() => setType(filter.value)}
-              className={cn(
-                "shrink-0 rounded-full border px-3 py-1.5 text-xs transition-colors",
-                type === filter.value
-                  ? "border-primary/50 bg-primary/15 text-primary"
-                  : "border-border/70 text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {filter.label}
-              {counts[filter.value] != null ? (
-                <span className="ml-1 opacity-60">{counts[filter.value]}</span>
-              ) : null}
-            </button>
-          ))}
-        </div>
-      </div>
+      <div className="mt-8 grid gap-6 lg:grid-cols-[190px_minmax(0,1fr)]">
+        <ResourcePurposeSidebar
+          groups={purposes}
+          activePurpose={purpose}
+          allCount={data?.length ?? 0}
+          onSelect={setPurpose}
+          ariaLabel="Marketplace purpose categories"
+        />
+        <div className="min-w-0 space-y-4">
+          <div className="space-y-3">
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search packages…"
+                className="pl-9"
+                aria-label="Search marketplace"
+              />
+            </div>
+            <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
+              {resourceCategories.map((filter) => (
+                <button
+                  key={filter.value}
+                  type="button"
+                  aria-pressed={type === filter.value}
+                  onClick={() => setType(filter.value)}
+                  className={cn(
+                    "shrink-0 rounded-full border px-3 py-1.5 text-xs transition-colors",
+                    type === filter.value
+                      ? "border-primary/50 bg-primary/15 text-primary"
+                      : "border-border/70 text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {filter.label}
+                  {counts[filter.value] != null ? (
+                    <span className="ml-1 opacity-60">{counts[filter.value]}</span>
+                  ) : null}
+                </button>
+              ))}
+            </div>
+          </div>
 
-      {isError ? (
-        <p role="alert" className="mt-4">
-          Could not load Marketplace.{" "}
-          <Button variant="link" onClick={() => void refetch()}>
-            Retry
-          </Button>
-        </p>
-      ) : null}
-      {!isLoading && !isError && results.length === 0 ? (
-        <p role="status" className="mt-4 text-sm text-muted-foreground">
-          No resources match your filters.
-        </p>
-      ) : null}
-      <div className="mt-8 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {isError ? (
+            <p role="alert">
+              Could not load Marketplace.{" "}
+              <Button variant="link" onClick={() => void refetch()}>
+                Retry
+              </Button>
+            </p>
+          ) : null}
+          {!isLoading && !isError && results.length === 0 ? (
+            <p role="status" className="text-sm text-muted-foreground">
+              No resources match your filters.
+            </p>
+          ) : null}
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
         {isLoading
           ? Array.from({ length: 6 }).map((_, index) => (
               <Skeleton key={index} className="h-36 rounded-xl" />
@@ -324,6 +322,8 @@ function MarketplaceContent() {
                 </Card>
               );
             })}
+          </div>
+        </div>
       </div>
 
       {viewText ? (

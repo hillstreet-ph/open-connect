@@ -6,7 +6,13 @@ import { listLibraryResources, removeResourceFromLibrary } from "@/lib/library.f
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Input } from "@/components/ui/input";
-import { groupResourcesByType, resourceCategoryForType } from "@/lib/resource-categories";
+import {
+  groupResourcesByPurpose,
+  groupResourcesByType,
+  resourceCategoryForType,
+  resourcePurpose,
+} from "@/lib/resource-categories";
+import { ResourcePurposeSidebar } from "@/components/resource-purpose-sidebar";
 import { resourceCategories } from "@/lib/nav";
 import { isSharedLibraryRow } from "@/lib/shared-resources";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +34,7 @@ export function ResourceLibraryPage({
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
+  const [purpose, setPurpose] = useState("all");
   const list = useServerFn(listLibraryResources);
   const remove = useServerFn(removeResourceFromLibrary);
   const resources = useQuery({
@@ -71,11 +78,13 @@ export function ResourceLibraryPage({
     counts[type] = (counts[type] ?? 0) + 1;
   }
 
+  const purposeGroups = groupResourcesByPurpose(rows);
   const filtered = rows.filter((row) => {
     const resource = row.resources;
     return (
       resource &&
       (category === "all" || resourceCategoryForType(resource.resource_type) === category) &&
+      (purpose === "all" || resourcePurpose(row) === purpose) &&
       `${resource.name} ${resource.description ?? ""} ${resource.resource_type}`
         .toLowerCase()
         .includes(search.toLowerCase().trim())
@@ -90,47 +99,56 @@ export function ResourceLibraryPage({
         <p className="mt-1 max-w-3xl text-xs text-muted-foreground">{description}</p>
       </div>
 
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <Input
-            aria-label="Search resources"
-            placeholder="Search resources…"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            className="h-9 max-w-xs text-sm"
-          />
-          <Button asChild size="sm" variant="outline">
-            <Link to="/resources">Browse Marketplace</Link>
-          </Button>
-        </div>
-        <div
-          role="group"
-          aria-label="Filter resources by category"
-          className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0"
-        >
-          {resourceCategories.map((filter) => (
-            <button
-              key={filter.value}
-              type="button"
-              aria-pressed={category === filter.value}
-              onClick={() => setCategory(filter.value)}
-              className={cn(
-                "shrink-0 rounded-full border px-3 py-1.5 text-xs transition-colors",
-                category === filter.value
-                  ? "border-primary/50 bg-primary/15 text-primary"
-                  : "border-border/70 text-muted-foreground hover:text-foreground",
-              )}
+      <div className="mt-4 grid gap-6 lg:grid-cols-[190px_minmax(0,1fr)]">
+        <ResourcePurposeSidebar
+          groups={purposeGroups}
+          activePurpose={purpose}
+          allCount={counts.all}
+          onSelect={setPurpose}
+          ariaLabel="Resource purpose categories"
+        />
+        <div className="min-w-0 space-y-4">
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <Input
+                aria-label="Search resources"
+                placeholder="Search resources…"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                className="h-9 max-w-xs text-sm"
+              />
+              <Button asChild size="sm" variant="outline">
+                <Link to="/resources">Browse Marketplace</Link>
+              </Button>
+            </div>
+            <div
+              role="group"
+              aria-label="Filter resources by type"
+              className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0"
             >
-              {filter.label}
-              {counts[filter.value] != null ? (
-                <span className="ml-1 opacity-60">{counts[filter.value]}</span>
-              ) : null}
-            </button>
-          ))}
-        </div>
-      </div>
-      {resources.isLoading ? <p role="status">Loading resources…</p> : null}
-      {groups.map((group) => (
+              {resourceCategories.map((filter) => (
+                <button
+                  key={filter.value}
+                  type="button"
+                  aria-pressed={category === filter.value}
+                  onClick={() => setCategory(filter.value)}
+                  className={cn(
+                    "shrink-0 rounded-full border px-3 py-1.5 text-xs transition-colors",
+                    category === filter.value
+                      ? "border-primary/50 bg-primary/15 text-primary"
+                      : "border-border/70 text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {filter.label}
+                  {counts[filter.value] != null ? (
+                    <span className="ml-1 opacity-60">{counts[filter.value]}</span>
+                  ) : null}
+                </button>
+              ))}
+            </div>
+          </div>
+          {resources.isLoading ? <p role="status">Loading resources…</p> : null}
+          {groups.map((group) => (
         <section key={group.type} className="space-y-2" aria-label={group.label}>
           <h2 className="text-sm font-semibold">
             {group.label} <span className="text-muted-foreground">({group.items.length})</span>
@@ -185,15 +203,17 @@ export function ResourceLibraryPage({
       {resources.isError ? (
         <p role="alert">Could not load your library. Please try again.</p>
       ) : null}
-      {!resources.isLoading && !resources.isError && filtered.length === 0 ? (
-        <Card className="shadow-panel">
-          <CardContent className="p-6 text-sm text-muted-foreground">
-            {rows.length
-              ? "No resources match your search."
-              : "No resources installed yet. Add resources from Marketplace or Studio."}
-          </CardContent>
-        </Card>
-      ) : null}
+          {!resources.isLoading && !resources.isError && filtered.length === 0 ? (
+            <Card className="shadow-panel">
+              <CardContent className="p-6 text-sm text-muted-foreground">
+                {rows.length
+                  ? "No resources match your filters."
+                  : "No resources installed yet. Add resources from Marketplace or Studio."}
+              </CardContent>
+            </Card>
+          ) : null}
+        </div>
+      </div>
     </div>
   );
 }
