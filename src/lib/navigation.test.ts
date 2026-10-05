@@ -324,17 +324,7 @@ test("Connections keeps Connectors, Credentials, and AI Gateway", () => {
 test("Marketplace and Resources expose only installable package categories", () => {
   assert.deepEqual(
     resourceCategories.map((category) => category.label),
-    [
-      "All",
-      "Skills",
-      "MCP",
-      "Tools",
-      "Plugins",
-      "Agents",
-      "Prompts",
-      "Toolkits",
-      "Others",
-    ],
+    ["All", "Skills", "MCP", "Tools", "Plugins", "Agents", "Prompts", "Toolkits", "Others"],
   );
 
   const groups = groupResourcesByType([
@@ -361,7 +351,10 @@ test("Guides, apps, models, memory, and knowledge are excluded from Marketplace 
   assert.match(marketplace, /\["guide", "app", "model", "memory", "knowledge"\]/);
   assert.match(library, /\["guide", "app", "model", "memory", "knowledge"\]/);
   for (const type of ["guide", "app", "model", "memory", "knowledge"]) {
-    assert.equal(resourceCategories.some((category) => category.value === type), false);
+    assert.equal(
+      resourceCategories.some((category) => category.value === type),
+      false,
+    );
   }
 });
 
