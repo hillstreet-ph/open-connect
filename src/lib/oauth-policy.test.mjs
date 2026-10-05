@@ -27,7 +27,9 @@ test("malformed callbacks return a stable error on server and browser", () => {
   for (const redirect_uri of ["", "not a URL"]) {
     assert.throws(
       () => validateOAuthRequest({ ...req, redirect_uri }),
-      (error) => error instanceof Error && error.message === "Invalid HTTPS callback. Restart from your client.",
+      (error) =>
+        error instanceof Error &&
+        error.message === "Invalid HTTPS callback. Restart from your client.",
     );
   }
 });
