@@ -71,17 +71,24 @@ test("connection surfaces remain internal and separate from Marketplace", () => 
   const sourceRoot = path.resolve(process.cwd(), "src");
   const sidebar = readFileSync(path.join(sourceRoot, "components/app-sidebar.tsx"), "utf8");
   const userMenu = readFileSync(path.join(sourceRoot, "components/user-menu.tsx"), "utf8");
+
   for (const route of ["/connections", "/secrets", "/models"]) {
     assert.ok(sidebar.includes(route), "Missing connection route " + route);
   }
   assert.ok(sidebar.includes('to: "/connections", label: "Connectors"'));
   assert.ok(userMenu.includes('to="/integrations"'));
 
-  const connectors = readFileSync(path.join(sourceRoot, "routes/_authenticated/connections.tsx"), "utf8");
+  const connectors = readFileSync(
+    path.join(sourceRoot, "routes/_authenticated/connections.tsx"),
+    "utf8",
+  );
   assert.ok(connectors.includes("Add custom MCP"));
   assert.ok(!connectors.includes('to="/resources"'));
 
-  const integrations = readFileSync(path.join(sourceRoot, "routes/_authenticated/integrations.tsx"), "utf8");
+  const integrations = readFileSync(
+    path.join(sourceRoot, "routes/_authenticated/integrations.tsx"),
+    "utf8",
+  );
   assert.ok(integrations.includes("<ApiKeysCard />"));
   assert.ok(integrations.includes("Connect ChatGPT with OAuth"));
   assert.ok(integrations.includes("setTelegramOpen(true)"));
@@ -93,11 +100,18 @@ test("connection surfaces remain internal and separate from Marketplace", () => 
 test("Integrations follows Data & privacy in Settings and includes account keys", () => {
   const sourceRoot = path.resolve(process.cwd(), "src");
   const userMenu = readFileSync(path.join(sourceRoot, "components/user-menu.tsx"), "utf8");
-  const settings = readFileSync(path.join(sourceRoot, "routes/_authenticated/settings.tsx"), "utf8");
+  const settings = readFileSync(
+    path.join(sourceRoot, "routes/_authenticated/settings.tsx"),
+    "utf8",
+  );
+
   assert.ok(userMenu.includes('to="/settings"'));
   assert.ok(userMenu.includes('to="/integrations"'));
   assert.ok(!userMenu.includes('to="/api-keys"'));
-  assert.ok(settings.indexOf('value="data">Data & privacy') < settings.indexOf('value="integrations">Integrations'));
+  assert.ok(
+    settings.indexOf('value="data">Data & privacy') <
+      settings.indexOf('value="integrations">Integrations'),
+  );
   assert.ok(settings.includes('to="/integrations"'));
   assert.ok(settings.includes('title="Connectors"'));
   assert.ok(settings.includes('title="AI Gateway"'));
