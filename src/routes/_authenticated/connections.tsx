@@ -78,9 +78,9 @@ function ConnectionsPage() {
   const [accountLabel, setAccountLabel] = useState("");
   const [endpointUrl, setEndpointUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
-  const [authType, setAuthType] = useState<
-    "none" | "bearer" | "api_key" | "personal_access_token"
-  >("bearer");
+  const [authType, setAuthType] = useState<"none" | "bearer" | "api_key" | "personal_access_token">(
+    "bearer",
+  );
   const endpointProviders = new Set(["custom_mcp", "supabase", "databricks", "litellm"]);
 
   const catalog = useQuery({ queryKey: ["connection-catalog"], queryFn: () => catalogFn({}) });
@@ -496,9 +496,7 @@ function ConnectionsPage() {
                   onChange={(event) =>
                     setAuthType(
                       event.target.value as
-                        | "none"
-                        | "bearer"
-                        | "api_key"
+                        | "none" | "bearer" | "api_key"
                         | "personal_access_token",
                     )
                   }

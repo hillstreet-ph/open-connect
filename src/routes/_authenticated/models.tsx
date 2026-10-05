@@ -380,9 +380,9 @@ function ModelsPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor={`provider-key-${provider.id}`}
-                    >Provider API key or access token</Label
-                  >
+                  <Label htmlFor={`provider-key-${provider.id}`}>
+                    Provider API key or access token
+                  </Label>
                   <Input
                     id={`provider-key-${provider.id}`}
                     type="password"
