@@ -52,8 +52,43 @@ async function ensureSkillsCollection(context: { supabase: SupabaseClient<Databa
     })
     .select("id")
     .single();
-  if (error) throw new Error(error.message);
-  return created.id as string;
+
+  let collectionId = created?.id as string | undefined;
+  if (error) {
+    const { data: concurrent, error: concurrentError } = await context.supabase
+      .from("toolkits")
+      .select("id")
+      .eq("user_id", context.userId)
+      .eq("slug", `collection-skills-${context.userId.replaceAll("-", "").slice(0, 12)}`)
+      .maybeSingle();
+    if (concurrentError) throw new Error(concurrentError.message);
+    if (!concurrent) throw new Error(error.message);
+    collectionId = concurrent.id as string;
+  }
+
+  if (!collectionId) throw new Error("Could not create Skills collection.");
+  const libraryId = await ensureLibrary(context);
+  const { data: installedSkills, error: skillsError } = await context.supabase
+    .from("toolkit_items")
+    .select("resource_id, resources!inner(resource_type)")
+    .eq("toolkit_id", libraryId)
+    .eq("resources.resource_type", "skill");
+  if (skillsError) throw new Error(skillsError.message);
+
+  if (installedSkills?.length) {
+    const { error: backfillError } = await context.supabase
+      .from("toolkit_items")
+      .upsert(
+        installedSkills.map((item, position) => ({
+          toolkit_id: collectionId,
+          resource_id: item.resource_id,
+          position,
+        })),
+        { onConflict: "toolkit_id,resource_id" },
+      );
+    if (backfillError) throw new Error(backfillError.message);
+  }
+  return collectionId;
 }
 
 export const listLibraryResources = createServerFn({ method: "GET" })
