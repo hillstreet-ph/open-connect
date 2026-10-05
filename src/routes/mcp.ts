@@ -1,4 +1,5 @@
 import { COMMAND_CENTER_HTML } from "@/lib/command-center";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   authenticateKey,
@@ -219,7 +220,7 @@ const PLATFORM_TOOLS: McpTool[] = [
   {
     name: "call_connection_tool",
     description:
-      "Call a tool on one verified Custom MCP connection. Non-read-only calls require administrator control access; destructive tools also require confirm=true.",
+      "Call a tool on one verified Custom MCP connection. Write-capable actions require a project-scoped key with connections:invoke; destructive tools also require confirm=true.",
     inputSchema: {
       type: "object",
       properties: {
@@ -1164,10 +1165,13 @@ export const Route = createFileRoute("/mcp")({
             }
             if (key.projectId) {
               await assertProjectAccess(key, key.projectId);
-              const { data: shared, error: sharedError } = await supabaseAdmin.rpc(
-                "list_project_connections",
-                { p_project_id: key.projectId },
-              );
+              const projectDb = supabaseAdmin as SupabaseClient;
+              const { data: shared, error: sharedError } = await projectDb
+                .from("project_connections")
+                .select(
+                  "connection_id, app_connections!inner(id,provider,display_name,status,scopes)",
+                )
+                .eq("project_id", key.projectId);
               if (sharedError) throw new Error(sharedError.message);
               const sharedRows = Array.isArray(shared)
                 ? (shared as Array<{
