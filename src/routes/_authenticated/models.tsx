@@ -32,6 +32,10 @@ export const Route = createFileRoute("/_authenticated/models")({
 const providers = [
   { id: "openrouter", name: "OpenRouter", baseUrl: "https://openrouter.ai/api/v1" },
   { id: "openai", name: "OpenAI", baseUrl: "https://api.openai.com/v1" },
+  { id: "nvidia", name: "NVIDIA NIM", baseUrl: "https://integrate.api.nvidia.com/v1" },
+  { id: "ollama_cloud", name: "Ollama Cloud", baseUrl: "https://ollama.com/v1" },
+  { id: "groq", name: "Groq", baseUrl: "https://api.groq.com/openai/v1" },
+  { id: "cerebras", name: "Cerebras", baseUrl: "https://api.cerebras.ai/v1" },
   { id: "anthropic", name: "Anthropic / Claude", baseUrl: "https://api.anthropic.com" },
   { id: "google", name: "Google / Gemini", baseUrl: "https://generativelanguage.googleapis.com" },
   { id: "xai", name: "xAI / Grok", baseUrl: "https://api.x.ai/v1" },
@@ -53,6 +57,18 @@ const aliases = [
   { alias: "gemini-flash", body: "Google Gemini Flash" },
   { alias: "grok-2", body: "xAI Grok" },
 ];
+const gatewayProviders = new Set([
+  "openrouter",
+  "litellm",
+  "openai",
+  "xai",
+  "mistral",
+  "deepseek",
+  "nvidia",
+  "ollama_cloud",
+  "groq",
+  "cerebras",
+]);
 
 function ModelsPage() {
   const { user } = useAuth();
@@ -82,7 +98,7 @@ function ModelsPage() {
       .filter(
         (item) =>
           item.status === "connected" &&
-          ((item.provider !== "openrouter" && item.provider !== "litellm") || item.gateway_ready),
+          (!gatewayProviders.has(item.provider) || item.gateway_ready),
       )
       .map((item) => item.provider),
   );
@@ -90,9 +106,7 @@ function ModelsPage() {
     (connections.data ?? [])
       .filter(
         (item) =>
-          item.status === "connected" &&
-          (item.provider === "openrouter" || item.provider === "litellm") &&
-          !item.gateway_ready,
+          item.status === "connected" && gatewayProviders.has(item.provider) && !item.gateway_ready,
       )
       .map((item) => item.provider),
   );
@@ -184,7 +198,9 @@ function ModelsPage() {
               <CardDescription className="mt-1 max-w-3xl">
                 Use <span className="font-mono text-primary">open-connect/auto</span> for all
                 projects and clients. It routes through your connected OpenRouter free-model router,
-                then tries LiteLLM models that explicitly report zero input and output cost.
+                then tries only provider free endpoints, Ollama free-plan models, and LiteLLM models
+                explicitly priced at zero. Other connected models appear below and may cost money
+                according to the provider.
               </CardDescription>
             </div>
             <Button
@@ -234,7 +250,14 @@ function ModelsPage() {
                       <span className="break-all font-mono text-xs">{model.id}</span>
                       <span className="text-xs text-muted-foreground">{model.provider}</span>
                       <Badge variant="outline" className="text-[10px]">
-                        {model.source === "openrouter" ? "OpenRouter" : "LiteLLM"}
+                        {
+                          {
+                            openrouter: "OpenRouter",
+                            litellm: "LiteLLM",
+                            nvidia: "NVIDIA",
+                            ollama_cloud: "Ollama Cloud",
+                          }[model.source]
+                        }
                       </Badge>
                     </div>
                   ))}
@@ -248,6 +271,27 @@ function ModelsPage() {
               )}
             </>
           )}
+          {freeModels.data?.allModels.length ? (
+            <div className="mt-5">
+              <h3 className="mb-2 text-sm font-semibold">All connected models</h3>
+              <div className="max-h-96 overflow-auto rounded-lg border border-border/70">
+                {freeModels.data.allModels.map((model) => (
+                  <div
+                    key={model.id}
+                    className="flex items-center justify-between gap-3 border-b px-3 py-2 last:border-b-0"
+                  >
+                    <span className="break-all font-mono text-xs">{model.id}</span>
+                    <Badge
+                      variant={model.free ? "secondary" : "outline"}
+                      className="shrink-0 text-[10px]"
+                    >
+                      {model.free ? "Auto · free eligible" : "Connected · check provider pricing"}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
 
@@ -287,9 +331,9 @@ function ModelsPage() {
       </Card>
       <h2 className="mt-14 text-xl font-semibold">AI provider credentials</h2>
       <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-        OpenRouter and LiteLLM connections are available to your model gateway. Connect OpenRouter
-        for its free catalog across providers, or configure zero-cost model pricing in LiteLLM.
-        Other provider keys remain available for integrations.
+        Connect compatible model APIs here to load their model catalogs into the gateway. Auto uses
+        only provider models explicitly marked free or configured at zero cost; named paid models
+        remain available through the gateway and follow the provider's billing.
       </p>
       <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {providers.map((provider) => (

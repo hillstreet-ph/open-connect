@@ -1,4 +1,4 @@
-export type FreeModelSource = "openrouter" | "litellm";
+export type FreeModelSource = "openrouter" | "litellm" | "nvidia" | "ollama_cloud";
 
 export type FreeModelEntry = {
   id: string;
@@ -18,6 +18,19 @@ type OpenRouterModel = {
   name?: unknown;
   pricing?: Record<string, unknown> | null;
 };
+
+// NVIDIA marks hosted prototypes as "Free Endpoint" in its official model catalog;
+// the inference API does not expose that entitlement with the /models response.
+const NVIDIA_FREE_ENDPOINT_MODELS = new Set([
+  "nvidia/nemotron-3.5-lightning-30b-a3b",
+  "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
+  "openai/gpt-oss-20b",
+  "meta/llama-3.2-11b-vision-instruct",
+  "meta/llama-3.2-90b-vision-instruct",
+  "google/gemma-4-31b-it",
+]);
+// Ollama documents gemma4:cloud as included in its free cloud plan.
+const OLLAMA_CLOUD_FREE_MODELS = new Set(["gemma4:cloud"]);
 
 function zero(value: unknown): boolean {
   if (typeof value === "number") return Number.isFinite(value) && value === 0;
@@ -108,7 +121,9 @@ export async function fetchFreeModelCatalog(
           ? [`${upstream.baseUrl.replace(/\/+$/, "")}/models`]
           : upstream.name === "litellm"
             ? modelInfoUrls(upstream.baseUrl)
-            : [];
+            : ["nvidia", "ollama_cloud"].includes(upstream.name)
+              ? [`${upstream.baseUrl.replace(/\/+$/, "")}/models`]
+              : [];
       for (const url of paths) {
         try {
           const response = await send(url, {
@@ -120,9 +135,31 @@ export async function fetchFreeModelCatalog(
           });
           if (!response.ok) continue;
           const payload: unknown = await response.json();
-          return upstream.name === "openrouter"
-            ? openRouterFreeModels(payload)
-            : liteLlmFreeModels(payload);
+          if (upstream.name === "openrouter") return openRouterFreeModels(payload);
+          if (upstream.name === "litellm") return liteLlmFreeModels(payload);
+          const allowed =
+            upstream.name === "nvidia" ? NVIDIA_FREE_ENDPOINT_MODELS : OLLAMA_CLOUD_FREE_MODELS;
+          const data =
+            payload && typeof payload === "object" ? (payload as { data?: unknown }).data : null;
+          if (!Array.isArray(data)) return [];
+          return data
+            .filter((item): item is { id: string; name?: string } =>
+              Boolean(
+                item &&
+                typeof item === "object" &&
+                typeof (item as { id?: unknown }).id === "string",
+              ),
+            )
+            .filter((item) => allowed.has(item.id))
+            .map((item) => ({
+              id: item.id,
+              provider:
+                providerFromModelId(item.id) === "unknown"
+                  ? upstream.name
+                  : providerFromModelId(item.id),
+              source: upstream.name as "nvidia" | "ollama_cloud",
+              name: typeof item.name === "string" ? item.name : null,
+            }));
         } catch {
           // Keep other configured providers available if a catalog is offline.
         }

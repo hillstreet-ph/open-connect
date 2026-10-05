@@ -84,13 +84,16 @@ test("resolves this user's connected OpenRouter and LiteLLM model gateways", asy
     refs[0]!.split("/").pop(),
     "user-a",
     refs[1]!.split("/").pop(),
+    "user-a",
+    "33333333-3333-3333-3333-333333333333",
   ]);
   assert.deepEqual(
     upstreams.map((upstream) => upstream.name),
-    ["openrouter", "litellm"],
+    ["openrouter", "litellm", "openai"],
   );
   assert.equal(upstreams[0]?.baseUrl, "https://openrouter.ai/api/v1");
   assert.equal(upstreams[1]?.baseUrl, "https://proxy.example/v1");
+  assert.equal(upstreams[2]?.baseUrl, "https://api.openai.com/v1");
   assert.equal(
     upstreams[1]?.headers["Authorization"],
     `Bearer secret-${refs[1]!.split("/").pop()}`,
@@ -123,5 +126,32 @@ test("stale gateway references are skipped and valid LiteLLM endpoints must be p
       resolve: async () => "secret",
     }),
     /public HTTPS/,
+  );
+});
+
+test("resolves NVIDIA, Ollama Cloud, Groq, and Cerebras through fixed provider endpoints", async () => {
+  const providers = ["nvidia", "ollama_cloud", "groq", "cerebras"];
+  const upstreams = await savedModelUpstreams("user-a", {
+    find: async () =>
+      providers.map((provider, index) => ({
+        provider,
+        status: "connected",
+        credential_reference: `credential://${provider}/${String(index + 1).padStart(8, "0")}-1111-1111-1111-111111111111`,
+      })),
+    resolve: async (_userId, credentialId) =>
+      JSON.stringify({ credential: `secret-${credentialId}` }),
+  });
+  assert.deepEqual(
+    upstreams.map((upstream) => upstream.name),
+    providers,
+  );
+  assert.deepEqual(
+    upstreams.map((upstream) => upstream.baseUrl),
+    [
+      "https://integrate.api.nvidia.com/v1",
+      "https://ollama.com/v1",
+      "https://api.groq.com/openai/v1",
+      "https://api.cerebras.ai/v1",
+    ],
   );
 });
