@@ -299,7 +299,10 @@ test("Discover keeps Marketplace and Resources while resource types stay in the 
     appCategories.find((group) => group.id === "discover")?.items.map((item) => item.label),
     ["Marketplace", "Resources"],
   );
-  assert.equal(flatAppNav().some((item) => item.to === "/others"), false);
+  assert.equal(
+    flatAppNav().some((item) => item.to === "/others"),
+    false,
+  );
 });
 
 test("Connections keeps Connectors, Credentials, and AI Gateway", () => {
