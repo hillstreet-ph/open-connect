@@ -13,6 +13,7 @@ import {
   syncComposioConnections,
 } from "@/lib/connections.functions";
 import { useAuth } from "@/hooks/use-auth";
+import { useRoles } from "@/hooks/use-roles";
 import { connectionCategories } from "@/lib/nav";
 import { BrandLogo } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
@@ -55,7 +56,7 @@ export const Route = createFileRoute("/_authenticated/connections")({
       {
         name: "description",
         content:
-          "Connect external apps and accounts with OAuth or secure API keys and tokens. AI and MCP integrations are managed separately.",
+          "Connect official external apps through OAuth or MCP. AI provider API keys and model credentials are managed in AI Gateway.",
       },
     ],
   }),
@@ -64,6 +65,7 @@ export const Route = createFileRoute("/_authenticated/connections")({
 
 function ConnectionsPage() {
   const { user } = useAuth();
+  const { isAdmin } = useRoles();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string>("All");
   const queryClient = useQueryClient();
@@ -206,13 +208,15 @@ function ConnectionsPage() {
             <Button asChild variant="outline">
               <Link to="/integrations">AI and MCP integrations</Link>
             </Button>
-            <Button
-              variant="outline"
-              disabled={syncMutation.isPending}
-              onClick={() => syncMutation.mutate()}
-            >
-              {syncMutation.isPending ? "Syncing…" : "Sync Composio accounts"}
-            </Button>
+            {isAdmin ? (
+              <Button
+                variant="outline"
+                disabled={syncMutation.isPending}
+                onClick={() => syncMutation.mutate()}
+              >
+                {syncMutation.isPending ? "Syncing…" : "Sync Composio accounts"}
+              </Button>
+            ) : null}
             <Button
               variant="outline"
               disabled={mine.isFetching}

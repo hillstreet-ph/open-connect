@@ -9,6 +9,7 @@ import { BrandLogo } from "@/components/brand-logo";
 import { useAuth } from "@/hooks/use-auth";
 import { configureAppConnection, listAppConnections } from "@/lib/connections.functions";
 import { listFreeModels } from "@/lib/model-catalog.functions";
+import { AI_GATEWAY_PROVIDERS, AI_GATEWAY_PROVIDER_IDS } from "@/lib/ai-gateway-providers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,21 +30,6 @@ export const Route = createFileRoute("/_authenticated/models")({
   component: ModelsPage,
 });
 
-const providers = [
-  { id: "openrouter", name: "OpenRouter", baseUrl: "https://openrouter.ai/api/v1" },
-  { id: "openai", name: "OpenAI", baseUrl: "https://api.openai.com/v1" },
-  { id: "nvidia", name: "NVIDIA NIM", baseUrl: "https://integrate.api.nvidia.com/v1" },
-  { id: "ollama_cloud", name: "Ollama Cloud", baseUrl: "https://ollama.com/v1" },
-  { id: "groq", name: "Groq", baseUrl: "https://api.groq.com/openai/v1" },
-  { id: "cerebras", name: "Cerebras", baseUrl: "https://api.cerebras.ai/v1" },
-  { id: "anthropic", name: "Anthropic / Claude", baseUrl: "https://api.anthropic.com" },
-  { id: "google", name: "Google / Gemini", baseUrl: "https://generativelanguage.googleapis.com" },
-  { id: "xai", name: "xAI / Grok", baseUrl: "https://api.x.ai/v1" },
-  { id: "mistral", name: "Mistral", baseUrl: "https://api.mistral.ai/v1" },
-  { id: "deepseek", name: "DeepSeek", baseUrl: "https://api.deepseek.com" },
-  { id: "litellm", name: "LiteLLM proxy", baseUrl: "https://litellm.example.com/v1" },
-];
-
 const aliases = [
   { alias: "open-connect/auto", body: "Free-only · routes across connected OpenRouter / LiteLLM" },
   { alias: "open-connect/fast", body: "Low latency · gpt-4o-mini" },
@@ -57,18 +43,7 @@ const aliases = [
   { alias: "gemini-flash", body: "Google Gemini Flash" },
   { alias: "grok-2", body: "xAI Grok" },
 ];
-const gatewayProviders = new Set([
-  "openrouter",
-  "litellm",
-  "openai",
-  "xai",
-  "mistral",
-  "deepseek",
-  "nvidia",
-  "ollama_cloud",
-  "groq",
-  "cerebras",
-]);
+const gatewayProviders = AI_GATEWAY_PROVIDER_IDS;
 
 function ModelsPage() {
   const { user } = useAuth();
@@ -112,7 +87,7 @@ function ModelsPage() {
   );
   const configureMutation = useMutation({
     mutationFn: () => {
-      const provider = providers.find((item) => item.id === activeProvider);
+      const provider = AI_GATEWAY_PROVIDERS.find((item) => item.id === activeProvider);
       if (!provider) throw new Error("Choose an AI provider");
       return configureFn({
         data: {
@@ -336,7 +311,7 @@ function ModelsPage() {
         remain available through the gateway and follow the provider's billing.
       </p>
       <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {providers.map((provider) => (
+        {AI_GATEWAY_PROVIDERS.map((provider) => (
           <Card key={provider.id} className="p-4">
             <div className="flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-2">
