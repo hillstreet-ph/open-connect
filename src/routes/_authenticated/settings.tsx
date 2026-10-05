@@ -396,7 +396,12 @@ function SettingsPage() {
         </TabsContent>
         <TabsContent value="integrations">
           <div className="grid gap-4 md:grid-cols-2">
-            <SettingsLinkCard to="/integrations" icon={Network} title="Integrations" description="Manage account-owned inbound connections for AI clients, MCP, and Telegram. Resources, Connectors, and model providers stay separate." />
+            <SettingsLinkCard
+              to="/integrations"
+              icon={Network}
+              title="Integrations"
+              description="Manage account-owned inbound connections for AI clients, MCP, and Telegram. Resources, Connectors, and model providers stay separate."
+            />
           </div>
         </TabsContent>
       </Tabs>
