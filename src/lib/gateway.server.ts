@@ -233,7 +233,10 @@ export function resolveUpstreams(): Upstream[] {
   return list;
 }
 
-export async function resolveUserUpstreams(userId: string): Promise<Upstream[]> {
+export async function resolveUserUpstreams(
+  userId: string,
+  allowPlatformFallback = true,
+): Promise<Upstream[]> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { savedOpenRouter } = await import("./model-connection.server");
   const saved = await savedOpenRouter(userId, {
@@ -243,7 +246,9 @@ export async function resolveUserUpstreams(userId: string): Promise<Upstream[]> 
         .select("status,credential_reference")
         .eq("user_id", id)
         .eq("provider", "openrouter")
-        .is("provider_account_id", null)
+        .eq("status", "connected")
+        .order("created_at", { ascending: false })
+        .limit(1)
         .maybeSingle();
       if (error) throw new Error("Unable to read model connection.");
       return data;
@@ -258,9 +263,8 @@ export async function resolveUserUpstreams(userId: string): Promise<Upstream[]> 
     },
   });
   // A saved personal connection is authoritative: no silent fallback to a different account.
-  return saved ? [saved] : resolveUpstreams();
+  return saved ? [saved] : allowPlatformFallback ? resolveUpstreams() : [];
 }
-
 export function resolveUpstream(): Upstream | null {
   return resolveUpstreams()[0] ?? null;
 }
