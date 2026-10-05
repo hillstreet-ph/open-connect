@@ -2,7 +2,7 @@
 
 Name: Open-Connect. MCP URL: https://open-connect.site/mcp. Authentication: OAuth. Client ID and secret: leave blank for dynamic registration. Logo: https://open-connect.site/open-connect-mark.png.
 
-Sign in to Open-Connect and approve the requested permissions. No API key is needed. The client receives a dedicated revocable token, visible as OAuth: <client name> in API keys & MCP. Tokens expire after 30 days; reconnect after expiration. Refresh tokens are not advertised or issued.
+Sign in to Open-Connect and approve the requested permissions. No API key is needed. The client receives a dedicated revocable token, visible as OAuth: <client name> under Integrations > API keys. Tokens expire after 30 days; reconnect after expiration. Refresh tokens are not advertised or issued.
 
 Existing connections created before this change must be recreated to register their exact callback URI. Authorization codes are opaque, hashed at rest, valid for five minutes, bound to the registered callback and client, and redeemed only once with PKCE S256. API keys remain available separately for bearer-token clients.
 
