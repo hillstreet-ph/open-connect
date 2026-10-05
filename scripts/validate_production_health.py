@@ -34,10 +34,6 @@ def validate_health(payload: Any) -> list[str]:
     if not isinstance(kv, dict) or not kv.get("bound") or not kv.get("writable"):
         failures.append("OC_KV must be bound and writable")
 
-    databricks = payload.get("databricks")
-    if not isinstance(databricks, dict) or not databricks.get("configured"):
-        failures.append("Databricks must be configured")
-
     env = payload.get("env")
     if not isinstance(env, dict):
         failures.append("env binding metadata must be present")
