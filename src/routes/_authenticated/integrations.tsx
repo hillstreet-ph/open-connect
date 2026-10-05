@@ -149,10 +149,32 @@ function IntegrationsPage() {
       </header>
 
       <nav aria-label="Integration setup types" className="flex flex-wrap gap-2 border-b pb-4">
-        {user ? <a href="#api-key" className="rounded-full border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground">API Key</a> : null}
-        <a href="#apps" className="rounded-full border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground">Apps</a>
-        <a href="#ai-agents" className="rounded-full border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground">AI Agents</a>
-        <a href="#custom-mcp" className="rounded-full border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground">Custom MCP</a>
+        {user ? (
+          <a
+            href="#api-key"
+            className="rounded-full border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
+          >
+            API Key
+          </a>
+        ) : null}
+        <a
+          href="#apps"
+          className="rounded-full border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
+        >
+          Apps
+        </a>
+        <a
+          href="#ai-agents"
+          className="rounded-full border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
+        >
+          AI Agents
+        </a>
+        <a
+          href="#custom-mcp"
+          className="rounded-full border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
+        >
+          Custom MCP
+        </a>
       </nav>
 
       <section id="ai-agents" className="scroll-mt-6">
