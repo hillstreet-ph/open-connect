@@ -8,7 +8,6 @@ import {
   LogOut,
   Plug,
   Settings,
-  Shield,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,9 +23,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 
 function initials(name: string, email: string) {
@@ -74,7 +70,7 @@ async function performSignOut(navigate: ReturnType<typeof useNavigate>) {
   await navigate({ to: "/auth" });
 }
 
-function AccountMenuItems({ onSignOut, showAdmin }: { onSignOut: () => void; showAdmin: boolean }) {
+function AccountMenuItems({ onSignOut }: { onSignOut: () => void }) {
   return (
     <>
       <DropdownMenuItem asChild>
@@ -101,25 +97,6 @@ function AccountMenuItems({ onSignOut, showAdmin }: { onSignOut: () => void; sho
           Settings
         </Link>
       </DropdownMenuItem>
-      {showAdmin ? (
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger>
-            <Shield /> System administration
-          </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent>
-            <DropdownMenuItem asChild>
-              <Link to="/admin">
-                <Shield /> User roles
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link to="/roles">
-                <KeyRound /> Access reference
-              </Link>
-            </DropdownMenuItem>
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
-      ) : null}
       <DropdownMenuItem asChild>
         <Link to="/guides">
           <FileCode /> Help & documentation
@@ -157,7 +134,7 @@ export function BrandLogo() {
 
 export function UserMenu({ sidebar = false }: { sidebar?: boolean }) {
   const { user, loading, displayName, email, avatarUrl } = useProfile();
-  const { isAdmin, primary } = useRoles();
+  const { primary } = useRoles();
   const navigate = useNavigate();
 
   if (loading) return null;
@@ -230,7 +207,7 @@ export function UserMenu({ sidebar = false }: { sidebar?: boolean }) {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <AccountMenuItems showAdmin={isAdmin} onSignOut={() => void performSignOut(navigate)} />
+        <AccountMenuItems onSignOut={() => void performSignOut(navigate)} />
       </DropdownMenuContent>
     </DropdownMenu>
   );
