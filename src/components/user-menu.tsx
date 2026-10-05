@@ -1,14 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Building2,
-  ChevronDown,
-  FileCode,
-  KeyRound,
-  LogOut,
-  Plug,
-  Settings,
-} from "lucide-react";
+import { Building2, ChevronDown, FileCode, KeyRound, LogOut, Plug, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
