@@ -18,7 +18,14 @@ export function safeOAuthReturn(value: unknown): string {
 }
 export function validateOAuthRequest(input: Record<string, unknown>) {
   const get = (k: string) => (typeof input[k] === "string" ? (input[k] as string) : "");
-  const uri = new URL(get("redirect_uri"));
+  let uri: URL;
+  try {
+    uri = new URL(get("redirect_uri"));
+  } catch {
+    // Keep this message identical on the server and browser. Native URL errors
+    // differ between runtimes and can trigger a React hydration mismatch.
+    throw new Error("Invalid HTTPS callback. Restart from your client.");
+  }
   if (uri.protocol !== "https:" || uri.username || uri.password || uri.hash)
     throw new Error("Invalid HTTPS callback. Restart from your client.");
   if (get("response_type") !== "code" || !get("client_id"))
