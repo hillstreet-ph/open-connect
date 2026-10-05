@@ -57,7 +57,6 @@ export const appCategories: NavCategory[] = [
     items: [
       { to: "/resources", label: "Marketplace" },
       { to: "/library", label: "Resources" },
-      { to: "/plugins", label: "Plugins" },
       { to: "/agents", label: "Agents" },
       { to: "/skills", label: "Skills" },
       { to: "/mcp-servers", label: "MCP" },
@@ -83,6 +82,7 @@ export const appCategories: NavCategory[] = [
     id: "connections",
     label: "Connections",
     items: [
+      { to: "/plugins", label: "Plugins" },
       { to: "/connections", label: "Connectors" },
       { to: "/secrets", label: "Credentials" },
       { to: "/models", label: "AI Gateway" },
