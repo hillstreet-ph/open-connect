@@ -29,6 +29,72 @@ async function ensureLibrary(context: { supabase: SupabaseClient<Database>; user
   return created.id as string;
 }
 
+async function ensureSkillsCollection(context: {
+  supabase: SupabaseClient<Database>;
+  userId: string;
+}) {
+  const { data: existing, error: readError } = await context.supabase
+    .from("toolkits")
+    .select("id")
+    .eq("user_id", context.userId)
+    .eq("name", "Skills")
+    .like("slug", "collection-%")
+    .limit(1)
+    .maybeSingle();
+  if (readError) throw new Error(readError.message);
+
+  let collectionId = existing?.id as string | undefined;
+  if (!collectionId) {
+    const slug = `collection-skills-${context.userId.replaceAll("-", "").slice(0, 12)}`;
+    const { data: created, error } = await context.supabase
+      .from("toolkits")
+      .insert({
+        user_id: context.userId,
+        slug,
+        name: "Skills",
+        description: "Skill resources installed from Marketplace.",
+        published: false,
+      })
+      .select("id")
+      .single();
+
+    collectionId = created?.id as string | undefined;
+    if (error) {
+      const { data: concurrent, error: concurrentError } = await context.supabase
+        .from("toolkits")
+        .select("id")
+        .eq("user_id", context.userId)
+        .eq("slug", slug)
+        .maybeSingle();
+      if (concurrentError) throw new Error(concurrentError.message);
+      if (!concurrent) throw new Error(error.message);
+      collectionId = concurrent.id as string;
+    }
+  }
+
+  if (!collectionId) throw new Error("Could not create Skills collection.");
+  const libraryId = await ensureLibrary(context);
+  const { data: installedSkills, error: skillsError } = await context.supabase
+    .from("toolkit_items")
+    .select("resource_id, resources!inner(resource_type)")
+    .eq("toolkit_id", libraryId)
+    .eq("resources.resource_type", "skill");
+  if (skillsError) throw new Error(skillsError.message);
+
+  if (installedSkills?.length) {
+    const { error: backfillError } = await context.supabase.from("toolkit_items").upsert(
+      installedSkills.map((item, position) => ({
+        toolkit_id: collectionId,
+        resource_id: item.resource_id,
+        position,
+      })),
+      { onConflict: "toolkit_id,resource_id" },
+    );
+    if (backfillError) throw new Error(backfillError.message);
+  }
+  return collectionId;
+}
+
 export const listLibraryResources = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((input?: { resourceType?: string }) => ({
@@ -47,8 +113,18 @@ export const addResourceToLibrary = createServerFn({ method: "POST" })
   }))
   .handler(async ({ data, context }) => {
     if (!data.resourceId) throw new Error("resourceId required");
+    const { data: resource, error: resourceError } = await context.supabase
+      .from("resources")
+      .select("resource_type")
+      .eq("id", data.resourceId)
+      .maybeSingle();
+    if (resourceError) throw new Error(resourceError.message);
+    if (!resource) throw new Error("Resource not found.");
+
     let collectionId: string | null = null;
-    if (data.collectionId) {
+    if (resource.resource_type === "skill") {
+      collectionId = await ensureSkillsCollection(context);
+    } else if (data.collectionId) {
       const { data: collection, error: collectionError } = await context.supabase
         .from("toolkits")
         .select("id")
