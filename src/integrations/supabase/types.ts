@@ -516,6 +516,31 @@ export type Database = {
         Args: { p_id: string };
         Returns: Json;
       };
+      create_credential_folder: {
+        Args: { p_name: string };
+        Returns: Json;
+      };
+      list_credential_folders: {
+        Args: Record<PropertyKey, never>;
+        Returns: Json;
+      };
+      update_credential_folder: {
+        Args: {
+          p_credential_ids: string[];
+          p_folder_id: string;
+          p_name: string;
+          p_project_ids: string[];
+        };
+        Returns: Json;
+      };
+      delete_credential_folder: {
+        Args: { p_folder_id: string };
+        Returns: boolean;
+      };
+      update_credential_secret_value: {
+        Args: { p_id: string; p_secret_value: string };
+        Returns: Json;
+      };
       get_service_credential: {
         Args: { p_name: string };
         Returns: string;
