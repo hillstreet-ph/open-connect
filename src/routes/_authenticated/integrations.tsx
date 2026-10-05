@@ -539,8 +539,9 @@ function IntegrationsPage() {
                 → Apps. Workspace admins can create and publish it from Workspace settings → Apps.
               </li>
               <li>
-                Add the remote MCP URL: <code className="break-all text-primary">{MCP_ENDPOINT}</code>,
-                choose OAuth, and scan the available tools.
+                Add the remote MCP URL:{" "}
+                <code className="break-all text-primary">{MCP_ENDPOINT}</code>, choose OAuth, and
+                scan the available tools.
               </li>
               <li>Sign in to Open-Connect and approve the account scopes requested by ChatGPT.</li>
               <li>Test a read action, then test only the write actions you intend to allow.</li>
