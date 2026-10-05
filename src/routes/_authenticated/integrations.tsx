@@ -154,8 +154,8 @@ function IntegrationsPage() {
       <section>
         <h2 className="text-lg font-semibold">MCP server and tools</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Discover MCP resources in the catalog, then connect clients with the endpoint and a
-          scoped key.
+          Discover MCP resources in the catalog, then connect clients with the endpoint and a scoped
+          key.
         </p>
         <div className="mt-5 grid gap-4 md:grid-cols-2">
           <Card className="shadow-panel">
