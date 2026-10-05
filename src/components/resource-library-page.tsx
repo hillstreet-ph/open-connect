@@ -184,9 +184,7 @@ export function ResourceLibraryPage({
             </div>
             {canManageCollections && selectedResourceIds.length > 0 ? (
               <div className="flex flex-wrap items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
-                <span className="text-sm font-medium">
-                  {selectedResourceIds.length} selected
-                </span>
+                <span className="text-sm font-medium">{selectedResourceIds.length} selected</span>
                 <span className="text-xs text-muted-foreground">
                   Create a collection or assign these resources to projects.
                 </span>
@@ -198,11 +196,7 @@ export function ResourceLibraryPage({
                 >
                   Manage selection
                 </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setSelectedResourceIds([])}
-                >
+                <Button size="sm" variant="ghost" onClick={() => setSelectedResourceIds([])}>
                   Clear
                 </Button>
               </div>
@@ -211,14 +205,18 @@ export function ResourceLibraryPage({
             {groups.map((group) => (
               <section key={group.type} className="space-y-2" aria-label={group.label}>
                 <h2 className="text-sm font-semibold">
-                  {group.label} <span className="text-muted-foreground">({group.items.length})</span>
+                  {group.label}{" "}
+                  <span className="text-muted-foreground">({group.items.length})</span>
                 </h2>
                 <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {group.items.map((row) => {
                     const resource = row.resources!;
                     const isSelected = selectedResourceIds.includes(resource.id);
                     return (
-                      <Card key={resource.id} className={cn("shadow-panel", isSelected && "border-primary")}>
+                      <Card
+                          key={resource.id}
+                          className={cn("shadow-panel", isSelected && "border-primary")}
+                        >
                         <CardHeader className="p-3 pb-1">
                           <div className="flex items-start justify-between gap-2">
                             <CardTitle className="text-sm leading-snug">{resource.name}</CardTitle>
