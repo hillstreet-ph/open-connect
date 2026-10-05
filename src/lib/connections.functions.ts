@@ -183,41 +183,6 @@ const CATALOG = [
   },
   // AI clients & gateways
   {
-    provider: "chatgpt",
-    display_name: "ChatGPT / OpenAI",
-    category: "AI",
-    scopes: ["models", "plugins", "mcp", "actions"],
-    oauth: true,
-  },
-  {
-    provider: "claude",
-    display_name: "Claude / Anthropic",
-    category: "AI",
-    scopes: ["models", "mcp", "plugins"],
-    oauth: true,
-  },
-  {
-    provider: "grok",
-    display_name: "Grok / xAI",
-    category: "AI",
-    scopes: ["models", "mcp", "tools"],
-    oauth: true,
-  },
-  {
-    provider: "hermes",
-    display_name: "Hermes Agent",
-    category: "AI",
-    scopes: ["mcp"],
-    oauth: false,
-  },
-  {
-    provider: "openwebui",
-    display_name: "Open WebUI",
-    category: "AI",
-    scopes: ["models", "tools", "mcp"],
-    oauth: false,
-  },
-  {
     provider: "openai",
     display_name: "OpenAI API",
     category: "AI",
@@ -293,20 +258,6 @@ const CATALOG = [
     display_name: "LiteLLM",
     category: "AI",
     scopes: ["models", "proxy"],
-    oauth: false,
-  },
-  {
-    provider: "lobehub",
-    display_name: "LobeHub",
-    category: "AI",
-    scopes: ["models", "agents", "mcp"],
-    oauth: false,
-  },
-  {
-    provider: "multion",
-    display_name: "MultiOn",
-    category: "AI",
-    scopes: ["browse", "sessions"],
     oauth: false,
   },
   // Automation / integration platforms
