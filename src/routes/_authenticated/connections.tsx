@@ -286,7 +286,7 @@ function ConnectionsPage() {
                       <div className="min-w-0">
                         <p className="font-semibold leading-snug">{app.display_name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {`${app.category} · ${app.connection_method === "managed_oauth" && app.oauth_ready ? "Composio" : "Official provider"}`}
+                          {`${app.category} · ${app.connection_method === "managed_oauth" ? "Composio" : app.connection_method === "native_oauth" ? "Official provider" : "API key"}`}
                         </p>
                       </div>
                     </div>
