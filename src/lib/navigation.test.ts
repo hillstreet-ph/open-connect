@@ -326,7 +326,6 @@ test("Marketplace and Resources share ordered type categories ending with Others
       "Skills",
       "MCP",
       "Tools",
-      "Guides",
       "Plugins",
       "Agents",
       "Prompts",
@@ -351,6 +350,21 @@ test("Marketplace and Resources share ordered type categories ending with Others
       ["Models", 1],
       ["Others", 1],
     ],
+  );
+});
+
+test("Guides are excluded from Marketplace and Resources", () => {
+  const marketplace = readFileSync(path.resolve(process.cwd(), "src/routes/resources.tsx"), "utf8");
+  const library = readFileSync(
+    path.resolve(process.cwd(), "src/components/resource-library-page.tsx"),
+    "utf8",
+  );
+
+  assert.match(marketplace, /item\.resource_type !== "guide"/);
+  assert.match(library, /type !== "guide"/);
+  assert.equal(
+    resourceCategories.some((category) => category.value === "guide"),
+    false,
   );
 });
 
