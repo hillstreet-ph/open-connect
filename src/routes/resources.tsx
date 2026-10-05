@@ -185,8 +185,8 @@ function MarketplaceContent() {
           </Badge>
           <h1 className="text-xl font-semibold">Marketplace</h1>
           <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-            Browse skills, tools, agents, MCP servers, and more.
-            Install packages to your personal Library. Project assignment is optional.
+            Browse skills, tools, agents, MCP servers, and more. Install packages to your personal
+            Library. Project assignment is optional.
           </p>
         </div>
         {!user ? (
