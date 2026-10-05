@@ -390,6 +390,6 @@ test("selected library resources can be added while creating a collection", () =
   assert.match(panel, /resourceIds: selectedResourceIds/);
   assert.match(panel, /will be added to this collection/);
   assert.match(panel, /Create & add/);
-  assert.match(functions, /data\\.resourceIds\\.map/);
+  assert.ok(functions.includes("data.resourceIds.map"));
   assert.match(functions, /const newIds/);
 });
