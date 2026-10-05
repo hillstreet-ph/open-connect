@@ -21,6 +21,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { AddToLibraryButton } from "@/components/add-to-library";
+import { ResourcePurposeSidebar } from "@/components/resource-purpose-sidebar";
 
 export const Route = createFileRoute("/resources")({
   head: () => ({
@@ -29,7 +30,7 @@ export const Route = createFileRoute("/resources")({
       {
         name: "description",
         content:
-          "Marketplace for guides, skills, MCP servers, tools, plugins, agents and prompts. Sign in to download or add to a project.",
+          "Marketplace for skills, MCP servers, tools, plugins, agents, prompts, and more. Sign in to download or add packages to your library.",
       },
       { property: "og:title", content: "Marketplace — Open-Connect" },
     ],
@@ -152,8 +153,8 @@ function MarketplaceContent() {
           </Badge>
           <h1 className="text-xl font-semibold">Marketplace</h1>
           <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-            Browse guides, skills, MCP, tools, plugins, agents, and prompts. Add packages to your
-            personal library, then share them with projects from the matching sidebar page.
+            Browse skills, MCP, tools, plugins, agents, prompts, and other packages. Add items to
+            your personal library, then share them with projects from the matching sidebar page.
           </p>
         </div>
         {!user ? (
@@ -176,154 +177,153 @@ function MarketplaceContent() {
         </div>
       ) : null}
 
-      <div className="mt-8 space-y-3">
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search packages…"
-            className="pl-9"
-            aria-label="Search marketplace"
-          />
-        </div>
-        <select
-          aria-label="Marketplace purpose category"
-          className="h-9 rounded-md border bg-background px-2 text-sm"
-          value={purpose}
-          onChange={(event) => setPurpose(event.target.value)}
-        >
-          <option value="all">All categories</option>
-          {purposes.map((group) => (
-            <option key={group.type} value={group.type}>
-              {group.label} ({group.items.length})
-            </option>
-          ))}
-        </select>
-        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
-          {resourceCategories.map((filter) => (
-            <button
-              key={filter.value}
-              type="button"
-              onClick={() => setType(filter.value)}
-              className={cn(
-                "shrink-0 rounded-full border px-3 py-1.5 text-xs transition-colors",
-                type === filter.value
-                  ? "border-primary/50 bg-primary/15 text-primary"
-                  : "border-border/70 text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {filter.label}
-              {counts[filter.value] != null ? (
-                <span className="ml-1 opacity-60">{counts[filter.value]}</span>
-              ) : null}
-            </button>
-          ))}
-        </div>
-      </div>
+      <div className="mt-8 grid gap-6 lg:grid-cols-[190px_minmax(0,1fr)]">
+        <ResourcePurposeSidebar
+          groups={purposes}
+          activePurpose={purpose}
+          allCount={data?.length ?? 0}
+          onSelect={setPurpose}
+          ariaLabel="Marketplace purpose categories"
+        />
+        <div className="min-w-0 space-y-4">
+          <div className="space-y-3">
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search packages…"
+                className="pl-9"
+                aria-label="Search marketplace"
+              />
+            </div>
+            <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
+              {resourceCategories.map((filter) => (
+                <button
+                  key={filter.value}
+                  type="button"
+                  aria-pressed={type === filter.value}
+                  onClick={() => setType(filter.value)}
+                  className={cn(
+                    "shrink-0 rounded-full border px-3 py-1.5 text-xs transition-colors",
+                    type === filter.value
+                      ? "border-primary/50 bg-primary/15 text-primary"
+                      : "border-border/70 text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {filter.label}
+                  {counts[filter.value] != null ? (
+                    <span className="ml-1 opacity-60">{counts[filter.value]}</span>
+                  ) : null}
+                </button>
+              ))}
+            </div>
+          </div>
 
-      {isError ? (
-        <p role="alert" className="mt-4">
-          Could not load Marketplace.{" "}
-          <Button variant="link" onClick={() => void refetch()}>
-            Retry
-          </Button>
-        </p>
-      ) : null}
-      {!isLoading && !isError && results.length === 0 ? (
-        <p role="status" className="mt-4 text-sm text-muted-foreground">
-          No resources match your filters.
-        </p>
-      ) : null}
-      <div className="mt-8 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {isLoading
-          ? Array.from({ length: 6 }).map((_, index) => (
-              <Skeleton key={index} className="h-36 rounded-xl" />
-            ))
-          : results.map((item) => {
-              const config =
-                item.installation_config && typeof item.installation_config === "object"
-                  ? (item.installation_config as Record<string, unknown>)
-                  : {};
-              const reviewState = String(config["review_state"] ?? "approved");
-              const canonicalUrl =
-                typeof config["canonical_url"] === "string" ? config["canonical_url"] : null;
-              const executable = item.verified && reviewState === "approved";
-              return (
-                <Card key={item.id} className="shadow-panel">
-                  <CardHeader className="p-3 pb-1">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <Badge variant="secondary" className="text-[10px] uppercase">
-                        {item.resource_type}
-                      </Badge>
-                      {item.verified ? (
-                        <Badge
-                          variant="outline"
-                          className="border-accent/50 text-[10px] text-accent"
-                        >
-                          Verified
-                        </Badge>
-                      ) : null}
-                      {!executable ? (
-                        <Badge variant="outline" className="text-[10px] capitalize">
-                          {reviewState.replaceAll("_", " ")}
-                        </Badge>
-                      ) : null}
-                    </div>
-                    <CardTitle className="mt-1 text-sm leading-snug">{item.name}</CardTitle>
-                    <CardDescription className="line-clamp-2 text-xs">
-                      {item.description}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex flex-wrap items-center justify-between gap-2 p-3 pt-1 text-xs text-muted-foreground">
-                    <span className="font-mono">v{item.version}</span>
-                    {user ? (
-                      <div className="flex flex-col items-end gap-1">
-                        <div className="flex gap-1">
-                          {canonicalUrl ? (
-                            <Button asChild size="sm" variant="ghost">
-                              <a href={canonicalUrl} target="_blank" rel="noopener noreferrer">
-                                <ExternalLink className="mr-1 size-3.5" />
-                                Source
-                              </a>
-                            </Button>
+          {isError ? (
+            <p role="alert">
+              Could not load Marketplace.{" "}
+              <Button variant="link" onClick={() => void refetch()}>
+                Retry
+              </Button>
+            </p>
+          ) : null}
+          {!isLoading && !isError && results.length === 0 ? (
+            <p role="status" className="text-sm text-muted-foreground">
+              No resources match your filters.
+            </p>
+          ) : null}
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            {isLoading
+              ? Array.from({ length: 6 }).map((_, index) => (
+                  <Skeleton key={index} className="h-36 rounded-xl" />
+                ))
+              : results.map((item) => {
+                  const config =
+                    item.installation_config && typeof item.installation_config === "object"
+                      ? (item.installation_config as Record<string, unknown>)
+                      : {};
+                  const reviewState = String(config["review_state"] ?? "approved");
+                  const canonicalUrl =
+                    typeof config["canonical_url"] === "string" ? config["canonical_url"] : null;
+                  const executable = item.verified && reviewState === "approved";
+                  return (
+                    <Card key={item.id} className="shadow-panel">
+                      <CardHeader className="p-3 pb-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <Badge variant="secondary" className="text-[10px] uppercase">
+                            {item.resource_type}
+                          </Badge>
+                          {item.verified ? (
+                            <Badge
+                              variant="outline"
+                              className="border-accent/50 text-[10px] text-accent"
+                            >
+                              Verified
+                            </Badge>
                           ) : null}
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => viewMutation.mutate(item.id)}
-                            disabled={viewMutation.isPending}
-                          >
-                            <Eye className="mr-1 size-3.5" />
-                            View
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => downloadMutation.mutate(item.id)}
-                            disabled={downloadMutation.isPending}
-                            title={
-                              executable ? undefined : "Metadata only until review is approved"
-                            }
-                          >
-                            <Download className="mr-1 size-3.5" />
-                            {executable ? "Download" : "Metadata"}
-                          </Button>
+                          {!executable ? (
+                            <Badge variant="outline" className="text-[10px] capitalize">
+                              {reviewState.replaceAll("_", " ")}
+                            </Badge>
+                          ) : null}
                         </div>
-                        {executable ? <AddToLibraryButton resourceId={item.id} /> : null}
-                      </div>
-                    ) : (
-                      <Button asChild size="sm" variant="outline">
-                        <Link to="/auth">
-                          <Lock className="mr-1 size-3.5" />
-                          Sign in
-                        </Link>
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
+                        <CardTitle className="mt-1 text-sm leading-snug">{item.name}</CardTitle>
+                        <CardDescription className="line-clamp-2 text-xs">
+                          {item.description}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="flex flex-wrap items-center justify-between gap-2 p-3 pt-1 text-xs text-muted-foreground">
+                        <span className="font-mono">v{item.version}</span>
+                        {user ? (
+                          <div className="flex flex-col items-end gap-1">
+                            <div className="flex gap-1">
+                              {canonicalUrl ? (
+                                <Button asChild size="sm" variant="ghost">
+                                  <a href={canonicalUrl} target="_blank" rel="noopener noreferrer">
+                                    <ExternalLink className="mr-1 size-3.5" />
+                                    Source
+                                  </a>
+                                </Button>
+                              ) : null}
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => viewMutation.mutate(item.id)}
+                                disabled={viewMutation.isPending}
+                              >
+                                <Eye className="mr-1 size-3.5" />
+                                View
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => downloadMutation.mutate(item.id)}
+                                disabled={downloadMutation.isPending}
+                                title={
+                                  executable ? undefined : "Metadata only until review is approved"
+                                }
+                              >
+                                <Download className="mr-1 size-3.5" />
+                                {executable ? "Download" : "Metadata"}
+                              </Button>
+                            </div>
+                            {executable ? <AddToLibraryButton resourceId={item.id} /> : null}
+                          </div>
+                        ) : (
+                          <Button asChild size="sm" variant="outline">
+                            <Link to="/auth">
+                              <Lock className="mr-1 size-3.5" />
+                              Sign in
+                            </Link>
+                          </Button>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+          </div>
+        </div>
       </div>
 
       {viewText ? (
