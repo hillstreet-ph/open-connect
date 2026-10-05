@@ -182,7 +182,9 @@ export const addResourcesToCollection = createServerFn({ method: "POST" })
       ...data.resourceIds,
     ]).size;
     if (resultingSize > 100) {
-      throw new Error("Collections can contain up to 100 resources. Remove items before adding more.");
+      throw new Error(
+        "Collections can contain up to 100 resources. Remove items before adding more.",
+      );
     }
     const { error } = await context.supabase.from("toolkit_items").upsert(
       data.resourceIds.map((resourceId, position) => ({
