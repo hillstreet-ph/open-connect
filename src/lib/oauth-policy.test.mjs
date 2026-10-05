@@ -42,7 +42,7 @@ test("preserves requested scopes without adding write permissions", () => {
   assert.equal(validateOAuthRequest(req).scope, "mcp:connect resources:read connections:read");
 });
 
-test("static discovery advertises only implemented OAuth grants", async () => {
+test("allows private memory and knowledge reads when explicitly requested", () => {\n  const scope = "mcp:connect memory:read knowledge:read";\n  assert.equal(validateOAuthRequest({ ...req, scope }).scope, scope);\n});\n\ntest("static discovery advertises only implemented OAuth grants", async () => {
   const { readFile } = await import("node:fs/promises");
   const metadata = JSON.parse(
     await readFile(
@@ -50,7 +50,7 @@ test("static discovery advertises only implemented OAuth grants", async () => {
       "utf8",
     ),
   );
-  assert.deepEqual(metadata.grant_types_supported, ["authorization_code"]);
+  assert.deepEqual(metadata.grant_types_supported, ["authorization_code"]);\n  assert.ok(metadata.scopes_supported.includes("memory:read"));\n  assert.ok(metadata.scopes_supported.includes("knowledge:read"));
   assert.deepEqual(metadata.token_endpoint_auth_methods_supported, ["none"]);
   assert.equal(metadata.logo_uri, "https://open-connect.site/open-connect-mark.png");
 });
