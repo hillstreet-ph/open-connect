@@ -1,6 +1,10 @@
 export type AgentHelperToolName =
   | "search_marketplace"
   | "list_projects"
+  | "list_tasks"
+  | "update_task_status"
+  | "list_schedules"
+  | "list_automations"
   | "install_resource_to_library"
   | "create_task"
   | "create_schedule"
@@ -104,6 +108,22 @@ export function describeAgentHelperToolResult(
     return projects.length
       ? `I found ${projects.length} project${projects.length === 1 ? "" : "s"} available to your account.`
       : "No projects are currently available to your account.";
+  }
+  if (name === "list_tasks") {
+    const tasks = Array.isArray(result["tasks"]) ? result["tasks"] : [];
+    return `Loaded ${tasks.length} recent task${tasks.length === 1 ? "" : "s"} available to your account.`;
+  }
+  if (name === "update_task_status") {
+    const task = result["task"] as { title?: unknown; status?: unknown } | undefined;
+    return `Updated “${String(task?.title ?? "the task")}” to ${String(task?.status ?? "the selected status")}.`;
+  }
+  if (name === "list_schedules") {
+    const schedules = Array.isArray(result["schedules"]) ? result["schedules"] : [];
+    return `Loaded ${schedules.length} schedule definition${schedules.length === 1 ? "" : "s"}. Scheduled execution availability depends on the workspace runner.`;
+  }
+  if (name === "list_automations") {
+    const automations = Array.isArray(result["automations"]) ? result["automations"] : [];
+    return `Loaded ${automations.length} automation${automations.length === 1 ? "" : "s"} available to your account.`;
   }
   if (name === "install_resource_to_library") {
     return `Added ${String(result["name"] ?? "the resource")} to your personal Library. This adds the resource only; it does not execute or connect it.`;

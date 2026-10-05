@@ -232,6 +232,28 @@ const CATALOG = [
     oauth: false,
   },
   {
+    provider: "nvidia",
+    display_name: "NVIDIA NIM",
+    category: "AI",
+    scopes: ["models"],
+    oauth: false,
+  },
+  {
+    provider: "ollama_cloud",
+    display_name: "Ollama Cloud",
+    category: "AI",
+    scopes: ["models"],
+    oauth: false,
+  },
+  { provider: "groq", display_name: "Groq", category: "AI", scopes: ["models"], oauth: false },
+  {
+    provider: "cerebras",
+    display_name: "Cerebras",
+    category: "AI",
+    scopes: ["models"],
+    oauth: false,
+  },
+  {
     provider: "anthropic",
     display_name: "Anthropic API",
     category: "AI",
@@ -509,8 +531,18 @@ export const listAppConnections = createServerFn({ method: "GET" })
       );
     }
     return connections.map(({ credential_reference, ...connection }) => {
-      const isModelGateway =
-        connection.provider === "openrouter" || connection.provider === "litellm";
+      const isModelGateway = [
+        "openrouter",
+        "litellm",
+        "nvidia",
+        "ollama_cloud",
+        "groq",
+        "cerebras",
+        "openai",
+        "xai",
+        "mistral",
+        "deepseek",
+      ].includes(connection.provider);
       const hasGatewayReference = Boolean(
         credential_reference?.match(
           new RegExp(`^credential://${connection.provider}/([0-9a-f-]{36})$`, "i"),

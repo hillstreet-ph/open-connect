@@ -20,7 +20,7 @@ type HelperContext = { supabase: SupabaseClient; userId: string };
 const SYSTEM_PROMPT = `You are Agent-Helper, Open-Connect's internal workspace assistant.
 Help the signed-in user understand and operate Open-Connect. You can use only the registered internal tools provided with this request. The authenticated app enforces the user's account and project access. Do not browse the web, call external services, run code, or claim that an action succeeded without an authoritative tool result.
 
-Registered tools can search published Marketplace resources, list projects visible to the signed-in user, add a published resource to that user's personal Library, create a task, save a schedule definition, or create a manual AI automation. Use at most one write action for each user message. Do not use a write tool when the user only asks for instructions, an explanation, or options. If required details are missing, ask a brief follow-up instead of guessing. Do not infer a project from a name; call list_projects and use its exact ID.
+Registered tools can search published Marketplace resources, list projects/tasks/schedules/automations visible to the signed-in user, update a task's status, add a published resource to that user's personal Library, create a task, save a schedule definition, or create a manual AI automation. Use at most one write action for each user message. Do not use a write tool when the user only asks for instructions, an explanation, or options. If required details are missing, ask a brief follow-up instead of guessing. Do not infer a project from a name; call list_projects and use its exact ID.
 
 Internal writes are limited to the signed-in user's own library, tasks, schedules, and manual AI automations; database row security remains authoritative. A saved schedule is currently a schedule definition in Open-Connect. It does not start a scheduled job or run an automation. Manual AI automations run only after a user opens Automations and chooses Run. Do not promise background or external actions.
 
@@ -46,6 +46,47 @@ const TOOLS = [
       name: "list_projects",
       description:
         "List projects visible to the signed-in user so an action can use the exact project ID.",
+      parameters: { type: "object", properties: {}, additionalProperties: false },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "list_tasks",
+      description: "List recent tasks available to the signed-in user.",
+      parameters: { type: "object", properties: {}, additionalProperties: false },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_task_status",
+      description: "Update one task visible to the signed-in user to a supported status.",
+      parameters: {
+        type: "object",
+        properties: {
+          taskId: { type: "string", format: "uuid" },
+          status: { type: "string", enum: ["todo", "in_progress", "blocked", "done", "cancelled"] },
+        },
+        required: ["taskId", "status"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "list_schedules",
+      description:
+        "List schedule definitions available to the signed-in user. Scheduled execution may not be enabled.",
+      parameters: { type: "object", properties: {}, additionalProperties: false },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "list_automations",
+      description: "List automations visible to the signed-in user and their recent status.",
       parameters: { type: "object", properties: {}, additionalProperties: false },
     },
   },
@@ -176,6 +217,53 @@ async function executeInternalTool(
         .limit(100);
       if (error) throw new Error("Your accessible projects could not be loaded.");
       return { projects: data ?? [] };
+    }
+    case "list_tasks": {
+      const { data, error } = await db
+        .from("tasks")
+        .select("id,title,status,priority,due_at,project_id,created_at")
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw new Error("Your tasks could not be loaded.");
+      return { tasks: data ?? [] };
+    }
+    case "update_task_status": {
+      const taskId = helperProjectId(args["taskId"]);
+      if (!taskId) throw new Error("Choose a task available to your account.");
+      const status = args["status"];
+      if (!["todo", "in_progress", "blocked", "done", "cancelled"].includes(String(status))) {
+        throw new Error("Choose a supported task status.");
+      }
+      const { data, error } = await db
+        .from("tasks")
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq("id", taskId)
+        .select("id,title,status")
+        .maybeSingle();
+      if (error || !data) throw new Error("That task is unavailable or could not be updated.");
+      return { updated: true, task: data };
+    }
+    case "list_schedules": {
+      const { data, error } = await db
+        .from("schedules")
+        .select(
+          "id,name,cron_expr,run_at,timezone,status,last_run_at,next_run_at,project_id,created_at",
+        )
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw new Error("Your schedules could not be loaded.");
+      return { schedules: data ?? [] };
+    }
+    case "list_automations": {
+      const { data, error } = await db
+        .from("automations")
+        .select(
+          "id,name,trigger_type,action_type,enabled,last_run_at,last_status,project_id,created_at",
+        )
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw new Error("Your automations could not be loaded.");
+      return { automations: data ?? [] };
     }
     case "install_resource_to_library": {
       const slug = helperText(args["slug"], "Marketplace resource", 160);
@@ -312,7 +400,7 @@ async function executeInternalTool(
 }
 
 async function requestFreeModel(
-  upstream: { name: "openrouter" | "litellm"; baseUrl: string; headers: Record<string, string> },
+  upstream: { name: string; baseUrl: string; headers: Record<string, string> },
   model: string,
   messages: Array<Record<string, unknown>>,
   includeTools: boolean,
@@ -390,6 +478,7 @@ export const askAgentHelper = createServerFn({ method: "POST" })
       throw new Error("Connect OpenRouter or LiteLLM in AI Gateway before using Agent-Helper.");
     }
     let first: Awaited<ReturnType<typeof requestFreeModel>> | null = null;
+    let selectedRoute: (typeof routes)[number] | null = null;
     for (const route of routes) {
       try {
         first = await requestFreeModel(
@@ -398,6 +487,7 @@ export const askAgentHelper = createServerFn({ method: "POST" })
           [{ role: "system", content: SYSTEM_PROMPT }, ...data.messages],
           true,
         );
+        selectedRoute = route;
         break;
       } catch {
         // Try the next model whose provider declared its cost as zero.
@@ -426,6 +516,10 @@ export const askAgentHelper = createServerFn({ method: "POST" })
     const allowedNames: AgentHelperToolName[] = [
       "search_marketplace",
       "list_projects",
+      "list_tasks",
+      "update_task_status",
+      "list_schedules",
+      "list_automations",
       "install_resource_to_library",
       "create_task",
       "create_schedule",
@@ -455,8 +549,10 @@ export const askAgentHelper = createServerFn({ method: "POST" })
     }
 
     try {
-      const followUp = await requestOpenRouter(
-        upstream,
+      if (!selectedRoute) throw new Error("No model route selected.");
+      const followUp = await requestFreeModel(
+        selectedRoute.upstream,
+        selectedRoute.model,
         [
           { role: "system", content: SYSTEM_PROMPT },
           ...data.messages,

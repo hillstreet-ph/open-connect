@@ -55,6 +55,7 @@ import { Route as OauthRegisterRouteImport } from './routes/oauth/register'
 import { Route as OauthTokenRouteImport } from './routes/oauth/token'
 import { Route as V1IndexRouteImport } from './routes/v1/index'
 import { Route as V1ModelsRouteImport } from './routes/v1/models'
+import { Route as AuthenticatedProjectAccessProjectIdRouteImport } from './routes/_authenticated/project-access.$projectId'
 import { Route as AuthenticatedProjectsProjectIdRouteImport } from './routes/_authenticated/projects.$projectId'
 import { Route as ApiV1DatabricksRouteImport } from './routes/api/v1/databricks'
 import { Route as ApiV1HealthRouteImport } from './routes/api/v1/health'
@@ -300,6 +301,12 @@ const V1ModelsRoute = V1ModelsRouteImport.update({
   path: '/v1/models',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedProjectAccessProjectIdRoute =
+  AuthenticatedProjectAccessProjectIdRouteImport.update({
+    id: '/project-access/$projectId',
+    path: '/project-access/$projectId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedProjectsProjectIdRoute =
   AuthenticatedProjectsProjectIdRouteImport.update({
     id: '/$projectId',
@@ -389,6 +396,7 @@ export interface FileRoutesByFullPath {
   '/oauth/token': typeof OauthTokenRoute
   '/v1/models': typeof V1ModelsRoute
   '/v1/': typeof V1IndexRoute
+  '/project-access/$projectId': typeof AuthenticatedProjectAccessProjectIdRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdRoute
   '/api/v1/databricks': typeof ApiV1DatabricksRoute
   '/api/v1/health': typeof ApiV1HealthRoute
@@ -444,6 +452,7 @@ export interface FileRoutesByTo {
   '/oauth/token': typeof OauthTokenRoute
   '/v1/models': typeof V1ModelsRoute
   '/v1': typeof V1IndexRoute
+  '/project-access/$projectId': typeof AuthenticatedProjectAccessProjectIdRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdRoute
   '/api/v1/databricks': typeof ApiV1DatabricksRoute
   '/api/v1/health': typeof ApiV1HealthRoute
@@ -501,6 +510,7 @@ export interface FileRoutesById {
   '/oauth/token': typeof OauthTokenRoute
   '/v1/models': typeof V1ModelsRoute
   '/v1/': typeof V1IndexRoute
+  '/_authenticated/project-access/$projectId': typeof AuthenticatedProjectAccessProjectIdRoute
   '/_authenticated/projects/$projectId': typeof AuthenticatedProjectsProjectIdRoute
   '/api/v1/databricks': typeof ApiV1DatabricksRoute
   '/api/v1/health': typeof ApiV1HealthRoute
@@ -558,6 +568,7 @@ export interface FileRouteTypes {
     | '/oauth/token'
     | '/v1/models'
     | '/v1/'
+    | '/project-access/$projectId'
     | '/projects/$projectId'
     | '/api/v1/databricks'
     | '/api/v1/health'
@@ -613,6 +624,7 @@ export interface FileRouteTypes {
     | '/oauth/token'
     | '/v1/models'
     | '/v1'
+    | '/project-access/$projectId'
     | '/projects/$projectId'
     | '/api/v1/databricks'
     | '/api/v1/health'
@@ -669,6 +681,7 @@ export interface FileRouteTypes {
     | '/oauth/token'
     | '/v1/models'
     | '/v1/'
+    | '/_authenticated/project-access/$projectId'
     | '/_authenticated/projects/$projectId'
     | '/api/v1/databricks'
     | '/api/v1/health'
@@ -1026,6 +1039,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof V1ModelsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/project-access/$projectId': {
+      id: '/_authenticated/project-access/$projectId'
+      path: '/project-access/$projectId'
+      fullPath: '/project-access/$projectId'
+      preLoaderRoute: typeof AuthenticatedProjectAccessProjectIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/projects/$projectId': {
       id: '/_authenticated/projects/$projectId'
       path: '/$projectId'
@@ -1146,6 +1166,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedTasksRoute: typeof AuthenticatedTasksRoute
   AuthenticatedToolkitsRoute: typeof AuthenticatedToolkitsRoute
   AuthenticatedToolsRoute: typeof AuthenticatedToolsRoute
+  AuthenticatedProjectAccessProjectIdRoute: typeof AuthenticatedProjectAccessProjectIdRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -1181,6 +1202,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedTasksRoute: AuthenticatedTasksRoute,
   AuthenticatedToolkitsRoute: AuthenticatedToolkitsRoute,
   AuthenticatedToolsRoute: AuthenticatedToolsRoute,
+  AuthenticatedProjectAccessProjectIdRoute:
+    AuthenticatedProjectAccessProjectIdRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

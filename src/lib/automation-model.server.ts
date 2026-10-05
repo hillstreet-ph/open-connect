@@ -8,7 +8,7 @@ export function automationPrompt(config: Record<string, unknown>): string {
 
 export async function generateAutomationResponse(
   prompt: string,
-  upstream: { name: "openrouter" | "litellm"; baseUrl: string; headers: Record<string, string> },
+  upstream: { name: string; baseUrl: string; headers: Record<string, string> },
   request: typeof fetch = fetch,
   model = "open-connect/auto",
 ) {
@@ -21,10 +21,21 @@ export async function generateAutomationResponse(
   )
     throw new Error("Choose a supported free model.");
   // Credentials must never follow a redirect or a configurable destination.
+  const fixedBases: Record<string, string> = {
+    openrouter: "https://openrouter.ai/api/v1",
+    nvidia: "https://integrate.api.nvidia.com/v1",
+    ollama_cloud: "https://ollama.com/v1",
+    groq: "https://api.groq.com/openai/v1",
+    cerebras: "https://api.cerebras.ai/v1",
+    openai: "https://api.openai.com/v1",
+    xai: "https://api.x.ai/v1",
+    mistral: "https://api.mistral.ai/v1",
+    deepseek: "https://api.deepseek.com/v1",
+  };
   const allowedBase =
-    upstream.name === "openrouter"
-      ? upstream.baseUrl === "https://openrouter.ai/api/v1"
-      : upstream.baseUrl.startsWith("https://");
+    upstream.name === "litellm"
+      ? upstream.baseUrl.startsWith("https://")
+      : fixedBases[upstream.name] === upstream.baseUrl;
   if (!allowedBase) throw new Error("Model endpoint is not supported.");
   const requestModel = model === "open-connect/auto" ? "openrouter/free" : model;
   let response: Response;

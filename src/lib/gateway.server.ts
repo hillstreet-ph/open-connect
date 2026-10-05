@@ -18,7 +18,17 @@ import { fetchFreeModelCatalog, isAutoFreeModel } from "./model-catalog";
 
 export const KEY_PREFIX = "oc_live_";
 
-export type UpstreamName = "openrouter" | "litellm";
+export type UpstreamName =
+  | "openrouter"
+  | "litellm"
+  | "nvidia"
+  | "ollama_cloud"
+  | "groq"
+  | "cerebras"
+  | "openai"
+  | "xai"
+  | "mistral"
+  | "deepseek";
 
 export type Upstream = {
   name: UpstreamName;
@@ -249,7 +259,18 @@ export async function resolveUserUpstreams(
     .from("app_connections")
     .select("provider,status,credential_reference,metadata")
     .eq("user_id", userId)
-    .in("provider", ["openrouter", "litellm"])
+    .in("provider", [
+      "openrouter",
+      "litellm",
+      "nvidia",
+      "ollama_cloud",
+      "groq",
+      "cerebras",
+      "openai",
+      "xai",
+      "mistral",
+      "deepseek",
+    ])
     .eq("status", "connected")
     .order("created_at", { ascending: false })
     .limit(10);
@@ -433,7 +454,7 @@ export async function fetchMergedModelCatalog(configured?: Upstream[]): Promise<
           if (m && typeof m.id === "string" && m.id.length > 0) {
             ids.add(m.id);
             const slash = m.id.indexOf("/");
-            if (slash > 0) providers.add(m.id.slice(0, slash));
+            providers.add(slash > 0 ? m.id.slice(0, slash) : u.name);
           }
         }
       } catch {
