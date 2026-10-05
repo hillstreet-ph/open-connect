@@ -572,6 +572,8 @@ function ProjectWorkspacePage() {
                   secret_type?: string;
                   scopes?: string[];
                   can_remove?: boolean;
+                  shared_via_folder?: boolean;
+                  folder_names?: string[];
                 }) => (
                   <div
                     key={credential.id}
@@ -583,6 +585,11 @@ function ProjectWorkspacePage() {
                         {credential.secret_type} ·{" "}
                         {(credential.scopes ?? []).join(", ") || "general"}
                       </p>
+                      {credential.shared_via_folder ? (
+                        <p className="mt-1 text-[11px] text-muted-foreground">
+                          Shared via folder: {(credential.folder_names ?? []).join(", ")}
+                        </p>
+                      ) : null}
                     </div>
                     {credential.can_remove ? (
                       <Button
