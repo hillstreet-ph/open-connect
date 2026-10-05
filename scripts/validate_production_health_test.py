@@ -10,7 +10,6 @@ def healthy_payload():
         "model_upstream": "openrouter",
         "model_upstreams": ["openrouter"],
         "kv": {"bound": True, "writable": True},
-        "databricks": {"configured": True},
         "env": {
             "SUPABASE_URL": True,
             "SUPABASE_PUBLISHABLE_KEY": True,
@@ -33,7 +32,13 @@ class ProductionHealthContractTests(unittest.TestCase):
 
         self.assertIn("model_upstream must be configured", failures)
         self.assertIn("model_upstreams must contain at least one provider", failures)
-        self.assertIn("Databricks must be configured", failures)
+        self.assertNotIn("Databricks must be configured", failures)
+
+    def test_databricks_is_optional(self):
+        payload = healthy_payload()
+        payload["databricks"] = {"configured": False}
+
+        self.assertEqual(validate_health(payload), [])
 
     def test_requires_writable_kv_and_supabase_bindings(self):
         payload = healthy_payload()
