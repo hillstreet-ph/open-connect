@@ -112,9 +112,8 @@ function AutomationsPage() {
           Automations
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Run AI prompts with your OpenRouter connection and review saved responses. Agent and
-          pipeline actions create plans; scheduled, webhook, and event execution is not connected
-          yet.
+          Run prompts now or schedule enabled AI response automations. Background runs use your
+          connected free model providers; agent and pipeline actions remain approval-gated plans.
         </p>
       </div>
 
@@ -149,8 +148,8 @@ function AutomationsPage() {
               onChange={(e) => setTriggerType(e.target.value as TriggerType)}
             >
               <option value="manual">Manual</option>
-              <option value="schedule" disabled={actionType === "model"}>
-                Schedule (not connected)
+              <option value="schedule" disabled={actionType !== "model"}>
+                Schedule (AI response)
               </option>
               <option value="webhook" disabled>
                 Webhook (not connected)
@@ -231,8 +230,9 @@ function AutomationsPage() {
             />
             {actionType === "model" ? (
               <p className="text-xs text-muted-foreground">
-                Sends this prompt to a free OpenRouter model when you click Run. Responses are saved
-                in your private run history. Provider availability and rate limits apply.
+                Sends this prompt through a connected free AI Gateway model when you click Run.
+                Responses are saved in your private run history. Provider availability and rate
+                limits apply.
               </p>
             ) : null}
           </div>

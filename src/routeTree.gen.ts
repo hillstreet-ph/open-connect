@@ -57,6 +57,7 @@ import { Route as V1IndexRouteImport } from './routes/v1/index'
 import { Route as V1ModelsRouteImport } from './routes/v1/models'
 import { Route as AuthenticatedProjectAccessProjectIdRouteImport } from './routes/_authenticated/project-access.$projectId'
 import { Route as AuthenticatedProjectsProjectIdRouteImport } from './routes/_authenticated/projects.$projectId'
+import { Route as ApiInternalSchedulerRouteImport } from './routes/api/internal/scheduler'
 import { Route as ApiV1DatabricksRouteImport } from './routes/api/v1/databricks'
 import { Route as ApiV1HealthRouteImport } from './routes/api/v1/health'
 import { Route as ApiV1ResourcesRouteImport } from './routes/api/v1/resources'
@@ -313,6 +314,11 @@ const AuthenticatedProjectsProjectIdRoute =
     path: '/$projectId',
     getParentRoute: () => AuthenticatedProjectsRoute,
   } as any)
+const ApiInternalSchedulerRoute = ApiInternalSchedulerRouteImport.update({
+  id: '/api/internal/scheduler',
+  path: '/api/internal/scheduler',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiV1DatabricksRoute = ApiV1DatabricksRouteImport.update({
   id: '/api/v1/databricks',
   path: '/api/v1/databricks',
@@ -398,6 +404,7 @@ export interface FileRoutesByFullPath {
   '/v1/': typeof V1IndexRoute
   '/project-access/$projectId': typeof AuthenticatedProjectAccessProjectIdRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdRoute
+  '/api/internal/scheduler': typeof ApiInternalSchedulerRoute
   '/api/v1/databricks': typeof ApiV1DatabricksRoute
   '/api/v1/health': typeof ApiV1HealthRoute
   '/api/v1/resources': typeof ApiV1ResourcesRoute
@@ -454,6 +461,7 @@ export interface FileRoutesByTo {
   '/v1': typeof V1IndexRoute
   '/project-access/$projectId': typeof AuthenticatedProjectAccessProjectIdRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdRoute
+  '/api/internal/scheduler': typeof ApiInternalSchedulerRoute
   '/api/v1/databricks': typeof ApiV1DatabricksRoute
   '/api/v1/health': typeof ApiV1HealthRoute
   '/api/v1/resources': typeof ApiV1ResourcesRoute
@@ -512,6 +520,7 @@ export interface FileRoutesById {
   '/v1/': typeof V1IndexRoute
   '/_authenticated/project-access/$projectId': typeof AuthenticatedProjectAccessProjectIdRoute
   '/_authenticated/projects/$projectId': typeof AuthenticatedProjectsProjectIdRoute
+  '/api/internal/scheduler': typeof ApiInternalSchedulerRoute
   '/api/v1/databricks': typeof ApiV1DatabricksRoute
   '/api/v1/health': typeof ApiV1HealthRoute
   '/api/v1/resources': typeof ApiV1ResourcesRoute
@@ -570,6 +579,7 @@ export interface FileRouteTypes {
     | '/v1/'
     | '/project-access/$projectId'
     | '/projects/$projectId'
+    | '/api/internal/scheduler'
     | '/api/v1/databricks'
     | '/api/v1/health'
     | '/api/v1/resources'
@@ -626,6 +636,7 @@ export interface FileRouteTypes {
     | '/v1'
     | '/project-access/$projectId'
     | '/projects/$projectId'
+    | '/api/internal/scheduler'
     | '/api/v1/databricks'
     | '/api/v1/health'
     | '/api/v1/resources'
@@ -683,6 +694,7 @@ export interface FileRouteTypes {
     | '/v1/'
     | '/_authenticated/project-access/$projectId'
     | '/_authenticated/projects/$projectId'
+    | '/api/internal/scheduler'
     | '/api/v1/databricks'
     | '/api/v1/health'
     | '/api/v1/resources'
@@ -707,6 +719,7 @@ export interface RootRouteChildren {
   OauthTokenRoute: typeof OauthTokenRoute
   V1ModelsRoute: typeof V1ModelsRoute
   V1IndexRoute: typeof V1IndexRoute
+  ApiInternalSchedulerRoute: typeof ApiInternalSchedulerRoute
   ApiV1DatabricksRoute: typeof ApiV1DatabricksRoute
   ApiV1HealthRoute: typeof ApiV1HealthRoute
   ApiV1ResourcesRoute: typeof ApiV1ResourcesRoute
@@ -1053,6 +1066,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsProjectIdRouteImport
       parentRoute: typeof AuthenticatedProjectsRoute
     }
+    '/api/internal/scheduler': {
+      id: '/api/internal/scheduler'
+      path: '/api/internal/scheduler'
+      fullPath: '/api/internal/scheduler'
+      preLoaderRoute: typeof ApiInternalSchedulerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/v1/databricks': {
       id: '/api/v1/databricks'
       path: '/api/v1/databricks'
@@ -1224,6 +1244,7 @@ const rootRouteChildren: RootRouteChildren = {
   OauthTokenRoute: OauthTokenRoute,
   V1ModelsRoute: V1ModelsRoute,
   V1IndexRoute: V1IndexRoute,
+  ApiInternalSchedulerRoute: ApiInternalSchedulerRoute,
   ApiV1DatabricksRoute: ApiV1DatabricksRoute,
   ApiV1HealthRoute: ApiV1HealthRoute,
   ApiV1ResourcesRoute: ApiV1ResourcesRoute,
