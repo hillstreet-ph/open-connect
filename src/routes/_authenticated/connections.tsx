@@ -475,9 +475,7 @@ function ConnectionsPage() {
             </div>
             <Button
               className="w-full"
-              disabled={
-                configureMutation.isPending || apiKey.trim().length < 8
-              }
+              disabled={configureMutation.isPending || apiKey.trim().length < 8}
               onClick={() => configureMutation.mutate()}
             >
               {configureMutation.isPending ? (

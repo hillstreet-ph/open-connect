@@ -2,7 +2,16 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { Bot, Copy, ExternalLink, Loader2, MessageCircle, Server, ShieldCheck, Trash2 } from "lucide-react";
+import {
+  Bot,
+  Copy,
+  ExternalLink,
+  Loader2,
+  MessageCircle,
+  Server,
+  ShieldCheck,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { BrandLogo } from "@/components/brand-logo";
@@ -36,7 +45,8 @@ export const Route = createFileRoute("/_authenticated/integrations")({
       { title: "Integrations — Open-Connect" },
       {
         name: "description",
-        content: "Manage separate API Key, Apps, AI Agents, and Custom MCP integrations for Open-Connect.",
+        content:
+          "Manage separate API Key, Apps, AI Agents, and Custom MCP integrations for Open-Connect.",
       },
     ],
   }),
@@ -146,7 +156,6 @@ function IntegrationsPage() {
       toast.error(error instanceof Error ? error.message : "Could not remove Telegram"),
   });
 
-
   const saveCustomMcp = useMutation({
     mutationFn: () =>
       customMcpConfigureFn({
@@ -161,7 +170,9 @@ function IntegrationsPage() {
       }),
     onSuccess: (result) => {
       toast.success(
-        result.validation.verified ? "MCP server verified and saved" : "MCP server saved for review",
+        result.validation.verified
+          ? "MCP server verified and saved"
+          : "MCP server saved for review",
       );
       setMcpName("");
       setMcpUrl("");
@@ -284,7 +295,8 @@ function IntegrationsPage() {
         <div className="mb-4">
           <h2 className="text-lg font-semibold">Custom MCP</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Manage account-owned remote MCP servers and the inbound endpoint AI clients use. These stay separate from app Connectors and Marketplace resources.
+            Manage account-owned remote MCP servers and the inbound endpoint AI clients use. These
+            stay separate from app Connectors and Marketplace resources.
           </p>
         </div>
         <Card className="shadow-panel">
@@ -294,7 +306,8 @@ function IntegrationsPage() {
             </div>
             <CardTitle className="mt-3 text-base">Remote MCP servers</CardTitle>
             <CardDescription>
-              Add a remote MCP endpoint for your account. Any credential is validated and stored in the secure vault.
+              Add a remote MCP endpoint for your account. Any credential is validated and stored in
+              the secure vault.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 px-5 pb-5">
@@ -390,9 +403,7 @@ function IntegrationsPage() {
                 })}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                No remote MCP servers are configured.
-              </p>
+              <p className="text-sm text-muted-foreground">No remote MCP servers are configured.</p>
             )}
           </CardContent>
         </Card>
