@@ -396,12 +396,70 @@ function SettingsPage() {
         </TabsContent>
         <TabsContent value="integrations">
           <div className="grid gap-4 md:grid-cols-2">
-            <SettingsLinkCard
-              to="/integrations"
-              icon={Network}
-              title="Integrations"
-              description="Manage account-owned inbound connections for AI clients, MCP, and Telegram. Resources, Connectors, and model providers stay separate."
-            />
+            <a
+              href="/integrations?section=api-key"
+              className="block rounded-xl border bg-card p-5 shadow-panel transition-colors hover:bg-accent/40"
+            >
+              <div className="flex items-start gap-3">
+                <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                  <KeyRound className="size-4" />
+                </div>
+                <div>
+                  <h2 className="font-medium">API Key</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Create and manage scoped keys for clients that use bearer authentication.
+                  </p>
+                </div>
+              </div>
+            </a>
+            <a
+              href="/integrations?section=apps"
+              className="block rounded-xl border bg-card p-5 shadow-panel transition-colors hover:bg-accent/40"
+            >
+              <div className="flex items-start gap-3">
+                <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                  <Network className="size-4" />
+                </div>
+                <div>
+                  <h2 className="font-medium">Apps</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Set up account-owned messaging apps such as Telegram.
+                  </p>
+                </div>
+              </div>
+            </a>
+            <a
+              href="/integrations?section=ai-agents"
+              className="block rounded-xl border bg-card p-5 shadow-panel transition-colors hover:bg-accent/40"
+            >
+              <div className="flex items-start gap-3">
+                <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                  <Sparkles className="size-4" />
+                </div>
+                <div>
+                  <h2 className="font-medium">AI Agents</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Connect ChatGPT and compatible AI clients with OAuth or scoped MCP access.
+                  </p>
+                </div>
+              </div>
+            </a>
+            <a
+              href="/integrations?section=custom-mcp"
+              className="block rounded-xl border bg-card p-5 shadow-panel transition-colors hover:bg-accent/40"
+            >
+              <div className="flex items-start gap-3">
+                <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                  <Building2 className="size-4" />
+                </div>
+                <div>
+                  <h2 className="font-medium">Custom MCP</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Configure the Open-Connect MCP endpoint for external clients.
+                  </p>
+                </div>
+              </div>
+            </a>
           </div>
         </TabsContent>
       </Tabs>
