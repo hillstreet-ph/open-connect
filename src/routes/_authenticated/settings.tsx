@@ -177,7 +177,7 @@ function SettingsPage() {
     <div className="mx-auto max-w-5xl px-4 py-14">
       <h1 className="text-3xl font-semibold">Settings</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Manage your account, organizations, people, connected apps, data, and platform security.
+        Manage your profile, workspace access, connected apps, data, and security.
       </p>
 
       <Tabs defaultValue="profile" className="mt-8">
