@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { savedOpenRouter } from "./model-connection.server.ts";
+import { savedModelUpstreams, savedOpenRouter } from "./model-connection.server.ts";
 const reference = "credential://openrouter/11111111-1111-1111-1111-111111111111";
 test("resolves only the requesting user's credential and fixes the destination", async () => {
   const calls: string[] = [];
@@ -43,4 +43,87 @@ test("unverified or mismatched connections fail closed", async () => {
       }),
     );
   }
+});
+
+test("resolves this user's connected OpenRouter and LiteLLM model gateways", async () => {
+  const userIds: string[] = [];
+  const refs = [
+    "credential://openrouter/11111111-1111-1111-1111-111111111111",
+    "credential://litellm/22222222-2222-2222-2222-222222222222",
+  ];
+  const upstreams = await savedModelUpstreams("user-a", {
+    find: async (userId) => {
+      userIds.push(userId);
+      return [
+        {
+          provider: "openrouter",
+          status: "connected",
+          credential_reference: refs[0]!,
+        },
+        {
+          provider: "litellm",
+          status: "connected",
+          credential_reference: refs[1]!,
+          metadata: { endpoint_url: "https://proxy.example/v1/" },
+        },
+        {
+          provider: "openai",
+          status: "connected",
+          credential_reference: "credential://openai/33333333-3333-3333-3333-333333333333",
+        },
+      ];
+    },
+    resolve: async (userId, credentialId) => {
+      userIds.push(userId, credentialId);
+      return JSON.stringify({ credential: `secret-${credentialId}` });
+    },
+  });
+  assert.deepEqual(userIds, [
+    "user-a",
+    "user-a",
+    refs[0]!.split("/").pop(),
+    "user-a",
+    refs[1]!.split("/").pop(),
+  ]);
+  assert.deepEqual(
+    upstreams.map((upstream) => upstream.name),
+    ["openrouter", "litellm"],
+  );
+  assert.equal(upstreams[0]?.baseUrl, "https://openrouter.ai/api/v1");
+  assert.equal(upstreams[1]?.baseUrl, "https://proxy.example/v1");
+  assert.equal(
+    upstreams[1]?.headers["Authorization"],
+    `Bearer secret-${refs[1]!.split("/").pop()}`,
+  );
+});
+
+test("LiteLLM connection must use a public HTTPS endpoint and matching credential reference", async () => {
+  await assert.rejects(
+    savedModelUpstreams("user-a", {
+      find: async () => [
+        {
+          provider: "litellm",
+          status: "connected",
+          credential_reference: "credential://openrouter/11111111-1111-1111-1111-111111111111",
+          metadata: { endpoint_url: "http://proxy.example/v1" },
+        },
+      ],
+      resolve: async () => "must-not-resolve",
+    }),
+    /credential reference/,
+  );
+  await assert.rejects(
+    savedModelUpstreams("user-a", {
+      find: async () => [
+        {
+          provider: "litellm",
+          status: "connected",
+          credential_reference: "credential://litellm/11111111-1111-1111-1111-111111111111",
+          metadata: { endpoint_url: "https://10.0.0.8/v1" },
+        },
+      ],
+      resolve: async () => "secret",
+    }),
+    /public HTTPS/,
+  );
 });
