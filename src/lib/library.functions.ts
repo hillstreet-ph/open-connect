@@ -9,10 +9,9 @@ const LIBRARY_SLUG = "open-connect-personal-library";
 export const syncKobePlayMarketplaceLibrary = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator(() => ({}))
-  .handler(
-  async ({ context }) =>
+  .handler(async ({ context }) =>
     syncKobePlayMarketplaceResources(context.supabase, context.userId),
-);
+  );
 
 async function ensureLibrary(context: { supabase: SupabaseClient<Database>; userId: string }) {
   const { data: existing, error: readError } = await context.supabase
