@@ -7,7 +7,7 @@ import { WorkspaceShell } from "@/components/workspace-shell";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Download, ExternalLink, Eye, Lock, Search } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,7 +24,7 @@ import { AddToLibraryButton } from "@/components/add-to-library";
 import { listLibraryResources, listResourceProjectAssignments } from "@/lib/library.functions";
 import { listResourceCollections } from "@/lib/resource-collections.functions";
 import {
-  getDefaultMarketplaceCollection,
+  resolveDefaultMarketplaceCollection,
   setDefaultMarketplaceCollection,
 } from "@/lib/resource-library-preferences";
 import { ResourcePurposeSidebar } from "@/components/resource-purpose-sidebar";
@@ -95,22 +95,14 @@ function MarketplaceContent() {
     queryFn: () => listAssignments({}),
     enabled: !!user,
   });
-  const [defaultCollectionId, setDefaultCollectionId] = useState("");
-  useEffect(() => {
-    if (!user?.id || !collections.data) return;
-    const validIds = new Set(collections.data.map((collection) => collection.id));
-    const saved = getDefaultMarketplaceCollection(user.id);
-    if (saved && validIds.has(saved)) {
-      setDefaultCollectionId(saved);
-      return;
-    }
-    const kobeplay = collections.data.find(
-      (collection) => collection.name.trim().toLowerCase() === "kobeplay",
+  const [defaultCollectionOverride, setDefaultCollectionOverride] = useState<string | null>(null);
+  const defaultCollectionId =
+    defaultCollectionOverride ??
+    resolveDefaultMarketplaceCollection(
+      user?.id,
+      collections.data?.map(({ id, name }) => ({ id, name })),
+      defaultCollectionOverride,
     );
-    const fallback = kobeplay?.id ?? "";
-    setDefaultCollectionId(fallback);
-    setDefaultMarketplaceCollection(user.id, fallback);
-  }, [user?.id, collections.data]);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["resources-marketplace"],
@@ -231,13 +223,15 @@ function MarketplaceContent() {
             value={defaultCollectionId}
             onChange={(event) => {
               const id = event.target.value;
-              setDefaultCollectionId(id);
+              setDefaultCollectionOverride(id);
               if (user.id) setDefaultMarketplaceCollection(user.id, id);
             }}
           >
             <option value="">Library only</option>
             {(collections.data ?? []).map((collection) => (
-              <option key={collection.id} value={collection.id}>{collection.name}</option>
+              <option key={collection.id} value={collection.id}>
+                {collection.name}
+              </option>
             ))}
           </select>
         </div>
@@ -321,11 +315,13 @@ function MarketplaceContent() {
                       collection.toolkit_items.some((entry) => entry.resource_id === item.id),
                     )
                     .map((collection) => collection.name);
-                  const projectNames = [...new Set(
-                    (assignments.data ?? [])
-                      .filter((assignment) => assignment.resourceId === item.id)
-                      .map((assignment) => assignment.projectName),
-                  )];
+                  const projectNames = [
+                    ...new Set(
+                      (assignments.data ?? [])
+                        .filter((assignment) => assignment.resourceId === item.id)
+                        .map((assignment) => assignment.projectName),
+                    ),
+                  ];
                   return (
                     <Card key={item.id} className="shadow-panel">
                       <CardHeader className="p-3 pb-1">
@@ -349,12 +345,18 @@ function MarketplaceContent() {
                         </div>
                         {inLibrary ? (
                           <div className="mt-1 flex flex-wrap gap-1">
-                            <Badge variant="outline" className="border-primary/50 text-primary">In Library</Badge>
+                            <Badge variant="outline" className="border-primary/50 text-primary">
+                              In Library
+                            </Badge>
                             {collectionNames.map((name) => (
-                              <Badge key={name} variant="secondary">{name}</Badge>
+                              <Badge key={name} variant="secondary">
+                                {name}
+                              </Badge>
                             ))}
                             {projectNames.map((name) => (
-                              <Badge key={name} variant="outline">Project: {name}</Badge>
+                              <Badge key={name} variant="outline">
+                                Project: {name}
+                              </Badge>
                             ))}
                           </div>
                         ) : null}
@@ -398,11 +400,13 @@ function MarketplaceContent() {
                                 {executable ? "Download" : "Metadata"}
                               </Button>
                             </div>
-                            {executable ? <AddToLibraryButton
-                              resourceId={item.id}
-                              collectionId={defaultCollectionId || undefined}
-                              alreadyInLibrary={inLibrary}
-                            /> : null}
+                            {executable ? (
+                              <AddToLibraryButton
+                                resourceId={item.id}
+                                collectionId={defaultCollectionId || undefined}
+                                alreadyInLibrary={inLibrary}
+                              />
+                            ) : null}
                           </div>
                         ) : (
                           <Button asChild size="sm" variant="outline">
