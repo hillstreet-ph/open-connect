@@ -8,6 +8,10 @@ const DEFAULT_BASES: Record<string, string> = {
   sentry: "https://sentry.io/api/0",
   zeabur: "https://api.zeabur.com",
   openrouter: "https://openrouter.ai/api/v1",
+  nvidia: "https://integrate.api.nvidia.com/v1",
+  ollama_cloud: "https://ollama.com/v1",
+  groq: "https://api.groq.com/openai/v1",
+  cerebras: "https://api.cerebras.ai/v1",
   openai: "https://api.openai.com/v1",
   anthropic: "https://api.anthropic.com/v1",
   google: "https://generativelanguage.googleapis.com/v1beta",
@@ -138,7 +142,20 @@ export async function validateConnectionCredential(
     return { verified: true, detail: "Gemini models verified" };
   }
 
-  if (["openrouter", "openai", "xai", "mistral", "deepseek", "litellm"].includes(setup.provider)) {
+  if (
+    [
+      "openrouter",
+      "openai",
+      "xai",
+      "mistral",
+      "deepseek",
+      "litellm",
+      "nvidia",
+      "ollama_cloud",
+      "groq",
+      "cerebras",
+    ].includes(setup.provider)
+  ) {
     const providerBase = base(setup);
     if (!providerBase) throw new Error("Provider base URL is required for validation.");
     await checkedFetch(`${providerBase}/models`, { headers: bearer }, send);

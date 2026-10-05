@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import { BrandLogo } from "@/components/brand-logo";
 import { useAuth } from "@/hooks/use-auth";
 import { configureAppConnection, listAppConnections } from "@/lib/connections.functions";
+import { listFreeModels } from "@/lib/model-catalog.functions";
+import { AI_GATEWAY_PROVIDERS, AI_GATEWAY_PROVIDER_IDS } from "@/lib/ai-gateway-providers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,18 +30,8 @@ export const Route = createFileRoute("/_authenticated/models")({
   component: ModelsPage,
 });
 
-const providers = [
-  { id: "openrouter", name: "OpenRouter", baseUrl: "https://openrouter.ai/api/v1" },
-  { id: "openai", name: "OpenAI", baseUrl: "https://api.openai.com/v1" },
-  { id: "anthropic", name: "Anthropic / Claude", baseUrl: "https://api.anthropic.com" },
-  { id: "google", name: "Google / Gemini", baseUrl: "https://generativelanguage.googleapis.com" },
-  { id: "xai", name: "xAI / Grok", baseUrl: "https://api.x.ai/v1" },
-  { id: "mistral", name: "Mistral", baseUrl: "https://api.mistral.ai/v1" },
-  { id: "deepseek", name: "DeepSeek", baseUrl: "https://api.deepseek.com" },
-  { id: "litellm", name: "LiteLLM proxy", baseUrl: "https://litellm.example.com/v1" },
-];
-
 const aliases = [
+  { alias: "open-connect/auto", body: "Free-only · routes across connected OpenRouter / LiteLLM" },
   { alias: "open-connect/fast", body: "Low latency · gpt-4o-mini" },
   { alias: "open-connect/coding", body: "Code · gpt-4o" },
   { alias: "open-connect/reasoning", body: "Reasoning · gpt-4o" },
@@ -51,6 +43,7 @@ const aliases = [
   { alias: "gemini-flash", body: "Google Gemini Flash" },
   { alias: "grok-2", body: "xAI Grok" },
 ];
+const gatewayProviders = AI_GATEWAY_PROVIDER_IDS;
 
 function ModelsPage() {
   const { user } = useAuth();
@@ -60,6 +53,7 @@ function ModelsPage() {
     mutationFn: () => testFn({}),
   });
   const listFn = useServerFn(listAppConnections);
+  const freeModelsFn = useServerFn(listFreeModels);
   const configureFn = useServerFn(configureAppConnection);
   const [activeProvider, setActiveProvider] = useState<string | null>(null);
   const [providerKey, setProviderKey] = useState("");
@@ -69,14 +63,31 @@ function ModelsPage() {
     queryFn: () => listFn({}),
     enabled: Boolean(user),
   });
+  const freeModels = useQuery({
+    queryKey: ["free-model-catalog", user?.id],
+    queryFn: () => freeModelsFn({}),
+    enabled: Boolean(user),
+  });
   const connectedProviders = new Set(
     (connections.data ?? [])
-      .filter((item) => item.status === "connected")
+      .filter(
+        (item) =>
+          item.status === "connected" &&
+          (!gatewayProviders.has(item.provider) || item.gateway_ready),
+      )
+      .map((item) => item.provider),
+  );
+  const reconnectProviders = new Set(
+    (connections.data ?? [])
+      .filter(
+        (item) =>
+          item.status === "connected" && gatewayProviders.has(item.provider) && !item.gateway_ready,
+      )
       .map((item) => item.provider),
   );
   const configureMutation = useMutation({
     mutationFn: () => {
-      const provider = providers.find((item) => item.id === activeProvider);
+      const provider = AI_GATEWAY_PROVIDERS.find((item) => item.id === activeProvider);
       if (!provider) throw new Error("Choose an AI provider");
       return configureFn({
         data: {
@@ -95,6 +106,7 @@ function ModelsPage() {
       setProviderKey("");
       setProviderUrl("");
       void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
+      void queryClient.invalidateQueries({ queryKey: ["free-model-catalog"] });
     },
     onError: (error) =>
       toast.error(error instanceof Error ? error.message : "Provider setup failed"),
@@ -151,6 +163,113 @@ function ModelsPage() {
         </CardContent>
       </Card>
 
+      <Card className="mt-6 shadow-panel" id="free-models">
+        <CardHeader className="pb-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <List className="size-4" /> Free models · Auto default
+              </CardTitle>
+              <CardDescription className="mt-1 max-w-3xl">
+                Use <span className="font-mono text-primary">open-connect/auto</span> for all
+                projects and clients. It routes through your connected OpenRouter free-model router,
+                then tries only provider free endpoints, Ollama free-plan models, and LiteLLM models
+                explicitly priced at zero. Other connected models appear below and may cost money
+                according to the provider.
+              </CardDescription>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => void freeModels.refetch()}
+              disabled={freeModels.isFetching || !user}
+            >
+              {freeModels.isFetching ? <Loader2 className="mr-1 size-3.5 animate-spin" /> : null}
+              Refresh list
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {!user ? (
+            <p className="text-sm text-muted-foreground">
+              Sign in to view your connected free models.
+            </p>
+          ) : freeModels.isLoading ? (
+            <p className="text-sm text-muted-foreground">Loading your free model catalog…</p>
+          ) : freeModels.error ? (
+            <p role="alert" className="text-sm text-destructive">
+              {freeModels.error.message}
+            </p>
+          ) : (
+            <>
+              <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                <Badge variant="secondary">Auto · open-connect/auto</Badge>
+                {(freeModels.data?.providers ?? []).map((provider) => (
+                  <Badge key={provider} variant="outline">
+                    {provider}
+                  </Badge>
+                ))}
+              </div>
+              {freeModels.data?.models.length ? (
+                <div className="max-h-80 overflow-auto rounded-lg border border-border/70">
+                  <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-3 border-b bg-muted/30 px-3 py-2 text-xs font-medium text-muted-foreground">
+                    <span>Model</span>
+                    <span>Provider</span>
+                    <span>Catalog</span>
+                  </div>
+                  {freeModels.data.models.map((model) => (
+                    <div
+                      key={`${model.source}:${model.id}`}
+                      className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 border-b px-3 py-2 last:border-b-0"
+                    >
+                      <span className="break-all font-mono text-xs">{model.id}</span>
+                      <span className="text-xs text-muted-foreground">{model.provider}</span>
+                      <Badge variant="outline" className="text-[10px]">
+                        {
+                          {
+                            openrouter: "OpenRouter",
+                            litellm: "LiteLLM",
+                            nvidia: "NVIDIA",
+                            ollama_cloud: "Ollama Cloud",
+                          }[model.source]
+                        }
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {reconnectProviders.size > 0
+                    ? `A connected gateway is missing its saved credential reference (${[...reconnectProviders].join(", ")}). Reconnect its credential below, then refresh the list.`
+                    : "No individually priced free models were found. Auto still uses the OpenRouter free router when that connection is available. Connect OpenRouter or configure free pricing on your LiteLLM proxy, then refresh."}
+                </p>
+              )}
+            </>
+          )}
+          {freeModels.data?.allModels.length ? (
+            <div className="mt-5">
+              <h3 className="mb-2 text-sm font-semibold">All connected models</h3>
+              <div className="max-h-96 overflow-auto rounded-lg border border-border/70">
+                {freeModels.data.allModels.map((model) => (
+                  <div
+                    key={model.id}
+                    className="flex items-center justify-between gap-3 border-b px-3 py-2 last:border-b-0"
+                  >
+                    <span className="break-all font-mono text-xs">{model.id}</span>
+                    <Badge
+                      variant={model.free ? "secondary" : "outline"}
+                      className="shrink-0 text-[10px]"
+                    >
+                      {model.free ? "Auto · free eligible" : "Connected · check provider pricing"}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
+
       <h2 className="mt-14 text-xl font-semibold">Stable aliases</h2>
       <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {aliases.map((item) => (
@@ -165,7 +284,7 @@ function ModelsPage() {
         <CardHeader>
           <CardTitle>Test free inference</CardTitle>
           <CardDescription>
-            Send a short test through your saved OpenRouter connection. Free models are subject to
+            Send a short test through your connected free-model routes. Free models are subject to
             provider quotas and availability.
           </CardDescription>
         </CardHeader>
@@ -187,35 +306,41 @@ function ModelsPage() {
       </Card>
       <h2 className="mt-14 text-xl font-semibold">AI provider credentials</h2>
       <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-        OpenRouter keys saved here are used by your model gateway. Other provider keys are stored
-        for integrations; direct gateway adapters must be configured separately.
+        Connect compatible model APIs here to load their model catalogs into the gateway. Auto uses
+        only provider models explicitly marked free or configured at zero cost; named paid models
+        remain available through the gateway and follow the provider's billing.
       </p>
       <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {providers.map((provider) => (
+        {AI_GATEWAY_PROVIDERS.map((provider) => (
           <Card key={provider.id} className="p-4">
             <div className="flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-2">
                 <BrandLogo provider={provider.id} name={provider.name} size="sm" />
                 <span className="truncate text-sm font-medium">{provider.name}</span>
               </div>
-              {connectedProviders.has(provider.id) ? (
+              {reconnectProviders.has(provider.id) ? (
+                <Badge variant="destructive">Reconnect</Badge>
+              ) : connectedProviders.has(provider.id) ? (
                 <Badge variant="secondary" className="gap-1">
                   <CheckCircle2 className="size-3" /> Connected
                 </Badge>
-              ) : (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={!user}
-                  onClick={() => {
-                    setActiveProvider(provider.id);
-                    setProviderUrl(provider.baseUrl);
-                    setProviderKey("");
-                  }}
-                >
-                  Add key
-                </Button>
-              )}
+              ) : null}
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!user}
+                onClick={() => {
+                  setActiveProvider(provider.id);
+                  setProviderUrl(provider.baseUrl);
+                  setProviderKey("");
+                }}
+              >
+                {reconnectProviders.has(provider.id)
+                  ? "Connect again"
+                  : connectedProviders.has(provider.id)
+                    ? "Manage connection"
+                    : "Connect"}
+              </Button>
             </div>
             {activeProvider === provider.id ? (
               <div className="mt-4 space-y-3 border-t border-border/70 pt-4">
@@ -230,14 +355,16 @@ function ModelsPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor={`provider-key-${provider.id}`}>Provider API key</Label>
+                  <Label htmlFor={`provider-key-${provider.id}`}>
+                    Provider API key or access token
+                  </Label>
                   <Input
                     id={`provider-key-${provider.id}`}
                     type="password"
                     autoComplete="off"
                     value={providerKey}
                     onChange={(event) => setProviderKey(event.target.value)}
-                    placeholder="Paste provider key"
+                    placeholder="Paste provider API key or token"
                     className="font-mono"
                   />
                 </div>
@@ -252,7 +379,7 @@ function ModelsPage() {
                     ) : (
                       <KeyRound className="mr-1 size-3.5" />
                     )}
-                    Save provider
+                    {connectedProviders.has(provider.id) ? "Update provider" : "Save provider"}
                   </Button>
                   <Button size="sm" variant="ghost" onClick={() => setActiveProvider(null)}>
                     Cancel

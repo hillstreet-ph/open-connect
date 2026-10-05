@@ -3,12 +3,17 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import {
   Bell,
+  BookOpen,
+  Bot,
+  Brain,
   Building2,
-  Database,
   KeyRound,
   Loader2,
+  MessageCircle,
   Network,
   Save,
+  Server,
+  Sparkles,
   ShieldCheck,
   Trash2,
   Upload,
@@ -24,6 +29,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { profileDraftValue } from "@/lib/react-compat";
+import { useRoles } from "@/hooks/use-roles";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
@@ -42,6 +48,7 @@ const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 function SettingsPage() {
   const queryClient = useQueryClient();
+  const { isAdmin } = useRoles();
   const fileRef = useRef<HTMLInputElement>(null);
   const [nameDraft, setNameDraft] = useState<{ userId: string; value: string } | null>(null);
   const [avatarDraft, setAvatarDraft] = useState<{ userId: string; value: string } | null>(null);
@@ -175,7 +182,7 @@ function SettingsPage() {
     <div className="mx-auto max-w-5xl px-4 py-14">
       <h1 className="text-3xl font-semibold">Settings</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Manage your account, organizations, people, connected apps, data, and platform security.
+        Manage your profile, workspace access, connected apps, data, and security.
       </p>
 
       <Tabs defaultValue="profile" className="mt-8">
@@ -186,8 +193,9 @@ function SettingsPage() {
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="security">Security & login</TabsTrigger>
           <TabsTrigger value="workspace">Workspace</TabsTrigger>
-          <TabsTrigger value="integrations">Apps & system</TabsTrigger>
+          <TabsTrigger value="apps">Apps & system</TabsTrigger>
           <TabsTrigger value="data">Data & privacy</TabsTrigger>
+          <TabsTrigger value="integrations">Integrations</TabsTrigger>
         </TabsList>
         <TabsContent value="profile">
           <Card className="shadow-panel">
@@ -327,36 +335,44 @@ function SettingsPage() {
             <SettingsLinkCard
               to="/orgs"
               icon={Building2}
-              title="Organizations & workspaces"
-              description="Create workspaces, groups, invite people, and manage member roles."
+              title="Organization & workspace"
+              description="Admin-managed organization membership, groups, and role assignments."
             />
             <SettingsLinkCard
               to="/roles"
-              icon={UsersRound}
-              title="Roles & permissions"
-              description="Review owner, admin, member, manager, developer, and viewer access."
+              icon={KeyRound}
+              title="Access reference"
+              description="Review Admin, Developer, and Member access across platform, organization, and project scopes."
             />
             <SettingsLinkCard
               to="/projects"
               icon={Network}
               title="Projects & environments"
-              description="Manage project boundaries and development, staging, and production scopes."
+              description="Open assigned projects and access project-scoped environments."
             />
-            <SettingsLinkCard
-              to="/admin"
-              icon={ShieldCheck}
-              title="System administration"
-              description="Owner and administrator controls for platform-wide access."
-            />
+            {isAdmin ? (
+              <SettingsLinkCard
+                to="/admin"
+                icon={UsersRound}
+                title="User roles"
+                description="Admins assign platform-level Member, Developer, and Admin roles."
+              />
+            ) : null}
           </div>
         </TabsContent>
-        <TabsContent value="integrations">
+        <TabsContent value="apps">
           <div className="grid gap-4 md:grid-cols-2">
+            <SettingsLinkCard
+              to="/models"
+              icon={Sparkles}
+              title="AI Gateway"
+              description="Configure model providers and routing. Provider keys are managed separately from client integrations."
+            />
             <SettingsLinkCard
               to="/connections"
               icon={Network}
-              title="Connected apps"
-              description="Manage OAuth providers, apps, MCP servers, and connection health."
+              title="Connectors"
+              description="Connect Open-Connect to external app accounts. Connections belong to their owner and are shared with projects explicitly."
             />
             <SettingsLinkCard
               to="/secrets"
@@ -376,10 +392,86 @@ function SettingsPage() {
           <div className="grid gap-4 md:grid-cols-2">
             <SettingsLinkCard
               to="/memory"
-              icon={Database}
-              title="Memory & knowledge"
-              description="Manage durable project context, documents, repositories, URLs, and reusable sources."
+              icon={Brain}
+              title="Memory"
+              description="Manage durable project decisions, instructions, preferences, and summaries."
             />
+            <SettingsLinkCard
+              to="/knowledge"
+              icon={BookOpen}
+              title="Knowledge"
+              description="Manage reusable documents, repositories, URLs, and other project sources."
+            />
+          </div>
+        </TabsContent>
+        <TabsContent value="integrations">
+          <div className="grid gap-4 md:grid-cols-2">
+            <a
+              href="/integrations?section=api-key"
+              className="block rounded-xl border bg-card p-5 shadow-panel transition-colors hover:bg-accent/40"
+            >
+              <div className="flex items-start gap-3">
+                <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                  <KeyRound className="size-4" />
+                </div>
+                <div>
+                  <h2 className="font-medium">API Key</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Create and manage scoped keys for clients that use bearer authentication.
+                  </p>
+                </div>
+              </div>
+            </a>
+            <a
+              href="/integrations?section=apps"
+              className="block rounded-xl border bg-card p-5 shadow-panel transition-colors hover:bg-accent/40"
+            >
+              <div className="flex items-start gap-3">
+                <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                  <MessageCircle className="size-4" />
+                </div>
+                <div>
+                  <h2 className="font-medium">Apps</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Connect account-owned apps such as Telegram and manage their credentials.
+                  </p>
+                </div>
+              </div>
+            </a>
+            <a
+              href="/integrations?section=ai-agents"
+              className="block rounded-xl border bg-card p-5 shadow-panel transition-colors hover:bg-accent/40"
+            >
+              <div className="flex items-start gap-3">
+                <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                  <Bot className="size-4" />
+                </div>
+                <div>
+                  <h2 className="font-medium">AI Agents</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Set up AI clients such as ChatGPT to connect with Open-Connect using OAuth or
+                    MCP.
+                  </p>
+                </div>
+              </div>
+            </a>
+            <a
+              href="/integrations?section=custom-mcp"
+              className="block rounded-xl border bg-card p-5 shadow-panel transition-colors hover:bg-accent/40"
+            >
+              <div className="flex items-start gap-3">
+                <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                  <Server className="size-4" />
+                </div>
+                <div>
+                  <h2 className="font-medium">Custom MCP</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Add and manage remote MCP servers separately from Connectors and Marketplace
+                    resources.
+                  </p>
+                </div>
+              </div>
+            </a>
           </div>
         </TabsContent>
       </Tabs>
@@ -392,17 +484,21 @@ function SettingsLinkCard({
   icon: Icon,
   title,
   description,
+  hash,
 }: {
   to:
     | "/orgs"
     | "/roles"
     | "/projects"
     | "/admin"
+    | "/models"
+    | "/integrations"
     | "/connections"
     | "/secrets"
     | "/automations"
     | "/memory"
     | "/knowledge";
+  hash?: string;
   icon: typeof Building2;
   title: string;
   description: string;
@@ -410,6 +506,7 @@ function SettingsLinkCard({
   return (
     <Link
       to={to}
+      hash={hash}
       className="block rounded-xl border bg-card p-5 shadow-panel transition-colors hover:bg-accent/40"
     >
       <div className="flex items-start gap-3">

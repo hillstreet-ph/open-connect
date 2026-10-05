@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { KeyRound, Link2, Loader2, Lock, Search, Plus, X, Unplug } from "lucide-react";
+import { KeyRound, Loader2, Lock, Search, Plus, X, Unplug } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -13,6 +13,7 @@ import {
   syncComposioConnections,
 } from "@/lib/connections.functions";
 import { useAuth } from "@/hooks/use-auth";
+import { useRoles } from "@/hooks/use-roles";
 import { connectionCategories } from "@/lib/nav";
 import { BrandLogo } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,7 @@ type CatalogApp = {
   oauth: boolean;
   oauth_ready: boolean;
   connection_method?: string;
+  auth_methods?: string[];
 };
 
 function connectionStatusLabel(status: string) {
@@ -55,7 +57,7 @@ export const Route = createFileRoute("/_authenticated/connections")({
       {
         name: "description",
         content:
-          "Connect GitHub, Telegram, ChatGPT, Grok and more. Agents get capability, never raw credentials.",
+          "Connect app accounts, Composio toolkits, and MCP servers. Credentials stay server-side; AI clients and model providers are managed separately.",
       },
     ],
   }),
@@ -64,6 +66,7 @@ export const Route = createFileRoute("/_authenticated/connections")({
 
 function ConnectionsPage() {
   const { user } = useAuth();
+  const { isAdmin } = useRoles();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string>("All");
   const queryClient = useQueryClient();
@@ -79,9 +82,12 @@ function ConnectionsPage() {
   const [endpointUrl, setEndpointUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [authType, setAuthType] = useState<"none" | "bearer" | "api_key">("bearer");
-  const endpointProviders = new Set(["custom_mcp", "supabase", "databricks", "litellm"]);
+  const endpointProviders = new Set(["supabase", "databricks", "litellm", "custom_mcp"]);
 
-  const catalog = useQuery({ queryKey: ["connection-catalog"], queryFn: () => catalogFn({}) });
+  const catalog = useQuery({
+    queryKey: ["connection-catalog"],
+    queryFn: () => catalogFn({}),
+  });
   const mine = useQuery({
     queryKey: ["app-connections"],
     queryFn: () => listFn({}),
@@ -132,7 +138,7 @@ function ConnectionsPage() {
           account_label: accountLabel,
           endpoint_url: endpointUrl,
           api_key: apiKey,
-          auth_type: authType,
+          auth_type: selectedApp?.provider === "custom_mcp" ? authType : "bearer",
         },
       }),
     onSuccess: (result) => {
@@ -145,7 +151,6 @@ function ConnectionsPage() {
       setAccountLabel("");
       setEndpointUrl("");
       setApiKey("");
-      setAuthType("bearer");
       void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Connection failed"),
@@ -171,7 +176,10 @@ function ConnectionsPage() {
       list.push(app);
       map.set(app.category, list);
     }
-    const order = ["All", ...connectionCategories];
+    const order = [
+      "All",
+      ...new Set([...connectionCategories, ...results.map((app) => app.category)]),
+    ];
     return order
       .filter((c) => c !== "All" && map.has(c))
       .map((c) => ({ category: c, apps: map.get(c)! }));
@@ -184,7 +192,10 @@ function ConnectionsPage() {
       connectionsByProvider.set(item.provider, item);
     }
   }
-  const catOptions = ["All", ...connectionCategories];
+  const catOptions = [
+    "All",
+    ...new Set([...connectionCategories, ...(catalog.data ?? []).map((app) => app.category)]),
+  ];
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:py-16">
@@ -193,20 +204,25 @@ function ConnectionsPage() {
       </Badge>
       <h1 className="text-2xl font-semibold sm:text-4xl">Connectors</h1>
       <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-        Connect official apps or add a custom MCP endpoint. Open-Connect keeps credentials
-        server-side and gives agents only approved capabilities.
+        Connect external app accounts, Composio toolkits, and MCP servers. Credentials stay
+        server-side.
       </p>
 
       <div className="mt-6 flex flex-wrap gap-2">
         {user && (
           <>
-            <Button
-              variant="outline"
-              disabled={syncMutation.isPending}
-              onClick={() => syncMutation.mutate()}
-            >
-              {syncMutation.isPending ? "Syncing…" : "Sync Composio accounts"}
+            <Button asChild variant="outline">
+              <Link to="/integrations">AI and MCP integrations</Link>
             </Button>
+            {isAdmin ? (
+              <Button
+                variant="outline"
+                disabled={syncMutation.isPending}
+                onClick={() => syncMutation.mutate()}
+              >
+                {syncMutation.isPending ? "Syncing…" : "Sync Composio accounts"}
+              </Button>
+            ) : null}
             <Button
               variant="outline"
               disabled={mine.isFetching}
@@ -223,18 +239,7 @@ function ConnectionsPage() {
             setQuery("");
           }}
         >
-          Browse app connectors
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => {
-            const customMcp = (catalog.data ?? []).find((app) => app.provider === "custom_mcp");
-            if (customMcp) setSelectedApp(customMcp as CatalogApp);
-          }}
-          disabled={!(catalog.data ?? []).some((app) => app.provider === "custom_mcp")}
-        >
-          Add custom MCP
+          Show all connectors
         </Button>
       </div>
 
@@ -289,10 +294,13 @@ function ConnectionsPage() {
                       <div className="min-w-0">
                         <p className="font-semibold leading-snug">{app.display_name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {app.provider === "custom_mcp"
-                            ? "Custom MCP endpoint"
-                            : `${app.category} · ${app.connection_method === "managed_oauth" && app.oauth_ready ? "Composio" : "Official provider"}`}
+                          {`${app.category} · ${app.provider === "custom_mcp" ? "MCP endpoint" : app.connection_method === "managed_oauth" ? "Composio" : app.connection_method === "native_oauth" ? "Official provider" : "API key"}`}
                         </p>
+                        {app.auth_methods?.length ? (
+                          <p className="text-xs text-muted-foreground">
+                            Auth: {app.auth_methods.join(" · ")}
+                          </p>
+                        ) : null}
                       </div>
                     </div>
                     {!user ? (
@@ -335,7 +343,10 @@ function ConnectionsPage() {
                               ? setManagedApp(app as CatalogApp)
                               : app.oauth
                                 ? connectMutation.mutate(app.provider)
-                                : setSelectedApp(app as CatalogApp)
+                                : (() => {
+                                    setAuthType(app.provider === "custom_mcp" ? "none" : "bearer");
+                                    setSelectedApp(app as CatalogApp);
+                                  })()
                           }
                         >
                           <Plus className="size-4" aria-hidden="true" />
@@ -345,9 +356,7 @@ function ConnectionsPage() {
                               ? app.oauth_ready
                                 ? "Connect"
                                 : "Setup required"
-                              : app.provider === "custom_mcp"
-                                ? "Add MCP"
-                                : "Add key"}
+                              : "Connect"}
                         </Button>
                       </div>
                     )}
@@ -431,7 +440,7 @@ function ConnectionsPage() {
             <Plus aria-hidden="true" className="size-4" />
             {managedApp?.oauth && !managedApp.oauth_ready
               ? "Provider setup required"
-              : "Add another account"}
+              : "Connect another account"}
           </Button>
         </DialogContent>
       </Dialog>
@@ -440,11 +449,7 @@ function ConnectionsPage() {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              {selectedApp?.provider === "custom_mcp" ? (
-                <Link2 className="size-5 text-primary" />
-              ) : (
-                <KeyRound className="size-5 text-primary" />
-              )}
+              <KeyRound className="size-5 text-primary" />
               Connect {selectedApp?.display_name}
             </DialogTitle>
             <DialogDescription>
@@ -482,28 +487,24 @@ function ConnectionsPage() {
             ) : null}
             {selectedApp?.provider === "custom_mcp" ? (
               <div className="space-y-2">
-                <Label htmlFor="connection-auth">Authentication method</Label>
+                <Label htmlFor="connection-auth-type">MCP authentication</Label>
                 <select
-                  id="connection-auth"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  id="connection-auth-type"
                   value={authType}
                   onChange={(event) =>
                     setAuthType(event.target.value as "none" | "bearer" | "api_key")
                   }
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                 >
                   <option value="none">No authentication</option>
                   <option value="bearer">Bearer token</option>
-                  <option value="api_key">X-API-Key header</option>
+                  <option value="api_key">API key header</option>
                 </select>
               </div>
             ) : null}
             {selectedApp?.provider !== "custom_mcp" || authType !== "none" ? (
               <div className="space-y-2">
-                <Label htmlFor="connection-key">
-                  {selectedApp?.provider === "custom_mcp"
-                    ? "Bearer token / API key"
-                    : "API key or access token"}
-                </Label>
+                <Label htmlFor="connection-key">API key or access token</Label>
                 <Input
                   id="connection-key"
                   type="password"

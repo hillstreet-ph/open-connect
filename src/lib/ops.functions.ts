@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertAutomationRunnable } from "@/lib/automation-readiness";
 import { buildAdaptivePlan } from "@/lib/autonomous-control";
+import { nextCronOccurrence } from "@/lib/schedule-cron";
 
 export type TaskStatus = "todo" | "in_progress" | "blocked" | "done" | "cancelled";
 export type TaskPriority = "low" | "medium" | "high" | "urgent";
@@ -96,7 +97,7 @@ export const listSchedules = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("schedules")
       .select(
-        "id, name, description, cron_expr, run_at, timezone, status, last_run_at, next_run_at, project_id, created_at",
+        "id, name, description, cron_expr, run_at, timezone, status, last_run_at, next_run_at, project_id, automation_id, created_at",
       )
       .order("created_at", { ascending: false })
       .limit(100);
@@ -114,6 +115,7 @@ export const createSchedule = createServerFn({ method: "POST" })
       runAt?: string;
       timezone?: string;
       projectId?: string;
+      automationId?: string;
     }) => ({
       name: (input?.name ?? "").trim(),
       description: (input?.description ?? "").trim() || null,
@@ -121,11 +123,29 @@ export const createSchedule = createServerFn({ method: "POST" })
       runAt: input?.runAt || null,
       timezone: (input?.timezone ?? "UTC").trim() || "UTC",
       projectId: input?.projectId || null,
+      automationId: input?.automationId || null,
     }),
   )
   .handler(async ({ data, context }) => {
     if (!data.name) throw new Error("Schedule name required");
     if (!data.cronExpr && !data.runAt) throw new Error("Provide cron expression or run-at time");
+    if (!data.automationId)
+      throw new Error("Choose an enabled AI response automation to run on this schedule.");
+    const { data: automation, error: automationError } = await context.supabase
+      .from("automations")
+      .select("id,action_type,enabled")
+      .eq("id", data.automationId)
+      .single();
+    if (automationError || !automation)
+      throw new Error("Choose an automation that belongs to your account.");
+    if (automation.action_type !== "model" || !automation.enabled)
+      throw new Error("Schedules can currently run enabled AI response automations only.");
+    let nextRunAt = data.runAt;
+    if (data.cronExpr) {
+      nextRunAt = nextCronOccurrence(data.cronExpr, new Date(), data.timezone).toISOString();
+    }
+    if (data.runAt && !Number.isFinite(Date.parse(data.runAt)))
+      throw new Error("Choose a valid run-at date and time.");
     const { data: row, error } = await context.supabase
       .from("schedules")
       .insert({
@@ -136,10 +156,11 @@ export const createSchedule = createServerFn({ method: "POST" })
         run_at: data.runAt,
         timezone: data.timezone,
         project_id: data.projectId,
+        automation_id: data.automationId,
         status: "active",
-        next_run_at: data.runAt,
+        next_run_at: nextRunAt,
       })
-      .select("id, name, status, cron_expr, run_at, created_at")
+      .select("id, name, status, cron_expr, run_at, automation_id, next_run_at, created_at")
       .single();
     if (error) throw new Error(error.message);
     return row;
@@ -202,8 +223,8 @@ export const createAutomation = createServerFn({ method: "POST" })
     if (data.actionType === "model") {
       const { automationPrompt } = await import("@/lib/automation-model.server");
       automationPrompt(data.config);
-      if (data.triggerType !== "manual")
-        throw new Error("AI response automations currently support manual runs only.");
+      if (!["manual", "schedule"].includes(data.triggerType))
+        throw new Error("AI response automations support manual or scheduled triggers.");
     }
     const { data: row, error } = await context.supabase
       .from("automations")
@@ -257,12 +278,23 @@ export const runAutomation = createServerFn({ method: "POST" })
       const { automationPrompt, generateAutomationResponse } =
         await import("@/lib/automation-model.server");
       const prompt = automationPrompt((automation.config ?? {}) as Record<string, unknown>);
-      const { resolveUserUpstreams } = await import("@/lib/gateway.server");
-      const upstream = (await resolveUserUpstreams(context.userId)).find(
-        (u) => u.name === "openrouter",
+      const { isAutoFreeModel, resolveAutoFreeRoutes, resolveUserUpstreams } =
+        await import("@/lib/gateway.server");
+      const availableRoutes = await resolveAutoFreeRoutes(
+        await resolveUserUpstreams(context.userId),
       );
-      if (!upstream)
-        throw new Error("Connect OpenRouter in AI Gateway before running this automation.");
+      const selectedModel = String(
+        (automation.config as Record<string, unknown>)?.model ?? "open-connect/auto",
+      );
+      const routes = isAutoFreeModel(selectedModel)
+        ? availableRoutes
+        : availableRoutes.filter((route) => route.model === selectedModel);
+      if (!routes.length)
+        throw new Error(
+          isAutoFreeModel(selectedModel)
+            ? "Connect a free model provider in AI Gateway before running this automation."
+            : "The selected model is not available as a free model from a connected provider.",
+        );
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       // Generated database types lag the deployed control-plane schema.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -282,7 +314,7 @@ export const runAutomation = createServerFn({ method: "POST" })
         plan: {
           action: "model",
           model: String(
-            (automation.config as Record<string, unknown>)?.model ?? "poolside/laguna-s-2.1:free",
+            (automation.config as Record<string, unknown>)?.model ?? "open-connect/auto",
           ),
         },
         evidence,
@@ -293,14 +325,14 @@ export const runAutomation = createServerFn({ method: "POST" })
       let result: { text: string; model: string } | null = null;
       let failure: string | null = null;
       try {
-        result = await generateAutomationResponse(
-          prompt,
-          upstream,
-          fetch,
-          String(
-            (automation.config as Record<string, unknown>)?.model ?? "poolside/laguna-s-2.1:free",
-          ),
-        );
+        for (const route of routes) {
+          try {
+            result = await generateAutomationResponse(prompt, route.upstream, fetch, route.model);
+            break;
+          } catch (error) {
+            failure = error instanceof Error ? error.message : "AI request failed.";
+          }
+        }
       } catch (error) {
         failure = error instanceof Error ? error.message : "AI request failed.";
       }

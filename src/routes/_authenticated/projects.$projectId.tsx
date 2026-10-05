@@ -9,6 +9,7 @@ import {
   deleteProject,
   listProjectEnvironments,
   listProjects,
+  listMyProjectMemberships,
   renameProject,
 } from "@/lib/orgs.functions";
 import {
@@ -63,6 +64,7 @@ function ProjectWorkspacePage() {
   const { isAdmin } = useRoles();
 
   const listProj = useServerFn(listProjects);
+  const listMemberships = useServerFn(listMyProjectMemberships);
   const listEnvs = useServerFn(listProjectEnvironments);
   const ensureEnvs = useServerFn(ensureProjectEnvironments);
   const deleteProj = useServerFn(deleteProject);
@@ -87,6 +89,14 @@ function ProjectWorkspacePage() {
 
   const projects = useQuery({ queryKey: ["projects"], queryFn: () => listProj({}) });
   const project = (projects.data ?? []).find((p) => p.id === projectId);
+  const memberships = useQuery({
+    queryKey: ["my-project-memberships"],
+    queryFn: () => listMemberships(),
+  });
+  const hasProjectAdmin = (memberships.data ?? []).some(
+    (membership) => membership.project_id === projectId && membership.role === "admin",
+  );
+  const canManageProjectSettings = isAdmin || hasProjectAdmin;
 
   const environments = useQuery({
     queryKey: ["project-environments", projectId],
@@ -140,7 +150,7 @@ function ProjectWorkspacePage() {
   const addConnMut = useMutation({
     mutationFn: () => addConn({ data: { projectId, connectionId: pickConnection } }),
     onSuccess: () => {
-      toast.success("Connection scoped to project");
+      toast.success("Connection shared with project");
       setPickConnection("");
       void qc.invalidateQueries({ queryKey: ["project-connections", projectId] });
     },
@@ -235,7 +245,7 @@ function ProjectWorkspacePage() {
           <Button asChild size="sm" variant="outline">
             <Link to="/secrets">Vault</Link>
           </Button>
-          {isAdmin ? (
+          {canManageProjectSettings ? (
             <>
               <Button
                 size="sm"
@@ -247,9 +257,11 @@ function ProjectWorkspacePage() {
               >
                 <Pencil className="size-3.5" /> Rename
               </Button>
-              <Button size="sm" variant="destructive" onClick={() => setDeleteOpen(true)}>
-                <Trash2 className="size-3.5" /> Delete project
-              </Button>
+              {isAdmin ? (
+                <Button size="sm" variant="destructive" onClick={() => setDeleteOpen(true)}>
+                  <Trash2 className="size-3.5" /> Delete project
+                </Button>
+              ) : null}
             </>
           ) : null}
         </div>
@@ -259,7 +271,8 @@ function ProjectWorkspacePage() {
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Memory · Knowledge</CardTitle>
           <CardDescription>
-            Private context assigned from Studio. These records never publish to Marketplace.
+            Private context assigned from Studio is shared with this project's members. These
+            records never publish to Marketplace.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-5 lg:grid-cols-2">
@@ -425,12 +438,12 @@ function ProjectWorkspacePage() {
         )}
       </div>
 
-      <Card className="shadow-panel">
+      <Card id="project-connections" className="shadow-panel">
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Connections · MCP · AI Gateway</CardTitle>
           <CardDescription>
-            Share a general sidebar connection or AI provider with this project. Secrets remain in
-            Vault and only the opaque broker reference is scoped.
+            The account owner explicitly shares this connection with the project. Members can invoke
+            its provider tools through the broker; credentials and connection settings stay private.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -458,7 +471,7 @@ function ProjectWorkspacePage() {
               onClick={() => addConnMut.mutate()}
             >
               {addConnMut.isPending ? <Loader2 className="mr-1 size-3.5 animate-spin" /> : null}
-              Scope to project
+              Share connection
             </Button>
           </div>
           <div className="space-y-2">
@@ -471,6 +484,7 @@ function ProjectWorkspacePage() {
                 (row: {
                   id: string;
                   connection_id?: string;
+                  can_revoke?: boolean;
                   app_connections?: {
                     display_name?: string;
                     provider?: string;
@@ -489,13 +503,16 @@ function ProjectWorkspacePage() {
                           {c?.provider} · {c?.status}
                         </p>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => row.connection_id && remConnMut.mutate(row.connection_id)}
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
+                      {row.can_revoke ? (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          aria-label={`Remove ${c?.display_name || c?.provider || "connection"} from project`}
+                          onClick={() => row.connection_id && remConnMut.mutate(row.connection_id)}
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      ) : null}
                     </div>
                   );
                 },
@@ -507,16 +524,16 @@ function ProjectWorkspacePage() {
 
       <Card className="shadow-panel">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Shared credentials</CardTitle>
+          <CardTitle className="text-base">Shared credentials · Vault references</CardTitle>
           <CardDescription>
-            Select credentials from the general sidebar Vault. Project pages show metadata only;
-            saved passwords, tokens, and TOTP seeds are never exposed here.
+            These references show metadata only and do not grant access to a connected account.
+            Secret values and TOTP seeds remain private to their owner.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap items-end gap-2">
             <div className="min-w-[220px] flex-1 space-y-1">
-              <Label htmlFor="pick-credential">General Vault credential</Label>
+              <Label htmlFor="pick-credential">Personal Vault credential reference</Label>
               <select
                 id="pick-credential"
                 className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
@@ -554,6 +571,9 @@ function ProjectWorkspacePage() {
                   name?: string;
                   secret_type?: string;
                   scopes?: string[];
+                  can_remove?: boolean;
+                  shared_via_folder?: boolean;
+                  folder_names?: string[];
                 }) => (
                   <div
                     key={credential.id}
@@ -565,15 +585,22 @@ function ProjectWorkspacePage() {
                         {credential.secret_type} ·{" "}
                         {(credential.scopes ?? []).join(", ") || "general"}
                       </p>
+                      {credential.shared_via_folder ? (
+                        <p className="mt-1 text-[11px] text-muted-foreground">
+                          Shared via folder: {(credential.folder_names ?? []).join(", ")}
+                        </p>
+                      ) : null}
                     </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      aria-label={`Remove ${credential.name ?? "credential"} from project`}
-                      onClick={() => remCredMut.mutate(credential.credential_id)}
-                    >
-                      <Trash2 className="size-3.5" />
-                    </Button>
+                    {credential.can_remove ? (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        aria-label={`Remove ${credential.name ?? "credential"} from project`}
+                        onClick={() => remCredMut.mutate(credential.credential_id)}
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    ) : null}
                   </div>
                 ),
               )

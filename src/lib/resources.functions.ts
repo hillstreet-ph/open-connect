@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { hasRole, type AppRole } from "@/lib/rbac";
+import { normalizeResourceLicense } from "@/lib/resource-license";
 
 const BUCKET = "resource-packages";
 
@@ -73,6 +74,7 @@ export const registerResourcePackage = createServerFn({ method: "POST" })
       package_mime?: string;
       published?: boolean;
       version?: string;
+      license?: string;
     }) => ({
       name: (input?.name ?? "").trim() || "Untitled",
       slug: (input?.slug ?? "")
@@ -89,6 +91,7 @@ export const registerResourcePackage = createServerFn({ method: "POST" })
       package_mime: input?.package_mime ?? null,
       published: input?.published === true,
       version: (input?.version ?? "1.0.0").trim() || "1.0.0",
+      license: normalizeResourceLicense(input?.license),
     }),
   )
   .handler(async ({ data, context }) => {
@@ -138,7 +141,7 @@ export const registerResourcePackage = createServerFn({ method: "POST" })
       },
       source: "user-upload",
       author: context.userId.slice(0, 8),
-      license: "proprietary",
+      license: data.license,
       verified: false,
       featured: false,
       supported_clients: ["chatgpt", "claude", "hermes", "custom"],

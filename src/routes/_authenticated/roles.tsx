@@ -19,8 +19,8 @@ export const Route = createFileRoute("/_authenticated/roles")({
   component: RolesAccessPage,
 });
 
-const ORG_ROLES: OrgRole[] = ["member", "admin", "owner"];
-const PROJECT_ROLES: ProjectRole[] = ["viewer", "developer", "manager"];
+const ORG_ROLES: OrgRole[] = ["member", "developer", "admin"];
+const PROJECT_ROLES: ProjectRole[] = ["member", "developer", "admin"];
 
 const MATRIX: { capability: string; levels: Record<AppRole, "full" | "scoped" | "denied"> }[] = [
   {
@@ -134,19 +134,19 @@ function RolesAccessPage() {
         <Card className="shadow-panel">
           <CardHeader className="p-4 pb-2">
             <CardTitle className="text-sm">Organization roles</CardTitle>
-            <CardDescription>Owner · Admin · Member (canonical)</CardDescription>
+            <CardDescription>Admin · Developer · Member</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 px-4 pb-4 text-xs text-muted-foreground">
             {ORG_ROLES.map((r) => (
               <div key={r} className="rounded-lg border border-border/60 px-3 py-2">
                 <span className="font-medium text-foreground">{ORG_ROLE_LABEL[r]}</span>
                 <p className="mt-0.5">
-                  {r === "owner" &&
-                    "Manage organization ownership and appoint organization admins."}
                   {r === "admin" &&
-                    "Manage members and permitted settings within the organization."}
+                    "Manage people, groups, settings, and project sharing within the organization."}
+                  {r === "developer" &&
+                    "Build, publish, and verify shared resources and develop assigned projects."}
                   {r === "member" &&
-                    "Workspace only — assigned projects, marketplace, personal keys. Permission-aware UI."}
+                    "Use the workspace, resources, and projects explicitly shared with you."}
                 </p>
               </div>
             ))}
@@ -155,21 +155,24 @@ function RolesAccessPage() {
         <Card className="shadow-panel">
           <CardHeader className="p-4 pb-2">
             <CardTitle className="text-sm">Project roles</CardTitle>
-            <CardDescription>Manager · Developer · Viewer</CardDescription>
+            <CardDescription>Admin · Developer · Member</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 px-4 pb-4 text-xs text-muted-foreground">
             {PROJECT_ROLES.map((r) => (
               <div key={r} className="rounded-lg border border-border/60 px-3 py-2">
                 <span className="font-medium text-foreground">{PROJECT_ROLE_LABEL[r]}</span>
                 <p className="mt-0.5">
-                  {r === "manager" && "Project access, members, installs, environments."}
-                  {r === "developer" && "Build resources, tools, project-scoped keys."}
-                  {r === "viewer" && "Read-only project surface."}
+                  {r === "admin" &&
+                    "Manage this project, its collaborators, installs, and environments."}
+                  {r === "developer" && "Build project resources, tools, and project-scoped keys."}
+                  {r === "member" &&
+                    "Use resources and features explicitly shared with this project."}
                 </p>
               </div>
             ))}
             <p className="pt-1 text-[11px]">
-              Same person can be Manager on one project and Viewer on another. See{" "}
+              Same person can have different roles in each project. Project access is assigned
+              explicitly. See{" "}
               <Link to="/orgs" className="text-primary underline-offset-2 hover:underline">
                 Organizations
               </Link>
@@ -190,7 +193,7 @@ function RolesAccessPage() {
           Open your user avatar menu for personal settings, organizations, and credentials. Platform
           roles are Member, Developer, and Admin. Developers can publish and verify marketplace
           resources; platform Admins manage platform roles. Organization and project access remain
-          separately scoped, so an organization Owner keeps ownership controls there.
+          separately scoped, Admins manage the organization; no separate Owner role is used.
         </CardContent>
       </Card>
 
@@ -278,8 +281,11 @@ function RolesAccessPage() {
 
       <Card className="shadow-panel">
         <CardHeader className="p-4 pb-2">
-          <CardTitle className="text-base">Canonical platform role summaries</CardTitle>
-          <CardDescription>Capabilities by platform role</CardDescription>
+          <CardTitle className="text-base">Canonical role summaries</CardTitle>
+          <CardDescription>
+            Platform capabilities; organization and project roles apply within their respective
+            scope.
+          </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 p-4 pt-2 sm:grid-cols-2 lg:grid-cols-3">
           {ROLE_SCOPE_MATRIX.filter((row) => ROLES.includes(row.role)).map((row) => (

@@ -33,7 +33,7 @@ export function useRoles() {
     primary,
     loading: authLoading || (Boolean(user) && query.isLoading),
     isAdmin: hasRole(roles, "admin"),
-    isOwner: hasRole(roles, "owner"),
+    isOwner: false,
     isPublisher: hasRole(roles, "publisher"),
     isDeveloper: hasRole(roles, "developer"),
     can: (capability: Capability) => can(roles, capability),

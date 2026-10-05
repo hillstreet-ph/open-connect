@@ -32,17 +32,17 @@ After changing secrets: **Retry deployment** on the latest production deploy so 
 
 ## Roles and access scope
 
-Human access uses three separate scopes:
+Human access uses three role names across platform, organization, and project scopes:
 
-| Scope | Roles | Purpose |
-|------|------|------|
-| Platform | **Member**, **Developer**, **Admin** | Member is the standard signed-in role and can upload private drafts. Developer manages toolkits and can verify and publish marketplace resources. Admin includes Developer capabilities and manages platform roles. Platform roles do not grant organization ownership or project membership. |
-| Organization | **Member**, **Admin**, **Owner** | Admins manage organization people, groups, and settings. Owners manage ownership and appoint admins. |
-| Project | **Viewer**, **Developer**, **Manager** | Viewer reads an assigned project. Developer builds within an assigned project. Manager manages that project's members, installs, and environments. |
+| Role | Purpose |
+|------|---------|
+| **Member** | Use personal resources and connections, plus projects and resources explicitly shared with them. Cannot create organizations, workspaces, or projects. |
+| **Developer** | Member access plus toolkit management, resource publishing and verification, and development inside assigned projects. Cannot create organizations, workspaces, or projects. |
+| **Admin** | Manage organization people, roles, groups, and project access; create projects; configure shared project resources. |
 
-Project membership is independent for every project. Organization Members only see projects explicitly shared with them. Project resources, environments, and memberships follow that same project boundary. Machine principals such as agents and API clients use scoped credentials and never receive human Owner or Admin roles.
+HillStreet uses one canonical organization and one workspace. They are provisioned as the shared structure and are not duplicated through the app. Organization Admins create projects inside that workspace and explicitly share each project with Developers or Members. Organization membership alone does not grant access to project resources. Groups organize teams without granting project access. Personal cloud connections and credentials stay private unless their owner explicitly shares a supported connection or credential reference with a project. AI agents, ChatGPT plugins, and API clients connect through scoped credentials and project resources rather than inheriting a human role.
 
-Legacy Owner and Publisher platform records remain readable for migration and audit purposes, but they cannot be newly assigned. New platform assignments are limited to Member, Developer, and Admin. Assign people by account email in System administration; invite new people through Organization settings. Organization ownership remains a separate organization role.
+Legacy Owner and Publisher records are converted to Admin and Developer. New assignments and user interfaces use only Admin, Developer, and Member. Assign platform roles in System administration; invite or edit organization roles and groups in Organization settings.
 
 Upload adoption is available to every signed-in Member (minimum platform role: user).
 

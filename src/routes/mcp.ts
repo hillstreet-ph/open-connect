@@ -1,4 +1,5 @@
 import { COMMAND_CENTER_HTML } from "@/lib/command-center";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   authenticateKey,
@@ -144,6 +145,40 @@ const PLATFORM_TOOLS: McpTool[] = [
     },
   },
   {
+    name: "list_my_memory",
+    description:
+      "Read the authenticated user's private Memory library. When project_id is supplied, also include that user's memory explicitly stored in that accessible project. Without project_id, only personal memory is returned.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        project_id: { type: "string" },
+        limit: { type: "integer", minimum: 1, maximum: 200 },
+      },
+    },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
+  },
+  {
+    name: "list_my_knowledge",
+    description:
+      "Read the authenticated user's private Knowledge library. When project_id is supplied, also include that user's knowledge explicitly stored in that accessible project. Without project_id, only personal knowledge is returned.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        project_id: { type: "string" },
+        limit: { type: "integer", minimum: 1, maximum: 200 },
+      },
+    },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
+  },
+  {
     name: "list_workspace_projects",
     description: "List workspaces and projects permitted by this API key's organization scope.",
     inputSchema: { type: "object", properties: {} },
@@ -219,7 +254,7 @@ const PLATFORM_TOOLS: McpTool[] = [
   {
     name: "call_connection_tool",
     description:
-      "Call a tool on one verified Custom MCP connection. Non-read-only calls require administrator control access; destructive tools also require confirm=true.",
+      "Call a tool on one verified Custom MCP connection. Write-capable actions require a project-scoped key with connections:invoke; destructive tools also require confirm=true.",
     inputSchema: {
       type: "object",
       properties: {
@@ -262,7 +297,7 @@ const PLATFORM_TOOLS: McpTool[] = [
   },
   {
     name: "e2b_create_sandbox",
-    description: "Create an isolated E2B sandbox. Owner/admin and tools:invoke are required.",
+    description: "Create an isolated E2B sandbox. Admin and tools:invoke are required.",
     inputSchema: {
       type: "object",
       properties: {
@@ -284,7 +319,7 @@ const PLATFORM_TOOLS: McpTool[] = [
   {
     name: "e2b_kill_sandbox",
     description:
-      "Terminate one E2B sandbox. Requires explicit confirm=true and owner/admin write access.",
+      "Terminate one E2B sandbox. Requires explicit confirm=true and admin write access.",
     inputSchema: {
       type: "object",
       properties: {
@@ -326,7 +361,7 @@ const PLATFORM_TOOLS: McpTool[] = [
   {
     name: "hubstaff_admin_request",
     description:
-      "Call an authorized Hubstaff v2 endpoint. Writes require owner/admin access; DELETE also requires confirm=true.",
+      "Call an authorized Hubstaff v2 endpoint. Writes require admin access; DELETE also requires confirm=true.",
     inputSchema: {
       type: "object",
       properties: {
@@ -477,7 +512,7 @@ const PLATFORM_TOOLS: McpTool[] = [
   {
     name: "install_capability",
     description:
-      "Request installation of an approved capability as owner/admin. Returns unsupported until a verified provider executor is available.",
+      "Request installation of an approved capability as admin. Returns unsupported until a verified provider executor is available.",
     inputSchema: {
       type: "object",
       properties: {
@@ -554,18 +589,41 @@ async function assertProjectAccess(key: AuthedKey, projectId: string) {
   if (key.projectId && project.id !== key.projectId) {
     throw new Error("Project is outside this API key's project scope.");
   }
+
+  const [membership, organizationAdmin] = await Promise.all([
+    supabaseAdmin
+      .from("project_members")
+      .select("id")
+      .eq("project_id", project.id)
+      .eq("user_id", key.userId)
+      .maybeSingle(),
+    supabaseAdmin
+      .from("organization_members")
+      .select("id")
+      .eq("organization_id", project.organization_id)
+      .eq("user_id", key.userId)
+      .eq("role", "admin")
+      .maybeSingle(),
+  ]);
+  if (
+    membership.error ||
+    organizationAdmin.error ||
+    (!membership.data && !organizationAdmin.data)
+  ) {
+    throw new Error("Project is unavailable to this API key.");
+  }
   return project;
 }
 
 async function requireControlWrite(key: AuthedKey) {
   const roles = await loadRoles(key.userId);
-  const authorizedRole = roles.includes("owner") || roles.includes("admin");
+  const authorizedRole = roles.includes("admin");
   const authorizedScope =
     hasScope(key, "control:write") ||
     hasScope(key, "tools:invoke") ||
     hasScope(key, "connections:invoke");
   if (!authorizedRole || !authorizedScope)
-    throw new Error("Owner/admin role and control write scope required.");
+    throw new Error("Admin role and control write scope required.");
   return roles;
 }
 
@@ -739,6 +797,8 @@ const TOOL_SCOPES: Record<string, string> = {
   open_connect_status: "mcp:connect",
   list_resources: "resources:read",
   list_personal_resources: "resources:read",
+  list_my_memory: "memory:read",
+  list_my_knowledge: "knowledge:read",
   list_workspace_projects: "resources:read",
   list_credential_metadata: "secrets:read",
   calculate: "mcp:connect",
@@ -1022,9 +1082,34 @@ export const Route = createFileRoute("/mcp")({
               const [workspaces, projects] = await Promise.all([workspaceQuery, projectQuery]);
               if (workspaces.error) throw new Error(workspaces.error.message);
               if (projects.error) throw new Error(projects.error.message);
+              const [
+                { data: assignedProjects, error: assignedError },
+                { data: adminMemberships, error: adminError },
+              ] = await Promise.all([
+                supabaseAdmin
+                  .from("project_members")
+                  .select("project_id")
+                  .eq("user_id", key.userId),
+                supabaseAdmin
+                  .from("organization_members")
+                  .select("organization_id")
+                  .eq("user_id", key.userId)
+                  .eq("role", "admin")
+                  .in("organization_id", organizationIds),
+              ]);
+              if (assignedError) throw new Error(assignedError.message);
+              if (adminError) throw new Error(adminError.message);
+              const assignedIds = new Set((assignedProjects ?? []).map((row) => row.project_id));
+              const adminOrganizationIds = new Set(
+                (adminMemberships ?? []).map((row) => row.organization_id),
+              );
+              const visibleProjects = (projects.data ?? []).filter(
+                (project) =>
+                  assignedIds.has(project.id) || adminOrganizationIds.has(project.organization_id),
+              );
               result = textResult({
                 workspaces: workspaces.data ?? [],
-                projects: projects.data ?? [],
+                projects: visibleProjects,
               });
             }
           } else if (name === "list_credential_metadata") {
@@ -1050,6 +1135,44 @@ export const Route = createFileRoute("/mcp")({
                 updated_at: item.updated_at,
               })),
               secret_values_exposed: false,
+            });
+          } else if (name === "list_my_memory" || name === "list_my_knowledge") {
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const requestedProject = String(args["project_id"] ?? key.projectId ?? "").trim();
+            if (key.projectId && requestedProject && requestedProject !== key.projectId) {
+              throw new Error("Key is restricted to a different project.");
+            }
+            if (requestedProject) await assertProjectAccess(key, requestedProject);
+            const limit = Math.min(200, Math.max(1, Math.floor(Number(args["limit"]) || 50)));
+            const isMemory = name === "list_my_memory";
+            const table = isMemory ? "memory_records" : "knowledge_items";
+            const select = isMemory
+              ? "id,project_id,title,content,memory_type,importance,pinned,tags,expires_at,created_at,updated_at"
+              : "id,project_id,title,content,source_type,source_url,status,tags,created_at,updated_at";
+            const readRows = async (projectId: string | null) => {
+              // Table names and selected columns are fixed above; the API key user id scopes every query.
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              let query = (supabaseAdmin as any)
+                .from(table)
+                .select(select)
+                .eq("user_id", key.userId)
+                .order("updated_at", { ascending: false })
+                .limit(limit);
+              query = projectId ? query.eq("project_id", projectId) : query.is("project_id", null);
+              if (!isMemory) query = query.neq("status", "archived");
+              const { data, error } = await query;
+              if (error) throw new Error(error.message);
+              return data ?? [];
+            };
+            const [personal, project] = await Promise.all([
+              readRows(null),
+              requestedProject ? readRows(requestedProject) : Promise.resolve([]),
+            ]);
+            result = textResult({
+              personal,
+              project,
+              project_id: requestedProject || null,
+              user_owned_only: true,
             });
           } else if (name === "list_personal_resources") {
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -1092,33 +1215,97 @@ export const Route = createFileRoute("/mcp")({
           } else if (name === "inspect_connections") {
             const provider = String(args["provider"] ?? "").trim();
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-            let query = supabaseAdmin
+            let ownedQuery = supabaseAdmin
               .from("app_connections")
-              .select("provider, display_name, status, scopes, credential_reference, last_used_at")
+              .select("id,provider,display_name,status,scopes,credential_reference,last_used_at")
               .eq("user_id", key.userId);
-            if (provider) query = query.eq("provider", provider);
-            const { data } = await query.order("created_at", { ascending: false }).limit(100);
-            result = textResult({
-              connections: (data ?? []).map((connection: Record<string, unknown>) => ({
-                ...connection,
-                credential_reference: connection["credential_reference"] ? "configured" : "missing",
-              })),
-            });
+            if (provider) ownedQuery = ownedQuery.eq("provider", provider);
+            const { data: owned, error: ownedError } = await ownedQuery
+              .order("created_at", { ascending: false })
+              .limit(100);
+            if (ownedError) throw new Error(ownedError.message);
+            const visible = new Map<string, Record<string, unknown>>();
+            for (const connection of owned ?? []) {
+              visible.set(connection.id, {
+                id: connection.id,
+                provider: connection.provider,
+                display_name: connection.display_name,
+                status: connection.status,
+                scopes: connection.scopes,
+                access_scope: "personal",
+                credential_reference: connection.credential_reference ? "configured" : "missing",
+                last_used_at: connection.last_used_at,
+              });
+            }
+            if (key.projectId) {
+              await assertProjectAccess(key, key.projectId);
+              const projectDb = supabaseAdmin as SupabaseClient;
+              const { data: shared, error: sharedError } = await projectDb
+                .from("project_connections")
+                .select(
+                  "connection_id, app_connections!inner(id,provider,display_name,status,scopes)",
+                )
+                .eq("project_id", key.projectId);
+              if (sharedError) throw new Error(sharedError.message);
+              const sharedRows = Array.isArray(shared)
+                ? (shared as Array<{
+                    connection_id?: string;
+                    app_connections?: {
+                      id?: string;
+                      provider?: string;
+                      display_name?: string;
+                      status?: string;
+                      scopes?: string[];
+                    } | null;
+                  }>)
+                : [];
+              for (const row of sharedRows) {
+                const connection = row.app_connections;
+                if (!connection?.id || (provider && connection.provider !== provider)) continue;
+                visible.set(connection.id, {
+                  id: connection.id,
+                  provider: connection.provider,
+                  display_name: connection.display_name,
+                  status: connection.status,
+                  scopes: connection.scopes,
+                  access_scope: "project",
+                  credential_reference: "brokered",
+                });
+              }
+            }
+            result = textResult({ connections: [...visible.values()] });
           } else if (name === "list_connection_tools") {
             const { listCustomMcpTools } = await import("@/lib/custom-mcp.server");
             result = textResult(
-              await listCustomMcpTools(key.userId, String(args["connection_id"] ?? "")),
+              await listCustomMcpTools(
+                key.userId,
+                String(args["connection_id"] ?? ""),
+                key.projectId ?? undefined,
+              ),
             );
           } else if (name === "call_connection_tool") {
             const { callCustomMcpTool, listCustomMcpTools } =
               await import("@/lib/custom-mcp.server");
             const connectionId = String(args["connection_id"] ?? "");
             const toolName = String(args["tool_name"] ?? "");
-            const catalog = await listCustomMcpTools(key.userId, connectionId);
+            const catalog = await listCustomMcpTools(
+              key.userId,
+              connectionId,
+              key.projectId ?? undefined,
+            );
             const tool = catalog.tools.find((item) => item["name"] === toolName);
             if (!tool) throw new Error("Connected MCP tool was not found.");
             const annotations = (tool["annotations"] ?? {}) as Record<string, unknown>;
-            if (annotations["readOnlyHint"] !== true) await requireControlWrite(key);
+            if (annotations["readOnlyHint"] !== true) {
+              if (!key.projectId) {
+                throw new Error(
+                  "Write-capable connection actions require a project-scoped API key.",
+                );
+              }
+              if (!hasScope(key, "connections:invoke")) {
+                throw new Error("Key cannot invoke write-capable connection actions.");
+              }
+            }
             if (annotations["destructiveHint"] === true && args["confirm"] !== true) {
               throw new Error("Explicit confirm=true is required for destructive tools.");
             }
@@ -1127,7 +1314,13 @@ export const Route = createFileRoute("/mcp")({
                 ? (args["arguments"] as Record<string, unknown>)
                 : {};
             result = textResult(
-              await callCustomMcpTool(key.userId, connectionId, toolName, toolArguments),
+              await callCustomMcpTool(
+                key.userId,
+                connectionId,
+                toolName,
+                toolArguments,
+                key.projectId ?? undefined,
+              ),
             );
           } else if (name === "e2b_health") {
             const { e2bConfig, e2bHealth } = await import("@/lib/e2b.server");
@@ -1543,10 +1736,17 @@ export const Route = createFileRoute("/mcp")({
               note: "Use id with list_connection_tools and call_connection_tool for Custom MCP connections. Credential values are never returned.",
             });
           } else if (name === "list_models") {
+            const { resolveUserUpstreams, fetchMergedModelCatalog } =
+              await import("@/lib/gateway.server");
+            const configured = await resolveUserUpstreams(key.userId, false);
+            const { ids, upstreams, providers } = await fetchMergedModelCatalog(configured);
             result = textResult({
               endpoint: "https://open-connect.site/v1",
-              aliases: MODEL_ALIASES,
-              auth: "Bearer oc_live_…",
+              models: ids,
+              providers,
+              upstreams,
+              count: ids.length,
+              note: "Catalog uses the authenticated user's AI Gateway connections. Credential values are never returned.",
             });
           } else if (name?.startsWith("resource_")) {
             const match = await findResourceByToolName(name);

@@ -57,16 +57,6 @@ export const appCategories: NavCategory[] = [
     items: [
       { to: "/resources", label: "Marketplace" },
       { to: "/library", label: "Resources" },
-      { to: "/plugins", label: "Plugins" },
-      { to: "/agents", label: "Agents" },
-      { to: "/skills", label: "Skills" },
-      { to: "/mcp-servers", label: "MCP" },
-      { to: "/tools", label: "Tools" },
-      { to: "/toolkits", label: "Toolkits", capability: "manage_toolkits" },
-      { to: "/prompts", label: "Prompts" },
-      { to: "/memory", label: "Memory" },
-      { to: "/knowledge", label: "Knowledge" },
-      { to: "/others", label: "Others" },
     ],
   },
   {
@@ -103,15 +93,11 @@ export const resourceCategories = [
   { value: "skill", label: "Skills" },
   { value: "mcp", label: "MCP" },
   { value: "tool", label: "Tools" },
-  { value: "guide", label: "Guides" },
   { value: "plugin", label: "Plugins" },
   { value: "agent", label: "Agents" },
   { value: "prompt", label: "Prompts" },
   { value: "toolkit", label: "Toolkits" },
-  { value: "memory", label: "Memory" },
-  { value: "knowledge", label: "Knowledge" },
-  { value: "app", label: "Apps" },
-  { value: "model", label: "Models" },
+  { value: "other", label: "Others" },
 ] as const;
 
 export const connectionCategories = [
@@ -122,4 +108,6 @@ export const connectionCategories = [
   "Infrastructure",
   "Data",
   "Business",
+  "Automation",
+  "Security",
 ] as const;

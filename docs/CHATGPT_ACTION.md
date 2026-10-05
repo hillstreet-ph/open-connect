@@ -14,7 +14,7 @@ Open-Connect exposes two complementary ChatGPT integrations:
 3. For a private owner-only GPT, bearer authentication can use a scoped `oc_live_...` key created
    in Open-Connect. Store it only in ChatGPT's encrypted Action authentication settings.
 4. Test `readOpenConnect` with `open_connect_status`, then `list_connections`, then `search`.
-5. Keep `writeOpenConnect` confirmation enabled. Open-Connect applies owner/admin, OAuth scope,
+5. Keep `writeOpenConnect` confirmation enabled. Open-Connect applies Admin, OAuth scope,
    approval, and production gates again on the server.
 
 The repository cannot install an Action into a ChatGPT account automatically. Account-level app

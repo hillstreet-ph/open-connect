@@ -29,6 +29,8 @@ jobs:
         run: bun run test
       - name: Marketplace branch history regression tests
         run: python3 scripts/update-marketplace-branch.test.py
+      - name: Production health contract tests
+        run: python3 scripts/validate_production_health_test.py
       - name: Typecheck / build
         env:
           VITE_SUPABASE_URL: https://huadtiuuoiriqrjpjxhr.supabase.co
@@ -49,6 +51,43 @@ jobs:
           path: .output/public
           retention-days: 7
 
+  publish-required-build-status:
+    name: Publish required build status
+    if: always() && github.event_name == 'pull_request'
+    needs: [validate]
+    runs-on: ubuntu-latest
+    permissions:
+      statuses: write
+    steps:
+      - name: Publish the protected-branch status from the CI result
+        uses: actions/github-script@v9
+        env:
+          VALIDATION_RESULT: ${{ needs.validate.result }}
+        with:
+          script: |
+            const state = process.env.VALIDATION_RESULT === 'success' ? 'success' : 'failure';
+            const { data: pullRequest } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+            });
+            const shas = new Set([
+              context.payload.pull_request.head.sha,
+              pullRequest.merge_commit_sha,
+            ].filter(Boolean));
+            for (const sha of shas) {
+              await github.rest.repos.createCommitStatus({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                sha,
+                state,
+                context: 'Build & validate',
+                description: state === 'success'
+                  ? 'Lint, tests, build, and SSR validation passed.'
+                  : `Validation job concluded as ${process.env.VALIDATION_RESULT}.`,
+              });
+            }
+
   smoke-production:
     name: Production smoke (post-merge)
     runs-on: ubuntu-latest
@@ -56,6 +95,7 @@ jobs:
     needs: validate
     timeout-minutes: 10
     steps:
+      - uses: actions/checkout@v7
       - name: Wait for Cloudflare Pages
         run: sleep 90
       - name: Health
@@ -65,8 +105,7 @@ jobs:
             code=$(curl -sS -o /tmp/health.json -w "%{http_code}" https://open-connect.site/api/v1/health || echo 000)
             echo "attempt $i -> $code"
             if [ "$code" = "200" ]; then
-              cat /tmp/health.json
-              python3 -c "import json;d=json.load(open('/tmp/health.json'));assert d.get('status')=='ok'"
+              python3 scripts/validate_production_health.py /tmp/health.json
               exit 0
             fi
             sleep 30
