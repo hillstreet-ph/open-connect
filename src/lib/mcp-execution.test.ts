@@ -2,7 +2,7 @@ import { beforeEach, expect, mock, test } from "bun:test";
 
 let post: (args: { request: Request }) => Promise<Response>;
 let authenticated = true;
-let roles = ["owner"];
+let roles = ["admin"];
 let scopes = ["mcp:connect", "control:write"];
 const resource = {
   slug: "fixture-approved-tool",
@@ -35,12 +35,16 @@ mock.module("@/integrations/supabase/client.server", () => ({
       if (table === "resources")
         return {
           select: () => ({
-            eq: () => ({ order: () => ({ limit: async () => ({ data: [resource] }) }) }),
+            eq: () => ({
+              order: () => ({ limit: async () => ({ data: [resource] }) }),
+            }),
           }),
         };
       if (table === "user_roles")
         return {
-          select: () => ({ eq: async () => ({ data: roles.map((role) => ({ role })) }) }),
+          select: () => ({
+            eq: async () => ({ data: roles.map((role) => ({ role })) }),
+          }),
         };
       throw new Error(`Unexpected database access: ${table}`);
     },
@@ -53,7 +57,13 @@ mock.module("@/lib/oauth-client.server", () => ({
       if (table !== "resources") throw new Error(`Unexpected public query: ${table}`);
       return {
         select: () => ({
-          eq: () => ({ order: () => ({ limit: async () => ({ data: [resource], error: null }) }) }),
+          eq: () => ({
+            order: () => ({
+              order: () => ({
+                range: async () => ({ data: [resource], error: null }),
+              }),
+            }),
+          }),
         }),
       };
     },
@@ -63,7 +73,7 @@ await import("../routes/mcp");
 
 beforeEach(() => {
   authenticated = true;
-  roles = ["owner"];
+  roles = ["admin"];
   scopes = ["mcp:connect", "control:write"];
   tables.length = 0;
   resource.verified = true;
@@ -95,7 +105,12 @@ function listTools() {
         accept: "application/json, text/event-stream",
         "content-type": "application/json",
       },
-      body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} }),
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 2,
+        method: "tools/list",
+        params: {},
+      }),
     }),
   });
 }
@@ -115,7 +130,9 @@ test("tool discovery exposes a stable titled platform catalog without duplicate 
 });
 
 test("approved resource invocation is an explicit tool error without an executor", async () => {
-  const response = await call("resource_fixture_approved_tool", { action: "invoke" });
+  const response = await call("resource_fixture_approved_tool", {
+    action: "invoke",
+  });
   const { result } = await response.json();
   expect(result.isError).toBe(true);
   expect(JSON.parse(result.content[0].text)).toMatchObject({
@@ -128,7 +145,9 @@ test("approved resource invocation is an explicit tool error without an executor
 });
 
 test("installation does not write a fabricated installed record", async () => {
-  const response = await call("install_capability", { resource_id: resource.slug });
+  const response = await call("install_capability", {
+    resource_id: resource.slug,
+  });
   const { result } = await response.json();
   expect(result.isError).toBe(true);
   expect(JSON.parse(result.content[0].text)).toMatchObject({
@@ -144,12 +163,12 @@ test("anonymous invocation remains rejected before catalog access", async () => 
   expect(tables).toEqual([]);
 });
 
-test("installation still requires owner or admin plus write scope", async () => {
+test("installation requires admin plus write scope", async () => {
   roles = ["member"];
   await expect(call("install_capability", { resource_id: resource.slug })).rejects.toThrow(
-    "Owner/admin role",
+    "Admin role",
   );
-  roles = ["owner"];
+  roles = ["admin"];
   scopes = ["mcp:connect"];
   await expect(call("install_capability", { resource_id: resource.slug })).rejects.toThrow(
     "control write scope",
@@ -163,4 +182,16 @@ test("unverified catalog entries remain ineligible for installation", async () =
     "cannot be installed",
   );
   expect(tables).not.toContain("capability_installations");
+});
+
+test("read tokens discover write scope requirements without gaining execution rights", async () => {
+  scopes = ["mcp:connect", "resources:read"];
+  const response = await listTools();
+  const { result } = await response.json();
+  const tool = result.tools.find((item: { name: string }) => item.name === "call_connection_tool");
+  expect(tool.securitySchemes).toEqual([{ type: "oauth2", scopes: ["connections:invoke"] }]);
+  expect(tool._meta.securitySchemes).toEqual(tool.securitySchemes);
+  const denied = await call("call_connection_tool", {});
+  expect(denied.status).toBe(403);
+  expect(tables).not.toContain("app_connections");
 });

@@ -26,9 +26,9 @@ Projects own tasks, schedules, automations, agents, resources, connections, mode
 | 1 | — | Dashboard, **Projects** |
 | 2 | Work | Tasks, Automations, **Schedules** |
 | 3 | Build | Studio, Agents, Toolkits |
-| 4 | Discover | Marketplace |
-| 5 | Connect | Connections, Integrations, AI Gateway |
-| 6 | User avatar menu | API keys & MCP, Settings, Organizations & workspaces, Credentials, System administration (privileged), Help, Sign out |
+| 4 | Discover | Marketplace, Resources, Agents, Skills, MCP, Tools, Toolkits, Prompts, Memory, Knowledge, Others |
+| 5 | Connections | Plugins, Connectors, Credentials, AI Gateway |
+| 6 | User avatar menu | Integrations, API keys & MCP, Settings, Organizations & workspaces, Help, Sign out |
 
 Naming: use **Schedules** (noun), not “Scheduled”.
 
@@ -39,12 +39,11 @@ Skills · Plugins · Tools · Agents · Prompts · MCP · Workflows · Templates
 ## Settings and administration
 
 The platform logo returns to Dashboard. The user avatar at the bottom of the sidebar opens account and system settings.
-Settings contains Profile and Security & login tabs. Only implemented settings are shown.
-Organizations & workspaces opens the existing organization management page; it does not claim to switch active tenant context.
+Settings contains Profile, Security & login, Workspace, Apps & system, and Data & privacy tabs. Workspace links to the one canonical organization/workspace, assigned projects, access reference, and Admin-only platform role assignment.
+Organization & workspace opens the existing organization management page; it does not claim to switch active tenant context.
 Credentials opens the existing scoped credential page.
 
-Admins and owners get one System administration submenu: User roles (`/admin`) and Access reference (`/roles`).
-No separate Owner Console or Admin Console appears in daily navigation. Owners retain their existing permissions within shared pages.
+Settings → Workspace contains Access reference (`/roles`) and, for platform Admins only, User roles (`/admin`). These role tools are removed from the account menu to avoid duplicate navigation. Direct route authorization remains enforced.
 Marketplace remains the single resource registry entry. Existing URLs and server authorization remain unchanged.
 
 ## Product rule
@@ -58,14 +57,11 @@ Open Connect is the gateway and control plane. Independent applications consume 
 | Personal settings | Every signed-in account | Settings: Profile; Security & login |
 | Client workspace | Member (stored as user) | Daily work, own credentials and API keys |
 | Toolkit management | Developer and higher | Build, using manage_toolkits capability |
-| System administration | Platform admin and owner | User avatar menu: User roles; Access reference |
+| System administration | Platform admin and owner | Settings → Workspace: User roles; Access reference |
 | Owner role management | Platform owner only | Within the shared User roles page |
 | Organizations and projects | Existing membership policies | Organizations & workspaces; Projects |
 
-System administration manages platform roles, not tenant membership. Organization
-owner/admin/member and project manager/developer/viewer are separate contexts.
-No additional access is granted by navigation. Clients are Members, not a new database role.
-Owner-role revocation and self-admin revocation controls mirror existing server denials.
+System administration manages platform roles; Organization settings manages HillStreet membership and groups; each project controls its own collaboration grants. Admin, Developer, and Member are the only human role labels across those scopes. Navigation adds no access. Clients use Member-level human identity plus their own scoped machine credentials.
 
 ## Account menu placement and MCP verification
 

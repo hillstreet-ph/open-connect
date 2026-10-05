@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Archive, Brain, CopyX, Loader2, Pin, PinOff, Plus, Search, Trash2 } from "lucide-react";
@@ -294,26 +294,32 @@ export function MemoryKnowledgePage({
       className={studioMode ? "space-y-4" : "mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 sm:py-8"}
     >
       {!studioMode ? (
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <Badge variant="outline" className="mb-2 border-primary/40 text-primary">
-              <Brain className="mr-1 size-3" /> AI context
-            </Badge>
-            <h1 className="font-display text-xl font-semibold tracking-tight sm:text-2xl">
-              {defaultSection === "memory" ? "Project Memory" : "Project Knowledge"}
-            </h1>
-            <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-              {defaultSection === "memory"
-                ? "Store durable project decisions, instructions, preferences, and summaries."
-                : "Organize project documents, URLs, repositories, conversations, and reusable sources."}{" "}
-              Records are private to your authenticated identity and can be scoped to each project.
-            </p>
+        <>
+          <Link to="/settings" className="inline-flex text-sm text-primary hover:underline">
+            ← Back to Settings
+          </Link>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <Badge variant="outline" className="mb-2 border-primary/40 text-primary">
+                <Brain className="mr-1 size-3" /> AI context
+              </Badge>
+              <h1 className="font-display text-xl font-semibold tracking-tight sm:text-2xl">
+                {defaultSection === "memory" ? "Project Memory" : "Project Knowledge"}
+              </h1>
+              <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+                {defaultSection === "memory"
+                  ? "Store durable project decisions, instructions, preferences, and summaries."
+                  : "Organize project documents, URLs, repositories, conversations, and reusable sources."}{" "}
+                Records are private to your authenticated identity and can be scoped to each
+                project.
+              </p>
+            </div>
+            <div className="w-full sm:w-72">
+              <Label className="mb-2 block">Project scope</Label>
+              <ProjectSelect value={projectId} onChange={setProjectId} projects={projectOptions} />
+            </div>
           </div>
-          <div className="w-full sm:w-72">
-            <Label className="mb-2 block">Project scope</Label>
-            <ProjectSelect value={projectId} onChange={setProjectId} projects={projectOptions} />
-          </div>
-        </div>
+        </>
       ) : (
         <div className="flex items-center justify-between gap-3">
           <h3 className="font-medium">Create {defaultSection}</h3>

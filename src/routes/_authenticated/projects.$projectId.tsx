@@ -9,13 +9,12 @@ import {
   deleteProject,
   listProjectEnvironments,
   listProjects,
+  listMyProjectMemberships,
   renameProject,
 } from "@/lib/orgs.functions";
 import {
   addCredentialToProject,
   addConnectionToProject,
-  addResourceToProject,
-  listCatalogForProject,
   listMyConnections,
   listMyCredentialMetadata,
   listProjectConnections,
@@ -23,7 +22,6 @@ import {
   listProjectResources,
   removeConnectionFromProject,
   removeCredentialFromProject,
-  removeResourceFromProject,
 } from "@/lib/workspace.functions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -41,7 +39,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useRoles } from "@/hooks/use-roles";
-import { groupProjectResources, RESOURCE_CATEGORIES } from "@/lib/resource-categories";
+import { groupProjectResources } from "@/lib/resource-categories";
 import { listKnowledge, listMemories } from "@/lib/memory.functions";
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId")({
@@ -59,8 +57,6 @@ export const Route = createFileRoute("/_authenticated/projects/$projectId")({
   component: ProjectWorkspacePage,
 });
 
-const TYPE_FILTERS = ["all", ...RESOURCE_CATEGORIES.map((category) => category.type)] as const;
-
 function ProjectWorkspacePage() {
   const { projectId } = Route.useParams();
   const qc = useQueryClient();
@@ -68,18 +64,16 @@ function ProjectWorkspacePage() {
   const { isAdmin } = useRoles();
 
   const listProj = useServerFn(listProjects);
+  const listMemberships = useServerFn(listMyProjectMemberships);
   const listEnvs = useServerFn(listProjectEnvironments);
   const ensureEnvs = useServerFn(ensureProjectEnvironments);
   const deleteProj = useServerFn(deleteProject);
   const renameProj = useServerFn(renameProject);
   const listRes = useServerFn(listProjectResources);
   const listConn = useServerFn(listProjectConnections);
-  const listCat = useServerFn(listCatalogForProject);
   const listMyConn = useServerFn(listMyConnections);
   const listMyCred = useServerFn(listMyCredentialMetadata);
   const listProjCred = useServerFn(listProjectCredentials);
-  const addRes = useServerFn(addResourceToProject);
-  const remRes = useServerFn(removeResourceFromProject);
   const addConn = useServerFn(addConnectionToProject);
   const remConn = useServerFn(removeConnectionFromProject);
   const addCred = useServerFn(addCredentialToProject);
@@ -87,8 +81,6 @@ function ProjectWorkspacePage() {
   const getMemories = useServerFn(listMemories);
   const getKnowledge = useServerFn(listKnowledge);
 
-  const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [pickResource, setPickResource] = useState("");
   const [pickConnection, setPickConnection] = useState("");
   const [pickCredential, setPickCredential] = useState("");
   const [renameOpen, setRenameOpen] = useState(false);
@@ -97,6 +89,14 @@ function ProjectWorkspacePage() {
 
   const projects = useQuery({ queryKey: ["projects"], queryFn: () => listProj({}) });
   const project = (projects.data ?? []).find((p) => p.id === projectId);
+  const memberships = useQuery({
+    queryKey: ["my-project-memberships"],
+    queryFn: () => listMemberships(),
+  });
+  const hasProjectAdmin = (memberships.data ?? []).some(
+    (membership) => membership.project_id === projectId && membership.role === "admin",
+  );
+  const canManageProjectSettings = isAdmin || hasProjectAdmin;
 
   const environments = useQuery({
     queryKey: ["project-environments", projectId],
@@ -123,13 +123,6 @@ function ProjectWorkspacePage() {
     queryFn: () => listConn({ data: { projectId } }),
     enabled: Boolean(projectId),
   });
-  const catalog = useQuery({
-    queryKey: ["catalog-for-project", typeFilter],
-    queryFn: () =>
-      listCat({
-        data: typeFilter === "all" ? {} : { resourceType: typeFilter },
-      }),
-  });
   const myConnections = useQuery({
     queryKey: ["my-connections"],
     queryFn: () => listMyConn({}),
@@ -154,25 +147,10 @@ function ProjectWorkspacePage() {
     enabled: Boolean(projectId),
   });
 
-  const addResMut = useMutation({
-    mutationFn: () => addRes({ data: { projectId, resourceId: pickResource } }),
-    onSuccess: () => {
-      toast.success("Added to project");
-      setPickResource("");
-      void qc.invalidateQueries({ queryKey: ["project-resources", projectId] });
-    },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
-  });
-
-  const remResMut = useMutation({
-    mutationFn: (resourceId: string) => remRes({ data: { projectId, resourceId } }),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ["project-resources", projectId] }),
-  });
-
   const addConnMut = useMutation({
     mutationFn: () => addConn({ data: { projectId, connectionId: pickConnection } }),
     onSuccess: () => {
-      toast.success("Connection scoped to project");
+      toast.success("Connection shared with project");
       setPickConnection("");
       void qc.invalidateQueries({ queryKey: ["project-connections", projectId] });
     },
@@ -254,6 +232,11 @@ function ProjectWorkspacePage() {
             <Link to="/projects">All projects</Link>
           </Button>
           <Button asChild size="sm" variant="outline">
+            <Link to="/project-access/$projectId" params={{ projectId }}>
+              Manage access
+            </Link>
+          </Button>
+          <Button asChild size="sm" variant="outline">
             <Link to="/resources">Marketplace</Link>
           </Button>
           <Button asChild size="sm" variant="outline">
@@ -262,7 +245,7 @@ function ProjectWorkspacePage() {
           <Button asChild size="sm" variant="outline">
             <Link to="/secrets">Vault</Link>
           </Button>
-          {isAdmin ? (
+          {canManageProjectSettings ? (
             <>
               <Button
                 size="sm"
@@ -274,9 +257,11 @@ function ProjectWorkspacePage() {
               >
                 <Pencil className="size-3.5" /> Rename
               </Button>
-              <Button size="sm" variant="destructive" onClick={() => setDeleteOpen(true)}>
-                <Trash2 className="size-3.5" /> Delete project
-              </Button>
+              {isAdmin ? (
+                <Button size="sm" variant="destructive" onClick={() => setDeleteOpen(true)}>
+                  <Trash2 className="size-3.5" /> Delete project
+                </Button>
+              ) : null}
             </>
           ) : null}
         </div>
@@ -286,7 +271,8 @@ function ProjectWorkspacePage() {
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Memory · Knowledge</CardTitle>
           <CardDescription>
-            Private context assigned from Studio. These records never publish to Marketplace.
+            Private context assigned from Studio is shared with this project's members. These
+            records never publish to Marketplace.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-5 lg:grid-cols-2">
@@ -391,66 +377,27 @@ function ProjectWorkspacePage() {
       </Card>
 
       <Card className="shadow-panel">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Add from workspace library</CardTitle>
+        <CardHeader>
+          <CardTitle className="text-base">Shared workspace library</CardTitle>
           <CardDescription>
-            Assign resources already installed from Marketplace or published in Studio. Public
-            Marketplace items must be installed first.
+            Install once and use across all your projects. Choose project credentials separately
+            below.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap gap-2">
-            {TYPE_FILTERS.map((t) => (
-              <Button
-                key={t}
-                size="sm"
-                variant={typeFilter === t ? "default" : "outline"}
-                onClick={() => setTypeFilter(t)}
-              >
-                {t === "all"
-                  ? "All"
-                  : (RESOURCE_CATEGORIES.find((category) => category.type === t)?.label ?? t)}
-              </Button>
-            ))}
-          </div>
-          <div className="flex flex-wrap items-end gap-2">
-            <div className="min-w-[220px] flex-1 space-y-1">
-              <Label htmlFor="pick-res">Installed resource</Label>
-              <select
-                id="pick-res"
-                className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                value={pickResource}
-                onChange={(e) => setPickResource(e.target.value)}
-              >
-                <option value="">Select resource…</option>
-                {(catalog.data ?? []).map(
-                  (r: { id: string; name?: string; resource_type?: string }) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name} ({r.resource_type})
-                    </option>
-                  ),
-                )}
-              </select>
-            </div>
-            <Button
-              disabled={!pickResource || addResMut.isPending}
-              onClick={() => addResMut.mutate()}
-            >
-              {addResMut.isPending ? <Loader2 className="mr-1 size-3.5 animate-spin" /> : null}
-              Add to project
-            </Button>
-          </div>
+        <CardContent>
+          <Button asChild variant="outline">
+            <Link to="/library">Manage installed resources</Link>
+          </Button>
         </CardContent>
       </Card>
 
       <div className="space-y-4">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Installed project resources ({resources.data?.length ?? 0})
+          Available resources ({resources.data?.length ?? 0})
         </h2>
         {(resources.data ?? []).length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            No resources assigned yet — install from Marketplace, then add from the workspace
-            library.
+            No resources yet. Install from Marketplace to make them available across your projects.
           </p>
         ) : (
           resourceGroups.map((group) => (
@@ -478,14 +425,9 @@ function ProjectWorkspacePage() {
                             {resource?.description || resource?.version || ""}
                           </p>
                         </div>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => resource?.id && remResMut.mutate(resource.id)}
-                          aria-label={`Remove ${resource?.name ?? "resource"} from project`}
-                        >
-                          <Trash2 className="size-3.5" />
-                        </Button>
+                        <Badge variant="outline">
+                          {row.shared ? "All projects" : "Project context"}
+                        </Badge>
                       </div>
                     </Card>
                   );
@@ -496,12 +438,12 @@ function ProjectWorkspacePage() {
         )}
       </div>
 
-      <Card className="shadow-panel">
+      <Card id="project-connections" className="shadow-panel">
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Connections · MCP · AI Gateway</CardTitle>
           <CardDescription>
-            Share a general sidebar connection or AI provider with this project. Secrets remain in
-            Vault and only the opaque broker reference is scoped.
+            The account owner explicitly shares this connection with the project. Members can invoke
+            its provider tools through the broker; credentials and connection settings stay private.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -529,7 +471,7 @@ function ProjectWorkspacePage() {
               onClick={() => addConnMut.mutate()}
             >
               {addConnMut.isPending ? <Loader2 className="mr-1 size-3.5 animate-spin" /> : null}
-              Scope to project
+              Share connection
             </Button>
           </div>
           <div className="space-y-2">
@@ -542,6 +484,7 @@ function ProjectWorkspacePage() {
                 (row: {
                   id: string;
                   connection_id?: string;
+                  can_revoke?: boolean;
                   app_connections?: {
                     display_name?: string;
                     provider?: string;
@@ -560,13 +503,16 @@ function ProjectWorkspacePage() {
                           {c?.provider} · {c?.status}
                         </p>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => row.connection_id && remConnMut.mutate(row.connection_id)}
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
+                      {row.can_revoke ? (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          aria-label={`Remove ${c?.display_name || c?.provider || "connection"} from project`}
+                          onClick={() => row.connection_id && remConnMut.mutate(row.connection_id)}
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      ) : null}
                     </div>
                   );
                 },
@@ -578,16 +524,16 @@ function ProjectWorkspacePage() {
 
       <Card className="shadow-panel">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Shared credentials</CardTitle>
+          <CardTitle className="text-base">Shared credentials · Vault references</CardTitle>
           <CardDescription>
-            Select credentials from the general sidebar Vault. Project pages show metadata only;
-            saved passwords, tokens, and TOTP seeds are never exposed here.
+            These references show metadata only and do not grant access to a connected account.
+            Secret values and TOTP seeds remain private to their owner.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-wrap items-end gap-2">
             <div className="min-w-[220px] flex-1 space-y-1">
-              <Label htmlFor="pick-credential">General Vault credential</Label>
+              <Label htmlFor="pick-credential">Personal Vault credential reference</Label>
               <select
                 id="pick-credential"
                 className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
@@ -625,6 +571,9 @@ function ProjectWorkspacePage() {
                   name?: string;
                   secret_type?: string;
                   scopes?: string[];
+                  can_remove?: boolean;
+                  shared_via_folder?: boolean;
+                  folder_names?: string[];
                 }) => (
                   <div
                     key={credential.id}
@@ -636,15 +585,22 @@ function ProjectWorkspacePage() {
                         {credential.secret_type} ·{" "}
                         {(credential.scopes ?? []).join(", ") || "general"}
                       </p>
+                      {credential.shared_via_folder ? (
+                        <p className="mt-1 text-[11px] text-muted-foreground">
+                          Shared via folder: {(credential.folder_names ?? []).join(", ")}
+                        </p>
+                      ) : null}
                     </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      aria-label={`Remove ${credential.name ?? "credential"} from project`}
-                      onClick={() => remCredMut.mutate(credential.credential_id)}
-                    >
-                      <Trash2 className="size-3.5" />
-                    </Button>
+                    {credential.can_remove ? (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        aria-label={`Remove ${credential.name ?? "credential"} from project`}
+                        onClick={() => remCredMut.mutate(credential.credential_id)}
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    ) : null}
                   </div>
                 ),
               )

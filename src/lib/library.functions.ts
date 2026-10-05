@@ -35,63 +35,41 @@ export const listLibraryResources = createServerFn({ method: "GET" })
     resourceType: input?.resourceType ?? null,
   }))
   .handler(async ({ data, context }) => {
-    const libraryId = await ensureLibrary(context);
-    let installedQuery = context.supabase
-      .from("toolkit_items")
-      .select(
-        "id, created_at, resources(id, name, slug, description, resource_type, version, verified, package_filename, package_size)",
-      )
-      .eq("toolkit_id", libraryId)
-      .order("created_at", { ascending: false });
-    let ownedQuery = context.supabase
-      .from("resources")
-      .select(
-        "id, created_at, name, slug, description, resource_type, version, verified, package_filename, package_size",
-      )
-      .eq("owner_id", context.userId)
-      .order("created_at", { ascending: false });
-    if (data.resourceType) {
-      installedQuery = installedQuery.eq("resources.resource_type", data.resourceType);
-      ownedQuery = ownedQuery.eq("resource_type", data.resourceType as never);
-    }
-    const [installedResult, ownedResult] = await Promise.all([installedQuery, ownedQuery]);
-    if (installedResult.error) throw new Error(installedResult.error.message);
-    if (ownedResult.error) throw new Error(ownedResult.error.message);
-    const installed = (installedResult.data ?? []) as unknown as Array<{
-      id: string;
-      created_at: string;
-      resources: {
-        id: string;
-        name: string;
-        slug: string;
-        description: string | null;
-        resource_type: string;
-        version: string | null;
-        verified: boolean;
-        package_filename: string | null;
-        package_size: number | null;
-      } | null;
-    }>;
-    const byId = new Map(
-      installed.flatMap((row) => (row.resources ? [[row.resources.id, row] as const] : [])),
-    );
-    for (const resource of ownedResult.data ?? []) {
-      if (!byId.has(resource.id)) {
-        byId.set(resource.id, {
-          id: `owned-${resource.id}`,
-          created_at: resource.created_at,
-          resources: resource,
-        });
-      }
-    }
-    return Array.from(byId.values()).sort((a, b) => b.created_at.localeCompare(a.created_at));
+    const { readWorkspaceLibrary } = await import("@/lib/workspace-library.server");
+    return readWorkspaceLibrary(context, data.resourceType);
   });
 
 export const addResourceToLibrary = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input: { resourceId: string }) => ({ resourceId: input?.resourceId ?? "" }))
+  .validator((input: { resourceId: string; collectionId?: string | null }) => ({
+    resourceId: input?.resourceId ?? "",
+    collectionId: input?.collectionId ?? null,
+  }))
   .handler(async ({ data, context }) => {
     if (!data.resourceId) throw new Error("resourceId required");
+    let collectionId: string | null = null;
+    if (data.collectionId) {
+      const { data: collection, error: collectionError } = await context.supabase
+        .from("toolkits")
+        .select("id")
+        .eq("id", data.collectionId)
+        .eq("user_id", context.userId)
+        .like("slug", "collection-%")
+        .maybeSingle();
+      if (collectionError) throw new Error(collectionError.message);
+      if (!collection) throw new Error("Collection not found.");
+      const { data: currentItems, error: itemsError } = await context.supabase
+        .from("toolkit_items")
+        .select("resource_id")
+        .eq("toolkit_id", collection.id);
+      if (itemsError) throw new Error(itemsError.message);
+      const existingIds = new Set((currentItems ?? []).map((item) => item.resource_id));
+      if (!existingIds.has(data.resourceId) && existingIds.size >= 100) {
+        throw new Error("This collection already contains 100 resources.");
+      }
+      collectionId = collection.id;
+    }
+
     const libraryId = await ensureLibrary(context);
     const { error } = await context.supabase
       .from("toolkit_items")
@@ -100,6 +78,15 @@ export const addResourceToLibrary = createServerFn({ method: "POST" })
         { onConflict: "toolkit_id,resource_id" },
       );
     if (error) throw new Error(error.message);
+    if (collectionId) {
+      const { error: itemError } = await context.supabase
+        .from("toolkit_items")
+        .upsert(
+          { toolkit_id: collectionId, resource_id: data.resourceId, position: 0 },
+          { onConflict: "toolkit_id,resource_id" },
+        );
+      if (itemError) throw new Error(itemError.message);
+    }
     return { ok: true };
   });
 
@@ -114,5 +101,35 @@ export const removeResourceFromLibrary = createServerFn({ method: "POST" })
       .eq("toolkit_id", libraryId)
       .eq("resource_id", data.resourceId);
     if (error) throw new Error(error.message);
+
+    const { data: collections, error: collectionsError } = await context.supabase
+      .from("toolkits")
+      .select("id")
+      .eq("user_id", context.userId)
+      .like("slug", "collection-%");
+    if (collectionsError) throw new Error(collectionsError.message);
+    const collectionIds = (collections ?? []).map((collection) => collection.id);
+    if (collectionIds.length) {
+      const { error: collectionItemsError } = await context.supabase
+        .from("toolkit_items")
+        .delete()
+        .in("toolkit_id", collectionIds)
+        .eq("resource_id", data.resourceId);
+      if (collectionItemsError) throw new Error(collectionItemsError.message);
+    }
     return { ok: true };
+  });
+
+export const listResourceProjectAssignments = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("project_resources")
+      .select("resource_id, project_id, projects(name)");
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((row) => ({
+      resourceId: row.resource_id,
+      projectId: row.project_id,
+      projectName: row.projects?.name ?? "Project",
+    }));
   });

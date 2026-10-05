@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { normalizeConnectionSetup, type ConnectionSetupInput } from "@/lib/connection-setup";
+import { AI_GATEWAY_PROVIDERS } from "@/lib/ai-gateway-providers";
+import { hasRole, type AppRole } from "@/lib/rbac";
 
 /**
  * Connection catalog — professional app plane.
@@ -8,6 +10,63 @@ import { normalizeConnectionSetup, type ConnectionSetupInput } from "@/lib/conne
  * Agents never receive provider tokens; they present oc_live_ keys only.
  */
 const CATALOG = [
+  {
+    provider: "cloudflare_api_key",
+    display_name: "Cloudflare API",
+    category: "Infrastructure",
+    scopes: [],
+    oauth: true,
+  },
+  {
+    provider: "cloudflare_browser_rendering",
+    display_name: "Cloudflare Browser Rendering",
+    category: "Infrastructure",
+    scopes: [],
+    oauth: true,
+  },
+  {
+    provider: "railway",
+    display_name: "Railway",
+    category: "Infrastructure",
+    scopes: [],
+    oauth: true,
+  },
+  // Existing Composio toolkits use hosted authorization when configured.
+  {
+    provider: "google_sheets",
+    display_name: "Google Sheets",
+    category: "Productivity",
+    scopes: [],
+    oauth: true,
+  },
+  {
+    provider: "google_docs",
+    display_name: "Google Docs",
+    category: "Productivity",
+    scopes: [],
+    oauth: true,
+  },
+  {
+    provider: "google_photos",
+    display_name: "Google Photos",
+    category: "Productivity",
+    scopes: [],
+    oauth: true,
+  },
+  {
+    provider: "google_super",
+    display_name: "Google Workspace",
+    category: "Productivity",
+    scopes: [],
+    oauth: true,
+  },
+  {
+    provider: "firecrawl",
+    display_name: "Firecrawl",
+    category: "Data",
+    scopes: [],
+    oauth: true,
+  },
   // Development
   {
     provider: "github",
@@ -44,13 +103,6 @@ const CATALOG = [
     scopes: ["read:jira-work", "write:jira-work"],
     oauth: true,
   },
-  {
-    provider: "cursor",
-    display_name: "Cursor",
-    category: "Development",
-    scopes: ["mcp"],
-    oauth: false,
-  },
   // Communication
   {
     provider: "telegram",
@@ -79,112 +131,6 @@ const CATALOG = [
     category: "Communication",
     scopes: ["gmail.readonly", "gmail.send"],
     oauth: true,
-  },
-  // AI clients & gateways
-  {
-    provider: "chatgpt",
-    display_name: "ChatGPT / OpenAI",
-    category: "AI",
-    scopes: ["models", "plugins", "mcp", "actions"],
-    oauth: true,
-  },
-  {
-    provider: "claude",
-    display_name: "Claude / Anthropic",
-    category: "AI",
-    scopes: ["models", "mcp", "plugins"],
-    oauth: true,
-  },
-  {
-    provider: "grok",
-    display_name: "Grok / xAI",
-    category: "AI",
-    scopes: ["models", "mcp", "tools"],
-    oauth: true,
-  },
-  {
-    provider: "hermes",
-    display_name: "Hermes Agent",
-    category: "AI",
-    scopes: ["mcp"],
-    oauth: false,
-  },
-  {
-    provider: "openwebui",
-    display_name: "Open WebUI",
-    category: "AI",
-    scopes: ["models", "tools", "mcp"],
-    oauth: false,
-  },
-  {
-    provider: "openai",
-    display_name: "OpenAI API",
-    category: "AI",
-    scopes: ["models"],
-    oauth: false,
-  },
-  {
-    provider: "openrouter",
-    display_name: "OpenRouter",
-    category: "AI",
-    scopes: ["models"],
-    oauth: false,
-  },
-  {
-    provider: "anthropic",
-    display_name: "Anthropic API",
-    category: "AI",
-    scopes: ["models"],
-    oauth: false,
-  },
-  {
-    provider: "google",
-    display_name: "Google Gemini API",
-    category: "AI",
-    scopes: ["models"],
-    oauth: false,
-  },
-  {
-    provider: "xai",
-    display_name: "xAI API",
-    category: "AI",
-    scopes: ["models"],
-    oauth: false,
-  },
-  {
-    provider: "mistral",
-    display_name: "Mistral API",
-    category: "AI",
-    scopes: ["models"],
-    oauth: false,
-  },
-  {
-    provider: "deepseek",
-    display_name: "DeepSeek API",
-    category: "AI",
-    scopes: ["models"],
-    oauth: false,
-  },
-  {
-    provider: "litellm",
-    display_name: "LiteLLM",
-    category: "AI",
-    scopes: ["models", "proxy"],
-    oauth: false,
-  },
-  {
-    provider: "lobehub",
-    display_name: "LobeHub",
-    category: "AI",
-    scopes: ["models", "agents", "mcp"],
-    oauth: false,
-  },
-  {
-    provider: "multion",
-    display_name: "MultiOn",
-    category: "AI",
-    scopes: ["browse", "sessions"],
-    oauth: false,
   },
   // Automation / integration platforms
   {
@@ -324,33 +270,61 @@ const CATALOG = [
   {
     provider: "custom_mcp",
     display_name: "Custom MCP server",
-    category: "Custom",
+    category: "Automation",
     scopes: ["tools:list", "tools:invoke"],
     oauth: false,
   },
 ] as const;
 
 export const listConnectionCatalog = createServerFn({ method: "GET" }).handler(async () => {
-  const { managedConnectorReady } = await import("@/lib/managed-connectors.server");
+  const { managedConnectorReady, connectionMethod, listComposioToolkits } =
+    await import("@/lib/managed-connectors.server");
   const githubReady = Boolean(
     process.env["GITHUB_CLIENT_ID"]?.trim() && process.env["GITHUB_CLIENT_SECRET"]?.trim(),
   );
-  return CATALOG.map((item) => {
-    const method =
-      item.provider === "github" ? "native_oauth" : item.oauth ? "managed_oauth" : "api_key";
+  const toolkits = await listComposioToolkits();
+  const toolkitBySlug = new Map(toolkits.map((toolkit) => [toolkit.slug, toolkit]));
+  const catalog = new Map<
+    string,
+    {
+      provider: string;
+      display_name: string;
+      category: string;
+      scopes: readonly string[];
+      oauth: boolean;
+      auth_methods?: string[];
+    }
+  >();
+  for (const item of CATALOG) catalog.set(item.provider, item);
+  for (const toolkit of toolkits) {
+    if (catalog.has(toolkit.slug)) continue;
+    catalog.set(toolkit.slug, {
+      provider: toolkit.slug,
+      display_name: toolkit.name,
+      category: toolkit.category,
+      scopes: [],
+      oauth: toolkit.authMethods.includes("OAUTH2"),
+      auth_methods: toolkit.authMethods,
+    });
+  }
+  return [...catalog.values()].map((item) => {
+    const toolkit = toolkitBySlug.get(item.provider);
+    const dynamicallyConnectable = Boolean(toolkit && process.env["COMPOSIO_API_KEY"]?.trim());
+    const ready = managedConnectorReady(item.provider) || dynamicallyConnectable;
+    const method = connectionMethod(item.provider, item.oauth, ready);
     return {
       provider: item.provider,
       display_name: item.display_name,
       category: item.category,
       scopes: [...item.scopes],
-      oauth: item.oauth,
+      auth_methods:
+        item.auth_methods ??
+        toolkit?.authMethods ??
+        (item.provider === "custom_mcp" ? ["MCP"] : []),
+      oauth: method !== "api_key",
       connection_method: method,
       oauth_ready:
-        method === "native_oauth"
-          ? githubReady
-          : method === "managed_oauth"
-            ? managedConnectorReady(item.provider)
-            : false,
+        method === "native_oauth" ? githubReady : method === "managed_oauth" ? ready : false,
     };
   });
 });
@@ -379,10 +353,7 @@ export const listAppConnections = createServerFn({ method: "GET" })
           try {
             const remote = await getManagedConnection(connection.provider, accountId);
             if (remote.status?.toUpperCase() !== "ACTIVE") return;
-            connection.status = "connected";
-            connection.provider_account_id = remote.id || accountId;
-            connection.scopes = [];
-            await context.supabase
+            const { error: updateError } = await context.supabase
               .from("app_connections")
               .update({
                 status: "connected",
@@ -391,20 +362,116 @@ export const listAppConnections = createServerFn({ method: "GET" })
                   source: "open-connect",
                   mode: "managed_oauth",
                   broker: "composio",
-                  validation: { verified: true, checked_at: new Date().toISOString() },
+                  validation: {
+                    verified: true,
+                    checked_at: new Date().toISOString(),
+                  },
                   full_scopes: false,
                 },
               })
               .eq("id", connection.id);
+            if (updateError) throw new Error("Could not save verified connection status");
+            connection.status = "connected";
+            connection.provider_account_id = remote.id || accountId;
+            connection.scopes = [];
           } catch {
             // Keep pending. The broker may still be waiting for the user to finish authorization.
           }
         }),
       );
     }
-    return connections.map(
-      ({ credential_reference: _credentialReference, ...connection }) => connection,
+    return connections.map(({ credential_reference, ...connection }) => {
+      const isModelGateway = AI_GATEWAY_PROVIDERS.some(
+        (provider) => provider.id === connection.provider,
+      );
+      const hasGatewayReference = Boolean(
+        credential_reference?.match(
+          new RegExp(`^credential://${connection.provider}/([0-9a-f-]{36})$`, "i"),
+        ),
+      );
+      return {
+        ...connection,
+        ...(isModelGateway
+          ? {
+              gateway_ready: connection.status === "connected" && hasGatewayReference,
+            }
+          : {}),
+      };
+    });
+  });
+
+export const syncComposioConnections = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: roleRows, error: roleError } = await context.supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", context.userId);
+    if (roleError) throw new Error(roleError.message);
+    const roles = (roleRows ?? []).map((row: { role: AppRole }) => row.role);
+    const effectiveRoles: AppRole[] = roles.length ? roles : ["user"];
+    if (!hasRole(effectiveRoles, "admin")) {
+      throw new Error("Forbidden: admin required");
+    }
+
+    const { listOwnedManagedConnections, listComposioToolkits } =
+      await import("@/lib/managed-connectors.server");
+    const [accounts, toolkits] = await Promise.all([
+      listOwnedManagedConnections(context.userId),
+      listComposioToolkits(),
+    ]);
+    const syncCatalog = new Map<string, { display_name: string }>(
+      CATALOG.map((item) => [item.provider, { display_name: item.display_name }]),
     );
+    for (const toolkit of toolkits) {
+      if (!syncCatalog.has(toolkit.slug))
+        syncCatalog.set(toolkit.slug, { display_name: toolkit.name });
+    }
+    const { data: saved, error: readError } = await context.supabase
+      .from("app_connections")
+      .select("provider,provider_account_id")
+      .eq("user_id", context.userId);
+    if (readError) throw new Error(readError.message);
+    const keys = new Set(
+      (saved ?? []).map((item) => `${item.provider}:${item.provider_account_id}`),
+    );
+    const records = accounts.flatMap((account) => {
+      const app = syncCatalog.get(account.provider);
+      if (!app || keys.has(`${account.provider}:${account.id}`)) return [];
+      return [
+        {
+          user_id: context.userId,
+          provider: account.provider,
+          provider_account_id: account.id,
+          display_name: app.display_name,
+          status: "connected",
+          scopes: [] as string[],
+          credential_reference: `composio://connected-account/${account.id}`,
+          metadata: {
+            source: "composio-sync",
+            mode: "managed_oauth",
+            broker: "composio",
+            validation: {
+              verified: true,
+              checked_at: new Date().toISOString(),
+            },
+            full_scopes: false,
+          },
+        },
+      ];
+    });
+    if (records.length) {
+      const { error } = await context.supabase.from("app_connections").insert(records);
+      if (error?.code === "23505") {
+        throw new Error("Another sync updated these accounts. Run sync again to refresh.");
+      }
+      if (error) throw new Error(error.message);
+    }
+    return {
+      imported: records.length,
+      existing: accounts.length - records.length,
+      matched: accounts.length,
+    };
   });
 
 export const connectApp = createServerFn({ method: "POST" })
@@ -413,11 +480,27 @@ export const connectApp = createServerFn({ method: "POST" })
     provider: (input?.provider ?? "").trim().toLowerCase(),
   }))
   .handler(async ({ data, context }) => {
-    const app = CATALOG.find((item) => item.provider === data.provider);
+    const { managedConnectorReady, connectionMethod, listComposioToolkits } =
+      await import("@/lib/managed-connectors.server");
+    const toolkit = (await listComposioToolkits()).find((item) => item.slug === data.provider);
+    const app =
+      CATALOG.find((item) => item.provider === data.provider) ??
+      (toolkit
+        ? {
+            provider: toolkit.slug,
+            display_name: toolkit.name,
+            category: toolkit.category,
+            scopes: [] as string[],
+            oauth: toolkit.authMethods.includes("OAUTH2"),
+          }
+        : undefined);
     if (!app) throw new Error("Unknown application");
-    if (!app.oauth) throw new Error("This provider uses a verified API key or token connection.");
+    const ready = managedConnectorReady(app.provider) || Boolean(toolkit);
+    const method = connectionMethod(app.provider, app.oauth, ready);
+    if (method === "api_key")
+      throw new Error("This provider uses a verified API key or token connection.");
 
-    if (app.provider !== "github") {
+    if (method === "managed_oauth") {
       const { createManagedConnectionLink } = await import("@/lib/managed-connectors.server");
       const callbackUrl = `${(process.env["VITE_APP_URL"] || "https://open-connect.site").replace(
         /\/$/,
@@ -425,6 +508,7 @@ export const connectApp = createServerFn({ method: "POST" })
       )}/connections?connected=${encodeURIComponent(app.provider)}`;
       const link = await createManagedConnectionLink({
         provider: app.provider,
+        toolkitSlug: toolkit?.slug ?? app.provider,
         userId: context.userId,
         callbackUrl,
       });
@@ -591,7 +675,9 @@ export const completeOAuthConnection = createServerFn({ method: "POST" })
       .select("id,provider,display_name,status,scopes,provider_account_id,created_at")
       .single();
     if (updateError) {
-      await context.supabase.rpc("delete_credential_secret", { p_id: secretId });
+      await context.supabase.rpc("delete_credential_secret", {
+        p_id: secretId,
+      });
       throw new Error(updateError.message);
     }
 
@@ -599,7 +685,9 @@ export const completeOAuthConnection = createServerFn({ method: "POST" })
       /^credential:\/\/[^/]+\/([0-9a-f-]{36})$/i,
     )?.[1];
     if (oldSecretId && oldSecretId !== secretId) {
-      await context.supabase.rpc("delete_credential_secret", { p_id: oldSecretId });
+      await context.supabase.rpc("delete_credential_secret", {
+        p_id: oldSecretId,
+      });
     }
     return connected;
   });
@@ -610,23 +698,33 @@ export const disconnectApp = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: connection, error: readError } = await context.supabase
       .from("app_connections")
-      .select("provider,credential_reference")
+      .select("provider,credential_reference,metadata")
+      .eq("user_id", context.userId)
       .eq("id", data.id)
       .maybeSingle();
     if (readError) throw new Error(readError.message);
     const managedAccountId = connection?.credential_reference?.match(
       /^composio:\/\/connected-account\/([^/]+)$/,
     )?.[1];
-    if (managedAccountId && connection?.provider) {
+    const imported =
+      (connection?.metadata as Record<string, unknown> | null)?.["source"] === "composio-sync";
+    if (managedAccountId && connection?.provider && !imported) {
       const { deleteManagedConnection } = await import("@/lib/managed-connectors.server");
       await deleteManagedConnection(connection.provider, managedAccountId);
     }
-    const { error } = await context.supabase.from("app_connections").delete().eq("id", data.id);
+    const { error } = await context.supabase
+      .from("app_connections")
+      .delete()
+      .eq("user_id", context.userId)
+      .eq("id", data.id);
     if (error) throw new Error(error.message);
     const secretId = connection?.credential_reference?.match(
       /^credential:\/\/[^/]+\/([0-9a-f-]{36})$/i,
     )?.[1];
-    if (secretId) await context.supabase.rpc("delete_credential_secret", { p_id: secretId });
+    if (secretId)
+      await context.supabase.rpc("delete_credential_secret", {
+        p_id: secretId,
+      });
     return { ok: true };
   });
 
@@ -634,22 +732,29 @@ export const configureAppConnection = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: ConnectionSetupInput) => input)
   .handler(async ({ data, context }) => {
-    const app = CATALOG.find((item) => item.provider === data.provider.trim().toLowerCase());
+    const providerId = data.provider.trim().toLowerCase();
+    const gatewayProvider = AI_GATEWAY_PROVIDERS.find((item) => item.id === providerId);
+    const app =
+      CATALOG.find((item) => item.provider === providerId) ??
+      (providerId === "custom_mcp"
+        ? {
+            provider: "custom_mcp",
+            display_name: data.display_name.trim() || "Custom MCP server",
+            scopes: [] as const,
+            oauth: false,
+          }
+        : gatewayProvider
+          ? {
+              provider: gatewayProvider.id,
+              display_name: gatewayProvider.name,
+              scopes: [] as const,
+              oauth: false,
+            }
+          : undefined);
     if (!app) throw new Error("Unknown application");
     const setup = normalizeConnectionSetup(data, app);
     const { validateConnectionCredential } = await import("@/lib/connection-validation.server");
     const validation = await validateConnectionCredential(setup);
-    const existing =
-      setup.provider === "custom_mcp"
-        ? null
-        : await context.supabase
-            .from("app_connections")
-            .select("id,credential_reference")
-            .eq("user_id", context.userId)
-            .eq("provider", setup.provider)
-            .is("provider_account_id", null)
-            .maybeSingle();
-    if (existing?.error) throw new Error(existing.error.message);
     let secretId = "";
     if (setup.apiKey) {
       const secretPayload = JSON.stringify({
@@ -670,10 +775,28 @@ export const configureAppConnection = createServerFn({ method: "POST" })
       secretId = String((secret as { id?: string } | null)?.id ?? "");
       if (!secretId) throw new Error("Credential vault did not return a reference");
     }
-    const accountId =
-      setup.provider === "custom_mcp"
-        ? `${setup.accountLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${(secretId || crypto.randomUUID()).slice(0, 8)}`
-        : null;
+    const { data: existingConnections, error: existingError } = await context.supabase
+      .from("app_connections")
+      .select("id,provider_account_id,credential_reference,metadata")
+      .eq("user_id", context.userId)
+      .eq("provider", setup.provider)
+      .order("created_at", { ascending: false })
+      .limit(25);
+    if (existingError) {
+      if (secretId)
+        await context.supabase.rpc("delete_credential_secret", {
+          p_id: secretId,
+        });
+      throw new Error("Could not check your existing provider connection.");
+    }
+    const existing = (existingConnections ?? []).find((item) => {
+      const metadata = item.metadata as Record<string, unknown> | null;
+      return (
+        metadata?.["source"] === "open-connect" &&
+        metadata?.["account_label"] === setup.accountLabel
+      );
+    });
+    const accountId = existing?.provider_account_id ?? `credential-${crypto.randomUUID()}`;
     const record = {
       user_id: context.userId,
       provider: setup.provider,
@@ -698,23 +821,38 @@ export const configureAppConnection = createServerFn({ method: "POST" })
       },
     };
 
-    const query = existing?.data?.id
-      ? context.supabase.from("app_connections").update(record).eq("id", existing.data.id)
-      : context.supabase.from("app_connections").insert(record);
-    const { data: connection, error } = await query
-      .select("id, provider, display_name, status, scopes, provider_account_id, created_at")
-      .single();
+    const query = context.supabase.from("app_connections");
+    const { data: connection, error } = existing
+      ? await query
+          .update(record)
+          .eq("id", existing.id)
+          .eq("user_id", context.userId)
+          .select("id, provider, display_name, status, scopes, provider_account_id, created_at")
+          .single()
+      : await query
+          .insert(record)
+          .select("id, provider, display_name, status, scopes, provider_account_id, created_at")
+          .single();
     if (error) {
       if (secretId) {
-        await context.supabase.rpc("delete_credential_secret", { p_id: secretId });
+        await context.supabase.rpc("delete_credential_secret", {
+          p_id: secretId,
+        });
       }
       throw new Error(error.message);
     }
-    const oldSecretId = existing?.data?.credential_reference?.match(
-      /^credential:\/\/[^/]+\/([0-9a-f-]{36})$/i,
-    )?.[1];
+    const oldReference = existing?.credential_reference;
+    const oldSecretId = oldReference?.match(/^credential:\/\/[^/]+\/([0-9a-f-]{36})$/i)?.[1];
     if (oldSecretId && oldSecretId !== secretId) {
-      await context.supabase.rpc("delete_credential_secret", { p_id: oldSecretId });
+      const { data: references, error: referenceError } = await context.supabase
+        .from("app_connections")
+        .select("id")
+        .eq("credential_reference", oldReference ?? "");
+      if (!referenceError && !references?.length) {
+        await context.supabase.rpc("delete_credential_secret", {
+          p_id: oldSecretId,
+        });
+      }
     }
     return { ...connection, validation };
   });

@@ -30,17 +30,21 @@ Optional later:
 
 After changing secrets: **Retry deployment** on the latest production deploy so runtime and build pick up values.
 
-## Roles (workspace)
+## Roles and access scope
 
-| Role | Can |
-|------|-----|
-| **user** | Dashboard, Studio, Orgs, upload/download, API keys, connections, secrets, guides |
-| **developer** | + manage toolkits |
-| **publisher** | + publish to marketplace |
-| **admin** | + verify packages, manage roles |
-| **owner** | all |
+Human access uses three role names across platform, organization, and project scopes:
 
-Upload adoption is available to **every signed-in user** (`upload_resources` min role = `user`).
+| Role | Purpose |
+|------|---------|
+| **Member** | Use personal resources and connections, plus projects and resources explicitly shared with them. Cannot create organizations, workspaces, or projects. |
+| **Developer** | Member access plus toolkit management, resource publishing and verification, and development inside assigned projects. Cannot create organizations, workspaces, or projects. |
+| **Admin** | Manage organization people, roles, groups, and project access; create projects; configure shared project resources. |
+
+HillStreet uses one canonical organization and one workspace. They are provisioned as the shared structure and are not duplicated through the app. Organization Admins create projects inside that workspace and explicitly share each project with Developers or Members. Organization membership alone does not grant access to project resources. Groups organize teams without granting project access. Personal cloud connections and credentials stay private unless their owner explicitly shares a supported connection or credential reference with a project. AI agents, ChatGPT plugins, and API clients connect through scoped credentials and project resources rather than inheriting a human role.
+
+Legacy Owner and Publisher records are converted to Admin and Developer. New assignments and user interfaces use only Admin, Developer, and Member. Assign platform roles in System administration; invite or edit organization roles and groups in Organization settings.
+
+Upload adoption is available to every signed-in Member (minimum platform role: user).
 
 ## API key scopes (all accounts / new keys)
 

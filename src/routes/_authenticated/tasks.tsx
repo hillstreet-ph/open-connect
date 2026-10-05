@@ -135,7 +135,16 @@ function TasksPage() {
       </Card>
 
       <div className="space-y-2">
-        {(tasks.data ?? []).length === 0 ? (
+        {tasks.isLoading ? <p role="status">Loading tasks…</p> : null}
+        {tasks.isError ? (
+          <p role="alert">
+            Could not load tasks.{" "}
+            <Button variant="link" onClick={() => void tasks.refetch()}>
+              Retry
+            </Button>
+          </p>
+        ) : null}
+        {!tasks.isLoading && !tasks.isError && (tasks.data ?? []).length === 0 ? (
           <p className="text-sm text-muted-foreground">No tasks yet.</p>
         ) : (
           tasks.data?.map((t) => (

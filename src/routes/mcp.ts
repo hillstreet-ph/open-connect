@@ -1,3 +1,5 @@
+import { COMMAND_CENTER_HTML } from "@/lib/command-center";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   authenticateKey,
@@ -59,17 +61,6 @@ type McpTool = {
 
 const COMMAND_CENTER_URI = "ui://open-connect/command-center-v1.html";
 
-const COMMAND_CENTER_HTML = `<!doctype html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<style>body{font:14px system-ui;margin:0;background:#08111f;color:#e5eefb}.app{padding:18px}.head{display:flex;justify-content:space-between;gap:12px;align-items:center}.badge{padding:5px 9px;border-radius:999px;background:#12315c;color:#8fd3ff}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:14px}.card{border:1px solid #24415f;border-radius:12px;padding:13px;background:#0d1b2d}.muted{color:#91a6bd}.ok{color:#6ee7a8}</style></head>
-<body><main class="app"><div class="head"><div><strong>Open-Connect Command Center</strong><div class="muted">Autonomous control with governed writes</div></div><span class="badge">owners + admins</span></div><section id="grid" class="grid"><div class="card">Waiting for Open-Connect status…</div></section></main>
-<script>
-const grid=document.getElementById('grid');
-function render(data){const d=data||{};const items=[['Gateway',d.gateway||'open-connect.site'],['Resources',d.planes?.resources?.published??'—'],['Connections',d.planes?.connections?.connected??'—'],['Policy','Protected actions gated']];grid.innerHTML=items.map(([k,v])=>'<div class="card"><div class="muted">'+k+'</div><div class="ok">'+v+'</div></div>').join('')}
-window.addEventListener('message',e=>{const m=e.data;if(m?.method==='ui/notifications/tool-result')render(m.params?.structuredContent||m.params?.content?.[0]?.text)});
-if(window.openai?.toolOutput)render(window.openai.toolOutput);
-</script></body></html>`;
-
 /** Isolate-level cache (Cloudflare warm isolates reuse this). */
 let catalogCache: {
   at: number;
@@ -85,21 +76,44 @@ const PLATFORM_TOOLS: McpTool[] = [
     name: "search",
     description:
       "Use this when searching Open-Connect projects, providers, plugins, skills, MCP servers, tools, or runs.",
-    inputSchema: { type: "object", properties: { query: { type: "string" } }, required: ["query"] },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    inputSchema: {
+      type: "object",
+      properties: { query: { type: "string" } },
+      required: ["query"],
+    },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
   },
   {
     name: "fetch",
     description: "Use this when retrieving one Open-Connect catalog item by its exact id or slug.",
-    inputSchema: { type: "object", properties: { id: { type: "string" } }, required: ["id"] },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    inputSchema: {
+      type: "object",
+      properties: { id: { type: "string" } },
+      required: ["id"],
+    },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
   },
   {
     name: "open_connect_status",
     description: "Gateway status: resources, connections, models",
     inputSchema: { type: "object", properties: {} },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
-    _meta: { "ui/resourceUri": COMMAND_CENTER_URI, "openai/outputTemplate": COMMAND_CENTER_URI },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
+    _meta: {
+      "ui/resourceUri": COMMAND_CENTER_URI,
+      "openai/outputTemplate": COMMAND_CENTER_URI,
+    },
   },
   {
     name: "list_resources",
@@ -124,20 +138,66 @@ const PLATFORM_TOOLS: McpTool[] = [
       type: "object",
       properties: { type: { type: "string" }, project_id: { type: "string" } },
     },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
+  },
+  {
+    name: "list_my_memory",
+    description:
+      "Read the authenticated user's private Memory library. When project_id is supplied, also include that user's memory explicitly stored in that accessible project. Without project_id, only personal memory is returned.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        project_id: { type: "string" },
+        limit: { type: "integer", minimum: 1, maximum: 200 },
+      },
+    },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
+  },
+  {
+    name: "list_my_knowledge",
+    description:
+      "Read the authenticated user's private Knowledge library. When project_id is supplied, also include that user's knowledge explicitly stored in that accessible project. Without project_id, only personal knowledge is returned.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        project_id: { type: "string" },
+        limit: { type: "integer", minimum: 1, maximum: 200 },
+      },
+    },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
   },
   {
     name: "list_workspace_projects",
     description: "List workspaces and projects permitted by this API key's organization scope.",
     inputSchema: { type: "object", properties: {} },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
   },
   {
     name: "list_credential_metadata",
     description:
       "List owned credential metadata and availability. Secret values and TOTP seeds are never returned.",
     inputSchema: { type: "object", properties: {} },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
   },
   {
     name: "calculate",
@@ -147,7 +207,11 @@ const PLATFORM_TOOLS: McpTool[] = [
       properties: { expression: { type: "string", maxLength: 240 } },
       required: ["expression"],
     },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
   },
   {
     name: "list_connections",
@@ -163,8 +227,15 @@ const PLATFORM_TOOLS: McpTool[] = [
     name: "inspect_connections",
     description:
       "Use this when validating connection health, scopes, and opaque credential bindings.",
-    inputSchema: { type: "object", properties: { provider: { type: "string" } } },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+    inputSchema: {
+      type: "object",
+      properties: { provider: { type: "string" } },
+    },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: true,
+    },
   },
   {
     name: "list_connection_tools",
@@ -174,12 +245,16 @@ const PLATFORM_TOOLS: McpTool[] = [
       properties: { connection_id: { type: "string" } },
       required: ["connection_id"],
     },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: true,
+    },
   },
   {
     name: "call_connection_tool",
     description:
-      "Call a tool on one verified Custom MCP connection. Non-read-only calls require administrator control access; destructive tools also require confirm=true.",
+      "Call a tool on one verified Custom MCP connection. Write-capable actions require a project-scoped key with connections:invoke; destructive tools also require confirm=true.",
     inputSchema: {
       type: "object",
       properties: {
@@ -201,7 +276,11 @@ const PLATFORM_TOOLS: McpTool[] = [
     name: "e2b_health",
     description: "Check whether the configured E2B sandbox API is reachable.",
     inputSchema: { type: "object", properties: {} },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: true,
+    },
   },
   {
     name: "e2b_list_sandboxes",
@@ -210,15 +289,22 @@ const PLATFORM_TOOLS: McpTool[] = [
       type: "object",
       properties: { limit: { type: "integer", minimum: 1, maximum: 100 } },
     },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: true,
+    },
   },
   {
     name: "e2b_create_sandbox",
-    description: "Create an isolated E2B sandbox. Owner/admin and tools:invoke are required.",
+    description: "Create an isolated E2B sandbox. Admin and tools:invoke are required.",
     inputSchema: {
       type: "object",
       properties: {
-        template: { type: "string", description: "E2B template id or alias; defaults to base." },
+        template: {
+          type: "string",
+          description: "E2B template id or alias; defaults to base.",
+        },
         timeout: { type: "integer", minimum: 30, maximum: 3600 },
         metadata: { type: "object", additionalProperties: { type: "string" } },
       },
@@ -233,12 +319,15 @@ const PLATFORM_TOOLS: McpTool[] = [
   {
     name: "e2b_kill_sandbox",
     description:
-      "Terminate one E2B sandbox. Requires explicit confirm=true and owner/admin write access.",
+      "Terminate one E2B sandbox. Requires explicit confirm=true and admin write access.",
     inputSchema: {
       type: "object",
       properties: {
         sandbox_id: { type: "string" },
-        confirm: { type: "boolean", description: "Must be true to terminate the sandbox." },
+        confirm: {
+          type: "boolean",
+          description: "Must be true to terminate the sandbox.",
+        },
       },
       required: ["sandbox_id", "confirm"],
     },
@@ -253,25 +342,42 @@ const PLATFORM_TOOLS: McpTool[] = [
     name: "hubstaff_admin_identity",
     description: "Validate the configured Hubstaff Admin identity and granted account access.",
     inputSchema: { type: "object", properties: {} },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: true,
+    },
   },
   {
     name: "hubstaff_admin_list_organizations",
     description: "List Hubstaff organizations available to the configured administrator.",
     inputSchema: { type: "object", properties: {} },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: true,
+    },
   },
   {
     name: "hubstaff_admin_request",
     description:
-      "Call an authorized Hubstaff v2 endpoint. Writes require owner/admin access; DELETE also requires confirm=true.",
+      "Call an authorized Hubstaff v2 endpoint. Writes require admin access; DELETE also requires confirm=true.",
     inputSchema: {
       type: "object",
       properties: {
-        method: { type: "string", enum: ["GET", "POST", "PUT", "PATCH", "DELETE"] },
-        path: { type: "string", description: "Hubstaff v2 path beginning with /v2/." },
+        method: {
+          type: "string",
+          enum: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+        },
+        path: {
+          type: "string",
+          description: "Hubstaff v2 path beginning with /v2/.",
+        },
         body: { type: "object", additionalProperties: true },
-        confirm: { type: "boolean", description: "Required for DELETE requests." },
+        confirm: {
+          type: "boolean",
+          description: "Required for DELETE requests.",
+        },
       },
       required: ["method", "path"],
     },
@@ -290,11 +396,18 @@ const PLATFORM_TOOLS: McpTool[] = [
       type: "object",
       properties: {
         goal: { type: "string" },
-        environment: { type: "string", enum: ["development", "staging", "production"] },
+        environment: {
+          type: "string",
+          enum: ["development", "staging", "production"],
+        },
       },
       required: ["goal"],
     },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
   },
   {
     name: "execute_plan",
@@ -304,7 +417,10 @@ const PLATFORM_TOOLS: McpTool[] = [
       type: "object",
       properties: {
         goal: { type: "string" },
-        environment: { type: "string", enum: ["development", "staging", "production"] },
+        environment: {
+          type: "string",
+          enum: ["development", "staging", "production"],
+        },
       },
       required: ["goal"],
     },
@@ -327,7 +443,11 @@ const PLATFORM_TOOLS: McpTool[] = [
       },
       required: ["goal"],
     },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
   },
   {
     name: "resolve_capability",
@@ -338,7 +458,11 @@ const PLATFORM_TOOLS: McpTool[] = [
       properties: { capability: { type: "string" } },
       required: ["capability"],
     },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
   },
   {
     name: "create_capability_draft",
@@ -349,7 +473,10 @@ const PLATFORM_TOOLS: McpTool[] = [
       properties: {
         capability: { type: "string" },
         goal: { type: "string" },
-        environment: { type: "string", enum: ["development", "staging", "production"] },
+        environment: {
+          type: "string",
+          enum: ["development", "staging", "production"],
+        },
       },
       required: ["capability", "goal"],
     },
@@ -385,12 +512,15 @@ const PLATFORM_TOOLS: McpTool[] = [
   {
     name: "install_capability",
     description:
-      "Request installation of an approved capability as owner/admin. Returns unsupported until a verified provider executor is available.",
+      "Request installation of an approved capability as admin. Returns unsupported until a verified provider executor is available.",
     inputSchema: {
       type: "object",
       properties: {
         resource_id: { type: "string" },
-        environment: { type: "string", enum: ["development", "staging", "production"] },
+        environment: {
+          type: "string",
+          enum: ["development", "staging", "production"],
+        },
       },
       required: ["resource_id"],
     },
@@ -459,18 +589,41 @@ async function assertProjectAccess(key: AuthedKey, projectId: string) {
   if (key.projectId && project.id !== key.projectId) {
     throw new Error("Project is outside this API key's project scope.");
   }
+
+  const [membership, organizationAdmin] = await Promise.all([
+    supabaseAdmin
+      .from("project_members")
+      .select("id")
+      .eq("project_id", project.id)
+      .eq("user_id", key.userId)
+      .maybeSingle(),
+    supabaseAdmin
+      .from("organization_members")
+      .select("id")
+      .eq("organization_id", project.organization_id)
+      .eq("user_id", key.userId)
+      .eq("role", "admin")
+      .maybeSingle(),
+  ]);
+  if (
+    membership.error ||
+    organizationAdmin.error ||
+    (!membership.data && !organizationAdmin.data)
+  ) {
+    throw new Error("Project is unavailable to this API key.");
+  }
   return project;
 }
 
 async function requireControlWrite(key: AuthedKey) {
   const roles = await loadRoles(key.userId);
-  const authorizedRole = roles.includes("owner") || roles.includes("admin");
+  const authorizedRole = roles.includes("admin");
   const authorizedScope =
     hasScope(key, "control:write") ||
     hasScope(key, "tools:invoke") ||
     hasScope(key, "connections:invoke");
   if (!authorizedRole || !authorizedScope)
-    throw new Error("Owner/admin role and control write scope required.");
+    throw new Error("Admin role and control write scope required.");
   return roles;
 }
 
@@ -503,7 +656,11 @@ function executionUnavailable(operation: "invoke" | "install", resource: Resourc
       status: "unsupported",
       code: "provider_executor_unavailable",
       operation,
-      resource: { slug: resource.slug, name: resource.name, type: resource.resource_type },
+      resource: {
+        slug: resource.slug,
+        name: resource.name,
+        type: resource.resource_type,
+      },
       execution: {
         verified: false,
         performed: false,
@@ -527,14 +684,23 @@ function toolTitle(name: string) {
     .join(" ");
 }
 
-function chatGptTools(key: AuthedKey) {
+function chatGptTools() {
   // Marketplace resources are intentionally accessed through list_resources,
   // search, and fetch. Publishing every catalog row as another MCP tool creates
   // duplicate capabilities and makes ChatGPT's plugin scan brittle.
-  return PLATFORM_TOOLS.filter((tool) => canUseTool(key, tool.name)).map((tool) => ({
-    ...tool,
-    title: tool.title ?? toolTitle(tool.name),
-  }));
+  // Discovery describes capabilities; execution still enforces token scopes and roles.
+  // Hiding write tools here prevents clients from discovering their OAuth requirements.
+  return PLATFORM_TOOLS.map((tool) => {
+    const securitySchemes = [
+      { type: "oauth2", scopes: [TOOL_SCOPES[tool.name] ?? "tools:invoke"] },
+    ];
+    return {
+      ...tool,
+      title: tool.title ?? toolTitle(tool.name),
+      securitySchemes,
+      _meta: { ...tool._meta, securitySchemes },
+    };
+  });
 }
 
 async function getCatalog(force = false) {
@@ -544,17 +710,22 @@ async function getCatalog(force = false) {
   }
 
   const { oauthDatabase } = await import("@/lib/oauth-client.server");
-  const { data, error } = await oauthDatabase()
-    .from("resources")
-    .select(
-      "id, slug, name, description, resource_type, installation_type, installation_config, verified",
-    )
-    .eq("published", true)
-    .order("featured", { ascending: false })
-    .limit(100);
-
-  if (error) throw new Error("Resource catalog unavailable");
-  const rows = (data ?? []) as ResourceRow[];
+  const rows: ResourceRow[] = [];
+  const pageSize = 200;
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await oauthDatabase()
+      .from("resources")
+      .select(
+        "id, slug, name, description, resource_type, installation_type, installation_config, verified",
+      )
+      .eq("published", true)
+      .order("featured", { ascending: false })
+      .order("id", { ascending: true })
+      .range(offset, offset + pageSize - 1);
+    if (error) throw new Error("Resource catalog unavailable");
+    rows.push(...((data ?? []) as ResourceRow[]));
+    if ((data?.length ?? 0) < pageSize) break;
+  }
   const bySlug = new Map<string, ResourceRow>();
   const byId = new Map<string, ResourceRow>();
   const byToolName = new Map<string, ResourceRow>();
@@ -626,6 +797,8 @@ const TOOL_SCOPES: Record<string, string> = {
   open_connect_status: "mcp:connect",
   list_resources: "resources:read",
   list_personal_resources: "resources:read",
+  list_my_memory: "memory:read",
+  list_my_knowledge: "knowledge:read",
   list_workspace_projects: "resources:read",
   list_credential_metadata: "secrets:read",
   calculate: "mcp:connect",
@@ -750,7 +923,7 @@ export const Route = createFileRoute("/mcp")({
               "Use read-only discovery tools before write tools. Hubstaff, E2B, connection, and credential actions are scoped to the authenticated Open-Connect account and role.",
           };
         } else if (body.method === "tools/list") {
-          result = { tools: chatGptTools(key) };
+          result = { tools: chatGptTools() };
         } else if (body.method === "resources/list") {
           result = {
             resources: [
@@ -803,21 +976,24 @@ export const Route = createFileRoute("/mcp")({
           if (name === "search") {
             const query = String(args["query"] ?? "").trim();
             const catalog = await getCatalog();
-            const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
-            const results = [...catalog.bySlug.values()]
-              .filter((item) =>
-                terms.every((term) =>
-                  `${item.slug} ${item.name} ${item.description ?? ""} ${item.resource_type}`
-                    .toLowerCase()
-                    .includes(term),
-                ),
-              )
-              .slice(0, 20)
-              .map((item) => ({
-                id: item.slug,
-                title: item.name,
-                url: `https://open-connect.site/resources/${item.slug}`,
-              }));
+            const ranked = rankCapabilities(
+              query,
+              [...catalog.bySlug.values()].map((item) => ({
+                slug: item.slug,
+                name: item.name,
+                description: item.description,
+                resourceType: item.resource_type,
+                installationType: item.installation_type,
+              })),
+              10,
+            );
+            const results = ranked.map((item) => ({
+              id: item.slug,
+              title: item.name,
+              url: `https://open-connect.site/resources/${item.slug}`,
+              score: item.score,
+              matched_terms: item.matchedTerms,
+            }));
             result = textResult({ results });
           } else if (name === "fetch") {
             const id = String(args["id"] ?? "").trim();
@@ -864,7 +1040,10 @@ export const Route = createFileRoute("/mcp")({
               gateway: "open-connect.site",
               planes: {
                 resources: { published: catalog.count },
-                connections: { connected: connections, available: connections !== null },
+                connections: {
+                  connected: connections,
+                  available: connections !== null,
+                },
                 models: {
                   endpoint: "https://open-connect.site/v1",
                   aliases: MODEL_ALIASES.map((a) => a.id),
@@ -875,7 +1054,10 @@ export const Route = createFileRoute("/mcp")({
             });
           } else if (name === "calculate") {
             const expression = String(args["expression"] ?? "");
-            result = textResult({ expression, result: calculateExpression(expression) });
+            result = textResult({
+              expression,
+              result: calculateExpression(expression),
+            });
           } else if (name === "list_workspace_projects") {
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
             const organizationIds = await loadAuthorizedOrganizationIds(key);
@@ -900,9 +1082,34 @@ export const Route = createFileRoute("/mcp")({
               const [workspaces, projects] = await Promise.all([workspaceQuery, projectQuery]);
               if (workspaces.error) throw new Error(workspaces.error.message);
               if (projects.error) throw new Error(projects.error.message);
+              const [
+                { data: assignedProjects, error: assignedError },
+                { data: adminMemberships, error: adminError },
+              ] = await Promise.all([
+                supabaseAdmin
+                  .from("project_members")
+                  .select("project_id")
+                  .eq("user_id", key.userId),
+                supabaseAdmin
+                  .from("organization_members")
+                  .select("organization_id")
+                  .eq("user_id", key.userId)
+                  .eq("role", "admin")
+                  .in("organization_id", organizationIds),
+              ]);
+              if (assignedError) throw new Error(assignedError.message);
+              if (adminError) throw new Error(adminError.message);
+              const assignedIds = new Set((assignedProjects ?? []).map((row) => row.project_id));
+              const adminOrganizationIds = new Set(
+                (adminMemberships ?? []).map((row) => row.organization_id),
+              );
+              const visibleProjects = (projects.data ?? []).filter(
+                (project) =>
+                  assignedIds.has(project.id) || adminOrganizationIds.has(project.organization_id),
+              );
               result = textResult({
                 workspaces: workspaces.data ?? [],
-                projects: projects.data ?? [],
+                projects: visibleProjects,
               });
             }
           } else if (name === "list_credential_metadata") {
@@ -929,6 +1136,44 @@ export const Route = createFileRoute("/mcp")({
               })),
               secret_values_exposed: false,
             });
+          } else if (name === "list_my_memory" || name === "list_my_knowledge") {
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const requestedProject = String(args["project_id"] ?? key.projectId ?? "").trim();
+            if (key.projectId && requestedProject && requestedProject !== key.projectId) {
+              throw new Error("Key is restricted to a different project.");
+            }
+            if (requestedProject) await assertProjectAccess(key, requestedProject);
+            const limit = Math.min(200, Math.max(1, Math.floor(Number(args["limit"]) || 50)));
+            const isMemory = name === "list_my_memory";
+            const table = isMemory ? "memory_records" : "knowledge_items";
+            const select = isMemory
+              ? "id,project_id,title,content,memory_type,importance,pinned,tags,expires_at,created_at,updated_at"
+              : "id,project_id,title,content,source_type,source_url,status,tags,created_at,updated_at";
+            const readRows = async (projectId: string | null) => {
+              // Table names and selected columns are fixed above; the API key user id scopes every query.
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              let query = (supabaseAdmin as any)
+                .from(table)
+                .select(select)
+                .eq("user_id", key.userId)
+                .order("updated_at", { ascending: false })
+                .limit(limit);
+              query = projectId ? query.eq("project_id", projectId) : query.is("project_id", null);
+              if (!isMemory) query = query.neq("status", "archived");
+              const { data, error } = await query;
+              if (error) throw new Error(error.message);
+              return data ?? [];
+            };
+            const [personal, project] = await Promise.all([
+              readRows(null),
+              requestedProject ? readRows(requestedProject) : Promise.resolve([]),
+            ]);
+            result = textResult({
+              personal,
+              project,
+              project_id: requestedProject || null,
+              user_owned_only: true,
+            });
           } else if (name === "list_personal_resources") {
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
             const type = typeof args["type"] === "string" ? args["type"] : "";
@@ -948,67 +1193,119 @@ export const Route = createFileRoute("/mcp")({
                 const resource = item.resources as unknown as Record<string, unknown> | null;
                 return resource ? [resource] : [];
               });
-            } else {
-              const { data: library } = await supabaseAdmin
-                .from("toolkits")
-                .select("id")
-                .eq("user_id", key.userId)
-                .eq("slug", "open-connect-personal-library")
-                .maybeSingle();
-              const owned = await supabaseAdmin
-                .from("resources")
-                .select("id,slug,name,description,resource_type,version,verified")
-                .eq("owner_id", key.userId);
-              if (owned.error) throw new Error(owned.error.message);
-              rows = (owned.data ?? []) as Array<Record<string, unknown>>;
-              if (library?.id) {
-                const installed = await supabaseAdmin
-                  .from("toolkit_items")
-                  .select("resources(id,slug,name,description,resource_type,version,verified)")
-                  .eq("toolkit_id", library.id);
-                if (installed.error) throw new Error(installed.error.message);
-                rows.push(
-                  ...(installed.data ?? []).flatMap((item) => {
-                    const resource = item.resources as unknown as Record<string, unknown> | null;
-                    return resource ? [resource] : [];
-                  }),
-                );
-              }
             }
-            const unique = [...new Map(rows.map((item) => [String(item["id"]), item])).values()]
-              .filter((item) => !type || item["resource_type"] === type)
-              .slice(0, 200);
-            result = textResult({ resources: unique, project_id: requestedProject || null });
+            const { readWorkspaceLibrary } = await import("@/lib/workspace-library.server");
+            const { isSharedLibraryRow } = await import("@/lib/shared-resources");
+            const library = await readWorkspaceLibrary({
+              supabase: supabaseAdmin,
+              userId: key.userId,
+            });
+            rows.push(
+              ...library
+                .filter((row) => !requestedProject || isSharedLibraryRow(row))
+                .flatMap((row) => (row.resources ? [row.resources] : [])),
+            );
+            const unique = [
+              ...new Map(rows.map((item) => [String(item["id"]), item])).values(),
+            ].filter((item) => !type || item["resource_type"] === type);
+            result = textResult({
+              resources: unique,
+              project_id: requestedProject || null,
+            });
           } else if (name === "inspect_connections") {
             const provider = String(args["provider"] ?? "").trim();
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-            let query = supabaseAdmin
+            let ownedQuery = supabaseAdmin
               .from("app_connections")
-              .select("provider, display_name, status, scopes, credential_reference, last_used_at")
+              .select("id,provider,display_name,status,scopes,credential_reference,last_used_at")
               .eq("user_id", key.userId);
-            if (provider) query = query.eq("provider", provider);
-            const { data } = await query.order("created_at", { ascending: false }).limit(100);
-            result = textResult({
-              connections: (data ?? []).map((connection: Record<string, unknown>) => ({
-                ...connection,
-                credential_reference: connection["credential_reference"] ? "configured" : "missing",
-              })),
-            });
+            if (provider) ownedQuery = ownedQuery.eq("provider", provider);
+            const { data: owned, error: ownedError } = await ownedQuery
+              .order("created_at", { ascending: false })
+              .limit(100);
+            if (ownedError) throw new Error(ownedError.message);
+            const visible = new Map<string, Record<string, unknown>>();
+            for (const connection of owned ?? []) {
+              visible.set(connection.id, {
+                id: connection.id,
+                provider: connection.provider,
+                display_name: connection.display_name,
+                status: connection.status,
+                scopes: connection.scopes,
+                access_scope: "personal",
+                credential_reference: connection.credential_reference ? "configured" : "missing",
+                last_used_at: connection.last_used_at,
+              });
+            }
+            if (key.projectId) {
+              await assertProjectAccess(key, key.projectId);
+              const projectDb = supabaseAdmin as SupabaseClient;
+              const { data: shared, error: sharedError } = await projectDb
+                .from("project_connections")
+                .select(
+                  "connection_id, app_connections!inner(id,provider,display_name,status,scopes)",
+                )
+                .eq("project_id", key.projectId);
+              if (sharedError) throw new Error(sharedError.message);
+              const sharedRows = Array.isArray(shared)
+                ? (shared as Array<{
+                    connection_id?: string;
+                    app_connections?: {
+                      id?: string;
+                      provider?: string;
+                      display_name?: string;
+                      status?: string;
+                      scopes?: string[];
+                    } | null;
+                  }>)
+                : [];
+              for (const row of sharedRows) {
+                const connection = row.app_connections;
+                if (!connection?.id || (provider && connection.provider !== provider)) continue;
+                visible.set(connection.id, {
+                  id: connection.id,
+                  provider: connection.provider,
+                  display_name: connection.display_name,
+                  status: connection.status,
+                  scopes: connection.scopes,
+                  access_scope: "project",
+                  credential_reference: "brokered",
+                });
+              }
+            }
+            result = textResult({ connections: [...visible.values()] });
           } else if (name === "list_connection_tools") {
             const { listCustomMcpTools } = await import("@/lib/custom-mcp.server");
             result = textResult(
-              await listCustomMcpTools(key.userId, String(args["connection_id"] ?? "")),
+              await listCustomMcpTools(
+                key.userId,
+                String(args["connection_id"] ?? ""),
+                key.projectId ?? undefined,
+              ),
             );
           } else if (name === "call_connection_tool") {
             const { callCustomMcpTool, listCustomMcpTools } =
               await import("@/lib/custom-mcp.server");
             const connectionId = String(args["connection_id"] ?? "");
             const toolName = String(args["tool_name"] ?? "");
-            const catalog = await listCustomMcpTools(key.userId, connectionId);
+            const catalog = await listCustomMcpTools(
+              key.userId,
+              connectionId,
+              key.projectId ?? undefined,
+            );
             const tool = catalog.tools.find((item) => item["name"] === toolName);
             if (!tool) throw new Error("Connected MCP tool was not found.");
             const annotations = (tool["annotations"] ?? {}) as Record<string, unknown>;
-            if (annotations["readOnlyHint"] !== true) await requireControlWrite(key);
+            if (annotations["readOnlyHint"] !== true) {
+              if (!key.projectId) {
+                throw new Error(
+                  "Write-capable connection actions require a project-scoped API key.",
+                );
+              }
+              if (!hasScope(key, "connections:invoke")) {
+                throw new Error("Key cannot invoke write-capable connection actions.");
+              }
+            }
             if (annotations["destructiveHint"] === true && args["confirm"] !== true) {
               throw new Error("Explicit confirm=true is required for destructive tools.");
             }
@@ -1017,12 +1314,22 @@ export const Route = createFileRoute("/mcp")({
                 ? (args["arguments"] as Record<string, unknown>)
                 : {};
             result = textResult(
-              await callCustomMcpTool(key.userId, connectionId, toolName, toolArguments),
+              await callCustomMcpTool(
+                key.userId,
+                connectionId,
+                toolName,
+                toolArguments,
+                key.projectId ?? undefined,
+              ),
             );
           } else if (name === "e2b_health") {
             const { e2bConfig, e2bHealth } = await import("@/lib/e2b.server");
             if (!e2bConfig().configured) throw new Error("E2B is not configured");
-            result = textResult({ configured: true, reachable: true, health: await e2bHealth() });
+            result = textResult({
+              configured: true,
+              reachable: true,
+              health: await e2bHealth(),
+            });
           } else if (name === "e2b_list_sandboxes") {
             const { e2bConfig, listE2bSandboxes } = await import("@/lib/e2b.server");
             if (!e2bConfig().configured) throw new Error("E2B is not configured");
@@ -1246,7 +1553,11 @@ export const Route = createFileRoute("/mcp")({
               .select("id,requested_capability,state,created_at")
               .single();
             if (error) throw new Error(error.message);
-            result = textResult({ draft: data, executable: false, values_exposed: false });
+            result = textResult({
+              draft: data,
+              executable: false,
+              values_exposed: false,
+            });
           } else if (name === "record_run_outcome") {
             await requireControlWrite(key);
             const correlationId = String(args["correlation_id"] ?? "").trim();
@@ -1312,7 +1623,10 @@ export const Route = createFileRoute("/mcp")({
                   source_type: "api",
                   status: "ready",
                   tags: ["verified-procedure", ...capabilitySlugs].slice(0, 20),
-                  metadata: { promoted_from_run: run.id, verified_successes: 3 },
+                  metadata: {
+                    promoted_from_run: run.id,
+                    verified_successes: 3,
+                  },
                 });
                 knowledgePromoted = true;
               }
@@ -1401,22 +1715,38 @@ export const Route = createFileRoute("/mcp")({
             result = textResult({ data, count: data.length });
           } else if (name === "list_connections") {
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-            const { data: conns } = await supabaseAdmin
-              .from("app_connections")
-              .select("provider, display_name, status, scopes")
-              .eq("user_id", key.userId)
-              .eq("status", "connected")
-              .order("created_at", { ascending: false })
-              .limit(50);
+            const connections: Array<Record<string, unknown>> = [];
+            const pageSize = 200;
+            for (let offset = 0; ; offset += pageSize) {
+              const { data: page, error } = await supabaseAdmin
+                .from("app_connections")
+                .select("id, provider, display_name, status, scopes")
+                .eq("user_id", key.userId)
+                .eq("status", "connected")
+                .order("created_at", { ascending: false })
+                .order("id", { ascending: true })
+                .range(offset, offset + pageSize - 1);
+              if (error) throw new Error("Could not list connected apps.");
+              connections.push(...(page ?? []));
+              if ((page?.length ?? 0) < pageSize) break;
+            }
             result = textResult({
-              data: conns ?? [],
-              note: "Capability grants only",
+              data: connections,
+              count: connections.length,
+              note: "Use id with list_connection_tools and call_connection_tool for Custom MCP connections. Credential values are never returned.",
             });
           } else if (name === "list_models") {
+            const { resolveUserUpstreams, fetchMergedModelCatalog } =
+              await import("@/lib/gateway.server");
+            const configured = await resolveUserUpstreams(key.userId, false);
+            const { ids, upstreams, providers } = await fetchMergedModelCatalog(configured);
             result = textResult({
               endpoint: "https://open-connect.site/v1",
-              aliases: MODEL_ALIASES,
-              auth: "Bearer oc_live_…",
+              models: ids,
+              providers,
+              upstreams,
+              count: ids.length,
+              note: "Catalog uses the authenticated user's AI Gateway connections. Credential values are never returned.",
             });
           } else if (name?.startsWith("resource_")) {
             const match = await findResourceByToolName(name);
@@ -1427,7 +1757,11 @@ export const Route = createFileRoute("/mcp")({
             } else if (action === "invoke" && !isExecutable(match)) {
               result = textResult({
                 status: reviewState(match),
-                resource: { slug: match.slug, name: match.name, type: match.resource_type },
+                resource: {
+                  slug: match.slug,
+                  name: match.name,
+                  type: match.resource_type,
+                },
                 risk: match.installation_config?.["risk"] ?? null,
                 message:
                   "Metadata-only resource cannot be invoked until review and approval are complete.",
@@ -1442,7 +1776,11 @@ export const Route = createFileRoute("/mcp")({
               });
             }
           } else {
-            result = textResult({ gateway: "open-connect.site", scopes: key.scopes, tool: name });
+            result = textResult({
+              gateway: "open-connect.site",
+              scopes: key.scopes,
+              tool: name,
+            });
           }
         } else if (body.method === "ping") {
           result = {};

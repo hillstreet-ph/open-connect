@@ -8,6 +8,10 @@ const DEFAULT_BASES: Record<string, string> = {
   sentry: "https://sentry.io/api/0",
   zeabur: "https://api.zeabur.com",
   openrouter: "https://openrouter.ai/api/v1",
+  nvidia: "https://integrate.api.nvidia.com/v1",
+  ollama_cloud: "https://ollama.com/v1",
+  groq: "https://api.groq.com/openai/v1",
+  cerebras: "https://api.cerebras.ai/v1",
   openai: "https://api.openai.com/v1",
   anthropic: "https://api.anthropic.com/v1",
   google: "https://generativelanguage.googleapis.com/v1beta",
@@ -24,6 +28,7 @@ async function checkedFetch(url: string, init: RequestInit, send: typeof fetch):
   const response = await send(url, {
     ...init,
     cache: "no-store",
+    redirect: "manual",
     signal: AbortSignal.timeout(12_000),
   });
   if (!response.ok) throw new Error(`Provider validation failed (HTTP ${response.status}).`);
@@ -36,35 +41,24 @@ export async function validateConnectionCredential(
 ): Promise<Validation> {
   const bearer = { Authorization: `Bearer ${setup.apiKey}` };
   if (setup.provider === "custom_mcp") {
-    const response = await checkedFetch(
+    const { withMcpClient } = await import("./mcp-client.server.ts");
+    const headers =
+      setup.authType === "none"
+        ? {}
+        : setup.authType === "api_key"
+          ? { "X-API-Key": setup.apiKey }
+          : bearer;
+    const accountId = await withMcpClient(
       setup.endpointUrl,
-      {
-        method: "POST",
-        headers: {
-          ...(setup.authType === "bearer" || setup.authType === "personal_access_token"
-            ? bearer
-            : setup.authType === "api_key"
-              ? { "X-API-Key": setup.apiKey }
-              : {}),
-          Accept: "application/json, text/event-stream",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          id: 1,
-          method: "initialize",
-          params: {
-            protocolVersion: "2025-06-18",
-            capabilities: {},
-            clientInfo: { name: "open-connect-validator", version: "1.0.0" },
-          },
-        }),
+      headers,
+      async (client) => {
+        const name = client.getServerVersion()?.name;
+        if (!name) throw new Error("MCP initialization did not complete.");
+        return name;
       },
       send,
     );
-    const payload = (await response.json()) as { result?: { serverInfo?: { name?: string } } };
-    if (!payload.result?.serverInfo?.name) throw new Error("MCP initialization did not complete.");
-    return { verified: true, accountId: payload.result.serverInfo.name, detail: "MCP initialized" };
+    return { verified: true, accountId, detail: "MCP initialized" };
   }
 
   if (setup.provider === "dockerhub") {
@@ -148,7 +142,20 @@ export async function validateConnectionCredential(
     return { verified: true, detail: "Gemini models verified" };
   }
 
-  if (["openrouter", "openai", "xai", "mistral", "deepseek", "litellm"].includes(setup.provider)) {
+  if (
+    [
+      "openrouter",
+      "openai",
+      "xai",
+      "mistral",
+      "deepseek",
+      "litellm",
+      "nvidia",
+      "ollama_cloud",
+      "groq",
+      "cerebras",
+    ].includes(setup.provider)
+  ) {
     const providerBase = base(setup);
     if (!providerBase) throw new Error("Provider base URL is required for validation.");
     await checkedFetch(`${providerBase}/models`, { headers: bearer }, send);

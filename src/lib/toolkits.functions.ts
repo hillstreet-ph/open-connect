@@ -20,6 +20,7 @@ export const listToolkits = createServerFn({ method: "GET" })
         "id, slug, name, description, published, created_at, toolkit_items(id, position, resources(id, name, resource_type))",
       )
       .neq("slug", "open-connect-personal-library")
+      .not("slug", "like", "collection-%")
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return data ?? [];
@@ -42,13 +43,18 @@ export const createToolkit = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     if (!data.name) throw new Error("A toolkit name is required");
+    const baseSlug = slugify(data.name);
+    const safeSlug =
+      baseSlug === "collection" || baseSlug.startsWith("collection-")
+        ? `toolkit-${baseSlug}`
+        : baseSlug;
 
     const { data: toolkit, error } = await context.supabase
       .from("toolkits")
       .insert({
         user_id: context.userId,
         name: data.name,
-        slug: `${slugify(data.name)}-${Math.random().toString(36).slice(2, 6)}`,
+        slug: `${safeSlug}-${Math.random().toString(36).slice(2, 6)}`,
         description: data.description || null,
         published: data.published,
       })
