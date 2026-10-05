@@ -237,7 +237,9 @@ function IntegrationsPage() {
           <CardHeader>
             <KeyRound className="size-4 text-primary" />
             <CardTitle className="mt-2 text-base">ChatGPT OAuth</CardTitle>
-            <CardDescription>OAuth endpoints for supported ChatGPT Actions and clients.</CardDescription>
+            <CardDescription>
+              OAuth endpoints for supported ChatGPT Actions and clients.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-1 font-mono text-xs text-primary">
             <p>/.well-known/oauth-authorization-server</p>
