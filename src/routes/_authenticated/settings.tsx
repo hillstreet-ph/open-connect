@@ -449,7 +449,8 @@ function SettingsPage() {
                 <div>
                   <h2 className="font-medium">AI Agents</h2>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Set up AI clients such as ChatGPT to connect with Open-Connect using OAuth or MCP.
+                    Set up AI clients such as ChatGPT to connect with Open-Connect using OAuth or
+                    MCP.
                   </p>
                 </div>
               </div>
@@ -465,7 +466,8 @@ function SettingsPage() {
                 <div>
                   <h2 className="font-medium">Custom MCP</h2>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Add and manage remote MCP servers separately from Connectors and Marketplace resources.
+                    Add and manage remote MCP servers separately from Connectors and Marketplace
+                    resources.
                   </p>
                 </div>
               </div>
