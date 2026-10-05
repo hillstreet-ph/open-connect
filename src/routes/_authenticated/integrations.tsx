@@ -29,15 +29,8 @@ const aiClients = [
   },
   {
     provider: "claude",
-    name: "Claude / Anthropic",
+    name: "Claude Desktop",
     body: "Use Claude Desktop or API clients with the Open-Connect MCP endpoint and scoped key.",
-    endpoints: ["/mcp"],
-    to: "/api-keys" as const,
-  },
-  {
-    provider: "grok",
-    name: "Grok / xAI",
-    body: "Connect AI agent workflows to approved Open-Connect tools using owner-scoped access.",
     endpoints: ["/mcp"],
     to: "/api-keys" as const,
   },
