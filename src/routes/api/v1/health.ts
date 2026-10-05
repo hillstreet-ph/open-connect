@@ -26,6 +26,10 @@ export const Route = createFileRoute("/api/v1/health")({
           },
           model_upstream: upstream?.name ?? null,
           model_upstreams: all.map((u) => u.name),
+          model_gateway: {
+            platform_upstream_configured: all.length > 0,
+            user_connections_supported: true,
+          },
           kv: {
             binding: "OC_KV",
             bound: kv.bound,
