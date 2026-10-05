@@ -76,7 +76,7 @@ test("connection surfaces remain internal and separate from Marketplace", () => 
     assert.ok(sidebar.includes(route), "Missing connection route " + route);
   }
   assert.ok(sidebar.includes('to: "/connections", label: "Connectors"'));
-  assert.ok(userMenu.includes('to="/integrations"'));
+  assert.ok(!userMenu.includes('to="/integrations"'));
 
   const connectors = readFileSync(
     path.join(sourceRoot, "routes/_authenticated/connections.tsx"),
@@ -106,7 +106,7 @@ test("Integrations follows Data & privacy in Settings and includes account keys"
   );
 
   assert.ok(userMenu.includes('to="/settings"'));
-  assert.ok(userMenu.includes('to="/integrations"'));
+  assert.ok(!userMenu.includes('to="/integrations"'));
   assert.ok(!userMenu.includes('to="/api-keys"'));
   assert.ok(
     settings.indexOf('value="data">Data & privacy') <
