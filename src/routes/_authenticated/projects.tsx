@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import {
   createProject,
   getCanonicalOrganization,
+  getOrganizationAccess,
   listProjects,
   listWorkspaces,
 } from "@/lib/orgs.functions";
@@ -16,7 +17,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useWorkspaceContext } from "@/hooks/use-workspace-context";
-import { useRoles } from "@/hooks/use-roles";
 
 export const Route = createFileRoute("/_authenticated/projects")({
   head: () => ({
@@ -46,15 +46,21 @@ function ProjectsIndex() {
   const listProj = useServerFn(listProjects);
   const createProj = useServerFn(createProject);
   const listWs = useServerFn(listWorkspaces);
+  const getOrgAccess = useServerFn(getOrganizationAccess);
 
   const [projectName, setProjectName] = useState("");
   const [projectDesc, setProjectDesc] = useState("");
   const { workspaceId: activeWorkspaceId } = useWorkspaceContext();
-  const { isAdmin, loading: rolesLoading } = useRoles();
+
 
   const organization = useQuery({
     queryKey: ["organization", "hillstreet-ph"],
     queryFn: () => getOrganization(),
+  });
+  const access = useQuery({
+    queryKey: ["organization-access", organization.data?.id],
+    queryFn: () => getOrgAccess({ data: { organizationId: organization.data!.id } }),
+    enabled: Boolean(organization.data?.id),
   });
   const projects = useQuery({
     queryKey: ["projects", organization.data?.id],
@@ -133,13 +139,13 @@ function ProjectsIndex() {
         </CardContent>
       </Card>
 
-      {rolesLoading ? (
+      {access.isLoading ? (
         <Card className="shadow-panel">
           <CardContent className="py-6 text-sm text-muted-foreground">
             Checking project permissions…
           </CardContent>
         </Card>
-      ) : isAdmin ? (
+      ) : access.data?.isAdmin ? (
         <div className="grid gap-4 lg:grid-cols-2">
           <Card className="shadow-panel lg:col-span-1">
             <CardHeader className="pb-2">
