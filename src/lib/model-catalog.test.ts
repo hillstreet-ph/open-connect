@@ -81,6 +81,28 @@ test("free catalog fetches OpenRouter and LiteLLM only without following redirec
   ]);
 });
 
+test("Auto only includes curated free NVIDIA endpoints and Ollama free-plan models", async () => {
+  const models = await fetchFreeModelCatalog(
+    [
+      { name: "nvidia", baseUrl: "https://integrate.api.nvidia.com/v1", headers: {} },
+      { name: "ollama_cloud", baseUrl: "https://ollama.com/v1", headers: {} },
+    ],
+    async () =>
+      Response.json({
+        data: [
+          { id: "nvidia/nemotron-3.5-lightning-30b-a3b" },
+          { id: "nvidia/a-paid-model" },
+          { id: "gemma4:cloud" },
+          { id: "qwen3:cloud" },
+        ],
+      }),
+  );
+  assert.deepEqual(models.map((model) => `${model.source}:${model.id}`).sort(), [
+    "nvidia:nvidia/nemotron-3.5-lightning-30b-a3b",
+    "ollama_cloud:gemma4:cloud",
+  ]);
+});
+
 test("Auto aliases use connected free routes and do not absorb named models", () => {
   for (const model of ["", "Auto", "free", "open-connect/auto", "open-connect/free"]) {
     assert.equal(isAutoFreeModel(model), true);

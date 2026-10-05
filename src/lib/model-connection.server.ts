@@ -7,7 +7,17 @@ export type SavedModelConnection = {
 };
 
 export type SavedModelUpstream = {
-  name: "openrouter" | "litellm";
+  name:
+    | "openrouter"
+    | "litellm"
+    | "nvidia"
+    | "ollama_cloud"
+    | "groq"
+    | "cerebras"
+    | "openai"
+    | "xai"
+    | "mistral"
+    | "deepseek";
   baseUrl: string;
   headers: Record<string, string>;
 };
@@ -58,7 +68,19 @@ function endpointForLiteLlm(metadata: unknown): string {
   return url.toString().replace(/\/+$/, "");
 }
 
-/** Resolve connected OpenRouter and LiteLLM credentials for this user only. */
+const COMPATIBLE_MODEL_ENDPOINTS: Record<Exclude<SavedModelUpstream["name"], "litellm">, string> = {
+  openrouter: "https://openrouter.ai/api/v1",
+  nvidia: "https://integrate.api.nvidia.com/v1",
+  ollama_cloud: "https://ollama.com/v1",
+  groq: "https://api.groq.com/openai/v1",
+  cerebras: "https://api.cerebras.ai/v1",
+  openai: "https://api.openai.com/v1",
+  xai: "https://api.x.ai/v1",
+  mistral: "https://api.mistral.ai/v1",
+  deepseek: "https://api.deepseek.com/v1",
+};
+
+/** Resolve connected OpenAI-compatible model providers for this user only. */
 export async function savedModelUpstreams(
   userId: string,
   dependencies: {
@@ -71,7 +93,7 @@ export async function savedModelUpstreams(
   const configured: SavedModelUpstream[] = [];
   for (const connection of connections) {
     if (
-      (connection.provider !== "openrouter" && connection.provider !== "litellm") ||
+      !(connection.provider in COMPATIBLE_MODEL_ENDPOINTS || connection.provider === "litellm") ||
       connection.status !== "connected"
     ) {
       continue;
@@ -84,11 +106,13 @@ export async function savedModelUpstreams(
     if (!reference) continue;
     const credential = credentialValue(await dependencies.resolve(userId, reference[1]!));
     configured.push({
-      name: connection.provider,
+      name: connection.provider as SavedModelUpstream["name"],
       baseUrl:
-        connection.provider === "openrouter"
-          ? "https://openrouter.ai/api/v1"
-          : endpointForLiteLlm(connection.metadata),
+        connection.provider === "litellm"
+          ? endpointForLiteLlm(connection.metadata)
+          : COMPATIBLE_MODEL_ENDPOINTS[
+              connection.provider as Exclude<SavedModelUpstream["name"], "litellm">
+            ],
       headers: {
         Authorization: `Bearer ${credential}`,
         "Content-Type": "application/json",

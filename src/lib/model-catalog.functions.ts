@@ -5,13 +5,19 @@ import { fetchFreeModelCatalog } from "@/lib/model-catalog";
 export const listFreeModels = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { resolveUserUpstreams } = await import("@/lib/gateway.server");
+    const { fetchMergedModelCatalog, resolveUserUpstreams } = await import("@/lib/gateway.server");
     const upstreams = await resolveUserUpstreams(context.userId);
+    const catalog = await fetchMergedModelCatalog(upstreams);
+    const freeModels = await fetchFreeModelCatalog(upstreams);
     return {
       defaultModel: "open-connect/auto",
       autoDescription:
-        "OpenRouter routes to its available free models. LiteLLM contributes models explicitly priced at zero.",
+        "Routes through verified free OpenRouter, NVIDIA, Ollama Cloud, and LiteLLM models.",
       providers: upstreams.map((upstream) => upstream.name),
-      models: await fetchFreeModelCatalog(upstreams),
+      models: freeModels,
+      allModels: catalog.ids.map((id) => ({
+        id,
+        free: freeModels.some((model) => model.id === id),
+      })),
     };
   });
