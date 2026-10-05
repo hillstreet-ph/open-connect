@@ -11,14 +11,6 @@ import { hasRole, type AppRole } from "@/lib/rbac";
  */
 const CATALOG = [
   {
-    provider: "anthropic_administrator",
-    display_name: "Anthropic Administration",
-    category: "AI",
-    scopes: [],
-    oauth: true,
-  },
-  { provider: "apify_mcp", display_name: "Apify MCP", category: "Data", scopes: [], oauth: true },
-  {
     provider: "cloudflare_api_key",
     display_name: "Cloudflare API",
     category: "Infrastructure",
@@ -33,51 +25,9 @@ const CATALOG = [
     oauth: true,
   },
   {
-    provider: "cloudflare_mcp",
-    display_name: "Cloudflare MCP",
-    category: "Infrastructure",
-    scopes: [],
-    oauth: true,
-  },
-  {
-    provider: "custom_tinyfish_mcp",
-    display_name: "TinyFish MCP",
-    category: "Data",
-    scopes: [],
-    oauth: true,
-  },
-  {
-    provider: "notion_mcp",
-    display_name: "Notion MCP",
-    category: "Productivity",
-    scopes: [],
-    oauth: true,
-  },
-  {
     provider: "railway",
     display_name: "Railway",
     category: "Infrastructure",
-    scopes: [],
-    oauth: true,
-  },
-  {
-    provider: "sentry_mcp",
-    display_name: "Sentry MCP",
-    category: "Development",
-    scopes: [],
-    oauth: true,
-  },
-  {
-    provider: "supabase_mcp",
-    display_name: "Supabase MCP",
-    category: "Data",
-    scopes: [],
-    oauth: true,
-  },
-  {
-    provider: "supabase_read_mcp",
-    display_name: "Supabase MCP (Read Only)",
-    category: "Data",
     scopes: [],
     oauth: true,
   },
@@ -310,13 +260,6 @@ const CATALOG = [
       "webhook:manage",
     ],
     oauth: true,
-  },
-  {
-    provider: "custom_mcp",
-    display_name: "Custom MCP server",
-    category: "Custom",
-    scopes: ["tools:list", "tools:invoke"],
-    oauth: false,
   },
 ] as const;
 
@@ -717,14 +660,21 @@ export const configureAppConnection = createServerFn({ method: "POST" })
     const gatewayProvider = AI_GATEWAY_PROVIDERS.find((item) => item.id === providerId);
     const app =
       CATALOG.find((item) => item.provider === providerId) ??
-      (gatewayProvider
+      (providerId === "custom_mcp"
         ? {
-            provider: gatewayProvider.id,
-            display_name: gatewayProvider.name,
+            provider: "custom_mcp",
+            display_name: data.display_name.trim() || "Custom MCP server",
             scopes: [] as const,
             oauth: false,
           }
-        : undefined);
+        : gatewayProvider
+          ? {
+              provider: gatewayProvider.id,
+              display_name: gatewayProvider.name,
+              scopes: [] as const,
+              oauth: false,
+            }
+          : undefined);
     if (!app) throw new Error("Unknown application");
     const setup = normalizeConnectionSetup(data, app);
     const { validateConnectionCredential } = await import("@/lib/connection-validation.server");

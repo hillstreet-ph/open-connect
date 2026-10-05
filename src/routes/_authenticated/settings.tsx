@@ -3,8 +3,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import {
   Bell,
+  BookOpen,
+  Brain,
   Building2,
-  Database,
   KeyRound,
   Loader2,
   Network,
@@ -388,9 +389,15 @@ function SettingsPage() {
           <div className="grid gap-4 md:grid-cols-2">
             <SettingsLinkCard
               to="/memory"
-              icon={Database}
-              title="Memory & knowledge"
-              description="Manage durable project context, documents, repositories, URLs, and reusable sources."
+              icon={Brain}
+              title="Memory"
+              description="Manage durable project decisions, instructions, preferences, and summaries."
+            />
+            <SettingsLinkCard
+              to="/knowledge"
+              icon={BookOpen}
+              title="Knowledge"
+              description="Manage reusable documents, repositories, URLs, and other project sources."
             />
           </div>
         </TabsContent>
@@ -400,7 +407,7 @@ function SettingsPage() {
               to="/integrations"
               icon={Network}
               title="Integrations"
-              description="Manage account-owned inbound connections for AI clients, MCP, and Telegram. Resources, Connectors, and model providers stay separate."
+              description="Manage separate API Key, Apps, AI Agents, and Custom MCP connection areas for Open-Connect."
             />
           </div>
         </TabsContent>
