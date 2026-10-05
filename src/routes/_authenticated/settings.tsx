@@ -408,28 +408,28 @@ function SettingsPage() {
           <div className="grid gap-4 md:grid-cols-2">
             <SettingsLinkCard
               to="/integrations"
-              hash="api-key"
+              section="api-key"
               icon={KeyRound}
               title="API Key"
               description="Create and manage scoped keys for clients that use bearer authentication."
             />
             <SettingsLinkCard
               to="/integrations"
-              hash="apps"
+              section="apps"
               icon={MessageCircle}
               title="Apps"
               description="Connect account-owned apps such as Telegram and manage their credentials."
             />
             <SettingsLinkCard
               to="/integrations"
-              hash="ai-agents"
+              section="ai-agents"
               icon={Bot}
               title="AI Agents"
               description="Set up AI clients such as ChatGPT to connect with Open-Connect using OAuth or MCP."
             />
             <SettingsLinkCard
               to="/integrations"
-              hash="custom-mcp"
+              section="custom-mcp"
               icon={Server}
               title="Custom MCP"
               description="Add and manage remote MCP servers separately from Connectors and Marketplace resources."
@@ -446,7 +446,7 @@ function SettingsLinkCard({
   icon: Icon,
   title,
   description,
-  hash,
+  section,
 }: {
   to:
     | "/orgs"
@@ -460,26 +460,36 @@ function SettingsLinkCard({
     | "/automations"
     | "/memory"
     | "/knowledge";
-  hash?: string;
+  section?: "api-key" | "apps" | "ai-agents" | "custom-mcp";
   icon: typeof Building2;
   title: string;
   description: string;
 }) {
-  return (
-    <Link
-      to={to}
-      hash={hash}
-      className="block rounded-xl border bg-card p-5 shadow-panel transition-colors hover:bg-accent/40"
-    >
-      <div className="flex items-start gap-3">
-        <div className="rounded-lg bg-primary/10 p-2 text-primary">
-          <Icon className="size-4" />
-        </div>
-        <div>
-          <h2 className="font-medium">{title}</h2>
-          <p className="mt-1 text-sm text-muted-foreground">{description}</p>
-        </div>
+  const cardContent = (
+    <div className="flex items-start gap-3">
+      <div className="rounded-lg bg-primary/10 p-2 text-primary">
+        <Icon className="size-4" />
       </div>
+      <div>
+        <h2 className="font-medium">{title}</h2>
+        <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+      </div>
+    </div>
+  );
+  const className =
+    "block rounded-xl border bg-card p-5 shadow-panel transition-colors hover:bg-accent/40";
+
+  if (section) {
+    return (
+      <Link to="/integrations" search={{ section }} className={className}>
+        {cardContent}
+      </Link>
+    );
+  }
+
+  return (
+    <Link to={to} className={className}>
+      {cardContent}
     </Link>
   );
 }

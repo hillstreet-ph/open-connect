@@ -6,6 +6,8 @@ import {
   Bot,
   Copy,
   ExternalLink,
+  ArrowLeft,
+  KeyRound,
   Loader2,
   MessageCircle,
   Server,
@@ -39,7 +41,15 @@ import {
   listInboundIntegrations,
 } from "@/lib/inbound-integrations.functions";
 
+const integrationSections = ["overview", "api-key", "apps", "ai-agents", "custom-mcp"] as const;
+type IntegrationSection = (typeof integrationSections)[number];
+
 export const Route = createFileRoute("/_authenticated/integrations")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    section: integrationSections.includes(search.section as IntegrationSection)
+      ? (search.section as IntegrationSection)
+      : "overview",
+  }),
   head: () => ({
     meta: [
       { title: "Integrations — Open-Connect" },
@@ -90,6 +100,7 @@ const aiClients = [
 ];
 
 function IntegrationsPage() {
+  const { section: integrationSection } = Route.useSearch();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const listFn = useServerFn(listInboundIntegrations);
@@ -113,7 +124,7 @@ function IntegrationsPage() {
   const connections = useQuery({
     queryKey: ["inbound-integrations"],
     queryFn: () => listFn({}),
-    enabled: Boolean(user),
+    enabled: Boolean(user) && integrationSection === "apps",
   });
 
   const telegramItems = (connections.data ?? []).filter((item) => item.provider === "telegram");
@@ -121,7 +132,7 @@ function IntegrationsPage() {
   const customMcpConnections = useQuery({
     queryKey: ["app-connections"],
     queryFn: () => customMcpListFn({}),
-    enabled: Boolean(user),
+    enabled: Boolean(user) && integrationSection === "custom-mcp",
   });
   const customMcpItems = (customMcpConnections.data ?? []).filter(
     (item) => item.provider === "custom_mcp",
@@ -210,316 +221,334 @@ function IntegrationsPage() {
           Open-Connect · inbound
         </Badge>
         <h1 className="mt-4 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-          Integrations
+          {integrationSection === "overview"
+            ? "Integrations"
+            : integrationSection === "api-key"
+              ? "API Key"
+              : integrationSection === "apps"
+                ? "Apps"
+                : integrationSection === "ai-agents"
+                  ? "AI Agents"
+                  : "Custom MCP"}
         </h1>
         <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-          Connect external AI clients, MCP clients, and Telegram into Open-Connect. Each integration
-          setup belongs to your account. Connectors are for external accounts Open-Connect uses; AI
-          models and resource catalogs are managed separately.
+          {integrationSection === "overview"
+            ? "Choose an integration type to manage it on its own page."
+            : "Manage this integration type separately from Connectors, AI Gateway, and Marketplace resources."}
         </p>
       </header>
 
-      <nav aria-label="Integration setup types" className="flex flex-wrap gap-2 border-b pb-4">
-        {user ? (
-          <a
-            href="#api-key"
-            className="rounded-full border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
-          >
-            API Key
-          </a>
-        ) : null}
-        <a
-          href="#apps"
-          className="rounded-full border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
-        >
-          Apps
-        </a>
-        <a
-          href="#ai-agents"
-          className="rounded-full border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
-        >
-          AI Agents
-        </a>
-        <a
-          href="#custom-mcp"
-          className="rounded-full border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
-        >
-          Custom MCP
-        </a>
-      </nav>
-
-      <section id="ai-agents" className="scroll-mt-6">
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold">AI Agents</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Choose a client to see its own connection flow.
-          </p>
+      {integrationSection === "overview" ? (
+        <div className="grid gap-4 md:grid-cols-2">
+          <IntegrationTypeCard
+            section="api-key"
+            icon={KeyRound}
+            title="API Key"
+            description="Create and manage scoped keys for clients that use bearer authentication."
+          />
+          <IntegrationTypeCard
+            section="apps"
+            icon={MessageCircle}
+            title="Apps"
+            description="Connect account-owned apps such as Telegram and manage their credentials."
+          />
+          <IntegrationTypeCard
+            section="ai-agents"
+            icon={Bot}
+            title="AI Agents"
+            description="Set up clients such as ChatGPT with their dedicated OAuth or MCP connection flow."
+          />
+          <IntegrationTypeCard
+            section="custom-mcp"
+            icon={Server}
+            title="Custom MCP"
+            description="Add and manage remote MCP servers separately from Connectors and Marketplace resources."
+          />
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {aiClients.map((client) => (
-            <Card key={client.provider} className="shadow-panel">
-              <CardHeader className="p-4">
-                <BrandLogo provider={client.provider} name={client.name} size="lg" />
-                <CardTitle className="mt-3 text-sm">{client.name}</CardTitle>
-                <CardDescription className="text-xs">{client.description}</CardDescription>
-              </CardHeader>
-              <CardContent className="px-4 pb-4">
-                {user ? (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="w-full"
-                    onClick={() =>
-                      client.provider === "chatgpt" ? setOauthOpen(true) : setMcpOpen(true)
-                    }
-                  >
-                    {client.provider === "chatgpt" ? (
-                      <ShieldCheck className="mr-2 size-4" />
-                    ) : (
-                      <Bot className="mr-2 size-4" />
-                    )}
-                    {client.action}
-                  </Button>
-                ) : (
-                  <Button asChild size="sm" variant="outline" className="w-full">
-                    <Link to="/auth">Sign in</Link>
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
-
-      <section id="custom-mcp" className="scroll-mt-6">
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold">Custom MCP</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Manage account-owned remote MCP servers and the inbound endpoint AI clients use. These
-            stay separate from app Connectors and Marketplace resources.
-          </p>
-        </div>
-        <Card className="shadow-panel">
-          <CardHeader className="p-5">
-            <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Server className="size-5" />
-            </div>
-            <CardTitle className="mt-3 text-base">Remote MCP servers</CardTitle>
-            <CardDescription>
-              Add a remote MCP endpoint for your account. Any credential is validated and stored in
-              the secure vault.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 px-5 pb-5">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="mcp-name">Name</Label>
-                <Input
-                  id="mcp-name"
-                  value={mcpName}
-                  onChange={(event) => setMcpName(event.target.value)}
-                  placeholder="Team MCP server"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="mcp-url">Server URL</Label>
-                <Input
-                  id="mcp-url"
-                  type="url"
-                  value={mcpUrl}
-                  onChange={(event) => setMcpUrl(event.target.value)}
-                  placeholder="https://mcp.example.com/mcp"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="mcp-auth-type">Authentication</Label>
-                <select
-                  id="mcp-auth-type"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={mcpAuthType}
-                  onChange={(event) => setMcpAuthType(event.target.value as typeof mcpAuthType)}
-                >
-                  <option value="none">No authentication</option>
-                  <option value="bearer">Bearer token</option>
-                  <option value="api_key">API key</option>
-                  <option value="personal_access_token">Personal access token</option>
-                </select>
-              </div>
-              {mcpAuthType !== "none" ? (
-                <div className="space-y-2">
-                  <Label htmlFor="mcp-credential">Credential</Label>
-                  <Input
-                    id="mcp-credential"
-                    type="password"
-                    autoComplete="new-password"
-                    value={mcpCredential}
-                    onChange={(event) => setMcpCredential(event.target.value)}
-                    placeholder="Paste credential"
-                  />
+      ) : (
+        <div className="space-y-6">
+          <Button asChild variant="ghost" size="sm">
+            <Link to="/integrations" search={{ section: "overview" }}>
+              <ArrowLeft className="mr-2 size-4" />
+              All integrations
+            </Link>
+          </Button>
+          {integrationSection === "api-key" && (
+        <section id="api-key" className="scroll-mt-6">
+                  <div className="mb-4">
+                    <h2 className="text-lg font-semibold">API Key</h2>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Create and revoke scoped keys for clients that use bearer authentication. ChatGPT uses
+                      OAuth and does not need an API key.
+                    </p>
+                  </div>
+                  <ApiKeysCard />
+                </section>
+      )}
+          {integrationSection === "apps" && (
+        <section id="apps" className="scroll-mt-6">
+                <div className="mb-4">
+                  <h2 className="text-lg font-semibold">Apps</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Set up your bot for agent messaging. This is an Open-Connect integration, separate from
+                    app connectors.
+                  </p>
                 </div>
-              ) : null}
-            </div>
-            <Button
-              disabled={
-                saveCustomMcp.isPending ||
-                !mcpUrl.trim() ||
-                (mcpAuthType !== "none" && mcpCredential.trim().length < 8)
-              }
-              onClick={() => saveCustomMcp.mutate()}
-            >
-              {saveCustomMcp.isPending ? (
-                <Loader2 className="mr-2 size-4 animate-spin" />
-              ) : (
-                <Server className="mr-2 size-4" />
-              )}
-              Add remote MCP server
-            </Button>
-            {customMcpItems.length ? (
-              <div className="space-y-2 border-t pt-4">
-                {customMcpItems.map((item) => {
-                  const metadata = (item.metadata ?? {}) as Record<string, unknown>;
-                  return (
-                    <div
-                      key={item.id}
-                      className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 text-sm"
-                    >
-                      <div className="min-w-0">
-                        <p className="font-medium">{item.display_name}</p>
-                        <p className="truncate text-xs text-muted-foreground">
-                          {String(metadata.endpoint_url ?? "")} · {item.status.replaceAll("_", " ")}
+                <Card className="shadow-panel">
+                  <CardHeader className="p-5">
+                    <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                      <MessageCircle className="size-5" />
+                    </div>
+                    <CardTitle className="mt-3 text-base">Telegram bot</CardTitle>
+                    <CardDescription>
+                      Your bot token is stored securely for your account and is never displayed to
+                      collaborators.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4 px-5 pb-5">
+                    <div className="space-y-2">
+                      {telegramItems.length ? (
+                        telegramItems.map((item) => (
+                          <div
+                            key={item.id}
+                            className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 text-sm"
+                          >
+                            <span>
+                              {item.display_name || "Telegram"} · {item.status.replaceAll("_", " ")}
+                            </span>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={removeTelegram.isPending}
+                              onClick={() => removeTelegram.mutate(item.id)}
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          No Telegram bot is connected to this account.
                         </p>
+                      )}
+                    </div>
+                    {user ? (
+                      <Button size="sm" onClick={() => setTelegramOpen(true)}>
+                        <MessageCircle className="mr-2 size-4" />
+                        Set up Telegram
+                      </Button>
+                    ) : (
+                      <Button asChild size="sm">
+                        <Link to="/auth">Sign in</Link>
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              </section>
+      )}
+          {integrationSection === "ai-agents" && (
+        <section id="ai-agents" className="scroll-mt-6">
+                <div className="mb-4">
+                  <h2 className="text-lg font-semibold">AI Agents</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Choose a client to see its own connection flow.
+                  </p>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {aiClients.map((client) => (
+                    <Card key={client.provider} className="shadow-panel">
+                      <CardHeader className="p-4">
+                        <BrandLogo provider={client.provider} name={client.name} size="lg" />
+                        <CardTitle className="mt-3 text-sm">{client.name}</CardTitle>
+                        <CardDescription className="text-xs">{client.description}</CardDescription>
+                      </CardHeader>
+                      <CardContent className="px-4 pb-4">
+                        {user ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full"
+                            onClick={() =>
+                              client.provider === "chatgpt" ? setOauthOpen(true) : setMcpOpen(true)
+                            }
+                          >
+                            {client.provider === "chatgpt" ? (
+                              <ShieldCheck className="mr-2 size-4" />
+                            ) : (
+                              <Bot className="mr-2 size-4" />
+                            )}
+                            {client.action}
+                          </Button>
+                        ) : (
+                          <Button asChild size="sm" variant="outline" className="w-full">
+                            <Link to="/auth">Sign in</Link>
+                          </Button>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </section>
+      )}
+          {integrationSection === "custom-mcp" && (
+        <section id="custom-mcp" className="scroll-mt-6">
+                <div className="mb-4">
+                  <h2 className="text-lg font-semibold">Custom MCP</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Manage account-owned remote MCP servers and the inbound endpoint AI clients use. These
+                    stay separate from app Connectors and Marketplace resources.
+                  </p>
+                </div>
+                <Card className="shadow-panel">
+                  <CardHeader className="p-5">
+                    <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                      <Server className="size-5" />
+                    </div>
+                    <CardTitle className="mt-3 text-base">Remote MCP servers</CardTitle>
+                    <CardDescription>
+                      Add a remote MCP endpoint for your account. Any credential is validated and stored in
+                      the secure vault.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4 px-5 pb-5">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="mcp-name">Name</Label>
+                        <Input
+                          id="mcp-name"
+                          value={mcpName}
+                          onChange={(event) => setMcpName(event.target.value)}
+                          placeholder="Team MCP server"
+                        />
                       </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={removeCustomMcp.isPending}
-                        onClick={() => removeCustomMcp.mutate(item.id)}
-                      >
-                        <Trash2 className="mr-2 size-4" />
-                        Remove
+                      <div className="space-y-2">
+                        <Label htmlFor="mcp-url">Server URL</Label>
+                        <Input
+                          id="mcp-url"
+                          type="url"
+                          value={mcpUrl}
+                          onChange={(event) => setMcpUrl(event.target.value)}
+                          placeholder="https://mcp.example.com/mcp"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="mcp-auth-type">Authentication</Label>
+                        <select
+                          id="mcp-auth-type"
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                          value={mcpAuthType}
+                          onChange={(event) => setMcpAuthType(event.target.value as typeof mcpAuthType)}
+                        >
+                          <option value="none">No authentication</option>
+                          <option value="bearer">Bearer token</option>
+                          <option value="api_key">API key</option>
+                          <option value="personal_access_token">Personal access token</option>
+                        </select>
+                      </div>
+                      {mcpAuthType !== "none" ? (
+                        <div className="space-y-2">
+                          <Label htmlFor="mcp-credential">Credential</Label>
+                          <Input
+                            id="mcp-credential"
+                            type="password"
+                            autoComplete="new-password"
+                            value={mcpCredential}
+                            onChange={(event) => setMcpCredential(event.target.value)}
+                            placeholder="Paste credential"
+                          />
+                        </div>
+                      ) : null}
+                    </div>
+                    <Button
+                      disabled={
+                        saveCustomMcp.isPending ||
+                        !mcpUrl.trim() ||
+                        (mcpAuthType !== "none" && mcpCredential.trim().length < 8)
+                      }
+                      onClick={() => saveCustomMcp.mutate()}
+                    >
+                      {saveCustomMcp.isPending ? (
+                        <Loader2 className="mr-2 size-4 animate-spin" />
+                      ) : (
+                        <Server className="mr-2 size-4" />
+                      )}
+                      Add remote MCP server
+                    </Button>
+                    {customMcpItems.length ? (
+                      <div className="space-y-2 border-t pt-4">
+                        {customMcpItems.map((item) => {
+                          const metadata = (item.metadata ?? {}) as Record<string, unknown>;
+                          return (
+                            <div
+                              key={item.id}
+                              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 text-sm"
+                            >
+                              <div className="min-w-0">
+                                <p className="font-medium">{item.display_name}</p>
+                                <p className="truncate text-xs text-muted-foreground">
+                                  {String(metadata.endpoint_url ?? "")} · {item.status.replaceAll("_", " ")}
+                                </p>
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={removeCustomMcp.isPending}
+                                onClick={() => removeCustomMcp.mutate(item.id)}
+                              >
+                                <Trash2 className="mr-2 size-4" />
+                                Remove
+                              </Button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No remote MCP servers are configured.</p>
+                    )}
+                  </CardContent>
+                </Card>
+        
+                <Card className="shadow-panel">
+                  <CardHeader className="p-5">
+                    <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                      <Bot className="size-5" />
+                    </div>
+                    <CardTitle className="mt-3 text-base">Open-Connect MCP endpoint</CardTitle>
+                    <CardDescription>
+                      Compatible clients connect here and receive only the capabilities allowed for your
+                      account and project access.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4 px-5 pb-5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <code className="min-w-0 flex-1 break-all rounded-md bg-muted px-3 py-2 text-sm">
+                        {MCP_ENDPOINT}
+                      </code>
+                      <Button variant="outline" size="sm" onClick={() => void copyEndpoint()}>
+                        <Copy className="mr-2 size-4" />
+                        Copy URL
                       </Button>
                     </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">No remote MCP servers are configured.</p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-panel">
-          <CardHeader className="p-5">
-            <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Bot className="size-5" />
-            </div>
-            <CardTitle className="mt-3 text-base">Open-Connect MCP endpoint</CardTitle>
-            <CardDescription>
-              Compatible clients connect here and receive only the capabilities allowed for your
-              account and project access.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 px-5 pb-5">
-            <div className="flex flex-wrap items-center gap-2">
-              <code className="min-w-0 flex-1 break-all rounded-md bg-muted px-3 py-2 text-sm">
-                {MCP_ENDPOINT}
-              </code>
-              <Button variant="outline" size="sm" onClick={() => void copyEndpoint()}>
-                <Copy className="mr-2 size-4" />
-                Copy URL
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-              <Badge variant="secondary">OAuth supported</Badge>
-              <Badge variant="secondary">Bearer key supported</Badge>
-              <span className="self-center">
-                OAuth clients sign in and approve in their client.
-              </span>
-            </div>
-            <Button variant="outline" size="sm" onClick={() => setMcpOpen(true)}>
-              Client setup instructions
-            </Button>
-          </CardContent>
-        </Card>
-      </section>
-
-      <section id="apps" className="scroll-mt-6">
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold">Apps</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Set up your bot for agent messaging. This is an Open-Connect integration, separate from
-            app connectors.
+                    <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                      <Badge variant="secondary">OAuth supported</Badge>
+                      <Badge variant="secondary">Bearer key supported</Badge>
+                      <span className="self-center">
+                        OAuth clients sign in and approve in their client.
+                      </span>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => setMcpOpen(true)}>
+                      Client setup instructions
+                    </Button>
+                  </CardContent>
+                </Card>
+              </section>
+      )}
+          <p className="text-xs text-muted-foreground">
+            Integrations belong to the signed-in account by default. Grant project access explicitly.
+            Connector accounts, model provider keys, and resource catalog entries remain separate.
           </p>
         </div>
-        <Card className="shadow-panel">
-          <CardHeader className="p-5">
-            <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <MessageCircle className="size-5" />
-            </div>
-            <CardTitle className="mt-3 text-base">Telegram bot</CardTitle>
-            <CardDescription>
-              Your bot token is stored securely for your account and is never displayed to
-              collaborators.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 px-5 pb-5">
-            <div className="space-y-2">
-              {telegramItems.length ? (
-                telegramItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 text-sm"
-                  >
-                    <span>
-                      {item.display_name || "Telegram"} · {item.status.replaceAll("_", " ")}
-                    </span>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={removeTelegram.isPending}
-                      onClick={() => removeTelegram.mutate(item.id)}
-                    >
-                      Remove
-                    </Button>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  No Telegram bot is connected to this account.
-                </p>
-              )}
-            </div>
-            {user ? (
-              <Button size="sm" onClick={() => setTelegramOpen(true)}>
-                <MessageCircle className="mr-2 size-4" />
-                Set up Telegram
-              </Button>
-            ) : (
-              <Button asChild size="sm">
-                <Link to="/auth">Sign in</Link>
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-      </section>
-
-      {user ? (
-        <section id="api-key" className="scroll-mt-6">
-          <div className="mb-4">
-            <h2 className="text-lg font-semibold">API Key</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Create and revoke scoped keys for clients that use bearer authentication. ChatGPT uses
-              OAuth and does not need an API key.
-            </p>
-          </div>
-          <ApiKeysCard />
-        </section>
-      ) : null}
-
-      <p className="text-xs text-muted-foreground">
-        Integrations belong to the signed-in account by default. Grant project access explicitly.
-        Connector accounts, model provider keys, and resource catalog entries remain separate.
-      </p>
+      )}
 
       <Dialog open={oauthOpen} onOpenChange={setOauthOpen}>
         <DialogContent className="sm:max-w-lg">
@@ -624,5 +653,35 @@ function IntegrationsPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function IntegrationTypeCard({
+  section,
+  icon: Icon,
+  title,
+  description,
+}: {
+  section: Exclude<IntegrationSection, "overview">;
+  icon: typeof Server;
+  title: string;
+  description: string;
+}) {
+  return (
+    <Link
+      to="/integrations"
+      search={{ section }}
+      className="block rounded-xl border bg-card p-5 shadow-panel transition-colors hover:bg-accent/40"
+    >
+      <div className="flex items-start gap-3">
+        <div className="rounded-lg bg-primary/10 p-2 text-primary">
+          <Icon className="size-4" />
+        </div>
+        <div>
+          <h2 className="font-medium">{title}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+        </div>
+      </div>
+    </Link>
   );
 }

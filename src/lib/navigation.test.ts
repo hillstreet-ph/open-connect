@@ -96,6 +96,13 @@ test("connection surfaces remain internal and separate from Marketplace", () => 
   assert.ok(integrations.includes("inbound-integrations.functions"));
   assert.ok(integrations.includes("connections.functions"));
   assert.ok(integrations.includes("Remote MCP servers"));
+  assert.ok(integrations.includes('section: integrationSections.includes(search.section'));
+  for (const section of ["api-key", "apps", "ai-agents", "custom-mcp"]) {
+    assert.ok(
+      integrations.includes('integrationSection === "' + section + '"'),
+      "Integration detail view is not isolated: " + section,
+    );
+  }
   for (const section of ['id="api-key"', 'id="apps"', 'id="ai-agents"', 'id="custom-mcp"']) {
     assert.ok(integrations.includes(section), "Missing integration section " + section);
   }
@@ -137,7 +144,7 @@ test("Integrations follows Data & privacy in Settings and includes account keys"
     ["Custom MCP", "custom-mcp"],
   ]) {
     assert.ok(settings.includes('title="' + title + '"'), "Missing integration card " + title);
-    assert.ok(settings.includes('hash="' + hash + '"'), "Missing integration section link " + hash);
+    assert.ok(settings.includes('section="' + hash + '"'), "Missing integration section selection " + hash);
   }
   assert.ok(!settings.includes('title="Integrations"'));
   assert.ok(settings.includes('title="Memory"'));
