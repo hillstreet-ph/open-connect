@@ -260,6 +260,14 @@ function Home() {
         <div className="absolute inset-0 bg-hero" aria-hidden />
         <div className="absolute inset-0 grid-lines opacity-50" aria-hidden />
         <div className="relative mx-auto max-w-3xl px-4 py-16 text-center sm:px-6 sm:py-24 md:py-28">
+          <img
+            src="/open-connect-logo.webp"
+            alt="Open-Connect: Connect. Build. Automate."
+            width={384}
+            height={384}
+            fetchPriority="high"
+            className="mx-auto mb-6 size-28 rounded-3xl object-cover shadow-panel sm:size-36"
+          />
           <Badge
             variant="outline"
             className="rounded-full border-primary/25 bg-card/60 px-3 py-1 text-primary shadow-sm"
