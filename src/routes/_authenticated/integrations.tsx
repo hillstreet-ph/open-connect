@@ -20,10 +20,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  configureAppConnection,
-  disconnectApp,
-  listAppConnections,
-} from "@/lib/connections.functions";
+  configureTelegramIntegration,
+  deleteInboundIntegration,
+  listInboundIntegrations,
+} from "@/lib/inbound-integrations.functions";
 
 export const Route = createFileRoute("/_authenticated/integrations")({
   head: () => ({
@@ -77,9 +77,9 @@ const aiClients = [
 function IntegrationsPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const listFn = useServerFn(listAppConnections);
-  const configureFn = useServerFn(configureAppConnection);
-  const disconnectFn = useServerFn(disconnectApp);
+  const listFn = useServerFn(listInboundIntegrations);
+  const configureFn = useServerFn(configureTelegramIntegration);
+  const disconnectFn = useServerFn(deleteInboundIntegration);
   const [oauthOpen, setOauthOpen] = useState(false);
   const [mcpOpen, setMcpOpen] = useState(false);
   const [telegramOpen, setTelegramOpen] = useState(false);
@@ -87,7 +87,7 @@ function IntegrationsPage() {
   const [botToken, setBotToken] = useState("");
 
   const connections = useQuery({
-    queryKey: ["app-connections"],
+    queryKey: ["inbound-integrations"],
     queryFn: () => listFn({}),
     enabled: Boolean(user),
   });
@@ -98,20 +98,12 @@ function IntegrationsPage() {
     mutationFn: () =>
       configureFn({
         data: {
-          provider: "telegram",
-          display_name: "Telegram",
-          account_label: botLabel.trim() || "Telegram bot",
-          endpoint_url: "",
-          api_key: botToken,
-          auth_type: "bearer",
+          display_name: botLabel.trim() || "Telegram bot",
+          token: botToken,
         },
       }),
     onSuccess: (result) => {
-      toast.success(
-        result.validation.verified
-          ? "Telegram bot verified and saved"
-          : "Telegram token saved securely",
-      );
+      toast.success("Telegram bot verified and saved securely");
       setBotLabel("");
       setBotToken("");
       setTelegramOpen(false);

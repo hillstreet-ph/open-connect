@@ -64,16 +64,27 @@ jobs:
         with:
           script: |
             const state = process.env.VALIDATION_RESULT === 'success' ? 'success' : 'failure';
-            await github.rest.repos.createCommitStatus({
+            const { data: pullRequest } = await github.rest.pulls.get({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              sha: context.payload.pull_request.head.sha,
-              state,
-              context: 'Build & validate',
-              description: state === 'success'
-                ? 'Lint, tests, build, and SSR validation passed.'
-                : `Validation job concluded as ${process.env.VALIDATION_RESULT}.`,
+              pull_number: context.issue.number,
             });
+            const shas = new Set([
+              context.payload.pull_request.head.sha,
+              pullRequest.merge_commit_sha,
+            ].filter(Boolean));
+            for (const sha of shas) {
+              await github.rest.repos.createCommitStatus({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                sha,
+                state,
+                context: 'Build & validate',
+                description: state === 'success'
+                  ? 'Lint, tests, build, and SSR validation passed.'
+                  : `Validation job concluded as ${process.env.VALIDATION_RESULT}.`,
+              });
+            }
 
   smoke-production:
     name: Production smoke (post-merge)
