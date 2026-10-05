@@ -49,7 +49,7 @@ type Item = {
 /**
  * Primary IA (locked):
  * Workspace switcher → Dashboard → Projects → Work → Discover → Cloud → Connections →
- * Plugins, Connectors, Credentials, and AI Gateway. Integrations, API keys, and settings live in the user avatar menu.
+ * Plugins, Connectors, Credentials, and AI Gateway. Integrations are in Settings; API keys and account settings are in the user menu.
  *
  * Organization settings live in the user menu; workspaces manage projects and environments.
  * System administration appears once for privileged roles in the shared menu.
