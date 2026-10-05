@@ -24,14 +24,14 @@ const aiClients = [
     provider: "chatgpt",
     name: "ChatGPT · Custom GPTs",
     body: "Connect GPT Actions and supported MCP clients with OAuth or a scoped Open-Connect key.",
-    endpoints: ["/oauth", "/v1", "/mcp"],
+    endpoints: ["/oauth", "/mcp"],
     to: "/api-keys" as const,
   },
   {
     provider: "claude",
     name: "Claude / Anthropic",
     body: "Use Claude Desktop or API clients with the Open-Connect MCP endpoint and scoped key.",
-    endpoints: ["/mcp", "/v1"],
+    endpoints: ["/mcp"],
     to: "/api-keys" as const,
   },
   {
@@ -59,7 +59,7 @@ const aiClients = [
     provider: "manus",
     name: "Manus · AI agents",
     body: "Give supported agents access only to assigned projects and approved resources.",
-    endpoints: ["/mcp", "/v1"],
+    endpoints: ["/mcp"],
     to: "/api-keys" as const,
   },
 ];
@@ -211,14 +211,14 @@ function IntegrationsPage() {
             </div>
             <CardTitle className="mt-3 text-sm">Telegram connections</CardTitle>
             <CardDescription className="text-xs">
-              Each account owner chooses which Telegram connection to share with each project.
-              Connection credentials stay private and are invoked through scoped capability grants.
+              This bot integration belongs to your account. Grant only the project capabilities required for
+              Telegram messaging; bot credentials stay private to you.
             </CardDescription>
           </CardHeader>
           <CardContent className="px-4 pb-4">
             {user ? (
               <Button asChild size="sm">
-                <Link to="/connections">Set up my Telegram bot</Link>
+                <Link to="/connections">Set up my Telegram integration</Link>
               </Button>
             ) : null}
           </CardContent>
