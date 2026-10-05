@@ -29,9 +29,10 @@ async function ensureLibrary(context: { supabase: SupabaseClient<Database>; user
   return created.id as string;
 }
 
-async function ensureSkillsCollection(
-  context: { supabase: SupabaseClient<Database>; userId: string },
-) {
+async function ensureSkillsCollection(context: {
+  supabase: SupabaseClient<Database>;
+  userId: string;
+}) {
   const { data: existing, error: readError } = await context.supabase
     .from("toolkits")
     .select("id")
@@ -81,8 +82,7 @@ async function ensureSkillsCollection(
   if (skillsError) throw new Error(skillsError.message);
 
   if (installedSkills?.length) {
-    const { error: backfillError } = await context.supabase
-      .from("toolkit_items")
+    const { error: backfillError } = await context.supabase.from("toolkit_items")
       .upsert(
         installedSkills.map((item, position) => ({
           toolkit_id: collectionId,
