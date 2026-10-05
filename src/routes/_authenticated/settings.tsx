@@ -25,6 +25,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { profileDraftValue } from "@/lib/react-compat";
+import { useRoles } from "@/hooks/use-roles";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
@@ -43,6 +44,7 @@ const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 function SettingsPage() {
   const queryClient = useQueryClient();
+  const { isAdmin } = useRoles();
   const fileRef = useRef<HTMLInputElement>(null);
   const [nameDraft, setNameDraft] = useState<{ userId: string; value: string } | null>(null);
   const [avatarDraft, setAvatarDraft] = useState<{ userId: string; value: string } | null>(null);
@@ -66,13 +68,9 @@ function SettingsPage() {
         userId: user.id,
         email: user.email ?? "",
         displayName:
-          profile?.["display_name"] ||
-          (user.user_metadata?.["display_name"] as string | undefined) ||
-          "",
+          profile?.display_name || (user.user_metadata?.display_name as string | undefined) || "",
         avatarUrl:
-          profile?.["avatar_url"] ||
-          (user.user_metadata?.["avatar_url"] as string | undefined) ||
-          "",
+          profile?.avatar_url || (user.user_metadata?.avatar_url as string | undefined) || "",
       };
     },
   });
@@ -180,7 +178,7 @@ function SettingsPage() {
     <div className="mx-auto max-w-5xl px-4 py-14">
       <h1 className="text-3xl font-semibold">Settings</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Manage your account, organizations, people, connected apps, data, and platform security.
+        Manage your profile, workspace access, connected apps, data, and security.
       </p>
 
       <Tabs defaultValue="profile" className="mt-8">
@@ -332,27 +330,29 @@ function SettingsPage() {
             <SettingsLinkCard
               to="/orgs"
               icon={Building2}
-              title="Organizations & workspaces"
-              description="Create workspaces, groups, invite people, and manage member roles."
+              title="Organization & workspace"
+              description="Admin-managed organization membership, groups, and role assignments."
             />
             <SettingsLinkCard
               to="/roles"
-              icon={UsersRound}
-              title="Roles & permissions"
-              description="Review Admin, Developer, and Member permissions at each scope."
+              icon={KeyRound}
+              title="Access reference"
+              description="Review Admin, Developer, and Member access across platform, organization, and project scopes."
             />
             <SettingsLinkCard
               to="/projects"
               icon={Network}
               title="Projects & environments"
-              description="Manage project boundaries and development, staging, and production scopes."
+              description="Open assigned projects and access project-scoped environments."
             />
-            <SettingsLinkCard
-              to="/admin"
-              icon={ShieldCheck}
-              title="System administration"
-              description="Administrator controls for platform-wide access."
-            />
+            {isAdmin ? (
+              <SettingsLinkCard
+                to="/admin"
+                icon={UsersRound}
+                title="User roles"
+                description="Admins assign platform-level Member, Developer, and Admin roles."
+              />
+            ) : null}
           </div>
         </TabsContent>
         <TabsContent value="integrations">
