@@ -354,18 +354,18 @@ test("Marketplace and Resources share ordered type categories ending with Others
 });
 
 test("Guides are excluded from Marketplace and Resources", () => {
-  const marketplace = readFileSync(path.resolve(process.cwd(), "src/routes/resources.tsx"), "utf8");
+  const marketplace = readFileSync(
+    path.resolve(process.cwd(), "src/routes/resources.tsx"),
+    "utf8",
+  );
   const library = readFileSync(
     path.resolve(process.cwd(), "src/components/resource-library-page.tsx"),
     "utf8",
   );
 
   assert.match(marketplace, /item\.resource_type !== "guide"/);
-  assert.match(library, /row\.resources\?\.resource_type !== "guide"/);
-  assert.equal(
-    resourceCategories.some((category) => category.value === "guide"),
-    false,
-  );
+  assert.match(library, /type !== "guide"/);
+  assert.equal(resourceCategories.some((category) => category.value === "guide"), false);
 });
 
 test("Resources uses the Marketplace category chip controls", () => {
