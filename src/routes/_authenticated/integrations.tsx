@@ -96,6 +96,12 @@ function IntegrationsPage() {
     "ai-agents": "AI Agents",
     "custom-mcp": "Custom MCP",
   };
+  const sectionDescriptions: Record<IntegrationSection, string> = {
+    "api-key": "Create and manage scoped credentials for clients that use bearer authentication.",
+    apps: "Connect account-owned messaging apps. Each app keeps its own secure setup.",
+    "ai-agents": "Connect ChatGPT and compatible AI agents through OAuth or supported MCP authentication.",
+    "custom-mcp": "Copy the Open-Connect MCP endpoint and configure it in any compatible external client.",
+  };
   const queryClient = useQueryClient();
   const listFn = useServerFn(listInboundIntegrations);
   const configureFn = useServerFn(configureTelegramIntegration);
@@ -167,9 +173,7 @@ function IntegrationsPage() {
           </Button>
         </div>
         <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-          Connect external AI clients, MCP clients, and Telegram into Open-Connect. Each integration
-          setup belongs to your account. Connectors are for external accounts Open-Connect uses; AI
-          models and resource catalogs are managed separately.
+          {sectionDescriptions[section]}
         </p>
       </header>
 
