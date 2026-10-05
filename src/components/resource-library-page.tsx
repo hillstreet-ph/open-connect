@@ -149,56 +149,56 @@ export function ResourceLibraryPage({
           </div>
           {resources.isLoading ? <p role="status">Loading resources…</p> : null}
           {groups.map((group) => (
-        <section key={group.type} className="space-y-2" aria-label={group.label}>
-          <h2 className="text-sm font-semibold">
-            {group.label} <span className="text-muted-foreground">({group.items.length})</span>
-          </h2>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {group.items.map((row) => {
-              const resource = row.resources!;
-              return (
-                <Card key={resource.id} className="shadow-panel">
-                  <CardHeader className="p-3 pb-1">
-                    <CardTitle className="text-sm leading-snug">{resource.name}</CardTitle>
-                    <CardDescription className="line-clamp-2 text-xs">
-                      {resource.description}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex flex-wrap items-center gap-1.5 p-3 pt-1">
-                    <Badge variant="secondary" className="text-[10px]">
-                      {isSharedLibraryRow(row) ? "All projects" : "Private context"}
-                    </Badge>
-                    {!resourceType ? (
-                      <Badge variant="outline" className="text-[10px]">
-                        {resource.resource_type}
-                      </Badge>
-                    ) : null}
-                    {!row.id.startsWith("owned-") ? (
-                      <Button
-                        size="sm"
-                        className="ml-auto size-8 p-0"
-                        variant="ghost"
-                        disabled={removeMutation.isPending}
-                        aria-label={`Remove ${resource.name} from workspace library`}
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              `Remove ${resource.name} from the shared workspace library?`,
-                            )
-                          )
-                            removeMutation.mutate(resource.id!);
-                        }}
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
-                    ) : null}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </section>
-      ))}
+            <section key={group.type} className="space-y-2" aria-label={group.label}>
+              <h2 className="text-sm font-semibold">
+                {group.label} <span className="text-muted-foreground">({group.items.length})</span>
+              </h2>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {group.items.map((row) => {
+                  const resource = row.resources!;
+                  return (
+                    <Card key={resource.id} className="shadow-panel">
+                      <CardHeader className="p-3 pb-1">
+                        <CardTitle className="text-sm leading-snug">{resource.name}</CardTitle>
+                        <CardDescription className="line-clamp-2 text-xs">
+                          {resource.description}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="flex flex-wrap items-center gap-1.5 p-3 pt-1">
+                        <Badge variant="secondary" className="text-[10px]">
+                          {isSharedLibraryRow(row) ? "All projects" : "Private context"}
+                        </Badge>
+                        {!resourceType ? (
+                          <Badge variant="outline" className="text-[10px]">
+                            {resource.resource_type}
+                          </Badge>
+                        ) : null}
+                        {!row.id.startsWith("owned-") ? (
+                          <Button
+                            size="sm"
+                            className="ml-auto size-8 p-0"
+                            variant="ghost"
+                            disabled={removeMutation.isPending}
+                            aria-label={`Remove ${resource.name} from workspace library`}
+                            onClick={() => {
+                              if (
+                                window.confirm(
+                                  `Remove ${resource.name} from the shared workspace library?`,
+                                )
+                              )
+                                removeMutation.mutate(resource.id!);
+                            }}
+                          >
+                            <Trash2 className="size-3.5" />
+                          </Button>
+                        ) : null}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
 
       {resources.isError ? (
         <p role="alert">Could not load your library. Please try again.</p>

@@ -153,8 +153,8 @@ function MarketplaceContent() {
           </Badge>
           <h1 className="text-xl font-semibold">Marketplace</h1>
           <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-            Browse skills, MCP, tools, plugins, agents, prompts, and other packages. Add items to your
-            personal library, then share them with projects from the matching sidebar page.
+            Browse skills, MCP, tools, plugins, agents, prompts, and other packages. Add items to
+            your personal library, then share them with projects from the matching sidebar page.
           </p>
         </div>
         {!user ? (
@@ -234,94 +234,94 @@ function MarketplaceContent() {
             </p>
           ) : null}
           <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-        {isLoading
-          ? Array.from({ length: 6 }).map((_, index) => (
-              <Skeleton key={index} className="h-36 rounded-xl" />
-            ))
-          : results.map((item) => {
-              const config =
-                item.installation_config && typeof item.installation_config === "object"
-                  ? (item.installation_config as Record<string, unknown>)
-                  : {};
-              const reviewState = String(config["review_state"] ?? "approved");
-              const canonicalUrl =
-                typeof config["canonical_url"] === "string" ? config["canonical_url"] : null;
-              const executable = item.verified && reviewState === "approved";
-              return (
-                <Card key={item.id} className="shadow-panel">
-                  <CardHeader className="p-3 pb-1">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <Badge variant="secondary" className="text-[10px] uppercase">
-                        {item.resource_type}
-                      </Badge>
-                      {item.verified ? (
-                        <Badge
-                          variant="outline"
-                          className="border-accent/50 text-[10px] text-accent"
-                        >
-                          Verified
-                        </Badge>
-                      ) : null}
-                      {!executable ? (
-                        <Badge variant="outline" className="text-[10px] capitalize">
-                          {reviewState.replaceAll("_", " ")}
-                        </Badge>
-                      ) : null}
-                    </div>
-                    <CardTitle className="mt-1 text-sm leading-snug">{item.name}</CardTitle>
-                    <CardDescription className="line-clamp-2 text-xs">
-                      {item.description}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex flex-wrap items-center justify-between gap-2 p-3 pt-1 text-xs text-muted-foreground">
-                    <span className="font-mono">v{item.version}</span>
-                    {user ? (
-                      <div className="flex flex-col items-end gap-1">
-                        <div className="flex gap-1">
-                          {canonicalUrl ? (
-                            <Button asChild size="sm" variant="ghost">
-                              <a href={canonicalUrl} target="_blank" rel="noopener noreferrer">
-                                <ExternalLink className="mr-1 size-3.5" />
-                                Source
-                              </a>
-                            </Button>
+            {isLoading
+              ? Array.from({ length: 6 }).map((_, index) => (
+                  <Skeleton key={index} className="h-36 rounded-xl" />
+                ))
+              : results.map((item) => {
+                  const config =
+                    item.installation_config && typeof item.installation_config === "object"
+                      ? (item.installation_config as Record<string, unknown>)
+                      : {};
+                  const reviewState = String(config["review_state"] ?? "approved");
+                  const canonicalUrl =
+                    typeof config["canonical_url"] === "string" ? config["canonical_url"] : null;
+                  const executable = item.verified && reviewState === "approved";
+                  return (
+                    <Card key={item.id} className="shadow-panel">
+                      <CardHeader className="p-3 pb-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <Badge variant="secondary" className="text-[10px] uppercase">
+                            {item.resource_type}
+                          </Badge>
+                          {item.verified ? (
+                            <Badge
+                              variant="outline"
+                              className="border-accent/50 text-[10px] text-accent"
+                            >
+                              Verified
+                            </Badge>
                           ) : null}
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => viewMutation.mutate(item.id)}
-                            disabled={viewMutation.isPending}
-                          >
-                            <Eye className="mr-1 size-3.5" />
-                            View
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => downloadMutation.mutate(item.id)}
-                            disabled={downloadMutation.isPending}
-                            title={
-                              executable ? undefined : "Metadata only until review is approved"
-                            }
-                          >
-                            <Download className="mr-1 size-3.5" />
-                            {executable ? "Download" : "Metadata"}
-                          </Button>
+                          {!executable ? (
+                            <Badge variant="outline" className="text-[10px] capitalize">
+                              {reviewState.replaceAll("_", " ")}
+                            </Badge>
+                          ) : null}
                         </div>
-                        {executable ? <AddToLibraryButton resourceId={item.id} /> : null}
-                      </div>
-                    ) : (
-                      <Button asChild size="sm" variant="outline">
-                        <Link to="/auth">
-                          <Lock className="mr-1 size-3.5" />
-                          Sign in
-                        </Link>
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
+                        <CardTitle className="mt-1 text-sm leading-snug">{item.name}</CardTitle>
+                        <CardDescription className="line-clamp-2 text-xs">
+                          {item.description}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="flex flex-wrap items-center justify-between gap-2 p-3 pt-1 text-xs text-muted-foreground">
+                        <span className="font-mono">v{item.version}</span>
+                        {user ? (
+                          <div className="flex flex-col items-end gap-1">
+                            <div className="flex gap-1">
+                              {canonicalUrl ? (
+                                <Button asChild size="sm" variant="ghost">
+                                  <a href={canonicalUrl} target="_blank" rel="noopener noreferrer">
+                                    <ExternalLink className="mr-1 size-3.5" />
+                                    Source
+                                  </a>
+                                </Button>
+                              ) : null}
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => viewMutation.mutate(item.id)}
+                                disabled={viewMutation.isPending}
+                              >
+                                <Eye className="mr-1 size-3.5" />
+                                View
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => downloadMutation.mutate(item.id)}
+                                disabled={downloadMutation.isPending}
+                                title={
+                                  executable ? undefined : "Metadata only until review is approved"
+                                }
+                              >
+                                <Download className="mr-1 size-3.5" />
+                                {executable ? "Download" : "Metadata"}
+                              </Button>
+                            </div>
+                            {executable ? <AddToLibraryButton resourceId={item.id} /> : null}
+                          </div>
+                        ) : (
+                          <Button asChild size="sm" variant="outline">
+                            <Link to="/auth">
+                              <Lock className="mr-1 size-3.5" />
+                              Sign in
+                            </Link>
+                          </Button>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
           </div>
         </div>
       </div>
