@@ -4,7 +4,12 @@ import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { validateOAuthRequest } from "@/lib/oauth-policy";
 export const Route = createFileRoute("/oauth/authorize")({
-  ssr: false,
+  ssr: true,
+  pendingComponent: () => (
+    <p role="status" className="mx-auto max-w-md px-4 py-12">
+      Loading Open-Connect authorization…
+    </p>
+  ),
   validateSearch: (s: Record<string, unknown>) =>
     Object.fromEntries(Object.entries(s).filter(([, v]) => typeof v === "string")) as Record<
       string,
@@ -60,6 +65,12 @@ function AuthorizePage() {
       <p className="mt-2 text-sm text-muted-foreground">
         Sign in and approve access. No API key is required.
       </p>
+      <noscript>
+        <p role="alert" className="mt-4">
+          JavaScript is required to sign in and approve this connection. Enable it, then reload this
+          page or restart the connection from Composio.
+        </p>
+      </noscript>
       {invalid || error ? (
         <p role="alert" className="mt-4 text-destructive">
           {invalid || error}
