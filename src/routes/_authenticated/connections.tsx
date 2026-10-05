@@ -55,7 +55,7 @@ export const Route = createFileRoute("/_authenticated/connections")({
       {
         name: "description",
         content:
-          "Connect external apps and accounts Open-Connect uses. AI clients and MCP entry points are managed separately in Integrations.",
+          "Connect external apps and accounts with OAuth or secure API keys and tokens. AI and MCP integrations are managed separately.",
       },
     ],
   }),
@@ -78,7 +78,7 @@ function ConnectionsPage() {
   const [accountLabel, setAccountLabel] = useState("");
   const [endpointUrl, setEndpointUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
-  const [authType, setAuthType] = useState<"none" | "bearer" | "api_key">("bearer");
+  const [authType, setAuthType] = useState<"none" | "bearer" | "api_key" | "personal_access_token">("bearer");
   const endpointProviders = new Set(["custom_mcp", "supabase", "databricks", "litellm"]);
 
   const catalog = useQuery({ queryKey: ["connection-catalog"], queryFn: () => catalogFn({}) });
@@ -154,7 +154,8 @@ function ConnectionsPage() {
   const results = useMemo(() => {
     const term = query.trim().toLowerCase();
     return (catalog.data ?? []).filter((app) => {
-      const matchesCat = category === "All" || app.category === category;
+      const hasWorkingConnection = !app.oauth || app.oauth_ready;
+      const matchesCat = (category === "All" || app.category === category) && hasWorkingConnection;
       const matchesTerm =
         !term ||
         app.display_name.toLowerCase().includes(term) ||
@@ -237,7 +238,7 @@ function ConnectionsPage() {
           }}
           disabled={!(catalog.data ?? []).some((app) => app.provider === "custom_mcp")}
         >
-          Add custom MCP
+          Connect custom MCP
         </Button>
       </div>
 
@@ -349,8 +350,8 @@ function ConnectionsPage() {
                                 ? "Connect"
                                 : "Setup required"
                               : app.provider === "custom_mcp"
-                                ? "Add MCP"
-                                : "Add key"}
+                                ? "Connect"
+                                : "Connect"}
                         </Button>
                       </div>
                     )}
@@ -434,7 +435,7 @@ function ConnectionsPage() {
             <Plus aria-hidden="true" className="size-4" />
             {managedApp?.oauth && !managedApp.oauth_ready
               ? "Provider setup required"
-              : "Add another account"}
+              : "Connect another account"}
           </Button>
         </DialogContent>
       </Dialog>
@@ -491,12 +492,13 @@ function ConnectionsPage() {
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                   value={authType}
                   onChange={(event) =>
-                    setAuthType(event.target.value as "none" | "bearer" | "api_key")
+                    setAuthType(event.target.value as "none" | "bearer" | "api_key" | "personal_access_token")
                   }
                 >
                   <option value="none">No authentication</option>
                   <option value="bearer">Bearer token</option>
-                  <option value="api_key">X-API-Key header</option>
+                  <option value="api_key">API key header</option>
+                  <option value="personal_access_token">Personal access token</option>
                 </select>
               </div>
             ) : null}
