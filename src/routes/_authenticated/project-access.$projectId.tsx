@@ -95,11 +95,24 @@ function ProjectAccessPage() {
           {access.isLoading ? (
             <p className="text-sm text-muted-foreground">Loading organization members…</p>
           ) : access.isError ? (
-            <div role="alert" className="rounded-md border border-destructive/30 p-3 text-sm">
+            <div
+              role="alert"
+              className="space-y-2 rounded-md border border-destructive/30 p-3 text-sm"
+            >
               <p>Could not load project access.</p>
-              <p className="mt-1 text-muted-foreground">
-                Project admins and organization admins can manage collaborators.
+              <p className="text-muted-foreground">
+                {access.error instanceof Error
+                  ? access.error.message
+                  : "Check your project access and try again."}
               </p>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={access.isFetching}
+                onClick={() => void access.refetch()}
+              >
+                Retry
+              </Button>
             </div>
           ) : (access.data?.members.length ?? 0) === 0 ? (
             <p className="text-sm text-muted-foreground">No active organization members.</p>
