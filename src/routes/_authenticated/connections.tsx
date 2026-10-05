@@ -37,6 +37,7 @@ type CatalogApp = {
   oauth: boolean;
   oauth_ready: boolean;
   connection_method?: string;
+  auth_methods?: string[];
 };
 
 function connectionStatusLabel(status: string) {
@@ -56,7 +57,7 @@ export const Route = createFileRoute("/_authenticated/connections")({
       {
         name: "description",
         content:
-          "Connect external app accounts. AI clients, AI agents, and MCP integrations are managed in Settings; model providers stay in AI Gateway.",
+          "Connect app accounts, Composio toolkits, and MCP servers. Credentials stay server-side; AI clients and model providers are managed separately.",
       },
     ],
   }),
@@ -80,9 +81,13 @@ function ConnectionsPage() {
   const [accountLabel, setAccountLabel] = useState("");
   const [endpointUrl, setEndpointUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
-  const endpointProviders = new Set(["supabase", "databricks", "litellm"]);
+  const [authType, setAuthType] = useState<"none" | "bearer" | "api_key">("bearer");
+  const endpointProviders = new Set(["supabase", "databricks", "litellm", "custom_mcp"]);
 
-  const catalog = useQuery({ queryKey: ["connection-catalog"], queryFn: () => catalogFn({}) });
+  const catalog = useQuery({
+    queryKey: ["connection-catalog"],
+    queryFn: () => catalogFn({}),
+  });
   const mine = useQuery({
     queryKey: ["app-connections"],
     queryFn: () => listFn({}),
@@ -133,7 +138,7 @@ function ConnectionsPage() {
           account_label: accountLabel,
           endpoint_url: endpointUrl,
           api_key: apiKey,
-          auth_type: "bearer",
+          auth_type: selectedApp?.provider === "custom_mcp" ? authType : "bearer",
         },
       }),
     onSuccess: (result) => {
@@ -187,7 +192,10 @@ function ConnectionsPage() {
       connectionsByProvider.set(item.provider, item);
     }
   }
-  const catOptions = ["All", ...connectionCategories];
+  const catOptions = [
+    "All",
+    ...new Set([...connectionCategories, ...(catalog.data ?? []).map((app) => app.category)]),
+  ];
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:py-16">
@@ -196,8 +204,8 @@ function ConnectionsPage() {
       </Badge>
       <h1 className="text-2xl font-semibold sm:text-4xl">Connectors</h1>
       <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-        Connect the external app accounts Open-Connect uses. AI clients and MCP entry points are
-        managed separately in Integrations. Credentials stay server-side.
+        Connect external app accounts, Composio toolkits, and MCP servers. Credentials stay
+        server-side.
       </p>
 
       <div className="mt-6 flex flex-wrap gap-2">
@@ -286,8 +294,13 @@ function ConnectionsPage() {
                       <div className="min-w-0">
                         <p className="font-semibold leading-snug">{app.display_name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {`${app.category} · ${app.connection_method === "managed_oauth" ? "Composio" : app.connection_method === "native_oauth" ? "Official provider" : "API key"}`}
+                          {`${app.category} · ${app.provider === "custom_mcp" ? "MCP endpoint" : app.connection_method === "managed_oauth" ? "Composio" : app.connection_method === "native_oauth" ? "Official provider" : "API key"}`}
                         </p>
+                        {app.auth_methods?.length ? (
+                          <p className="text-xs text-muted-foreground">
+                            Auth: {app.auth_methods.join(" · ")}
+                          </p>
+                        ) : null}
                       </div>
                     </div>
                     {!user ? (
@@ -330,7 +343,10 @@ function ConnectionsPage() {
                               ? setManagedApp(app as CatalogApp)
                               : app.oauth
                                 ? connectMutation.mutate(app.provider)
-                                : setSelectedApp(app as CatalogApp)
+                                : (() => {
+                                    setAuthType(app.provider === "custom_mcp" ? "none" : "bearer");
+                                    setSelectedApp(app as CatalogApp);
+                                  })()
                           }
                         >
                           <Plus className="size-4" aria-hidden="true" />
@@ -453,31 +469,61 @@ function ConnectionsPage() {
             </div>
             {selectedApp && endpointProviders.has(selectedApp.provider) ? (
               <div className="space-y-2">
-                <Label htmlFor="connection-endpoint">Service base URL</Label>
+                <Label htmlFor="connection-endpoint">
+                  {selectedApp.provider === "custom_mcp" ? "MCP endpoint URL" : "Service base URL"}
+                </Label>
                 <Input
                   id="connection-endpoint"
                   type="url"
                   value={endpointUrl}
                   onChange={(event) => setEndpointUrl(event.target.value)}
-                  placeholder="https://workspace.example.com"
+                  placeholder={
+                    selectedApp.provider === "custom_mcp"
+                      ? "https://mcp.example.com/mcp"
+                      : "https://workspace.example.com"
+                  }
                 />
               </div>
             ) : null}
-            <div className="space-y-2">
-              <Label htmlFor="connection-key">API key or access token</Label>
-              <Input
-                id="connection-key"
-                type="password"
-                autoComplete="off"
-                value={apiKey}
-                onChange={(event) => setApiKey(event.target.value)}
-                placeholder="Paste credential"
-                className="font-mono"
-              />
-            </div>
+            {selectedApp?.provider === "custom_mcp" ? (
+              <div className="space-y-2">
+                <Label htmlFor="connection-auth-type">MCP authentication</Label>
+                <select
+                  id="connection-auth-type"
+                  value={authType}
+                  onChange={(event) =>
+                    setAuthType(event.target.value as "none" | "bearer" | "api_key")
+                  }
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="none">No authentication</option>
+                  <option value="bearer">Bearer token</option>
+                  <option value="api_key">API key header</option>
+                </select>
+              </div>
+            ) : null}
+            {selectedApp?.provider !== "custom_mcp" || authType !== "none" ? (
+              <div className="space-y-2">
+                <Label htmlFor="connection-key">API key or access token</Label>
+                <Input
+                  id="connection-key"
+                  type="password"
+                  autoComplete="off"
+                  value={apiKey}
+                  onChange={(event) => setApiKey(event.target.value)}
+                  placeholder="Paste credential"
+                  className="font-mono"
+                />
+              </div>
+            ) : null}
             <Button
               className="w-full"
-              disabled={configureMutation.isPending || apiKey.trim().length < 8}
+              disabled={
+                configureMutation.isPending ||
+                (selectedApp?.provider === "custom_mcp"
+                  ? !endpointUrl.trim() || (authType !== "none" && apiKey.trim().length < 8)
+                  : apiKey.trim().length < 8)
+              }
               onClick={() => configureMutation.mutate()}
             >
               {configureMutation.isPending ? (
