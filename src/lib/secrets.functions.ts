@@ -2,13 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export type SecretType =
-  | "api_key"
-  | "oauth_token"
-  | "mcp_url"
-  | "bot_token"
-  | "password"
-  | "totp"
-  | "other";
+  "api_key" | "oauth_token" | "mcp_url" | "bot_token" | "password" | "totp" | "other";
 
 export type CredentialFolder = {
   id: string;
@@ -176,12 +170,7 @@ export const createCredentialFolder = createServerFn({ method: "POST" })
 export const updateCredentialFolder = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator(
-    (input: {
-      id: string;
-      name: string;
-      credential_ids?: string[];
-      project_ids?: string[];
-    }) => ({
+    (input: { id: string; name: string; credential_ids?: string[]; project_ids?: string[] }) => ({
       id: (input?.id ?? "").trim(),
       name: (input?.name ?? "").trim().slice(0, 80),
       credential_ids: Array.isArray(input?.credential_ids)
