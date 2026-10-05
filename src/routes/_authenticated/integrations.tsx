@@ -328,9 +328,8 @@ function IntegrationsPage() {
       </section>
       ) : null}
 
-      {user ? (
-        {section === "api-key" ? (
-<section id="api-key" className="scroll-mt-6">
+      {section === "api-key" && user ? (
+        <section id="api-key" className="scroll-mt-6">
           <div className="mb-4">
             <h2 className="text-lg font-semibold">API Key</h2>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -340,7 +339,6 @@ function IntegrationsPage() {
           </div>
           <ApiKeysCard />
         </section>
-      ) : null}
       ) : null}
 
       <p className="text-xs text-muted-foreground">
