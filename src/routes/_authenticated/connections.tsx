@@ -220,7 +220,13 @@ function ConnectionsPage() {
       connectionsByProvider.set(item.provider, item);
     }
   }
-  const catOptions = ["All", ...connectionCategories];
+  const catOptions = [
+    "All",
+    ...new Set([
+      ...connectionCategories,
+      ...(catalog.data ?? []).map((app) => app.category),
+    ]),
+  ];
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:py-16">
