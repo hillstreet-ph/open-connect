@@ -151,7 +151,7 @@ export function CloudWorkspacePage({ kind }: { kind: keyof typeof descriptions }
               {project ? (
                 <Button asChild variant="outline">
                   <Link to="/projects/$projectId" params={{ projectId }} hash="project-connections">
-                    Project settings & sharing
+                    Open project settings
                   </Link>
                 </Button>
               ) : null}
