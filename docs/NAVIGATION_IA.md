@@ -39,8 +39,8 @@ Skills · Plugins · Tools · Agents · Prompts · MCP · Workflows · Templates
 ## Settings and administration
 
 The platform logo returns to Dashboard. The user avatar at the bottom of the sidebar opens account and system settings.
-Settings contains Profile and Security & login tabs. Only implemented settings are shown.
-Organizations & workspaces opens the existing organization management page; it does not claim to switch active tenant context.
+Settings contains Profile, Security & login, Workspace, Apps & system, and Data & privacy tabs. Workspace links to the one canonical organization/workspace, assigned projects, access reference, and Admin-only platform role assignment.
+Organization & workspace opens the existing organization management page; it does not claim to switch active tenant context.
 Credentials opens the existing scoped credential page.
 
 Settings → Workspace contains Access reference (`/roles`) and, for platform Admins only, User roles (`/admin`). These role tools are removed from the account menu to avoid duplicate navigation. Direct route authorization remains enforced.
