@@ -4,12 +4,15 @@ import { useRef, useState } from "react";
 import {
   Bell,
   BookOpen,
+  Bot,
   Brain,
   Building2,
   KeyRound,
   Loader2,
+  MessageCircle,
   Network,
   Save,
+  Server,
   Sparkles,
   ShieldCheck,
   Trash2,
@@ -405,9 +408,31 @@ function SettingsPage() {
           <div className="grid gap-4 md:grid-cols-2">
             <SettingsLinkCard
               to="/integrations"
-              icon={Network}
-              title="Integrations"
-              description="Manage separate API Key, Apps, AI Agents, and Custom MCP connection areas for Open-Connect."
+              hash="api-key"
+              icon={KeyRound}
+              title="API Key"
+              description="Create and manage scoped keys for clients that use bearer authentication."
+            />
+            <SettingsLinkCard
+              to="/integrations"
+              hash="apps"
+              icon={MessageCircle}
+              title="Apps"
+              description="Connect account-owned apps such as Telegram and manage their credentials."
+            />
+            <SettingsLinkCard
+              to="/integrations"
+              hash="ai-agents"
+              icon={Bot}
+              title="AI Agents"
+              description="Set up AI clients such as ChatGPT to connect with Open-Connect using OAuth or MCP."
+            />
+            <SettingsLinkCard
+              to="/integrations"
+              hash="custom-mcp"
+              icon={Server}
+              title="Custom MCP"
+              description="Add and manage remote MCP servers separately from Connectors and Marketplace resources."
             />
           </div>
         </TabsContent>
@@ -421,6 +446,7 @@ function SettingsLinkCard({
   icon: Icon,
   title,
   description,
+  hash,
 }: {
   to:
     | "/orgs"
@@ -434,6 +460,7 @@ function SettingsLinkCard({
     | "/automations"
     | "/memory"
     | "/knowledge";
+  hash?: string;
   icon: typeof Building2;
   title: string;
   description: string;
@@ -441,6 +468,7 @@ function SettingsLinkCard({
   return (
     <Link
       to={to}
+      hash={hash}
       className="block rounded-xl border bg-card p-5 shadow-panel transition-colors hover:bg-accent/40"
     >
       <div className="flex items-start gap-3">

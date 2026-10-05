@@ -130,6 +130,16 @@ test("Integrations follows Data & privacy in Settings and includes account keys"
   assert.ok(settings.includes('to="/integrations"'));
   assert.ok(settings.includes('title="Connectors"'));
   assert.ok(settings.includes('title="AI Gateway"'));
+  for (const [title, hash] of [
+    ["API Key", "api-key"],
+    ["Apps", "apps"],
+    ["AI Agents", "ai-agents"],
+    ["Custom MCP", "custom-mcp"],
+  ]) {
+    assert.ok(settings.includes('title="' + title + '"'), "Missing integration card " + title);
+    assert.ok(settings.includes('hash="' + hash + '"'), "Missing integration section link " + hash);
+  }
+  assert.ok(!settings.includes('title="Integrations"'));
   assert.ok(settings.includes('title="Memory"'));
   assert.ok(settings.includes('title="Knowledge"'));
   assert.ok(!settings.includes('title="Memory & knowledge"'));
