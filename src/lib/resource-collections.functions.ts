@@ -84,18 +84,18 @@ export const listAssignableProjects = createServerFn({ method: "GET" })
       { data: orgRoles, error: orgError },
       { data: memberships, error: membershipError },
     ] = await Promise.all([
-        context.supabase.from("projects").select("id, name, organization_id"),
-        context.supabase
-          .from("organization_members")
-          .select("organization_id")
-          .eq("user_id", context.userId)
-          .eq("role", "admin"),
-        context.supabase
-          .from("project_members")
-          .select("project_id")
-          .eq("user_id", context.userId)
-          .eq("role", "manager"),
-      ]);
+      context.supabase.from("projects").select("id, name, organization_id"),
+      context.supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", context.userId)
+        .eq("role", "admin"),
+      context.supabase
+        .from("project_members")
+        .select("project_id")
+        .eq("user_id", context.userId)
+        .eq("role", "manager"),
+    ]);
     if (projectError) throw new Error(projectError.message);
     if (orgError) throw new Error(orgError.message);
     if (membershipError) throw new Error(membershipError.message);
