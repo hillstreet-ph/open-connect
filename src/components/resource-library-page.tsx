@@ -25,6 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { MemoryKnowledgePage } from "@/routes/_authenticated/memory";
 
 export function ResourceLibraryPage({
   resourceType,
@@ -41,7 +42,7 @@ export function ResourceLibraryPage({
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
   const [purpose, setPurpose] = useState("all");
-  const [view, setView] = useState<"library" | "collections">("library");
+  const [view, setView] = useState<"library" | "collections" | "memory" | "knowledge">("library");
   const [selectedResourceIds, setSelectedResourceIds] = useState<string[]>([]);
   const canManageCollections = !resourceType && !otherTypesOnly;
   const list = useServerFn(listLibraryResources);
@@ -126,7 +127,7 @@ export function ResourceLibraryPage({
           aria-label="Resource library views"
           className="mt-4 flex gap-2 border-b border-border"
         >
-          {(["library", "collections"] as const).map((tab) => (
+          {(["library", "collections", "memory", "knowledge"] as const).map((tab) => (
             <button
               key={tab}
               type="button"
@@ -140,7 +141,7 @@ export function ResourceLibraryPage({
                   : "border-transparent text-muted-foreground hover:text-foreground",
               )}
             >
-              {tab === "library" ? "Library" : "Collections"}
+              {tab[0].toUpperCase() + tab.slice(1)}
             </button>
           ))}
         </div>
@@ -150,6 +151,10 @@ export function ResourceLibraryPage({
           selectedResourceIds={selectedResourceIds}
           onClearSelection={() => setSelectedResourceIds([])}
         />
+      ) : canManageCollections && view === "memory" ? (
+        <MemoryKnowledgePage defaultSection="memory" />
+      ) : canManageCollections && view === "knowledge" ? (
+        <MemoryKnowledgePage defaultSection="knowledge" />
       ) : (
         <div className="mt-4 grid gap-6 lg:grid-cols-[190px_minmax(0,1fr)]">
           <ResourcePurposeSidebar
