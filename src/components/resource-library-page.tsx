@@ -76,9 +76,7 @@ export function ResourceLibraryPage({
   const rows = (resources.data ?? []).filter((row) => {
     const type = row.resources?.resource_type ?? "";
     return (
-      type !== "guide" &&
-      type !== "app" &&
-      type !== "model" &&
+      !["guide", "app", "model", "memory", "knowledge"].includes(type) &&
       (!otherTypesOnly ||
         ![
           "plugin",
