@@ -343,7 +343,7 @@ function MarketplaceContent() {
                             </Badge>
                           ) : null}
                         </div>
-                        {inLibrary ? (
+                        {inLibrary || collectionNames.length > 0 || projectNames.length > 0 ? (
                           <div className="mt-1 flex flex-wrap gap-1">
                             <Badge variant="outline" className="border-primary/50 text-primary">
                               In Library
