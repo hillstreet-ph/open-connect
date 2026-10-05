@@ -23,12 +23,17 @@ def validate_health(payload: Any) -> list[str]:
     if payload.get("status") != "ok":
         failures.append("status must be ok")
 
-    if not payload.get("model_upstream"):
-        failures.append("model_upstream must be configured")
-
     upstreams = payload.get("model_upstreams")
-    if not isinstance(upstreams, list) or not upstreams:
-        failures.append("model_upstreams must contain at least one provider")
+    if not isinstance(upstreams, list):
+        failures.append("model_upstreams must be a list")
+
+    model_gateway = payload.get("model_gateway")
+    supports_user_connections = (
+        isinstance(model_gateway, dict)
+        and model_gateway.get("user_connections_supported") is True
+    )
+    if isinstance(upstreams, list) and not upstreams and not supports_user_connections:
+        failures.append("model gateway must have a platform provider or support user-scoped connections")
 
     kv = payload.get("kv")
     if not isinstance(kv, dict) or not kv.get("bound") or not kv.get("writable"):
