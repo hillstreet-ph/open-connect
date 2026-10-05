@@ -71,7 +71,6 @@ const CLOUD: Item[] = [
 const DISCOVER: Item[] = [
   { to: "/resources", label: "Marketplace", icon: Boxes },
   { to: "/library", label: "Resources", icon: Boxes },
-  { to: "/others", label: "Others", icon: Boxes },
 ];
 
 const CONNECTIONS: Item[] = [
