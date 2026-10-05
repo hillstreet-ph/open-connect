@@ -49,7 +49,8 @@ export async function syncOpenAiMarketplaceResources(supabase: SupabaseClient, u
   const { data: collections, error: collectionsError } = await supabase
     .from("toolkits")
     .select("id")
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .like("slug", "collection-%");
   if (collectionsError) throw new Error(collectionsError.message);
 
   const toolkitIds = [
@@ -67,5 +68,62 @@ export async function syncOpenAiMarketplaceResources(supabase: SupabaseClient, u
     if (error) throw new Error(error.message);
   }
 
-  return { resources: resourceIds.length, collections: toolkitIds.length, projects: 0 };
+  const [
+    { data: projects, error: projectError },
+    { data: organizationRoles, error: organizationRoleError },
+    { data: projectRoles, error: projectRoleError },
+    { data: ownedOrganizations, error: ownedOrganizationError },
+  ] = await Promise.all([
+    supabase.from("projects").select("id, organization_id"),
+    supabase
+      .from("organization_members")
+      .select("organization_id")
+      .eq("user_id", userId)
+      .in("role", ["owner", "admin"]),
+    supabase
+      .from("project_members")
+      .select("project_id")
+      .eq("user_id", userId)
+      .in("role", ["admin", "manager"]),
+    supabase.from("organizations").select("id").eq("owner_id", userId),
+  ]);
+  if (projectError) throw new Error(projectError.message);
+  if (organizationRoleError) throw new Error(organizationRoleError.message);
+  if (projectRoleError) throw new Error(projectRoleError.message);
+  if (ownedOrganizationError) throw new Error(ownedOrganizationError.message);
+
+  const managedOrganizationIds = new Set([
+    ...(organizationRoles ?? []).map((row) => row.organization_id as string),
+    ...(ownedOrganizations ?? []).map((row) => row.id as string),
+  ]);
+  const managedProjectIds = new Set((projectRoles ?? []).map((row) => row.project_id as string));
+  const manageableProjects = (projects ?? []).filter(
+    (project) =>
+      managedOrganizationIds.has(project.organization_id as string) ||
+      managedProjectIds.has(project.id as string),
+  );
+
+  let assignedProjects = 0;
+  const projectChunks = manageableProjects.flatMap((project) =>
+    resourceIds.map((resourceId) => ({
+      project_id: project.id as string,
+      resource_id: resourceId,
+      added_by: userId,
+    })),
+  );
+  for (let offset = 0; offset < projectChunks.length; offset += 500) {
+    const { error } = await supabase.from("project_resources").upsert(
+      projectChunks.slice(offset, offset + 500),
+      { onConflict: "project_id,resource_id", ignoreDuplicates: true },
+    );
+    if (error) throw new Error(error.message);
+    assignedProjects += Math.min(500, projectChunks.length - offset);
+  }
+
+  return {
+    resources: resourceIds.length,
+    collections: toolkitIds.length,
+    projects: manageableProjects.length,
+    projectLinks: assignedProjects,
+  };
 }

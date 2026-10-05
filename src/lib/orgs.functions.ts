@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { syncOpenAiMarketplaceResources } from "@/lib/marketplace-auto-sync.server";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 function slugify(raw: string) {
@@ -444,6 +445,7 @@ export const createProject = createServerFn({ method: "POST" })
       })),
     );
 
+    await syncOpenAiMarketplaceResources(context.supabase, context.userId);
     return project;
   });
 
