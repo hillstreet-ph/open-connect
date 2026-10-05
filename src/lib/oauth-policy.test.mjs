@@ -23,6 +23,15 @@ test("requires code and S256, rejects unsupported scopes and unsafe callbacks", 
   ])
     assert.throws(() => validateOAuthRequest({ ...req, ...p }));
 });
+test("malformed callbacks return a stable error on server and browser", () => {
+  for (const redirect_uri of ["", "not a URL"]) {
+    assert.throws(
+      () => validateOAuthRequest({ ...req, redirect_uri }),
+      /^Error: Invalid HTTPS callback\\. Restart from your client\\.$/,
+    );
+  }
+});
+
 test("preserves requested scopes without adding write permissions", () => {
   assert.equal(
     validateOAuthRequest({ ...req, scope: "mcp:connect resources:read" }).scope,
