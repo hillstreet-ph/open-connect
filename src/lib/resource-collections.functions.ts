@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
-import { syncOpenAiMarketplaceResources } from "@/lib/marketplace-auto-sync.server";
+import { syncKobePlayMarketplaceResources } from "@/lib/marketplace-auto-sync.server";
 
 const COLLECTION_PREFIX = "collection-";
 
@@ -158,7 +158,7 @@ export const createResourceCollection = createServerFn({ method: "POST" })
         throw new Error(itemError.message);
       }
     }
-    await syncOpenAiMarketplaceResources(context.supabase, context.userId);
+    await syncKobePlayMarketplaceResources(context.supabase, context.userId);
     return { id: collection.id };
   });
 

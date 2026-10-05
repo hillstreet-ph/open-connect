@@ -1,8 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { syncOpenAiMarketplaceResources } from "@/lib/marketplace-auto-sync.server";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { syncKobePlayMarketplaceResources } from "@/lib/marketplace-auto-sync.server";
 
 function slugify(raw: string) {
   return raw
@@ -445,7 +445,7 @@ export const createProject = createServerFn({ method: "POST" })
       })),
     );
 
-    await syncOpenAiMarketplaceResources(context.supabase, context.userId);
+    await syncKobePlayMarketplaceResources(context.supabase, context.userId);
     return project;
   });
 

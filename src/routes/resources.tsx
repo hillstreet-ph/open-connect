@@ -187,9 +187,9 @@ function MarketplaceContent() {
           </Badge>
           <h1 className="text-xl font-semibold">Marketplace</h1>
           <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-            OpenAI and ChatGPT Marketplace resources sync to your Library, all collections, and
-            every project you manage. Other packages can still be installed into a chosen collection
-            and assigned to projects.
+            Airtable, Notion, Google Workspace, OpenAI, and ChatGPT resources sync to your Library,
+            KobePlay collection, and projects every five minutes. Project schedules use the AI
+            Gateway when an enabled AI response automation is linked.
           </p>
         </div>
         {!user ? (

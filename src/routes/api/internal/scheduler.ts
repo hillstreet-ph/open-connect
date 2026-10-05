@@ -9,6 +9,63 @@ function json(body: unknown, status = 200) {
   });
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function syncKobePlayCatalog(db: any) {
+  const { data: workspace, error: workspaceError } = await db
+    .from("workspaces")
+    .select("id")
+    .eq("slug", "kobeplay")
+    .maybeSingle();
+  if (workspaceError) throw new Error("KobePlay workspace lookup failed.");
+  if (!workspace) return { users: 0, resources: 0, projects: 0, failed: 0 };
+
+  const { data: projects, error: projectsError } = await db
+    .from("projects")
+    .select("id, organization_id")
+    .eq("workspace_id", workspace.id);
+  if (projectsError) throw new Error("KobePlay project lookup failed.");
+  const projectIds = (projects ?? []).map((project: { id: string }) => project.id);
+  const organizationIds = [
+    ...new Set(
+      (projects ?? []).map((project: { organization_id: string }) => project.organization_id),
+    ),
+  ];
+  if (!projectIds.length) return { users: 0, resources: 0, projects: 0, failed: 0 };
+
+  const [projectAdmins, organizationAdmins] = await Promise.all([
+    db.from("project_members").select("user_id").in("project_id", projectIds).eq("role", "admin"),
+    db
+      .from("organization_members")
+      .select("user_id")
+      .in("organization_id", organizationIds)
+      .eq("role", "admin"),
+  ]);
+  if (projectAdmins.error || organizationAdmins.error) {
+    throw new Error("KobePlay workspace managers could not be loaded.");
+  }
+
+  const userIds = [
+    ...new Set([
+      ...(projectAdmins.data ?? []).map((row: { user_id: string }) => row.user_id),
+      ...(organizationAdmins.data ?? []).map((row: { user_id: string }) => row.user_id),
+    ]),
+  ];
+  const { syncKobePlayMarketplaceResources } = await import("@/lib/marketplace-auto-sync.server");
+  let resources = 0;
+  let linkedProjects = 0;
+  let failed = 0;
+  for (const userId of userIds) {
+    try {
+      const result = await syncKobePlayMarketplaceResources(db, userId);
+      resources += result.resources;
+      linkedProjects += result.projects;
+    } catch {
+      failed += 1;
+    }
+  }
+  return { users: userIds.length, resources, projects: linkedProjects, failed };
+}
+
 async function processDueSchedules() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   // Generated database types lag the schedules and control-plane migrations.
@@ -17,6 +74,12 @@ async function processDueSchedules() {
   const now = new Date();
   const nowIso = now.toISOString();
   const leaseOwner = crypto.randomUUID();
+  const marketplaceSync = await syncKobePlayCatalog(db).catch(() => ({
+    users: 0,
+    resources: 0,
+    projects: 0,
+    failed: 1,
+  }));
   const { data: due, error: dueError } = await db
     .from("schedules")
     .select("id,user_id,name,automation_id,cron_expr,run_at,timezone,next_run_at")
@@ -171,7 +234,12 @@ async function processDueSchedules() {
     }
     results.push({ schedule_id: schedule.id, status });
   }
-  return { checked: due?.length ?? 0, processed: results.length, results };
+  return {
+    checked: due?.length ?? 0,
+    processed: results.length,
+    results,
+    marketplace_sync: marketplaceSync,
+  };
 }
 
 export const Route = createFileRoute("/api/internal/scheduler")({

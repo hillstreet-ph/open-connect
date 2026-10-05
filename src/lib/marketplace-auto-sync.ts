@@ -1,4 +1,4 @@
-type OpenAiMarketplaceCandidate = {
+type KobePlayMarketplaceCandidate = {
   slug: string;
   name: string;
   description?: string | null;
@@ -6,13 +6,16 @@ type OpenAiMarketplaceCandidate = {
   supported_clients?: string[] | null;
 };
 
-/** Match explicit OpenAI/ChatGPT metadata as well as clearly named catalog entries. */
-export function isOpenAiMarketplaceResource(resource: OpenAiMarketplaceCandidate): boolean {
-  const clients = (resource.supported_clients ?? []).map((client) => client.toLowerCase());
-  if (clients.some((client) => /^(openai|chatgpt|openai-compatible)$/.test(client))) return true;
-  if (["openai", "chatgpt"].includes((resource.category_slug ?? "").toLowerCase())) return true;
+/** Match Marketplace entries connected to KobePlay's requested apps and AI clients. */
+export function isKobePlayMarketplaceResource(resource: KobePlayMarketplaceCandidate): boolean {
+  const targetPattern =
+    /(^|[^a-z0-9])(openai|chatgpt|openai compatible|airtable|notion|gmail|google (drive|docs?|documents?|sheets?|spreadsheets?|workspace|accounts?))([^a-z0-9]|$)/;
+  const normalize = (value: string) => value.toLowerCase().replace(/[_-]+/g, " ");
+  if ((resource.supported_clients ?? []).some((client) => targetPattern.test(normalize(client)))) {
+    return true;
+  }
+  if (targetPattern.test(normalize(resource.category_slug ?? ""))) return true;
 
-  const searchable =
-    `${resource.slug} ${resource.name} ${resource.description ?? ""}`.toLowerCase();
-  return /(^|[^a-z0-9])(openai|chatgpt)([^a-z0-9]|$)/.test(searchable);
+  const searchable = normalize(`${resource.slug} ${resource.name} ${resource.description ?? ""}`);
+  return targetPattern.test(searchable);
 }

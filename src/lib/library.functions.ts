@@ -2,14 +2,14 @@ import { createServerFn } from "@tanstack/react-start";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
-import { syncOpenAiMarketplaceResources } from "@/lib/marketplace-auto-sync.server";
+import { syncKobePlayMarketplaceResources } from "@/lib/marketplace-auto-sync.server";
 
 const LIBRARY_SLUG = "open-connect-personal-library";
 
-export const syncOpenAiMarketplaceLibrary = createServerFn({ method: "POST" })
+export const syncKobePlayMarketplaceLibrary = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator(() => ({}))
-  .handler(async ({ context }) => syncOpenAiMarketplaceResources(context.supabase, context.userId));
+  .handler(async ({ context }) => syncKobePlayMarketplaceResources(context.supabase, context.userId));
 
 async function ensureLibrary(context: { supabase: SupabaseClient<Database>; userId: string }) {
   const { data: existing, error: readError } = await context.supabase
@@ -41,7 +41,7 @@ export const listLibraryResources = createServerFn({ method: "GET" })
     resourceType: input?.resourceType ?? null,
   }))
   .handler(async ({ data, context }) => {
-    await syncOpenAiMarketplaceResources(context.supabase, context.userId);
+    await syncKobePlayMarketplaceResources(context.supabase, context.userId);
     const { readWorkspaceLibrary } = await import("@/lib/workspace-library.server");
     return readWorkspaceLibrary(context, data.resourceType);
   });
