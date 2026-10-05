@@ -1,149 +1,116 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Bot, KeyRound, MessageCircle, Network } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { useState } from "react";
+import { Bot, Copy, ExternalLink, MessageCircle, ShieldCheck } from "lucide-react";
+import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { BrandLogo } from "@/components/brand-logo";
+import { ApiKeysCard } from "@/components/api-keys-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { configureAppConnection, disconnectApp, listAppConnections } from "@/lib/connections.functions";
 
 export const Route = createFileRoute("/_authenticated/integrations")({
   head: () => ({
     meta: [
       { title: "Integrations — Open-Connect" },
-      {
-        name: "description",
-        content: "Built-in Open-Connect integrations for AI clients, MCP, and Telegram.",
-      },
+      { name: "description", content: "Set up inbound AI, MCP, and Telegram integrations for Open-Connect." },
     ],
   }),
   component: IntegrationsPage,
 });
 
+const MCP_ENDPOINT = "https://open-connect.site/mcp";
 const aiClients = [
-  {
-    provider: "chatgpt",
-    name: "ChatGPT · Custom GPTs",
-    body: "Connect GPT Actions and supported MCP clients with OAuth or a scoped Open-Connect key.",
-    endpoints: ["/oauth", "/mcp"],
-    to: "/api-keys" as const,
-  },
-  {
-    provider: "claude",
-    name: "Claude Desktop",
-    body: "Use Claude Desktop or API clients with the Open-Connect MCP endpoint and scoped key.",
-    endpoints: ["/mcp"],
-    to: "/api-keys" as const,
-  },
-  {
-    provider: "openwebui",
-    name: "Open WebUI",
-    body: "Connect an AI client to Open-Connect tools using its owner’s scoped access.",
-    endpoints: ["/mcp", "Scoped client key"],
-    to: "/api-keys" as const,
-  },
-  {
-    provider: "hermes",
-    name: "Hermes Agent",
-    body: "Connect the agent runtime to project-scoped tools from the Open-Connect MCP catalog.",
-    endpoints: ["https://open-connect.site/mcp"],
-    to: "/api-keys" as const,
-  },
-  {
-    provider: "manus",
-    name: "Manus · AI agents",
-    body: "Give supported agents access only to assigned projects and approved resources.",
-    endpoints: ["/mcp"],
-    to: "/api-keys" as const,
-  },
+  { provider: "chatgpt", name: "ChatGPT", description: "Connect ChatGPT using OAuth. ChatGPT signs in and requests approval when it connects.", action: "Connect with OAuth" },
+  { provider: "claude", name: "Claude", description: "Connect a compatible Claude client to your Open-Connect MCP server.", action: "View MCP setup" },
+  { provider: "openwebui", name: "Open WebUI", description: "Connect your own Open WebUI client with a scoped key.", action: "View MCP setup" },
+  { provider: "hermes", name: "Hermes Agent", description: "Give your agent access to tools allowed for your account and projects.", action: "View MCP setup" },
+  { provider: "manus", name: "Manus", description: "Connect a supported agent through the Open-Connect MCP endpoint.", action: "View MCP setup" },
 ];
 
 function IntegrationsPage() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const listFn = useServerFn(listAppConnections);
+  const configureFn = useServerFn(configureAppConnection);
+  const disconnectFn = useServerFn(disconnectApp);
+  const [oauthOpen, setOauthOpen] = useState(false);
+  const [mcpOpen, setMcpOpen] = useState(false);
+  const [telegramOpen, setTelegramOpen] = useState(false);
+  const [botLabel, setBotLabel] = useState("");
+  const [botToken, setBotToken] = useState("");
+  const connections = useQuery({
+    queryKey: ["app-connections"],
+    queryFn: () => listFn({}),
+    enabled: Boolean(user),
+  });
+  const telegramItems = (connections.data ?? []).filter((item) => item.provider === "telegram");
+  const saveTelegram = useMutation({
+    mutationFn: () => configureFn({ data: {
+      provider: "telegram",
+      display_name: "Telegram",
+      account_label: botLabel.trim() || "Telegram bot",
+      endpoint_url: "",
+      api_key: botToken,
+      auth_type: "bearer",
+    }}),
+    onSuccess: (result) => {
+      toast.success(result.validation.verified ? "Telegram bot verified and saved" : "Telegram token saved securely");
+      setBotLabel("");
+      setBotToken("");
+      setTelegramOpen(false);
+      void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : "Could not set up Telegram"),
+  });
+  const removeTelegram = useMutation({
+    mutationFn: (id: string) => disconnectFn({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Telegram integration removed");
+      void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : "Could not remove Telegram"),
+  });
+
+  async function copyEndpoint() {
+    try {
+      await navigator.clipboard.writeText(MCP_ENDPOINT);
+      toast.success("MCP endpoint copied");
+    } catch {
+      toast.error("Could not copy endpoint");
+    }
+  }
 
   return (
     <div className="mx-auto max-w-6xl space-y-10 px-4 py-10 sm:px-6 sm:py-14">
       <header>
-        <Badge variant="outline" className="border-primary/40 text-primary">
-          Built-in Open-Connect integrations
-        </Badge>
-        <h1 className="mt-4 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-          Integrations
-        </h1>
+        <Badge variant="outline" className="border-primary/40 text-primary">Open-Connect · inbound</Badge>
+        <h1 className="mt-4 font-display text-3xl font-semibold tracking-tight sm:text-4xl">Integrations</h1>
         <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-          Integrations are Open-Connect entry points for AI agents, MCP clients, and Telegram.
-          Open-Connect owns the integration definitions; each user owns their setup and grants
-          access to projects explicitly. Resources, external app connectors, and AI model providers
-          are managed separately.
+          Connect external AI clients, MCP clients, and Telegram into Open-Connect. Each integration setup belongs to your account. Connectors are for external accounts Open-Connect uses; AI models and resource catalogs are managed separately.
         </p>
-        {user ? (
-          <div className="mt-6 flex flex-wrap gap-2">
-            <Button asChild>
-              <Link to="/api-keys">Client API keys</Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link to="/mcp-servers">MCP tools</Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link to="/connections">Telegram bot connection</Link>
-            </Button>
-          </div>
-        ) : (
-          <Button asChild className="mt-6">
-            <Link to="/auth">Sign in to connect</Link>
-          </Button>
-        )}
       </header>
 
-      <Card className="bg-pillar shadow-panel">
-        <CardHeader>
-          <CardTitle className="text-base">Ownership and access</CardTitle>
-          <CardDescription>
-            Every setup belongs to its signed-in account. Use project-scoped keys and explicit
-            grants so clients only see approved capabilities.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-3 text-sm sm:grid-cols-3">
-          <p>
-            <strong>Integrations</strong>
-            <br />
-            AI clients, MCP clients, and Telegram entry points.
-          </p>
-          <p>
-            <strong>Connectors</strong>
-            <br />
-            Owner-controlled accounts Open-Connect uses with external apps.
-          </p>
-          <p>
-            <strong>AI Gateway</strong>
-            <br />
-            Model providers, provider keys, and routing.
-          </p>
-        </CardContent>
-      </Card>
-
       <section>
-        <h2 className="text-lg font-semibold">AI clients and agents</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Connect agent clients to approved Open-Connect capabilities. Model providers are
-          configured separately.
-        </p>
-        <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mb-4"><h2 className="text-lg font-semibold">AI clients and agents</h2><p className="mt-1 text-sm text-muted-foreground">Choose a client to see its own connection flow.</p></div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {aiClients.map((client) => (
-            <Card key={client.name} className="shadow-panel">
+            <Card key={client.provider} className="shadow-panel">
               <CardHeader className="p-4">
                 <BrandLogo provider={client.provider} name={client.name} size="lg" />
                 <CardTitle className="mt-3 text-sm">{client.name}</CardTitle>
-                <CardDescription className="text-xs">{client.body}</CardDescription>
+                <CardDescription className="text-xs">{client.description}</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-1 px-4 pb-4 font-mono text-[11px] text-primary">
-                {client.endpoints.map((endpoint) => (
-                  <p key={endpoint}>{endpoint}</p>
-                ))}
-                {user ? (
-                  <Button asChild size="sm" variant="outline" className="mt-3 w-full font-sans">
-                    <Link to={client.to}>Configure</Link>
-                  </Button>
-                ) : null}
+              <CardContent className="px-4 pb-4">
+                {user ? <Button size="sm" variant="outline" className="w-full" onClick={() => client.provider === "chatgpt" ? setOauthOpen(true) : setMcpOpen(true)}>
+                  {client.provider === "chatgpt" ? <ShieldCheck className="mr-2 size-4" /> : <Bot className="mr-2 size-4" />}{client.action}
+                </Button> : <Button asChild size="sm" variant="outline" className="w-full"><Link to="/auth">Sign in</Link></Button>}
               </CardContent>
             </Card>
           ))}
@@ -151,90 +118,48 @@ function IntegrationsPage() {
       </section>
 
       <section>
-        <h2 className="text-lg font-semibold">MCP server and tools</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Discover MCP resources in the catalog, then connect clients with the endpoint and a scoped
-          key.
-        </p>
-        <div className="mt-5 grid gap-4 md:grid-cols-2">
-          <Card className="shadow-panel">
-            <CardHeader className="p-4">
-              <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <Bot className="size-5" />
-              </div>
-              <CardTitle className="mt-3 text-sm">Open-Connect MCP server</CardTitle>
-              <CardDescription className="text-xs">
-                Expose approved resources and tools to clients using each user’s project access.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-1 px-4 pb-4 font-mono text-[11px] text-primary">
-              <p>https://open-connect.site/mcp</p>
-              <p>Authorization: Bearer oc_live_…</p>
-              {user ? (
-                <div className="mt-3 flex gap-2 font-sans">
-                  <Button asChild size="sm">
-                    <Link to="/api-keys">Create key</Link>
-                  </Button>
-                  <Button asChild size="sm" variant="outline">
-                    <Link to="/mcp-servers">Browse MCP</Link>
-                  </Button>
-                </div>
-              ) : null}
-            </CardContent>
-          </Card>
-          <Card className="shadow-panel">
-            <CardHeader className="p-4">
-              <BrandLogo provider="cursor" name="MCP-capable IDEs" size="lg" />
-              <CardTitle className="mt-3 text-sm">MCP-capable IDEs and agents</CardTitle>
-              <CardDescription className="text-xs">
-                Configure Cursor and other compatible clients with the Open-Connect server URL.
-                Tools remain bounded by the signed-in account and its project grants.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-1 px-4 pb-4 font-mono text-[11px] text-primary">
-              <p>MCP · /mcp</p>
-              <p>Tools · /mcp</p>
-              {user ? (
-                <Button asChild size="sm" variant="outline" className="mt-3 w-full font-sans">
-                  <Link to="/mcp-servers">Browse MCP tools</Link>
-                </Button>
-              ) : null}
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-
-      <section>
-        <h2 className="text-lg font-semibold">Telegram</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Connect Telegram accounts and bots as explicit app connections for approved agent
-          messaging.
-        </p>
-        <Card className="mt-5 shadow-panel">
-          <CardHeader className="p-4">
-            <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <MessageCircle className="size-5" />
-            </div>
-            <CardTitle className="mt-3 text-sm">Telegram connections</CardTitle>
-            <CardDescription className="text-xs">
-              This bot integration belongs to your account. Grant only the project capabilities
-              required for Telegram messaging; bot credentials stay private to you.
-            </CardDescription>
+        <div className="mb-4"><h2 className="text-lg font-semibold">MCP server</h2><p className="mt-1 text-sm text-muted-foreground">Your inbound Open-Connect endpoint. Resource catalog MCP servers are managed separately.</p></div>
+        <Card className="shadow-panel">
+          <CardHeader className="p-5">
+            <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary"><Bot className="size-5" /></div>
+            <CardTitle className="mt-3 text-base">Open-Connect MCP</CardTitle>
+            <CardDescription>Compatible clients connect here and receive only the capabilities allowed for your account and project access.</CardDescription>
           </CardHeader>
-          <CardContent className="px-4 pb-4">
-            {user ? (
-              <Button asChild size="sm">
-                <Link to="/connections">Set up my Telegram integration</Link>
-              </Button>
-            ) : null}
+          <CardContent className="space-y-4 px-5 pb-5">
+            <div className="flex flex-wrap items-center gap-2"><code className="min-w-0 flex-1 break-all rounded-md bg-muted px-3 py-2 text-sm">{MCP_ENDPOINT}</code><Button variant="outline" size="sm" onClick={() => void copyEndpoint()}><Copy className="mr-2 size-4" />Copy URL</Button></div>
+            <div className="flex flex-wrap gap-2 text-xs text-muted-foreground"><Badge variant="secondary">OAuth supported</Badge><Badge variant="secondary">Bearer key supported</Badge><span className="self-center">OAuth clients sign in and approve in their client.</span></div>
+            <Button variant="outline" size="sm" onClick={() => setMcpOpen(true)}>Client setup instructions</Button>
           </CardContent>
         </Card>
       </section>
 
-      <p className="text-xs text-muted-foreground">
-        Open-Connect does not share an owner’s integration setup by default. Sharing project
-        resources, connector accounts, or credentials requires a separate explicit grant.
-      </p>
+      <section>
+        <div className="mb-4"><h2 className="text-lg font-semibold">Telegram</h2><p className="mt-1 text-sm text-muted-foreground">Set up your bot for agent messaging. This is an Open-Connect integration, separate from app connectors.</p></div>
+        <Card className="shadow-panel">
+          <CardHeader className="p-5">
+            <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary"><MessageCircle className="size-5" /></div>
+            <CardTitle className="mt-3 text-base">Telegram bot</CardTitle>
+            <CardDescription>Your bot token is stored securely for your account and is never displayed to collaborators.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 px-5 pb-5">
+            <div className="space-y-2">
+              {telegramItems.length ? telegramItems.map((item) => <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 text-sm"><span>{item.display_name || "Telegram"} · {item.status.replaceAll("_", " ")}</span><Button size="sm" variant="outline" disabled={removeTelegram.isPending} onClick={() => removeTelegram.mutate(item.id)}>Remove</Button></div>) : <p className="text-sm text-muted-foreground">No Telegram bot is connected to this account.</p>}
+            </div>
+            {user ? <Button size="sm" onClick={() => setTelegramOpen(true)}><MessageCircle className="mr-2 size-4" />Set up Telegram</Button> : <Button asChild size="sm"><Link to="/auth">Sign in</Link></Button>}
+          </CardContent>
+        </Card>
+      </section>
+
+      {user ? <section>
+        <div className="mb-4"><h2 className="text-lg font-semibold">API keys</h2><p className="mt-1 text-sm text-muted-foreground">Create and revoke scoped keys for clients that use bearer authentication. ChatGPT uses OAuth and does not need an API key.</p></div>
+        <ApiKeysCard />
+      </section> : null}
+
+      <p className="text-xs text-muted-foreground">Integrations belong to the signed-in account by default. Grant project access explicitly. Connector accounts, model provider keys, and resource catalog entries remain separate.</p>
+
+      <Dialog open={oauthOpen} onOpenChange={setOauthOpen}><DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>Connect ChatGPT with OAuth</DialogTitle><DialogDescription>ChatGPT starts the OAuth request and Open-Connect shows sign-in and consent when the client connects. No API key is needed.</DialogDescription></DialogHeader><div className="space-y-4 text-sm"><ol className="list-decimal space-y-2 pl-5 text-muted-foreground"><li>Open ChatGPT Settings, then Apps or Connectors, and add a custom MCP server.</li><li>Paste the server URL: <code className="break-all text-primary">{MCP_ENDPOINT}</code>.</li><li>Choose OAuth and finish sign-in and approval when ChatGPT redirects to Open-Connect.</li></ol><Button asChild className="w-full"><a href="https://chatgpt.com" target="_blank" rel="noreferrer">Open ChatGPT <ExternalLink className="ml-2 size-4" /></a></Button></div></DialogContent></Dialog>
+      <Dialog open={mcpOpen} onOpenChange={setMcpOpen}><DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>Connect an MCP client</DialogTitle><DialogDescription>Use the Open-Connect endpoint directly. This does not browse or install marketplace resources.</DialogDescription></DialogHeader><div className="space-y-3 text-sm"><p>Server URL</p><code className="block break-all rounded-md bg-muted p-3">{MCP_ENDPOINT}</code><p className="text-muted-foreground">Use OAuth when supported. Otherwise create a narrowly scoped key under API keys and send it as a bearer token.</p><Button variant="outline" onClick={() => void copyEndpoint()}><Copy className="mr-2 size-4" />Copy endpoint</Button></div></DialogContent></Dialog>
+      <Dialog open={telegramOpen} onOpenChange={(open) => { setTelegramOpen(open); if (!open) { setBotToken(""); setBotLabel(""); } }}><DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>Set up Telegram</DialogTitle><DialogDescription>Create a bot with Telegram’s BotFather, then add its token here. The token is stored in the secure credential vault.</DialogDescription></DialogHeader><div className="space-y-4"><div className="space-y-2"><Label htmlFor="telegram-label">Bot name</Label><Input id="telegram-label" value={botLabel} onChange={(event) => setBotLabel(event.target.value)} placeholder="Support bot" autoComplete="off" /></div><div className="space-y-2"><Label htmlFor="telegram-token">Bot token</Label><Input id="telegram-token" type="password" value={botToken} onChange={(event) => setBotToken(event.target.value)} placeholder="Paste token from BotFather" autoComplete="new-password" /></div><Button className="w-full" disabled={saveTelegram.isPending || botToken.trim().length < 8} onClick={() => saveTelegram.mutate()}>{saveTelegram.isPending ? "Verifying and saving…" : "Save Telegram integration"}</Button></div></DialogContent></Dialog>
     </div>
   );
 }
