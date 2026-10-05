@@ -406,7 +406,7 @@ test("Marketplace installs stay in the personal library and agent context reads 
     library.indexOf("export const removeResourceFromLibrary"),
   );
 
-  assert.match(install, /open-connect-personal-library/);
+  assert.match(library, /LIBRARY_SLUG = "open-connect-personal-library"/);
   assert.match(install, /toolkit_items/);
   assert.doesNotMatch(install, /project_resources/);
   assert.match(mcp, /name === "list_my_memory"/);
