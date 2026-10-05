@@ -98,10 +98,13 @@ test("connection surfaces remain internal and separate from Marketplace", () => 
     "utf8",
   );
   assert.match(integrations, /createFileRoute\("\/_authenticated\/integrations"\)/);
-  assert.doesNotMatch(integrations, /(?:to|href)=["']\/resources["']/);
+  assert.doesNotMatch(integrations, /(?:to|href)=["']\/(?:resources|connections|mcp-servers|api-keys)["']/);
+  assert.match(integrations, /<ApiKeysCard \/>/);
+  assert.match(integrations, /Connect ChatGPT with OAuth/);
+  assert.match(integrations, /setTelegramOpen\(true\)/);
 });
 
-test("Integrations is configured under Settings and stays separate from account API keys", () => {
+test("Integrations is in Settings and owns inbound setup and API keys", () => {
   const sourceRoot = path.resolve(process.cwd(), "src");
   const userMenu = readFileSync(path.join(sourceRoot, "components/user-menu.tsx"), "utf8");
   const settings = readFileSync(
