@@ -5,9 +5,9 @@ import { askAgentHelper } from "@/lib/agent-helper.functions";
 type Message = { role: "user" | "assistant"; content: string };
 
 const STARTERS = [
-  "How do I add a Marketplace plugin to my Library?",
-  "Help me set up an automation",
-  "Where do I connect OpenRouter?",
+  "Find an Airtable skill in Marketplace",
+  "Create a task to finish my Open-Connect setup",
+  "Create a manual AI automation for a weekly summary",
 ];
 
 export function AgentHelper() {
@@ -17,7 +17,8 @@ export function AgentHelper() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: "Hi, I’m Agent-Helper. Ask me about setting up Open-Connect.",
+      content:
+        "Hi, I’m Agent-Helper. I can search Marketplace, add resources to your Library, and create tasks, schedule definitions, or manual AI automations. I can also guide you through settings and connections.",
     },
   ]);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -40,10 +41,16 @@ export function AgentHelper() {
     setDraft("");
     setBusy(true);
     try {
-      const result = await askAgentHelper({
+      const result = (await askAgentHelper({
         data: { messages: next.filter((_, index) => index > 0).slice(-10) },
-      });
-      setMessages((current) => [...current, { role: "assistant", content: result.reply }]);
+      })) as { reply?: unknown };
+      if (typeof result.reply !== "string") {
+        throw new Error("Agent-Helper returned an invalid response. Please try again.");
+      }
+      setMessages((current) => [
+        ...current,
+        { role: "assistant", content: result.reply as string },
+      ]);
     } catch (error) {
       const message =
         error instanceof Error && error.message
@@ -85,7 +92,7 @@ export function AgentHelper() {
             </div>
             <div className="min-w-0 flex-1">
               <h2 className="text-sm font-semibold">Agent-Helper</h2>
-              <p className="text-xs text-muted-foreground">Open-Connect setup support</p>
+              <p className="text-xs text-muted-foreground">Internal setup & actions</p>
             </div>
             <button
               type="button"
@@ -140,7 +147,8 @@ export function AgentHelper() {
           </div>
 
           <p className="px-4 pb-2 text-[10px] leading-4 text-muted-foreground">
-            Prompts go to OpenRouter for model processing. No external tools or actions run.
+            Prompts go to your saved OpenRouter key. Internal writes use your account access.
+            Schedule definitions are saved, but do not run jobs yet.
           </p>
           <form onSubmit={submit} className="flex items-end gap-2 border-t border-border p-3">
             <textarea
@@ -152,7 +160,7 @@ export function AgentHelper() {
               rows={1}
               disabled={busy}
               aria-label="Message Agent-Helper"
-              placeholder="Ask about setting up Open-Connect…"
+              placeholder="Ask Agent-Helper to set up Open-Connect…"
               className="max-h-24 min-h-10 flex-1 resize-y rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
             />
             <button

@@ -825,7 +825,25 @@ export const configureAppConnection = createServerFn({ method: "POST" })
       secretId = String((secret as { id?: string } | null)?.id ?? "");
       if (!secretId) throw new Error("Credential vault did not return a reference");
     }
-    const accountId = `credential-${crypto.randomUUID()}`;
+    const { data: existingConnections, error: existingError } = await context.supabase
+      .from("app_connections")
+      .select("id,provider_account_id,credential_reference,metadata")
+      .eq("user_id", context.userId)
+      .eq("provider", setup.provider)
+      .order("created_at", { ascending: false })
+      .limit(25);
+    if (existingError) {
+      if (secretId) await context.supabase.rpc("delete_credential_secret", { p_id: secretId });
+      throw new Error("Could not check your existing provider connection.");
+    }
+    const existing = (existingConnections ?? []).find((item) => {
+      const metadata = item.metadata as Record<string, unknown> | null;
+      return (
+        metadata?.["source"] === "open-connect" &&
+        metadata?.["account_label"] === setup.accountLabel
+      );
+    });
+    const accountId = existing?.provider_account_id ?? `credential-${crypto.randomUUID()}`;
     const record = {
       user_id: context.userId,
       provider: setup.provider,
@@ -850,15 +868,34 @@ export const configureAppConnection = createServerFn({ method: "POST" })
       },
     };
 
-    const query = context.supabase.from("app_connections").insert(record);
-    const { data: connection, error } = await query
-      .select("id, provider, display_name, status, scopes, provider_account_id, created_at")
-      .single();
+    const query = context.supabase.from("app_connections");
+    const { data: connection, error } = existing
+      ? await query
+          .update(record)
+          .eq("id", existing.id)
+          .eq("user_id", context.userId)
+          .select("id, provider, display_name, status, scopes, provider_account_id, created_at")
+          .single()
+      : await query
+          .insert(record)
+          .select("id, provider, display_name, status, scopes, provider_account_id, created_at")
+          .single();
     if (error) {
       if (secretId) {
         await context.supabase.rpc("delete_credential_secret", { p_id: secretId });
       }
       throw new Error(error.message);
+    }
+    const oldReference = existing?.credential_reference;
+    const oldSecretId = oldReference?.match(/^credential:\/\/[^/]+\/([0-9a-f-]{36})$/i)?.[1];
+    if (oldSecretId && oldSecretId !== secretId) {
+      const { data: references, error: referenceError } = await context.supabase
+        .from("app_connections")
+        .select("id")
+        .eq("credential_reference", oldReference ?? "");
+      if (!referenceError && !references?.length) {
+        await context.supabase.rpc("delete_credential_secret", { p_id: oldSecretId });
+      }
     }
     return { ...connection, validation };
   });

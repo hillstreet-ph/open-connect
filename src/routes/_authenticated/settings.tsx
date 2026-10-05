@@ -9,6 +9,7 @@ import {
   Loader2,
   Network,
   Save,
+  Sparkles,
   ShieldCheck,
   Trash2,
   Upload,
@@ -357,6 +358,12 @@ function SettingsPage() {
         <TabsContent value="integrations">
           <div className="grid gap-4 md:grid-cols-2">
             <SettingsLinkCard
+              to="/models"
+              icon={Sparkles}
+              title="AI Gateway & provider keys"
+              description="Add or update your OpenRouter or other provider key. Keys are stored in the credential vault and never sent to Agent-Helper chat."
+            />
+            <SettingsLinkCard
               to="/connections"
               icon={Network}
               title="Connected apps"
@@ -402,6 +409,7 @@ function SettingsLinkCard({
     | "/roles"
     | "/projects"
     | "/admin"
+    | "/models"
     | "/connections"
     | "/secrets"
     | "/automations"
