@@ -39,7 +39,19 @@ import {
   listInboundIntegrations,
 } from "@/lib/inbound-integrations.functions";
 
+const integrationSections = ["api-key", "apps", "ai-agents", "custom-mcp"] as const;
+type IntegrationSection = (typeof integrationSections)[number];
+
+function parseIntegrationSection(value: unknown): IntegrationSection {
+  return typeof value === "string" && integrationSections.includes(value as IntegrationSection)
+    ? (value as IntegrationSection)
+    : "ai-agents";
+}
+
 export const Route = createFileRoute("/_authenticated/integrations")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    section: parseIntegrationSection(search.section),
+  }),
   head: () => ({
     meta: [
       { title: "Integrations — Open-Connect" },
@@ -91,6 +103,13 @@ const aiClients = [
 
 function IntegrationsPage() {
   const { user } = useAuth();
+  const { section } = Route.useSearch();
+  const sectionTitles: Record<IntegrationSection, string> = {
+    "api-key": "API Key",
+    apps: "Apps",
+    "ai-agents": "AI Agents",
+    "custom-mcp": "Custom MCP",
+  };
   const queryClient = useQueryClient();
   const listFn = useServerFn(listInboundIntegrations);
   const configureFn = useServerFn(configureTelegramIntegration);
@@ -113,7 +132,7 @@ function IntegrationsPage() {
   const connections = useQuery({
     queryKey: ["inbound-integrations"],
     queryFn: () => listFn({}),
-    enabled: Boolean(user),
+    enabled: Boolean(user) && section === "apps",
   });
 
   const telegramItems = (connections.data ?? []).filter((item) => item.provider === "telegram");
@@ -121,7 +140,7 @@ function IntegrationsPage() {
   const customMcpConnections = useQuery({
     queryKey: ["app-connections"],
     queryFn: () => customMcpListFn({}),
-    enabled: Boolean(user),
+    enabled: Boolean(user) && section === "custom-mcp",
   });
   const customMcpItems = (customMcpConnections.data ?? []).filter(
     (item) => item.provider === "custom_mcp",
@@ -209,9 +228,14 @@ function IntegrationsPage() {
         <Badge variant="outline" className="border-primary/40 text-primary">
           Open-Connect · inbound
         </Badge>
-        <h1 className="mt-4 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-          Integrations
-        </h1>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+            {sectionTitles[section]}
+          </h1>
+          <Button asChild size="sm" variant="outline">
+            <Link to="/settings">Back to Settings</Link>
+          </Button>
+        </div>
         <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground sm:text-base">
           Connect external AI clients, MCP clients, and Telegram into Open-Connect. Each integration
           setup belongs to your account. Connectors are for external accounts Open-Connect uses; AI
@@ -219,36 +243,7 @@ function IntegrationsPage() {
         </p>
       </header>
 
-      <nav aria-label="Integration setup types" className="flex flex-wrap gap-2 border-b pb-4">
-        {user ? (
-          <a
-            href="#api-key"
-            className="rounded-full border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
-          >
-            API Key
-          </a>
-        ) : null}
-        <a
-          href="#apps"
-          className="rounded-full border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
-        >
-          Apps
-        </a>
-        <a
-          href="#ai-agents"
-          className="rounded-full border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
-        >
-          AI Agents
-        </a>
-        <a
-          href="#custom-mcp"
-          className="rounded-full border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
-        >
-          Custom MCP
-        </a>
-      </nav>
-
-      <section id="ai-agents" className="scroll-mt-6">
+<section id="ai-agents" hidden={section !== "ai-agents"} className="scroll-mt-6">
         <div className="mb-4">
           <h2 className="text-lg font-semibold">AI Agents</h2>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -291,7 +286,7 @@ function IntegrationsPage() {
         </div>
       </section>
 
-      <section id="custom-mcp" className="scroll-mt-6">
+      <section id="custom-mcp" hidden={section !== "custom-mcp"} className="scroll-mt-6">
         <div className="mb-4">
           <h2 className="text-lg font-semibold">Custom MCP</h2>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -443,7 +438,7 @@ function IntegrationsPage() {
         </Card>
       </section>
 
-      <section id="apps" className="scroll-mt-6">
+      <section id="apps" hidden={section !== "apps"} className="scroll-mt-6">
         <div className="mb-4">
           <h2 className="text-lg font-semibold">Apps</h2>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -504,7 +499,7 @@ function IntegrationsPage() {
       </section>
 
       {user ? (
-        <section id="api-key" className="scroll-mt-6">
+        <section id="api-key" hidden={section !== "api-key"} className="scroll-mt-6">
           <div className="mb-4">
             <h2 className="text-lg font-semibold">API Key</h2>
             <p className="mt-1 text-sm text-muted-foreground">
