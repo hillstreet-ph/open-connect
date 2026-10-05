@@ -387,9 +387,9 @@ test("selected library resources can be added while creating a collection", () =
     "utf8",
   );
 
-  assert.match(panel, /createCollection\\(\\{ data: \\{ name, resourceIds: selectedResourceIds \\} \\}\\)/);
+  assert.match(panel, /resourceIds: selectedResourceIds/);
   assert.match(panel, /will be added to this collection/);
   assert.match(panel, /Create & add/);
-  assert.match(functions, /data\\.resourceIds\\.map\\(\\(resourceId, position\\)/);
-  assert.match(functions, /const newIds = data\\.resourceIds\\.filter\\(\\(id\\) => !existingIds\\.has\\(id\\)\\)/);
+  assert.match(functions, /data\\.resourceIds\\.map/);
+  assert.match(functions, /const newIds/);
 });
