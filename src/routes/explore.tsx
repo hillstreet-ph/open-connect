@@ -17,12 +17,12 @@ export const Route = createFileRoute("/explore")({
       {
         name: "description",
         content:
-          "Browse Skills, Apps, Models, MCP servers, Tools, Agents and Prompts in the Open-Connect marketplace and bundle them into a Toolkit.",
+          "Browse agent resources and tools in the Open-Connect Marketplace and bundle selected items into a Toolkit.",
       },
       { property: "og:title", content: "Explore the Open-Connect Marketplace" },
       {
         property: "og:description",
-        content: "Skills, Apps, Models, MCP, Tools, Agents and Prompts — one marketplace, one key.",
+        content: "Skills, MCP servers, tools, agents, and prompts for Open-Connect.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -34,8 +34,6 @@ export const Route = createFileRoute("/explore")({
 export const EXPLORE_TABS = [
   { value: "all", label: "All" },
   { value: "skill", label: "Skills" },
-  { value: "app", label: "Apps" },
-  { value: "model", label: "Models" },
   { value: "mcp", label: "MCP" },
   { value: "tool", label: "Tools" },
   { value: "agent", label: "Agents" },
@@ -53,7 +51,7 @@ export function useMarketplace() {
         .order("featured", { ascending: false })
         .order("name");
       if (error) throw error;
-      return data;
+      return (data ?? []).filter((item) => !["app", "model"].includes(item.resource_type));
     },
   });
 }
@@ -81,13 +79,19 @@ function ExplorePage() {
         <div>
           <h1 className="text-3xl font-semibold sm:text-4xl">Explore</h1>
           <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
-            Skills, Apps, Models, MCP servers, Tools, Agents and Prompts. Pick what your agent needs
-            and bundle it into a Toolkit.
+            Browse agent resources and tools, then bundle what your projects need into a Toolkit.
+            Apps and AI models are managed in their dedicated connection pages.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline">
             <Link to="/resources">Browse Marketplace</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link to="/connections">Connect apps</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link to="/models">AI Gateway</Link>
           </Button>
           <Button asChild>
             <Link to="/toolkits">Build a Toolkit</Link>
