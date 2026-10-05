@@ -245,19 +245,17 @@ export async function resolveUserUpstreams(
   // Generated database types lag the deployed credential resolver RPC.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabaseAdmin as any;
+  const { data: connections, error: connectionError } = await db
+    .from("app_connections")
+    .select("provider,status,credential_reference,metadata")
+    .eq("user_id", userId)
+    .in("provider", ["openrouter", "litellm"])
+    .eq("status", "connected")
+    .order("created_at", { ascending: false })
+    .limit(10);
+  if (connectionError) throw new Error("Unable to read model connection.");
   const saved = await savedModelUpstreams(userId, {
-    find: async (id) => {
-      const { data, error } = await db
-        .from("app_connections")
-        .select("provider,status,credential_reference,metadata")
-        .eq("user_id", id)
-        .in("provider", ["openrouter", "litellm"])
-        .eq("status", "connected")
-        .order("created_at", { ascending: false })
-        .limit(10);
-      if (error) throw new Error("Unable to read model connection.");
-      return data ?? [];
-    },
+    find: async () => connections ?? [],
     resolve: async (id, credentialId) => {
       const { data, error } = await db.rpc("resolve_connection_credential", {
         p_user_id: id,
@@ -268,7 +266,11 @@ export async function resolveUserUpstreams(
     },
   });
   // A saved personal connection is authoritative: no silent fallback to a different account.
-  return saved.length > 0 ? saved : allowPlatformFallback ? resolveUpstreams() : [];
+  return saved.length > 0 || (connections?.length ?? 0) > 0
+    ? saved
+    : allowPlatformFallback
+      ? resolveUpstreams()
+      : [];
 }
 
 export type AutoFreeRoute = { upstream: Upstream; model: string };

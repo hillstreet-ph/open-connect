@@ -23,6 +23,19 @@ test("uses free model, bounded tokens and does not follow redirects or execute t
   });
   assert.deepEqual(result, { text: "Hello!", model: "test:free" });
 });
+test("accepts a catalogued OpenRouter free model for Auto fallback", async () => {
+  const result = await generateAutomationResponse(
+    "Hello",
+    upstream,
+    async (_url, options) => {
+      const body = JSON.parse(String(options?.body));
+      assert.equal(body.model, "meta/free-model:free");
+      return Response.json({ choices: [{ message: { content: "Hello!" } }] });
+    },
+    "meta/free-model:free",
+  );
+  assert.equal(result.model, "meta/free-model:free");
+});
 test("rejects redirects, rate limits, missing text and malformed responses", async () => {
   for (const response of [
     new Response(null, { status: 302 }),

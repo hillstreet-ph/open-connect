@@ -79,9 +79,9 @@ export async function savedModelUpstreams(
     const reference = connection.credential_reference?.match(
       new RegExp(`^credential://${connection.provider}/([0-9a-f-]{36})$`, "i"),
     );
-    if (!reference) {
-      throw new Error(`Reconnect ${connection.provider} to restore its credential reference.`);
-    }
+    // Old/imported connections can show as connected without a gateway vault reference.
+    // Skip those rows so one stale connection cannot block another valid provider.
+    if (!reference) continue;
     const credential = credentialValue(await dependencies.resolve(userId, reference[1]!));
     configured.push({
       name: connection.provider,

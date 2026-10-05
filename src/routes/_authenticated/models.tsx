@@ -79,7 +79,21 @@ function ModelsPage() {
   });
   const connectedProviders = new Set(
     (connections.data ?? [])
-      .filter((item) => item.status === "connected")
+      .filter(
+        (item) =>
+          item.status === "connected" &&
+          ((item.provider !== "openrouter" && item.provider !== "litellm") || item.gateway_ready),
+      )
+      .map((item) => item.provider),
+  );
+  const reconnectProviders = new Set(
+    (connections.data ?? [])
+      .filter(
+        (item) =>
+          item.status === "connected" &&
+          (item.provider === "openrouter" || item.provider === "litellm") &&
+          !item.gateway_ready,
+      )
       .map((item) => item.provider),
   );
   const configureMutation = useMutation({
@@ -103,6 +117,7 @@ function ModelsPage() {
       setProviderKey("");
       setProviderUrl("");
       void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
+      void queryClient.invalidateQueries({ queryKey: ["free-model-catalog"] });
     },
     onError: (error) =>
       toast.error(error instanceof Error ? error.message : "Provider setup failed"),
@@ -226,9 +241,9 @@ function ModelsPage() {
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  No individually priced free models were found. Auto still uses the OpenRouter free
-                  router when that connection is available. Connect OpenRouter or configure free
-                  pricing on your LiteLLM proxy, then refresh.
+                  {reconnectProviders.size > 0
+                    ? `A connected gateway is missing its saved credential reference (${[...reconnectProviders].join(", ")}). Reconnect its key below, then refresh the list.`
+                    : "No individually priced free models were found. Auto still uses the OpenRouter free router when that connection is available. Connect OpenRouter or configure free pricing on your LiteLLM proxy, then refresh."}
                 </p>
               )}
             </>
@@ -250,7 +265,7 @@ function ModelsPage() {
         <CardHeader>
           <CardTitle>Test free inference</CardTitle>
           <CardDescription>
-            Send a short test through your saved OpenRouter connection. Free models are subject to
+            Send a short test through your connected free-model routes. Free models are subject to
             provider quotas and availability.
           </CardDescription>
         </CardHeader>
@@ -284,7 +299,9 @@ function ModelsPage() {
                 <BrandLogo provider={provider.id} name={provider.name} size="sm" />
                 <span className="truncate text-sm font-medium">{provider.name}</span>
               </div>
-              {connectedProviders.has(provider.id) ? (
+              {reconnectProviders.has(provider.id) ? (
+                <Badge variant="destructive">Reconnect</Badge>
+              ) : connectedProviders.has(provider.id) ? (
                 <Badge variant="secondary" className="gap-1">
                   <CheckCircle2 className="size-3" /> Connected
                 </Badge>
@@ -299,7 +316,11 @@ function ModelsPage() {
                   setProviderKey("");
                 }}
               >
-                {connectedProviders.has(provider.id) ? "Update key" : "Add key"}
+                {reconnectProviders.has(provider.id)
+                  ? "Reconnect key"
+                  : connectedProviders.has(provider.id)
+                    ? "Update key"
+                    : "Add key"}
               </Button>
             </div>
             {activeProvider === provider.id ? (
