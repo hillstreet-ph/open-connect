@@ -67,8 +67,8 @@ function AuthorizePage() {
       </p>
       <noscript>
         <p role="alert" className="mt-4">
-          JavaScript is required to sign in and approve this connection. Enable it, then reload
-          this page or restart the connection from Composio.
+          JavaScript is required to sign in and approve this connection. Enable it, then reload this
+          page or restart the connection from Composio.
         </p>
       </noscript>
       {invalid || error ? (
