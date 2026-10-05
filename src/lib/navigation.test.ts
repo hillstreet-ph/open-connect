@@ -71,40 +71,40 @@ test("connection surfaces remain internal and separate from Marketplace", () => 
   const sourceRoot = path.resolve(process.cwd(), "src");
   const sidebar = readFileSync(path.join(sourceRoot, "components/app-sidebar.tsx"), "utf8");
   const userMenu = readFileSync(path.join(sourceRoot, "components/user-menu.tsx"), "utf8");
-  const connectGroup = sidebar.match(/const CONNECTIONS: Item\[\] = \[([\s\S]*?)\];/)?.[1] ?? "";
+  const connectGroup = sidebar.match(/const CONNECTIONS: Item\\[\\] = \\[([\\s\\S]*?)\\];/)?.[1] ?? "";
 
   for (const route of ["/connections", "/secrets", "/models"]) {
-    assert.match(connectGroup, new RegExp(`to: ["']${route}["']`));
+    assert.match(connectGroup, new RegExp("to: [\\"']" + route + "[\\"']"));
   }
   assert.match(sidebar, /<NavGroup label="Connections" items={CONNECTIONS}/);
-  assert.match(connectGroup, /to: "\/connections", label: "Connectors"/);
-  assert.doesNotMatch(connectGroup, /\/resources|\/integrations|\/api-keys/);
-  assert.match(userMenu, /to="\/api-keys"/);
+  assert.match(connectGroup, /to: "\\/connections", label: "Connectors"/);
+  assert.doesNotMatch(connectGroup, /\\/resources|\\/integrations|\\/api-keys/);
+  assert.match(userMenu, /to="\\/integrations"/);
 
   const models = readFileSync(path.join(sourceRoot, "routes/_authenticated/models.tsx"), "utf8");
-  assert.match(models, /createFileRoute\("\/_authenticated\/models"\)/);
-  assert.doesNotMatch(models, /(?:to|href)=["']\/(?:resources|auth)["']/);
+  assert.match(models, /createFileRoute\\("\\/_authenticated\\/models"\\)/);
+  assert.doesNotMatch(models, /(?:to|href)=["']\\/(?:resources|auth)["']/);
 
   const connectors = readFileSync(
     path.join(sourceRoot, "routes/_authenticated/connections.tsx"),
     "utf8",
   );
-  assert.match(connectors, /createFileRoute\("\/_authenticated\/connections"\)/);
+  assert.match(connectors, /createFileRoute\\("\\/_authenticated\\/connections"\\)/);
   assert.match(connectors, /Add custom MCP/);
-  assert.doesNotMatch(connectors, /(?:to|href)=["']\/resources["']/);
+  assert.doesNotMatch(connectors, /(?:to|href)=["']\\/resources["']/);
 
   const integrations = readFileSync(
     path.join(sourceRoot, "routes/_authenticated/integrations.tsx"),
     "utf8",
   );
-  assert.match(integrations, /createFileRoute\("\/_authenticated\/integrations"\)/);
-  assert.doesNotMatch(integrations, /(?:to|href)=["']\/(?:resources|connections|mcp-servers|api-keys)["']/);
-  assert.match(integrations, /<ApiKeysCard \/>/);
+  assert.match(integrations, /createFileRoute\\("\\/_authenticated\\/integrations"\\)/);
+  assert.doesNotMatch(integrations, /(?:to|href)=["']\\/(?:resources|connections|mcp-servers|api-keys)["']/);
+  assert.match(integrations, /<ApiKeysCard \\/>/);
   assert.match(integrations, /Connect ChatGPT with OAuth/);
-  assert.match(integrations, /setTelegramOpen\(true\)/);
+  assert.match(integrations, /setTelegramOpen\\(true\\)/);
 });
 
-test("Integrations is in Settings and owns inbound setup and API keys", () => {
+test("Integrations follows Data & privacy in Settings and includes account keys", () => {
   const sourceRoot = path.resolve(process.cwd(), "src");
   const userMenu = readFileSync(path.join(sourceRoot, "components/user-menu.tsx"), "utf8");
   const settings = readFileSync(
@@ -112,14 +112,14 @@ test("Integrations is in Settings and owns inbound setup and API keys", () => {
     "utf8",
   );
 
-  assert.match(userMenu, /to="\/settings"/);
-  assert.doesNotMatch(userMenu, /to="\/integrations"/);
-  assert.match(userMenu, /to="\/api-keys"/);
-  assert.match(settings, /to="\/integrations"/);
-  assert.match(settings, /title="Integrations"/);
+  assert.match(userMenu, /to="\\/settings"/);
+  assert.match(userMenu, /to="\\/integrations"/);
+  assert.doesNotMatch(userMenu, /to="\\/api-keys"/);
+  assert.match(settings, /<TabsTrigger value="data">Data & privacy<\\/TabsTrigger>[\\s\\S]*?<TabsTrigger value="integrations">Integrations<\\/TabsTrigger>/);
+  assert.match(settings, /to="\\/integrations"/);
   assert.match(settings, /title="Connectors"/);
   assert.match(settings, /title="AI Gateway"/);
-  assert.doesNotMatch(settings, /to="\/api-keys"/);
+  assert.doesNotMatch(settings, /to="\\/api-keys"/);
 });
 
 test("Toolkit creation reads from the personal library, not the Marketplace catalog", () => {
