@@ -130,10 +130,7 @@ test("supports secure Vault value rotation and metadata-only folder project shar
   assert.match(credentialFoldersMigration, /credential_folder_projects/i);
   assert.match(credentialFoldersMigration, /credential\.user_id = v_owner/);
   assert.match(credentialFoldersMigration, /vault\.create_secret/);
-  assert.match(
-    credentialFoldersMigration,
-    /delete from vault\.secrets where id = v_old_vault_id/i,
-  );
+  assert.match(credentialFoldersMigration, /delete from vault\.secrets where id = v_old_vault_id/i);
   assert.match(credentialFoldersMigration, /user_id = auth\.uid\(\)/);
   assert.match(credentialFoldersMigration, /project access denied/i);
   assert.match(credentialFoldersMigration, /shared_via_folder/);
