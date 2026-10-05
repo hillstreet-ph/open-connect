@@ -19,7 +19,12 @@ import { BrandLogo } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -81,10 +86,20 @@ function ConnectionsPage() {
   const [accountLabel, setAccountLabel] = useState("");
   const [endpointUrl, setEndpointUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
-  const [authType, setAuthType] = useState<"none" | "bearer" | "api_key">("bearer");
-  const endpointProviders = new Set(["supabase", "databricks", "litellm", "custom_mcp"]);
+  const [authType, setAuthType] = useState<"none" | "bearer" | "api_key">(
+    "bearer",
+  );
+  const endpointProviders = new Set([
+    "supabase",
+    "databricks",
+    "litellm",
+    "custom_mcp",
+  ]);
 
-  const catalog = useQuery({ queryKey: ["connection-catalog"], queryFn: () => catalogFn({}) });
+  const catalog = useQuery({
+    queryKey: ["connection-catalog"],
+    queryFn: () => catalogFn({}),
+  });
   const mine = useQuery({
     queryKey: ["app-connections"],
     queryFn: () => listFn({}),
@@ -101,7 +116,8 @@ function ConnectionsPage() {
       );
       void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Composio sync failed"),
+    onError: (e) =>
+      toast.error(e instanceof Error ? e.message : "Composio sync failed"),
   });
 
   const connectMutation = useMutation({
@@ -114,7 +130,8 @@ function ConnectionsPage() {
       toast.success("Connection saved securely");
       void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Connect failed"),
+    onError: (e) =>
+      toast.error(e instanceof Error ? e.message : "Connect failed"),
   });
 
   const disconnectMutation = useMutation({
@@ -123,7 +140,10 @@ function ConnectionsPage() {
       toast.success("Connection removed");
       void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not remove connection"),
+    onError: (e) =>
+      toast.error(
+        e instanceof Error ? e.message : "Could not remove connection",
+      ),
   });
 
   const configureMutation = useMutation({
@@ -135,7 +155,8 @@ function ConnectionsPage() {
           account_label: accountLabel,
           endpoint_url: endpointUrl,
           api_key: apiKey,
-          auth_type: selectedApp?.provider === "custom_mcp" ? authType : "bearer",
+          auth_type:
+            selectedApp?.provider === "custom_mcp" ? authType : "bearer",
         },
       }),
     onSuccess: (result) => {
@@ -150,7 +171,8 @@ function ConnectionsPage() {
       setApiKey("");
       void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Connection failed"),
+    onError: (e) =>
+      toast.error(e instanceof Error ? e.message : "Connection failed"),
   });
 
   const results = useMemo(() => {
@@ -175,17 +197,26 @@ function ConnectionsPage() {
     }
     const order = [
       "All",
-      ...new Set([...connectionCategories, ...results.map((app) => app.category)]),
+      ...new Set([
+        ...connectionCategories,
+        ...results.map((app) => app.category),
+      ]),
     ];
     return order
       .filter((c) => c !== "All" && map.has(c))
       .map((c) => ({ category: c, apps: map.get(c)! }));
   }, [results]);
 
-  const connectionsByProvider = new Map<string, NonNullable<typeof mine.data>[number]>();
+  const connectionsByProvider = new Map<
+    string,
+    NonNullable<typeof mine.data>[number]
+  >();
   for (const item of mine.data ?? []) {
     const current = connectionsByProvider.get(item.provider);
-    if (!current || (item.status === "connected" && current.status !== "connected")) {
+    if (
+      !current ||
+      (item.status === "connected" && current.status !== "connected")
+    ) {
       connectionsByProvider.set(item.provider, item);
     }
   }
@@ -198,7 +229,8 @@ function ConnectionsPage() {
       </Badge>
       <h1 className="text-2xl font-semibold sm:text-4xl">Connectors</h1>
       <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-        Connect external app accounts, Composio toolkits, and MCP servers. Credentials stay server-side.
+        Connect external app accounts, Composio toolkits, and MCP servers.
+        Credentials stay server-side.
       </p>
 
       <div className="mt-6 flex flex-wrap gap-2">
@@ -283,19 +315,31 @@ function ConnectionsPage() {
                 return (
                   <Card key={app.provider} className="flex flex-col gap-4 p-5">
                     <div className="flex min-w-0 items-center gap-3">
-                      <BrandLogo provider={app.provider} name={app.display_name} />
+                      <BrandLogo
+                        provider={app.provider}
+                        name={app.display_name}
+                      />
                       <div className="min-w-0">
-                        <p className="font-semibold leading-snug">{app.display_name}</p>
+                        <p className="font-semibold leading-snug">
+                          {app.display_name}
+                        </p>
                         <p className="text-xs text-muted-foreground">
                           {`${app.category} · ${app.provider === "custom_mcp" ? "MCP endpoint" : app.connection_method === "managed_oauth" ? "Composio" : app.connection_method === "native_oauth" ? "Official provider" : "API key"}`}
                         </p>
                         {app.auth_methods?.length ? (
-                          <p className="text-xs text-muted-foreground">Auth: {app.auth_methods.join(" · ")}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Auth: {app.auth_methods.join(" · ")}
+                          </p>
                         ) : null}
                       </div>
                     </div>
                     {!user ? (
-                      <Button asChild size="sm" variant="outline" className="shrink-0">
+                      <Button
+                        asChild
+                        size="sm"
+                        variant="outline"
+                        className="shrink-0"
+                      >
                         <Link to="/auth">Sign in</Link>
                       </Button>
                     ) : (
@@ -304,13 +348,17 @@ function ConnectionsPage() {
                           <Badge variant="outline">
                             {
                               (mine.data ?? []).filter(
-                                (c) => c.provider === app.provider && c.status === "connected",
+                                (c) =>
+                                  c.provider === app.provider &&
+                                  c.status === "connected",
                               ).length
                             }{" "}
                             connected ·{" "}
                             {
                               (mine.data ?? []).filter(
-                                (c) => c.provider === app.provider && c.status === "pending",
+                                (c) =>
+                                  c.provider === app.provider &&
+                                  c.status === "pending",
                               ).length
                             }{" "}
                             pending
@@ -322,7 +370,8 @@ function ConnectionsPage() {
                           className="shrink-0 border-blue-600 bg-blue-700 text-white hover:bg-blue-800 hover:text-white focus-visible:ring-2 focus-visible:ring-blue-400"
                           disabled={
                             !connection &&
-                            (connectMutation.isPending || (app.oauth && !app.oauth_ready))
+                            (connectMutation.isPending ||
+                              (app.oauth && !app.oauth_ready))
                           }
                           title={
                             app.oauth && !app.oauth_ready
@@ -335,9 +384,13 @@ function ConnectionsPage() {
                               : app.oauth
                                 ? connectMutation.mutate(app.provider)
                                 : (() => {
-                                  setAuthType(app.provider === "custom_mcp" ? "none" : "bearer");
-                                  setSelectedApp(app as CatalogApp);
-                                })()
+                                    setAuthType(
+                                      app.provider === "custom_mcp"
+                                        ? "none"
+                                        : "bearer",
+                                    );
+                                    setSelectedApp(app as CatalogApp);
+                                  })()
                           }
                         >
                           <Plus className="size-4" aria-hidden="true" />
@@ -358,42 +411,63 @@ function ConnectionsPage() {
           </div>
         ))}
         {grouped.length === 0 ? (
-          <p className="text-center text-sm text-muted-foreground">No apps match this filter.</p>
+          <p className="text-center text-sm text-muted-foreground">
+            No apps match this filter.
+          </p>
         ) : null}
       </div>
 
       <Card className="mt-12 bg-pillar shadow-panel">
         <CardHeader className="p-5">
-          <Badge variant="outline" className="w-fit border-primary/40 text-primary">
+          <Badge
+            variant="outline"
+            className="w-fit border-primary/40 text-primary"
+          >
             <Lock className="mr-1 size-3" /> Credential boundary
           </Badge>
-          <CardTitle className="mt-3 text-base">Agents never see the secret</CardTitle>
+          <CardTitle className="mt-3 text-base">
+            Agents never see the secret
+          </CardTitle>
           <CardDescription>
-            Provider tokens stay server-side. Agents present a scoped Open-Connect key only.
+            Provider tokens stay server-side. Agents present a scoped
+            Open-Connect key only.
           </CardDescription>
         </CardHeader>
       </Card>
 
-      <Dialog open={Boolean(managedApp)} onOpenChange={(open) => !open && setManagedApp(null)}>
+      <Dialog
+        open={Boolean(managedApp)}
+        onOpenChange={(open) => !open && setManagedApp(null)}
+      >
         <DialogContent className="sm:max-w-xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{managedApp?.display_name} accounts</DialogTitle>
             <DialogDescription>
-              Manage each account separately. Adding an account keeps your existing connections.
+              Manage each account separately. Adding an account keeps your
+              existing connections.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             {(mine.data ?? [])
               .filter((c) => c.provider === managedApp?.provider)
               .map((c, index) => (
-                <div key={c.id} className="rounded-lg border border-border p-4 space-y-3">
+                <div
+                  key={c.id}
+                  className="rounded-lg border border-border p-4 space-y-3"
+                >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="font-medium">Account {index + 1}</p>
-                    <Badge variant="outline">{connectionStatusLabel(c.status)}</Badge>
+                    <Badge variant="outline">
+                      {connectionStatusLabel(c.status)}
+                    </Badge>
                   </div>
                   <details className="text-xs text-muted-foreground">
-                    <summary className="cursor-pointer">Account details</summary>
-                    <p className="mt-2 break-all">Reference: {c.provider_account_id || c.id}</p>
+                    <summary className="cursor-pointer">
+                      Account details
+                    </summary>
+                    <p className="mt-2 break-all">
+                      Reference: {c.provider_account_id || c.id}
+                    </p>
                   </details>
                   <Button
                     size="sm"
@@ -407,7 +481,9 @@ function ConnectionsPage() {
                     ) : (
                       <Unplug aria-hidden="true" className="size-4" />
                     )}
-                    {c.status === "pending" ? "Cancel verification" : "Disconnect"}
+                    {c.status === "pending"
+                      ? "Cancel verification"
+                      : "Disconnect"}
                   </Button>
                 </div>
               ))}
@@ -436,7 +512,10 @@ function ConnectionsPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={Boolean(selectedApp)} onOpenChange={(open) => !open && setSelectedApp(null)}>
+      <Dialog
+        open={Boolean(selectedApp)}
+        onOpenChange={(open) => !open && setSelectedApp(null)}
+      >
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -444,8 +523,8 @@ function ConnectionsPage() {
               Connect {selectedApp?.display_name}
             </DialogTitle>
             <DialogDescription>
-              The credential is encrypted in Supabase Vault. Agents receive only an opaque
-              credential reference.
+              The credential is encrypted in Supabase Vault. Agents receive only
+              an opaque credential reference.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -460,13 +539,21 @@ function ConnectionsPage() {
             </div>
             {selectedApp && endpointProviders.has(selectedApp.provider) ? (
               <div className="space-y-2">
-                <Label htmlFor="connection-endpoint">{selectedApp.provider === "custom_mcp" ? "MCP endpoint URL" : "Service base URL"}</Label>
+                <Label htmlFor="connection-endpoint">
+                  {selectedApp.provider === "custom_mcp"
+                    ? "MCP endpoint URL"
+                    : "Service base URL"}
+                </Label>
                 <Input
                   id="connection-endpoint"
                   type="url"
                   value={endpointUrl}
                   onChange={(event) => setEndpointUrl(event.target.value)}
-                  placeholder={selectedApp.provider === "custom_mcp" ? "https://mcp.example.com/mcp" : "https://workspace.example.com"}
+                  placeholder={
+                    selectedApp.provider === "custom_mcp"
+                      ? "https://mcp.example.com/mcp"
+                      : "https://workspace.example.com"
+                  }
                 />
               </div>
             ) : null}
@@ -476,7 +563,11 @@ function ConnectionsPage() {
                 <select
                   id="connection-auth-type"
                   value={authType}
-                  onChange={(event) => setAuthType(event.target.value as "none" | "bearer" | "api_key")}
+                  onChange={(event) =>
+                    setAuthType(
+                      event.target.value as "none" | "bearer" | "api_key",
+                    )
+                  }
                   className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                 >
                   <option value="none">No authentication</option>
@@ -486,22 +577,28 @@ function ConnectionsPage() {
               </div>
             ) : null}
             {selectedApp?.provider !== "custom_mcp" || authType !== "none" ? (
-            <div className="space-y-2">
-              <Label htmlFor="connection-key">API key or access token</Label>
-              <Input
-                id="connection-key"
-                type="password"
-                autoComplete="off"
-                value={apiKey}
-                onChange={(event) => setApiKey(event.target.value)}
-                placeholder="Paste credential"
-                className="font-mono"
-              />
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="connection-key">API key or access token</Label>
+                <Input
+                  id="connection-key"
+                  type="password"
+                  autoComplete="off"
+                  value={apiKey}
+                  onChange={(event) => setApiKey(event.target.value)}
+                  placeholder="Paste credential"
+                  className="font-mono"
+                />
+              </div>
             ) : null}
             <Button
               className="w-full"
-              disabled={configureMutation.isPending || (selectedApp?.provider === "custom_mcp" ? !endpointUrl.trim() || (authType !== "none" && apiKey.trim().length < 8) : apiKey.trim().length < 8)}
+              disabled={
+                configureMutation.isPending ||
+                (selectedApp?.provider === "custom_mcp"
+                  ? !endpointUrl.trim() ||
+                    (authType !== "none" && apiKey.trim().length < 8)
+                  : apiKey.trim().length < 8)
+              }
               onClick={() => configureMutation.mutate()}
             >
               {configureMutation.isPending ? (
