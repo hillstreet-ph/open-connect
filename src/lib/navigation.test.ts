@@ -127,7 +127,15 @@ test("Integrations follows Data & privacy in Settings and includes account keys"
     settings.indexOf('value="data">Data & privacy') <
       settings.indexOf('value="integrations">Integrations'),
   );
-  assert.ok(settings.includes('to="/integrations"'));
+  for (const section of ["api-key", "apps", "ai-agents", "custom-mcp"]) {
+    assert.ok(settings.includes('href="/integrations?section=' + section + '"'));
+  }
+  assert.ok(settings.indexOf('href="/integrations?section=api-key"') <
+    settings.indexOf('href="/integrations?section=apps"'));
+  assert.ok(settings.indexOf('href="/integrations?section=apps"') <
+    settings.indexOf('href="/integrations?section=ai-agents"'));
+  assert.ok(settings.indexOf('href="/integrations?section=ai-agents"') <
+    settings.indexOf('href="/integrations?section=custom-mcp"'));
   assert.ok(settings.includes('title="Connectors"'));
   assert.ok(settings.includes('title="AI Gateway"'));
   assert.ok(settings.includes('title="Memory"'));
