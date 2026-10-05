@@ -77,7 +77,13 @@ export function ResourceCollectionsPanel({
   const createMutation = useMutation({
     mutationFn: () => createCollection({ data: { name, resourceIds: selectedResourceIds } }),
     onSuccess: (result) => {
-      toast.success("Collection created");
+      const collectionName = name.trim();
+      const addedCount = selectedResourceIds.length;
+      toast.success(
+        addedCount
+          ? `${addedCount} resource${addedCount === 1 ? "" : "s"} added to “${collectionName}”`
+          : "Collection created",
+      );
       setName("");
       if (createAsDefault && user?.id) {
         chooseDefaultCollection(result.id);
@@ -186,8 +192,8 @@ export function ResourceCollectionsPanel({
           />
           <p className="text-xs text-muted-foreground">
             {selectedResourceIds.length
-              ? `${selectedResourceIds.length} selected resources will be added.`
-              : "Create an empty folder, then add resources from your Library."}
+              ? `${selectedResourceIds.length} selected resource${selectedResourceIds.length === 1 ? "" : "s"} will be added to this collection.`
+              : "Create an empty collection, then add resources from your Library."}
           </p>
         </div>
         <div className="flex flex-col gap-2 sm:items-end">
@@ -205,7 +211,9 @@ export function ResourceCollectionsPanel({
             onClick={() => createMutation.mutate()}
           >
             <FolderPlus className="mr-2 size-4" />
-            Create collection
+            {selectedResourceIds.length
+              ? `Create & add ${selectedResourceIds.length}`
+              : "Create collection"}
           </Button>
         </div>
       </div>
