@@ -72,9 +72,9 @@ function AccountMenuItems({ onSignOut }: { onSignOut: () => void }) {
         </Link>
       </DropdownMenuItem>
       <DropdownMenuItem asChild>
-        <Link to="/api-keys" className="cursor-pointer">
+        <Link to="/integrations" className="cursor-pointer">
           <KeyRound className="mr-2 size-4" />
-          API keys · plugins · MCP
+          Integrations · API keys · MCP
         </Link>
       </DropdownMenuItem>
       <DropdownMenuItem asChild>
