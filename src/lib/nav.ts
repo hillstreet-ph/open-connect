@@ -112,6 +112,7 @@ export const resourceCategories = [
   { value: "knowledge", label: "Knowledge" },
   { value: "app", label: "Apps" },
   { value: "model", label: "Models" },
+  { value: "other", label: "Others" },
 ] as const;
 
 export const connectionCategories = [

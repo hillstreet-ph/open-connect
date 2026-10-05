@@ -6,7 +6,7 @@ import { listLibraryResources, removeResourceFromLibrary } from "@/lib/library.f
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Input } from "@/components/ui/input";
-import { groupResourcesByPurpose, resourcePurpose } from "@/lib/resource-categories";
+import { groupResourcesByType, resourceCategoryForType } from "@/lib/resource-categories";
 import { isSharedLibraryRow } from "@/lib/shared-resources";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -57,18 +57,18 @@ export function ResourceLibraryPage({
         "knowledge",
       ].includes(row.resources?.resource_type ?? ""),
   );
-  const categories = groupResourcesByPurpose(rows);
+  const categories = groupResourcesByType(rows);
   const filtered = rows.filter((row) => {
     const resource = row.resources;
     return (
       resource &&
-      (category === "all" || resourcePurpose(row) === category) &&
-      `${resource.name} ${resource.description ?? ""} ${resource.resource_type} ${resourcePurpose(row)}`
+      (category === "all" || resourceCategoryForType(resource.resource_type) === category) &&
+      `${resource.name} ${resource.description ?? ""} ${resource.resource_type}`
         .toLowerCase()
         .includes(search.toLowerCase().trim())
     );
   });
-  const groups = groupResourcesByPurpose(filtered);
+  const groups = groupResourcesByType(filtered);
 
   return (
     <div className="mx-auto max-w-6xl space-y-4 px-4 py-4 sm:px-5 sm:py-5">

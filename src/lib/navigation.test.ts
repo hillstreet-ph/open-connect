@@ -3,8 +3,8 @@ import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { isAppPath } from "./shell.ts";
-import { appCategories, flatAppNav, flatPublicNav, publicCategories } from "./nav.ts";
-import { groupProjectResources, groupResourcesByPurpose } from "./resource-categories.ts";
+import { appCategories, flatAppNav, flatPublicNav, publicCategories, resourceCategories } from "./nav.ts";
+import { groupProjectResources, groupResourcesByPurpose, groupResourcesByType } from "./resource-categories.ts";
 
 function routePaths() {
   const routesRoot = path.resolve(process.cwd(), "src/routes");
@@ -305,5 +305,41 @@ test("Connections order includes Plugins, Connectors, Credentials, and AI Gatewa
   assert.deepEqual(
     appCategories.find((group) => group.id === "connections")?.items.map((item) => item.label),
     ["Plugins", "Connectors", "Credentials", "AI Gateway"],
+  );
+});
+
+test("Marketplace and Resources share ordered type categories ending with Others", () => {
+  assert.deepEqual(
+    resourceCategories.map((category) => category.label),
+    [
+      "All",
+      "Skills",
+      "MCP",
+      "Tools",
+      "Guides",
+      "Plugins",
+      "Agents",
+      "Prompts",
+      "Toolkits",
+      "Memory",
+      "Knowledge",
+      "Apps",
+      "Models",
+      "Others",
+    ],
+  );
+
+  const groups = groupResourcesByType([
+    { id: "s", resources: { resource_type: "skill" } },
+    { id: "m", resources: { resource_type: "model" } },
+    { id: "x", resources: { resource_type: "custom-integration" } },
+  ]);
+  assert.deepEqual(
+    groups.map((group) => [group.label, group.items.length]),
+    [
+      ["Skills", 1],
+      ["Models", 1],
+      ["Others", 1],
+    ],
   );
 });
