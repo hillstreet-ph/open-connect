@@ -22,8 +22,12 @@ export const configureTelegramIntegration = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const displayName = data.display_name.trim() || "Telegram bot";
     const token = data.token.trim();
-    if (displayName.length > 80) throw new Error("Bot name must be 80 characters or fewer.");
-    if (token.length < 20 || token.length > 256) throw new Error("Enter a valid Telegram bot token.");
+    if (displayName.length > 80) {
+      throw new Error("Bot name must be 80 characters or fewer.");
+    }
+    if (token.length < 20 || token.length > 256) {
+      throw new Error("Enter a valid Telegram bot token.");
+    }
 
     const response = await fetch("https://api.telegram.org/bot" + token + "/getMe", {
       cache: "no-store",
