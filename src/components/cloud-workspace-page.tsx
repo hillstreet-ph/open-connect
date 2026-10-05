@@ -150,8 +150,8 @@ export function CloudWorkspacePage({ kind }: { kind: keyof typeof descriptions }
               </Button>
               {project ? (
                 <Button asChild variant="outline">
-                  <Link to="/project-access/$projectId" params={{ projectId }}>
-                    Project sharing
+                  <Link to="/projects/$projectId" params={{ projectId }} hash="project-connections">
+                    Project settings & sharing
                   </Link>
                 </Button>
               ) : null}
