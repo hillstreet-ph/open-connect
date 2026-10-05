@@ -26,9 +26,9 @@ Projects own tasks, schedules, automations, agents, resources, connections, mode
 | 1 | — | Dashboard, **Projects** |
 | 2 | Work | Tasks, Automations, **Schedules** |
 | 3 | Build | Studio, Agents, Toolkits |
-| 4 | Discover | Marketplace |
-| 5 | Connect | Connections, Integrations, AI Gateway |
-| 6 | User avatar menu | API keys & MCP, Settings, Organizations & workspaces, Credentials, System administration (privileged), Help, Sign out |
+| 4 | Discover | Marketplace, Resources, Agents, Skills, MCP, Tools, Toolkits, Prompts, Memory, Knowledge, Others |
+| 5 | Connections | Plugins, Connectors, Credentials, AI Gateway |
+| 6 | User avatar menu | Integrations, API keys & MCP, Settings, Organizations & workspaces, System administration (privileged), Help, Sign out |
 
 Naming: use **Schedules** (noun), not “Scheduled”.
 

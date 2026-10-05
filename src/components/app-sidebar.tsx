@@ -49,7 +49,7 @@ type Item = {
 /**
  * Primary IA (locked):
  * Workspace switcher → Dashboard → Projects → Work → Discover → Cloud → Connections →
- * Connectors, Credentials, and AI Gateway. Integrations, API keys, and settings live in the user avatar menu.
+ * Plugins, Connectors, Credentials, and AI Gateway. Integrations, API keys, and settings live in the user avatar menu.
  *
  * Organization settings live in the user menu; workspaces manage projects and environments.
  * System administration appears once for privileged roles in the shared menu.
@@ -77,7 +77,6 @@ const CLOUD: Item[] = [
 const DISCOVER: Item[] = [
   { to: "/resources", label: "Marketplace", icon: Boxes },
   { to: "/library", label: "Resources", icon: Boxes },
-  { to: "/plugins", label: "Plugins", icon: Puzzle },
   { to: "/agents", label: "Agents", icon: Bot },
   { to: "/skills", label: "Skills", icon: Wrench },
   { to: "/mcp-servers", label: "MCP", icon: Plug },
@@ -90,6 +89,7 @@ const DISCOVER: Item[] = [
 ];
 
 const CONNECTIONS: Item[] = [
+  { to: "/plugins", label: "Plugins", icon: Puzzle },
   { to: "/connections", label: "Connectors", icon: Plug },
   { to: "/secrets", label: "Credentials", icon: LockKeyhole },
   { to: "/models", label: "AI Gateway", icon: Sparkles },

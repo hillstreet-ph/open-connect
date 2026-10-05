@@ -288,7 +288,6 @@ test("Discover order includes dedicated MCP and Tools routes", () => {
     [
       "Marketplace",
       "Resources",
-      "Plugins",
       "Agents",
       "Skills",
       "MCP",
@@ -299,5 +298,12 @@ test("Discover order includes dedicated MCP and Tools routes", () => {
       "Knowledge",
       "Others",
     ],
+  );
+});
+
+test("Connections order includes Plugins, Connectors, Credentials, and AI Gateway", () => {
+  assert.deepEqual(
+    appCategories.find((group) => group.id === "connections")?.items.map((item) => item.label),
+    ["Plugins", "Connectors", "Credentials", "AI Gateway"],
   );
 });
