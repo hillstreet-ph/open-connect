@@ -8,6 +8,7 @@ import {
   createOrganizationGroup,
   inviteOrganizationMember,
   getCanonicalOrganization,
+  getOrganizationAccess,
   listOrganizationPeople,
   removeOrganizationMember,
   setOrganizationMemberGroups,
@@ -42,6 +43,7 @@ function OrgsPage() {
   const updateRole = useServerFn(updateOrganizationMemberRole);
   const removeMember = useServerFn(removeOrganizationMember);
   const setGroups = useServerFn(setOrganizationMemberGroups);
+  const getOrgAccess = useServerFn(getOrganizationAccess);
 
   const [groupName, setGroupName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
@@ -55,6 +57,12 @@ function OrgsPage() {
     queryFn: () => getOrganization(),
   });
   const activeOrgId = organization.data?.id ?? "";
+  const access = useQuery({
+    queryKey: ["organization-access", activeOrgId],
+    queryFn: () => getOrgAccess({ data: { organizationId: activeOrgId } }),
+    enabled: Boolean(activeOrgId && isAdmin),
+  });
+  const isAdmin = access.data?.isAdmin === true;
   const people = useQuery({
     queryKey: ["organization-people", activeOrgId],
     queryFn: () => listPeople({ data: { organizationId: activeOrgId } }),
@@ -131,7 +139,7 @@ function OrgsPage() {
         project management stays under Workspaces.
       </p>
 
-      <Card className="mt-8 shadow-panel">
+      <Card className={`mt-8 shadow-panel ${isAdmin ? "" : "hidden"}`}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <UsersRound className="size-4" /> People & groups
@@ -401,6 +409,17 @@ function OrgsPage() {
           ) : null}
         </CardContent>
       </Card>
+      {!access.isLoading && !isAdmin ? (
+        <Card className="mt-8 shadow-panel">
+          <CardHeader>
+            <CardTitle className="text-base">Organization settings are admin-managed</CardTitle>
+            <CardDescription>
+              Only organization Admins can invite people, change roles, manage groups, or update
+              organization access. Ask an Admin if you need a change.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      ) : null}
     </div>
   );
 }
