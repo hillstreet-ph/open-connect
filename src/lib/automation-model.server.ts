@@ -1,6 +1,6 @@
 /** Bounded text generation only: never executes model-proposed tools or code. */
 export function automationPrompt(config: Record<string, unknown>): string {
-  const prompt = typeof config.prompt === "string" ? config.prompt.trim() : "";
+  const prompt = typeof config["prompt"] === "string" ? config["prompt"].trim() : "";
   if (!prompt || prompt.length > 8000)
     throw new Error("Enter an AI prompt between 1 and 8,000 characters.");
   return prompt;
@@ -8,16 +8,23 @@ export function automationPrompt(config: Record<string, unknown>): string {
 
 export async function generateAutomationResponse(
   prompt: string,
-  upstream: { baseUrl: string; headers: Record<string, string> },
+  upstream: { name: "openrouter" | "litellm"; baseUrl: string; headers: Record<string, string> },
   request: typeof fetch = fetch,
-  model = "poolside/laguna-s-2.1:free",
+  model = "open-connect/auto",
 ) {
   automationPrompt({ prompt });
-  if (!["poolside/laguna-s-2.1:free", "openrouter/free"].includes(model))
+  if (
+    upstream.name === "openrouter" &&
+    !["open-connect/auto", "poolside/laguna-s-2.1:free", "openrouter/free"].includes(model)
+  )
     throw new Error("Choose a supported free model.");
   // Credentials must never follow a redirect or a configurable destination.
-  if (upstream.baseUrl !== "https://openrouter.ai/api/v1")
-    throw new Error("OpenRouter endpoint is not supported.");
+  const allowedBase =
+    upstream.name === "openrouter"
+      ? upstream.baseUrl === "https://openrouter.ai/api/v1"
+      : upstream.baseUrl.startsWith("https://");
+  if (!allowedBase) throw new Error("Model endpoint is not supported.");
+  const requestModel = model === "open-connect/auto" ? "openrouter/free" : model;
   let response: Response;
   try {
     response = await request(upstream.baseUrl + "/chat/completions", {
@@ -26,7 +33,7 @@ export async function generateAutomationResponse(
       signal: AbortSignal.timeout(60000),
       headers: upstream.headers,
       body: JSON.stringify({
-        model,
+        model: requestModel,
         messages: [{ role: "user", content: prompt }],
         max_tokens: 2048,
       }),
@@ -48,5 +55,8 @@ export async function generateAutomationResponse(
   if (typeof text !== "string" || !text.trim())
     throw new Error("AI provider returned no text. Retry the run.");
   if (text.length > 50000) throw new Error("AI response exceeded the storage limit.");
-  return { text, model: typeof data.model === "string" ? data.model : model };
+  return {
+    text,
+    model: typeof data.model === "string" ? data.model : requestModel,
+  };
 }

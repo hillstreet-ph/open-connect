@@ -294,7 +294,7 @@ async function executeInternalTool(
           trigger_type: "manual",
           action_type: "model",
           project_id: projectId,
-          config: { prompt, model: "openrouter/free" },
+          config: { prompt, model: "open-connect/auto" },
           enabled: true,
         })
         .select("id,name,trigger_type,action_type,enabled,project_id,created_at")
