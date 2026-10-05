@@ -42,6 +42,22 @@ test("allows a public custom MCP endpoint without a stored credential", () => {
   assert.equal(setup.apiKey, "");
 });
 
+test("rejects insecure localhost MCP endpoints because execution requires HTTPS", () => {
+  assert.throws(
+    () =>
+      normalizeConnectionSetup(
+        {
+          provider: "custom_mcp",
+          endpoint_url: "http://localhost:3000/mcp",
+          api_key: "",
+          auth_type: "none",
+        },
+        app("custom_mcp"),
+      ),
+    /must use HTTPS/,
+  );
+});
+
 test("rejects an insecure remote MCP endpoint", () => {
   assert.throws(
     () =>
