@@ -406,34 +406,72 @@ function SettingsPage() {
         </TabsContent>
         <TabsContent value="integrations">
           <div className="grid gap-4 md:grid-cols-2">
-            <SettingsLinkCard
-              to="/integrations"
-              hash="api-key"
-              icon={KeyRound}
-              title="API Key"
-              description="Create and manage scoped keys for clients that use bearer authentication."
-            />
-            <SettingsLinkCard
-              to="/integrations"
-              hash="apps"
-              icon={MessageCircle}
-              title="Apps"
-              description="Connect account-owned apps such as Telegram and manage their credentials."
-            />
-            <SettingsLinkCard
-              to="/integrations"
-              hash="ai-agents"
-              icon={Bot}
-              title="AI Agents"
-              description="Set up AI clients such as ChatGPT to connect with Open-Connect using OAuth or MCP."
-            />
-            <SettingsLinkCard
-              to="/integrations"
-              hash="custom-mcp"
-              icon={Server}
-              title="Custom MCP"
-              description="Add and manage remote MCP servers separately from Connectors and Marketplace resources."
-            />
+            <a
+              href="/integrations?section=api-key"
+              className="block rounded-xl border bg-card p-5 shadow-panel transition-colors hover:bg-accent/40"
+            >
+              <div className="flex items-start gap-3">
+                <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                  <KeyRound className="size-4" />
+                </div>
+                <div>
+                  <h2 className="font-medium">API Key</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Create and manage scoped keys for clients that use bearer authentication.
+                  </p>
+                </div>
+              </div>
+            </a>
+            <a
+              href="/integrations?section=apps"
+              className="block rounded-xl border bg-card p-5 shadow-panel transition-colors hover:bg-accent/40"
+            >
+              <div className="flex items-start gap-3">
+                <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                  <MessageCircle className="size-4" />
+                </div>
+                <div>
+                  <h2 className="font-medium">Apps</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Connect account-owned apps such as Telegram and manage their credentials.
+                  </p>
+                </div>
+              </div>
+            </a>
+            <a
+              href="/integrations?section=ai-agents"
+              className="block rounded-xl border bg-card p-5 shadow-panel transition-colors hover:bg-accent/40"
+            >
+              <div className="flex items-start gap-3">
+                <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                  <Bot className="size-4" />
+                </div>
+                <div>
+                  <h2 className="font-medium">AI Agents</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Set up AI clients such as ChatGPT to connect with Open-Connect using OAuth or
+                    MCP.
+                  </p>
+                </div>
+              </div>
+            </a>
+            <a
+              href="/integrations?section=custom-mcp"
+              className="block rounded-xl border bg-card p-5 shadow-panel transition-colors hover:bg-accent/40"
+            >
+              <div className="flex items-start gap-3">
+                <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                  <Server className="size-4" />
+                </div>
+                <div>
+                  <h2 className="font-medium">Custom MCP</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Add and manage remote MCP servers separately from Connectors and Marketplace
+                    resources.
+                  </p>
+                </div>
+              </div>
+            </a>
           </div>
         </TabsContent>
       </Tabs>
