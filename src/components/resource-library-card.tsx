@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AddToProjectButton } from "@/components/add-to-project";
+import { SUPPORTED_RESOURCE_LICENSES } from "@/lib/resource-license";
 
 const TYPES = [
   "skill",
@@ -79,6 +80,7 @@ export function ResourceLibraryCard({
   const [slug, setSlug] = useState("");
   const [description, setDescription] = useState("");
   const [resourceType, setResourceType] = useState<string>(defaultType);
+  const [license, setLicense] = useState<string>("proprietary");
   const [signals, setSignals] = useState<string[]>([]);
   const [confidence, setConfidence] = useState<string>("");
   const [busy, setBusy] = useState(false);
@@ -115,7 +117,13 @@ export function ResourceLibraryCard({
 
   async function uploadOne(
     fileObj: File,
-    override?: { name: string; slug: string; description: string; resource_type: string },
+    override?: {
+      name: string;
+      slug: string;
+      description: string;
+      resource_type: string;
+      license: string;
+    },
   ) {
     if (fileObj.size > MAX_BYTES) throw new Error(`${fileObj.name} exceeds 50MB`);
     const detected = override ?? (await detectFromFile(fileObj));
@@ -143,6 +151,7 @@ export function ResourceLibraryCard({
         slug: `${meta.slug}-${Date.now().toString(36).slice(-4)}`,
         description: meta.description,
         resource_type: meta.resource_type as (typeof TYPES)[number],
+        license: override ? override.license : "proprietary",
         package_path: path,
         package_filename: fileObj.name,
         package_size: fileObj.size,
@@ -162,12 +171,14 @@ export function ResourceLibraryCard({
         slug: slug || "resource",
         description: description || "",
         resource_type: resourceType,
+        license,
       });
       toast.success("Saved as a draft for review");
       setFile(null);
       setName("");
       setSlug("");
       setDescription("");
+      setLicense("proprietary");
       setSignals([]);
       setConfidence("");
       if (fileRef.current) fileRef.current.value = "";
@@ -284,6 +295,25 @@ export function ResourceLibraryCard({
                 </option>
               ))}
             </select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="pkg-license">License</Label>
+            <select
+              id="pkg-license"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              value={license}
+              onChange={(e) => setLicense(e.target.value)}
+            >
+              {SUPPORTED_RESOURCE_LICENSES.map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-muted-foreground">
+              Verify the source license and include its notice before selecting a non-proprietary
+              license.
+            </p>
           </div>
           <div className="space-y-2 sm:col-span-2">
             <Label htmlFor="pkg-slug">Slug</Label>
