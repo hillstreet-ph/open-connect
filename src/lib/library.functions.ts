@@ -29,6 +29,33 @@ async function ensureLibrary(context: { supabase: SupabaseClient<Database>; user
   return created.id as string;
 }
 
+async function ensureSkillsCollection(context: { supabase: SupabaseClient<Database>; userId: string }) {
+  const { data: existing, error: readError } = await context.supabase
+    .from("toolkits")
+    .select("id")
+    .eq("user_id", context.userId)
+    .eq("name", "Skills")
+    .like("slug", "collection-%")
+    .limit(1)
+    .maybeSingle();
+  if (readError) throw new Error(readError.message);
+  if (existing) return existing.id as string;
+
+  const { data: created, error } = await context.supabase
+    .from("toolkits")
+    .insert({
+      user_id: context.userId,
+      slug: `collection-skills-${context.userId.replaceAll("-", "").slice(0, 12)}`,
+      name: "Skills",
+      description: "Skill resources installed from Marketplace.",
+      published: false,
+    })
+    .select("id")
+    .single();
+  if (error) throw new Error(error.message);
+  return created.id as string;
+}
+
 export const listLibraryResources = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((input?: { resourceType?: string }) => ({
@@ -47,8 +74,18 @@ export const addResourceToLibrary = createServerFn({ method: "POST" })
   }))
   .handler(async ({ data, context }) => {
     if (!data.resourceId) throw new Error("resourceId required");
+    const { data: resource, error: resourceError } = await context.supabase
+      .from("resources")
+      .select("resource_type")
+      .eq("id", data.resourceId)
+      .maybeSingle();
+    if (resourceError) throw new Error(resourceError.message);
+    if (!resource) throw new Error("Resource not found.");
+
     let collectionId: string | null = null;
-    if (data.collectionId) {
+    if (resource.resource_type === "skill") {
+      collectionId = await ensureSkillsCollection(context);
+    } else if (data.collectionId) {
       const { data: collection, error: collectionError } = await context.supabase
         .from("toolkits")
         .select("id")
