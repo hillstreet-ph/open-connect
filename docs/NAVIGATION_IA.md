@@ -28,7 +28,7 @@ Projects own tasks, schedules, automations, agents, resources, connections, mode
 | 3 | Build | Studio, Agents, Toolkits |
 | 4 | Discover | Marketplace, Resources, Agents, Skills, MCP, Tools, Toolkits, Prompts, Memory, Knowledge, Others |
 | 5 | Connections | Plugins, Connectors, Credentials, AI Gateway |
-| 6 | User avatar menu | Integrations, API keys & MCP, Settings, Organizations & workspaces, System administration (privileged), Help, Sign out |
+| 6 | User avatar menu | Integrations, API keys & MCP, Settings, Organizations & workspaces, Help, Sign out |
 
 Naming: use **Schedules** (noun), not “Scheduled”.
 
@@ -43,8 +43,7 @@ Settings contains Profile and Security & login tabs. Only implemented settings a
 Organizations & workspaces opens the existing organization management page; it does not claim to switch active tenant context.
 Credentials opens the existing scoped credential page.
 
-Admins and owners get one System administration submenu: User roles (`/admin`) and Access reference (`/roles`).
-No separate Owner Console or Admin Console appears in daily navigation. Owners retain their existing permissions within shared pages.
+Settings → Workspace contains Access reference (`/roles`) and, for platform Admins only, User roles (`/admin`). These role tools are removed from the account menu to avoid duplicate navigation. Direct route authorization remains enforced.
 Marketplace remains the single resource registry entry. Existing URLs and server authorization remain unchanged.
 
 ## Product rule
@@ -58,7 +57,7 @@ Open Connect is the gateway and control plane. Independent applications consume 
 | Personal settings | Every signed-in account | Settings: Profile; Security & login |
 | Client workspace | Member (stored as user) | Daily work, own credentials and API keys |
 | Toolkit management | Developer and higher | Build, using manage_toolkits capability |
-| System administration | Platform admin and owner | User avatar menu: User roles; Access reference |
+| System administration | Platform admin and owner | Settings → Workspace: User roles; Access reference |
 | Owner role management | Platform owner only | Within the shared User roles page |
 | Organizations and projects | Existing membership policies | Organizations & workspaces; Projects |
 
