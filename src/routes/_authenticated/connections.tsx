@@ -495,8 +495,7 @@ function ConnectionsPage() {
                   value={authType}
                   onChange={(event) =>
                     setAuthType(
-                      event.target.value as "none" | "bearer" | "api_key"
-                        | "personal_access_token",
+                      event.target.value as "none" | "bearer" | "api_key" | "personal_access_token",
                     )
                   }
                 >
