@@ -107,7 +107,7 @@ function IntegrationsPage() {
       setBotLabel("");
       setBotToken("");
       setTelegramOpen(false);
-      void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
+      void queryClient.invalidateQueries({ queryKey: ["inbound-integrations"] });
     },
     onError: (error) =>
       toast.error(error instanceof Error ? error.message : "Could not set up Telegram"),
@@ -148,9 +148,16 @@ function IntegrationsPage() {
         </p>
       </header>
 
-      <section>
+      <nav aria-label="Integration setup types" className="flex flex-wrap gap-2 border-b pb-4">
+        <a href="#apps" className="rounded-full border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground">Apps</a>
+        <a href="#ai-agents" className="rounded-full border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground">AI Agents</a>
+        <a href="#custom-mcp" className="rounded-full border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground">Custom MCP</a>
+        {user ? <a href="#api-key" className="rounded-full border px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground">API Key</a> : null}
+      </nav>
+
+      <section id="ai-agents" className="scroll-mt-6">
         <div className="mb-4">
-          <h2 className="text-lg font-semibold">AI clients and agents</h2>
+          <h2 className="text-lg font-semibold">AI Agents</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Choose a client to see its own connection flow.
           </p>
@@ -191,9 +198,9 @@ function IntegrationsPage() {
         </div>
       </section>
 
-      <section>
+      <section id="custom-mcp" className="scroll-mt-6">
         <div className="mb-4">
-          <h2 className="text-lg font-semibold">MCP server</h2>
+          <h2 className="text-lg font-semibold">Custom MCP</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Your inbound Open-Connect endpoint. Resource catalog MCP servers are managed separately.
           </p>
@@ -203,7 +210,7 @@ function IntegrationsPage() {
             <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <Bot className="size-5" />
             </div>
-            <CardTitle className="mt-3 text-base">Open-Connect MCP</CardTitle>
+            <CardTitle className="mt-3 text-base">Open-Connect MCP endpoint</CardTitle>
             <CardDescription>
               Compatible clients connect here and receive only the capabilities allowed for your
               account and project access.
@@ -233,9 +240,9 @@ function IntegrationsPage() {
         </Card>
       </section>
 
-      <section>
+      <section id="apps" className="scroll-mt-6">
         <div className="mb-4">
-          <h2 className="text-lg font-semibold">Telegram</h2>
+          <h2 className="text-lg font-semibold">Apps</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Set up your bot for agent messaging. This is an Open-Connect integration, separate from
             app connectors.
@@ -294,9 +301,9 @@ function IntegrationsPage() {
       </section>
 
       {user ? (
-        <section>
+        <section id="api-key" className="scroll-mt-6">
           <div className="mb-4">
-            <h2 className="text-lg font-semibold">API keys</h2>
+            <h2 className="text-lg font-semibold">API Key</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Create and revoke scoped keys for clients that use bearer authentication. ChatGPT uses
               OAuth and does not need an API key.
