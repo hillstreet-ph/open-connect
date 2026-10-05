@@ -51,7 +51,7 @@ export const listProjectAccess = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((input: { projectId: string }) => ({ projectId: input.projectId }))
   .handler(async ({ data, context }) => {
-    const project = await requireProjectManager(context.supabase, context.userId, data.projectId);
+    const project = await requireProjectAdmin(context.supabase, context.userId, data.projectId);
     const [{ data: members, error: membersError }, { data: assigned, error: assignedError }] =
       await Promise.all([
         context.supabase
@@ -109,7 +109,7 @@ export const setProjectMemberRole = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     if (!data.userId) throw new Error("Choose an organization member");
     if (!PROJECT_ROLES.includes(data.role)) throw new Error("Choose Admin, Developer, or Member");
-    const project = await requireProjectManager(context.supabase, context.userId, data.projectId);
+    const project = await requireProjectAdmin(context.supabase, context.userId, data.projectId);
     const { data: member, error: memberError } = await context.supabase
       .from("organization_members")
       .select("user_id")
@@ -137,7 +137,7 @@ export const removeProjectMember = createServerFn({ method: "POST" })
   }))
   .handler(async ({ data, context }) => {
     if (!data.userId) throw new Error("userId required");
-    const project = await requireProjectManager(context.supabase, context.userId, data.projectId);
+    const project = await requireProjectAdmin(context.supabase, context.userId, data.projectId);
     const { error } = await context.supabase
       .from("project_members")
       .delete()
