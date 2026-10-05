@@ -9,13 +9,7 @@ import { BrandLogo } from "@/components/brand-logo";
 import { ApiKeysCard } from "@/components/api-keys-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -156,9 +150,9 @@ function IntegrationsPage() {
           Integrations
         </h1>
         <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-          Connect external AI clients, MCP clients, and Telegram into Open-Connect. Each
-          integration setup belongs to your account. Connectors are for external accounts
-          Open-Connect uses; AI models and resource catalogs are managed separately.
+          Connect external AI clients, MCP clients, and Telegram into Open-Connect. Each integration
+          setup belongs to your account. Connectors are for external accounts Open-Connect uses; AI
+          models and resource catalogs are managed separately.
         </p>
       </header>
 
@@ -236,7 +230,9 @@ function IntegrationsPage() {
             <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
               <Badge variant="secondary">OAuth supported</Badge>
               <Badge variant="secondary">Bearer key supported</Badge>
-              <span className="self-center">OAuth clients sign in and approve in their client.</span>
+              <span className="self-center">
+                OAuth clients sign in and approve in their client.
+              </span>
             </div>
             <Button variant="outline" size="sm" onClick={() => setMcpOpen(true)}>
               Client setup instructions
@@ -310,8 +306,8 @@ function IntegrationsPage() {
           <div className="mb-4">
             <h2 className="text-lg font-semibold">API keys</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Create and revoke scoped keys for clients that use bearer authentication. ChatGPT
-              uses OAuth and does not need an API key.
+              Create and revoke scoped keys for clients that use bearer authentication. ChatGPT uses
+              OAuth and does not need an API key.
             </p>
           </div>
           <ApiKeysCard />
