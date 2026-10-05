@@ -82,15 +82,14 @@ async function ensureSkillsCollection(context: {
   if (skillsError) throw new Error(skillsError.message);
 
   if (installedSkills?.length) {
-    const { error: backfillError } = await context.supabase.from("toolkit_items")
-      .upsert(
-        installedSkills.map((item, position) => ({
-          toolkit_id: collectionId,
-          resource_id: item.resource_id,
-          position,
-        })),
-        { onConflict: "toolkit_id,resource_id" },
-      );
+    const { error: backfillError } = await context.supabase.from("toolkit_items").upsert(
+      installedSkills.map((item, position) => ({
+        toolkit_id: collectionId,
+        resource_id: item.resource_id,
+        position,
+      })),
+      { onConflict: "toolkit_id,resource_id" },
+    );
     if (backfillError) throw new Error(backfillError.message);
   }
   return collectionId;
