@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { KeyRound, Link2, Loader2, Lock, Search, Plus, X, Unplug } from "lucide-react";
+import { KeyRound, Loader2, Lock, Search, Plus, X, Unplug } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -56,7 +56,7 @@ export const Route = createFileRoute("/_authenticated/connections")({
       {
         name: "description",
         content:
-          "Connect official external apps through OAuth or MCP. AI provider API keys and model credentials are managed in AI Gateway.",
+          "Connect external app accounts. AI clients, AI agents, and MCP integrations are managed in Settings; model providers stay in AI Gateway.",
       },
     ],
   }),
@@ -80,10 +80,7 @@ function ConnectionsPage() {
   const [accountLabel, setAccountLabel] = useState("");
   const [endpointUrl, setEndpointUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
-  const [authType, setAuthType] = useState<"none" | "bearer" | "api_key" | "personal_access_token">(
-    "bearer",
-  );
-  const endpointProviders = new Set(["custom_mcp", "supabase", "databricks", "litellm"]);
+  const endpointProviders = new Set(["supabase", "databricks", "litellm"]);
 
   const catalog = useQuery({ queryKey: ["connection-catalog"], queryFn: () => catalogFn({}) });
   const mine = useQuery({
@@ -136,7 +133,7 @@ function ConnectionsPage() {
           account_label: accountLabel,
           endpoint_url: endpointUrl,
           api_key: apiKey,
-          auth_type: authType,
+          auth_type: "bearer",
         },
       }),
     onSuccess: (result) => {
@@ -149,7 +146,6 @@ function ConnectionsPage() {
       setAccountLabel("");
       setEndpointUrl("");
       setApiKey("");
-      setAuthType("bearer");
       void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Connection failed"),
@@ -235,17 +231,6 @@ function ConnectionsPage() {
         >
           Browse app connectors
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => {
-            const customMcp = (catalog.data ?? []).find((app) => app.provider === "custom_mcp");
-            if (customMcp) setSelectedApp(customMcp as CatalogApp);
-          }}
-          disabled={!(catalog.data ?? []).some((app) => app.provider === "custom_mcp")}
-        >
-          Add custom MCP
-        </Button>
       </div>
 
       <div className="mt-8 space-y-3">
@@ -299,9 +284,7 @@ function ConnectionsPage() {
                       <div className="min-w-0">
                         <p className="font-semibold leading-snug">{app.display_name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {app.provider === "custom_mcp"
-                            ? "Custom MCP endpoint"
-                            : `${app.category} · ${app.connection_method === "managed_oauth" && app.oauth_ready ? "Composio" : "Official provider"}`}
+                          {`${app.category} · ${app.connection_method === "managed_oauth" && app.oauth_ready ? "Composio" : "Official provider"}`}
                         </p>
                       </div>
                     </div>
@@ -355,9 +338,7 @@ function ConnectionsPage() {
                               ? app.oauth_ready
                                 ? "Connect"
                                 : "Setup required"
-                              : app.provider === "custom_mcp"
-                                ? "Connect"
-                                : "Connect"}
+                              : "Connect"}
                         </Button>
                       </div>
                     )}
@@ -450,11 +431,7 @@ function ConnectionsPage() {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              {selectedApp?.provider === "custom_mcp" ? (
-                <Link2 className="size-5 text-primary" />
-              ) : (
-                <KeyRound className="size-5 text-primary" />
-              )}
+              <KeyRound className="size-5 text-primary" />
               Connect {selectedApp?.display_name}
             </DialogTitle>
             <DialogDescription>
@@ -474,68 +451,31 @@ function ConnectionsPage() {
             </div>
             {selectedApp && endpointProviders.has(selectedApp.provider) ? (
               <div className="space-y-2">
-                <Label htmlFor="connection-endpoint">
-                  {selectedApp.provider === "custom_mcp" ? "MCP endpoint URL" : "Service base URL"}
-                </Label>
+                <Label htmlFor="connection-endpoint">Service base URL</Label>
                 <Input
                   id="connection-endpoint"
                   type="url"
                   value={endpointUrl}
                   onChange={(event) => setEndpointUrl(event.target.value)}
-                  placeholder={
-                    selectedApp.provider === "custom_mcp"
-                      ? "https://mcp.example.com/mcp"
-                      : "https://workspace.example.com"
-                  }
+                  placeholder="https://workspace.example.com"
                 />
               </div>
             ) : null}
-            {selectedApp?.provider === "custom_mcp" ? (
-              <div className="space-y-2">
-                <Label htmlFor="connection-auth">Authentication method</Label>
-                <select
-                  id="connection-auth"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={authType}
-                  onChange={(event) =>
-                    setAuthType(
-                      event.target.value as "none" | "bearer" | "api_key" | "personal_access_token",
-                    )
-                  }
-                >
-                  <option value="none">No authentication</option>
-                  <option value="bearer">Bearer token</option>
-                  <option value="api_key">API key header</option>
-                  <option value="personal_access_token">Personal access token</option>
-                </select>
-              </div>
-            ) : null}
-            {selectedApp?.provider !== "custom_mcp" || authType !== "none" ? (
-              <div className="space-y-2">
-                <Label htmlFor="connection-key">
-                  {selectedApp?.provider === "custom_mcp"
-                    ? "Bearer token / API key"
-                    : "API key or access token"}
-                </Label>
-                <Input
-                  id="connection-key"
-                  type="password"
-                  autoComplete="off"
-                  value={apiKey}
-                  onChange={(event) => setApiKey(event.target.value)}
-                  placeholder="Paste credential"
-                  className="font-mono"
-                />
-              </div>
-            ) : null}
+            <div className="space-y-2">
+              <Label htmlFor="connection-key">API key or access token</Label>
+              <Input
+                id="connection-key"
+                type="password"
+                autoComplete="off"
+                value={apiKey}
+                onChange={(event) => setApiKey(event.target.value)}
+                placeholder="Paste credential"
+                className="font-mono"
+              />
+            </div>
             <Button
               className="w-full"
-              disabled={
-                configureMutation.isPending ||
-                (selectedApp?.provider === "custom_mcp"
-                  ? !endpointUrl.trim() || (authType !== "none" && apiKey.trim().length < 8)
-                  : apiKey.trim().length < 8)
-              }
+              disabled={configureMutation.isPending || apiKey.trim().length < 8}
               onClick={() => configureMutation.mutate()}
             >
               {configureMutation.isPending ? (
