@@ -8,6 +8,7 @@ import {
   createOrganizationGroup,
   inviteOrganizationMember,
   getCanonicalOrganization,
+  getOrganizationAccess,
   listOrganizationPeople,
   removeOrganizationMember,
   setOrganizationMemberGroups,
@@ -18,7 +19,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useRoles } from "@/hooks/use-roles";
 
 export const Route = createFileRoute("/_authenticated/orgs")({
   head: () => ({
@@ -36,7 +36,7 @@ export const Route = createFileRoute("/_authenticated/orgs")({
 
 function OrgsPage() {
   const qc = useQueryClient();
-  const { isAdmin, loading: rolesLoading } = useRoles();
+
   const getOrganization = useServerFn(getCanonicalOrganization);
   const listPeople = useServerFn(listOrganizationPeople);
   const createGroup = useServerFn(createOrganizationGroup);
@@ -44,6 +44,7 @@ function OrgsPage() {
   const updateRole = useServerFn(updateOrganizationMemberRole);
   const removeMember = useServerFn(removeOrganizationMember);
   const setGroups = useServerFn(setOrganizationMemberGroups);
+  const getOrgAccess = useServerFn(getOrganizationAccess);
 
   const [groupName, setGroupName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
@@ -57,6 +58,12 @@ function OrgsPage() {
     queryFn: () => getOrganization(),
   });
   const activeOrgId = organization.data?.id ?? "";
+  const access = useQuery({
+    queryKey: ["organization-access", activeOrgId],
+    queryFn: () => getOrgAccess({ data: { organizationId: activeOrgId } }),
+    enabled: Boolean(activeOrgId),
+  });
+  const isAdmin = access.data?.isAdmin === true;
   const people = useQuery({
     queryKey: ["organization-people", activeOrgId],
     queryFn: () => listPeople({ data: { organizationId: activeOrgId } }),
@@ -133,7 +140,7 @@ function OrgsPage() {
         project management stays under Workspaces.
       </p>
 
-      {rolesLoading ? (
+      {access.isLoading ? (
         <Card className="mt-8 shadow-panel">
           <CardContent className="py-6 text-sm text-muted-foreground">
             Checking organization permissions…
