@@ -29,7 +29,9 @@ async function ensureLibrary(context: { supabase: SupabaseClient<Database>; user
   return created.id as string;
 }
 
-async function ensureSkillsCollection(context: { supabase: SupabaseClient<Database>; userId: string }) {
+async function ensureSkillsCollection(
+  context: { supabase: SupabaseClient<Database>; userId: string },
+) {
   const { data: existing, error: readError } = await context.supabase
     .from("toolkits")
     .select("id")
@@ -39,31 +41,34 @@ async function ensureSkillsCollection(context: { supabase: SupabaseClient<Databa
     .limit(1)
     .maybeSingle();
   if (readError) throw new Error(readError.message);
-  if (existing) return existing.id as string;
 
-  const { data: created, error } = await context.supabase
-    .from("toolkits")
-    .insert({
-      user_id: context.userId,
-      slug: `collection-skills-${context.userId.replaceAll("-", "").slice(0, 12)}`,
-      name: "Skills",
-      description: "Skill resources installed from Marketplace.",
-      published: false,
-    })
-    .select("id")
-    .single();
-
-  let collectionId = created?.id as string | undefined;
-  if (error) {
-    const { data: concurrent, error: concurrentError } = await context.supabase
+  let collectionId = existing?.id as string | undefined;
+  if (!collectionId) {
+    const slug = `collection-skills-${context.userId.replaceAll("-", "").slice(0, 12)}`;
+    const { data: created, error } = await context.supabase
       .from("toolkits")
+      .insert({
+        user_id: context.userId,
+        slug,
+        name: "Skills",
+        description: "Skill resources installed from Marketplace.",
+        published: false,
+      })
       .select("id")
-      .eq("user_id", context.userId)
-      .eq("slug", `collection-skills-${context.userId.replaceAll("-", "").slice(0, 12)}`)
-      .maybeSingle();
-    if (concurrentError) throw new Error(concurrentError.message);
-    if (!concurrent) throw new Error(error.message);
-    collectionId = concurrent.id as string;
+      .single();
+
+    collectionId = created?.id as string | undefined;
+    if (error) {
+      const { data: concurrent, error: concurrentError } = await context.supabase
+        .from("toolkits")
+        .select("id")
+        .eq("user_id", context.userId)
+        .eq("slug", slug)
+        .maybeSingle();
+      if (concurrentError) throw new Error(concurrentError.message);
+      if (!concurrent) throw new Error(error.message);
+      collectionId = concurrent.id as string;
+    }
   }
 
   if (!collectionId) throw new Error("Could not create Skills collection.");
