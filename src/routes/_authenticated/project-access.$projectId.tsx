@@ -95,7 +95,10 @@ function ProjectAccessPage() {
           {access.isLoading ? (
             <p className="text-sm text-muted-foreground">Loading organization members…</p>
           ) : access.isError ? (
-            <div role="alert" className="space-y-2 rounded-md border border-destructive/30 p-3 text-sm">
+            <div
+              role="alert"
+              className="space-y-2 rounded-md border border-destructive/30 p-3 text-sm"
+            >
               <p>Could not load project access.</p>
               <p className="text-muted-foreground">
                 {access.error instanceof Error
