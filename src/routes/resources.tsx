@@ -185,8 +185,8 @@ function MarketplaceContent() {
           </Badge>
           <h1 className="text-xl font-semibold">Marketplace</h1>
           <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-            Browse skills, MCP, tools, plugins, agents, prompts, and other packages. Add items to
-            your personal library, then share them with projects from the matching sidebar page.
+            Browse skills, tools, agents, MCP servers, and more. Install packages to your personal
+            Library. Project assignment is optional.
           </p>
         </div>
         {!user ? (
@@ -214,7 +214,8 @@ function MarketplaceContent() {
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium">Add new Marketplace items to</p>
             <p className="text-xs text-muted-foreground">
-              Installs always enter Library. Choose a default collection or use Library only.
+              Installs go to your personal Library. A default collection is optional. Projects are
+              never assigned automatically.
             </p>
           </div>
           <select

@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Building2, ChevronDown, FileCode, KeyRound, LogOut, Settings } from "lucide-react";
+import { Building2, ChevronDown, FileCode, LogOut, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -69,12 +69,6 @@ function AccountMenuItems({ onSignOut }: { onSignOut: () => void }) {
         <Link to="/orgs" className="cursor-pointer">
           <Building2 className="mr-2 size-4" />
           hillstreet-ph
-        </Link>
-      </DropdownMenuItem>
-      <DropdownMenuItem asChild>
-        <Link to="/api-keys" className="cursor-pointer">
-          <KeyRound className="mr-2 size-4" />
-          API keys · plugins · MCP
         </Link>
       </DropdownMenuItem>
       <DropdownMenuItem asChild>

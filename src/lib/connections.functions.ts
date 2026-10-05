@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { normalizeConnectionSetup, type ConnectionSetupInput } from "@/lib/connection-setup";
+import { AI_GATEWAY_PROVIDERS } from "@/lib/ai-gateway-providers";
+import { hasRole, type AppRole } from "@/lib/rbac";
 
 /**
  * Connection catalog — professional app plane.
@@ -180,85 +182,6 @@ const CATALOG = [
     category: "Communication",
     scopes: ["gmail.readonly", "gmail.send"],
     oauth: true,
-  },
-  // AI clients & gateways
-  {
-    provider: "openai",
-    display_name: "OpenAI API",
-    category: "AI",
-    scopes: ["models"],
-    oauth: false,
-  },
-  {
-    provider: "openrouter",
-    display_name: "OpenRouter",
-    category: "AI",
-    scopes: ["models"],
-    oauth: false,
-  },
-  {
-    provider: "nvidia",
-    display_name: "NVIDIA NIM",
-    category: "AI",
-    scopes: ["models"],
-    oauth: false,
-  },
-  {
-    provider: "ollama_cloud",
-    display_name: "Ollama Cloud",
-    category: "AI",
-    scopes: ["models"],
-    oauth: false,
-  },
-  { provider: "groq", display_name: "Groq", category: "AI", scopes: ["models"], oauth: false },
-  {
-    provider: "cerebras",
-    display_name: "Cerebras",
-    category: "AI",
-    scopes: ["models"],
-    oauth: false,
-  },
-  {
-    provider: "anthropic",
-    display_name: "Anthropic API",
-    category: "AI",
-    scopes: ["models"],
-    oauth: false,
-  },
-  {
-    provider: "google",
-    display_name: "Google Gemini API",
-    category: "AI",
-    scopes: ["models"],
-    oauth: false,
-  },
-  {
-    provider: "xai",
-    display_name: "xAI API",
-    category: "AI",
-    scopes: ["models"],
-    oauth: false,
-  },
-  {
-    provider: "mistral",
-    display_name: "Mistral API",
-    category: "AI",
-    scopes: ["models"],
-    oauth: false,
-  },
-  {
-    provider: "deepseek",
-    display_name: "DeepSeek API",
-    category: "AI",
-    scopes: ["models"],
-    oauth: false,
-  },
-  {
-    provider: "litellm",
-    display_name: "LiteLLM",
-    category: "AI",
-    scopes: ["models", "proxy"],
-    oauth: false,
   },
   // Automation / integration platforms
   {
@@ -482,18 +405,9 @@ export const listAppConnections = createServerFn({ method: "GET" })
       );
     }
     return connections.map(({ credential_reference, ...connection }) => {
-      const isModelGateway = [
-        "openrouter",
-        "litellm",
-        "nvidia",
-        "ollama_cloud",
-        "groq",
-        "cerebras",
-        "openai",
-        "xai",
-        "mistral",
-        "deepseek",
-      ].includes(connection.provider);
+      const isModelGateway = AI_GATEWAY_PROVIDERS.some(
+        (provider) => provider.id === connection.provider,
+      );
       const hasGatewayReference = Boolean(
         credential_reference?.match(
           new RegExp(`^credential://${connection.provider}/([0-9a-f-]{36})$`, "i"),
@@ -511,6 +425,17 @@ export const listAppConnections = createServerFn({ method: "GET" })
 export const syncComposioConnections = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    const { data: roleRows, error: roleError } = await context.supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", context.userId);
+    if (roleError) throw new Error(roleError.message);
+    const roles = (roleRows ?? []).map((row: { role: AppRole }) => row.role);
+    const effectiveRoles: AppRole[] = roles.length ? roles : ["user"];
+    if (!hasRole(effectiveRoles, "admin")) {
+      throw new Error("Forbidden: admin required");
+    }
+
     const { listOwnedManagedConnections } = await import("@/lib/managed-connectors.server");
     const accounts = await listOwnedManagedConnections(context.userId);
     const { data: saved, error: readError } = await context.supabase
@@ -795,7 +720,18 @@ export const configureAppConnection = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: ConnectionSetupInput) => input)
   .handler(async ({ data, context }) => {
-    const app = CATALOG.find((item) => item.provider === data.provider.trim().toLowerCase());
+    const providerId = data.provider.trim().toLowerCase();
+    const gatewayProvider = AI_GATEWAY_PROVIDERS.find((item) => item.id === providerId);
+    const app =
+      CATALOG.find((item) => item.provider === providerId) ??
+      (gatewayProvider
+        ? {
+            provider: gatewayProvider.id,
+            display_name: gatewayProvider.name,
+            scopes: [] as const,
+            oauth: false,
+          }
+        : undefined);
     if (!app) throw new Error("Unknown application");
     const setup = normalizeConnectionSetup(data, app);
     const { validateConnectionCredential } = await import("@/lib/connection-validation.server");
