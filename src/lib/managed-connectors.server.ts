@@ -108,7 +108,11 @@ export async function listComposioToolkits(): Promise<ComposioToolkit[]> {
       items.push({
         slug,
         name,
-        category: toolkitCategory(raw["categories"] ?? raw["category"]),
+        category: toolkitCategory(
+          raw["categories"] ??
+            (raw["meta"] as { categories?: unknown } | undefined)?.categories ??
+            raw["category"],
+        ),
         authMethods: toolkitAuthMethods(raw),
       });
     }
