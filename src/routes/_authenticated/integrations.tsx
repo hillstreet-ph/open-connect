@@ -82,6 +82,13 @@ const aiClients = [
     action: "View MCP setup",
   },
   {
+    provider: "grok",
+    name: "Grok / xAI API",
+    description:
+      "Use xAI API remote MCP tools with Open-Connect. This connects through the xAI API, not Grok.com sign-in.",
+    action: "View MCP setup",
+  },
+  {
     provider: "openwebui",
     name: "Open WebUI",
     description: "Connect your own Open WebUI client with a scoped key.",
@@ -527,14 +534,23 @@ function IntegrationsPage() {
           </DialogHeader>
           <div className="space-y-4 text-sm">
             <ol className="list-decimal space-y-2 pl-5 text-muted-foreground">
-              <li>Open ChatGPT Settings, then Apps or Connectors, and add a custom MCP server.</li>
               <li>
-                Paste the server URL: <code className="break-all text-primary">{MCP_ENDPOINT}</code>
+                In ChatGPT on the web, enable Developer mode, then create a custom app from Settings
+                → Apps. Workspace admins can create and publish it from Workspace settings → Apps.
               </li>
               <li>
-                Choose OAuth and finish sign-in and approval when ChatGPT redirects to Open-Connect.
+                Add the remote MCP URL:{" "}
+                <code className="break-all text-primary">{MCP_ENDPOINT}</code>, choose OAuth, and
+                scan the available tools.
               </li>
+              <li>Sign in to Open-Connect and approve the account scopes requested by ChatGPT.</li>
+              <li>Test a read action, then test only the write actions you intend to allow.</li>
             </ol>
+            <p className="text-xs text-muted-foreground">
+              Full write-capable MCP apps are available on ChatGPT Business, Enterprise, and Edu.
+              ChatGPT Pro currently supports read and fetch access only. OAuth access expires after
+              30 days; reconnect when ChatGPT requests authorization again.
+            </p>
             <Button asChild className="w-full">
               <a href="https://chatgpt.com" target="_blank" rel="noreferrer">
                 Open ChatGPT <ExternalLink className="ml-2 size-4" />
@@ -558,7 +574,8 @@ function IntegrationsPage() {
             <code className="block break-all rounded-md bg-muted p-3">{MCP_ENDPOINT}</code>
             <p className="text-muted-foreground">
               Use OAuth when supported. Otherwise create a narrowly scoped key under API keys and
-              send it as a bearer token.
+              send it as a bearer token. Allow only the tools this client needs; write access is
+              checked against the key scopes, connected account, and project grants.
             </p>
             <Button variant="outline" onClick={() => void copyEndpoint()}>
               <Copy className="mr-2 size-4" />
