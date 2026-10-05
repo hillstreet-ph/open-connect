@@ -12,7 +12,7 @@ export const Route = createFileRoute("/_authenticated/integrations")({
       { title: "Integrations — Open-Connect" },
       {
         name: "description",
-        content: "Connect AI clients, MCP tools, and Telegram through Open-Connect.",
+        content: "Built-in Open-Connect integrations for AI clients, MCP, and Telegram.",
       },
     ],
   }),
@@ -37,16 +37,16 @@ const aiClients = [
   {
     provider: "grok",
     name: "Grok / xAI",
-    body: "Connect compatible model and tool workflows through Open-Connect.",
-    endpoints: ["/v1", "/mcp"],
-    to: "/models" as const,
+    body: "Connect AI agent workflows to approved Open-Connect tools using owner-scoped access.",
+    endpoints: ["/mcp"],
+    to: "/api-keys" as const,
   },
   {
     provider: "openwebui",
     name: "Open WebUI",
-    body: "Point the OpenAI-compatible base URL to Open-Connect and use a scoped key.",
-    endpoints: ["OPENAI_API_BASE=/v1", "OPENAI_API_KEY=oc_live_…"],
-    to: "/models" as const,
+    body: "Connect an AI client to Open-Connect tools using its owner’s scoped access.",
+    endpoints: ["/mcp", "Scoped client key"],
+    to: "/api-keys" as const,
   },
   {
     provider: "hermes",
@@ -54,13 +54,6 @@ const aiClients = [
     body: "Connect the agent runtime to project-scoped tools from the Open-Connect MCP catalog.",
     endpoints: ["https://open-connect.site/mcp"],
     to: "/api-keys" as const,
-  },
-  {
-    provider: "mistral",
-    name: "Mistral / compatible clients",
-    body: "Use the OpenAI-compatible model gateway with your own scoped API key.",
-    endpoints: ["Base URL · /v1", "Bearer oc_live_…"],
-    to: "/models" as const,
   },
   {
     provider: "manus",
@@ -78,15 +71,16 @@ function IntegrationsPage() {
     <div className="mx-auto max-w-6xl space-y-10 px-4 py-10 sm:px-6 sm:py-14">
       <header>
         <Badge variant="outline" className="border-primary/40 text-primary">
-          External clients → Open-Connect
+          Built-in Open-Connect integrations
         </Badge>
         <h1 className="mt-4 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
           Integrations
         </h1>
         <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-          Bring ChatGPT, Claude, Grok, other AI agents, MCP clients, and Telegram into Open-Connect.
-          Each user manages their own client keys and authorizations; projects receive only
-          explicitly granted access. Connectors and AI Gateway settings remain separate.
+          Integrations are Open-Connect entry points for AI agents, MCP clients, and Telegram. Open-Connect
+          owns the integration definitions; each user owns their setup and grants access to projects
+          explicitly. Resources, external app connectors, and AI model providers are managed
+          separately.
         </p>
         {user ? (
           <div className="mt-6 flex flex-wrap gap-2">
@@ -109,24 +103,23 @@ function IntegrationsPage() {
 
       <Card className="bg-pillar shadow-panel">
         <CardHeader>
-          <CardTitle className="text-base">Open-Connect gateway</CardTitle>
+          <CardTitle className="text-base">Ownership and access</CardTitle>
           <CardDescription>
-            Use the same project-scoped identity across supported AI and MCP clients.
+            Every setup belongs to its signed-in account. Use project-scoped keys and explicit
+            grants so clients only see approved capabilities.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-2 font-mono text-xs text-primary sm:grid-cols-2">
-          <p>Models · https://open-connect.site/v1</p>
-          <p>MCP · https://open-connect.site/mcp</p>
-          <p>API · https://open-connect.site/api/v1</p>
-          <p>OAuth · https://open-connect.site/oauth</p>
-          <p className="sm:col-span-2">Authorization: Bearer oc_live_…</p>
+        <CardContent className="grid gap-3 sm:grid-cols-3 text-sm">
+          <p><strong>Integrations</strong><br />AI clients, MCP clients, and Telegram entry points.</p>
+          <p><strong>Connectors</strong><br />Owner-controlled accounts Open-Connect uses with external apps.</p>
+          <p><strong>AI Gateway</strong><br />Model providers, provider keys, and routing.</p>
         </CardContent>
       </Card>
 
       <section>
         <h2 className="text-lg font-semibold">AI clients and agents</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Connect model clients using the Open-Connect gateway or MCP tools.
+          Connect agent clients to approved Open-Connect capabilities. Model providers are configured separately.
         </p>
         <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {aiClients.map((client) => (
@@ -232,42 +225,10 @@ function IntegrationsPage() {
         </Card>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2">
-        <Card className="shadow-panel">
-          <CardHeader>
-            <KeyRound className="size-4 text-primary" />
-            <CardTitle className="mt-2 text-base">ChatGPT OAuth</CardTitle>
-            <CardDescription>
-              OAuth endpoints for supported ChatGPT Actions and clients.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-1 font-mono text-xs text-primary">
-            <p>/.well-known/oauth-authorization-server</p>
-            <p>/oauth/authorize · /oauth/token · /oauth/register</p>
-          </CardContent>
-        </Card>
-        <Card className="shadow-panel">
-          <CardHeader>
-            <Network className="size-4 text-primary" />
-            <CardTitle className="mt-2 text-base">Quick setup</CardTitle>
-            <CardDescription>
-              Create a scoped key, then configure an AI model client or MCP client.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <pre className="overflow-x-auto rounded-lg border border-border bg-background/80 p-4 text-xs">{`OPENAI_API_BASE=https://open-connect.site/v1
-OPENAI_API_KEY=oc_live_YOUR_KEY`}</pre>
-            <pre className="overflow-x-auto rounded-lg border border-border bg-background/80 p-4 text-xs">{`{
-  "mcpServers": {
-    "open-connect": {
-      "url": "https://open-connect.site/mcp",
-      "headers": { "Authorization": "Bearer oc_live_YOUR_KEY" }
-    }
-  }
-}`}</pre>
-          </CardContent>
-        </Card>
-      </section>
+      <p className="text-xs text-muted-foreground">
+        Open-Connect does not share an owner’s integration setup by default. Sharing project
+        resources, connector accounts, or credentials requires a separate explicit grant.
+      </p>
     </div>
   );
 }
