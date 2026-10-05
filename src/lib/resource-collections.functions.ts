@@ -186,16 +186,19 @@ export const addResourcesToCollection = createServerFn({ method: "POST" })
         "Collections can contain up to 100 resources. Remove items before adding more.",
       );
     }
-    const { error } = await context.supabase.from("toolkit_items").upsert(
-      data.resourceIds.map((resourceId, position) => ({
-        toolkit_id: data.collectionId,
-        resource_id: resourceId,
-        position,
-      })),
-      { onConflict: "toolkit_id,resource_id" },
-    );
-    if (error) throw new Error(error.message);
-    return { added: data.resourceIds.length };
+    const existingIds = new Set((currentItems ?? []).map((item) => item.resource_id));
+    const newIds = data.resourceIds.filter((id) => !existingIds.has(id));
+    if (newIds.length) {
+      const { error } = await context.supabase.from("toolkit_items").insert(
+        newIds.map((resourceId, position) => ({
+          toolkit_id: data.collectionId,
+          resource_id: resourceId,
+          position: resultingSize - newIds.length + position,
+        })),
+      );
+      if (error) throw new Error(error.message);
+    }
+    return { added: newIds.length, skipped: data.resourceIds.length - newIds.length };
   });
 
 export const removeResourceFromCollection = createServerFn({ method: "POST" })
@@ -249,16 +252,32 @@ export const assignResourcesToProjects = createServerFn({ method: "POST" })
     if (totalLinks > 500) {
       throw new Error("This assignment is too large. Select fewer resources or projects.");
     }
-    const links = data.projectIds.flatMap((projectId) =>
-      data.resourceIds.map((resourceId) => ({
-        project_id: projectId,
-        resource_id: resourceId,
-        added_by: context.userId,
-      })),
+    const { data: existingLinks, error: existingError } = await context.supabase
+      .from("project_resources")
+      .select("project_id, resource_id")
+      .in("project_id", data.projectIds)
+      .in("resource_id", data.resourceIds);
+    if (existingError) throw new Error(existingError.message);
+    const existingKeys = new Set(
+      (existingLinks ?? []).map((link) => `${link.project_id}:${link.resource_id}`),
     );
-    const { error } = await context.supabase.from("project_resources").upsert(links, {
-      onConflict: "project_id,resource_id",
-    });
-    if (error) throw new Error(error.message);
-    return { assigned: links.length };
+    const links = data.projectIds.flatMap((projectId) =>
+      data.resourceIds
+        .filter((resourceId) => !existingKeys.has(`${projectId}:${resourceId}`))
+        .map((resourceId) => ({
+          project_id: projectId,
+          resource_id: resourceId,
+          added_by: context.userId,
+        })),
+    );
+    if (links.length) {
+      const { error } = await context.supabase.from("project_resources").upsert(links, {
+        onConflict: "project_id,resource_id",
+      });
+      if (error) throw new Error(error.message);
+    }
+    return {
+      assigned: links.length,
+      skipped: data.projectIds.length * data.resourceIds.length - links.length,
+    };
   });
