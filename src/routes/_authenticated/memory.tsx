@@ -295,31 +295,29 @@ export function MemoryKnowledgePage({
     >
       {!studioMode ? (
         <>
-          <Link
-            to="/library"
-            className="inline-flex text-sm text-primary hover:underline"
-          >
+          <Link to="/library" className="inline-flex text-sm text-primary hover:underline">
             ← Back to Resources
           </Link>
           <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <Badge variant="outline" className="mb-2 border-primary/40 text-primary">
-              <Brain className="mr-1 size-3" /> AI context
-            </Badge>
-            <h1 className="font-display text-xl font-semibold tracking-tight sm:text-2xl">
-              {defaultSection === "memory" ? "Project Memory" : "Project Knowledge"}
-            </h1>
-            <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-              {defaultSection === "memory"
-                ? "Store durable project decisions, instructions, preferences, and summaries."
-                : "Organize project documents, URLs, repositories, conversations, and reusable sources."}{" "}
-              Records are private to your authenticated identity and can be scoped to each project.
-            </p>
-          </div>
-          <div className="w-full sm:w-72">
-            <Label className="mb-2 block">Project scope</Label>
-            <ProjectSelect value={projectId} onChange={setProjectId} projects={projectOptions} />
-          </div>
+            <div>
+              <Badge variant="outline" className="mb-2 border-primary/40 text-primary">
+                <Brain className="mr-1 size-3" /> AI context
+              </Badge>
+              <h1 className="font-display text-xl font-semibold tracking-tight sm:text-2xl">
+                {defaultSection === "memory" ? "Project Memory" : "Project Knowledge"}
+              </h1>
+              <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+                {defaultSection === "memory"
+                  ? "Store durable project decisions, instructions, preferences, and summaries."
+                  : "Organize project documents, URLs, repositories, conversations, and reusable sources."}{" "}
+                Records are private to your authenticated identity and can be scoped to each
+                project.
+              </p>
+            </div>
+            <div className="w-full sm:w-72">
+              <Label className="mb-2 block">Project scope</Label>
+              <ProjectSelect value={projectId} onChange={setProjectId} projects={projectOptions} />
+            </div>
           </div>
         </>
       ) : (
