@@ -91,7 +91,7 @@ export const listAssignableProjects = createServerFn({ method: "GET" })
           .from("project_members")
           .select("project_id")
           .eq("user_id", context.userId)
-          .eq("role", "admin"),
+          .eq("role", "manager"),
       ]);
     if (projectError) throw new Error(projectError.message);
     if (orgError) throw new Error(orgError.message);
