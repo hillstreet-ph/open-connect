@@ -214,9 +214,9 @@ export function ResourceLibraryPage({
                     const isSelected = selectedResourceIds.includes(resource.id);
                     return (
                       <Card
-                          key={resource.id}
-                          className={cn("shadow-panel", isSelected && "border-primary")}
-                        >
+                        key={resource.id}
+                        className={cn("shadow-panel", isSelected && "border-primary")}
+                      >
                         <CardHeader className="p-3 pb-1">
                           <div className="flex items-start justify-between gap-2">
                             <CardTitle className="text-sm leading-snug">{resource.name}</CardTitle>
