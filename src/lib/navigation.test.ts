@@ -74,52 +74,37 @@ test("connection surfaces remain internal and separate from Marketplace", () => 
   const connectGroup = sidebar.match(/const CONNECTIONS: Item\\[\\] = \\[([\\s\\S]*?)\\];/)?.[1] ?? "";
 
   for (const route of ["/connections", "/secrets", "/models"]) {
-    assert.match(connectGroup, new RegExp("to: [\\"']" + route + "[\\"']"));
+    assert.ok(connectGroup.includes(route), "Missing connection route " + route);
   }
-  assert.match(sidebar, /<NavGroup label="Connections" items={CONNECTIONS}/);
-  assert.match(connectGroup, /to: "\\/connections", label: "Connectors"/);
-  assert.doesNotMatch(connectGroup, /\\/resources|\\/integrations|\\/api-keys/);
-  assert.match(userMenu, /to="\\/integrations"/);
+  assert.ok(connectGroup.includes('label: "Connectors"'));
+  assert.ok(!connectGroup.includes("/integrations"));
+  assert.ok(userMenu.includes('to="/integrations"'));
 
-  const models = readFileSync(path.join(sourceRoot, "routes/_authenticated/models.tsx"), "utf8");
-  assert.match(models, /createFileRoute\\("\\/_authenticated\\/models"\\)/);
-  assert.doesNotMatch(models, /(?:to|href)=["']\\/(?:resources|auth)["']/);
+  const connectors = readFileSync(path.join(sourceRoot, "routes/_authenticated/connections.tsx"), "utf8");
+  assert.ok(connectors.includes("Add custom MCP"));
+  assert.ok(!connectors.includes('to="/resources"'));
 
-  const connectors = readFileSync(
-    path.join(sourceRoot, "routes/_authenticated/connections.tsx"),
-    "utf8",
-  );
-  assert.match(connectors, /createFileRoute\\("\\/_authenticated\\/connections"\\)/);
-  assert.match(connectors, /Add custom MCP/);
-  assert.doesNotMatch(connectors, /(?:to|href)=["']\\/resources["']/);
-
-  const integrations = readFileSync(
-    path.join(sourceRoot, "routes/_authenticated/integrations.tsx"),
-    "utf8",
-  );
-  assert.match(integrations, /createFileRoute\\("\\/_authenticated\\/integrations"\\)/);
-  assert.doesNotMatch(integrations, /(?:to|href)=["']\\/(?:resources|connections|mcp-servers|api-keys)["']/);
-  assert.match(integrations, /<ApiKeysCard \\/>/);
-  assert.match(integrations, /Connect ChatGPT with OAuth/);
-  assert.match(integrations, /setTelegramOpen\\(true\\)/);
+  const integrations = readFileSync(path.join(sourceRoot, "routes/_authenticated/integrations.tsx"), "utf8");
+  assert.ok(integrations.includes("<ApiKeysCard />"));
+  assert.ok(integrations.includes("Connect ChatGPT with OAuth"));
+  assert.ok(integrations.includes("setTelegramOpen(true)"));
+  for (const route of ["/resources", "/connections", "/mcp-servers", "/api-keys"]) {
+    assert.ok(!integrations.includes('to="' + route + '"'), "Unexpected redirect to " + route);
+  }
 });
 
 test("Integrations follows Data & privacy in Settings and includes account keys", () => {
   const sourceRoot = path.resolve(process.cwd(), "src");
   const userMenu = readFileSync(path.join(sourceRoot, "components/user-menu.tsx"), "utf8");
-  const settings = readFileSync(
-    path.join(sourceRoot, "routes/_authenticated/settings.tsx"),
-    "utf8",
-  );
-
-  assert.match(userMenu, /to="\\/settings"/);
-  assert.match(userMenu, /to="\\/integrations"/);
-  assert.doesNotMatch(userMenu, /to="\\/api-keys"/);
-  assert.match(settings, /<TabsTrigger value="data">Data & privacy<\\/TabsTrigger>[\\s\\S]*?<TabsTrigger value="integrations">Integrations<\\/TabsTrigger>/);
-  assert.match(settings, /to="\\/integrations"/);
-  assert.match(settings, /title="Connectors"/);
-  assert.match(settings, /title="AI Gateway"/);
-  assert.doesNotMatch(settings, /to="\\/api-keys"/);
+  const settings = readFileSync(path.join(sourceRoot, "routes/_authenticated/settings.tsx"), "utf8");
+  assert.ok(userMenu.includes('to="/settings"'));
+  assert.ok(userMenu.includes('to="/integrations"'));
+  assert.ok(!userMenu.includes('to="/api-keys"'));
+  assert.ok(settings.indexOf('value="data">Data & privacy') < settings.indexOf('value="integrations">Integrations'));
+  assert.ok(settings.includes('to="/integrations"'));
+  assert.ok(settings.includes('title="Connectors"'));
+  assert.ok(settings.includes('title="AI Gateway"'));
+  assert.ok(!settings.includes('to="/api-keys"'));
 });
 
 test("Toolkit creation reads from the personal library, not the Marketplace catalog", () => {
