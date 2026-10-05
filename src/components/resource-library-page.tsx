@@ -13,6 +13,7 @@ import {
   resourcePurpose,
 } from "@/lib/resource-categories";
 import { ResourcePurposeSidebar } from "@/components/resource-purpose-sidebar";
+import { ResourceCollectionsPanel } from "@/components/resource-collections-panel";
 import { resourceCategories } from "@/lib/nav";
 import { isSharedLibraryRow } from "@/lib/shared-resources";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +36,9 @@ export function ResourceLibraryPage({
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
   const [purpose, setPurpose] = useState("all");
+  const [view, setView] = useState<"library" | "collections">("library");
+  const [selectedResourceIds, setSelectedResourceIds] = useState<string[]>([]);
+  const canManageCollections = !resourceType && !otherTypesOnly;
   const list = useServerFn(listLibraryResources);
   const remove = useServerFn(removeResourceFromLibrary);
   const resources = useQuery({
@@ -99,6 +103,37 @@ export function ResourceLibraryPage({
         <p className="mt-1 max-w-3xl text-xs text-muted-foreground">{description}</p>
       </div>
 
+      {canManageCollections ? (
+        <div
+          role="tablist"
+          aria-label="Resource library views"
+          className="mt-4 flex gap-2 border-b border-border"
+        >
+          {(["library", "collections"] as const).map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              role="tab"
+              aria-selected={view === tab}
+              onClick={() => setView(tab)}
+              className={cn(
+                "border-b-2 px-3 py-2 text-sm capitalize transition-colors",
+                view === tab
+                  ? "border-primary text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {tab === "library" ? "Library" : "Collections"}
+            </button>
+          ))}
+        </div>
+      ) : null}
+      {canManageCollections && view === "collections" ? (
+        <ResourceCollectionsPanel
+          selectedResourceIds={selectedResourceIds}
+          onClearSelection={() => setSelectedResourceIds([])}
+        />
+      ) : (
       <div className="mt-4 grid gap-6 lg:grid-cols-[190px_minmax(0,1fr)]">
         <ResourcePurposeSidebar
           groups={purposeGroups}
@@ -147,6 +182,31 @@ export function ResourceLibraryPage({
               ))}
             </div>
           </div>
+          {canManageCollections && selectedResourceIds.length > 0 ? (
+            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
+              <span className="text-sm font-medium">
+                {selectedResourceIds.length} selected
+              </span>
+              <span className="text-xs text-muted-foreground">
+                Create a collection or assign these resources to projects.
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                className="ml-auto"
+                onClick={() => setView("collections")}
+              >
+                Manage selection
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setSelectedResourceIds([])}
+              >
+                Clear
+              </Button>
+            </div>
+          ) : null}
           {resources.isLoading ? <p role="status">Loading resources…</p> : null}
           {groups.map((group) => (
             <section key={group.type} className="space-y-2" aria-label={group.label}>
@@ -156,10 +216,28 @@ export function ResourceLibraryPage({
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {group.items.map((row) => {
                   const resource = row.resources!;
+                  const isSelected = selectedResourceIds.includes(resource.id);
                   return (
-                    <Card key={resource.id} className="shadow-panel">
+                    <Card key={resource.id} className={cn("shadow-panel", isSelected && "border-primary")}>
                       <CardHeader className="p-3 pb-1">
-                        <CardTitle className="text-sm leading-snug">{resource.name}</CardTitle>
+                        <div className="flex items-start justify-between gap-2">
+                          <CardTitle className="text-sm leading-snug">{resource.name}</CardTitle>
+                          {canManageCollections ? (
+                            <input
+                              type="checkbox"
+                              aria-label={`Select ${resource.name}`}
+                              checked={isSelected}
+                              onChange={() =>
+                                setSelectedResourceIds((current) =>
+                                  isSelected
+                                    ? current.filter((id) => id !== resource.id)
+                                    : [...current, resource.id],
+                                )
+                              }
+                              className="mt-0.5 size-4 shrink-0 accent-primary"
+                            />
+                          ) : null}
+                        </div>
                         <CardDescription className="line-clamp-2 text-xs">
                           {resource.description}
                         </CardDescription>
@@ -214,6 +292,7 @@ export function ResourceLibraryPage({
           ) : null}
         </div>
       </div>
+      )}
     </div>
   );
 }
