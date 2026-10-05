@@ -83,7 +83,7 @@ function MarketplaceContent() {
         .order("featured", { ascending: false })
         .order("name");
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []).filter((item) => item.resource_type !== "guide");
     },
   });
 

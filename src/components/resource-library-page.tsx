@@ -44,21 +44,24 @@ export function ResourceLibraryPage({
     onError: (error) => toast.error(error.message),
   });
 
-  const rows = (resources.data ?? []).filter(
-    (row) =>
-      !otherTypesOnly ||
-      ![
-        "plugin",
-        "agent",
-        "skill",
-        "mcp",
-        "tool",
-        "toolkit",
-        "prompt",
-        "memory",
-        "knowledge",
-      ].includes(row.resources?.resource_type ?? ""),
-  );
+  const rows = (resources.data ?? []).filter((row) => {
+    const type = row.resources?.resource_type ?? "";
+    return (
+      type !== "guide" &&
+      (!otherTypesOnly ||
+        ![
+          "plugin",
+          "agent",
+          "skill",
+          "mcp",
+          "tool",
+          "toolkit",
+          "prompt",
+          "memory",
+          "knowledge",
+        ].includes(type))
+    );
+  });
   const counts: Record<string, number> = {
     all: rows.filter((row) => row.resources).length,
   };

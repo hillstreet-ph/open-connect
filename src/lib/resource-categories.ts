@@ -6,7 +6,6 @@ export const RESOURCE_CATEGORIES = [
   { type: "plugin", label: "Plugins" },
   { type: "mcp", label: "MCP Servers" },
   { type: "tool", label: "Tools" },
-  { type: "guide", label: "Guides" },
   { type: "app", label: "Apps" },
   { type: "model", label: "Models" },
   { type: "prompt", label: "Prompts" },
@@ -35,7 +34,7 @@ export function groupProjectResources<T extends ProjectResourceRow>(rows: T[]) {
   }));
   const known = new Set(RESOURCE_CATEGORIES.map((category) => category.type as string));
   const other = rows.filter((row) => !known.has(row.resources?.resource_type ?? ""));
-  if (other.length) groups.push({ type: "other" as never, label: "Other" as never, items: other });
+  if (other.length) groups.push({ type: "other" as never, label: "Others" as never, items: other });
   return groups.filter((group) => group.items.length > 0);
 }
 
