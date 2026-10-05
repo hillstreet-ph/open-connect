@@ -136,20 +136,14 @@ export async function callCustomMcpTool(
     auditId = audit.id;
   }
 
+  let result;
   try {
-    const result = await withMcpClient(connection.endpoint, connection.headers, (client) =>
+    result = await withMcpClient(connection.endpoint, connection.headers, (client) =>
       client.callTool({ name: toolName, arguments: args }, undefined, { timeout: 30000 }),
     );
-    if (auditId) {
-      await supabaseAdmin
-        .from("project_connection_audit")
-        .update({ outcome: "succeeded", completed_at: new Date().toISOString() })
-        .eq("id", auditId);
-    }
-    return result;
   } catch (error) {
     if (auditId) {
-      await supabaseAdmin
+      const { error: auditError } = await supabaseAdmin
         .from("project_connection_audit")
         .update({
           outcome: "failed",
@@ -157,7 +151,30 @@ export async function callCustomMcpTool(
           completed_at: new Date().toISOString(),
         })
         .eq("id", auditId);
+      if (auditError) {
+        throw new Error("The provider action failed and its audit record could not be finalized.");
+      }
     }
     throw error;
   }
+
+  if (auditId) {
+    const failed = result.isError === true;
+    const { error: auditError } = await supabaseAdmin
+      .from("project_connection_audit")
+      .update({
+        outcome: failed ? "failed" : "succeeded",
+        error_kind: failed ? "provider_tool_error" : null,
+        completed_at: new Date().toISOString(),
+      })
+      .eq("id", auditId);
+    if (auditError) {
+      throw new Error(
+        failed
+          ? "The provider returned an error and its audit record could not be finalized."
+          : "The provider action completed, but its audit record could not be finalized. Check provider state before retrying.",
+      );
+    }
+  }
+  return result;
 }
