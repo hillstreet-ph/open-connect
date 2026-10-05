@@ -404,6 +404,24 @@ test("selected library resources can be added while creating a collection", () =
   assert.match(functions, /const newIds/);
 });
 
+test("Marketplace skill installs automatically join the Skills collection", () => {
+  const sourceRoot = path.resolve(process.cwd(), "src");
+  const library = readFileSync(path.join(sourceRoot, "lib/library.functions.ts"), "utf8");
+  const marketplace = readFileSync(path.join(sourceRoot, "routes/resources.tsx"), "utf8");
+  const button = readFileSync(path.join(sourceRoot, "components/add-to-library.tsx"), "utf8");
+  const install = library.slice(
+    library.indexOf("export const addResourceToLibrary"),
+    library.indexOf("export const removeResourceFromLibrary"),
+  );
+
+  assert.match(library, /async function ensureSkillsCollection/);
+  assert.match(library, /name: "Skills"/);
+  assert.match(install, /resource\.resource_type === "skill"/);
+  assert.match(install, /collectionId = await ensureSkillsCollection\(context\)/);
+  assert.match(marketplace, /Skills are automatically added to your Library and Skills collection/);
+  assert.match(button, /Added to your Library and Skills collection/);
+});
+
 test("Marketplace installs stay in the personal library and agent context reads are user scoped", () => {
   const sourceRoot = path.resolve(process.cwd(), "src");
   const library = readFileSync(path.join(sourceRoot, "lib/library.functions.ts"), "utf8");
