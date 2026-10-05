@@ -279,7 +279,7 @@ test("every sidebar destination uses workspace chrome and matches page search la
     to: match[1],
     label: match[2],
   }));
-  assert.ok(items.length > 20);
+  assert.ok(items.length > 10);
   assert.deepEqual(
     items.map((item) => item.to).sort(),
     flatAppNav()
@@ -294,33 +294,21 @@ test("every sidebar destination uses workspace chrome and matches page search la
   assert.equal(isAppPath("/tools-unrelated"), false);
 });
 
-test("Discover order includes dedicated MCP and Tools routes", () => {
+test("Discover keeps only Marketplace, Resources, and other resource types", () => {
   assert.deepEqual(
     appCategories.find((group) => group.id === "discover")?.items.map((item) => item.label),
-    [
-      "Marketplace",
-      "Resources",
-      "Agents",
-      "Skills",
-      "MCP",
-      "Tools",
-      "Toolkits",
-      "Prompts",
-      "Memory",
-      "Knowledge",
-      "Others",
-    ],
+    ["Marketplace", "Resources", "Others"],
   );
 });
 
-test("Connections order includes Plugins, Connectors, Credentials, and AI Gateway", () => {
+test("Connections keeps Connectors, Credentials, and AI Gateway", () => {
   assert.deepEqual(
     appCategories.find((group) => group.id === "connections")?.items.map((item) => item.label),
-    ["Plugins", "Connectors", "Credentials", "AI Gateway"],
+    ["Connectors", "Credentials", "AI Gateway"],
   );
 });
 
-test("Marketplace and Resources share ordered type categories ending with Others", () => {
+test("Marketplace and Resources retain resource types as ordered library categories", () => {
   assert.deepEqual(
     resourceCategories.map((category) => category.label),
     [
@@ -370,12 +358,15 @@ test("Guides are excluded from Marketplace and Resources", () => {
   );
 });
 
-test("Resources uses the Marketplace category chip controls", () => {
+test("Resources provides Library, Collections, Memory, and Knowledge views", () => {
   const source = readFileSync(
     path.resolve(process.cwd(), "src/components/resource-library-page.tsx"),
     "utf8",
   );
 
+  assert.match(source, /\["library", "collections", "memory", "knowledge"\]/);
+  assert.match(source, /view === "memory"/);
+  assert.match(source, /view === "knowledge"/);
   assert.match(source, /resourceCategories\.map\(\(filter\) =>/);
   assert.match(source, /aria-label="Filter resources by category"/);
   assert.match(source, /aria-pressed=\{category === filter\.value\}/);
