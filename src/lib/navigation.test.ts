@@ -378,7 +378,6 @@ test("Resources provides Library, Collections, Memory, and Knowledge views", () 
   assert.doesNotMatch(source, /<select[\s\S]*?aria-label="Resource category"/);
 });
 
-
 test("selected library resources can be added while creating a collection", () => {
   const sourceRoot = path.resolve(process.cwd(), "src");
   const panel = readFileSync(
