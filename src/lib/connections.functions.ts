@@ -405,7 +405,9 @@ export const listAppConnections = createServerFn({ method: "GET" })
       );
     }
     return connections.map(({ credential_reference, ...connection }) => {
-      const isModelGateway = AI_GATEWAY_PROVIDERS.some((provider) => provider.id === connection.provider);
+      const isModelGateway = AI_GATEWAY_PROVIDERS.some(
+        (provider) => provider.id === connection.provider,
+      );
       const hasGatewayReference = Boolean(
         credential_reference?.match(
           new RegExp(`^credential://${connection.provider}/([0-9a-f-]{36})$`, "i"),
