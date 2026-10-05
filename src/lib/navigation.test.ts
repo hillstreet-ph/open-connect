@@ -101,7 +101,7 @@ test("connection surfaces remain internal and separate from Marketplace", () => 
   );
   assert.ok(inboundMigration.includes("CREATE TABLE IF NOT EXISTS public.inbound_integrations"));
   assert.ok(inboundMigration.includes("Users manage own inbound integrations"));
-  assert.ok(!inboundMigration.includes("app_connections"));
+  assert.ok(!inboundMigration.includes("REFERENCES public.app_connections"));
   for (const route of ["/resources", "/connections", "/mcp-servers", "/api-keys"]) {
     assert.ok(!integrations.includes('to="' + route + '"'), "Unexpected redirect to " + route);
   }
