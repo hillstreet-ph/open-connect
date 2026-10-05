@@ -353,3 +353,16 @@ test("Marketplace and Resources share ordered type categories ending with Others
     ],
   );
 });
+
+test("Resources uses the Marketplace category chip controls", () => {
+  const source = readFileSync(
+    path.resolve(process.cwd(), "src/components/resource-library-page.tsx"),
+    "utf8",
+  );
+
+  assert.match(source, /resourceCategories\.map\(\(filter\) =>/);
+  assert.match(source, /aria-label="Filter resources by category"/);
+  assert.match(source, /aria-pressed=\{category === filter\.value\}/);
+  assert.match(source, /rounded-full border px-3 py-1\.5 text-xs transition-colors/);
+  assert.doesNotMatch(source, /<select[\s\S]*?aria-label="Resource category"/);
+});
