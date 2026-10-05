@@ -438,7 +438,7 @@ function ProjectWorkspacePage() {
         )}
       </div>
 
-      <Card className="shadow-panel">
+      <Card id="project-connections" className="shadow-panel">
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Connections · MCP · AI Gateway</CardTitle>
           <CardDescription>
