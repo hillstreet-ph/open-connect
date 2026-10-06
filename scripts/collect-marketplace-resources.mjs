@@ -6,8 +6,10 @@ import {
   canonicalizeUrl,
   hasSuspiciousMetadata,
   isAllowedCatalogUrl,
+  isSourceEnabled,
   normalizeOpenSlug,
   registryFingerprint,
+  registrySourceRow,
 } from "../src/lib/registry-normalize.ts";
 
 const root = resolve(import.meta.dirname, "..");
@@ -234,7 +236,7 @@ async function collectFirecrawlSource(source) {
 }
 
 async function collectSource(source) {
-  if (!source.enabled) return [];
+  if (!isSourceEnabled(source)) return [];
   if (source.adapter === "github_repository_search") return collectGitHubSource(source);
   if (source.adapter === "firecrawl_crawl") return collectFirecrawlSource(source);
   throw new Error(`unsupported adapter: ${source.adapter}`);
@@ -250,7 +252,7 @@ if (fromCatalog) {
   results.push(...catalog.candidates);
 } else {
   for (const source of registry.sources) {
-    if (!source.enabled) continue;
+    if (!isSourceEnabled(source)) continue;
     if (source.adapter === "firecrawl_crawl" && stopFirecrawl) {
       failures.push({
         sourceId: source.id,
@@ -275,12 +277,12 @@ const candidates = deduplicateCandidates(results).map((candidate) => ({
   fingerprint: registryFingerprint(candidate),
 }));
 
-const enabledSources = registry.sources.filter((source) => source.enabled).length;
+const enabledSources = registry.sources.filter(isSourceEnabled).length;
 const minimumSources = registry.default_policy.minimum_successful_sources ?? enabledSources;
 const minimumCandidates = registry.default_policy.minimum_candidates ?? 1;
 const successfulSources = fromCatalog ? enabledSources : successfulSourceIds.size;
 const firecrawlSources = registry.sources.filter(
-  (source) => source.enabled && source.adapter === "firecrawl_crawl",
+  (source) => isSourceEnabled(source) && source.adapter === "firecrawl_crawl",
 );
 const successfulFirecrawlSources = fromCatalog
   ? firecrawlSources.length
@@ -354,17 +356,7 @@ if (publish) {
   const sourceResponse = await fetch(`${supabaseUrl}/rest/v1/registry_sources?on_conflict=slug`, {
     method: "POST",
     headers: apiHeaders,
-    body: JSON.stringify(
-      registry.sources.map((source) => ({
-        slug: source.id,
-        name: source.name,
-        adapter: source.adapter,
-        base_url: source.catalog_url || source.url,
-        trust_level: source.trust,
-        enabled: source.enabled,
-        config: { discovery_url: source.url },
-      })),
-    ),
+    body: JSON.stringify(registry.sources.map(registrySourceRow)),
   });
   if (!sourceResponse.ok)
     throw new Error(`registry source upsert failed: HTTP ${sourceResponse.status}`);
