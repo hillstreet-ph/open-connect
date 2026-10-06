@@ -9,7 +9,32 @@
     "require_license": true,
     "require_security_review": true,
     "excluded_paths": ["schemas", "node_modules", ".git", "__pycache__"],
-    "excluded_extensions": [".pyc", ".so", ".ttf", ".otf", ".woff", ".woff2", ".pdf", ".zip", ".png", ".jpg", ".jpeg", ".gif", ".mp4", ".sqlite", ".db"]
+    "excluded_extensions": [
+      ".py",
+      ".js",
+      ".mjs",
+      ".ts",
+      ".tsx",
+      ".sh",
+      ".bash",
+      ".pyc",
+      ".so",
+      ".ttf",
+      ".otf",
+      ".woff",
+      ".woff2",
+      ".pdf",
+      ".zip",
+      ".png",
+      ".jpg",
+      ".jpeg",
+      ".gif",
+      ".mp4",
+      ".sqlite",
+      ".db"
+    ],
+    "excluded_executables": "files beginning with a shebang (#!) are not vendored",
+    "rationale": "The marketplace serves SKILL.md only. Executable upstream code is excluded so vendored third-party scripts are never shipped or scanned as first-party code."
   },
   "sources": [
     {

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import test from "node:test";
 
@@ -66,6 +66,45 @@ test("vendored skill catalog is metadata-only with unique open slugs", () => {
       existsSync(resolve(root, "public/downloads/skills", resource.slug, "SKILL.md")),
       `missing download package for ${resource.slug}`,
     );
+  }
+});
+
+test("vendored sources contain no executable upstream code", () => {
+  const manifest = readJson("config/vendored-skills.manifest.json") as {
+    policy: { excluded_extensions: string[]; excluded_executables: string };
+    sources: Array<{ path: string }>;
+  };
+  const scriptExtensions = new Set([
+    ".py",
+    ".js",
+    ".mjs",
+    ".cjs",
+    ".ts",
+    ".tsx",
+    ".jsx",
+    ".sh",
+    ".bash",
+    ".ps1",
+  ]);
+  const walk = (dir: string): string[] => {
+    const out: string[] = [];
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = resolve(dir, entry.name);
+      if (entry.isDirectory()) out.push(...walk(full));
+      else if (entry.isFile()) out.push(full);
+    }
+    return out;
+  };
+  for (const source of manifest.sources) {
+    for (const file of walk(resolve(root, "skills/vendor", source.path))) {
+      const ext = file.slice(file.lastIndexOf(".")).toLowerCase();
+      assert.ok(!scriptExtensions.has(ext), `executable upstream file vendored: ${file}`);
+      assert.notEqual(
+        readFileSync(file).subarray(0, 2).toString(),
+        "#!",
+        `shebang executable vendored: ${file}`,
+      );
+    }
   }
 });
 

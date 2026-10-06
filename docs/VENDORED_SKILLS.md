@@ -7,15 +7,19 @@ package stays metadata-only until a separate security review approves it.
 
 ## Vendored sources
 
-| Source | Repository | Vendored path | Skills |
-|---|---|---|---|
-| OpenHands Extensions | `https://github.com/OpenHands/extensions` | `skills/vendor/openhands-extensions` | Official OpenHands skills and plugins. |
-| OpenHands core agent skills | `https://github.com/OpenHands/OpenHands` (`.agents/skills`) | `skills/vendor/openhands-core` | In-repo agent skills. `OpenHands/openhands` resolves to the same repository. |
-| Manus Skills | `https://github.com/master-kanor/manus-skills` | `skills/vendor/manus-skills` | Community arsenal grouped by tier, workflow, utility, design, analysis, and integration. |
-| OpenClaw | `https://github.com/openclaw/openclaw` | `skills/vendor/openclaw` | Operator skills, custodian skills, and repository agent skills. |
+| Source                      | Repository                                                  | Vendored path                        | Skills                                                                                   |
+| --------------------------- | ----------------------------------------------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------- |
+| OpenHands Extensions        | `https://github.com/OpenHands/extensions`                   | `skills/vendor/openhands-extensions` | Official OpenHands skills and plugins.                                                   |
+| OpenHands core agent skills | `https://github.com/OpenHands/OpenHands` (`.agents/skills`) | `skills/vendor/openhands-core`       | In-repo agent skills. `OpenHands/openhands` resolves to the same repository.             |
+| Manus Skills                | `https://github.com/master-kanor/manus-skills`              | `skills/vendor/manus-skills`         | Community arsenal grouped by tier, workflow, utility, design, analysis, and integration. |
+| OpenClaw                    | `https://github.com/openclaw/openclaw`                      | `skills/vendor/openclaw`             | Operator skills, custodian skills, and repository agent skills.                          |
 
-All four upstream repositories are MIT licensed. Binary assets (fonts, images, PDFs, Office ISO
-schemas) are intentionally excluded; only source text, scripts, references, and assets are vendored.
+All four upstream repositories are MIT licensed. Only non-executable source text is vendored:
+prompt bodies, references, assets, and JSON/YAML manifests. Executable upstream code — anything with
+a script extension (`.py`, `.js`, `.mjs`, `.ts`, `.tsx`, `.sh`, …) or a `#!` shebang — is
+intentionally excluded. The marketplace serves `SKILL.md` only, so vendoring third-party scripts
+would ship unreviewed code and trip CodeQL against first-party paths. Binary assets (fonts, images,
+PDFs, Office ISO schemas) are excluded for the same reason.
 
 ## Pipeline
 
