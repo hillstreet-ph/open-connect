@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Fixed the marketplace publish job, which failed with `registry source upsert failed: HTTP 400`.
+  Registry rows that omit `enabled` were treated as disabled, so the bulk `registry_sources` upsert
+  sent rows with two different key sets and PostgREST rejected the request. Absent now means enabled,
+  and every row is built with the full column set. Enabled sources now resolve to 40 (27 Firecrawl),
+  up from 13.
 - Vendored 251 MIT-licensed agent skills from `OpenHands/extensions`, `OpenHands/OpenHands`
   (`.agents/skills`, also served by `OpenHands/openhands`), `master-kanor/manus-skills`, and
   `openclaw/openclaw` into `skills/vendor`. The marketplace catalog, static
