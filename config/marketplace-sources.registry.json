@@ -892,6 +892,62 @@
         "prompt",
         "guide"
       ]
+    },
+    {
+      "id": "openhands-extensions-skills",
+      "name": "OpenHands Extensions skills",
+      "adapter": "github_repository_search",
+      "url": "https://api.github.com/search/repositories?q=org%3AOpenHands+extensions+in%3Aname+archived%3Afalse&sort=updated&order=desc",
+      "catalog_url": "https://github.com/OpenHands/extensions",
+      "categories": [
+        "skills",
+        "agents",
+        "developer"
+      ],
+      "trust": "official_upstream",
+      "enabled": true
+    },
+    {
+      "id": "openhands-core-skills",
+      "name": "OpenHands core agent skills",
+      "adapter": "github_repository_search",
+      "url": "https://api.github.com/search/repositories?q=org%3AOpenHands+archived%3Afalse&sort=updated&order=desc",
+      "catalog_url": "https://github.com/OpenHands/OpenHands/tree/main/.agents/skills",
+      "categories": [
+        "skills",
+        "agents",
+        "developer"
+      ],
+      "trust": "official_upstream",
+      "enabled": true
+    },
+    {
+      "id": "manus-skills",
+      "name": "Manus Skills",
+      "adapter": "github_repository_search",
+      "url": "https://api.github.com/search/repositories?q=manus+skills+in%3Aname+archived%3Afalse&sort=updated&order=desc",
+      "catalog_url": "https://github.com/master-kanor/manus-skills",
+      "categories": [
+        "skills",
+        "automation",
+        "productivity"
+      ],
+      "trust": "verified_community",
+      "enabled": true
+    },
+    {
+      "id": "openclaw-skills",
+      "name": "OpenClaw skills",
+      "adapter": "github_repository_search",
+      "url": "https://api.github.com/search/repositories?q=org%3Aopenclaw+archived%3Afalse&sort=updated&order=desc",
+      "catalog_url": "https://github.com/openclaw/openclaw",
+      "categories": [
+        "skills",
+        "agents",
+        "tools"
+      ],
+      "trust": "verified_community",
+      "enabled": true
     }
   ]
 }

@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Vendored 251 MIT-licensed agent skills from `OpenHands/extensions`, `OpenHands/OpenHands`
+  (`.agents/skills`, also served by `OpenHands/openhands`), `master-kanor/manus-skills`, and
+  `openclaw/openclaw` into `skills/vendor`. The marketplace catalog, static
+  `public/downloads/skills` packages, and a Supabase migration are generated from
+  `config/vendored-skills.manifest.json`; every row stays metadata-only, `verified: false`, and
+  review-gated.
+- Added `npm run skills:generate` / `npm run skills:validate` plus `vendored-skills.test.ts`, and
+  registered the four upstream repositories as marketplace and capability sources.
 - Credentials now support password-manager records with email, username, website, notes, an
   encrypted password/key, and a separately encrypted optional TOTP seed. Owners can explicitly
   reveal/copy their own value or current six-digit OTP; revealed values auto-clear after 30 seconds.

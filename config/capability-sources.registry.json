@@ -71,6 +71,55 @@
       "status": "provider_endpoint_required",
       "published": false,
       "reason": "No official endpoint or package identity was verified from the supplied request."
+    },
+    {
+      "id": "openhands-extensions-skills",
+      "kind": "skill_directory",
+      "category": "developer",
+      "canonical_url": "https://github.com/OpenHands/extensions",
+      "trust": "verified_first_party",
+      "status": "vendored_metadata_only",
+      "discovery": "SKILL.md",
+      "vendored_path": "skills/vendor/openhands-extensions",
+      "install_policy": "metadata_only_review_required",
+      "license": "MIT"
+    },
+    {
+      "id": "openhands-core-agent-skills",
+      "kind": "skill_directory",
+      "category": "developer",
+      "canonical_url": "https://github.com/OpenHands/OpenHands/tree/main/.agents/skills",
+      "trust": "verified_first_party",
+      "status": "vendored_metadata_only",
+      "discovery": "SKILL.md",
+      "vendored_path": "skills/vendor/openhands-core",
+      "alias_of": "https://github.com/OpenHands/openhands",
+      "install_policy": "metadata_only_review_required",
+      "license": "MIT"
+    },
+    {
+      "id": "manus-skills",
+      "kind": "skill_directory",
+      "category": "productivity",
+      "canonical_url": "https://github.com/master-kanor/manus-skills",
+      "trust": "verified_community",
+      "status": "vendored_metadata_only",
+      "discovery": "SKILL.md",
+      "vendored_path": "skills/vendor/manus-skills",
+      "install_policy": "metadata_only_review_required",
+      "license": "MIT"
+    },
+    {
+      "id": "openclaw-skills",
+      "kind": "skill_directory",
+      "category": "developer",
+      "canonical_url": "https://github.com/openclaw/openclaw",
+      "trust": "verified_community",
+      "status": "vendored_metadata_only",
+      "discovery": "SKILL.md",
+      "vendored_path": "skills/vendor/openclaw",
+      "install_policy": "metadata_only_review_required",
+      "license": "MIT"
     }
   ],
   "credential_policy": {
