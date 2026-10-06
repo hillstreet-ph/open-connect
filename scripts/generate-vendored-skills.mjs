@@ -2,7 +2,7 @@
 // Generates the vendored skill catalog, static download packages, and the
 // marketplace migration from config/vendored-skills.manifest.json.
 // Metadata-only: nothing here installs or executes upstream code.
-import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { resolve, join, relative, sep } from "node:path";
 
