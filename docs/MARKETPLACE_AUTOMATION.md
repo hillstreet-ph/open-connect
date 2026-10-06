@@ -42,3 +42,16 @@ Required production secret: `SUPABASE_SERVICE_ROLE_KEY`, stored in the protected
 `production` environment. GitHub Actions also needs repository workflow permissions to create pull
 requests. Source changes belong in `config/marketplace-sources.registry.json`; every source must use
 an implemented adapter and an explicitly allowlisted host.
+
+## Vendored upstream skills
+
+Four MIT-licensed upstream repositories are vendored as metadata-only skill sources rather than
+crawled: `OpenHands/extensions`, `OpenHands/OpenHands` (`.agents/skills`, also served by
+`OpenHands/openhands`), `master-kanor/manus-skills`, and `openclaw/openclaw`. The catalog, static
+download packages, and Supabase migration are generated from `config/vendored-skills.manifest.json`.
+See [VENDORED_SKILLS.md](./VENDORED_SKILLS.md).
+
+```bash
+npm run skills:generate   # rebuild catalog, downloads, and migration from the manifest
+npm run skills:validate   # fail if any vendored package is unsafe or inconsistent
+```

@@ -1,0 +1,87 @@
+{
+  "schema_version": "1.0.0",
+  "registry_id": "open-connect-vendored-skills",
+  "policy": {
+    "mode": "vendored_source",
+    "executable": false,
+    "auto_install": false,
+    "auto_publish": false,
+    "require_license": true,
+    "require_security_review": true,
+    "excluded_paths": ["schemas", "node_modules", ".git", "__pycache__"],
+    "excluded_extensions": [".pyc", ".so", ".ttf", ".otf", ".woff", ".woff2", ".pdf", ".zip", ".png", ".jpg", ".jpeg", ".gif", ".mp4", ".sqlite", ".db"]
+  },
+  "sources": [
+    {
+      "id": "openhands-extensions",
+      "name": "OpenHands Extensions",
+      "repo": "https://github.com/OpenHands/extensions",
+      "requested": "https://github.com/OpenHands/extensions",
+      "ref": "main",
+      "license": "MIT",
+      "trust": "official_first_party",
+      "category": "developer",
+      "path": "openhands-extensions",
+      "upstream_index": "marketplaces/openhands-extensions.json",
+      "description": "Official OpenHands skills and plugins repository."
+    },
+    {
+      "id": "openhands-core",
+      "name": "OpenHands Core Agent Skills",
+      "repo": "https://github.com/OpenHands/OpenHands",
+      "requested": "https://github.com/OpenHands/OpenHands/tree/main/.agents/skills",
+      "also_at": "https://github.com/OpenHands/openhands",
+      "ref": "main",
+      "license": "MIT",
+      "trust": "official_first_party",
+      "category": "developer",
+      "path": "openhands-core",
+      "upstream_index": ".agents/skills",
+      "description": "In-repository agent skills maintained in the OpenHands monorepo. OpenHands/openhands resolves to the same repository as OpenHands/OpenHands."
+    },
+    {
+      "id": "manus-skills",
+      "name": "Manus Skills",
+      "repo": "https://github.com/master-kanor/manus-skills",
+      "requested": "https://github.com/master-kanor/manus-skills",
+      "ref": "main",
+      "license": "MIT",
+      "trust": "verified_community",
+      "category": "productivity",
+      "path": "manus-skills",
+      "upstream_index": "skills.json",
+      "description": "Community skill arsenal grouped by foundation, automation, workflow, utility, design, analysis, and integration tiers.",
+      "group_categories": {
+        "analysis-skills": "data",
+        "automation-skills": "developer",
+        "design-skills": "productivity",
+        "development-skills": "developer",
+        "integration-skills": "connections",
+        "tier1-foundation": "developer",
+        "tier2-automation": "developer",
+        "tier3-advanced": "developer",
+        "tier4-specialized": "developer",
+        "utility-skills": "productivity",
+        "workflow-skills": "developer"
+      }
+    },
+    {
+      "id": "openclaw",
+      "name": "OpenClaw",
+      "repo": "https://github.com/openclaw/openclaw",
+      "requested": "https://github.com/openclaw/openclaw",
+      "ref": "main",
+      "license": "MIT",
+      "trust": "verified_community",
+      "category": "developer",
+      "path": "openclaw",
+      "upstream_index": "skills",
+      "description": "OpenClaw personal agent runtime with operator skills, custodian skills, and repository agent skills.",
+      "group_categories": {
+        "skills": "productivity",
+        "custodian": "infrastructure",
+        "agents": "developer"
+      }
+    }
+  ]
+}
