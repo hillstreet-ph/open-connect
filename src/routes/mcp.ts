@@ -624,7 +624,7 @@ async function assertProjectAccess(key: AuthedKey, projectId: string) {
 
 async function requireControlWrite(key: AuthedKey) {
   const roles = await loadRoles(key.userId);
-  const authorizedRole = roles.includes("admin");
+  const authorizedRole = roles.includes("owner") || roles.includes("admin");
   const authorizedScope =
     hasScope(key, "control:write") ||
     hasScope(key, "tools:invoke") ||
