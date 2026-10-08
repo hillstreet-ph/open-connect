@@ -15,9 +15,9 @@ describe("Hubstaff Admin API", () => {
   });
 
   it("rejects paths outside Hubstaff v2 before resolving credentials", async () => {
-    await expect(
-      hubstaffAdminRequest("user-1", { path: "https://example.com" }),
-    ).rejects.toThrow("Invalid Hubstaff API path");
+    await expect(hubstaffAdminRequest("user-1", { path: "https://example.com" })).rejects.toThrow(
+      "Invalid Hubstaff API path",
+    );
   });
 
   it("uses a connected organization token directly as the bearer credential", async () => {
