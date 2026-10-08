@@ -43,9 +43,7 @@ async function readUserCredential(userId: string): Promise<string | null> {
   if (connectionError) throw new Error("Unable to load the Hubstaff Admin connection.");
   if (!connection?.credential_reference) return null;
 
-  const match = connection.credential_reference.match(
-    /^credential:\/\/[^/]+\/([0-9a-f-]{36})$/i,
-  );
+  const match = connection.credential_reference.match(/^credential:\/\/[^/]+\/([0-9a-f-]{36})$/i);
   if (!match) throw new Error("Hubstaff Admin has an invalid credential reference.");
 
   const { data, error } = await supabaseAdmin.rpc("resolve_connection_credential", {
