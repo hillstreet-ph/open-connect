@@ -1675,13 +1675,32 @@ export const Route = createFileRoute("/mcp")({
               ? args["scopes"].filter((scope): scope is string => typeof scope === "string")
               : [];
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-            const { data, error } = await supabaseAdmin
+            const displayName = String(args["display_name"] ?? provider);
+            const { data: existing, error: existingError } = await supabaseAdmin
               .from("app_connections")
-              .upsert(
-                {
+              .select("id")
+              .eq("user_id", key.userId)
+              .eq("provider", provider)
+              .eq("credential_reference", credentialRef)
+              .maybeSingle();
+            if (existingError) throw new Error(existingError.message);
+
+            const connectionQuery = existing
+              ? supabaseAdmin
+                  .from("app_connections")
+                  .update({
+                    display_name: displayName,
+                    status: "connected",
+                    scopes,
+                    credential_reference: credentialRef,
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq("id", existing.id)
+                  .eq("user_id", key.userId)
+              : supabaseAdmin.from("app_connections").insert({
                   user_id: key.userId,
                   provider,
-                  display_name: String(args["display_name"] ?? provider),
+                  display_name: displayName,
                   provider_account_id: key.userId,
                   status: "connected",
                   scopes,
@@ -1691,9 +1710,8 @@ export const Route = createFileRoute("/mcp")({
                     mode: "capability_grant",
                     secrets_exposed: false,
                   },
-                },
-                { onConflict: "user_id,provider,provider_account_id" },
-              )
+                });
+            const { data, error } = await connectionQuery
               .select("id,provider,display_name,status,scopes")
               .single();
             if (error) throw new Error(error.message);
