@@ -18,6 +18,7 @@ import {
 } from "@/lib/autonomous-control";
 import { streamableMcpResponse } from "@/lib/mcp-transport.server";
 import { calculateExpression } from "@/lib/calculator";
+import { hasRole } from "@/lib/rbac";
 
 const WWW_AUTH =
   'Bearer realm="open-connect", resource_metadata="https://open-connect.site/.well-known/oauth-protected-resource"';
@@ -624,7 +625,7 @@ async function assertProjectAccess(key: AuthedKey, projectId: string) {
 
 async function requireControlWrite(key: AuthedKey) {
   const roles = await loadRoles(key.userId);
-  const authorizedRole = roles.includes("admin");
+  const authorizedRole = hasRole(roles, "admin");
   const authorizedScope =
     hasScope(key, "control:write") ||
     hasScope(key, "tools:invoke") ||
