@@ -47,6 +47,21 @@ test("allows private memory and knowledge reads when explicitly requested", () =
   assert.equal(validateOAuthRequest({ ...req, scope }).scope, scope);
 });
 
+test("database OAuth allowlist accepts advertised private read scopes", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const migration = await readFile(
+    new URL(
+      "../../supabase/migrations/20261008013000_oauth_memory_knowledge_scopes.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.match(migration, /'memory:read'/);
+  assert.match(migration, /'knowledge:read'/);
+  assert.match(migration, /TO authenticated/);
+  assert.doesNotMatch(migration, /TO anon\s*;/);
+});
+
 test("static discovery advertises only implemented OAuth grants", async () => {
   const { readFile } = await import("node:fs/promises");
   const metadata = JSON.parse(
