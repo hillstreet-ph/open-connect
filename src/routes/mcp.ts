@@ -23,7 +23,9 @@ const WWW_AUTH =
   'Bearer realm="open-connect", resource_metadata="https://open-connect.site/.well-known/oauth-protected-resource"';
 
 function normalizeConnectionProvider(value: unknown) {
-  const provider = String(value ?? "").trim().toLowerCase();
+  const provider = String(value ?? "")
+    .trim()
+    .toLowerCase();
   return provider === "hubstaff" || provider === "hubstaff-admin" ? "hubstaff_admin" : provider;
 }
 
