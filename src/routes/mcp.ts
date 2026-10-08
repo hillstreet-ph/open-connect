@@ -22,6 +22,13 @@ import { calculateExpression } from "@/lib/calculator";
 const WWW_AUTH =
   'Bearer realm="open-connect", resource_metadata="https://open-connect.site/.well-known/oauth-protected-resource"';
 
+function normalizeConnectionProvider(value: unknown) {
+  const provider = String(value ?? "")
+    .trim()
+    .toLowerCase();
+  return provider === "hubstaff" || provider === "hubstaff-admin" ? "hubstaff_admin" : provider;
+}
+
 const CATALOG_TTL_MS = 45_000;
 const MODEL_ALIASES = [
   { id: "open-connect/fast", upstream: "openai/gpt-4o-mini" },
@@ -1213,7 +1220,7 @@ export const Route = createFileRoute("/mcp")({
               project_id: requestedProject || null,
             });
           } else if (name === "inspect_connections") {
-            const provider = String(args["provider"] ?? "").trim();
+            const provider = normalizeConnectionProvider(args["provider"]);
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
             let ownedQuery = supabaseAdmin
               .from("app_connections")
@@ -1365,13 +1372,13 @@ export const Route = createFileRoute("/mcp")({
               await import("@/lib/hubstaff-admin.server");
             if (!hubstaffAdminConfig().configured)
               throw new Error("Hubstaff Admin is not configured");
-            result = textResult(await hubstaffAdminIdentity());
+            result = textResult(await hubstaffAdminIdentity(key.userId));
           } else if (name === "hubstaff_admin_list_organizations") {
             const { hubstaffAdminConfig, listHubstaffOrganizations } =
               await import("@/lib/hubstaff-admin.server");
             if (!hubstaffAdminConfig().configured)
               throw new Error("Hubstaff Admin is not configured");
-            result = textResult(await listHubstaffOrganizations());
+            result = textResult(await listHubstaffOrganizations(key.userId));
           } else if (name === "hubstaff_admin_request") {
             const method = String(args["method"] ?? "GET").toUpperCase();
             if (method !== "GET") await requireControlWrite(key);
@@ -1387,7 +1394,7 @@ export const Route = createFileRoute("/mcp")({
                 ? (args["body"] as Record<string, unknown>)
                 : undefined;
             result = textResult(
-              await hubstaffAdminRequest({
+              await hubstaffAdminRequest(key.userId, {
                 method,
                 path: String(args["path"] ?? ""),
                 ...(body ? { body } : {}),
@@ -1658,9 +1665,7 @@ export const Route = createFileRoute("/mcp")({
             result = executionUnavailable("install", item);
           } else if (name === "configure_connection") {
             await requireControlWrite(key);
-            const provider = String(args["provider"] ?? "")
-              .trim()
-              .toLowerCase();
+            const provider = normalizeConnectionProvider(args["provider"]);
             const credentialRef = String(args["credential_ref"] ?? "").trim();
             if (!provider || !isOpaqueCredentialReference(credentialRef))
               throw new Error(
