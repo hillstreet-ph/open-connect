@@ -247,7 +247,7 @@ const PLATFORM_TOOLS: McpTool[] = [
   },
   {
     name: "list_connection_tools",
-    description: "Discover tools from one verified Custom MCP connection.",
+    description: "Discover tools from one accessible Twilio or verified Custom MCP connection.",
     inputSchema: {
       type: "object",
       properties: { connection_id: { type: "string" } },
@@ -262,7 +262,7 @@ const PLATFORM_TOOLS: McpTool[] = [
   {
     name: "call_connection_tool",
     description:
-      "Call a tool on one verified Custom MCP connection. Write-capable actions require a project-scoped key with connections:invoke; destructive tools also require confirm=true.",
+      "Call a tool on one accessible Twilio or verified Custom MCP connection. Twilio writes require admin access. Custom MCP writes require a project-scoped key with connections:invoke; destructive tools also require confirm=true.",
     inputSchema: {
       type: "object",
       properties: {
@@ -1304,7 +1304,9 @@ export const Route = createFileRoute("/mcp")({
             const tool = catalog.tools.find((item) => item["name"] === toolName);
             if (!tool) throw new Error("Connected MCP tool was not found.");
             const annotations = (tool["annotations"] ?? {}) as Record<string, unknown>;
-            if (annotations["readOnlyHint"] !== true) {
+            if (annotations["readOnlyHint"] !== true && catalog.connection.provider === "twilio") {
+              await requireControlWrite(key);
+            } else if (annotations["readOnlyHint"] !== true) {
               if (!key.projectId) {
                 throw new Error(
                   "Write-capable connection actions require a project-scoped API key.",

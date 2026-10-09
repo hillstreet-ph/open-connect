@@ -1,4 +1,5 @@
 import { fetchMcpTools, withMcpClient } from "./mcp-client.server.ts";
+import { callTwilioTool, twilioTools } from "./twilio.server.ts";
 
 export function connectionAuthHeaders(authType: string, credential: string) {
   if (!credential || authType === "none") return {};
@@ -70,26 +71,43 @@ async function assertProjectConnectionAccess(
   }
 }
 
-export async function getCustomMcpConnection(
+export async function assertToolConnectionAccess(
   userId: string,
-  connectionId: string,
+  connection: { id: string; user_id: string; provider: string; status: string },
   projectId?: string,
+  checkProject = assertProjectConnectionAccess,
 ) {
+  if (!["custom_mcp", "twilio"].includes(connection.provider)) {
+    throw new Error("No executable adapter is configured for this connection.");
+  }
+  if (connection.status !== "connected") throw new Error("Connection is not verified.");
+  if (projectId) {
+    await checkProject(userId, connection.user_id, connection.id, projectId);
+  } else if (connection.user_id !== userId) {
+    throw new Error("Connection not found.");
+  }
+}
+
+async function getToolConnection(userId: string, connectionId: string, projectId?: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data, error } = await supabaseAdmin
     .from("app_connections")
-    .select("id,user_id,provider,display_name,status,credential_reference,metadata")
+    .select("id,user_id,provider,display_name,status,credential_reference,metadata,scopes")
     .eq("id", connectionId)
     .maybeSingle();
   if (error || !data) throw new Error("Connection not found.");
-  if (data.provider !== "custom_mcp") throw new Error("Only Custom MCP connections use this tool.");
-  if (data.status !== "connected") throw new Error("Connection is not verified.");
-
-  if (projectId) {
-    await assertProjectConnectionAccess(userId, data.user_id, connectionId, projectId);
-  } else if (data.user_id !== userId) {
-    throw new Error("Connection not found.");
+  await assertToolConnectionAccess(userId, data, projectId);
+  if (
+    data.provider === "twilio" &&
+    !/^credential:\/\/twilio\/[0-9a-f-]{36}$/i.test(data.credential_reference ?? "")
+  ) {
+    throw new Error("Twilio has an invalid credential reference.");
   }
+  return data;
+}
+
+async function materializeCustomMcpConnection(data: Awaited<ReturnType<typeof getToolConnection>>) {
+  if (data.provider !== "custom_mcp") throw new Error("Only Custom MCP connections use this tool.");
 
   const metadata = (data.metadata ?? {}) as Record<string, unknown>;
   const endpoint = String(metadata["endpoint_url"] ?? "");
@@ -104,10 +122,27 @@ export async function getCustomMcpConnection(
   };
 }
 
+export async function getCustomMcpConnection(
+  userId: string,
+  connectionId: string,
+  projectId?: string,
+) {
+  return materializeCustomMcpConnection(await getToolConnection(userId, connectionId, projectId));
+}
+
 export async function listCustomMcpTools(userId: string, connectionId: string, projectId?: string) {
-  const connection = await getCustomMcpConnection(userId, connectionId, projectId);
-  const tools = await fetchMcpTools(connection.endpoint, connection.headers);
-  return { connection: { id: connection.id, name: connection.name }, tools };
+  const saved = await getToolConnection(userId, connectionId, projectId);
+  const tools =
+    saved.provider === "twilio"
+      ? twilioTools(saved.scopes ?? [])
+      : await (async () => {
+          const connection = await materializeCustomMcpConnection(saved);
+          return fetchMcpTools(connection.endpoint, connection.headers);
+        })();
+  return {
+    connection: { id: saved.id, name: saved.display_name, provider: saved.provider },
+    tools,
+  };
 }
 
 export async function callCustomMcpTool(
@@ -117,7 +152,7 @@ export async function callCustomMcpTool(
   args: Record<string, unknown>,
   projectId?: string,
 ) {
-  const connection = await getCustomMcpConnection(userId, connectionId, projectId);
+  const connection = await getToolConnection(userId, connectionId, projectId);
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   let auditId: string | undefined;
   if (projectId) {
@@ -138,9 +173,18 @@ export async function callCustomMcpTool(
 
   let result;
   try {
-    result = await withMcpClient(connection.endpoint, connection.headers, (client) =>
-      client.callTool({ name: toolName, arguments: args }, undefined, { timeout: 30000 }),
-    );
+    if (connection.provider === "twilio") {
+      result = await callTwilioTool(toolName, args, {
+        scopes: connection.scopes ?? [],
+        resolveCredential: () =>
+          resolveCredential(connection.user_id, connection.credential_reference),
+      });
+    } else {
+      const custom = await materializeCustomMcpConnection(connection);
+      result = await withMcpClient(custom.endpoint, custom.headers, (client) =>
+        client.callTool({ name: toolName, arguments: args }, undefined, { timeout: 30000 }),
+      );
+    }
   } catch (error) {
     if (auditId) {
       const { error: auditError } = await supabaseAdmin
