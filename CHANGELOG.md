@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- Fixed the marketplace publish job, which failed with `registry source upsert failed: HTTP 400`.
+  Registry rows that omit `enabled` were treated as disabled, so the bulk `registry_sources` upsert
+  sent rows with two different key sets and PostgREST rejected the request. Absent now means enabled,
+  and every row is built with the full column set. Enabled sources now resolve to 40 (27 Firecrawl),
+  up from 13.
+- Vendored 251 MIT-licensed agent skills from `OpenHands/extensions`, `OpenHands/OpenHands`
+  (`.agents/skills`, also served by `OpenHands/openhands`), `master-kanor/manus-skills`, and
+  `openclaw/openclaw` into `skills/vendor`. The marketplace catalog, static
+  `public/downloads/skills` packages, and a Supabase migration are generated from
+  `config/vendored-skills.manifest.json`; every row stays metadata-only, `verified: false`, and
+  review-gated.
+- Added `npm run skills:generate` / `npm run skills:validate` plus `vendored-skills.test.ts`, and
+  registered the four upstream repositories as marketplace and capability sources.
 - Credentials now support password-manager records with email, username, website, notes, an
   encrypted password/key, and a separately encrypted optional TOTP seed. Owners can explicitly
   reveal/copy their own value or current six-digit OTP; revealed values auto-clear after 30 seconds.

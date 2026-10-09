@@ -18,9 +18,17 @@ import {
 } from "@/lib/autonomous-control";
 import { streamableMcpResponse } from "@/lib/mcp-transport.server";
 import { calculateExpression } from "@/lib/calculator";
+import { hasRole } from "@/lib/rbac";
 
 const WWW_AUTH =
   'Bearer realm="open-connect", resource_metadata="https://open-connect.site/.well-known/oauth-protected-resource"';
+
+function normalizeConnectionProvider(value: unknown) {
+  const provider = String(value ?? "")
+    .trim()
+    .toLowerCase();
+  return provider === "hubstaff" || provider === "hubstaff-admin" ? "hubstaff_admin" : provider;
+}
 
 const CATALOG_TTL_MS = 45_000;
 const MODEL_ALIASES = [
@@ -239,7 +247,7 @@ const PLATFORM_TOOLS: McpTool[] = [
   },
   {
     name: "list_connection_tools",
-    description: "Discover tools from one verified Custom MCP connection.",
+    description: "Discover tools from one accessible Twilio or verified Custom MCP connection.",
     inputSchema: {
       type: "object",
       properties: { connection_id: { type: "string" } },
@@ -254,7 +262,7 @@ const PLATFORM_TOOLS: McpTool[] = [
   {
     name: "call_connection_tool",
     description:
-      "Call a tool on one verified Custom MCP connection. Write-capable actions require a project-scoped key with connections:invoke; destructive tools also require confirm=true.",
+      "Call a tool on one accessible Twilio or verified Custom MCP connection. Twilio writes require admin access. Custom MCP writes require a project-scoped key with connections:invoke; destructive tools also require confirm=true.",
     inputSchema: {
       type: "object",
       properties: {
@@ -617,7 +625,7 @@ async function assertProjectAccess(key: AuthedKey, projectId: string) {
 
 async function requireControlWrite(key: AuthedKey) {
   const roles = await loadRoles(key.userId);
-  const authorizedRole = roles.includes("admin");
+  const authorizedRole = hasRole(roles, "admin");
   const authorizedScope =
     hasScope(key, "control:write") ||
     hasScope(key, "tools:invoke") ||
@@ -881,10 +889,12 @@ export const Route = createFileRoute("/mcp")({
           !hasScope(key, "mcp:connect") &&
           !hasScope(key, "models:read") &&
           !hasScope(key, "models:invoke") &&
-          !hasScope(key, "resources:read")
+          !hasScope(key, "resources:read") &&
+          !hasScope(key, "memory:read") &&
+          !hasScope(key, "knowledge:read")
         ) {
           return gatewayError(
-            "Key is missing mcp, models, or resources scope.",
+            "Key is missing an MCP read or model scope.",
             403,
             "insufficient_scope",
           );
@@ -1213,7 +1223,7 @@ export const Route = createFileRoute("/mcp")({
               project_id: requestedProject || null,
             });
           } else if (name === "inspect_connections") {
-            const provider = String(args["provider"] ?? "").trim();
+            const provider = normalizeConnectionProvider(args["provider"]);
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
             let ownedQuery = supabaseAdmin
               .from("app_connections")
@@ -1296,7 +1306,9 @@ export const Route = createFileRoute("/mcp")({
             const tool = catalog.tools.find((item) => item["name"] === toolName);
             if (!tool) throw new Error("Connected MCP tool was not found.");
             const annotations = (tool["annotations"] ?? {}) as Record<string, unknown>;
-            if (annotations["readOnlyHint"] !== true) {
+            if (annotations["readOnlyHint"] !== true && catalog.connection.provider === "twilio") {
+              await requireControlWrite(key);
+            } else if (annotations["readOnlyHint"] !== true) {
               if (!key.projectId) {
                 throw new Error(
                   "Write-capable connection actions require a project-scoped API key.",
@@ -1313,15 +1325,17 @@ export const Route = createFileRoute("/mcp")({
               args["arguments"] && typeof args["arguments"] === "object"
                 ? (args["arguments"] as Record<string, unknown>)
                 : {};
-            result = textResult(
-              await callCustomMcpTool(
-                key.userId,
-                connectionId,
-                toolName,
-                toolArguments,
-                key.projectId ?? undefined,
-              ),
+            const connectionResult = await callCustomMcpTool(
+              key.userId,
+              connectionId,
+              toolName,
+              toolArguments,
+              key.projectId ?? undefined,
             );
+            result = {
+              ...textResult(connectionResult),
+              ...(connectionResult.isError ? { isError: true } : {}),
+            };
           } else if (name === "e2b_health") {
             const { e2bConfig, e2bHealth } = await import("@/lib/e2b.server");
             if (!e2bConfig().configured) throw new Error("E2B is not configured");
@@ -1365,13 +1379,13 @@ export const Route = createFileRoute("/mcp")({
               await import("@/lib/hubstaff-admin.server");
             if (!hubstaffAdminConfig().configured)
               throw new Error("Hubstaff Admin is not configured");
-            result = textResult(await hubstaffAdminIdentity());
+            result = textResult(await hubstaffAdminIdentity(key.userId));
           } else if (name === "hubstaff_admin_list_organizations") {
             const { hubstaffAdminConfig, listHubstaffOrganizations } =
               await import("@/lib/hubstaff-admin.server");
             if (!hubstaffAdminConfig().configured)
               throw new Error("Hubstaff Admin is not configured");
-            result = textResult(await listHubstaffOrganizations());
+            result = textResult(await listHubstaffOrganizations(key.userId));
           } else if (name === "hubstaff_admin_request") {
             const method = String(args["method"] ?? "GET").toUpperCase();
             if (method !== "GET") await requireControlWrite(key);
@@ -1387,7 +1401,7 @@ export const Route = createFileRoute("/mcp")({
                 ? (args["body"] as Record<string, unknown>)
                 : undefined;
             result = textResult(
-              await hubstaffAdminRequest({
+              await hubstaffAdminRequest(key.userId, {
                 method,
                 path: String(args["path"] ?? ""),
                 ...(body ? { body } : {}),
@@ -1658,9 +1672,7 @@ export const Route = createFileRoute("/mcp")({
             result = executionUnavailable("install", item);
           } else if (name === "configure_connection") {
             await requireControlWrite(key);
-            const provider = String(args["provider"] ?? "")
-              .trim()
-              .toLowerCase();
+            const provider = normalizeConnectionProvider(args["provider"]);
             const credentialRef = String(args["credential_ref"] ?? "").trim();
             if (!provider || !isOpaqueCredentialReference(credentialRef))
               throw new Error(
@@ -1670,13 +1682,32 @@ export const Route = createFileRoute("/mcp")({
               ? args["scopes"].filter((scope): scope is string => typeof scope === "string")
               : [];
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-            const { data, error } = await supabaseAdmin
+            const displayName = String(args["display_name"] ?? provider);
+            const { data: existing, error: existingError } = await supabaseAdmin
               .from("app_connections")
-              .upsert(
-                {
+              .select("id")
+              .eq("user_id", key.userId)
+              .eq("provider", provider)
+              .eq("credential_reference", credentialRef)
+              .maybeSingle();
+            if (existingError) throw new Error(existingError.message);
+
+            const connectionQuery = existing
+              ? supabaseAdmin
+                  .from("app_connections")
+                  .update({
+                    display_name: displayName,
+                    status: "connected",
+                    scopes,
+                    credential_reference: credentialRef,
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq("id", existing.id)
+                  .eq("user_id", key.userId)
+              : supabaseAdmin.from("app_connections").insert({
                   user_id: key.userId,
                   provider,
-                  display_name: String(args["display_name"] ?? provider),
+                  display_name: displayName,
                   provider_account_id: key.userId,
                   status: "connected",
                   scopes,
@@ -1686,9 +1717,8 @@ export const Route = createFileRoute("/mcp")({
                     mode: "capability_grant",
                     secrets_exposed: false,
                   },
-                },
-                { onConflict: "user_id,provider,provider_account_id" },
-              )
+                });
+            const { data, error } = await connectionQuery
               .select("id,provider,display_name,status,scopes")
               .single();
             if (error) throw new Error(error.message);

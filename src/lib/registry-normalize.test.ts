@@ -6,8 +6,11 @@ import {
   deduplicateCandidates,
   hasSuspiciousMetadata,
   isAllowedCatalogUrl,
+  isSourceEnabled,
   normalizeOpenSlug,
   registryFingerprint,
+  registrySourceRow,
+  type RegistrySource,
 } from "./registry-normalize.ts";
 
 test("normalizes repository URLs and open-prefixed slugs", () => {
@@ -80,4 +83,26 @@ test("agent team has one supervisor, open names, and no direct self delegation",
   assert.ok(registry.agents.every((agent) => agent.id.startsWith("open-")));
   assert.ok(registry.agents.every((agent) => !agent.delegates.includes(agent.id)));
   assert.ok(registry.agents.some((agent) => agent.id === registry.supervisor));
+});
+
+test("registry sources treat an absent enabled flag as enabled", () => {
+  assert.equal(isSourceEnabled({ enabled: undefined }), true);
+  assert.equal(isSourceEnabled({}), true);
+  assert.equal(isSourceEnabled({ enabled: false }), false);
+  assert.equal(isSourceEnabled({ enabled: true }), true);
+});
+
+test("registry source rows keep one key set for PostgREST bulk upsert", () => {
+  const registry = JSON.parse(readFileSync("config/marketplace-sources.registry.json", "utf8")) as {
+    sources: RegistrySource[];
+  };
+  const rows = registry.sources.map(registrySourceRow);
+  const keySets = new Set(rows.map((row) => Object.keys(row).sort().join(",")));
+  assert.equal(
+    keySets.size,
+    1,
+    `bulk upsert rows must share keys, saw ${[...keySets].join(" | ")}`,
+  );
+  assert.ok(rows.every((row) => typeof row.enabled === "boolean"));
+  assert.ok(rows.every((row) => row.base_url && row.slug && row.adapter && row.trust_level));
 });

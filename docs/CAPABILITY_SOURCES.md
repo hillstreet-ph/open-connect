@@ -6,6 +6,10 @@ The canonical machine-readable registry is `config/capability-sources.registry.j
 |---|---|---|---|
 | Docker Agent MCP | Infrastructure | Cataloged | Runtime must have Docker Agent and provider OAuth/environment bindings |
 | Docker Agent Skills | Developer | Cataloged | Reuses canonical `SKILL.md` packages; no duplicate copies |
+| OpenHands Extensions | Developer | Vendored metadata only | `skills/vendor/openhands-extensions`; MIT; review before install |
+| OpenHands core agent skills | Developer | Vendored metadata only | `skills/vendor/openhands-core`; MIT; review before install |
+| Manus Skills | Productivity | Vendored metadata only | `skills/vendor/manus-skills`; MIT; review before install |
+| OpenClaw skills | Developer | Vendored metadata only | `skills/vendor/openclaw`; MIT; review before install |
 | OPX Coding | Developer | Discovery only | Package-by-package provenance, license, and duplicate review |
 | TinyFish | Browser | Authorization required | OAuth preferred; API key only through `credential://tinyfish/open-connect` |
 | ToolMatch | Developer | Endpoint required | Not published until its official endpoint/package is verified |

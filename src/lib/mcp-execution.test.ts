@@ -14,6 +14,21 @@ const resource = {
   verified: true,
 };
 const tables: string[] = [];
+let connectionProvider = "twilio";
+let connectionReadOnly = false;
+let connectionError = false;
+const connectionCalls: unknown[] = [];
+
+mock.module("@/lib/custom-mcp.server", () => ({
+  listCustomMcpTools: async () => ({
+    connection: { id: "fixture-connection", provider: connectionProvider },
+    tools: [{ name: "fixture-operation", annotations: { readOnlyHint: connectionReadOnly } }],
+  }),
+  callCustomMcpTool: async (...args: unknown[]) => {
+    connectionCalls.push(args);
+    return { content: [{ type: "text", text: "{}" }], isError: connectionError };
+  },
+}));
 
 mock.module("@tanstack/react-router", () => ({
   createFileRoute: () => (options: { server: { handlers: { POST: typeof post } } }) => {
@@ -46,6 +61,35 @@ mock.module("@/integrations/supabase/client.server", () => ({
             eq: async () => ({ data: roles.map((role) => ({ role })) }),
           }),
         };
+      if (table === "memory_records" || table === "knowledge_items") {
+        const query = {
+          select() {
+            return this;
+          },
+          eq() {
+            return this;
+          },
+          order() {
+            return this;
+          },
+          limit() {
+            return this;
+          },
+          is() {
+            return this;
+          },
+          neq() {
+            return this;
+          },
+          then(
+            onfulfilled: (value: { data: unknown[]; error: null }) => unknown,
+            onrejected?: (reason: unknown) => unknown,
+          ) {
+            return Promise.resolve({ data: [], error: null }).then(onfulfilled, onrejected);
+          },
+        };
+        return query;
+      }
       throw new Error(`Unexpected database access: ${table}`);
     },
   },
@@ -77,6 +121,10 @@ beforeEach(() => {
   scopes = ["mcp:connect", "control:write"];
   tables.length = 0;
   resource.verified = true;
+  connectionProvider = "twilio";
+  connectionReadOnly = false;
+  connectionError = false;
+  connectionCalls.length = 0;
 });
 
 function call(name: string, args: Record<string, unknown> = {}) {
@@ -194,4 +242,75 @@ test("read tokens discover write scope requirements without gaining execution ri
   const denied = await call("call_connection_tool", {});
   expect(denied.status).toBe(403);
   expect(tables).not.toContain("app_connections");
+});
+
+test("private read grants pass the MCP entry gate without mcp:connect", async () => {
+  for (const [scope, tool, table] of [
+    ["memory:read", "list_my_memory", "memory_records"],
+    ["knowledge:read", "list_my_knowledge", "knowledge_items"],
+  ] as const) {
+    scopes = [scope];
+    const response = await call(tool);
+    expect(response.status).toBe(200);
+    const { result } = await response.json();
+    expect(JSON.parse(result.content[0].text)).toMatchObject({
+      personal: [],
+      project: [],
+      user_owned_only: true,
+    });
+    expect(tables).toContain(table);
+  }
+});
+
+test("native Twilio writes require admin role and an invoke scope before provider execution", async () => {
+  scopes = ["mcp:connect", "connections:invoke"];
+  roles = ["developer"];
+  const args = { connection_id: "fixture-connection", tool_name: "fixture-operation" };
+  await expect(call("call_connection_tool", args)).rejects.toThrow("Admin role");
+  expect(connectionCalls).toEqual([]);
+  roles = ["admin"];
+  scopes = ["mcp:connect", "connections:read"];
+  expect((await call("call_connection_tool", args)).status).toBe(403);
+  expect(connectionCalls).toEqual([]);
+  roles = ["owner"];
+  scopes = ["mcp:connect", "connections:invoke"];
+  expect((await call("call_connection_tool", args)).status).toBe(200);
+  expect(connectionCalls).toHaveLength(1);
+});
+
+test("Twilio read tools work for scoped non-admins without granting writes", async () => {
+  scopes = ["mcp:connect", "connections:invoke"];
+  roles = ["user"];
+  connectionReadOnly = true;
+  expect(
+    (
+      await call("call_connection_tool", {
+        connection_id: "fixture-connection",
+        tool_name: "fixture-operation",
+      })
+    ).status,
+  ).toBe(200);
+  expect(connectionCalls).toHaveLength(1);
+});
+
+test("adding Twilio execution preserves the project requirement for Custom MCP writes", async () => {
+  scopes = ["mcp:connect", "connections:invoke"];
+  connectionProvider = "custom_mcp";
+  await expect(
+    call("call_connection_tool", {
+      connection_id: "fixture-connection",
+      tool_name: "fixture-operation",
+    }),
+  ).rejects.toThrow("project-scoped");
+  expect(connectionCalls).toEqual([]);
+});
+
+test("connection failures propagate as MCP tool errors instead of successful wrappers", async () => {
+  connectionError = true;
+  const response = await call("call_connection_tool", {
+    connection_id: "fixture-connection",
+    tool_name: "fixture-operation",
+  });
+  const { result } = await response.json();
+  expect(result.isError).toBe(true);
 });

@@ -19,6 +19,36 @@ export function isAllowedCatalogUrl(value: string, allowedHosts: string[]): bool
   }
 }
 
+export type RegistrySource = {
+  id: string;
+  name: string;
+  adapter: string;
+  url?: string | null;
+  catalog_url?: string | null;
+  trust: string;
+  enabled?: boolean;
+};
+
+// Registry rows may omit `enabled`; absent means enabled, matching the column
+// default in public.registry_sources.
+export function isSourceEnabled(source: Pick<RegistrySource, "enabled">): boolean {
+  return source.enabled !== false;
+}
+
+// PostgREST bulk upserts reject rows whose key sets differ, so the row builder
+// always emits the full column set rather than dropping absent fields.
+export function registrySourceRow(source: RegistrySource) {
+  return {
+    slug: source.id,
+    name: source.name,
+    adapter: source.adapter,
+    base_url: source.catalog_url || source.url,
+    trust_level: source.trust,
+    enabled: isSourceEnabled(source),
+    config: { discovery_url: source.url },
+  };
+}
+
 export function hasSuspiciousMetadata(value: string): boolean {
   return /(curl|wget)\s+[^\n]*\|\s*(sh|bash)|powershell\s+-e|BEGIN (RSA |OPENSSH )?PRIVATE KEY|(?:api[_-]?key|token|password)\s*[:=]\s*\S+/i.test(
     value,
