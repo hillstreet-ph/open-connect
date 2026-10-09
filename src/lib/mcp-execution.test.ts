@@ -4,6 +4,8 @@ let post: (args: { request: Request }) => Promise<Response>;
 let authenticated = true;
 let roles = ["admin"];
 let scopes = ["mcp:connect", "control:write"];
+let keyBoundary: Record<string, string> = {};
+let managedReads = 0;
 const resource = {
   slug: "fixture-approved-tool",
   name: "Approved fixture",
@@ -18,6 +20,15 @@ let connectionProvider = "twilio";
 let connectionReadOnly = false;
 let connectionError = false;
 const connectionCalls: unknown[] = [];
+
+mock.module("@/lib/managed-connectors.server", () => ({
+  listOwnedManagedConnections: async (userId: string) => {
+    expect(userId).toBe("fixture-user");
+    managedReads++;
+    return [{ id: "ca_fixture", provider: "gmail" }];
+  },
+  listComposioToolkits: async () => [{ slug: "gmail", name: "Gmail" }],
+}));
 
 mock.module("@/lib/custom-mcp.server", () => ({
   listCustomMcpTools: async () => ({
@@ -37,7 +48,8 @@ mock.module("@tanstack/react-router", () => ({
   },
 }));
 mock.module("@/lib/gateway.server", () => ({
-  authenticateKey: async () => (authenticated ? { userId: "fixture-user", scopes } : null),
+  authenticateKey: async () =>
+    authenticated ? { userId: "fixture-user", scopes, ...keyBoundary } : null,
   hasScope: (_key: unknown, scope: string) => scopes.includes(scope),
   json: (body: unknown) => Response.json(body),
   gatewayError: (message: string, status: number) => Response.json({ error: message }, { status }),
@@ -59,6 +71,14 @@ mock.module("@/integrations/supabase/client.server", () => ({
         return {
           select: () => ({
             eq: async () => ({ data: roles.map((role) => ({ role })) }),
+          }),
+        };
+      if (table === "app_connections")
+        return {
+          select: () => ({
+            eq: () => ({
+              order: () => ({ range: async () => ({ data: [], error: null }) }),
+            }),
           }),
         };
       throw new Error(`Unexpected database access: ${table}`);
@@ -96,6 +116,33 @@ beforeEach(() => {
   connectionReadOnly = false;
   connectionError = false;
   connectionCalls.length = 0;
+  managedReads = 0;
+  keyBoundary = {};
+});
+
+test("Composio preview performs owned-account reads without import or project writes", async () => {
+  scopes = ["mcp:connect", "connections:read"];
+  const response = await call("preview_composio_sync");
+  const { result } = await response.json();
+  const plan = JSON.parse(result.content[0].text);
+  expect(plan.dry_run).toBe(true);
+  expect(plan.candidates).toEqual([
+    { account_id: "ca_fixture", provider: "gmail", display_name: "Gmail" },
+  ]);
+  expect(managedReads).toBe(1);
+  expect(tables).toEqual(["user_roles", "app_connections"]);
+});
+
+test("Composio preview rejects non-admins and bounded API keys before broker access", async () => {
+  scopes = ["mcp:connect", "connections:read"];
+  roles = ["user"];
+  await expect(call("preview_composio_sync")).rejects.toThrow("admin required");
+  roles = ["admin"];
+  for (const field of ["projectId", "workspaceId", "organizationId"]) {
+    keyBoundary = { [field]: "fixture-boundary" };
+    await expect(call("preview_composio_sync")).rejects.toThrow("personal API key");
+  }
+  expect(managedReads).toBe(0);
 });
 
 function call(name: string, args: Record<string, unknown> = {}) {
