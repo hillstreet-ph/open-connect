@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "status": "proposed",
+  "control_plane": "https://open-connect.site",
+  "mcp_endpoint": "https://open-connect.site/mcp",
+  "broker": "composio",
+  "connection_identity": "composio connected account id",
+  "skill_slug": "sync-hillstreet-composio-feb69e05e879",
+  "secret_variable_names": ["COMPOSIO_API_KEY"],
+  "identity_variable_names": [
+    "COMPOSIO_USER_MAPPINGS",
+    "COMPOSIO_AUTH_CONFIGS",
+    "COMPOSIO_AUTH_CONFIG_ALIASES"
+  ],
+  "clients": ["chatgpt", "open-connect", "open-system", "open-box", "open-tgate", "open-teleset"],
+  "projects": [
+    {
+      "slug": "open-connect",
+      "domain": "open-connect.site",
+      "capability_area": "control and catalog",
+      "assignment_state": "approval_required"
+    },
+    {
+      "slug": "open-system",
+      "domain": "open-system.space",
+      "capability_area": "agent execution",
+      "assignment_state": "approval_required"
+    },
+    {
+      "slug": "open-box",
+      "domain": null,
+      "capability_area": "files and artifacts",
+      "assignment_state": "approval_required"
+    },
+    {
+      "slug": "open-tgate",
+      "domain": "open-tgate.site",
+      "capability_area": "Telegram gateway",
+      "assignment_state": "approval_required"
+    },
+    {
+      "slug": "open-teleset",
+      "domain": "open-teleset.site",
+      "capability_area": "telephony and SMS",
+      "assignment_state": "approval_required"
+    }
+  ],
+  "toolkit": {
+    "name": "HillStreet Integration Operations",
+    "resource_slugs": [
+      "open-devapps-kit",
+      "open-github-kit",
+      "open-dockerhub-kit",
+      "open-cloudflare-kit",
+      "open-supabase-kit",
+      "fullstack-platform-operations-5inh"
+    ],
+    "installation_state": "not_installed"
+  },
+  "policy": {
+    "copy_secrets": false,
+    "automatic_project_sharing": false,
+    "automatic_plugin_installation": false,
+    "automatic_duplicate_deletion": false
+  }
+}

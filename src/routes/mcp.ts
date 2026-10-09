@@ -18,7 +18,7 @@ import {
 } from "@/lib/autonomous-control";
 import { streamableMcpResponse } from "@/lib/mcp-transport.server";
 import { calculateExpression } from "@/lib/calculator";
-import { hasRole } from "@/lib/rbac";
+import { hasRole, type AppRole } from "@/lib/rbac";
 
 const WWW_AUTH =
   'Bearer realm="open-connect", resource_metadata="https://open-connect.site/.well-known/oauth-protected-resource"';
@@ -540,6 +540,18 @@ const PLATFORM_TOOLS: McpTool[] = [
     },
   },
   {
+    name: "preview_composio_sync",
+    description:
+      "Preview owned ACTIVE Composio accounts missing from the personal connector library. Read-only; never imports accounts or assigns project access.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true,
+    },
+  },
+  {
     name: "configure_connection",
     description:
       "Use this when binding a provider through an opaque credential:// reference; raw secret values are rejected.",
@@ -562,10 +574,10 @@ const PLATFORM_TOOLS: McpTool[] = [
   },
 ];
 
-async function loadRoles(userId: string): Promise<string[]> {
+async function loadRoles(userId: string): Promise<AppRole[]> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data } = await supabaseAdmin.from("user_roles").select("role").eq("user_id", userId);
-  return (data ?? []).map((row: { role: string }) => row.role);
+  return (data ?? []).map((row: { role: AppRole }) => row.role);
 }
 
 async function loadAuthorizedOrganizationIds(key: AuthedKey): Promise<string[]> {
@@ -811,6 +823,7 @@ const TOOL_SCOPES: Record<string, string> = {
   list_credential_metadata: "secrets:read",
   calculate: "mcp:connect",
   list_connections: "connections:read",
+  preview_composio_sync: "connections:read",
   list_models: "models:read",
   inspect_connections: "connections:read",
   list_connection_tools: "connections:read",
@@ -1668,6 +1681,44 @@ export const Route = createFileRoute("/mcp")({
             if (!isExecutable(item))
               throw new Error(`Capability is ${reviewState(item)} and cannot be installed.`);
             result = executionUnavailable("install", item);
+          } else if (name === "preview_composio_sync") {
+            if (key.projectId || key.workspaceId || key.organizationId)
+              throw new Error("Use a personal API key to preview personal Composio accounts.");
+            if (!hasRole(await loadRoles(key.userId), "admin"))
+              throw new Error("Forbidden: admin required");
+            const { listOwnedManagedConnections, listComposioToolkits } =
+              await import("@/lib/managed-connectors.server");
+            const { planComposioSync } = await import("@/lib/composio-sync");
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const [accounts, catalog] = await Promise.all([
+              listOwnedManagedConnections(key.userId),
+              listComposioToolkits(),
+            ]);
+            const saved: Array<{
+              provider: string;
+              provider_account_id: string | null;
+              credential_reference: string | null;
+            }> = [];
+            for (let offset = 0; ; offset += 200) {
+              const { data: page, error } = await supabaseAdmin
+                .from("app_connections")
+                .select("provider,provider_account_id,credential_reference")
+                .eq("user_id", key.userId)
+                .order("id", { ascending: true })
+                .range(offset, offset + 199);
+              if (error) throw new Error("Could not preview saved connectors.");
+              saved.push(...(page ?? []));
+              if ((page?.length ?? 0) < 200) break;
+            }
+            result = textResult({
+              ...planComposioSync(accounts, saved, catalog),
+              toolkit_count: catalog.length,
+              dry_run: true,
+              secrets_exposed: false,
+              apply_url: "https://open-connect.site/connections",
+              next_action:
+                "Run Sync Composio accounts as the authenticated administrator after approval, then assign selected connectors to projects.",
+            });
           } else if (name === "configure_connection") {
             await requireControlWrite(key);
             const provider = normalizeConnectionProvider(args["provider"]);
