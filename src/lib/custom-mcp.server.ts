@@ -1,5 +1,5 @@
 import { fetchMcpTools, withMcpClient } from "./mcp-client.server.ts";
-import { callTwilioTool, twilioTools } from "./twilio.server.ts";
+import { callTwilioTool, twilioFailureResult, twilioTools } from "./twilio.server.ts";
 
 export function connectionAuthHeaders(authType: string, credential: string) {
   if (!credential || authType === "none") return {};
@@ -199,6 +199,7 @@ export async function callCustomMcpTool(
         throw new Error("The provider action failed and its audit record could not be finalized.");
       }
     }
+    if (connection.provider === "twilio") return twilioFailureResult(error);
     throw error;
   }
 

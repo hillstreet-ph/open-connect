@@ -1323,15 +1323,17 @@ export const Route = createFileRoute("/mcp")({
               args["arguments"] && typeof args["arguments"] === "object"
                 ? (args["arguments"] as Record<string, unknown>)
                 : {};
-            result = textResult(
-              await callCustomMcpTool(
-                key.userId,
-                connectionId,
-                toolName,
-                toolArguments,
-                key.projectId ?? undefined,
-              ),
+            const connectionResult = await callCustomMcpTool(
+              key.userId,
+              connectionId,
+              toolName,
+              toolArguments,
+              key.projectId ?? undefined,
             );
+            result = {
+              ...textResult(connectionResult),
+              ...(connectionResult.isError ? { isError: true } : {}),
+            };
           } else if (name === "e2b_health") {
             const { e2bConfig, e2bHealth } = await import("@/lib/e2b.server");
             if (!e2bConfig().configured) throw new Error("E2B is not configured");

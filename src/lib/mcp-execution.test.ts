@@ -16,6 +16,7 @@ const resource = {
 const tables: string[] = [];
 let connectionProvider = "twilio";
 let connectionReadOnly = false;
+let connectionError = false;
 const connectionCalls: unknown[] = [];
 
 mock.module("@/lib/custom-mcp.server", () => ({
@@ -25,7 +26,7 @@ mock.module("@/lib/custom-mcp.server", () => ({
   }),
   callCustomMcpTool: async (...args: unknown[]) => {
     connectionCalls.push(args);
-    return { content: [{ type: "text", text: "{}" }], isError: false };
+    return { content: [{ type: "text", text: "{}" }], isError: connectionError };
   },
 }));
 
@@ -93,6 +94,7 @@ beforeEach(() => {
   resource.verified = true;
   connectionProvider = "twilio";
   connectionReadOnly = false;
+  connectionError = false;
   connectionCalls.length = 0;
 });
 
@@ -254,4 +256,14 @@ test("adding Twilio execution preserves the project requirement for Custom MCP w
     }),
   ).rejects.toThrow("project-scoped");
   expect(connectionCalls).toEqual([]);
+});
+
+test("connection failures propagate as MCP tool errors instead of successful wrappers", async () => {
+  connectionError = true;
+  const response = await call("call_connection_tool", {
+    connection_id: "fixture-connection",
+    tool_name: "fixture-operation",
+  });
+  const { result } = await response.json();
+  expect(result.isError).toBe(true);
 });
