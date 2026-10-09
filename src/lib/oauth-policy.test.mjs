@@ -51,7 +51,7 @@ test("database OAuth allowlist accepts advertised private read scopes", async ()
   const { readFile } = await import("node:fs/promises");
   const migration = await readFile(
     new URL(
-      "../../supabase/migrations/20261008013000_oauth_memory_knowledge_scopes.sql",
+      "../../supabase/migrations/20261009012000_oauth_memory_knowledge_scopes.sql",
       import.meta.url,
     ),
     "utf8",
@@ -75,4 +75,16 @@ test("static discovery advertises only implemented OAuth grants", async () => {
   assert.ok(metadata.scopes_supported.includes("knowledge:read"));
   assert.deepEqual(metadata.token_endpoint_auth_methods_supported, ["none"]);
   assert.equal(metadata.logo_uri, "https://open-connect.site/open-connect-mark.png");
+});
+
+test("static protected-resource metadata advertises private read grants", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const metadata = JSON.parse(
+    await readFile(
+      new URL("../../public/.well-known/oauth-protected-resource", import.meta.url),
+      "utf8",
+    ),
+  );
+  assert.ok(metadata.scopes_supported.includes("memory:read"));
+  assert.ok(metadata.scopes_supported.includes("knowledge:read"));
 });
