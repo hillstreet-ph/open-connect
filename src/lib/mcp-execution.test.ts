@@ -149,6 +149,28 @@ beforeEach(() => {
   keyBoundary = {};
 });
 
+test("control decisions reject non-admins and bounded keys before approval writes", async () => {
+  const args = {
+    approval_id: "00000000-0000-4000-8000-000000000001",
+    decision: "approved",
+    confirm: true,
+  };
+  scopes = ["mcp:connect", "tools:invoke"];
+  roles = ["developer"];
+  await expect(call("decide_control_approval", args)).rejects.toThrow("Admin role");
+  expect(tables).not.toContain("control_approvals");
+  roles = ["admin"];
+  for (const boundary of [
+    { projectId: "project" },
+    { workspaceId: "workspace" },
+    { organizationId: "org" },
+  ]) {
+    keyBoundary = boundary;
+    await expect(call("decide_control_approval", args)).rejects.toThrow("personal API key");
+    expect(tables).not.toContain("control_approvals");
+  }
+});
+
 test("Composio preview performs owned-account reads without import or project writes", async () => {
   scopes = ["mcp:connect", "connections:read"];
   const response = await call("preview_composio_sync");
