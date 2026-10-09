@@ -1,5 +1,3 @@
-import { Buffer } from "node:buffer";
-
 class TwilioRequestError extends Error {}
 
 export function twilioFailureResult(error: unknown) {
@@ -178,7 +176,7 @@ export async function callTwilioTool(
   name: string,
   args: Record<string, unknown>,
   context: { scopes: string[]; resolveCredential: () => Promise<string> },
-  request: typeof fetch = globalThis.fetch,
+  request: typeof fetch = (input, init) => globalThis.fetch(input, init),
 ) {
   if (!twilioTools(context.scopes).some((tool) => tool.name === name)) {
     throw new TwilioRequestError("Twilio tool is not granted to this connection.");
@@ -216,20 +214,22 @@ export async function callTwilioTool(
   url.search = query.toString();
   let response: Response;
   try {
-    response = await request(url, {
+    response = await request(url.href, {
       method,
       headers: {
         accept: "application/json",
-        authorization: `Basic ${Buffer.from(`${bundle.keySid}:${bundle.secret}`).toString("base64")}`,
+        authorization: `Basic ${btoa(`${bundle.keySid}:${bundle.secret}`)}`,
         ...(method === "POST" ? { "content-type": "application/x-www-form-urlencoded" } : {}),
       },
       ...(method === "POST" ? { body } : {}),
       redirect: "error",
       signal: AbortSignal.timeout(30_000),
     });
-  } catch {
+  } catch (error) {
+    const kind =
+      error instanceof Error && /^[A-Za-z]{1,30}$/.test(error.name) ? error.name : "NetworkError";
     throw new TwilioRequestError(
-      "Twilio request failed or timed out; verify provider state before retrying a write.",
+      `Twilio request failed (${kind}); verify provider state before retrying a write.`,
     );
   }
   if (!response.ok) {
