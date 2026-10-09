@@ -1,5 +1,25 @@
 import { Buffer } from "node:buffer";
 
+class TwilioRequestError extends Error {}
+
+export function twilioFailureResult(error: unknown) {
+  return {
+    content: [
+      {
+        type: "text" as const,
+        text: JSON.stringify({
+          provider: "twilio",
+          error:
+            error instanceof TwilioRequestError
+              ? error.message
+              : "Twilio connector encountered an internal error.",
+        }),
+      },
+    ],
+    isError: true,
+  };
+}
+
 type Tool = {
   name: string;
   description: string;
@@ -64,13 +84,14 @@ export function twilioTools(scopes: string[]): Tool[] {
 export function twilioResourceScope(path: string, method: string) {
   const action = method === "GET" ? "read" : "write";
   if (path === ".json" || path === "/Balance.json") {
-    if (method !== "GET") throw new Error("Account mutation is not supported by this connector.");
+    if (method !== "GET")
+      throw new TwilioRequestError("Account mutation is not supported by this connector.");
     return "account:read";
   }
   const match = path.match(
     /^\/(IncomingPhoneNumbers|Messages|Calls)(?:\/((?:PN|SM|MM|CA)[a-f0-9]{32}))?\.json$/i,
   );
-  if (!match) throw new Error("Unsupported account-relative Twilio path.");
+  if (!match) throw new TwilioRequestError("Unsupported account-relative Twilio path.");
   const collection = match[1]!;
   const sid = match[2];
   const resources: Record<string, { prefixes: string[]; scope: string }> = {
@@ -80,19 +101,20 @@ export function twilioResourceScope(path: string, method: string) {
   };
   const resource = resources[collection];
   if (!resource || (sid && !resource.prefixes.includes(sid.slice(0, 2)))) {
-    throw new Error("Twilio resource SID does not match its collection.");
+    throw new TwilioRequestError("Twilio resource SID does not match its collection.");
   }
-  if (method === "DELETE" && !sid) throw new Error("DELETE requires a specific Twilio resource.");
+  if (method === "DELETE" && !sid)
+    throw new TwilioRequestError("DELETE requires a specific Twilio resource.");
   return `${resource.scope}:${action}`;
 }
 
 function parameters(value: unknown): URLSearchParams {
   if (value === undefined) return new URLSearchParams();
   if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error("Twilio parameters must be a flat string-valued object.");
+    throw new TwilioRequestError("Twilio parameters must be a flat string-valued object.");
   }
   const entries = Object.entries(value);
-  if (entries.length > 100) throw new Error("Too many Twilio parameters.");
+  if (entries.length > 100) throw new TwilioRequestError("Too many Twilio parameters.");
   const result = new URLSearchParams();
   for (const [key, item] of entries) {
     if (
@@ -100,10 +122,10 @@ function parameters(value: unknown): URLSearchParams {
       typeof item !== "string" ||
       item.length > 5000
     ) {
-      throw new Error("Invalid Twilio parameter.");
+      throw new TwilioRequestError("Invalid Twilio parameter.");
     }
     if (key === "PageSize" && (!/^\d+$/.test(item) || Number(item) < 1 || Number(item) > 1000)) {
-      throw new Error("Twilio PageSize must be between 1 and 1000.");
+      throw new TwilioRequestError("Twilio PageSize must be between 1 and 1000.");
     }
     result.set(key, item);
   }
@@ -115,7 +137,7 @@ function parseBundle(value: string) {
   try {
     bundle = JSON.parse(value) as Record<string, unknown>;
   } catch {
-    throw new Error("Twilio requires a JSON account/API-key credential bundle.");
+    throw new TwilioRequestError("Twilio requires a JSON account/API-key credential bundle.");
   }
   if (
     !bundle ||
@@ -127,7 +149,7 @@ function parseBundle(value: string) {
     typeof bundle.api_key_secret !== "string" ||
     !/^[A-Za-z0-9_-]{16,256}$/.test(bundle.api_key_secret)
   ) {
-    throw new Error("Twilio credential bundle is incomplete or invalid.");
+    throw new TwilioRequestError("Twilio credential bundle is incomplete or invalid.");
   }
   return {
     accountSid: bundle.account_sid,
@@ -159,7 +181,7 @@ export async function callTwilioTool(
   request: typeof fetch = globalThis.fetch,
 ) {
   if (!twilioTools(context.scopes).some((tool) => tool.name === name)) {
-    throw new Error("Twilio tool is not granted to this connection.");
+    throw new TwilioRequestError("Twilio tool is not granted to this connection.");
   }
   const paths: Record<string, string> = {
     twilio_account: ".json",
@@ -170,21 +192,25 @@ export async function callTwilioTool(
   const isWrite = name === "twilio_request";
   const method = isWrite ? String(args.method ?? "") : "GET";
   if (isWrite && !["POST", "DELETE"].includes(method)) {
-    throw new Error("Twilio writes require POST or DELETE.");
+    throw new TwilioRequestError("Twilio writes require POST or DELETE.");
   }
   const path = isWrite ? String(args.path ?? "") : paths[name]!;
   const scope = twilioResourceScope(path, method);
-  if (!context.scopes.includes(scope)) throw new Error("Twilio resource scope is not granted.");
+  if (!context.scopes.includes(scope))
+    throw new TwilioRequestError("Twilio resource scope is not granted.");
   if (
     (method === "DELETE" || (method === "POST" && path === "/IncomingPhoneNumbers.json")) &&
     args.confirm !== true
   ) {
-    throw new Error("Deleting a resource or purchasing a number requires confirm=true.");
+    throw new TwilioRequestError(
+      "Deleting a resource or purchasing a number requires confirm=true.",
+    );
   }
   const query = parameters(isWrite ? undefined : args.query);
   if (!isWrite && name !== "twilio_account" && !query.has("PageSize")) query.set("PageSize", "50");
   const body = parameters(isWrite ? args.body : undefined);
-  if (method === "DELETE" && body.size) throw new Error("DELETE does not accept a body.");
+  if (method === "DELETE" && body.size)
+    throw new TwilioRequestError("DELETE does not accept a body.");
   const bundle = parseBundle(await context.resolveCredential());
   const url = new URL(`https://api.twilio.com/2010-04-01/Accounts/${bundle.accountSid}${path}`);
   url.search = query.toString();
@@ -202,13 +228,13 @@ export async function callTwilioTool(
       signal: AbortSignal.timeout(30_000),
     });
   } catch {
-    throw new Error(
+    throw new TwilioRequestError(
       "Twilio request failed or timed out; verify provider state before retrying a write.",
     );
   }
   if (!response.ok) {
     const payload = (await response.json().catch(() => ({}))) as { code?: unknown };
-    throw new Error(
+    throw new TwilioRequestError(
       `Twilio returned HTTP ${response.status}${typeof payload.code === "number" ? ` (code ${payload.code})` : ""}.`,
     );
   }
@@ -217,7 +243,7 @@ export async function callTwilioTool(
     try {
       payload = await response.json();
     } catch {
-      throw new Error(
+      throw new TwilioRequestError(
         "Twilio returned an invalid JSON response; verify provider state before retrying a write.",
       );
     }

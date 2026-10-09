@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { callTwilioTool, twilioResourceScope, twilioTools } from "./twilio.server.ts";
+import {
+  callTwilioTool,
+  twilioFailureResult,
+  twilioResourceScope,
+  twilioTools,
+} from "./twilio.server.ts";
 import { assertToolConnectionAccess } from "./custom-mcp.server.ts";
 
 const accountSid = `AC${"a".repeat(32)}`;
@@ -150,6 +155,22 @@ test("provider and network errors cannot echo credentials", async () => {
     }),
     (error: unknown) => error instanceof Error && !error.message.includes(secret),
   );
+});
+
+test("native tool errors are explicit MCP failures and hide unexpected exception contents", async () => {
+  const unexpected = twilioFailureResult(new Error(secret));
+  assert.equal(unexpected.isError, true);
+  assert.ok(!unexpected.content[0]!.text.includes(secret));
+  try {
+    await callTwilioTool("twilio_account", {}, context(["account:read"]), async () =>
+      Response.json({ code: 20003, message: secret }, { status: 401 }),
+    );
+    assert.fail("request should fail");
+  } catch (error) {
+    const failure = twilioFailureResult(error);
+    assert.match(failure.content[0]!.text, /HTTP 401/);
+    assert.ok(!failure.content[0]!.text.includes(secret));
+  }
 });
 
 test("invalid bundles and non-flat parameters never reach Twilio", async () => {
