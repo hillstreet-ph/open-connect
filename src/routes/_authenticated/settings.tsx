@@ -72,9 +72,11 @@ function SettingsPage() {
         userId: user.id,
         email: user.email ?? "",
         displayName:
-          profile?.display_name || (user.user_metadata?.display_name as string | undefined) || "",
+          profile?.display_name ||
+          (user.user_metadata?.["display_name"] as string | undefined) ||
+          "",
         avatarUrl:
-          profile?.avatar_url || (user.user_metadata?.avatar_url as string | undefined) || "",
+          profile?.avatar_url || (user.user_metadata?.["avatar_url"] as string | undefined) || "",
       };
     },
   });
@@ -506,7 +508,7 @@ function SettingsLinkCard({
   return (
     <Link
       to={to}
-      hash={hash}
+      {...(hash ? { hash } : {})}
       className="block rounded-xl border bg-card p-5 shadow-panel transition-colors hover:bg-accent/40"
     >
       <div className="flex items-start gap-3">

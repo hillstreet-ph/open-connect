@@ -1,3 +1,4 @@
+import type { Json } from "@/integrations/supabase/types";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertAutomationRunnable } from "@/lib/automation-readiness";
@@ -14,7 +15,7 @@ export type ActionType = "notify" | "webhook" | "mcp" | "agent" | "pipeline" | "
 
 export const listTasks = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((input?: { projectId?: string; status?: string }) => ({
+  .validator((input?: { projectId?: string | undefined; status?: string }) => ({
     projectId: input?.projectId ?? null,
     status: input?.status ?? null,
   }))
@@ -38,10 +39,10 @@ export const createTask = createServerFn({ method: "POST" })
   .validator(
     (input: {
       title: string;
-      description?: string;
+      description?: string | undefined;
       priority?: TaskPriority;
-      projectId?: string;
-      organizationId?: string;
+      projectId?: string | undefined;
+      organizationId?: string | undefined;
       dueAt?: string;
     }) => ({
       title: (input?.title ?? "").trim(),
@@ -110,11 +111,11 @@ export const createSchedule = createServerFn({ method: "POST" })
   .validator(
     (input: {
       name: string;
-      description?: string;
-      cronExpr?: string;
-      runAt?: string;
+      description?: string | undefined;
+      cronExpr?: string | undefined;
+      runAt?: string | undefined;
       timezone?: string;
-      projectId?: string;
+      projectId?: string | undefined;
       automationId?: string;
     }) => ({
       name: (input?.name ?? "").trim(),
@@ -204,10 +205,10 @@ export const createAutomation = createServerFn({ method: "POST" })
   .validator(
     (input: {
       name: string;
-      description?: string;
+      description?: string | undefined;
       triggerType?: TriggerType;
       actionType?: ActionType;
-      projectId?: string;
+      projectId?: string | undefined;
       config?: Record<string, unknown>;
     }) => ({
       name: (input?.name ?? "").trim(),
@@ -215,7 +216,9 @@ export const createAutomation = createServerFn({ method: "POST" })
       triggerType: (input?.triggerType ?? "manual") as TriggerType,
       actionType: (input?.actionType ?? "notify") as ActionType,
       projectId: input?.projectId || null,
-      config: input?.config ?? {},
+      config: JSON.parse(JSON.stringify(input?.config ?? {})) as {
+        [key: string]: Json | undefined;
+      },
     }),
   )
   .handler(async ({ data, context }) => {
@@ -284,7 +287,7 @@ export const runAutomation = createServerFn({ method: "POST" })
         await resolveUserUpstreams(context.userId),
       );
       const selectedModel = String(
-        (automation.config as Record<string, unknown>)?.model ?? "open-connect/auto",
+        (automation.config as Record<string, unknown>)?.["model"] ?? "open-connect/auto",
       );
       const routes = isAutoFreeModel(selectedModel)
         ? availableRoutes
@@ -314,7 +317,7 @@ export const runAutomation = createServerFn({ method: "POST" })
         plan: {
           action: "model",
           model: String(
-            (automation.config as Record<string, unknown>)?.model ?? "open-connect/auto",
+            (automation.config as Record<string, unknown>)?.["model"] ?? "open-connect/auto",
           ),
         },
         evidence,

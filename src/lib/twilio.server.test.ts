@@ -26,7 +26,7 @@ test("Twilio discovery exposes only granted resource tools", () => {
     ["twilio_messages"],
   );
   assert.deepEqual(twilioTools([]), []);
-  assert.equal(twilioTools(["phone-numbers:write"])[0]?.annotations.readOnlyHint, false);
+  assert.equal(twilioTools(["phone-numbers:write"])[0]?.annotations["readOnlyHint"], false);
 });
 
 test("uses fixed Twilio origin and the resolved account; encodes filters safely", async () => {

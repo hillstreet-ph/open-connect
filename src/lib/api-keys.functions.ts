@@ -29,9 +29,9 @@ export const createApiKey = createServerFn({ method: "POST" })
       name?: string;
       profile?: AccessProfile;
       scopes?: string[];
-      organizationId?: string;
+      organizationId?: string | undefined;
       workspaceId?: string;
-      projectId?: string;
+      projectId?: string | undefined;
     }) => {
       const profile = isAccessProfile(input?.profile ?? "") ? input.profile! : "developer";
       return {

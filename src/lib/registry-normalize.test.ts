@@ -86,7 +86,7 @@ test("agent team has one supervisor, open names, and no direct self delegation",
 });
 
 test("registry sources treat an absent enabled flag as enabled", () => {
-  assert.equal(isSourceEnabled({ enabled: undefined }), true);
+  assert.equal(isSourceEnabled({}), true);
   assert.equal(isSourceEnabled({}), true);
   assert.equal(isSourceEnabled({ enabled: false }), false);
   assert.equal(isSourceEnabled({ enabled: true }), true);

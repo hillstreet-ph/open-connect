@@ -152,13 +152,13 @@ test("managed toolkit authorization is created on demand and reused by the conne
       callbackUrl: "https://open-connect.site/connections",
     });
     assert.equal(link.connected_account_id, "ca_dynamic");
-    assert.equal(calls[0].method, "GET");
-    assert.equal(calls[1].method, "POST");
-    assert.deepEqual(calls[1].body, {
+    assert.equal(calls[0]!.method, "GET");
+    assert.equal(calls[1]!.method, "POST");
+    assert.deepEqual(calls[1]!.body, {
       toolkit: { slug: "dynamic_app" },
       auth_config: { type: "use_composio_managed_auth" },
     });
-    assert.equal((calls[2].body as { auth_config_id?: string }).auth_config_id, "ac_dynamic");
+    assert.equal((calls[2]!.body as { auth_config_id?: string }).auth_config_id, "ac_dynamic");
   } finally {
     globalThis.fetch = originalFetch;
     if (originalKey === undefined) delete process.env["COMPOSIO_API_KEY"];
@@ -205,8 +205,8 @@ test("Composio toolkit discovery follows cursors and exposes supported auth meth
       toolkits.map(({ slug }) => slug),
       ["sample_oauth", "sample_key"],
     );
-    assert.deepEqual(toolkits[0].authMethods, ["OAUTH2", "API_KEY"]);
-    assert.equal(toolkits[0].category, "Productivity");
+    assert.deepEqual(toolkits[0]!.authMethods, ["OAUTH2", "API_KEY"]);
+    assert.equal(toolkits[0]!.category, "Productivity");
     assert.equal(calls, 2);
   } finally {
     globalThis.fetch = originalFetch;

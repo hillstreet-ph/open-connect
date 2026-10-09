@@ -6,6 +6,8 @@ test("cron parser validates five fields and supported syntax", () => {
   assert.deepEqual(parseCron("*/15 9-17 * * 1-5"), ["*/15", "9-17", "*", "*", "1-5"]);
   assert.throws(() => parseCron("every hour"), /five-field/);
   assert.throws(() => parseCron("99 * * * *"), /Cron fields/);
+  assert.throws(() => parseCron(",1 * * * *"), /Cron fields/);
+  assert.throws(() => parseCron("/5 * * * *"), /Cron fields/);
 });
 
 test("cron matching supports timezone-aware schedules", () => {

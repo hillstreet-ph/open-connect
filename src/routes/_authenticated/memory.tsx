@@ -242,7 +242,8 @@ export function MemoryKnowledgePage({
       });
     },
     onSuccess: (result) => {
-      if (result.duplicate) toast.info("This source link is already in Knowledge");
+      if ("duplicate" in result && result.duplicate)
+        toast.info("This source link is already in Knowledge");
       else toast.success("Knowledge added");
       setKnowledgeTitle("");
       setKnowledgeContent("");

@@ -1,3 +1,4 @@
+import { credentialMetadata } from "@/lib/secrets.functions";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ProjectResourceRow } from "@/lib/resource-categories";
 import { createServerFn } from "@tanstack/react-start";
@@ -258,7 +259,10 @@ export const listCatalogForProject = createServerFn({ method: "GET" })
       .select("id, name, slug, resource_type, description, version, verified")
       .eq("owner_id", context.userId);
     if (data.resourceType) {
-      installedQuery = installedQuery.eq("resources.resource_type", data.resourceType);
+      installedQuery = installedQuery.eq(
+        "resources.resource_type",
+        data.resourceType as import("@/integrations/supabase/types").Database["public"]["Enums"]["resource_type"],
+      );
       ownedQuery = ownedQuery.eq("resource_type", data.resourceType as never);
     }
     const [installed, owned] = await Promise.all([installedQuery, ownedQuery]);
@@ -289,7 +293,7 @@ export const listMyCredentialMetadata = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase.rpc("list_credential_secrets");
     if (error) throw new Error(error.message);
-    return Array.isArray(data) ? data : [];
+    return Array.isArray(data) ? data.map(credentialMetadata) : [];
   });
 
 export const listProjectCredentials = createServerFn({ method: "GET" })
@@ -300,7 +304,29 @@ export const listProjectCredentials = createServerFn({ method: "GET" })
       p_project_id: data.projectId,
     });
     if (error) throw new Error(error.message);
-    return Array.isArray(rows) ? rows : [];
+    return Array.isArray(rows)
+      ? rows.map((value) => {
+          if (!value || typeof value !== "object" || Array.isArray(value))
+            throw new Error("Invalid project credential metadata");
+          const row = value as Record<string, unknown>;
+          if (typeof row["id"] !== "string" || typeof row["credential_id"] !== "string")
+            throw new Error("Project credential identity is missing");
+          const strings = (key: string) =>
+            Array.isArray(row[key])
+              ? row[key].filter((item): item is string => typeof item === "string")
+              : [];
+          return {
+            id: row["id"],
+            credential_id: row["credential_id"],
+            name: typeof row["name"] === "string" ? row["name"] : "Credential",
+            secret_type: typeof row["secret_type"] === "string" ? row["secret_type"] : "other",
+            scopes: strings("scopes"),
+            folder_names: strings("folder_names"),
+            shared_via_folder: row["shared_via_folder"] === true,
+            can_remove: row["can_remove"] === true,
+          };
+        })
+      : [];
   });
 
 export const addCredentialToProject = createServerFn({ method: "POST" })

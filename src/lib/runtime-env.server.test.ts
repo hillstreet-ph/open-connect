@@ -79,7 +79,7 @@ describe("runtime environment hydration", () => {
       {},
       () => {
         events.push("application");
-        assert.equal(target.RUNTIME_READY, "yes");
+        assert.equal(target["RUNTIME_READY"], "yes");
         return "loaded";
       },
       async () => {

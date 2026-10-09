@@ -12,7 +12,7 @@ export function AddToLibraryButton({
   resourceType,
 }: {
   resourceId: string;
-  collectionId?: string;
+  collectionId?: string | undefined;
   resourceType?: string;
   alreadyInLibrary?: boolean;
 }) {

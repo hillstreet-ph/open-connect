@@ -27,7 +27,7 @@ function widget() {
   const grid = element(),
     access = element();
   let receive: (event: { data: { method: string; params: unknown } }) => void = () => {};
-  vm.runInNewContext(COMMAND_CENTER_HTML.match(/<script>([\s\S]*?)<\/script>/i)![1], {
+  vm.runInNewContext(COMMAND_CENTER_HTML.match(/<script>([\s\S]*?)<\/script>/i)![1]!, {
     document: {
       getElementById: (id: string) => (id === "grid" ? grid : access),
       createElement: element,
@@ -59,9 +59,9 @@ test("renders JSON text tool results including zero counts without HTML injectio
       },
     ],
   });
-  assert.equal(w.grid.children[0].children[1].textContent, "<img onerror=alert(1)>");
-  assert.equal(w.grid.children[1].children[1].textContent, "86");
-  assert.equal(w.grid.children[2].children[1].textContent, "0");
+  assert.equal(w.grid.children[0]!.children[1]!.textContent, "<img onerror=alert(1)>");
+  assert.equal(w.grid.children[1]!.children[1]!.textContent, "86");
+  assert.equal(w.grid.children[2]!.children[1]!.textContent, "0");
   assert.equal(w.access.textContent, "Limited access");
   w.send({ content: [{ type: "text", text: "not JSON" }] });
   assert.equal(w.grid.children.length, 4);
@@ -70,5 +70,5 @@ test("renders structured status and reports the actual control scope", () => {
   const w = widget();
   w.send({ structuredContent: { planes: {}, scopes: ["control:write"] } });
   assert.equal(w.access.textContent, "Control write granted");
-  assert.equal(w.grid.children[2].children[1].textContent, "Unavailable");
+  assert.equal(w.grid.children[2]!.children[1]!.textContent, "Unavailable");
 });

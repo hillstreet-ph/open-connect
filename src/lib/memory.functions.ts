@@ -63,7 +63,7 @@ function canonicalizeSourceUrl(value?: string) {
 
 export const listMemories = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((input?: { projectId?: string; memoryType?: string }) => ({
+  .validator((input?: { projectId?: string | undefined; memoryType?: string }) => ({
     projectId: input?.projectId || null,
     memoryType: input?.memoryType || null,
   }))
@@ -92,9 +92,9 @@ export const createMemory = createServerFn({ method: "POST" })
       content: string;
       memoryType: MemoryType;
       importance?: number;
-      projectId?: string;
+      projectId?: string | undefined;
       tags?: string;
-      file?: UploadedFile;
+      file?: UploadedFile | undefined;
     }) => ({
       title: (input?.title ?? "").trim(),
       content: (input?.content ?? "").trim(),
@@ -153,7 +153,9 @@ export const deleteMemory = createServerFn({ method: "POST" })
 
 export const removeDuplicateMemories = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input?: { projectId?: string }) => ({ projectId: input?.projectId || null }))
+  .validator((input?: { projectId?: string | undefined }) => ({
+    projectId: input?.projectId || null,
+  }))
   .handler(async ({ data, context }) => {
     let query = context.supabase
       .from("memory_records")
@@ -175,7 +177,7 @@ export const removeDuplicateMemories = createServerFn({ method: "POST" })
 
 export const listKnowledge = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((input?: { projectId?: string; query?: string }) => ({
+  .validator((input?: { projectId?: string | undefined; query?: string | undefined }) => ({
     projectId: input?.projectId || null,
     query: (input?.query ?? "").trim().slice(0, 200),
   }))
@@ -206,10 +208,10 @@ export const createKnowledge = createServerFn({ method: "POST" })
       title: string;
       content: string;
       sourceType: KnowledgeSourceType;
-      sourceUrl?: string;
-      projectId?: string;
+      sourceUrl?: string | undefined;
+      projectId?: string | undefined;
       tags?: string;
-      file?: UploadedFile;
+      file?: UploadedFile | undefined;
     }) => ({
       title: (input?.title ?? "").trim(),
       content: (input?.content ?? "").trim(),
@@ -275,7 +277,9 @@ export const archiveKnowledge = createServerFn({ method: "POST" })
 
 export const removeDuplicateKnowledge = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input?: { projectId?: string }) => ({ projectId: input?.projectId || null }))
+  .validator((input?: { projectId?: string | undefined }) => ({
+    projectId: input?.projectId || null,
+  }))
   .handler(async ({ data, context }) => {
     let query = context.supabase
       .from("knowledge_items")
