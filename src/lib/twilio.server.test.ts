@@ -40,7 +40,7 @@ test("uses fixed Twilio origin and the resolved account; encodes filters safely"
       assert.equal(url.pathname, `/2010-04-01/Accounts/${accountSid}/Messages.json`);
       assert.equal(url.searchParams.get("To"), "+13513007502");
       assert.equal(url.searchParams.get("PageToken"), "a&b");
-      assert.equal(init?.redirect, "error");
+      assert.equal(init?.redirect, "manual");
       assert.equal(
         new Headers(init?.headers).get("authorization"),
         `Basic ${Buffer.from(`${keySid}:${secret}`).toString("base64")}`,
@@ -67,6 +67,26 @@ test("default edge fetch keeps its required global receiver and uses a string UR
     assert.equal(resultData(response).status, 200);
   } finally {
     globalThis.fetch = original;
+  }
+});
+
+test("requests remain compatible when the edge runtime omits AbortSignal.timeout", async () => {
+  const descriptor = Object.getOwnPropertyDescriptor(AbortSignal, "timeout")!;
+  Object.defineProperty(AbortSignal, "timeout", { ...descriptor, value: undefined });
+  try {
+    const result = await callTwilioTool(
+      "twilio_account",
+      {},
+      context(["account:read"]),
+      async (_input, init) => {
+        assert.ok(init?.signal instanceof AbortSignal);
+        assert.equal(init.signal.aborted, false);
+        return Response.json({ sid: accountSid });
+      },
+    );
+    assert.equal(resultData(result).status, 200);
+  } finally {
+    Object.defineProperty(AbortSignal, "timeout", descriptor);
   }
 });
 

@@ -213,6 +213,8 @@ export async function callTwilioTool(
   const url = new URL(`https://api.twilio.com/2010-04-01/Accounts/${bundle.accountSid}${path}`);
   url.search = query.toString();
   let response: Response;
+  const controller = new AbortController();
+  const deadline = setTimeout(() => controller.abort(), 30_000);
   try {
     response = await request(url.href, {
       method,
@@ -222,43 +224,60 @@ export async function callTwilioTool(
         ...(method === "POST" ? { "content-type": "application/x-www-form-urlencoded" } : {}),
       },
       ...(method === "POST" ? { body } : {}),
-      redirect: "error",
-      signal: AbortSignal.timeout(30_000),
+      redirect: "manual",
+      signal: controller.signal,
     });
   } catch (error) {
+    clearTimeout(deadline);
     const kind =
       error instanceof Error && /^[A-Za-z]{1,30}$/.test(error.name) ? error.name : "NetworkError";
+    const message = error instanceof Error ? error.message : "";
+    const reason = /AbortSignal|signal/i.test(message)
+      ? "signal unavailable"
+      : /Illegal invocation|Illegal receiver/i.test(message)
+        ? "invalid fetch receiver"
+        : /not permitted|denied|disallowed/i.test(message)
+          ? "outbound access denied"
+          : /redirect/i.test(message)
+            ? "redirect rejected"
+            : /fetch failed|Failed to fetch/i.test(message)
+              ? "network fetch failed"
+              : "request initialization failed";
     throw new TwilioRequestError(
-      `Twilio request failed (${kind}); verify provider state before retrying a write.`,
+      `Twilio request failed (${kind}: ${reason}); verify provider state before retrying a write.`,
     );
   }
-  if (!response.ok) {
-    const payload = (await response.json().catch(() => ({}))) as { code?: unknown };
-    throw new TwilioRequestError(
-      `Twilio returned HTTP ${response.status}${typeof payload.code === "number" ? ` (code ${payload.code})` : ""}.`,
-    );
-  }
-  let payload: unknown = null;
-  if (response.status !== 204) {
-    try {
-      payload = await response.json();
-    } catch {
+  try {
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => ({}))) as { code?: unknown };
       throw new TwilioRequestError(
-        "Twilio returned an invalid JSON response; verify provider state before retrying a write.",
+        `Twilio returned HTTP ${response.status}${typeof payload.code === "number" ? ` (code ${payload.code})` : ""}.`,
       );
     }
+    let payload: unknown = null;
+    if (response.status !== 204) {
+      try {
+        payload = await response.json();
+      } catch {
+        throw new TwilioRequestError(
+          "Twilio returned an invalid JSON response; verify provider state before retrying a write.",
+        );
+      }
+    }
+    return {
+      content: [
+        {
+          type: "text" as const,
+          text: JSON.stringify({
+            provider: "twilio",
+            status: response.status,
+            data: redactProviderPayload(payload, bundle.secret),
+          }),
+        },
+      ],
+      isError: false,
+    };
+  } finally {
+    clearTimeout(deadline);
   }
-  return {
-    content: [
-      {
-        type: "text" as const,
-        text: JSON.stringify({
-          provider: "twilio",
-          status: response.status,
-          data: redactProviderPayload(payload, bundle.secret),
-        }),
-      },
-    ],
-    isError: false,
-  };
 }
