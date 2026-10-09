@@ -902,10 +902,12 @@ export const Route = createFileRoute("/mcp")({
           !hasScope(key, "mcp:connect") &&
           !hasScope(key, "models:read") &&
           !hasScope(key, "models:invoke") &&
-          !hasScope(key, "resources:read")
+          !hasScope(key, "resources:read") &&
+          !hasScope(key, "memory:read") &&
+          !hasScope(key, "knowledge:read")
         ) {
           return gatewayError(
-            "Key is missing mcp, models, or resources scope.",
+            "Key is missing an MCP read or model scope.",
             403,
             "insufficient_scope",
           );

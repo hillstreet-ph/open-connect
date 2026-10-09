@@ -42,6 +42,26 @@ test("preserves requested scopes without adding write permissions", () => {
   assert.equal(validateOAuthRequest(req).scope, "mcp:connect resources:read connections:read");
 });
 
+test("allows private memory and knowledge reads when explicitly requested", () => {
+  const scope = "mcp:connect memory:read knowledge:read";
+  assert.equal(validateOAuthRequest({ ...req, scope }).scope, scope);
+});
+
+test("database OAuth allowlist accepts advertised private read scopes", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const migration = await readFile(
+    new URL(
+      "../../supabase/migrations/20261009012000_oauth_memory_knowledge_scopes.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.match(migration, /'memory:read'/);
+  assert.match(migration, /'knowledge:read'/);
+  assert.match(migration, /TO authenticated/);
+  assert.doesNotMatch(migration, /TO anon\s*;/);
+});
+
 test("static discovery advertises only implemented OAuth grants", async () => {
   const { readFile } = await import("node:fs/promises");
   const metadata = JSON.parse(
@@ -51,6 +71,20 @@ test("static discovery advertises only implemented OAuth grants", async () => {
     ),
   );
   assert.deepEqual(metadata.grant_types_supported, ["authorization_code"]);
+  assert.ok(metadata.scopes_supported.includes("memory:read"));
+  assert.ok(metadata.scopes_supported.includes("knowledge:read"));
   assert.deepEqual(metadata.token_endpoint_auth_methods_supported, ["none"]);
   assert.equal(metadata.logo_uri, "https://open-connect.site/open-connect-mark.png");
+});
+
+test("static protected-resource metadata advertises private read grants", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const metadata = JSON.parse(
+    await readFile(
+      new URL("../../public/.well-known/oauth-protected-resource", import.meta.url),
+      "utf8",
+    ),
+  );
+  assert.ok(metadata.scopes_supported.includes("memory:read"));
+  assert.ok(metadata.scopes_supported.includes("knowledge:read"));
 });

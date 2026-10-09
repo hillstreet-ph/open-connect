@@ -73,6 +73,35 @@ mock.module("@/integrations/supabase/client.server", () => ({
             eq: async () => ({ data: roles.map((role) => ({ role })) }),
           }),
         };
+      if (table === "memory_records" || table === "knowledge_items") {
+        const query = {
+          select() {
+            return this;
+          },
+          eq() {
+            return this;
+          },
+          order() {
+            return this;
+          },
+          limit() {
+            return this;
+          },
+          is() {
+            return this;
+          },
+          neq() {
+            return this;
+          },
+          then(
+            onfulfilled: (value: { data: unknown[]; error: null }) => unknown,
+            onrejected?: (reason: unknown) => unknown,
+          ) {
+            return Promise.resolve({ data: [], error: null }).then(onfulfilled, onrejected);
+          },
+        };
+        return query;
+      }
       if (table === "app_connections")
         return {
           select: () => ({
@@ -260,6 +289,24 @@ test("read tokens discover write scope requirements without gaining execution ri
   const denied = await call("call_connection_tool", {});
   expect(denied.status).toBe(403);
   expect(tables).not.toContain("app_connections");
+});
+
+test("private read grants pass the MCP entry gate without mcp:connect", async () => {
+  for (const [scope, tool, table] of [
+    ["memory:read", "list_my_memory", "memory_records"],
+    ["knowledge:read", "list_my_knowledge", "knowledge_items"],
+  ] as const) {
+    scopes = [scope];
+    const response = await call(tool);
+    expect(response.status).toBe(200);
+    const { result } = await response.json();
+    expect(JSON.parse(result.content[0].text)).toMatchObject({
+      personal: [],
+      project: [],
+      user_owned_only: true,
+    });
+    expect(tables).toContain(table);
+  }
 });
 
 test("native Twilio writes require admin role and an invoke scope before provider execution", async () => {
