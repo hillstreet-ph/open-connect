@@ -51,6 +51,25 @@ test("uses fixed Twilio origin and the resolved account; encodes filters safely"
   assert.deepEqual(resultData(result).data, { messages: [], next_page_uri: null });
 });
 
+test("default edge fetch keeps its required global receiver and uses a string URL", async () => {
+  const original = globalThis.fetch;
+  globalThis.fetch = async function (this: typeof globalThis, input, init) {
+    assert.equal(this, globalThis);
+    assert.equal(typeof input, "string");
+    assert.equal(
+      new Headers(init?.headers).get("authorization"),
+      `Basic ${btoa(`${keySid}:${secret}`)}`,
+    );
+    return Response.json({ sid: accountSid });
+  };
+  try {
+    const response = await callTwilioTool("twilio_account", {}, context(["account:read"]));
+    assert.equal(resultData(response).status, 200);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
 test("removes account auth tokens and nested reusable secrets from provider output", async () => {
   const result = await callTwilioTool("twilio_account", {}, context(["account:read"]), async () =>
     Response.json({
