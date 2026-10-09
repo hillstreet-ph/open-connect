@@ -196,7 +196,7 @@ export async function callCustomMcpTool(
         })
         .eq("id", auditId);
       if (auditError) {
-        throw new Error("The provider action failed and its audit record could not be finalized.");
+        throw new Error("The provider action failed and its audit record could not be finalized.", { cause: auditError });
       }
     }
     if (connection.provider === "twilio") return twilioFailureResult(error);

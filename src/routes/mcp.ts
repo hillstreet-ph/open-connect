@@ -926,7 +926,7 @@ export const Route = createFileRoute("/mcp")({
           return gatewayError("JSON-RPC method required.", 400, "invalid_request");
         }
 
-        let result: unknown = { ok: true };
+        let result: unknown;
 
         if (body.method === "initialize") {
           result = {
@@ -1202,7 +1202,7 @@ export const Route = createFileRoute("/mcp")({
             if (key.projectId && requestedProject && requestedProject !== key.projectId) {
               throw new Error("Key is restricted to a different project.");
             }
-            let rows: Array<Record<string, unknown>> = [];
+            let rows: Array<Record<string, unknown>>;
             if (requestedProject) {
               await assertProjectAccess(key, requestedProject);
               const { data, error } = await supabaseAdmin
