@@ -14,6 +14,20 @@ const resource = {
   verified: true,
 };
 const tables: string[] = [];
+let connectionProvider = "twilio";
+let connectionReadOnly = false;
+const connectionCalls: unknown[] = [];
+
+mock.module("@/lib/custom-mcp.server", () => ({
+  listCustomMcpTools: async () => ({
+    connection: { id: "fixture-connection", provider: connectionProvider },
+    tools: [{ name: "fixture-operation", annotations: { readOnlyHint: connectionReadOnly } }],
+  }),
+  callCustomMcpTool: async (...args: unknown[]) => {
+    connectionCalls.push(args);
+    return { content: [{ type: "text", text: "{}" }], isError: false };
+  },
+}));
 
 mock.module("@tanstack/react-router", () => ({
   createFileRoute: () => (options: { server: { handlers: { POST: typeof post } } }) => {
@@ -77,6 +91,9 @@ beforeEach(() => {
   scopes = ["mcp:connect", "control:write"];
   tables.length = 0;
   resource.verified = true;
+  connectionProvider = "twilio";
+  connectionReadOnly = false;
+  connectionCalls.length = 0;
 });
 
 function call(name: string, args: Record<string, unknown> = {}) {
@@ -194,4 +211,47 @@ test("read tokens discover write scope requirements without gaining execution ri
   const denied = await call("call_connection_tool", {});
   expect(denied.status).toBe(403);
   expect(tables).not.toContain("app_connections");
+});
+
+test("native Twilio writes require admin role and an invoke scope before provider execution", async () => {
+  scopes = ["mcp:connect", "connections:invoke"];
+  roles = ["developer"];
+  const args = { connection_id: "fixture-connection", tool_name: "fixture-operation" };
+  await expect(call("call_connection_tool", args)).rejects.toThrow("Admin role");
+  expect(connectionCalls).toEqual([]);
+  roles = ["admin"];
+  scopes = ["mcp:connect", "connections:read"];
+  expect((await call("call_connection_tool", args)).status).toBe(403);
+  expect(connectionCalls).toEqual([]);
+  roles = ["owner"];
+  scopes = ["mcp:connect", "connections:invoke"];
+  expect((await call("call_connection_tool", args)).status).toBe(200);
+  expect(connectionCalls).toHaveLength(1);
+});
+
+test("Twilio read tools work for scoped non-admins without granting writes", async () => {
+  scopes = ["mcp:connect", "connections:invoke"];
+  roles = ["user"];
+  connectionReadOnly = true;
+  expect(
+    (
+      await call("call_connection_tool", {
+        connection_id: "fixture-connection",
+        tool_name: "fixture-operation",
+      })
+    ).status,
+  ).toBe(200);
+  expect(connectionCalls).toHaveLength(1);
+});
+
+test("adding Twilio execution preserves the project requirement for Custom MCP writes", async () => {
+  scopes = ["mcp:connect", "connections:invoke"];
+  connectionProvider = "custom_mcp";
+  await expect(
+    call("call_connection_tool", {
+      connection_id: "fixture-connection",
+      tool_name: "fixture-operation",
+    }),
+  ).rejects.toThrow("project-scoped");
+  expect(connectionCalls).toEqual([]);
 });
