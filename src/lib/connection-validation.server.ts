@@ -1,7 +1,7 @@
 import type { normalizeConnectionSetup } from "./connection-setup";
 
 type Setup = ReturnType<typeof normalizeConnectionSetup>;
-type Validation = { verified: boolean; accountId?: string; detail: string };
+type Validation = { verified: boolean; accountId?: string | undefined; detail: string };
 
 const DEFAULT_BASES: Record<string, string> = {
   cloudflare: "https://api.cloudflare.com/client/v4",

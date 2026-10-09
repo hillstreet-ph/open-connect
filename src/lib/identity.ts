@@ -46,8 +46,8 @@ export function highestOrgRole(roles: OrgRole[]): OrgRole {
   return roles.reduce((best, r) => (ORG_ROLE_RANK[r] > ORG_ROLE_RANK[best] ? r : best), roles[0]!);
 }
 
-export function highestProjectRole(roles: ProjectRole[]): ProjectRole {
-  if (!roles.length) return "viewer";
+export function highestProjectRole(roles: ProjectRole[]): ProjectRole | null {
+  if (!roles.length) return null;
   return roles.reduce(
     (best, r) => (PROJECT_ROLE_RANK[r] > PROJECT_ROLE_RANK[best] ? r : best),
     roles[0]!,

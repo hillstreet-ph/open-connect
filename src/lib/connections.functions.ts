@@ -336,7 +336,7 @@ export const listAppConnections = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("app_connections")
       .select(
-        "id, provider, display_name, status, scopes, provider_account_id, credential_reference, last_used_at, created_at",
+        "id, provider, display_name, status, scopes, provider_account_id, credential_reference, metadata, last_used_at, created_at",
       )
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
@@ -381,7 +381,7 @@ export const listAppConnections = createServerFn({ method: "GET" })
         }),
       );
     }
-    return connections.map(({ credential_reference, ...connection }) => {
+    return connections.map(({ credential_reference, metadata, ...connection }) => {
       const isModelGateway = AI_GATEWAY_PROVIDERS.some(
         (provider) => provider.id === connection.provider,
       );
@@ -392,6 +392,16 @@ export const listAppConnections = createServerFn({ method: "GET" })
       );
       return {
         ...connection,
+        metadata:
+          connection.provider === "custom_mcp" &&
+          metadata &&
+          typeof metadata === "object" &&
+          !Array.isArray(metadata)
+            ? {
+                endpoint_url:
+                  typeof metadata["endpoint_url"] === "string" ? metadata["endpoint_url"] : "",
+              }
+            : {},
         ...(isModelGateway
           ? {
               gateway_ready: connection.status === "connected" && hasGatewayReference,
@@ -736,7 +746,7 @@ export const configureAppConnection = createServerFn({ method: "POST" })
       (providerId === "custom_mcp"
         ? {
             provider: "custom_mcp",
-            display_name: data.display_name.trim() || "Custom MCP server",
+            display_name: (data.display_name ?? "").trim() || "Custom MCP server",
             scopes: [] as const,
             oauth: false,
           }

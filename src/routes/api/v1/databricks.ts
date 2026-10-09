@@ -14,7 +14,7 @@ function json(body: unknown, status = 200) {
 }
 
 function authorized(request: Request) {
-  const expected = process.env.DATABRICKS_SYNC_SECRET?.trim() ?? "";
+  const expected = process.env["DATABRICKS_SYNC_SECRET"]?.trim() ?? "";
   const provided = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? "";
   if (!expected || expected.length !== provided.length) return false;
   return timingSafeEqual(Buffer.from(expected), Buffer.from(provided));

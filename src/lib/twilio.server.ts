@@ -140,19 +140,19 @@ function parseBundle(value: string) {
   if (
     !bundle ||
     typeof bundle !== "object" ||
-    typeof bundle.account_sid !== "string" ||
-    !/^AC[a-f0-9]{32}$/i.test(bundle.account_sid) ||
-    typeof bundle.api_key_sid !== "string" ||
-    !/^SK[a-f0-9]{32}$/i.test(bundle.api_key_sid) ||
-    typeof bundle.api_key_secret !== "string" ||
-    !/^[A-Za-z0-9_-]{16,256}$/.test(bundle.api_key_secret)
+    typeof bundle["account_sid"] !== "string" ||
+    !/^AC[a-f0-9]{32}$/i.test(bundle["account_sid"]) ||
+    typeof bundle["api_key_sid"] !== "string" ||
+    !/^SK[a-f0-9]{32}$/i.test(bundle["api_key_sid"]) ||
+    typeof bundle["api_key_secret"] !== "string" ||
+    !/^[A-Za-z0-9_-]{16,256}$/.test(bundle["api_key_secret"])
   ) {
     throw new TwilioRequestError("Twilio credential bundle is incomplete or invalid.");
   }
   return {
-    accountSid: bundle.account_sid,
-    keySid: bundle.api_key_sid,
-    secret: bundle.api_key_secret,
+    accountSid: bundle["account_sid"],
+    keySid: bundle["api_key_sid"],
+    secret: bundle["api_key_secret"],
   };
 }
 
@@ -188,25 +188,25 @@ export async function callTwilioTool(
     twilio_calls: "/Calls.json",
   };
   const isWrite = name === "twilio_request";
-  const method = isWrite ? String(args.method ?? "") : "GET";
+  const method = isWrite ? String(args["method"] ?? "") : "GET";
   if (isWrite && !["POST", "DELETE"].includes(method)) {
     throw new TwilioRequestError("Twilio writes require POST or DELETE.");
   }
-  const path = isWrite ? String(args.path ?? "") : paths[name]!;
+  const path = isWrite ? String(args["path"] ?? "") : paths[name]!;
   const scope = twilioResourceScope(path, method);
   if (!context.scopes.includes(scope))
     throw new TwilioRequestError("Twilio resource scope is not granted.");
   if (
     (method === "DELETE" || (method === "POST" && path === "/IncomingPhoneNumbers.json")) &&
-    args.confirm !== true
+    args["confirm"] !== true
   ) {
     throw new TwilioRequestError(
       "Deleting a resource or purchasing a number requires confirm=true.",
     );
   }
-  const query = parameters(isWrite ? undefined : args.query);
+  const query = parameters(isWrite ? undefined : args["query"]);
   if (!isWrite && name !== "twilio_account" && !query.has("PageSize")) query.set("PageSize", "50");
-  const body = parameters(isWrite ? args.body : undefined);
+  const body = parameters(isWrite ? args["body"] : undefined);
   if (method === "DELETE" && body.size)
     throw new TwilioRequestError("DELETE does not accept a body.");
   const bundle = parseBundle(await context.resolveCredential());

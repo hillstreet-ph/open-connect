@@ -41,7 +41,7 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+function ErrorComponent({ error, reset }: { error: unknown; reset: () => void }) {
   console.error("[Open-Connect] route error", error);
   const router = useRouter();
   useEffect(() => {
@@ -49,7 +49,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   }, [error]);
 
   const detail =
-    error?.message && error.message !== "HTTPError"
+    error instanceof Error && error.message && error.message !== "HTTPError"
       ? error.message
       : "A temporary client error occurred. Refresh usually fixes it after a new deploy.";
 

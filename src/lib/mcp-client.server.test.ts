@@ -56,7 +56,7 @@ for (const stream of [false, true]) {
       f.send,
     );
     assert.deepEqual(
-      tools.map((t) => t.name),
+      tools.map((t) => t["name"]),
       ["first", "second"],
     );
     assert.deepEqual(f.methods, [

@@ -958,7 +958,7 @@ export const Route = createFileRoute("/mcp")({
           return gatewayError("JSON-RPC method required.", 400, "invalid_request");
         }
 
-        let result: unknown = { ok: true };
+        let result: Record<string, unknown> = { ok: true };
 
         if (body.method === "initialize") {
           result = {
@@ -1941,11 +1941,17 @@ export const Route = createFileRoute("/mcp")({
         }
 
         fireLog(key, 200);
-        return streamableMcpResponse(request, body, {
-          jsonrpc: "2.0",
-          id: body.id ?? null,
-          result,
-        });
+        return streamableMcpResponse(
+          request,
+          body,
+          body.id === undefined
+            ? null
+            : {
+                jsonrpc: "2.0",
+                id: body.id,
+                result,
+              },
+        );
       },
     },
   },
