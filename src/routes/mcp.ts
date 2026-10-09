@@ -440,6 +440,33 @@ const PLATFORM_TOOLS: McpTool[] = [
     },
   },
   {
+    name: "list_control_approvals",
+    description:
+      "Inspect your own approval requests, including their exact target and expiry. Does not expose other users' requests.",
+    inputSchema: { type: "object", properties: {} },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  },
+  {
+    name: "decide_control_approval",
+    description:
+      "Record an explicit decision on your own pending, unexpired approval. Requires a personal admin key and confirm=true. Records authorization without starting execution.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        approval_id: { type: "string" },
+        decision: { type: "string", enum: ["approved", "denied"] },
+        confirm: { type: "boolean" },
+      },
+      required: ["approval_id", "decision", "confirm"],
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: false,
+    },
+  },
+  {
     name: "recommend_toolchain",
     description:
       "Find the smallest approved plugin, skill, tool, app, or MCP bundle matching a goal.",
@@ -839,6 +866,8 @@ const TOOL_SCOPES: Record<string, string> = {
   recommend_toolchain: "resources:read",
   resolve_capability: "resources:read",
   execute_plan: "tools:invoke",
+  list_control_approvals: "resources:read",
+  decide_control_approval: "tools:invoke",
   create_capability_draft: "resources:write",
   record_run_outcome: "resources:write",
   configure_connection: "connections:invoke",
@@ -846,6 +875,7 @@ const TOOL_SCOPES: Record<string, string> = {
 
 const SELF_GUARDED_WRITE_TOOLS = new Set([
   "execute_plan",
+  "decide_control_approval",
   "create_capability_draft",
   "record_run_outcome",
   "configure_connection",
@@ -1459,6 +1489,38 @@ export const Route = createFileRoute("/mcp")({
                 })),
               ),
             );
+          } else if (name === "list_control_approvals" || name === "decide_control_approval") {
+            if (key.projectId || key.workspaceId || key.organizationId)
+              throw new Error("Use a personal API key for personal control approvals.");
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const db = supabaseAdmin as import("@supabase/supabase-js").SupabaseClient;
+            if (name === "list_control_approvals") {
+              const { data, error } = await db
+                .from("control_approvals")
+                .select(
+                  "id,action,target,environment,state,expires_at,parameters_digest,decided_at",
+                )
+                .eq("tenant_id", key.userId)
+                .eq("requested_by", key.userId)
+                .order("created_at", { ascending: false })
+                .limit(100);
+              if (error) throw new Error("Could not read your approval requests.");
+              result = textResult({ approvals: data ?? [], execution_started: false });
+            } else {
+              await requireControlWrite(key);
+              const { decideControlApproval } = await import("@/lib/control-approvals.server");
+              result = textResult(
+                await decideControlApproval(
+                  db,
+                  key.userId,
+                  String(args["approval_id"] ?? ""),
+                  String(
+                    args["decision"] ?? "",
+                  ) as import("@/lib/control-approvals.server").ApprovalDecision,
+                  args["confirm"] === true,
+                ),
+              );
+            }
           } else if (name === "execute_plan") {
             await requireControlWrite(key);
             const catalog = await getCatalog();
@@ -1524,22 +1586,31 @@ export const Route = createFileRoute("/mcp")({
                 },
               });
             }
+            let approvalRequest: { id: string; expires_at: string } | null = null;
             if (plan.approvalRequired) {
-              await controlDb.from("control_approvals").insert({
-                tenant_id: key.userId,
-                requested_by: key.userId,
-                action: "execute_plan",
-                target: plan.goal,
-                environment: plan.environment,
-                risk: "protected",
-                parameters_digest: plan.id,
-                expires_at: new Date(Date.now() + 15 * 60_000).toISOString(),
-              });
+              const { data: approval, error: approvalError } = await controlDb
+                .from("control_approvals")
+                .insert({
+                  tenant_id: key.userId,
+                  requested_by: key.userId,
+                  action: "execute_plan",
+                  target: plan.goal,
+                  environment: plan.environment,
+                  risk: "protected",
+                  parameters_digest: plan.id,
+                  expires_at: new Date(Date.now() + 15 * 60_000).toISOString(),
+                })
+                .select("id,expires_at")
+                .single();
+              if (approvalError || !approval)
+                throw new Error("Could not create the required approval request.");
+              approvalRequest = approval;
             }
             result = textResult({
               correlation_id: plan.id,
               state,
               plan,
+              approval_request: approvalRequest,
               autonomous_steps_executed: plan.approvalRequired
                 ? ["discover"]
                 : ["discover", "plan"],
