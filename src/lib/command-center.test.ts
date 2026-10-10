@@ -168,3 +168,13 @@ test("shows unavailable settings for legacy server and disables writes for read-
   w.send({ structuredContent: { ...status, scopes: ["resources:read"] } });
   assert.equal(w.toggle.disabled, true);
 });
+
+test("legacy callTool also times out so pending host calls cannot leave a permanent spinner", async () => {
+  const w = widget({ callTool: () => new Promise(() => {}) });
+  w.expire();
+  await flush();
+  w.expire();
+  await flush();
+  assert.equal(w.retry.hidden, false);
+  assert.match(w.status.textContent, /host did not respond/);
+});
