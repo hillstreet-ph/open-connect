@@ -109,7 +109,9 @@ async function getToolConnection(userId: string, connectionId: string, projectId
   return data;
 }
 
-async function materializeCustomMcpConnection(data: Awaited<ReturnType<typeof getToolConnection>>) {
+type ToolConnection = Awaited<ReturnType<typeof getToolConnection>>;
+
+async function materializeCustomMcpConnection(data: ToolConnection) {
   if (data.provider !== "custom_mcp") throw new Error("Only Custom MCP connections use this tool.");
 
   const metadata = (data.metadata ?? {}) as Record<string, unknown>;
@@ -133,20 +135,22 @@ export async function getCustomMcpConnection(
   return materializeCustomMcpConnection(await getToolConnection(userId, connectionId, projectId));
 }
 
+async function listToolsForConnection(saved: ToolConnection) {
+  return saved.provider === "twilio"
+    ? twilioTools(saved.scopes ?? [])
+    : saved.provider === "telegram"
+      ? telegramTools(saved.scopes ?? [])
+      : await (async () => {
+          const connection = await materializeCustomMcpConnection(saved);
+          return fetchMcpTools(connection.endpoint, connection.headers);
+        })();
+}
+
 export async function listCustomMcpTools(userId: string, connectionId: string, projectId?: string) {
   const saved = await getToolConnection(userId, connectionId, projectId);
-  const tools =
-    saved.provider === "twilio"
-      ? twilioTools(saved.scopes ?? [])
-      : saved.provider === "telegram"
-        ? telegramTools(saved.scopes ?? [])
-        : await (async () => {
-            const connection = await materializeCustomMcpConnection(saved);
-            return fetchMcpTools(connection.endpoint, connection.headers);
-          })();
   return {
     connection: { id: saved.id, name: saved.display_name, provider: saved.provider },
-    tools,
+    tools: await listToolsForConnection(saved),
   };
 }
 
@@ -156,8 +160,21 @@ export async function callCustomMcpTool(
   toolName: string,
   args: Record<string, unknown>,
   projectId?: string,
+  authorizeTool?: (
+    connection: { id: string; name: string; provider: string },
+    tool: Record<string, unknown>,
+  ) => void,
 ) {
   const connection = await getToolConnection(userId, connectionId, projectId);
+  if (authorizeTool) {
+    const tools = await listToolsForConnection(connection);
+    const tool = tools.find((item) => item["name"] === toolName);
+    if (!tool) throw new Error("Tool is no longer available. Refresh the connection.");
+    authorizeTool(
+      { id: connection.id, name: connection.display_name, provider: connection.provider },
+      tool,
+    );
+  }
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   let auditId: string | undefined;
   if (projectId) {
