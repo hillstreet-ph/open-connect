@@ -1,3 +1,4 @@
+import { Validator, type Schema } from "@cfworker/json-schema";
 import { beforeEach, expect, mock, test } from "bun:test";
 
 let post: (args: { request: Request }) => Promise<Response>;
@@ -17,10 +18,16 @@ const resource = {
 };
 const tables: string[] = [];
 const privateReads: { table: string; filters: Record<string, unknown> }[] = [];
+const credentialReads: { fields: string; filters: Record<string, unknown> }[] = [];
+const autoPreferences = new Map<string, boolean>();
 let connectionProvider = "twilio";
 let connectionReadOnly = false;
 let connectionError = false;
 const connectionCalls: unknown[] = [];
+const connectionUpdates: Array<{
+  values: Record<string, unknown>;
+  filters: Record<string, unknown>;
+}> = [];
 let connectionToolReads = 0;
 let hubstaffRequests = 0;
 const assignedConnections = new Set<string>();
@@ -83,6 +90,73 @@ mock.module("@/integrations/supabase/client.server", () => ({
   supabaseAdmin: {
     from: (table: string) => {
       tables.push(table);
+      if (table === "auto_preferences") {
+        const filters: Record<string, unknown> = {};
+        let write: Record<string, unknown> | null = null;
+        const query = {
+          select() {
+            return this;
+          },
+          eq(k: string, v: unknown) {
+            filters[k] = v;
+            return this;
+          },
+          upsert(row: Record<string, unknown>) {
+            write = row;
+            return this;
+          },
+          async maybeSingle() {
+            const enabled = autoPreferences.get(
+              String(filters["user_id"]) + "/" + String(filters["scope_key"]),
+            );
+            return { data: enabled === undefined ? null : { enabled }, error: null };
+          },
+          async single() {
+            if (!write) throw new Error("write missing");
+            expect(write["user_id"]).toBe("fixture-user");
+            autoPreferences.set(
+              String(write["user_id"]) + "/" + String(write["scope_key"]),
+              Boolean(write["enabled"]),
+            );
+            return { data: { enabled: write["enabled"] }, error: null };
+          },
+        };
+        return query;
+      }
+      if (table === "credential_secrets") {
+        const read = { fields: "", filters: {} as Record<string, unknown> };
+        credentialReads.push(read);
+        const query = {
+          select(fields: string) {
+            read.fields = fields;
+            return this;
+          },
+          eq(field: string, value: unknown) {
+            read.filters[field] = value;
+            return this;
+          },
+          order() {
+            return this;
+          },
+          async limit() {
+            return {
+              data: [
+                {
+                  id: "owned-credential",
+                  name: "Fixture login",
+                  website: "https://fixture.invalid/login",
+                  username: "owner",
+                  email_address: null,
+                  vault_secret_id: "fixture-vault",
+                  totp_vault_secret_id: "fixture-totp",
+                },
+              ],
+              error: null,
+            };
+          },
+        };
+        return query;
+      }
       if (
         ["organization_members", "projects", "project_members", "project_connections"].includes(
           table,
@@ -183,14 +257,36 @@ mock.module("@/integrations/supabase/client.server", () => ({
         };
         return query;
       }
-      if (table === "app_connections")
-        return {
-          select: () => ({
-            eq: () => ({
-              order: () => ({ range: async () => ({ data: [], error: null }) }),
-            }),
+      if (table === "app_connections") {
+        const filters: Record<string, unknown> = {};
+        let values: Record<string, unknown> | undefined;
+        const query = {
+          select() {
+            return this;
+          },
+          eq(field: string, value: unknown) {
+            filters[field] = value;
+            return this;
+          },
+          order() {
+            return this;
+          },
+          range: async () => ({ data: [], error: null }),
+          maybeSingle: async () => ({
+            data: { id: "fixture-connection", metadata: { source: "fixture" } },
+            error: null,
           }),
+          update(value: Record<string, unknown>) {
+            values = value;
+            return this;
+          },
+          single: async () => {
+            if (values) connectionUpdates.push({ values, filters });
+            return { data: { id: "fixture-connection", provider: "telegram" }, error: null };
+          },
         };
+        return query;
+      }
       throw new Error(`Unexpected database access: ${table}`);
     },
   },
@@ -217,6 +313,8 @@ mock.module("@/lib/oauth-client.server", () => ({
 await import("../routes/mcp");
 
 beforeEach(() => {
+  credentialReads.length = 0;
+  autoPreferences.clear();
   authenticated = true;
   roles = ["admin"];
   scopes = ["mcp:connect", "control:write"];
@@ -227,6 +325,7 @@ beforeEach(() => {
   connectionReadOnly = false;
   connectionError = false;
   connectionCalls.length = 0;
+  connectionUpdates.length = 0;
   managedReads = 0;
   keyBoundary = {};
   assignedConnections.clear();
@@ -572,6 +671,71 @@ test("Twilio read tools work for scoped non-admins without granting writes", asy
   expect(connectionCalls).toHaveLength(1);
 });
 
+test("native Telegram sends require admin and provider invoke grants before execution", async () => {
+  connectionProvider = "telegram";
+  scopes = ["mcp:connect", "connections:invoke"];
+  roles = ["user"];
+  const args = { connection_id: "fixture-connection", tool_name: "fixture-operation" };
+  await expect(call("call_connection_tool", args)).rejects.toThrow("Admin role");
+  expect(connectionCalls).toEqual([]);
+  roles = ["admin"];
+  scopes = ["mcp:connect", "connections:read"];
+  expect((await call("call_connection_tool", args)).status).toBe(403);
+  expect(connectionCalls).toEqual([]);
+  scopes = ["mcp:connect", "connections:invoke"];
+  expect((await call("call_connection_tool", args)).status).toBe(200);
+  expect(connectionCalls).toHaveLength(1);
+});
+
+test("Telegram destination configuration preserves metadata and updates only the owned bot", async () => {
+  const credentialRef = `credential://telegram/${"a".repeat(8)}-aaaa-aaaa-aaaa-${"a".repeat(12)}`;
+  const response = await call("configure_connection", {
+    provider: "telegram",
+    credential_ref: credentialRef,
+    scopes: ["inbound:telegram", "messages:send"],
+    telegram_destination: { chat_id: "-1001234567890", message_thread_id: 167 },
+  });
+  expect(response.status).toBe(200);
+  expect(connectionUpdates).toHaveLength(1);
+  expect(connectionUpdates[0]!.values["metadata"]).toEqual({
+    source: "fixture",
+    telegram_chat_id: "-1001234567890",
+    telegram_message_thread_id: 167,
+  });
+  expect(connectionUpdates[0]!.filters["user_id"]).toBe("fixture-user");
+  expect(connectionUpdates[0]!.filters["id"]).toBe("fixture-connection");
+});
+
+test("Telegram destination configuration rejects missing control access and invalid bindings before writes", async () => {
+  const args = {
+    provider: "telegram",
+    credential_ref: `credential://telegram/${"a".repeat(8)}-aaaa-aaaa-aaaa-${"a".repeat(12)}`,
+    telegram_destination: { chat_id: "-1001234567890", message_thread_id: 167 },
+  };
+  roles = ["user"];
+  await expect(call("configure_connection", args)).rejects.toThrow("Admin role");
+  roles = ["admin"];
+  scopes = ["mcp:connect", "connections:invoke"];
+  await expect(call("configure_connection", args)).rejects.toThrow("control write");
+  scopes = ["mcp:connect", "control:write"];
+  await expect(call("configure_connection", { ...args, provider: "twilio" })).rejects.toThrow(
+    "Telegram provider",
+  );
+  await expect(
+    call("configure_connection", {
+      ...args,
+      credential_ref: args.credential_ref.replace("telegram", "github"),
+    }),
+  ).rejects.toThrow("bot credential");
+  await expect(
+    call("configure_connection", {
+      ...args,
+      telegram_destination: { chat_id: "@other", message_thread_id: 167 },
+    }),
+  ).rejects.toThrow("supergroup");
+  expect(connectionUpdates).toEqual([]);
+});
+
 test("adding Twilio execution preserves the project requirement for Custom MCP writes", async () => {
   scopes = ["mcp:connect", "connections:invoke"];
   connectionProvider = "custom_mcp";
@@ -592,4 +756,118 @@ test("connection failures propagate as MCP tool errors instead of successful wra
   });
   const { result } = await response.json();
   expect(result.isError).toBe(true);
+});
+
+test("Auto toggle enforces write scope and saves only the authenticated key context", async () => {
+  scopes = ["mcp:connect", "resources:read"];
+  expect((await call("set_auto_mode", { enabled: false })).status).toBe(403);
+  expect(autoPreferences.size).toBe(0);
+  scopes.push("tools:invoke");
+  keyBoundary = { projectId: "fixture-project" };
+  const { result } = await (
+    await call("set_auto_mode", { enabled: false, user_id: "other-user", scope_key: "personal" })
+  ).json();
+  expect(result.structuredContent.auto.scope).toBe("project:fixture-project");
+  expect(autoPreferences.get("fixture-user/project:fixture-project")).toBe(false);
+  expect(autoPreferences.has("other-user/personal")).toBe(false);
+});
+
+test("Auto discovery respects Off and returns metadata without provider execution", async () => {
+  scopes = ["mcp:connect", "resources:read", "tools:invoke"];
+  await call("set_auto_mode", { enabled: false });
+  let payload = (await (await call("auto_discover", { goal: "Approved fixture" })).json()).result
+    .structuredContent;
+  expect(payload.status).toBe("disabled");
+  expect(payload.matches).toEqual([]);
+  await call("set_auto_mode", { enabled: true });
+  payload = (await (await call("auto_discover", { goal: "Approved fixture" })).json()).result
+    .structuredContent;
+  expect(payload.status).toBe("matched");
+  expect(payload.matches[0].slug).toBe(resource.slug);
+  expect(payload.execution_performed).toBe(false);
+  expect(payload.values_exposed).toBe(false);
+  expect(connectionCalls).toEqual([]);
+  expect(connectionToolReads).toBe(0);
+});
+
+test("Auto results satisfy advertised schemas and widgets can call scoped status and toggle tools", async () => {
+  scopes = ["mcp:connect", "resources:read", "tools:invoke"];
+  const response = await post({
+    request: new Request("https://fixture.invalid/mcp", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json, text/event-stream",
+      },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
+    }),
+  });
+  const tools = (await response.json()).result.tools as {
+    name: string;
+    outputSchema: Schema;
+    _meta?: Record<string, unknown>;
+  }[];
+  for (const [name, args] of [
+    ["open_connect_status", {}],
+    ["get_auto_mode", {}],
+    ["set_auto_mode", { enabled: true }],
+    ["auto_discover", { goal: "Approved fixture" }],
+  ] as const) {
+    const tool = tools.find((t) => t.name === name)!;
+    const payload = (await (await call(name, args)).json()).result.structuredContent;
+    const validation = new Validator(tool.outputSchema).validate(payload);
+    expect(validation.errors).toEqual([]);
+    expect(validation.valid).toBe(true);
+    if (name !== "auto_discover") expect(tool._meta?.["openai/widgetAccessible"]).toBe(true);
+  }
+});
+
+test("catalog links open the Marketplace's resource filter instead of a missing detail route", async () => {
+  scopes = ["mcp:connect", "resources:read"];
+  const search = JSON.parse(
+    (await (await call("search", { query: "Approved fixture" })).json()).result.content[0].text,
+  );
+  const fetch = JSON.parse(
+    (await (await call("fetch", { id: resource.slug })).json()).result.content[0].text,
+  );
+  expect(search.results[0].url).toBe(
+    "https://open-connect.site/resources?resource=fixture-approved-tool",
+  );
+  expect(fetch.url).toBe(search.results[0].url);
+});
+
+test("browser matching requires secrets scope and rejects bounded keys before personal reads", async () => {
+  scopes = ["mcp:connect"];
+  expect(
+    (await call("match_browser_credentials", { origin: "https://fixture.invalid" })).status,
+  ).toBe(403);
+  expect(credentialReads).toEqual([]);
+  scopes.push("secrets:read");
+  keyBoundary = { projectId: "fixture-project" };
+  expect(
+    (await call("match_browser_credentials", { origin: "https://fixture.invalid" })).status,
+  ).toBe(403);
+  expect(credentialReads).toEqual([]);
+});
+
+test("browser matching selects owned metadata only and satisfies its output contract", async () => {
+  scopes = ["mcp:connect", "secrets:read"];
+  const result = (
+    await (
+      await call("match_browser_credentials", {
+        origin: "https://fixture.invalid",
+        account: "owner",
+      })
+    ).json()
+  ).result.structuredContent;
+  expect(result.status).toBe("matched");
+  expect(result.sign_in_performed).toBe(false);
+  expect(
+    new Validator(
+      (await import("./auto-mcp-contract")).BROWSER_CREDENTIAL_MATCH_OUTPUT_SCHEMA as Schema,
+    ).validate(result).valid,
+  ).toBe(true);
+  expect(credentialReads[0]?.filters).toEqual({ user_id: "fixture-user", secret_type: "password" });
+  expect(credentialReads[0]?.fields.split(",")).not.toContain("secret_value");
+  expect(JSON.stringify(result)).not.toMatch(/fixture-vault|fixture-totp/);
 });

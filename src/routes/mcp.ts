@@ -1,3 +1,12 @@
+import {
+  AUTO_MODE_OUTPUT_SCHEMA,
+  AUTO_DISCOVERY_OUTPUT_SCHEMA,
+  AUTO_STATUS_OUTPUT_SCHEMA,
+  BROWSER_CREDENTIAL_MATCH_OUTPUT_SCHEMA,
+} from "@/lib/auto-mcp-contract";
+import type { Json } from "@/integrations/supabase/types";
+import { matchBrowserCredentials } from "@/lib/browser-credential-matching";
+import { autoInstructions, readAutoMode, writeAutoMode } from "@/lib/auto-mode.server";
 import { COMMAND_CENTER_HTML } from "@/lib/command-center";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createFileRoute } from "@tanstack/react-router";
@@ -63,11 +72,13 @@ type McpTool = {
   title?: string;
   description: string;
   inputSchema: Record<string, unknown>;
+  outputSchema?: Record<string, unknown>;
   annotations?: Record<string, boolean>;
   _meta?: Record<string, unknown>;
 };
 
-const COMMAND_CENTER_URI = "ui://open-connect/command-center-v1.html";
+const COMMAND_CENTER_URI = "ui://open-connect/command-center-v2.html";
+const LEGACY_COMMAND_CENTER_URI = "ui://open-connect/command-center-v1.html";
 
 /** Isolate-level cache (Cloudflare warm isolates reuse this). */
 let catalogCache: {
@@ -112,6 +123,7 @@ const PLATFORM_TOOLS: McpTool[] = [
   {
     name: "open_connect_status",
     description: "Gateway status: resources, connections, models",
+    outputSchema: AUTO_STATUS_OUTPUT_SCHEMA,
     inputSchema: { type: "object", properties: {} },
     annotations: {
       readOnlyHint: true,
@@ -119,9 +131,55 @@ const PLATFORM_TOOLS: McpTool[] = [
       openWorldHint: false,
     },
     _meta: {
+      ui: { resourceUri: COMMAND_CENTER_URI, visibility: ["model", "app"] },
+      "openai/widgetAccessible": true,
       "ui/resourceUri": COMMAND_CENTER_URI,
       "openai/outputTemplate": COMMAND_CENTER_URI,
     },
+  },
+  {
+    name: "get_auto_mode",
+    outputSchema: AUTO_MODE_OUTPUT_SCHEMA,
+    _meta: { ui: { visibility: ["model", "app"] }, "openai/widgetAccessible": true },
+    description:
+      "Read the authenticated account's scoped Auto autonomy and discovery preference. Host approvals remain enforced.",
+    inputSchema: { type: "object", properties: {} },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  },
+  {
+    name: "set_auto_mode",
+    outputSchema: AUTO_MODE_OUTPUT_SCHEMA,
+    _meta: { ui: { visibility: ["model", "app"] }, "openai/widgetAccessible": true },
+    description:
+      "Save Auto on/off for the authenticated account and key context. Enables task autonomy and discovery, not permission bypass or secret access.",
+    inputSchema: {
+      type: "object",
+      properties: { enabled: { type: "boolean" } },
+      required: ["enabled"],
+      additionalProperties: false,
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      openWorldHint: false,
+      idempotentHint: true,
+    },
+  },
+  {
+    name: "auto_discover",
+    outputSchema: AUTO_DISCOVERY_OUTPUT_SCHEMA,
+    description:
+      "When Auto is enabled and an authorized task needs a capability, match verified Marketplace tools and skills to the goal. Returns metadata and next steps, never executes or reveals credentials.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        goal: { type: "string", minLength: 1, maxLength: 2000 },
+        limit: { type: "integer", minimum: 1, maximum: 10 },
+      },
+      required: ["goal"],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   },
   {
     name: "list_resources",
@@ -206,6 +264,22 @@ const PLATFORM_TOOLS: McpTool[] = [
       destructiveHint: false,
       openWorldHint: false,
     },
+  },
+  {
+    name: "match_browser_credentials",
+    outputSchema: BROWSER_CREDENTIAL_MATCH_OUTPUT_SCHEMA,
+    description:
+      "Match owned password metadata to an exact HTTPS origin and optional account. Returns credential IDs and password/TOTP availability only. Does not reveal secrets, generate codes, inject credentials, or sign in. Use the browser host's secure authentication capability.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        origin: { type: "string", maxLength: 500 },
+        account: { type: "string", maxLength: 320 },
+      },
+      required: ["origin"],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   },
   {
     name: "calculate",
@@ -589,6 +663,15 @@ const PLATFORM_TOOLS: McpTool[] = [
         display_name: { type: "string" },
         credential_ref: { type: "string" },
         scopes: { type: "array", items: { type: "string" } },
+        telegram_destination: {
+          type: "object",
+          properties: {
+            chat_id: { type: "string", description: "Numeric Telegram supergroup ID" },
+            message_thread_id: { type: "integer", minimum: 1 },
+          },
+          required: ["chat_id", "message_thread_id"],
+          additionalProperties: false,
+        },
       },
       required: ["provider", "credential_ref"],
     },
@@ -869,12 +952,16 @@ const TOOL_SCOPES: Record<string, string> = {
   search: "resources:read",
   fetch: "resources:read",
   open_connect_status: "mcp:connect",
+  get_auto_mode: "mcp:connect",
+  set_auto_mode: "tools:invoke",
+  auto_discover: "resources:read",
   list_resources: "resources:read",
   list_personal_resources: "resources:read",
   list_my_memory: "memory:read",
   list_my_knowledge: "knowledge:read",
   list_workspace_projects: "resources:read",
   list_credential_metadata: "secrets:read",
+  match_browser_credentials: "secrets:read",
   calculate: "mcp:connect",
   list_connections: "connections:read",
   preview_composio_sync: "connections:read",
@@ -932,7 +1019,7 @@ export const Route = createFileRoute("/mcp")({
         }
         return json({
           name: "open-connect",
-          version: "1.0.1",
+          version: "1.0.2",
           protocol: "mcp",
           planes: ["resources", "connections", "models", "credentials"],
           endpoints: {
@@ -989,6 +1076,8 @@ export const Route = createFileRoute("/mcp")({
         let result: Record<string, unknown> = { ok: true };
 
         if (body.method === "initialize") {
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+          const auto = await readAutoMode(supabaseAdmin as SupabaseClient, key);
           result = {
             protocolVersion: body.params?.protocolVersion ?? "2025-06-18",
             capabilities: {
@@ -997,11 +1086,10 @@ export const Route = createFileRoute("/mcp")({
             },
             serverInfo: {
               name: "open-connect",
-              version: "1.0.1",
+              version: "1.0.2",
               planes: ["resources", "connections", "models", "credentials"],
             },
-            instructions:
-              "Use read-only discovery tools before write tools. Hubstaff, E2B, connection, and credential actions are scoped to the authenticated Open-Connect account and role.",
+            instructions: autoInstructions(auto.enabled),
           };
         } else if (body.method === "tools/list") {
           result = { tools: chatGptTools() };
@@ -1019,7 +1107,7 @@ export const Route = createFileRoute("/mcp")({
         } else if (body.method === "resources/read") {
           const uri = (body.params as { uri?: string } | undefined)?.uri;
           result =
-            uri === COMMAND_CENTER_URI
+            uri === COMMAND_CENTER_URI || uri === LEGACY_COMMAND_CENTER_URI
               ? {
                   contents: [
                     {
@@ -1077,7 +1165,7 @@ export const Route = createFileRoute("/mcp")({
             const results = ranked.map((item) => ({
               id: item.slug,
               title: item.name,
-              url: `https://open-connect.site/resources/${item.slug}`,
+              url: `https://open-connect.site/resources?resource=${encodeURIComponent(item.slug)}`,
               score: item.score,
               matched_terms: item.matchedTerms,
             }));
@@ -1092,7 +1180,7 @@ export const Route = createFileRoute("/mcp")({
                     id: item.slug,
                     title: item.name,
                     text: item.description ?? "",
-                    url: `https://open-connect.site/resources/${item.slug}`,
+                    url: `https://open-connect.site/resources?resource=${encodeURIComponent(item.slug)}`,
                     metadata: {
                       type: item.resource_type,
                       installation_type: item.installation_type,
@@ -1119,11 +1207,15 @@ export const Route = createFileRoute("/mcp")({
                 .select("id", { count: "exact", head: true })
                 .eq("user_id", key.userId)
                 .eq("status", "connected");
-              if (!response.error) connections = response.count;
+              if (!response.error && typeof response.count === "number")
+                connections = response.count;
             } catch {
               // Status must remain available even when the optional connection counter is not.
             }
-            result = textResult({
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const auto = await readAutoMode(supabaseAdmin as SupabaseClient, key);
+            const status = {
+              auto,
               gateway: "open-connect.site",
               planes: {
                 resources: { published: catalog.count },
@@ -1138,7 +1230,63 @@ export const Route = createFileRoute("/mcp")({
               },
               scopes: key.scopes,
               user_id: key.userId,
-            });
+            };
+            result = { ...textResult(status), structuredContent: status };
+          } else if (
+            name === "get_auto_mode" ||
+            name === "set_auto_mode" ||
+            name === "auto_discover"
+          ) {
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const auto =
+              name === "set_auto_mode"
+                ? await writeAutoMode(supabaseAdmin as SupabaseClient, key, args["enabled"])
+                : await readAutoMode(supabaseAdmin as SupabaseClient, key);
+            let payload: Record<string, unknown> = {
+              auto,
+              instructions: autoInstructions(auto.enabled),
+            };
+            if (name === "auto_discover") {
+              const goal = String(args["goal"] ?? "").trim();
+              if (!goal || goal.length > 2000)
+                return gatewayError("goal must contain 1–2000 characters", 400, "invalid_request");
+              const requestedLimit = Number(args["limit"] ?? 5);
+              const limit = Number.isFinite(requestedLimit)
+                ? Math.min(10, Math.max(1, Math.trunc(requestedLimit)))
+                : 5;
+              const catalog = auto.enabled === true ? await getCatalog() : null;
+              const matches = catalog
+                ? rankCapabilities(
+                    goal,
+                    [...catalog.bySlug.values()].filter(isExecutable).map((item) => ({
+                      slug: item.slug,
+                      name: item.name,
+                      description: item.description,
+                      resourceType: item.resource_type,
+                      installationType: item.installation_type,
+                    })),
+                    limit,
+                  )
+                : [];
+              payload = {
+                ...payload,
+                goal,
+                matches,
+                execution_performed: false,
+                values_exposed: false,
+                status: !auto.available
+                  ? "unavailable"
+                  : !auto.enabled
+                    ? "disabled"
+                    : matches.length
+                      ? "matched"
+                      : "no_match",
+                next_action: matches.length
+                  ? "Inspect matched metadata, then discover the actual host or connection tool schema and verify authorized access."
+                  : "Use an existing host tool or report the missing capability; do not assume a catalog entry is executable.",
+              };
+            }
+            result = { ...textResult(payload), structuredContent: payload };
           } else if (name === "calculate") {
             const expression = String(args["expression"] ?? "");
             result = textResult({
@@ -1199,6 +1347,28 @@ export const Route = createFileRoute("/mcp")({
                 projects: visibleProjects,
               });
             }
+          } else if (name === "match_browser_credentials") {
+            if (key.projectId || key.workspaceId || key.organizationId)
+              return gatewayError(
+                "Browser password matching requires a personal credential context.",
+                403,
+                "insufficient_scope",
+              );
+            // Validate before accessing the owner's password metadata.
+            matchBrowserCredentials([], args["origin"], args["account"]);
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const { data, error } = await supabaseAdmin
+              .from("credential_secrets")
+              .select("id,name,website,username,email_address,vault_secret_id,totp_vault_secret_id")
+              .eq("user_id", key.userId)
+              .eq("secret_type", "password")
+              .order("id")
+              .limit(1001);
+            if (error) throw new Error("Credential metadata could not be read.");
+            if ((data?.length ?? 0) > 1000)
+              throw new Error("Too many credential records to establish an unambiguous match.");
+            const payload = matchBrowserCredentials(data ?? [], args["origin"], args["account"]);
+            result = { ...textResult(payload), structuredContent: payload };
           } else if (name === "list_credential_metadata") {
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
             const { data, error } = await supabaseAdmin
@@ -1385,7 +1555,10 @@ export const Route = createFileRoute("/mcp")({
             const tool = catalog.tools.find((item) => item["name"] === toolName);
             if (!tool) throw new Error("Connected MCP tool was not found.");
             const annotations = (tool["annotations"] ?? {}) as Record<string, unknown>;
-            if (annotations["readOnlyHint"] !== true && catalog.connection.provider === "twilio") {
+            if (
+              annotations["readOnlyHint"] !== true &&
+              ["twilio", "telegram"].includes(catalog.connection.provider)
+            ) {
               await requireProviderWrite(key);
             } else if (annotations["readOnlyHint"] !== true) {
               if (!key.projectId) {
@@ -1841,9 +2014,34 @@ export const Route = createFileRoute("/mcp")({
               : [];
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
             const displayName = String(args["display_name"] ?? provider);
+            let destinationMetadata:
+              { telegram_chat_id: string; telegram_message_thread_id: number } | undefined;
+            if (args["telegram_destination"] !== undefined) {
+              if (provider !== "telegram")
+                throw new Error("Telegram destination requires Telegram provider.");
+              if (!/^credential:\/\/telegram\/[0-9a-f-]{36}$/i.test(credentialRef))
+                throw new Error("Telegram destination requires an owned bot credential reference.");
+              const { telegramDestination } = await import("@/lib/telegram.server");
+              const value = args["telegram_destination"] as Record<string, unknown> | null;
+              if (
+                !value ||
+                Object.keys(value).some(
+                  (field) => !["chat_id", "message_thread_id"].includes(field),
+                )
+              )
+                throw new Error("Invalid Telegram destination fields.");
+              const destination = telegramDestination({
+                telegram_chat_id: value["chat_id"],
+                telegram_message_thread_id: value["message_thread_id"],
+              });
+              destinationMetadata = {
+                telegram_chat_id: destination.chat_id,
+                telegram_message_thread_id: destination.message_thread_id,
+              };
+            }
             const { data: existing, error: existingError } = await supabaseAdmin
               .from("app_connections")
-              .select("id")
+              .select("id,metadata")
               .eq("user_id", key.userId)
               .eq("provider", provider)
               .eq("credential_reference", credentialRef)
@@ -1859,6 +2057,14 @@ export const Route = createFileRoute("/mcp")({
                     scopes,
                     credential_reference: credentialRef,
                     updated_at: new Date().toISOString(),
+                    ...(destinationMetadata
+                      ? {
+                          metadata: {
+                            ...((existing.metadata as Record<string, Json>) ?? {}),
+                            ...destinationMetadata,
+                          },
+                        }
+                      : {}),
                   })
                   .eq("id", existing.id)
                   .eq("user_id", key.userId)
@@ -1874,6 +2080,7 @@ export const Route = createFileRoute("/mcp")({
                     source: "chatgpt-mcp",
                     mode: "capability_grant",
                     secrets_exposed: false,
+                    ...destinationMetadata,
                   },
                 });
             const { data, error } = await connectionQuery

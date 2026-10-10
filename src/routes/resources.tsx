@@ -30,6 +30,8 @@ import {
 import { ResourcePurposeSidebar } from "@/components/resource-purpose-sidebar";
 
 export const Route = createFileRoute("/resources")({
+  validateSearch: (search: Record<string, unknown>): { resource?: string } =>
+    typeof search["resource"] === "string" ? { resource: search["resource"].slice(0, 160) } : {},
   head: () => ({
     meta: [
       { title: "Marketplace — Open-Connect" },
@@ -59,19 +61,21 @@ function triggerBlobDownload(filename: string, content: string, mime: string) {
 
 function ResourcesPage() {
   const { user } = useAuth();
+  const { resource } = Route.useSearch();
   return user ? (
     <WorkspaceShell>
-      <MarketplaceContent />
+      <MarketplaceContent key={resource ?? "all"} />
     </WorkspaceShell>
   ) : (
-    <MarketplaceContent />
+    <MarketplaceContent key={resource ?? "all"} />
   );
 }
 
 function MarketplaceContent() {
   const { user } = useAuth();
   const [type, setType] = useState<string>("all");
-  const [query, setQuery] = useState("");
+  const { resource: linkedResource } = Route.useSearch();
+  const [query, setQuery] = useState(linkedResource ?? "");
   const [purpose, setPurpose] = useState("all");
   const [viewText, setViewText] = useState<string | null>(null);
   const [viewTitle, setViewTitle] = useState("");
@@ -158,17 +162,19 @@ function MarketplaceContent() {
     return (data ?? []).filter((item) => {
       const matchesType = type === "all" || resourceCategoryForType(item.resource_type) === type;
       const matchesTerm =
-        !term ||
-        item.name.toLowerCase().includes(term) ||
-        (item.description ?? "").toLowerCase().includes(term) ||
-        item.slug.toLowerCase().includes(term);
+        linkedResource && query === linkedResource
+          ? item.slug === linkedResource
+          : !term ||
+            item.name.toLowerCase().includes(term) ||
+            (item.description ?? "").toLowerCase().includes(term) ||
+            item.slug.toLowerCase().includes(term);
       return (
         matchesType &&
         matchesTerm &&
         (purpose === "all" || resourcePurpose({ id: item.id, resources: item }) === purpose)
       );
     });
-  }, [data, query, type, purpose]);
+  }, [data, query, type, purpose, linkedResource]);
 
   const counts = useMemo(() => {
     const map: Record<string, number> = { all: data?.length ?? 0 };
