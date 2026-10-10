@@ -896,7 +896,6 @@ const SELF_GUARDED_WRITE_TOOLS = new Set([
   "install_capability",
   "e2b_create_sandbox",
   "e2b_kill_sandbox",
-  "hubstaff_admin_request",
 ]);
 
 function canUseTool(key: AuthedKey, toolName: string) {
