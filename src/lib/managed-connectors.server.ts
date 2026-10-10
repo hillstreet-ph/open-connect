@@ -108,6 +108,53 @@ export async function listComposioToolkits(): Promise<ComposioToolkit[]> {
 }
 
 async function authConfigForToolkit(toolkitSlug: string, apiKey: string): Promise<string> {
+  if (toolkitSlug.toLowerCase().startsWith("custom_")) {
+    const candidates = new Set<string>();
+    const cursors = new Set<string>();
+    let cursor = "";
+    do {
+      const query = new URLSearchParams({
+        toolkit_slug: toolkitSlug,
+        is_composio_managed: "false",
+        show_disabled: "false",
+        limit: "50",
+      });
+      if (cursor) query.set("cursor", cursor);
+      const page = await composioRequest<{
+        items?: Array<{
+          id?: string;
+          toolkit?: { slug?: string };
+          is_composio_managed?: boolean;
+          status?: string;
+        }>;
+        next_cursor?: string | null;
+      }>(`/auth_configs?${query}`, apiKey);
+      for (const item of page.items ?? []) {
+        if (
+          item.id?.startsWith("ac_") &&
+          item.toolkit?.slug?.toLowerCase() === toolkitSlug.toLowerCase() &&
+          item.is_composio_managed === false &&
+          item.status === "ENABLED"
+        ) {
+          candidates.add(item.id);
+        }
+      }
+      cursor = page.next_cursor ?? "";
+      if (cursor && cursors.has(cursor))
+        throw new Error("Composio auth config pagination did not advance.");
+      if (cursor) cursors.add(cursor);
+      if (cursors.size > 100) throw new Error("Composio auth config pagination limit reached.");
+    } while (cursor);
+    if (candidates.size === 1) return [...candidates][0]!;
+    if (candidates.size > 1) {
+      throw new Error(
+        `Multiple enabled custom auth configs exist for ${toolkitSlug}. Select one in COMPOSIO_AUTH_CONFIGS before connecting.`,
+      );
+    }
+    throw new Error(
+      `No enabled custom auth config exists for ${toolkitSlug}. Create one in Composio before connecting.`,
+    );
+  }
   const query = new URLSearchParams({
     toolkit_slug: toolkitSlug,
     is_composio_managed: "true",
