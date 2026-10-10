@@ -693,3 +693,17 @@ test("Auto results satisfy advertised schemas and widgets can call scoped status
     if (name !== "auto_discover") expect(tool._meta?.["openai/widgetAccessible"]).toBe(true);
   }
 });
+
+test("catalog links open the Marketplace's resource filter instead of a missing detail route", async () => {
+  scopes = ["mcp:connect", "resources:read"];
+  const search = JSON.parse(
+    (await (await call("search", { query: "Approved fixture" })).json()).result.content[0].text,
+  );
+  const fetch = JSON.parse(
+    (await (await call("fetch", { id: resource.slug })).json()).result.content[0].text,
+  );
+  expect(search.results[0].url).toBe(
+    "https://open-connect.site/resources?resource=fixture-approved-tool",
+  );
+  expect(fetch.url).toBe(search.results[0].url);
+});

@@ -1136,7 +1136,7 @@ export const Route = createFileRoute("/mcp")({
             const results = ranked.map((item) => ({
               id: item.slug,
               title: item.name,
-              url: `https://open-connect.site/resources/${item.slug}`,
+              url: `https://open-connect.site/resources?resource=${encodeURIComponent(item.slug)}`,
               score: item.score,
               matched_terms: item.matchedTerms,
             }));
@@ -1151,7 +1151,7 @@ export const Route = createFileRoute("/mcp")({
                     id: item.slug,
                     title: item.name,
                     text: item.description ?? "",
-                    url: `https://open-connect.site/resources/${item.slug}`,
+                    url: `https://open-connect.site/resources?resource=${encodeURIComponent(item.slug)}`,
                     metadata: {
                       type: item.resource_type,
                       installation_type: item.installation_type,
