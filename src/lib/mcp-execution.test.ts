@@ -23,6 +23,10 @@ let connectionProvider = "twilio";
 let connectionReadOnly = false;
 let connectionError = false;
 const connectionCalls: unknown[] = [];
+const connectionUpdates: Array<{
+  values: Record<string, unknown>;
+  filters: Record<string, unknown>;
+}> = [];
 let connectionToolReads = 0;
 let hubstaffRequests = 0;
 const assignedConnections = new Set<string>();
@@ -218,14 +222,36 @@ mock.module("@/integrations/supabase/client.server", () => ({
         };
         return query;
       }
-      if (table === "app_connections")
-        return {
-          select: () => ({
-            eq: () => ({
-              order: () => ({ range: async () => ({ data: [], error: null }) }),
-            }),
+      if (table === "app_connections") {
+        const filters: Record<string, unknown> = {};
+        let values: Record<string, unknown> | undefined;
+        const query = {
+          select() {
+            return this;
+          },
+          eq(field: string, value: unknown) {
+            filters[field] = value;
+            return this;
+          },
+          order() {
+            return this;
+          },
+          range: async () => ({ data: [], error: null }),
+          maybeSingle: async () => ({
+            data: { id: "fixture-connection", metadata: { source: "fixture" } },
+            error: null,
           }),
+          update(value: Record<string, unknown>) {
+            values = value;
+            return this;
+          },
+          single: async () => {
+            if (values) connectionUpdates.push({ values, filters });
+            return { data: { id: "fixture-connection", provider: "telegram" }, error: null };
+          },
         };
+        return query;
+      }
       throw new Error(`Unexpected database access: ${table}`);
     },
   },
@@ -263,6 +289,7 @@ beforeEach(() => {
   connectionReadOnly = false;
   connectionError = false;
   connectionCalls.length = 0;
+  connectionUpdates.length = 0;
   managedReads = 0;
   keyBoundary = {};
   assignedConnections.clear();
@@ -606,6 +633,71 @@ test("Twilio read tools work for scoped non-admins without granting writes", asy
     ).status,
   ).toBe(200);
   expect(connectionCalls).toHaveLength(1);
+});
+
+test("native Telegram sends require admin and provider invoke grants before execution", async () => {
+  connectionProvider = "telegram";
+  scopes = ["mcp:connect", "connections:invoke"];
+  roles = ["user"];
+  const args = { connection_id: "fixture-connection", tool_name: "fixture-operation" };
+  await expect(call("call_connection_tool", args)).rejects.toThrow("Admin role");
+  expect(connectionCalls).toEqual([]);
+  roles = ["admin"];
+  scopes = ["mcp:connect", "connections:read"];
+  expect((await call("call_connection_tool", args)).status).toBe(403);
+  expect(connectionCalls).toEqual([]);
+  scopes = ["mcp:connect", "connections:invoke"];
+  expect((await call("call_connection_tool", args)).status).toBe(200);
+  expect(connectionCalls).toHaveLength(1);
+});
+
+test("Telegram destination configuration preserves metadata and updates only the owned bot", async () => {
+  const credentialRef = `credential://telegram/${"a".repeat(8)}-aaaa-aaaa-aaaa-${"a".repeat(12)}`;
+  const response = await call("configure_connection", {
+    provider: "telegram",
+    credential_ref: credentialRef,
+    scopes: ["inbound:telegram", "messages:send"],
+    telegram_destination: { chat_id: "-1001234567890", message_thread_id: 167 },
+  });
+  expect(response.status).toBe(200);
+  expect(connectionUpdates).toHaveLength(1);
+  expect(connectionUpdates[0]!.values["metadata"]).toEqual({
+    source: "fixture",
+    telegram_chat_id: "-1001234567890",
+    telegram_message_thread_id: 167,
+  });
+  expect(connectionUpdates[0]!.filters["user_id"]).toBe("fixture-user");
+  expect(connectionUpdates[0]!.filters["id"]).toBe("fixture-connection");
+});
+
+test("Telegram destination configuration rejects missing control access and invalid bindings before writes", async () => {
+  const args = {
+    provider: "telegram",
+    credential_ref: `credential://telegram/${"a".repeat(8)}-aaaa-aaaa-aaaa-${"a".repeat(12)}`,
+    telegram_destination: { chat_id: "-1001234567890", message_thread_id: 167 },
+  };
+  roles = ["user"];
+  await expect(call("configure_connection", args)).rejects.toThrow("Admin role");
+  roles = ["admin"];
+  scopes = ["mcp:connect", "connections:invoke"];
+  await expect(call("configure_connection", args)).rejects.toThrow("control write");
+  scopes = ["mcp:connect", "control:write"];
+  await expect(call("configure_connection", { ...args, provider: "twilio" })).rejects.toThrow(
+    "Telegram provider",
+  );
+  await expect(
+    call("configure_connection", {
+      ...args,
+      credential_ref: args.credential_ref.replace("telegram", "github"),
+    }),
+  ).rejects.toThrow("bot credential");
+  await expect(
+    call("configure_connection", {
+      ...args,
+      telegram_destination: { chat_id: "@other", message_thread_id: 167 },
+    }),
+  ).rejects.toThrow("supergroup");
+  expect(connectionUpdates).toEqual([]);
 });
 
 test("adding Twilio execution preserves the project requirement for Custom MCP writes", async () => {
