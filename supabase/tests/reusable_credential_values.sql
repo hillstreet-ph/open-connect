@@ -2,6 +2,17 @@
 -- All test rows and Vault changes are rolled back. No secrets are returned.
 begin;
 do $$
+begin
+  if has_function_privilege('anon','public.update_credential_secret_value(uuid,text)','EXECUTE')
+    or has_function_privilege('anon','public.assert_credential_value_unique(text)','EXECUTE') then
+    raise exception 'Anonymous credential mutation/validation grant';
+  end if;
+  if not has_function_privilege('authenticated','public.update_credential_secret_value(uuid,text)','EXECUTE') then
+    raise exception 'Authenticated rotation grant missing';
+  end if;
+end;
+$$;
+do $$
 declare
   owner_id uuid := auth.uid();
   first_id uuid;
@@ -53,4 +64,37 @@ begin
 end;
 $$;
 select 'duplicate creation, isolated rotation, TOTP and owner boundaries passed' as result;
+rollback;
+-- Verify the API-role grant boundary even with a valid synthetic owner's claim.
+set role anon;
+do $$
+declare blocked boolean := false;
+begin
+  begin perform public.assert_credential_value_unique('synthetic-value');
+    exception when insufficient_privilege then blocked := true; end;
+  if not blocked then raise exception 'Anonymous role invoked credential validation'; end if;
+end;
+$$;
+reset role;
+begin;
+set role authenticated;
+do $$
+declare
+  first_id uuid;
+  second_id uuid;
+  shared_value text := gen_random_uuid()::text;
+begin
+  if not public.assert_credential_value_unique('synthetic-value') then
+    raise exception 'Authenticated owner validation failed'; end if;
+  first_id := (public.create_credential_item('API-role regression','password','{}',
+    shared_value,'','','https://example.invalid','','')->>'id')::uuid;
+  second_id := (public.create_credential_item('API-role regression','password','{}',
+    shared_value,'','','https://other.example.invalid','','')->>'id')::uuid;
+  perform public.update_credential_secret_value(first_id,shared_value);
+  if public.reveal_credential_secret(first_id)->>'value' <> shared_value
+    or public.reveal_credential_secret(second_id)->>'value' <> shared_value then
+    raise exception 'Authenticated API-role create/update/reveal failed'; end if;
+end;
+$$;
+reset role;
 rollback;

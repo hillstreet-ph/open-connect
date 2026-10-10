@@ -42,6 +42,16 @@ jobs:
             -f supabase/tests/key_access_fixture.sql \
             -f supabase/migrations/20261010030000_owned_key_access.sql \
             -f supabase/tests/owned_key_access.sql
+      - name: Exercise duplicate credential values and owner boundaries
+        env:
+          PGPASSWORD: disposable-ci-only
+        run: |
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 \
+            -f supabase/tests/credential_value_fixture.sql \
+            -f supabase/migrations/20260923090000_credential_totp.sql \
+            -f supabase/migrations/20260924010000_password_manager_credentials.sql \
+            -f supabase/migrations/20261010050000_reusable_credential_values.sql \
+            -f supabase/tests/reusable_credential_values.sql
   test:
     runs-on: ubuntu-latest
     defaults:
