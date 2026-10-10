@@ -118,11 +118,6 @@ export const createSecret = createServerFn({ method: "POST" })
       throw new Error("API keys and tokens cannot contain spaces or sentences");
     }
 
-    const { error: duplicateError } = await context.supabase.rpc("assert_credential_value_unique", {
-      p_secret_value: data.secret_value,
-    });
-    if (duplicateError) throw new Error(duplicateError.message);
-
     const { data: row, error } = await context.supabase.rpc("create_credential_item", {
       p_name: data.name,
       p_secret_type: data.secret_type,
