@@ -21,6 +21,7 @@ let connectionReadOnly = false;
 let connectionError = false;
 const connectionCalls: unknown[] = [];
 let connectionToolReads = 0;
+let hubstaffRequests = 0;
 const assignedConnections = new Set<string>();
 const assignedConnection = {
   id: "fixture-connection",
@@ -50,6 +51,16 @@ mock.module("@/lib/custom-mcp.server", () => ({
   callCustomMcpTool: async (...args: unknown[]) => {
     connectionCalls.push(args);
     return { content: [{ type: "text", text: "{}" }], isError: connectionError };
+  },
+}));
+
+mock.module("@/lib/hubstaff-admin.server", () => ({
+  hubstaffAdminConfig: () => ({ configured: true }),
+  hubstaffAdminIdentity: async () => ({ id: "fixture-hubstaff-user" }),
+  listHubstaffOrganizations: async () => [],
+  hubstaffAdminRequest: async () => {
+    hubstaffRequests++;
+    return { ok: true };
   },
 }));
 
@@ -211,6 +222,7 @@ beforeEach(() => {
   keyBoundary = {};
   assignedConnections.clear();
   connectionToolReads = 0;
+  hubstaffRequests = 0;
 });
 
 test("project connection catalogs contain only assigned accounts", async () => {
@@ -438,6 +450,39 @@ test("private read grants pass the MCP entry gate without mcp:connect", async ()
     });
     expect(tables).toContain(table);
   }
+});
+
+test("private read grants cannot invoke Hubstaff admin requests", async () => {
+  for (const scope of ["memory:read", "knowledge:read"]) {
+    scopes = [scope];
+    const response = await call("hubstaff_admin_request", {
+      method: "GET",
+      path: "/v2/organizations",
+    });
+    expect(response.status).toBe(403);
+  }
+  expect(hubstaffRequests).toBe(0);
+});
+
+test("Hubstaff GET requests require and accept the advertised tools invoke scope", async () => {
+  scopes = ["tools:invoke"];
+  const response = await call("hubstaff_admin_request", {
+    method: "GET",
+    path: "/v2/organizations",
+  });
+  expect(response.status).toBe(200);
+  expect(hubstaffRequests).toBe(1);
+});
+
+test("Hubstaff writes preserve the existing connections invoke control gate", async () => {
+  scopes = ["mcp:connect", "connections:invoke"];
+  const response = await call("hubstaff_admin_request", {
+    method: "PATCH",
+    path: "/v2/organizations/1",
+    body: { name: "Fixture" },
+  });
+  expect(response.status).toBe(200);
+  expect(hubstaffRequests).toBe(1);
 });
 
 test("native Twilio writes require admin role and an invoke scope before provider execution", async () => {
