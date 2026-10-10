@@ -3280,6 +3280,10 @@ export type Database = {
       };
     };
     Functions: {
+      oc_update_owned_key_access: {
+        Args: { p_key_id: string; p_profile: string; p_custom_scopes?: string[] };
+        Returns: Json;
+      };
       add_project_connection: {
         Args: { p_connection_id: string; p_project_id: string };
         Returns: Json;

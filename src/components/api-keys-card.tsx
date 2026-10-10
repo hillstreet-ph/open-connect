@@ -4,13 +4,25 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Copy, KeyRound, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { createApiKey, listApiKeys, revokeApiKey } from "@/lib/api-keys.functions";
+import {
+  createApiKey,
+  listApiKeys,
+  revokeApiKey,
+  updateApiKeyAccess,
+} from "@/lib/api-keys.functions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ACCESS_PROFILES, type AccessProfile } from "@/lib/access-profiles";
+import {
+  ACCESS_PROFILES,
+  isAccessProfile,
+  scopesForProfile,
+  type AccessProfile,
+} from "@/lib/access-profiles";
 import { listProjects } from "@/lib/orgs.functions";
+import { getMyRoles } from "@/lib/roles.functions";
+import { hasRole } from "@/lib/rbac";
 
 const PROFILE_LABELS: Record<AccessProfile, string> = {
   read_only: "Read only",
@@ -25,14 +37,33 @@ export function ApiKeysCard() {
   const list = useServerFn(listApiKeys);
   const create = useServerFn(createApiKey);
   const revoke = useServerFn(revokeApiKey);
+  const update = useServerFn(updateApiKeyAccess);
+  const getRoles = useServerFn(getMyRoles);
   const listProj = useServerFn(listProjects);
   const [name, setName] = useState("");
   const [profile, setProfile] = useState<AccessProfile>("developer");
   const [projectId, setProjectId] = useState("");
   const [freshKey, setFreshKey] = useState<string | null>(null);
 
-  const keys = useQuery({ queryKey: ["api-keys"], queryFn: () => list({}) });
+  const keys = useQuery({
+    queryKey: ["api-keys"],
+    queryFn: () => list({}),
+    refetchInterval: 30_000,
+  });
   const projects = useQuery({ queryKey: ["projects"], queryFn: () => listProj({}) });
+  const roles = useQuery({ queryKey: ["my-roles"], queryFn: () => getRoles({}) });
+  const isAdmin = hasRole(roles.data ?? [], "admin");
+
+  const updateMutation = useMutation({
+    mutationFn: (input: { id: string; profile: AccessProfile; scopes: string[] }) =>
+      update({ data: input }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["api-keys"] });
+      toast.success("Permissions updated. Connected clients may take 30 seconds to refresh.");
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Could not update permissions"),
+  });
 
   const createMutation = useMutation({
     mutationFn: (keyName: string) =>
@@ -90,7 +121,7 @@ export function ApiKeysCard() {
               onChange={(event) => setProfile(event.target.value as AccessProfile)}
             >
               {(Object.keys(PROFILE_LABELS) as AccessProfile[])
-                .filter((value) => value !== "custom")
+                .filter((value) => value !== "custom" && (isAdmin || value !== "administrator"))
                 .map((value) => (
                   <option key={value} value={value}>
                     {PROFILE_LABELS[value]}
@@ -156,7 +187,7 @@ export function ApiKeysCard() {
               keys.data.map((key) => (
                 <li
                   key={key.id}
-                  className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2"
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border px-3 py-2"
                 >
                   <span className="min-w-0">
                     <span className="block truncate font-medium">{key.name}</span>
@@ -173,6 +204,19 @@ export function ApiKeysCard() {
                       </Badge>
                     ) : null}
                   </span>
+                  {key.active ? (
+                    <KeyAccessEditor
+                      key={`${key.id}:${key.access_profile}:${key.scopes?.join(",")}`}
+                      name={key.name}
+                      profile={key.access_profile}
+                      scopes={key.scopes ?? []}
+                      isAdmin={isAdmin}
+                      pending={updateMutation.isPending}
+                      onApply={(profile, scopes) =>
+                        updateMutation.mutate({ id: key.id, profile, scopes })
+                      }
+                    />
+                  ) : null}
                   {key.revoked_at ? (
                     <Badge variant="outline" className="text-muted-foreground">
                       Revoked
@@ -196,6 +240,50 @@ export function ApiKeysCard() {
         </CardContent>
       </Card>
       <McpConnectionCard key={freshKey ? "fresh" : "existing"} freshKey={freshKey} />
+    </div>
+  );
+}
+
+function KeyAccessEditor(props: {
+  name: string;
+  profile: string;
+  scopes: string[];
+  isAdmin: boolean;
+  pending: boolean;
+  onApply: (profile: AccessProfile, scopes: string[]) => void;
+}) {
+  const initial = isAccessProfile(props.profile) ? props.profile : "custom";
+  const [profile, setProfile] = useState<AccessProfile>(initial);
+  const expected = scopesForProfile(profile, props.scopes);
+  const changed =
+    profile !== props.profile ||
+    expected.length !== props.scopes.length ||
+    expected.some((scope) => !props.scopes.includes(scope));
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <select
+        aria-label={`Permissions for ${props.name}`}
+        value={profile}
+        onChange={(event) => setProfile(event.target.value as AccessProfile)}
+        className="h-9 max-w-36 rounded-md border border-input bg-background px-2 text-sm"
+        disabled={props.pending}
+      >
+        {(Object.keys(PROFILE_LABELS) as AccessProfile[])
+          .filter((value) => props.isAdmin || value !== "administrator" || initial === value)
+          .map((value) => (
+            <option key={value} value={value}>
+              {PROFILE_LABELS[value]}
+            </option>
+          ))}
+      </select>
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={props.pending || !changed || (profile === "administrator" && !props.isAdmin)}
+        onClick={() => props.onApply(profile, profile === "custom" ? props.scopes : [])}
+      >
+        Apply permissions
+      </Button>
     </div>
   );
 }
