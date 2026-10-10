@@ -1,3 +1,4 @@
+import type { Json } from "@/integrations/supabase/types";
 import { autoInstructions, readAutoMode, writeAutoMode } from "@/lib/auto-mode.server";
 import { COMMAND_CENTER_HTML } from "@/lib/command-center";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -631,6 +632,15 @@ const PLATFORM_TOOLS: McpTool[] = [
         display_name: { type: "string" },
         credential_ref: { type: "string" },
         scopes: { type: "array", items: { type: "string" } },
+        telegram_destination: {
+          type: "object",
+          properties: {
+            chat_id: { type: "string", description: "Numeric Telegram supergroup ID" },
+            message_thread_id: { type: "integer", minimum: 1 },
+          },
+          required: ["chat_id", "message_thread_id"],
+          additionalProperties: false,
+        },
       },
       required: ["provider", "credential_ref"],
     },
@@ -1490,7 +1500,10 @@ export const Route = createFileRoute("/mcp")({
             const tool = catalog.tools.find((item) => item["name"] === toolName);
             if (!tool) throw new Error("Connected MCP tool was not found.");
             const annotations = (tool["annotations"] ?? {}) as Record<string, unknown>;
-            if (annotations["readOnlyHint"] !== true && catalog.connection.provider === "twilio") {
+            if (
+              annotations["readOnlyHint"] !== true &&
+              ["twilio", "telegram"].includes(catalog.connection.provider)
+            ) {
               await requireProviderWrite(key);
             } else if (annotations["readOnlyHint"] !== true) {
               if (!key.projectId) {
@@ -1946,9 +1959,34 @@ export const Route = createFileRoute("/mcp")({
               : [];
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
             const displayName = String(args["display_name"] ?? provider);
+            let destinationMetadata:
+              { telegram_chat_id: string; telegram_message_thread_id: number } | undefined;
+            if (args["telegram_destination"] !== undefined) {
+              if (provider !== "telegram")
+                throw new Error("Telegram destination requires Telegram provider.");
+              if (!/^credential:\/\/telegram\/[0-9a-f-]{36}$/i.test(credentialRef))
+                throw new Error("Telegram destination requires an owned bot credential reference.");
+              const { telegramDestination } = await import("@/lib/telegram.server");
+              const value = args["telegram_destination"] as Record<string, unknown> | null;
+              if (
+                !value ||
+                Object.keys(value).some(
+                  (field) => !["chat_id", "message_thread_id"].includes(field),
+                )
+              )
+                throw new Error("Invalid Telegram destination fields.");
+              const destination = telegramDestination({
+                telegram_chat_id: value["chat_id"],
+                telegram_message_thread_id: value["message_thread_id"],
+              });
+              destinationMetadata = {
+                telegram_chat_id: destination.chat_id,
+                telegram_message_thread_id: destination.message_thread_id,
+              };
+            }
             const { data: existing, error: existingError } = await supabaseAdmin
               .from("app_connections")
-              .select("id")
+              .select("id,metadata")
               .eq("user_id", key.userId)
               .eq("provider", provider)
               .eq("credential_reference", credentialRef)
@@ -1964,6 +2002,14 @@ export const Route = createFileRoute("/mcp")({
                     scopes,
                     credential_reference: credentialRef,
                     updated_at: new Date().toISOString(),
+                    ...(destinationMetadata
+                      ? {
+                          metadata: {
+                            ...((existing.metadata as Record<string, Json>) ?? {}),
+                            ...destinationMetadata,
+                          },
+                        }
+                      : {}),
                   })
                   .eq("id", existing.id)
                   .eq("user_id", key.userId)
@@ -1979,6 +2025,7 @@ export const Route = createFileRoute("/mcp")({
                     source: "chatgpt-mcp",
                     mode: "capability_grant",
                     secrets_exposed: false,
+                    ...destinationMetadata,
                   },
                 });
             const { data, error } = await connectionQuery

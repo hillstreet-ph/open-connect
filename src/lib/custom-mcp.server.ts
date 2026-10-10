@@ -1,5 +1,6 @@
 import { fetchMcpTools, withMcpClient } from "./mcp-client.server.ts";
 import { callTwilioTool, twilioFailureResult, twilioTools } from "./twilio.server.ts";
+import { callTelegramTool, telegramFailureResult, telegramTools } from "./telegram.server.ts";
 
 export function connectionAuthHeaders(authType: string, credential: string) {
   if (!credential || authType === "none") return {};
@@ -77,7 +78,7 @@ export async function assertToolConnectionAccess(
   projectId?: string,
   checkProject = assertProjectConnectionAccess,
 ) {
-  if (!["custom_mcp", "twilio"].includes(connection.provider)) {
+  if (!["custom_mcp", "twilio", "telegram"].includes(connection.provider)) {
     throw new Error("No executable adapter is configured for this connection.");
   }
   if (connection.status !== "connected") throw new Error("Connection is not verified.");
@@ -98,10 +99,12 @@ async function getToolConnection(userId: string, connectionId: string, projectId
   if (error || !data) throw new Error("Connection not found.");
   await assertToolConnectionAccess(userId, data, projectId);
   if (
-    data.provider === "twilio" &&
-    !/^credential:\/\/twilio\/[0-9a-f-]{36}$/i.test(data.credential_reference ?? "")
+    ["twilio", "telegram"].includes(data.provider) &&
+    !new RegExp(`^credential://${data.provider}/[0-9a-f-]{36}$`, "i").test(
+      data.credential_reference ?? "",
+    )
   ) {
-    throw new Error("Twilio has an invalid credential reference.");
+    throw new Error("Native provider has an invalid credential reference.");
   }
   return data;
 }
@@ -135,10 +138,12 @@ export async function listCustomMcpTools(userId: string, connectionId: string, p
   const tools =
     saved.provider === "twilio"
       ? twilioTools(saved.scopes ?? [])
-      : await (async () => {
-          const connection = await materializeCustomMcpConnection(saved);
-          return fetchMcpTools(connection.endpoint, connection.headers);
-        })();
+      : saved.provider === "telegram"
+        ? telegramTools(saved.scopes ?? [])
+        : await (async () => {
+            const connection = await materializeCustomMcpConnection(saved);
+            return fetchMcpTools(connection.endpoint, connection.headers);
+          })();
   return {
     connection: { id: saved.id, name: saved.display_name, provider: saved.provider },
     tools,
@@ -179,6 +184,13 @@ export async function callCustomMcpTool(
         resolveCredential: () =>
           resolveCredential(connection.user_id, connection.credential_reference),
       });
+    } else if (connection.provider === "telegram") {
+      result = await callTelegramTool(toolName, args, {
+        scopes: connection.scopes ?? [],
+        metadata: connection.metadata,
+        resolveCredential: () =>
+          resolveCredential(connection.user_id, connection.credential_reference),
+      });
     } else {
       const custom = await materializeCustomMcpConnection(connection);
       result = await withMcpClient(custom.endpoint, custom.headers, (client) =>
@@ -200,6 +212,7 @@ export async function callCustomMcpTool(
       }
     }
     if (connection.provider === "twilio") return twilioFailureResult(error);
+    if (connection.provider === "telegram") return telegramFailureResult(error);
     throw error;
   }
 
