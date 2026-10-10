@@ -155,7 +155,7 @@ const PLATFORM_TOOLS: McpTool[] = [
   {
     name: "list_my_memory",
     description:
-      "Read the authenticated user's private Memory library. When project_id is supplied, also include that user's memory explicitly stored in that accessible project. Without project_id, only personal memory is returned.",
+      "Read the authenticated user's private Memory library. When project_id is supplied, also include that user's memory explicitly stored in that accessible project. Without project_id, only personal memory is returned. Project-bound keys return only their project records, never personal records.",
     inputSchema: {
       type: "object",
       properties: {
@@ -172,7 +172,7 @@ const PLATFORM_TOOLS: McpTool[] = [
   {
     name: "list_my_knowledge",
     description:
-      "Read the authenticated user's private Knowledge library. When project_id is supplied, also include that user's knowledge explicitly stored in that accessible project. Without project_id, only personal knowledge is returned.",
+      "Read the authenticated user's private Knowledge library. When project_id is supplied, also include that user's knowledge explicitly stored in that accessible project. Without project_id, only personal knowledge is returned. Project-bound keys return only their project records, never personal records.",
     inputSchema: {
       type: "object",
       properties: {
@@ -679,12 +679,25 @@ async function requireProjectConnectionGrant(key: AuthedKey, connectionId: strin
 async function requireControlWrite(key: AuthedKey) {
   const roles = await loadRoles(key.userId);
   const authorizedRole = hasRole(roles, "admin");
-  const authorizedScope =
-    hasScope(key, "control:write") ||
-    hasScope(key, "tools:invoke") ||
-    hasScope(key, "connections:invoke");
+  const authorizedScope = hasScope(key, "control:write");
   if (!authorizedRole || !authorizedScope)
     throw new Error("Admin role and control write scope required.");
+  return roles;
+}
+
+// Provider writes retain their advertised invoke scopes; control-plane mutations
+// require the distinct control:write grant above.
+async function requireProviderWrite(key: AuthedKey) {
+  const roles = await loadRoles(key.userId);
+  if (
+    !hasRole(roles, "admin") ||
+    !(
+      hasScope(key, "control:write") ||
+      hasScope(key, "tools:invoke") ||
+      hasScope(key, "connections:invoke")
+    )
+  )
+    throw new Error("Admin role and provider invoke scope required.");
   return roles;
 }
 
@@ -1239,7 +1252,7 @@ export const Route = createFileRoute("/mcp")({
               return data ?? [];
             };
             const [personal, project] = await Promise.all([
-              readRows(null),
+              key.projectId ? Promise.resolve([]) : readRows(null),
               requestedProject ? readRows(requestedProject) : Promise.resolve([]),
             ]);
             result = textResult({
@@ -1373,7 +1386,7 @@ export const Route = createFileRoute("/mcp")({
             if (!tool) throw new Error("Connected MCP tool was not found.");
             const annotations = (tool["annotations"] ?? {}) as Record<string, unknown>;
             if (annotations["readOnlyHint"] !== true && catalog.connection.provider === "twilio") {
-              await requireControlWrite(key);
+              await requireProviderWrite(key);
             } else if (annotations["readOnlyHint"] !== true) {
               if (!key.projectId) {
                 throw new Error(
@@ -1415,7 +1428,7 @@ export const Route = createFileRoute("/mcp")({
             if (!e2bConfig().configured) throw new Error("E2B is not configured");
             result = textResult(await listE2bSandboxes(Number(args["limit"] ?? 100)));
           } else if (name === "e2b_create_sandbox") {
-            await requireControlWrite(key);
+            await requireProviderWrite(key);
             const { createE2bSandbox, e2bConfig } = await import("@/lib/e2b.server");
             if (!e2bConfig().configured) throw new Error("E2B is not configured");
             const metadata =
@@ -1435,7 +1448,7 @@ export const Route = createFileRoute("/mcp")({
               }),
             );
           } else if (name === "e2b_kill_sandbox") {
-            await requireControlWrite(key);
+            await requireProviderWrite(key);
             if (args["confirm"] !== true) throw new Error("Explicit confirm=true is required");
             const { e2bConfig, killE2bSandbox } = await import("@/lib/e2b.server");
             if (!e2bConfig().configured) throw new Error("E2B is not configured");
@@ -1454,7 +1467,7 @@ export const Route = createFileRoute("/mcp")({
             result = textResult(await listHubstaffOrganizations(key.userId));
           } else if (name === "hubstaff_admin_request") {
             const method = String(args["method"] ?? "GET").toUpperCase();
-            if (method !== "GET") await requireControlWrite(key);
+            if (method !== "GET") await requireProviderWrite(key);
             if (method === "DELETE" && args["confirm"] !== true) {
               throw new Error("Explicit confirm=true is required for DELETE");
             }

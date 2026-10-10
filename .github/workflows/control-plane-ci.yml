@@ -1,13 +1,47 @@
 name: Control Plane CI
 on:
   pull_request:
-    paths: ["control-plane/**", "supabase/migrations/**", ".github/workflows/control-plane-ci.yml"]
+    paths:
+      [
+        "control-plane/**",
+        "supabase/migrations/**",
+        "supabase/tests/**",
+        ".github/workflows/control-plane-ci.yml",
+      ]
   push:
     branches: [main]
-    paths: ["control-plane/**", "supabase/migrations/**", ".github/workflows/control-plane-ci.yml"]
+    paths:
+      [
+        "control-plane/**",
+        "supabase/migrations/**",
+        "supabase/tests/**",
+        ".github/workflows/control-plane-ci.yml",
+      ]
 permissions:
   contents: read
 jobs:
+  key-access:
+    name: Owned key access boundary
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: disposable-ci-only
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Exercise grants, audit, idempotency and negative authorization
+        env:
+          PGPASSWORD: disposable-ci-only
+        run: |
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 \
+            -f supabase/tests/key_access_fixture.sql \
+            -f supabase/migrations/20261010030000_owned_key_access.sql \
+            -f supabase/tests/owned_key_access.sql
   test:
     runs-on: ubuntu-latest
     defaults:
