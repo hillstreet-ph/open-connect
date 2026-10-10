@@ -2,7 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { ensureKobePlayVerify } from "./verify-admin.mjs";
 import { createBackend } from "./backend.mjs";
-import { createIngress, desiredNumberConfig, eligibleNumber, recordingTwiml } from "./platform.mjs";
+import {
+  createIngress,
+  desiredNumberConfig,
+  eligibleNumber,
+  recordingTwiml,
+  telegramDestination,
+} from "./platform.mjs";
 
 const sid = "VA" + "a".repeat(32);
 const configured = {
@@ -201,3 +207,136 @@ test("future-number adoption leaves player and explicitly unrelated numbers sepa
   assert.ok(xml.includes('track="inbound"'));
   assert.ok(xml.includes("/recording#rc=2&amp;rp="));
 });
+
+test("invalid topics fail rather than sending an OTP to the general chat", () => {
+  assert.deepEqual(telegramDestination({ telegram_chat_id: "group" }), { chat_id: "group" });
+  for (const topic of [0, -1, 1.5, "167", NaN]) {
+    assert.throws(
+      () => telegramDestination({ telegram_chat_id: "group", telegram_message_thread_id: topic }),
+      /telegram_topic_invalid/,
+    );
+  }
+});
+
+for (const kind of ["sms", "audio", "media"]) {
+  test(`worker delivers ${kind} into the configured forum topic with content protection`, async () => {
+    const token = "c".repeat(64);
+    const hash = Buffer.from(
+      await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token)),
+    ).toString("hex");
+    const accountSid = "AC" + "a".repeat(32);
+    const runtime = {
+      account_sid: accountSid,
+      user_id: "owner",
+      worker_key_hash: hash,
+      next_send_at: new Date(0).toISOString(),
+      last_reconciled_at: new Date().toISOString(),
+    };
+    const config = {
+      ...runtime,
+      enabled: true,
+      api_credential_id: "api",
+      bot_credential_id: "bot",
+      telegram_chat_id: "-1001111111111",
+      telegram_message_thread_id: 167,
+    };
+    const job = {
+      id: "job",
+      phone_number_sid: "PN" + "a".repeat(32),
+      kind,
+      attempts: 1,
+      claim_token: "claim",
+      payload: {
+        to: "+15551234567",
+        from: "+15557654321",
+        receivedAt: "2026-10-10T00:00:00Z",
+        body: "Fixture message",
+        messageSid: "SM" + "a".repeat(32),
+        mediaSid: "ME" + "a".repeat(32),
+        callSid: "CA" + "a".repeat(32),
+        recordingSid: "RE" + "a".repeat(32),
+      },
+    };
+    const original = globalThis.fetch;
+    let claimed = false,
+      sent = false,
+      finished = null;
+    globalThis.fetch = async (input, options) => {
+      const url = new URL(String(input));
+      if (url.origin === "https://api.telegram.org") {
+        const data = kind === "sms" ? JSON.parse(options.body) : Object.fromEntries(options.body);
+        assert.equal(String(data.chat_id), config.telegram_chat_id);
+        assert.equal(Number(data.message_thread_id), 167);
+        assert.equal(String(data.protect_content), "true");
+        assert.ok(
+          url.pathname.endsWith(
+            kind === "sms" ? "/sendMessage" : kind === "audio" ? "/sendAudio" : "/sendDocument",
+          ),
+        );
+        if (kind === "sms") assert.ok(data.text.includes("Fixture message"));
+        else assert.ok(data[kind === "audio" ? "audio" : "document"] instanceof Blob);
+        sent = true;
+        return Response.json({ ok: true, result: { message_id: 200 } });
+      }
+      if (url.origin === "https://api.twilio.com") {
+        if (kind === "audio" && url.pathname.endsWith(".json")) {
+          return Response.json({
+            account_sid: accountSid,
+            call_sid: job.payload.callSid,
+            status: "completed",
+          });
+        }
+        return new Response(new Uint8Array([1, 2, 3]), {
+          headers: { "content-type": "audio/mpeg" },
+        });
+      }
+      assert.equal(url.origin, "https://db.example");
+      const body = options.body ? JSON.parse(options.body) : null;
+      if (url.pathname.endsWith("/hillstreet_otp_runtime")) return Response.json([runtime]);
+      if (url.pathname.endsWith("/hillstreet_sms_forwarding")) return Response.json([config]);
+      if (url.pathname.endsWith("/hillstreet_acquire_otp_worker")) return Response.json("lease");
+      if (url.pathname.endsWith("/hillstreet_claim_otp_job")) {
+        if (claimed) return Response.json(null);
+        claimed = true;
+        return Response.json(job);
+      }
+      if (url.pathname.endsWith("/resolve_connection_credential")) {
+        return Response.json(
+          body.p_credential_id === "bot"
+            ? "fixture-token"
+            : JSON.stringify({
+                account_sid: accountSid,
+                api_key_sid: "SK" + "b".repeat(32),
+                api_key_secret: "fixture",
+              }),
+        );
+      }
+      if (url.pathname.endsWith("/hillstreet_otp_jobs")) {
+        if (body.status !== "sending") finished = body;
+        return Response.json([{ id: "job" }]);
+      }
+      throw new Error("Unexpected request " + url.pathname);
+    };
+    try {
+      const backend = createBackend({
+        root: "https://db.example",
+        serviceKey: "fixture",
+        background: () => {},
+      });
+      const response = await backend.worker(
+        new Request("https://worker.example", {
+          method: "POST",
+          headers: { Authorization: "Bearer " + token },
+          body: JSON.stringify({ account_sid: accountSid }),
+        }),
+      );
+      assert.equal(response.status, 200);
+      assert.equal(sent, true);
+      assert.equal(finished.status, "delivered");
+      assert.equal(finished.telegram_message_id, 200);
+      assert.equal(finished.payload_ciphertext, null);
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+}

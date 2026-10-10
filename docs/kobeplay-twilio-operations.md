@@ -30,6 +30,8 @@ No public SMS proxy was deployed. Fraud Guard's Console settings and destination
 
 ## Internal Telegram number workflow
 
+Forum destinations use `telegram_message_thread_id` on both the account runtime and the per-number forwarding configuration. Reconciliation copies the runtime default to enrolled numbers. SMS JSON and audio/document multipart sends all include Telegram's `message_thread_id`. A configured invalid topic fails without sending sensitive content to the general chat. Verify the topic with a harmless message and provider response before updating live routing. Keep group and topic IDs in private operational configuration.
+
 Existing forwarding is independent of player Verify. Incoming text/MMS is queued; voice records the inbound track and forwards protected audio after the recording completes. It is not a live Telegram voice bridge or transcription service.
 
 For future numbers, purchase only after number suitability and cost are resolved. Set the friendly name prefix `HillStreet / OTP`; the existing worker automatically enrolls matching numbers and verifies webhook readback. It preserves explicitly disabled numbers and avoids numbers assigned to TwiML applications or trunks.
