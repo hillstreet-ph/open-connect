@@ -1,3 +1,4 @@
+import AUTO_SKILL_MARKDOWN from "../../skills/auto/SKILL.md?raw";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { hasRole, type AppRole } from "@/lib/rbac";
@@ -200,7 +201,7 @@ export const getResourceDownloadUrl = createServerFn({ method: "POST" })
     const { data: resource, error } = await context.supabase
       .from("resources")
       .select(
-        "id, name, slug, description, resource_type, version, author, package_path, package_filename, owner_id, published, installation_config",
+        "id, name, slug, description, resource_type, version, author, package_path, package_filename, owner_id, published, installation_config, verified, source",
       )
       .eq("id", data.id)
       .maybeSingle();
@@ -228,7 +229,10 @@ export const getResourceDownloadUrl = createServerFn({ method: "POST" })
       };
     }
 
-    const markdown = skillManifest(resource);
+    const markdown =
+      resource.slug === "auto" && resource.verified && resource.source === "open-connect"
+        ? AUTO_SKILL_MARKDOWN
+        : skillManifest(resource);
     const filename = `${resource.slug || resource.name}.md`;
     return {
       kind: "markdown" as const,

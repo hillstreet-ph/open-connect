@@ -1,3 +1,4 @@
+import { autoInstructions, readAutoMode, writeAutoMode } from "@/lib/auto-mode.server";
 import { COMMAND_CENTER_HTML } from "@/lib/command-center";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createFileRoute } from "@tanstack/react-router";
@@ -67,7 +68,8 @@ type McpTool = {
   _meta?: Record<string, unknown>;
 };
 
-const COMMAND_CENTER_URI = "ui://open-connect/command-center-v1.html";
+const COMMAND_CENTER_URI = "ui://open-connect/command-center-v2.html";
+const LEGACY_COMMAND_CENTER_URI = "ui://open-connect/command-center-v1.html";
 
 /** Isolate-level cache (Cloudflare warm isolates reuse this). */
 let catalogCache: {
@@ -119,9 +121,49 @@ const PLATFORM_TOOLS: McpTool[] = [
       openWorldHint: false,
     },
     _meta: {
+      ui: { resourceUri: COMMAND_CENTER_URI },
       "ui/resourceUri": COMMAND_CENTER_URI,
       "openai/outputTemplate": COMMAND_CENTER_URI,
     },
+  },
+  {
+    name: "get_auto_mode",
+    description:
+      "Read the authenticated account's scoped Auto autonomy and discovery preference. Host approvals remain enforced.",
+    inputSchema: { type: "object", properties: {} },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  },
+  {
+    name: "set_auto_mode",
+    description:
+      "Save Auto on/off for the authenticated account and key context. Enables task autonomy and discovery, not permission bypass or secret access.",
+    inputSchema: {
+      type: "object",
+      properties: { enabled: { type: "boolean" } },
+      required: ["enabled"],
+      additionalProperties: false,
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      openWorldHint: false,
+      idempotentHint: true,
+    },
+  },
+  {
+    name: "auto_discover",
+    description:
+      "When Auto is enabled and an authorized task needs a capability, match verified Marketplace tools and skills to the goal. Returns metadata and next steps, never executes or reveals credentials.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        goal: { type: "string", minLength: 1, maxLength: 2000 },
+        limit: { type: "integer", minimum: 1, maximum: 10 },
+      },
+      required: ["goal"],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   },
   {
     name: "list_resources",
@@ -869,6 +911,9 @@ const TOOL_SCOPES: Record<string, string> = {
   search: "resources:read",
   fetch: "resources:read",
   open_connect_status: "mcp:connect",
+  get_auto_mode: "mcp:connect",
+  set_auto_mode: "tools:invoke",
+  auto_discover: "resources:read",
   list_resources: "resources:read",
   list_personal_resources: "resources:read",
   list_my_memory: "memory:read",
@@ -932,7 +977,7 @@ export const Route = createFileRoute("/mcp")({
         }
         return json({
           name: "open-connect",
-          version: "1.0.1",
+          version: "1.0.2",
           protocol: "mcp",
           planes: ["resources", "connections", "models", "credentials"],
           endpoints: {
@@ -989,6 +1034,8 @@ export const Route = createFileRoute("/mcp")({
         let result: Record<string, unknown> = { ok: true };
 
         if (body.method === "initialize") {
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+          const auto = await readAutoMode(supabaseAdmin as SupabaseClient, key);
           result = {
             protocolVersion: body.params?.protocolVersion ?? "2025-06-18",
             capabilities: {
@@ -997,11 +1044,10 @@ export const Route = createFileRoute("/mcp")({
             },
             serverInfo: {
               name: "open-connect",
-              version: "1.0.1",
+              version: "1.0.2",
               planes: ["resources", "connections", "models", "credentials"],
             },
-            instructions:
-              "Use read-only discovery tools before write tools. Hubstaff, E2B, connection, and credential actions are scoped to the authenticated Open-Connect account and role.",
+            instructions: autoInstructions(auto.enabled),
           };
         } else if (body.method === "tools/list") {
           result = { tools: chatGptTools() };
@@ -1019,7 +1065,7 @@ export const Route = createFileRoute("/mcp")({
         } else if (body.method === "resources/read") {
           const uri = (body.params as { uri?: string } | undefined)?.uri;
           result =
-            uri === COMMAND_CENTER_URI
+            uri === COMMAND_CENTER_URI || uri === LEGACY_COMMAND_CENTER_URI
               ? {
                   contents: [
                     {
@@ -1123,7 +1169,10 @@ export const Route = createFileRoute("/mcp")({
             } catch {
               // Status must remain available even when the optional connection counter is not.
             }
-            result = textResult({
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const auto = await readAutoMode(supabaseAdmin as SupabaseClient, key);
+            const status = {
+              auto,
               gateway: "open-connect.site",
               planes: {
                 resources: { published: catalog.count },
@@ -1138,7 +1187,63 @@ export const Route = createFileRoute("/mcp")({
               },
               scopes: key.scopes,
               user_id: key.userId,
-            });
+            };
+            result = { ...textResult(status), structuredContent: status };
+          } else if (
+            name === "get_auto_mode" ||
+            name === "set_auto_mode" ||
+            name === "auto_discover"
+          ) {
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const auto =
+              name === "set_auto_mode"
+                ? await writeAutoMode(supabaseAdmin as SupabaseClient, key, args["enabled"])
+                : await readAutoMode(supabaseAdmin as SupabaseClient, key);
+            let payload: Record<string, unknown> = {
+              auto,
+              instructions: autoInstructions(auto.enabled),
+            };
+            if (name === "auto_discover") {
+              const goal = String(args["goal"] ?? "").trim();
+              if (!goal || goal.length > 2000)
+                return gatewayError("goal must contain 1–2000 characters", 400, "invalid_request");
+              const requestedLimit = Number(args["limit"] ?? 5);
+              const limit = Number.isFinite(requestedLimit)
+                ? Math.min(10, Math.max(1, Math.trunc(requestedLimit)))
+                : 5;
+              const catalog = auto.enabled === true ? await getCatalog() : null;
+              const matches = catalog
+                ? rankCapabilities(
+                    goal,
+                    [...catalog.bySlug.values()].filter(isExecutable).map((item) => ({
+                      slug: item.slug,
+                      name: item.name,
+                      description: item.description,
+                      resourceType: item.resource_type,
+                      installationType: item.installation_type,
+                    })),
+                    limit,
+                  )
+                : [];
+              payload = {
+                ...payload,
+                goal,
+                matches,
+                execution_performed: false,
+                values_exposed: false,
+                status: !auto.available
+                  ? "unavailable"
+                  : !auto.enabled
+                    ? "disabled"
+                    : matches.length
+                      ? "matched"
+                      : "no_match",
+                next_action: matches.length
+                  ? "Inspect matched metadata, then discover the actual host or connection tool schema and verify authorized access."
+                  : "Use an existing host tool or report the missing capability; do not assume a catalog entry is executable.",
+              };
+            }
+            result = { ...textResult(payload), structuredContent: payload };
           } else if (name === "calculate") {
             const expression = String(args["expression"] ?? "");
             result = textResult({
