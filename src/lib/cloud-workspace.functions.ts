@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { assertCloudWorkspaceToolAllowed } from "@/lib/cloud-workspace-policy";
 
 const connectionInput = z.object({
   projectId: z.string().uuid(),
@@ -40,6 +41,7 @@ export const runCloudTool = createServerFn({ method: "POST" })
     const tool = catalog.tools.find((item) => item["name"] === data.toolName);
     if (!tool) throw new Error("Tool is no longer available. Refresh the connection.");
     const annotations = (tool["annotations"] ?? {}) as Record<string, unknown>;
+    assertCloudWorkspaceToolAllowed(catalog.connection.provider, annotations);
     if (annotations["destructiveHint"] === true && !data.confirm) {
       throw new Error("Confirm the destructive operation before running this tool.");
     }
