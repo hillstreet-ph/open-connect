@@ -1038,8 +1038,7 @@ export const Route = createFileRoute("/mcp")({
 
           if (
             !name ||
-            (!canUseTool(key, name) &&
-              (!SELF_GUARDED_WRITE_TOOLS.has(name) || hubstaffRead))
+            (!canUseTool(key, name) && (!SELF_GUARDED_WRITE_TOOLS.has(name) || hubstaffRead))
           ) {
             return gatewayError(
               `Key cannot invoke ${name || "this tool"} in its selected scope.`,
