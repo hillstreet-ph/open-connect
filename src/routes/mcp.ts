@@ -1,3 +1,8 @@
+import {
+  AUTO_MODE_OUTPUT_SCHEMA,
+  AUTO_DISCOVERY_OUTPUT_SCHEMA,
+  AUTO_STATUS_OUTPUT_SCHEMA,
+} from "@/lib/auto-mcp-contract";
 import { autoInstructions, readAutoMode, writeAutoMode } from "@/lib/auto-mode.server";
 import { COMMAND_CENTER_HTML } from "@/lib/command-center";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -64,6 +69,7 @@ type McpTool = {
   title?: string;
   description: string;
   inputSchema: Record<string, unknown>;
+  outputSchema?: Record<string, unknown>;
   annotations?: Record<string, boolean>;
   _meta?: Record<string, unknown>;
 };
@@ -114,6 +120,7 @@ const PLATFORM_TOOLS: McpTool[] = [
   {
     name: "open_connect_status",
     description: "Gateway status: resources, connections, models",
+    outputSchema: AUTO_STATUS_OUTPUT_SCHEMA,
     inputSchema: { type: "object", properties: {} },
     annotations: {
       readOnlyHint: true,
@@ -121,13 +128,16 @@ const PLATFORM_TOOLS: McpTool[] = [
       openWorldHint: false,
     },
     _meta: {
-      ui: { resourceUri: COMMAND_CENTER_URI },
+      ui: { resourceUri: COMMAND_CENTER_URI, visibility: ["model", "app"] },
+      "openai/widgetAccessible": true,
       "ui/resourceUri": COMMAND_CENTER_URI,
       "openai/outputTemplate": COMMAND_CENTER_URI,
     },
   },
   {
     name: "get_auto_mode",
+    outputSchema: AUTO_MODE_OUTPUT_SCHEMA,
+    _meta: { ui: { visibility: ["model", "app"] }, "openai/widgetAccessible": true },
     description:
       "Read the authenticated account's scoped Auto autonomy and discovery preference. Host approvals remain enforced.",
     inputSchema: { type: "object", properties: {} },
@@ -135,6 +145,8 @@ const PLATFORM_TOOLS: McpTool[] = [
   },
   {
     name: "set_auto_mode",
+    outputSchema: AUTO_MODE_OUTPUT_SCHEMA,
+    _meta: { ui: { visibility: ["model", "app"] }, "openai/widgetAccessible": true },
     description:
       "Save Auto on/off for the authenticated account and key context. Enables task autonomy and discovery, not permission bypass or secret access.",
     inputSchema: {
@@ -152,6 +164,7 @@ const PLATFORM_TOOLS: McpTool[] = [
   },
   {
     name: "auto_discover",
+    outputSchema: AUTO_DISCOVERY_OUTPUT_SCHEMA,
     description:
       "When Auto is enabled and an authorized task needs a capability, match verified Marketplace tools and skills to the goal. Returns metadata and next steps, never executes or reveals credentials.",
     inputSchema: {

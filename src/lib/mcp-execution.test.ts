@@ -1,3 +1,4 @@
+import { Validator, type Schema } from "@cfworker/json-schema";
 import { beforeEach, expect, mock, test } from "bun:test";
 
 let post: (args: { request: Request }) => Promise<Response>;
@@ -659,4 +660,36 @@ test("Auto discovery respects Off and returns metadata without provider executio
   expect(payload.values_exposed).toBe(false);
   expect(connectionCalls).toEqual([]);
   expect(connectionToolReads).toBe(0);
+});
+
+test("Auto results satisfy advertised schemas and widgets can call scoped status and toggle tools", async () => {
+  scopes = ["mcp:connect", "resources:read", "tools:invoke"];
+  const response = await post({
+    request: new Request("https://fixture.invalid/mcp", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json, text/event-stream",
+      },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
+    }),
+  });
+  const tools = (await response.json()).result.tools as {
+    name: string;
+    outputSchema: Schema;
+    _meta?: Record<string, unknown>;
+  }[];
+  for (const [name, args] of [
+    ["open_connect_status", {}],
+    ["get_auto_mode", {}],
+    ["set_auto_mode", { enabled: true }],
+    ["auto_discover", { goal: "Approved fixture" }],
+  ] as const) {
+    const tool = tools.find((t) => t.name === name)!;
+    const payload = (await (await call(name, args)).json()).result.structuredContent;
+    const validation = new Validator(tool.outputSchema).validate(payload);
+    expect(validation.errors).toEqual([]);
+    expect(validation.valid).toBe(true);
+    if (name !== "auto_discover") expect(tool._meta?.["openai/widgetAccessible"]).toBe(true);
+  }
 });
