@@ -465,10 +465,21 @@ test("private read grants cannot invoke Hubstaff admin requests", async () => {
 });
 
 test("Hubstaff GET requests require and accept the advertised tools invoke scope", async () => {
-  scopes = ["mcp:connect", "tools:invoke"];
+  scopes = ["tools:invoke"];
   const response = await call("hubstaff_admin_request", {
     method: "GET",
     path: "/v2/organizations",
+  });
+  expect(response.status).toBe(200);
+  expect(hubstaffRequests).toBe(1);
+});
+
+test("Hubstaff writes preserve the existing connections invoke control gate", async () => {
+  scopes = ["mcp:connect", "connections:invoke"];
+  const response = await call("hubstaff_admin_request", {
+    method: "PATCH",
+    path: "/v2/organizations/1",
+    body: { name: "Fixture" },
   });
   expect(response.status).toBe(200);
   expect(hubstaffRequests).toBe(1);
