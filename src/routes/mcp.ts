@@ -896,6 +896,7 @@ const SELF_GUARDED_WRITE_TOOLS = new Set([
   "install_capability",
   "e2b_create_sandbox",
   "e2b_kill_sandbox",
+  "hubstaff_admin_request",
 ]);
 
 function canUseTool(key: AuthedKey, toolName: string) {
@@ -947,7 +948,8 @@ export const Route = createFileRoute("/mcp")({
           !hasScope(key, "models:invoke") &&
           !hasScope(key, "resources:read") &&
           !hasScope(key, "memory:read") &&
-          !hasScope(key, "knowledge:read")
+          !hasScope(key, "knowledge:read") &&
+          !hasScope(key, "tools:invoke")
         ) {
           return gatewayError(
             "Key is missing an MCP read or model scope.",
@@ -1030,8 +1032,15 @@ export const Route = createFileRoute("/mcp")({
         } else if (body.method === "tools/call") {
           const name = body.params?.name;
           const args = body.params?.arguments ?? {};
+          const hubstaffRead =
+            name === "hubstaff_admin_request" &&
+            String(args["method"] ?? "GET").toUpperCase() === "GET";
 
-          if (!name || (!canUseTool(key, name) && !SELF_GUARDED_WRITE_TOOLS.has(name))) {
+          if (
+            !name ||
+            (!canUseTool(key, name) &&
+              (!SELF_GUARDED_WRITE_TOOLS.has(name) || hubstaffRead))
+          ) {
             return gatewayError(
               `Key cannot invoke ${name || "this tool"} in its selected scope.`,
               403,
