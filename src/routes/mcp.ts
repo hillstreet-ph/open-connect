@@ -662,6 +662,20 @@ async function assertProjectAccess(key: AuthedKey, projectId: string) {
   return project;
 }
 
+/** A project key may use only connections deliberately assigned to that project. */
+async function requireProjectConnectionGrant(key: AuthedKey, connectionId: string) {
+  if (!key.projectId) return;
+  await assertProjectAccess(key, key.projectId);
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: grant, error } = await supabaseAdmin
+    .from("project_connections")
+    .select("id")
+    .eq("project_id", key.projectId)
+    .eq("connection_id", connectionId)
+    .maybeSingle();
+  if (error || !grant) throw new Error("Connection is not assigned to this API key's project.");
+}
+
 async function requireControlWrite(key: AuthedKey) {
   const roles = await loadRoles(key.userId);
   const authorizedRole = hasRole(roles, "admin");
@@ -1273,9 +1287,9 @@ export const Route = createFileRoute("/mcp")({
               .select("id,provider,display_name,status,scopes,credential_reference,last_used_at")
               .eq("user_id", key.userId);
             if (provider) ownedQuery = ownedQuery.eq("provider", provider);
-            const { data: owned, error: ownedError } = await ownedQuery
-              .order("created_at", { ascending: false })
-              .limit(100);
+            const { data: owned, error: ownedError } = key.projectId
+              ? { data: [], error: null }
+              : await ownedQuery.order("created_at", { ascending: false }).limit(100);
             if (ownedError) throw new Error(ownedError.message);
             const visible = new Map<string, Record<string, unknown>>();
             for (const connection of owned ?? []) {
@@ -1328,6 +1342,7 @@ export const Route = createFileRoute("/mcp")({
             }
             result = textResult({ connections: [...visible.values()] });
           } else if (name === "list_connection_tools") {
+            await requireProjectConnectionGrant(key, String(args["connection_id"] ?? ""));
             const { listCustomMcpTools } = await import("@/lib/custom-mcp.server");
             result = textResult(
               await listCustomMcpTools(
@@ -1340,6 +1355,7 @@ export const Route = createFileRoute("/mcp")({
             const { callCustomMcpTool, listCustomMcpTools } =
               await import("@/lib/custom-mcp.server");
             const connectionId = String(args["connection_id"] ?? "");
+            await requireProjectConnectionGrant(key, connectionId);
             const toolName = String(args["tool_name"] ?? "");
             const catalog = await listCustomMcpTools(
               key.userId,
@@ -1869,18 +1885,33 @@ export const Route = createFileRoute("/mcp")({
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
             const connections: Array<Record<string, unknown>> = [];
             const pageSize = 200;
-            for (let offset = 0; ; offset += pageSize) {
-              const { data: page, error } = await supabaseAdmin
-                .from("app_connections")
-                .select("id, provider, display_name, status, scopes")
-                .eq("user_id", key.userId)
-                .eq("status", "connected")
-                .order("created_at", { ascending: false })
-                .order("id", { ascending: true })
-                .range(offset, offset + pageSize - 1);
-              if (error) throw new Error("Could not list connected apps.");
-              connections.push(...(page ?? []));
-              if ((page?.length ?? 0) < pageSize) break;
+            if (key.projectId) {
+              await assertProjectAccess(key, key.projectId);
+              const { data: shared, error } = await supabaseAdmin
+                .from("project_connections")
+                .select("app_connections!inner(id,provider,display_name,status,scopes)")
+                .eq("project_id", key.projectId)
+                .eq("app_connections.status", "connected");
+              if (error) throw new Error("Could not list this project's connected apps.");
+              connections.push(
+                ...(shared ?? []).flatMap((row) =>
+                  row.app_connections ? [row.app_connections] : [],
+                ),
+              );
+            } else {
+              for (let offset = 0; ; offset += pageSize) {
+                const { data: page, error } = await supabaseAdmin
+                  .from("app_connections")
+                  .select("id, provider, display_name, status, scopes")
+                  .eq("user_id", key.userId)
+                  .eq("status", "connected")
+                  .order("created_at", { ascending: false })
+                  .order("id", { ascending: true })
+                  .range(offset, offset + pageSize - 1);
+                if (error) throw new Error("Could not list connected apps.");
+                connections.push(...(page ?? []));
+                if ((page?.length ?? 0) < pageSize) break;
+              }
             }
             result = textResult({
               data: connections,

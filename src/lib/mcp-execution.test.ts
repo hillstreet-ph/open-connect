@@ -20,6 +20,15 @@ let connectionProvider = "twilio";
 let connectionReadOnly = false;
 let connectionError = false;
 const connectionCalls: unknown[] = [];
+let connectionToolReads = 0;
+const assignedConnections = new Set<string>();
+const assignedConnection = {
+  id: "fixture-connection",
+  provider: "twilio",
+  display_name: "Project account",
+  status: "connected",
+  scopes: ["account:read"],
+};
 
 mock.module("@/lib/managed-connectors.server", () => ({
   listOwnedManagedConnections: async (userId: string) => {
@@ -31,10 +40,13 @@ mock.module("@/lib/managed-connectors.server", () => ({
 }));
 
 mock.module("@/lib/custom-mcp.server", () => ({
-  listCustomMcpTools: async () => ({
-    connection: { id: "fixture-connection", provider: connectionProvider },
-    tools: [{ name: "fixture-operation", annotations: { readOnlyHint: connectionReadOnly } }],
-  }),
+  listCustomMcpTools: async () => {
+    connectionToolReads++;
+    return {
+      connection: { id: "fixture-connection", provider: connectionProvider },
+      tools: [{ name: "fixture-operation", annotations: { readOnlyHint: connectionReadOnly } }],
+    };
+  },
   callCustomMcpTool: async (...args: unknown[]) => {
     connectionCalls.push(args);
     return { content: [{ type: "text", text: "{}" }], isError: connectionError };
@@ -59,6 +71,56 @@ mock.module("@/integrations/supabase/client.server", () => ({
   supabaseAdmin: {
     from: (table: string) => {
       tables.push(table);
+      if (
+        ["organization_members", "projects", "project_members", "project_connections"].includes(
+          table,
+        )
+      ) {
+        const filters: Record<string, unknown> = {};
+        const query = {
+          select() {
+            return this;
+          },
+          eq(field: string, value: unknown) {
+            filters[field] = value;
+            return this;
+          },
+          in() {
+            return this;
+          },
+          maybeSingle: async () => ({
+            data:
+              table === "projects"
+                ? {
+                    id: "fixture-project",
+                    organization_id: "fixture-org",
+                    workspace_id: "fixture-workspace",
+                  }
+                : table === "organization_members"
+                  ? { id: "fixture-membership" }
+                  : table === "project_connections" &&
+                      filters["project_id"] === "fixture-project" &&
+                      assignedConnections.has(String(filters["connection_id"]))
+                    ? { id: "fixture-grant" }
+                    : null,
+            error: null,
+          }),
+          then(
+            onfulfilled: (value: { data: unknown[]; error: null }) => unknown,
+            onrejected?: (reason: unknown) => unknown,
+          ) {
+            const data =
+              table === "organization_members"
+                ? [{ organization_id: "fixture-org" }]
+                : filters["project_id"] === "fixture-project" &&
+                    assignedConnections.has(assignedConnection.id)
+                  ? [{ connection_id: assignedConnection.id, app_connections: assignedConnection }]
+                  : [];
+            return Promise.resolve({ data, error: null }).then(onfulfilled, onrejected);
+          },
+        };
+        return query;
+      }
       if (table === "resources")
         return {
           select: () => ({
@@ -147,6 +209,53 @@ beforeEach(() => {
   connectionCalls.length = 0;
   managedReads = 0;
   keyBoundary = {};
+  assignedConnections.clear();
+  connectionToolReads = 0;
+});
+
+test("project connection catalogs contain only assigned accounts", async () => {
+  keyBoundary = {
+    projectId: "fixture-project",
+    organizationId: "fixture-org",
+    workspaceId: "fixture-workspace",
+  };
+  scopes = ["mcp:connect", "connections:read"];
+  for (const tool of ["list_connections", "inspect_connections"]) {
+    const empty = await (await call(tool)).json();
+    const catalog = JSON.parse(empty.result.content[0].text);
+    expect(catalog.data ?? catalog.connections).toEqual([]);
+  }
+  assignedConnections.add(assignedConnection.id);
+  for (const tool of ["list_connections", "inspect_connections"]) {
+    const response = await (await call(tool)).json();
+    const catalog = JSON.parse(response.result.content[0].text);
+    expect(catalog.data ?? catalog.connections).toHaveLength(1);
+    expect((catalog.data ?? catalog.connections)[0].id).toBe(assignedConnection.id);
+  }
+});
+
+test("project tool discovery denies unassigned owner accounts before broker access", async () => {
+  keyBoundary = { projectId: "fixture-project" };
+  scopes = ["mcp:connect", "connections:read"];
+  const args = { connection_id: assignedConnection.id };
+  await expect(call("list_connection_tools", args)).rejects.toThrow("not assigned");
+  expect(connectionToolReads).toBe(0);
+  assignedConnections.add(assignedConnection.id);
+  expect((await call("list_connection_tools", args)).status).toBe(200);
+  expect(connectionToolReads).toBe(1);
+});
+
+test("project execution denies unassigned owner accounts before broker access", async () => {
+  keyBoundary = { projectId: "fixture-project" };
+  scopes = ["mcp:connect", "connections:invoke"];
+  connectionReadOnly = true;
+  const args = { connection_id: assignedConnection.id, tool_name: "fixture-operation" };
+  await expect(call("call_connection_tool", args)).rejects.toThrow("not assigned");
+  expect(connectionToolReads).toBe(0);
+  expect(connectionCalls).toEqual([]);
+  assignedConnections.add(assignedConnection.id);
+  expect((await call("call_connection_tool", args)).status).toBe(200);
+  expect(connectionCalls).toHaveLength(1);
 });
 
 test("control decisions reject non-admins and bounded keys before approval writes", async () => {
