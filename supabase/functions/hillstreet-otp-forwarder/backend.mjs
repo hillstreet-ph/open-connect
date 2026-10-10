@@ -1,5 +1,12 @@
 import { ensureKobePlayVerify } from "./verify-admin.mjs";
-import { boundedBytes, sid, desiredNumberConfig, eligibleNumber, deliverJob } from "./platform.mjs";
+import {
+  boundedBytes,
+  sid,
+  desiredNumberConfig,
+  eligibleNumber,
+  deliverJob,
+  telegramDestination,
+} from "./platform.mjs";
 export function createBackend({
   root,
   serviceKey,
@@ -220,6 +227,7 @@ export function createBackend({
             bot_credential_id: r.bot_credential_id,
             api_credential_id: r.api_credential_id,
             telegram_chat_id: r.telegram_chat_id,
+            telegram_message_thread_id: r.telegram_message_thread_id ?? null,
             canonical_url: r.function_base_url,
             enabled: desired.sms || desired.voice,
             voice_enabled: desired.voice,
@@ -306,6 +314,7 @@ export function createBackend({
   }
   async function prepare(job, config) {
     const p = job.payload;
+    const destination = telegramDestination(config);
     const botRaw = await secret(config.user_id, config.bot_credential_id);
     const botToken = botRaw.trim().startsWith("{") ? JSON.parse(botRaw).credential : botRaw;
     if (typeof botToken !== "string" || !botToken) throw new Error("credential_format");
@@ -315,7 +324,7 @@ export function createBackend({
         botToken,
         method: "sendMessage",
         data: {
-          chat_id: config.telegram_chat_id,
+          ...destination,
           text:
             label +
             "\n\n" +
@@ -351,7 +360,7 @@ export function createBackend({
         ? "audio/mpeg"
         : (response.headers.get("content-type")?.split(";")[0] ?? "application/octet-stream");
     const form = new FormData();
-    form.set("chat_id", config.telegram_chat_id);
+    for (const [name, value] of Object.entries(destination)) form.set(name, String(value));
     form.set("protect_content", "true");
     form.set("caption", label);
     form.set(

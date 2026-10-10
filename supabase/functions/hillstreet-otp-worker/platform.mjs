@@ -15,6 +15,15 @@ const reject = (status) =>
   });
 export const sid = (value, prefix) =>
   typeof value === "string" && new RegExp("^" + prefix + "[0-9a-f]{32}$").test(value);
+export function telegramDestination(config) {
+  const destination = { chat_id: config.telegram_chat_id };
+  const topic = config.telegram_message_thread_id;
+  if (topic != null) {
+    if (!Number.isSafeInteger(topic) || topic <= 0) throw new Error("telegram_topic_invalid");
+    destination.message_thread_id = topic;
+  }
+  return destination;
+}
 export async function boundedBytes(response, max = 5_000_000) {
   if (!response.body) throw new Error("empty_media");
   const reader = response.body.getReader(),
@@ -219,9 +228,12 @@ export async function deliverJob(job, config, deps) {
   try {
     prepared = await deps.prepare(job, config);
   } catch (e) {
-    const permanent = ["media_too_large", "media_origin_invalid", "recording_mismatch"].includes(
-      e?.message,
-    );
+    const permanent = [
+      "media_too_large",
+      "media_origin_invalid",
+      "recording_mismatch",
+      "telegram_topic_invalid",
+    ].includes(e?.message);
     await deps.finish(job, {
       status: permanent || job.attempts >= 5 ? "exhausted" : "queued",
       delay: Math.min(120, 5 * 2 ** job.attempts),
