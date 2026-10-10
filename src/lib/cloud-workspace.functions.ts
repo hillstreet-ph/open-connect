@@ -36,15 +36,7 @@ export const runCloudTool = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data, context }) => {
-    const { listCustomMcpTools, callCustomMcpTool } = await import("@/lib/custom-mcp.server");
-    const catalog = await listCustomMcpTools(context.userId, data.connectionId, data.projectId);
-    const tool = catalog.tools.find((item) => item["name"] === data.toolName);
-    if (!tool) throw new Error("Tool is no longer available. Refresh the connection.");
-    const annotations = (tool["annotations"] ?? {}) as Record<string, unknown>;
-    assertCloudWorkspaceToolAllowed(catalog.connection.provider, annotations);
-    if (annotations["destructiveHint"] === true && !data.confirm) {
-      throw new Error("Confirm the destructive operation before running this tool.");
-    }
+    const { callCustomMcpTool } = await import("@/lib/custom-mcp.server");
     return {
       result: JSON.stringify(
         await callCustomMcpTool(
@@ -53,6 +45,13 @@ export const runCloudTool = createServerFn({ method: "POST" })
           data.toolName,
           data.arguments,
           data.projectId,
+          (connection, tool) => {
+            const annotations = (tool["annotations"] ?? {}) as Record<string, unknown>;
+            assertCloudWorkspaceToolAllowed(connection.provider, annotations);
+            if (annotations["destructiveHint"] === true && !data.confirm) {
+              throw new Error("Confirm the destructive operation before running this tool.");
+            }
+          },
         ),
         null,
         2,
