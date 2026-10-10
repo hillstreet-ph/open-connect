@@ -17,6 +17,7 @@ const resource = {
 };
 const tables: string[] = [];
 const privateReads: { table: string; filters: Record<string, unknown> }[] = [];
+const autoPreferences = new Map<string, boolean>();
 let connectionProvider = "twilio";
 let connectionReadOnly = false;
 let connectionError = false;
@@ -83,6 +84,39 @@ mock.module("@/integrations/supabase/client.server", () => ({
   supabaseAdmin: {
     from: (table: string) => {
       tables.push(table);
+      if (table === "auto_preferences") {
+        const filters: Record<string, unknown> = {};
+        let write: Record<string, unknown> | null = null;
+        const query = {
+          select() {
+            return this;
+          },
+          eq(k: string, v: unknown) {
+            filters[k] = v;
+            return this;
+          },
+          upsert(row: Record<string, unknown>) {
+            write = row;
+            return this;
+          },
+          async maybeSingle() {
+            const enabled = autoPreferences.get(
+              String(filters["user_id"]) + "/" + String(filters["scope_key"]),
+            );
+            return { data: enabled === undefined ? null : { enabled }, error: null };
+          },
+          async single() {
+            if (!write) throw new Error("write missing");
+            expect(write["user_id"]).toBe("fixture-user");
+            autoPreferences.set(
+              String(write["user_id"]) + "/" + String(write["scope_key"]),
+              Boolean(write["enabled"]),
+            );
+            return { data: { enabled: write["enabled"] }, error: null };
+          },
+        };
+        return query;
+      }
       if (
         ["organization_members", "projects", "project_members", "project_connections"].includes(
           table,
@@ -217,6 +251,7 @@ mock.module("@/lib/oauth-client.server", () => ({
 await import("../routes/mcp");
 
 beforeEach(() => {
+  autoPreferences.clear();
   authenticated = true;
   roles = ["admin"];
   scopes = ["mcp:connect", "control:write"];
@@ -592,4 +627,36 @@ test("connection failures propagate as MCP tool errors instead of successful wra
   });
   const { result } = await response.json();
   expect(result.isError).toBe(true);
+});
+
+test("Auto toggle enforces write scope and saves only the authenticated key context", async () => {
+  scopes = ["mcp:connect", "resources:read"];
+  expect((await call("set_auto_mode", { enabled: false })).status).toBe(403);
+  expect(autoPreferences.size).toBe(0);
+  scopes.push("tools:invoke");
+  keyBoundary = { projectId: "fixture-project" };
+  const { result } = await (
+    await call("set_auto_mode", { enabled: false, user_id: "other-user", scope_key: "personal" })
+  ).json();
+  expect(result.structuredContent.auto.scope).toBe("project:fixture-project");
+  expect(autoPreferences.get("fixture-user/project:fixture-project")).toBe(false);
+  expect(autoPreferences.has("other-user/personal")).toBe(false);
+});
+
+test("Auto discovery respects Off and returns metadata without provider execution", async () => {
+  scopes = ["mcp:connect", "resources:read", "tools:invoke"];
+  await call("set_auto_mode", { enabled: false });
+  let payload = (await (await call("auto_discover", { goal: "Approved fixture" })).json()).result
+    .structuredContent;
+  expect(payload.status).toBe("disabled");
+  expect(payload.matches).toEqual([]);
+  await call("set_auto_mode", { enabled: true });
+  payload = (await (await call("auto_discover", { goal: "Approved fixture" })).json()).result
+    .structuredContent;
+  expect(payload.status).toBe("matched");
+  expect(payload.matches[0].slug).toBe(resource.slug);
+  expect(payload.execution_performed).toBe(false);
+  expect(payload.values_exposed).toBe(false);
+  expect(connectionCalls).toEqual([]);
+  expect(connectionToolReads).toBe(0);
 });
