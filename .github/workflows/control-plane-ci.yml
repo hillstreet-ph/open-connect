@@ -52,6 +52,16 @@ jobs:
             -f supabase/migrations/20260924010000_password_manager_credentials.sql \
             -f supabase/migrations/20261010050000_reusable_credential_values.sql \
             -f supabase/tests/reusable_credential_values.sql
+      - name: Exercise organization policy helper grants and membership boundaries
+        env:
+          PGPASSWORD: disposable-ci-only
+        run: |
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 \
+            -f supabase/tests/organization_policy_fixture.sql \
+            -f supabase/migrations/20261010094318_restore_organization_policy_grants.sql \
+            -f supabase/tests/organization_policy_grants.sql \
+            -f supabase/migrations/20261010094318_restore_organization_policy_grants.sql \
+            -f supabase/tests/organization_policy_grants.sql
   test:
     runs-on: ubuntu-latest
     defaults:
