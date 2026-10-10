@@ -110,6 +110,25 @@ async function getToolConnection(userId: string, connectionId: string, projectId
 }
 
 type ToolConnection = Awaited<ReturnType<typeof getToolConnection>>;
+type ToolAuthorizer = (
+  connection: { id: string; name: string; provider: string },
+  tool: Record<string, unknown>,
+) => void;
+
+export function authorizeToolForConnectionSnapshot(
+  connection: { id: string; display_name: string; provider: string },
+  tools: Array<Record<string, unknown>>,
+  toolName: string,
+  authorizeTool: ToolAuthorizer,
+) {
+  const tool = tools.find((item) => item["name"] === toolName);
+  if (!tool) throw new Error("Tool is no longer available. Refresh the connection.");
+  authorizeTool(
+    { id: connection.id, name: connection.display_name, provider: connection.provider },
+    tool,
+  );
+  return tool;
+}
 
 async function materializeCustomMcpConnection(data: ToolConnection) {
   if (data.provider !== "custom_mcp") throw new Error("Only Custom MCP connections use this tool.");
@@ -160,20 +179,12 @@ export async function callCustomMcpTool(
   toolName: string,
   args: Record<string, unknown>,
   projectId?: string,
-  authorizeTool?: (
-    connection: { id: string; name: string; provider: string },
-    tool: Record<string, unknown>,
-  ) => void,
+  authorizeTool?: ToolAuthorizer,
 ) {
   const connection = await getToolConnection(userId, connectionId, projectId);
   if (authorizeTool) {
     const tools = await listToolsForConnection(connection);
-    const tool = tools.find((item) => item["name"] === toolName);
-    if (!tool) throw new Error("Tool is no longer available. Refresh the connection.");
-    authorizeTool(
-      { id: connection.id, name: connection.display_name, provider: connection.provider },
-      tool,
-    );
+    authorizeToolForConnectionSnapshot(connection, tools, toolName, authorizeTool);
   }
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   let auditId: string | undefined;
