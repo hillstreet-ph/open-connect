@@ -30,7 +30,14 @@ function render(value){
   loaded=true;status.textContent=enabled===null?'Connected. Auto settings unavailable; retry to load them.':enabled?'Connected · Auto discovery enabled':'Connected · Auto discovery off';retry.hidden=enabled!==null;return true;
 }
 function rpc(method,params){return new Promise((resolve,reject)=>{const id='auto-'+(++serial);const timer=setTimeout(()=>{pending.delete(id);reject(new Error('Open-Connect did not respond. Retry connection.'))},8000);pending.set(id,{resolve,reject,timer});window.parent.postMessage({jsonrpc:'2.0',id,method,params},'*')})}
-function tool(name,args){if(bridgeReady)return rpc('tools/call',{name,arguments:args});if(typeof window.openai?.callTool==='function')return window.openai.callTool(name,args);throw new Error('The chat host has not connected the tool bridge. Retry or reopen the app.')}
+function tool(name,args){
+  if(bridgeReady)return rpc('tools/call',{name,arguments:args});
+  if(typeof window.openai?.callTool==='function')return new Promise((resolve,reject)=>{
+    const timer=setTimeout(()=>reject(new Error('The chat host did not respond. Retry connection.')),8000);
+    try{Promise.resolve(window.openai.callTool(name,args)).then(value=>{clearTimeout(timer);resolve(value)},error=>{clearTimeout(timer);reject(error)})}catch(error){clearTimeout(timer);reject(error)}
+  });
+  throw new Error('The chat host has not connected the tool bridge. Retry or reopen the app.');
+}
 function fail(error){status.textContent=error?.message||'Connection failed. Retry connection.';retry.hidden=false;toggle.disabled=enabled===null||!canSave;}
 window.addEventListener('message',e=>{
   if(e.source!==window.parent)return;const m=e.data;if(!m||m.jsonrpc!=='2.0')return;

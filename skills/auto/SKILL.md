@@ -19,6 +19,10 @@ Finish the user's authorized objective. Reuse prior authorization for the same t
 
 Prefer existing authenticated connectors and browser sessions. Read relevant credential metadata only when the authorized task requires it. Pass opaque credential references only to documented secure injection tools accepting those references. Follow the browser host's authentication handoff when injection is unavailable. Never expose passwords, tokens, cookies, private keys, or TOTP seeds in output, source, or logs.
 
+For a required browser sign-in, inspect the current destination origin and account. Use `match_browser_credentials` with that exact HTTPS origin and optional intended account when exposed. It searches the owner's password metadata, checks exact origin and account, and reports password/TOTP availability without values. Ambiguous matches require account selection; a match is not authentication. Bounded project/workspace/organization keys cannot search personal passwords with this tool.
+
+Read the browser host's authentication capability before sign-in. ChatGPT cloud browser `browserAuth` supports secure user credential entry, but its current contract has no Open-Connect credential-reference or TOTP injection parameter. Do not retrieve raw passwords or codes to fill through lower-level browser APIs. For another authorized browser executor, reuse stored passwords and generate TOTP only inside a documented secure broker that validates the destination and supports references; verify success on the destination site. Do not bypass CAPTCHA, device approval, consent, or host confirmations.
+
 Respect ChatGPT and Codex host confirmations, automatic approval review, provider consent, and managed policies. Never auto-click Allow buttons, mislabel writes as reads, or bypass a denied operation. Auto reduces discretionary assistant confirmations; it cannot disable platform approval controls. Task autonomy does not authorize unrelated deletion, purchases, messages, or changes to other accounts.
 
 ## Verify completion

@@ -1,3 +1,4 @@
+import { Validator, type Schema } from "@cfworker/json-schema";
 import { beforeEach, expect, mock, test } from "bun:test";
 
 let post: (args: { request: Request }) => Promise<Response>;
@@ -17,6 +18,7 @@ const resource = {
 };
 const tables: string[] = [];
 const privateReads: { table: string; filters: Record<string, unknown> }[] = [];
+const credentialReads: { fields: string; filters: Record<string, unknown> }[] = [];
 const autoPreferences = new Map<string, boolean>();
 let connectionProvider = "twilio";
 let connectionReadOnly = false;
@@ -117,6 +119,40 @@ mock.module("@/integrations/supabase/client.server", () => ({
               Boolean(write["enabled"]),
             );
             return { data: { enabled: write["enabled"] }, error: null };
+          },
+        };
+        return query;
+      }
+      if (table === "credential_secrets") {
+        const read = { fields: "", filters: {} as Record<string, unknown> };
+        credentialReads.push(read);
+        const query = {
+          select(fields: string) {
+            read.fields = fields;
+            return this;
+          },
+          eq(field: string, value: unknown) {
+            read.filters[field] = value;
+            return this;
+          },
+          order() {
+            return this;
+          },
+          async limit() {
+            return {
+              data: [
+                {
+                  id: "owned-credential",
+                  name: "Fixture login",
+                  website: "https://fixture.invalid/login",
+                  username: "owner",
+                  email_address: null,
+                  vault_secret_id: "fixture-vault",
+                  totp_vault_secret_id: "fixture-totp",
+                },
+              ],
+              error: null,
+            };
           },
         };
         return query;
@@ -277,6 +313,7 @@ mock.module("@/lib/oauth-client.server", () => ({
 await import("../routes/mcp");
 
 beforeEach(() => {
+  credentialReads.length = 0;
   autoPreferences.clear();
   authenticated = true;
   roles = ["admin"];
@@ -751,4 +788,86 @@ test("Auto discovery respects Off and returns metadata without provider executio
   expect(payload.values_exposed).toBe(false);
   expect(connectionCalls).toEqual([]);
   expect(connectionToolReads).toBe(0);
+});
+
+test("Auto results satisfy advertised schemas and widgets can call scoped status and toggle tools", async () => {
+  scopes = ["mcp:connect", "resources:read", "tools:invoke"];
+  const response = await post({
+    request: new Request("https://fixture.invalid/mcp", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json, text/event-stream",
+      },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
+    }),
+  });
+  const tools = (await response.json()).result.tools as {
+    name: string;
+    outputSchema: Schema;
+    _meta?: Record<string, unknown>;
+  }[];
+  for (const [name, args] of [
+    ["open_connect_status", {}],
+    ["get_auto_mode", {}],
+    ["set_auto_mode", { enabled: true }],
+    ["auto_discover", { goal: "Approved fixture" }],
+  ] as const) {
+    const tool = tools.find((t) => t.name === name)!;
+    const payload = (await (await call(name, args)).json()).result.structuredContent;
+    const validation = new Validator(tool.outputSchema).validate(payload);
+    expect(validation.errors).toEqual([]);
+    expect(validation.valid).toBe(true);
+    if (name !== "auto_discover") expect(tool._meta?.["openai/widgetAccessible"]).toBe(true);
+  }
+});
+
+test("catalog links open the Marketplace's resource filter instead of a missing detail route", async () => {
+  scopes = ["mcp:connect", "resources:read"];
+  const search = JSON.parse(
+    (await (await call("search", { query: "Approved fixture" })).json()).result.content[0].text,
+  );
+  const fetch = JSON.parse(
+    (await (await call("fetch", { id: resource.slug })).json()).result.content[0].text,
+  );
+  expect(search.results[0].url).toBe(
+    "https://open-connect.site/resources?resource=fixture-approved-tool",
+  );
+  expect(fetch.url).toBe(search.results[0].url);
+});
+
+test("browser matching requires secrets scope and rejects bounded keys before personal reads", async () => {
+  scopes = ["mcp:connect"];
+  expect(
+    (await call("match_browser_credentials", { origin: "https://fixture.invalid" })).status,
+  ).toBe(403);
+  expect(credentialReads).toEqual([]);
+  scopes.push("secrets:read");
+  keyBoundary = { projectId: "fixture-project" };
+  expect(
+    (await call("match_browser_credentials", { origin: "https://fixture.invalid" })).status,
+  ).toBe(403);
+  expect(credentialReads).toEqual([]);
+});
+
+test("browser matching selects owned metadata only and satisfies its output contract", async () => {
+  scopes = ["mcp:connect", "secrets:read"];
+  const result = (
+    await (
+      await call("match_browser_credentials", {
+        origin: "https://fixture.invalid",
+        account: "owner",
+      })
+    ).json()
+  ).result.structuredContent;
+  expect(result.status).toBe("matched");
+  expect(result.sign_in_performed).toBe(false);
+  expect(
+    new Validator(
+      (await import("./auto-mcp-contract")).BROWSER_CREDENTIAL_MATCH_OUTPUT_SCHEMA as Schema,
+    ).validate(result).valid,
+  ).toBe(true);
+  expect(credentialReads[0]?.filters).toEqual({ user_id: "fixture-user", secret_type: "password" });
+  expect(credentialReads[0]?.fields.split(",")).not.toContain("secret_value");
+  expect(JSON.stringify(result)).not.toMatch(/fixture-vault|fixture-totp/);
 });
