@@ -107,7 +107,7 @@ export const listLibraryResources = createServerFn({ method: "GET" })
 
 export const addResourceToLibrary = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input: { resourceId: string; collectionId?: string | null }) => ({
+  .validator((input: { resourceId: string; collectionId?: string | undefined | null }) => ({
     resourceId: input?.resourceId ?? "",
     collectionId: input?.collectionId ?? null,
   }))

@@ -31,7 +31,9 @@ jobs:
         run: python3 scripts/update-marketplace-branch.test.py
       - name: Production health contract tests
         run: python3 scripts/validate_production_health_test.py
-      - name: Typecheck / build
+      - name: Strict TypeScript validation
+        run: bun run typecheck
+      - name: Production build
         env:
           VITE_SUPABASE_URL: https://huadtiuuoiriqrjpjxhr.supabase.co
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_placeholder' }}

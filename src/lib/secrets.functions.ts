@@ -12,12 +12,64 @@ export type CredentialFolder = {
   projects: Array<{ id: string; name: string }>;
 };
 
+export type CredentialMetadata = {
+  id: string;
+  name: string;
+  secret_type: string;
+  email_address: string | null;
+  username: string | null;
+  website: string | null;
+  notes: string | null;
+  tags: string[];
+  projects: Array<{ id: string; name: string }>;
+  last_used_at: string | null;
+  created_at: string;
+  updated_at: string;
+  has_secret: boolean;
+  has_totp: boolean;
+};
+
+export function credentialMetadata(value: unknown): CredentialMetadata {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Invalid credential metadata");
+  const row = value as Record<string, unknown>;
+  const text = (key: string) => (typeof row[key] === "string" ? (row[key] as string) : null);
+  const id = text("id"),
+    name = text("name");
+  if (!id || !name) throw new Error("Credential metadata is missing its identity");
+  const projects = Array.isArray(row["projects"]) ? row["projects"] : [];
+  return {
+    id,
+    name,
+    secret_type: text("secret_type") ?? "other",
+    email_address: text("email_address"),
+    username: text("username"),
+    website: text("website"),
+    notes: text("notes"),
+    tags: Array.isArray(row["tags"])
+      ? row["tags"].filter((tag): tag is string => typeof tag === "string")
+      : [],
+    projects: projects.flatMap((project: unknown) => {
+      if (!project || typeof project !== "object") return [];
+      const p = project as Record<string, unknown>;
+      return typeof p["id"] === "string" && typeof p["name"] === "string"
+        ? [{ id: p["id"], name: p["name"] }]
+        : [];
+    }),
+    last_used_at: text("last_used_at"),
+    created_at: text("created_at") ?? "",
+    updated_at: text("updated_at") ?? "",
+    has_secret: row["has_secret"] === true,
+    has_totp: row["has_totp"] === true,
+  };
+}
+
 export const listSecrets = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase.rpc("list_credential_secrets");
     if (error) throw new Error(error.message);
-    return Array.isArray(data) ? data : [];
+    return Array.isArray(data) ? data.map(credentialMetadata) : [];
   });
 
 export const createSecret = createServerFn({ method: "POST" })

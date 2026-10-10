@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { callTwilioTool, twilioResourceScope, twilioTools } from "./twilio.server.ts";
+import {
+  callTwilioTool,
+  twilioFailureResult,
+  twilioResourceScope,
+  twilioTools,
+} from "./twilio.server.ts";
 import { assertToolConnectionAccess } from "./custom-mcp.server.ts";
 
 const accountSid = `AC${"a".repeat(32)}`;
@@ -21,7 +26,7 @@ test("Twilio discovery exposes only granted resource tools", () => {
     ["twilio_messages"],
   );
   assert.deepEqual(twilioTools([]), []);
-  assert.equal(twilioTools(["phone-numbers:write"])[0]?.annotations.readOnlyHint, false);
+  assert.equal(twilioTools(["phone-numbers:write"])[0]?.annotations["readOnlyHint"], false);
 });
 
 test("uses fixed Twilio origin and the resolved account; encodes filters safely", async () => {
@@ -35,7 +40,7 @@ test("uses fixed Twilio origin and the resolved account; encodes filters safely"
       assert.equal(url.pathname, `/2010-04-01/Accounts/${accountSid}/Messages.json`);
       assert.equal(url.searchParams.get("To"), "+13513007502");
       assert.equal(url.searchParams.get("PageToken"), "a&b");
-      assert.equal(init?.redirect, "error");
+      assert.equal(init?.redirect, "manual");
       assert.equal(
         new Headers(init?.headers).get("authorization"),
         `Basic ${Buffer.from(`${keySid}:${secret}`).toString("base64")}`,
@@ -44,6 +49,45 @@ test("uses fixed Twilio origin and the resolved account; encodes filters safely"
     },
   );
   assert.deepEqual(resultData(result).data, { messages: [], next_page_uri: null });
+});
+
+test("default edge fetch keeps its required global receiver and uses a string URL", async () => {
+  const original = globalThis.fetch;
+  globalThis.fetch = async function (this: typeof globalThis, input, init) {
+    assert.equal(this, globalThis);
+    assert.equal(typeof input, "string");
+    assert.equal(
+      new Headers(init?.headers).get("authorization"),
+      `Basic ${btoa(`${keySid}:${secret}`)}`,
+    );
+    return Response.json({ sid: accountSid });
+  };
+  try {
+    const response = await callTwilioTool("twilio_account", {}, context(["account:read"]));
+    assert.equal(resultData(response).status, 200);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test("requests remain compatible when the edge runtime omits AbortSignal.timeout", async () => {
+  const descriptor = Object.getOwnPropertyDescriptor(AbortSignal, "timeout")!;
+  Object.defineProperty(AbortSignal, "timeout", { ...descriptor, value: undefined });
+  try {
+    const result = await callTwilioTool(
+      "twilio_account",
+      {},
+      context(["account:read"]),
+      async (_input, init) => {
+        assert.ok(init?.signal instanceof AbortSignal);
+        assert.equal(init.signal.aborted, false);
+        return Response.json({ sid: accountSid });
+      },
+    );
+    assert.equal(resultData(result).status, 200);
+  } finally {
+    Object.defineProperty(AbortSignal, "timeout", descriptor);
+  }
 });
 
 test("removes account auth tokens and nested reusable secrets from provider output", async () => {
@@ -150,6 +194,22 @@ test("provider and network errors cannot echo credentials", async () => {
     }),
     (error: unknown) => error instanceof Error && !error.message.includes(secret),
   );
+});
+
+test("native tool errors are explicit MCP failures and hide unexpected exception contents", async () => {
+  const unexpected = twilioFailureResult(new Error(secret));
+  assert.equal(unexpected.isError, true);
+  assert.ok(!unexpected.content[0]!.text.includes(secret));
+  try {
+    await callTwilioTool("twilio_account", {}, context(["account:read"]), async () =>
+      Response.json({ code: 20003, message: secret }, { status: 401 }),
+    );
+    assert.fail("request should fail");
+  } catch (error) {
+    const failure = twilioFailureResult(error);
+    assert.match(failure.content[0]!.text, /HTTP 401/);
+    assert.ok(!failure.content[0]!.text.includes(secret));
+  }
 });
 
 test("invalid bundles and non-flat parameters never reach Twilio", async () => {

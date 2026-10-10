@@ -39,7 +39,7 @@ export async function withMcpClient<T>(
     { capabilities: {}, jsonSchemaValidator: new CfWorkerJsonSchemaValidator() },
   );
   try {
-    await client.connect(transport, { timeout: 20000 });
+    await client.connect(transport as Parameters<Client["connect"]>[0], { timeout: 20000 });
     return await operation(client);
   } catch {
     // A remote error may echo authorization headers; never forward it to the browser.

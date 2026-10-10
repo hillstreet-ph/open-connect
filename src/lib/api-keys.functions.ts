@@ -1,6 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { isAccessProfile, scopesForProfile, type AccessProfile } from "@/lib/access-profiles";
+import {
+  isAccessProfile,
+  scopesForProfile,
+  validateKeyAccessChange,
+  requireKeyScopeAuthority,
+  type AccessProfile,
+} from "@/lib/access-profiles";
 
 /**
  * Full autonomous surface for oc_live_ keys.
@@ -15,11 +21,14 @@ export const listApiKeys = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("api_keys")
       .select(
-        "id, name, key_prefix, scopes, access_profile, organization_id, workspace_id, project_id, last_used_at, revoked_at, created_at",
+        "id, name, key_prefix, scopes, access_profile, organization_id, workspace_id, project_id, last_used_at, revoked_at, expires_at, created_at",
       )
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
-    return data ?? [];
+    return (data ?? []).map((key) => ({
+      ...key,
+      active: !key.revoked_at && (!key.expires_at || Date.parse(key.expires_at) > Date.now()),
+    }));
   });
 
 export const createApiKey = createServerFn({ method: "POST" })
@@ -29,9 +38,9 @@ export const createApiKey = createServerFn({ method: "POST" })
       name?: string;
       profile?: AccessProfile;
       scopes?: string[];
-      organizationId?: string;
+      organizationId?: string | undefined;
       workspaceId?: string;
-      projectId?: string;
+      projectId?: string | undefined;
     }) => {
       const profile = isAccessProfile(input?.profile ?? "") ? input.profile! : "developer";
       return {
@@ -45,6 +54,17 @@ export const createApiKey = createServerFn({ method: "POST" })
     },
   )
   .handler(async ({ data, context }) => {
+    if (data.scopes.includes("control:write")) {
+      const { data: roles, error } = await context.supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", context.userId);
+      if (error) throw new Error(error.message);
+      requireKeyScopeAuthority(
+        (roles ?? []).map((row) => row.role),
+        data.scopes,
+      );
+    }
     let organizationId = data.organizationId;
     let workspaceId = data.workspaceId;
     const projectId = data.projectId;
@@ -103,6 +123,19 @@ export const createApiKey = createServerFn({ method: "POST" })
     });
     if (error) throw new Error(error.message);
     return { key: key.raw, scopes: data.scopes, profile: data.profile };
+  });
+
+export const updateApiKeyAccess = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator(validateKeyAccessChange)
+  .handler(async ({ data, context }) => {
+    const { data: result, error } = await context.supabase.rpc("oc_update_owned_key_access", {
+      p_key_id: data.id,
+      p_profile: data.profile,
+      p_custom_scopes: data.profile === "custom" ? data.scopes : [],
+    });
+    if (error) throw new Error(error.message);
+    return result;
   });
 
 export const revokeApiKey = createServerFn({ method: "POST" })

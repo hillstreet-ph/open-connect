@@ -4,6 +4,8 @@ let post: (args: { request: Request }) => Promise<Response>;
 let authenticated = true;
 let roles = ["admin"];
 let scopes = ["mcp:connect", "control:write"];
+let keyBoundary: Record<string, string> = {};
+let managedReads = 0;
 const resource = {
   slug: "fixture-approved-tool",
   name: "Approved fixture",
@@ -14,18 +16,52 @@ const resource = {
   verified: true,
 };
 const tables: string[] = [];
+const privateReads: { table: string; filters: Record<string, unknown> }[] = [];
 let connectionProvider = "twilio";
 let connectionReadOnly = false;
+let connectionError = false;
 const connectionCalls: unknown[] = [];
+let connectionToolReads = 0;
+let hubstaffRequests = 0;
+const assignedConnections = new Set<string>();
+const assignedConnection = {
+  id: "fixture-connection",
+  provider: "twilio",
+  display_name: "Project account",
+  status: "connected",
+  scopes: ["account:read"],
+};
+
+mock.module("@/lib/managed-connectors.server", () => ({
+  listOwnedManagedConnections: async (userId: string) => {
+    expect(userId).toBe("fixture-user");
+    managedReads++;
+    return [{ id: "ca_fixture", provider: "gmail" }];
+  },
+  listComposioToolkits: async () => [{ slug: "gmail", name: "Gmail" }],
+}));
 
 mock.module("@/lib/custom-mcp.server", () => ({
-  listCustomMcpTools: async () => ({
-    connection: { id: "fixture-connection", provider: connectionProvider },
-    tools: [{ name: "fixture-operation", annotations: { readOnlyHint: connectionReadOnly } }],
-  }),
+  listCustomMcpTools: async () => {
+    connectionToolReads++;
+    return {
+      connection: { id: "fixture-connection", provider: connectionProvider },
+      tools: [{ name: "fixture-operation", annotations: { readOnlyHint: connectionReadOnly } }],
+    };
+  },
   callCustomMcpTool: async (...args: unknown[]) => {
     connectionCalls.push(args);
-    return { content: [{ type: "text", text: "{}" }], isError: false };
+    return { content: [{ type: "text", text: "{}" }], isError: connectionError };
+  },
+}));
+
+mock.module("@/lib/hubstaff-admin.server", () => ({
+  hubstaffAdminConfig: () => ({ configured: true }),
+  hubstaffAdminIdentity: async () => ({ id: "fixture-hubstaff-user" }),
+  listHubstaffOrganizations: async () => [],
+  hubstaffAdminRequest: async () => {
+    hubstaffRequests++;
+    return { ok: true };
   },
 }));
 
@@ -36,7 +72,8 @@ mock.module("@tanstack/react-router", () => ({
   },
 }));
 mock.module("@/lib/gateway.server", () => ({
-  authenticateKey: async () => (authenticated ? { userId: "fixture-user", scopes } : null),
+  authenticateKey: async () =>
+    authenticated ? { userId: "fixture-user", scopes, ...keyBoundary } : null,
   hasScope: (_key: unknown, scope: string) => scopes.includes(scope),
   json: (body: unknown) => Response.json(body),
   gatewayError: (message: string, status: number) => Response.json({ error: message }, { status }),
@@ -46,6 +83,56 @@ mock.module("@/integrations/supabase/client.server", () => ({
   supabaseAdmin: {
     from: (table: string) => {
       tables.push(table);
+      if (
+        ["organization_members", "projects", "project_members", "project_connections"].includes(
+          table,
+        )
+      ) {
+        const filters: Record<string, unknown> = {};
+        const query = {
+          select() {
+            return this;
+          },
+          eq(field: string, value: unknown) {
+            filters[field] = value;
+            return this;
+          },
+          in() {
+            return this;
+          },
+          maybeSingle: async () => ({
+            data:
+              table === "projects"
+                ? {
+                    id: "fixture-project",
+                    organization_id: "fixture-org",
+                    workspace_id: "fixture-workspace",
+                  }
+                : table === "organization_members"
+                  ? { id: "fixture-membership" }
+                  : table === "project_connections" &&
+                      filters["project_id"] === "fixture-project" &&
+                      assignedConnections.has(String(filters["connection_id"]))
+                    ? { id: "fixture-grant" }
+                    : null,
+            error: null,
+          }),
+          then(
+            onfulfilled: (value: { data: unknown[]; error: null }) => unknown,
+            onrejected?: (reason: unknown) => unknown,
+          ) {
+            const data =
+              table === "organization_members"
+                ? [{ organization_id: "fixture-org" }]
+                : filters["project_id"] === "fixture-project" &&
+                    assignedConnections.has(assignedConnection.id)
+                  ? [{ connection_id: assignedConnection.id, app_connections: assignedConnection }]
+                  : [];
+            return Promise.resolve({ data, error: null }).then(onfulfilled, onrejected);
+          },
+        };
+        return query;
+      }
       if (table === "resources")
         return {
           select: () => ({
@@ -58,6 +145,50 @@ mock.module("@/integrations/supabase/client.server", () => ({
         return {
           select: () => ({
             eq: async () => ({ data: roles.map((role) => ({ role })) }),
+          }),
+        };
+      if (table === "memory_records" || table === "knowledge_items") {
+        const filters: Record<string, unknown> = {};
+        const query = {
+          select() {
+            return this;
+          },
+          eq(field: string, value: unknown) {
+            filters[field] = value;
+            return this;
+          },
+          order() {
+            return this;
+          },
+          limit() {
+            return this;
+          },
+          is(field: string, value: unknown) {
+            filters[field] = value;
+            return this;
+          },
+          neq() {
+            return this;
+          },
+          then(
+            onfulfilled: (value: { data: unknown[]; error: null }) => unknown,
+            onrejected?: (reason: unknown) => unknown,
+          ) {
+            privateReads.push({ table, filters: { ...filters } });
+            return Promise.resolve({
+              data: [{ id: filters["project_id"] ? "project-row" : "personal-row" }],
+              error: null,
+            }).then(onfulfilled, onrejected);
+          },
+        };
+        return query;
+      }
+      if (table === "app_connections")
+        return {
+          select: () => ({
+            eq: () => ({
+              order: () => ({ range: async () => ({ data: [], error: null }) }),
+            }),
           }),
         };
       throw new Error(`Unexpected database access: ${table}`);
@@ -90,10 +221,156 @@ beforeEach(() => {
   roles = ["admin"];
   scopes = ["mcp:connect", "control:write"];
   tables.length = 0;
+  privateReads.length = 0;
   resource.verified = true;
   connectionProvider = "twilio";
   connectionReadOnly = false;
+  connectionError = false;
   connectionCalls.length = 0;
+  managedReads = 0;
+  keyBoundary = {};
+  assignedConnections.clear();
+  connectionToolReads = 0;
+  hubstaffRequests = 0;
+});
+
+test("project runtime private reads never query owner personal memory or knowledge", async () => {
+  keyBoundary = {
+    projectId: "fixture-project",
+    organizationId: "fixture-org",
+    workspaceId: "fixture-workspace",
+  };
+  for (const [scope, tool] of [
+    ["memory:read", "list_my_memory"],
+    ["knowledge:read", "list_my_knowledge"],
+  ] as const) {
+    scopes = [scope];
+    privateReads.length = 0;
+    const payload = JSON.parse((await (await call(tool)).json()).result.content[0].text);
+    expect(payload.personal).toEqual([]);
+    expect(payload.project).toEqual([{ id: "project-row" }]);
+    expect(privateReads).toHaveLength(1);
+    expect(privateReads[0]!.filters).toEqual({
+      user_id: "fixture-user",
+      project_id: "fixture-project",
+    });
+    await expect(call(tool, { project_id: "another-project" })).rejects.toThrow(
+      "different project",
+    );
+    expect(privateReads).toHaveLength(1);
+  }
+});
+
+test("unbound owner private reads retain personal and explicitly authorized project records", async () => {
+  for (const [scope, tool] of [
+    ["memory:read", "list_my_memory"],
+    ["knowledge:read", "list_my_knowledge"],
+  ] as const) {
+    scopes = [scope];
+    privateReads.length = 0;
+    const payload = JSON.parse(
+      (await (await call(tool, { project_id: "fixture-project" })).json()).result.content[0].text,
+    );
+    expect(payload.personal).toEqual([{ id: "personal-row" }]);
+    expect(payload.project).toEqual([{ id: "project-row" }]);
+    expect(privateReads).toHaveLength(2);
+    expect(privateReads.every((read) => read.filters["user_id"] === "fixture-user")).toBe(true);
+  }
+});
+
+test("project connection catalogs contain only assigned accounts", async () => {
+  keyBoundary = {
+    projectId: "fixture-project",
+    organizationId: "fixture-org",
+    workspaceId: "fixture-workspace",
+  };
+  scopes = ["mcp:connect", "connections:read"];
+  for (const tool of ["list_connections", "inspect_connections"]) {
+    const empty = await (await call(tool)).json();
+    const catalog = JSON.parse(empty.result.content[0].text);
+    expect(catalog.data ?? catalog.connections).toEqual([]);
+  }
+  assignedConnections.add(assignedConnection.id);
+  for (const tool of ["list_connections", "inspect_connections"]) {
+    const response = await (await call(tool)).json();
+    const catalog = JSON.parse(response.result.content[0].text);
+    expect(catalog.data ?? catalog.connections).toHaveLength(1);
+    expect((catalog.data ?? catalog.connections)[0].id).toBe(assignedConnection.id);
+  }
+});
+
+test("project tool discovery denies unassigned owner accounts before broker access", async () => {
+  keyBoundary = { projectId: "fixture-project" };
+  scopes = ["mcp:connect", "connections:read"];
+  const args = { connection_id: assignedConnection.id };
+  await expect(call("list_connection_tools", args)).rejects.toThrow("not assigned");
+  expect(connectionToolReads).toBe(0);
+  assignedConnections.add(assignedConnection.id);
+  expect((await call("list_connection_tools", args)).status).toBe(200);
+  expect(connectionToolReads).toBe(1);
+});
+
+test("project execution denies unassigned owner accounts before broker access", async () => {
+  keyBoundary = { projectId: "fixture-project" };
+  scopes = ["mcp:connect", "connections:invoke"];
+  connectionReadOnly = true;
+  const args = { connection_id: assignedConnection.id, tool_name: "fixture-operation" };
+  await expect(call("call_connection_tool", args)).rejects.toThrow("not assigned");
+  expect(connectionToolReads).toBe(0);
+  expect(connectionCalls).toEqual([]);
+  assignedConnections.add(assignedConnection.id);
+  expect((await call("call_connection_tool", args)).status).toBe(200);
+  expect(connectionCalls).toHaveLength(1);
+});
+
+test("control decisions reject non-admins and bounded keys before approval writes", async () => {
+  const args = {
+    approval_id: "00000000-0000-4000-8000-000000000001",
+    decision: "approved",
+    confirm: true,
+  };
+  scopes = ["mcp:connect", "tools:invoke"];
+  roles = ["developer"];
+  await expect(call("decide_control_approval", args)).rejects.toThrow("Admin role");
+  expect(tables).not.toContain("control_approvals");
+  roles = ["admin"];
+  await expect(call("decide_control_approval", args)).rejects.toThrow("control write scope");
+  expect(tables).not.toContain("control_approvals");
+  scopes = ["mcp:connect", "control:write"];
+  for (const boundary of [
+    { projectId: "project" },
+    { workspaceId: "workspace" },
+    { organizationId: "org" },
+  ]) {
+    keyBoundary = boundary;
+    await expect(call("decide_control_approval", args)).rejects.toThrow("personal API key");
+    expect(tables).not.toContain("control_approvals");
+  }
+});
+
+test("Composio preview performs owned-account reads without import or project writes", async () => {
+  scopes = ["mcp:connect", "connections:read"];
+  const response = await call("preview_composio_sync");
+  const { result } = await response.json();
+  const plan = JSON.parse(result.content[0].text);
+  expect(plan.dry_run).toBe(true);
+  expect(plan.candidates).toEqual([
+    { account_id: "ca_fixture", provider: "gmail", display_name: "Gmail" },
+  ]);
+  expect(managedReads).toBe(1);
+  expect(tables).toEqual(["user_roles", "app_connections"]);
+});
+
+test("Composio preview rejects non-admins and bounded API keys before broker access", async () => {
+  scopes = ["mcp:connect", "connections:read"];
+  roles = ["user"];
+  await expect(call("preview_composio_sync")).rejects.toThrow("admin required");
+  roles = ["admin"];
+  for (const field of ["projectId", "workspaceId", "organizationId"]) {
+    keyBoundary = { [field]: "fixture-boundary" };
+    await expect(call("preview_composio_sync")).rejects.toThrow("personal API key");
+  }
+  expect(managedReads).toBe(0);
 });
 
 function call(name: string, args: Record<string, unknown> = {}) {
@@ -213,6 +490,57 @@ test("read tokens discover write scope requirements without gaining execution ri
   expect(tables).not.toContain("app_connections");
 });
 
+test("private read grants pass the MCP entry gate without mcp:connect", async () => {
+  for (const [scope, tool, table] of [
+    ["memory:read", "list_my_memory", "memory_records"],
+    ["knowledge:read", "list_my_knowledge", "knowledge_items"],
+  ] as const) {
+    scopes = [scope];
+    const response = await call(tool);
+    expect(response.status).toBe(200);
+    const { result } = await response.json();
+    expect(JSON.parse(result.content[0].text)).toMatchObject({
+      personal: [{ id: "personal-row" }],
+      project: [],
+      user_owned_only: true,
+    });
+    expect(tables).toContain(table);
+  }
+});
+
+test("private read grants cannot invoke Hubstaff admin requests", async () => {
+  for (const scope of ["memory:read", "knowledge:read"]) {
+    scopes = [scope];
+    const response = await call("hubstaff_admin_request", {
+      method: "GET",
+      path: "/v2/organizations",
+    });
+    expect(response.status).toBe(403);
+  }
+  expect(hubstaffRequests).toBe(0);
+});
+
+test("Hubstaff GET requests require and accept the advertised tools invoke scope", async () => {
+  scopes = ["tools:invoke"];
+  const response = await call("hubstaff_admin_request", {
+    method: "GET",
+    path: "/v2/organizations",
+  });
+  expect(response.status).toBe(200);
+  expect(hubstaffRequests).toBe(1);
+});
+
+test("Hubstaff writes preserve the existing connections invoke control gate", async () => {
+  scopes = ["mcp:connect", "connections:invoke"];
+  const response = await call("hubstaff_admin_request", {
+    method: "PATCH",
+    path: "/v2/organizations/1",
+    body: { name: "Fixture" },
+  });
+  expect(response.status).toBe(200);
+  expect(hubstaffRequests).toBe(1);
+});
+
 test("native Twilio writes require admin role and an invoke scope before provider execution", async () => {
   scopes = ["mcp:connect", "connections:invoke"];
   roles = ["developer"];
@@ -254,4 +582,14 @@ test("adding Twilio execution preserves the project requirement for Custom MCP w
     }),
   ).rejects.toThrow("project-scoped");
   expect(connectionCalls).toEqual([]);
+});
+
+test("connection failures propagate as MCP tool errors instead of successful wrappers", async () => {
+  connectionError = true;
+  const response = await call("call_connection_tool", {
+    connection_id: "fixture-connection",
+    tool_name: "fixture-operation",
+  });
+  const { result } = await response.json();
+  expect(result.isError).toBe(true);
 });

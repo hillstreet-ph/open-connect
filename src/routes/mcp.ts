@@ -18,7 +18,7 @@ import {
 } from "@/lib/autonomous-control";
 import { streamableMcpResponse } from "@/lib/mcp-transport.server";
 import { calculateExpression } from "@/lib/calculator";
-import { hasRole } from "@/lib/rbac";
+import { hasRole, type AppRole } from "@/lib/rbac";
 
 const WWW_AUTH =
   'Bearer realm="open-connect", resource_metadata="https://open-connect.site/.well-known/oauth-protected-resource"';
@@ -155,7 +155,7 @@ const PLATFORM_TOOLS: McpTool[] = [
   {
     name: "list_my_memory",
     description:
-      "Read the authenticated user's private Memory library. When project_id is supplied, also include that user's memory explicitly stored in that accessible project. Without project_id, only personal memory is returned.",
+      "Read the authenticated user's private Memory library. When project_id is supplied, also include that user's memory explicitly stored in that accessible project. Without project_id, only personal memory is returned. Project-bound keys return only their project records, never personal records.",
     inputSchema: {
       type: "object",
       properties: {
@@ -172,7 +172,7 @@ const PLATFORM_TOOLS: McpTool[] = [
   {
     name: "list_my_knowledge",
     description:
-      "Read the authenticated user's private Knowledge library. When project_id is supplied, also include that user's knowledge explicitly stored in that accessible project. Without project_id, only personal knowledge is returned.",
+      "Read the authenticated user's private Knowledge library. When project_id is supplied, also include that user's knowledge explicitly stored in that accessible project. Without project_id, only personal knowledge is returned. Project-bound keys return only their project records, never personal records.",
     inputSchema: {
       type: "object",
       properties: {
@@ -440,6 +440,33 @@ const PLATFORM_TOOLS: McpTool[] = [
     },
   },
   {
+    name: "list_control_approvals",
+    description:
+      "Inspect your own approval requests, including their exact target and expiry. Does not expose other users' requests.",
+    inputSchema: { type: "object", properties: {} },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  },
+  {
+    name: "decide_control_approval",
+    description:
+      "Record an explicit decision on your own pending, unexpired approval. Requires a personal admin key and confirm=true. Records authorization without starting execution.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        approval_id: { type: "string" },
+        decision: { type: "string", enum: ["approved", "denied"] },
+        confirm: { type: "boolean" },
+      },
+      required: ["approval_id", "decision", "confirm"],
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: false,
+    },
+  },
+  {
     name: "recommend_toolchain",
     description:
       "Find the smallest approved plugin, skill, tool, app, or MCP bundle matching a goal.",
@@ -540,6 +567,18 @@ const PLATFORM_TOOLS: McpTool[] = [
     },
   },
   {
+    name: "preview_composio_sync",
+    description:
+      "Preview owned ACTIVE Composio accounts missing from the personal connector library. Read-only; never imports accounts or assigns project access.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true,
+    },
+  },
+  {
     name: "configure_connection",
     description:
       "Use this when binding a provider through an opaque credential:// reference; raw secret values are rejected.",
@@ -562,10 +601,10 @@ const PLATFORM_TOOLS: McpTool[] = [
   },
 ];
 
-async function loadRoles(userId: string): Promise<string[]> {
+async function loadRoles(userId: string): Promise<AppRole[]> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data } = await supabaseAdmin.from("user_roles").select("role").eq("user_id", userId);
-  return (data ?? []).map((row: { role: string }) => row.role);
+  return (data ?? []).map((row: { role: AppRole }) => row.role);
 }
 
 async function loadAuthorizedOrganizationIds(key: AuthedKey): Promise<string[]> {
@@ -623,15 +662,42 @@ async function assertProjectAccess(key: AuthedKey, projectId: string) {
   return project;
 }
 
+/** A project key may use only connections deliberately assigned to that project. */
+async function requireProjectConnectionGrant(key: AuthedKey, connectionId: string) {
+  if (!key.projectId) return;
+  await assertProjectAccess(key, key.projectId);
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: grant, error } = await supabaseAdmin
+    .from("project_connections")
+    .select("id")
+    .eq("project_id", key.projectId)
+    .eq("connection_id", connectionId)
+    .maybeSingle();
+  if (error || !grant) throw new Error("Connection is not assigned to this API key's project.");
+}
+
 async function requireControlWrite(key: AuthedKey) {
   const roles = await loadRoles(key.userId);
   const authorizedRole = hasRole(roles, "admin");
-  const authorizedScope =
-    hasScope(key, "control:write") ||
-    hasScope(key, "tools:invoke") ||
-    hasScope(key, "connections:invoke");
+  const authorizedScope = hasScope(key, "control:write");
   if (!authorizedRole || !authorizedScope)
     throw new Error("Admin role and control write scope required.");
+  return roles;
+}
+
+// Provider writes retain their advertised invoke scopes; control-plane mutations
+// require the distinct control:write grant above.
+async function requireProviderWrite(key: AuthedKey) {
+  const roles = await loadRoles(key.userId);
+  if (
+    !hasRole(roles, "admin") ||
+    !(
+      hasScope(key, "control:write") ||
+      hasScope(key, "tools:invoke") ||
+      hasScope(key, "connections:invoke")
+    )
+  )
+    throw new Error("Admin role and provider invoke scope required.");
   return roles;
 }
 
@@ -811,6 +877,7 @@ const TOOL_SCOPES: Record<string, string> = {
   list_credential_metadata: "secrets:read",
   calculate: "mcp:connect",
   list_connections: "connections:read",
+  preview_composio_sync: "connections:read",
   list_models: "models:read",
   inspect_connections: "connections:read",
   list_connection_tools: "connections:read",
@@ -826,6 +893,8 @@ const TOOL_SCOPES: Record<string, string> = {
   recommend_toolchain: "resources:read",
   resolve_capability: "resources:read",
   execute_plan: "tools:invoke",
+  list_control_approvals: "resources:read",
+  decide_control_approval: "tools:invoke",
   create_capability_draft: "resources:write",
   record_run_outcome: "resources:write",
   configure_connection: "connections:invoke",
@@ -833,6 +902,7 @@ const TOOL_SCOPES: Record<string, string> = {
 
 const SELF_GUARDED_WRITE_TOOLS = new Set([
   "execute_plan",
+  "decide_control_approval",
   "create_capability_draft",
   "record_run_outcome",
   "configure_connection",
@@ -889,10 +959,13 @@ export const Route = createFileRoute("/mcp")({
           !hasScope(key, "mcp:connect") &&
           !hasScope(key, "models:read") &&
           !hasScope(key, "models:invoke") &&
-          !hasScope(key, "resources:read")
+          !hasScope(key, "resources:read") &&
+          !hasScope(key, "memory:read") &&
+          !hasScope(key, "knowledge:read") &&
+          !hasScope(key, "tools:invoke")
         ) {
           return gatewayError(
-            "Key is missing mcp, models, or resources scope.",
+            "Key is missing an MCP read or model scope.",
             403,
             "insufficient_scope",
           );
@@ -913,7 +986,7 @@ export const Route = createFileRoute("/mcp")({
           return gatewayError("JSON-RPC method required.", 400, "invalid_request");
         }
 
-        let result: unknown = { ok: true };
+        let result: Record<string, unknown> = { ok: true };
 
         if (body.method === "initialize") {
           result = {
@@ -972,8 +1045,14 @@ export const Route = createFileRoute("/mcp")({
         } else if (body.method === "tools/call") {
           const name = body.params?.name;
           const args = body.params?.arguments ?? {};
+          const hubstaffRead =
+            name === "hubstaff_admin_request" &&
+            String(args["method"] ?? "GET").toUpperCase() === "GET";
 
-          if (!name || (!canUseTool(key, name) && !SELF_GUARDED_WRITE_TOOLS.has(name))) {
+          if (
+            !name ||
+            (!canUseTool(key, name) && (!SELF_GUARDED_WRITE_TOOLS.has(name) || hubstaffRead))
+          ) {
             return gatewayError(
               `Key cannot invoke ${name || "this tool"} in its selected scope.`,
               403,
@@ -1173,7 +1252,7 @@ export const Route = createFileRoute("/mcp")({
               return data ?? [];
             };
             const [personal, project] = await Promise.all([
-              readRows(null),
+              key.projectId ? Promise.resolve([]) : readRows(null),
               requestedProject ? readRows(requestedProject) : Promise.resolve([]),
             ]);
             result = textResult({
@@ -1228,9 +1307,9 @@ export const Route = createFileRoute("/mcp")({
               .select("id,provider,display_name,status,scopes,credential_reference,last_used_at")
               .eq("user_id", key.userId);
             if (provider) ownedQuery = ownedQuery.eq("provider", provider);
-            const { data: owned, error: ownedError } = await ownedQuery
-              .order("created_at", { ascending: false })
-              .limit(100);
+            const { data: owned, error: ownedError } = key.projectId
+              ? { data: [], error: null }
+              : await ownedQuery.order("created_at", { ascending: false }).limit(100);
             if (ownedError) throw new Error(ownedError.message);
             const visible = new Map<string, Record<string, unknown>>();
             for (const connection of owned ?? []) {
@@ -1283,6 +1362,7 @@ export const Route = createFileRoute("/mcp")({
             }
             result = textResult({ connections: [...visible.values()] });
           } else if (name === "list_connection_tools") {
+            await requireProjectConnectionGrant(key, String(args["connection_id"] ?? ""));
             const { listCustomMcpTools } = await import("@/lib/custom-mcp.server");
             result = textResult(
               await listCustomMcpTools(
@@ -1295,6 +1375,7 @@ export const Route = createFileRoute("/mcp")({
             const { callCustomMcpTool, listCustomMcpTools } =
               await import("@/lib/custom-mcp.server");
             const connectionId = String(args["connection_id"] ?? "");
+            await requireProjectConnectionGrant(key, connectionId);
             const toolName = String(args["tool_name"] ?? "");
             const catalog = await listCustomMcpTools(
               key.userId,
@@ -1305,7 +1386,7 @@ export const Route = createFileRoute("/mcp")({
             if (!tool) throw new Error("Connected MCP tool was not found.");
             const annotations = (tool["annotations"] ?? {}) as Record<string, unknown>;
             if (annotations["readOnlyHint"] !== true && catalog.connection.provider === "twilio") {
-              await requireControlWrite(key);
+              await requireProviderWrite(key);
             } else if (annotations["readOnlyHint"] !== true) {
               if (!key.projectId) {
                 throw new Error(
@@ -1323,15 +1404,17 @@ export const Route = createFileRoute("/mcp")({
               args["arguments"] && typeof args["arguments"] === "object"
                 ? (args["arguments"] as Record<string, unknown>)
                 : {};
-            result = textResult(
-              await callCustomMcpTool(
-                key.userId,
-                connectionId,
-                toolName,
-                toolArguments,
-                key.projectId ?? undefined,
-              ),
+            const connectionResult = await callCustomMcpTool(
+              key.userId,
+              connectionId,
+              toolName,
+              toolArguments,
+              key.projectId ?? undefined,
             );
+            result = {
+              ...textResult(connectionResult),
+              ...(connectionResult.isError ? { isError: true } : {}),
+            };
           } else if (name === "e2b_health") {
             const { e2bConfig, e2bHealth } = await import("@/lib/e2b.server");
             if (!e2bConfig().configured) throw new Error("E2B is not configured");
@@ -1345,7 +1428,7 @@ export const Route = createFileRoute("/mcp")({
             if (!e2bConfig().configured) throw new Error("E2B is not configured");
             result = textResult(await listE2bSandboxes(Number(args["limit"] ?? 100)));
           } else if (name === "e2b_create_sandbox") {
-            await requireControlWrite(key);
+            await requireProviderWrite(key);
             const { createE2bSandbox, e2bConfig } = await import("@/lib/e2b.server");
             if (!e2bConfig().configured) throw new Error("E2B is not configured");
             const metadata =
@@ -1365,7 +1448,7 @@ export const Route = createFileRoute("/mcp")({
               }),
             );
           } else if (name === "e2b_kill_sandbox") {
-            await requireControlWrite(key);
+            await requireProviderWrite(key);
             if (args["confirm"] !== true) throw new Error("Explicit confirm=true is required");
             const { e2bConfig, killE2bSandbox } = await import("@/lib/e2b.server");
             if (!e2bConfig().configured) throw new Error("E2B is not configured");
@@ -1384,7 +1467,7 @@ export const Route = createFileRoute("/mcp")({
             result = textResult(await listHubstaffOrganizations(key.userId));
           } else if (name === "hubstaff_admin_request") {
             const method = String(args["method"] ?? "GET").toUpperCase();
-            if (method !== "GET") await requireControlWrite(key);
+            if (method !== "GET") await requireProviderWrite(key);
             if (method === "DELETE" && args["confirm"] !== true) {
               throw new Error("Explicit confirm=true is required for DELETE");
             }
@@ -1442,6 +1525,38 @@ export const Route = createFileRoute("/mcp")({
                 })),
               ),
             );
+          } else if (name === "list_control_approvals" || name === "decide_control_approval") {
+            if (key.projectId || key.workspaceId || key.organizationId)
+              throw new Error("Use a personal API key for personal control approvals.");
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const db = supabaseAdmin as import("@supabase/supabase-js").SupabaseClient;
+            if (name === "list_control_approvals") {
+              const { data, error } = await db
+                .from("control_approvals")
+                .select(
+                  "id,action,target,environment,state,expires_at,parameters_digest,decided_at",
+                )
+                .eq("tenant_id", key.userId)
+                .eq("requested_by", key.userId)
+                .order("created_at", { ascending: false })
+                .limit(100);
+              if (error) throw new Error("Could not read your approval requests.");
+              result = textResult({ approvals: data ?? [], execution_started: false });
+            } else {
+              await requireControlWrite(key);
+              const { decideControlApproval } = await import("@/lib/control-approvals.server");
+              result = textResult(
+                await decideControlApproval(
+                  db,
+                  key.userId,
+                  String(args["approval_id"] ?? ""),
+                  String(
+                    args["decision"] ?? "",
+                  ) as import("@/lib/control-approvals.server").ApprovalDecision,
+                  args["confirm"] === true,
+                ),
+              );
+            }
           } else if (name === "execute_plan") {
             await requireControlWrite(key);
             const catalog = await getCatalog();
@@ -1507,22 +1622,31 @@ export const Route = createFileRoute("/mcp")({
                 },
               });
             }
+            let approvalRequest: { id: string; expires_at: string } | null = null;
             if (plan.approvalRequired) {
-              await controlDb.from("control_approvals").insert({
-                tenant_id: key.userId,
-                requested_by: key.userId,
-                action: "execute_plan",
-                target: plan.goal,
-                environment: plan.environment,
-                risk: "protected",
-                parameters_digest: plan.id,
-                expires_at: new Date(Date.now() + 15 * 60_000).toISOString(),
-              });
+              const { data: approval, error: approvalError } = await controlDb
+                .from("control_approvals")
+                .insert({
+                  tenant_id: key.userId,
+                  requested_by: key.userId,
+                  action: "execute_plan",
+                  target: plan.goal,
+                  environment: plan.environment,
+                  risk: "protected",
+                  parameters_digest: plan.id,
+                  expires_at: new Date(Date.now() + 15 * 60_000).toISOString(),
+                })
+                .select("id,expires_at")
+                .single();
+              if (approvalError || !approval)
+                throw new Error("Could not create the required approval request.");
+              approvalRequest = approval;
             }
             result = textResult({
               correlation_id: plan.id,
               state,
               plan,
+              approval_request: approvalRequest,
               autonomous_steps_executed: plan.approvalRequired
                 ? ["discover"]
                 : ["discover", "plan"],
@@ -1666,6 +1790,44 @@ export const Route = createFileRoute("/mcp")({
             if (!isExecutable(item))
               throw new Error(`Capability is ${reviewState(item)} and cannot be installed.`);
             result = executionUnavailable("install", item);
+          } else if (name === "preview_composio_sync") {
+            if (key.projectId || key.workspaceId || key.organizationId)
+              throw new Error("Use a personal API key to preview personal Composio accounts.");
+            if (!hasRole(await loadRoles(key.userId), "admin"))
+              throw new Error("Forbidden: admin required");
+            const { listOwnedManagedConnections, listComposioToolkits } =
+              await import("@/lib/managed-connectors.server");
+            const { planComposioSync } = await import("@/lib/composio-sync");
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const [accounts, catalog] = await Promise.all([
+              listOwnedManagedConnections(key.userId),
+              listComposioToolkits(),
+            ]);
+            const saved: Array<{
+              provider: string;
+              provider_account_id: string | null;
+              credential_reference: string | null;
+            }> = [];
+            for (let offset = 0; ; offset += 200) {
+              const { data: page, error } = await supabaseAdmin
+                .from("app_connections")
+                .select("provider,provider_account_id,credential_reference")
+                .eq("user_id", key.userId)
+                .order("id", { ascending: true })
+                .range(offset, offset + 199);
+              if (error) throw new Error("Could not preview saved connectors.");
+              saved.push(...(page ?? []));
+              if ((page?.length ?? 0) < 200) break;
+            }
+            result = textResult({
+              ...planComposioSync(accounts, saved, catalog),
+              toolkit_count: catalog.length,
+              dry_run: true,
+              secrets_exposed: false,
+              apply_url: "https://open-connect.site/connections",
+              next_action:
+                "Run Sync Composio accounts as the authenticated administrator after approval, then assign selected connectors to projects.",
+            });
           } else if (name === "configure_connection") {
             await requireControlWrite(key);
             const provider = normalizeConnectionProvider(args["provider"]);
@@ -1743,18 +1905,33 @@ export const Route = createFileRoute("/mcp")({
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
             const connections: Array<Record<string, unknown>> = [];
             const pageSize = 200;
-            for (let offset = 0; ; offset += pageSize) {
-              const { data: page, error } = await supabaseAdmin
-                .from("app_connections")
-                .select("id, provider, display_name, status, scopes")
-                .eq("user_id", key.userId)
-                .eq("status", "connected")
-                .order("created_at", { ascending: false })
-                .order("id", { ascending: true })
-                .range(offset, offset + pageSize - 1);
-              if (error) throw new Error("Could not list connected apps.");
-              connections.push(...(page ?? []));
-              if ((page?.length ?? 0) < pageSize) break;
+            if (key.projectId) {
+              await assertProjectAccess(key, key.projectId);
+              const { data: shared, error } = await supabaseAdmin
+                .from("project_connections")
+                .select("app_connections!inner(id,provider,display_name,status,scopes)")
+                .eq("project_id", key.projectId)
+                .eq("app_connections.status", "connected");
+              if (error) throw new Error("Could not list this project's connected apps.");
+              connections.push(
+                ...(shared ?? []).flatMap((row) =>
+                  row.app_connections ? [row.app_connections] : [],
+                ),
+              );
+            } else {
+              for (let offset = 0; ; offset += pageSize) {
+                const { data: page, error } = await supabaseAdmin
+                  .from("app_connections")
+                  .select("id, provider, display_name, status, scopes")
+                  .eq("user_id", key.userId)
+                  .eq("status", "connected")
+                  .order("created_at", { ascending: false })
+                  .order("id", { ascending: true })
+                  .range(offset, offset + pageSize - 1);
+                if (error) throw new Error("Could not list connected apps.");
+                connections.push(...(page ?? []));
+                if ((page?.length ?? 0) < pageSize) break;
+              }
             }
             result = textResult({
               data: connections,
@@ -1815,11 +1992,17 @@ export const Route = createFileRoute("/mcp")({
         }
 
         fireLog(key, 200);
-        return streamableMcpResponse(request, body, {
-          jsonrpc: "2.0",
-          id: body.id ?? null,
-          result,
-        });
+        return streamableMcpResponse(
+          request,
+          body,
+          body.id === undefined
+            ? null
+            : {
+                jsonrpc: "2.0",
+                id: body.id,
+                result,
+              },
+        );
       },
     },
   },

@@ -18,6 +18,8 @@ export const OAUTH_SCOPES_SUPPORTED = [
   "mcp:connect",
   "resources:read",
   "resources:write",
+  "memory:read",
+  "knowledge:read",
   "connections:read",
   "connections:invoke",
   "models:read",

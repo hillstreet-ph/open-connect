@@ -149,7 +149,7 @@ export function ResourceLibraryPage({
                   : "border-transparent text-muted-foreground hover:text-foreground",
               )}
             >
-              {tab[0].toUpperCase() + tab.slice(1)}
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
             </button>
           ))}
         </div>
@@ -168,7 +168,7 @@ export function ResourceLibraryPage({
           <ResourcePurposeSidebar
             groups={purposeGroups}
             activePurpose={purpose}
-            allCount={counts.all}
+            allCount={counts["all"] ?? 0}
             onSelect={setPurpose}
             ariaLabel="Resource purpose categories"
           />

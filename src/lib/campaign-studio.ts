@@ -51,6 +51,7 @@ export function extractResponseText(payload: OpenAIResponsePayload): string | un
       if (content.type === "output_text" && content.text) return content.text;
     }
   }
+  return undefined;
 }
 
 export function extractGeneratedImages(
