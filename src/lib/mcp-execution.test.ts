@@ -83,7 +83,8 @@ mock.module("@/lib/gateway.server", () => ({
     authenticated ? { userId: "fixture-user", scopes, ...keyBoundary } : null,
   hasScope: (_key: unknown, scope: string) => scopes.includes(scope),
   json: (body: unknown) => Response.json(body),
-  gatewayError: (message: string, status: number) => Response.json({ error: message }, { status }),
+  gatewayError: (message: string, status: number, code?: string) =>
+    Response.json({ error: { message, type: "open_connect_error", code } }, { status }),
   logGatewayRequest: async () => undefined,
 }));
 mock.module("@/integrations/supabase/client.server", () => ({
@@ -428,12 +429,13 @@ test("control decisions reject non-admins and bounded keys before approval write
     decision: "approved",
     confirm: true,
   };
-  scopes = ["mcp:connect", "tools:invoke"];
+  scopes = ["mcp:connect", "control:write"];
   roles = ["developer"];
   await expect(call("decide_control_approval", args)).rejects.toThrow("Admin role");
   expect(tables).not.toContain("control_approvals");
   roles = ["admin"];
-  await expect(call("decide_control_approval", args)).rejects.toThrow("control write scope");
+  scopes = ["mcp:connect", "tools:invoke"];
+  expect((await call("decide_control_approval", args)).status).toBe(403);
   expect(tables).not.toContain("control_approvals");
   scopes = ["mcp:connect", "control:write"];
   for (const boundary of [
@@ -563,10 +565,33 @@ test("installation requires admin plus write scope", async () => {
   );
   roles = ["admin"];
   scopes = ["mcp:connect"];
-  await expect(call("install_capability", { resource_id: resource.slug })).rejects.toThrow(
-    "control write scope",
-  );
+  expect((await call("install_capability", { resource_id: resource.slug })).status).toBe(403);
   expect(tables).not.toContain("capability_installations");
+});
+
+test("control mutations return explicit scope denials before private reads or writes", async () => {
+  scopes = ["mcp:connect", "tools:invoke", "connections:invoke", "resources:write"];
+  for (const tool of [
+    "execute_plan",
+    "decide_control_approval",
+    "create_capability_draft",
+    "record_run_outcome",
+    "configure_connection",
+    "install_capability",
+  ]) {
+    const response = await call(tool);
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({
+      error: {
+        message: `Key requires control:write to invoke ${tool}.`,
+        type: "open_connect_error",
+        code: "insufficient_scope",
+      },
+    });
+  }
+  expect(tables).toEqual([]);
+  expect(connectionUpdates).toEqual([]);
+  expect(connectionCalls).toEqual([]);
 });
 
 test("unverified catalog entries remain ineligible for installation", async () => {
@@ -716,7 +741,7 @@ test("Telegram destination configuration rejects missing control access and inva
   await expect(call("configure_connection", args)).rejects.toThrow("Admin role");
   roles = ["admin"];
   scopes = ["mcp:connect", "connections:invoke"];
-  await expect(call("configure_connection", args)).rejects.toThrow("control write");
+  expect((await call("configure_connection", args)).status).toBe(403);
   scopes = ["mcp:connect", "control:write"];
   await expect(call("configure_connection", { ...args, provider: "twilio" })).rejects.toThrow(
     "Telegram provider",

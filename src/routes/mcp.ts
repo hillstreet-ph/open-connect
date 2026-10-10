@@ -979,12 +979,13 @@ const TOOL_SCOPES: Record<string, string> = {
   plan_goal: "resources:read",
   recommend_toolchain: "resources:read",
   resolve_capability: "resources:read",
-  execute_plan: "tools:invoke",
+  execute_plan: "control:write",
   list_control_approvals: "resources:read",
-  decide_control_approval: "tools:invoke",
-  create_capability_draft: "resources:write",
-  record_run_outcome: "resources:write",
-  configure_connection: "connections:invoke",
+  decide_control_approval: "control:write",
+  create_capability_draft: "control:write",
+  record_run_outcome: "control:write",
+  configure_connection: "control:write",
+  install_capability: "control:write",
 };
 
 const SELF_GUARDED_WRITE_TOOLS = new Set([
@@ -1136,6 +1137,16 @@ export const Route = createFileRoute("/mcp")({
           const hubstaffRead =
             name === "hubstaff_admin_request" &&
             String(args["method"] ?? "GET").toUpperCase() === "GET";
+
+          // Self-guarded provider writes retain their invoke grants. Control-plane
+          // tools must report missing scope before their role/data guards throw.
+          if (name && TOOL_SCOPES[name] === "control:write" && !hasScope(key, "control:write")) {
+            return gatewayError(
+              `Key requires control:write to invoke ${name}.`,
+              403,
+              "insufficient_scope",
+            );
+          }
 
           if (
             !name ||
