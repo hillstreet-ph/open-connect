@@ -16,6 +16,7 @@ const resource = {
   verified: true,
 };
 const tables: string[] = [];
+const privateReads: { table: string; filters: Record<string, unknown> }[] = [];
 let connectionProvider = "twilio";
 let connectionReadOnly = false;
 let connectionError = false;
@@ -147,11 +148,13 @@ mock.module("@/integrations/supabase/client.server", () => ({
           }),
         };
       if (table === "memory_records" || table === "knowledge_items") {
+        const filters: Record<string, unknown> = {};
         const query = {
           select() {
             return this;
           },
-          eq() {
+          eq(field: string, value: unknown) {
+            filters[field] = value;
             return this;
           },
           order() {
@@ -160,7 +163,8 @@ mock.module("@/integrations/supabase/client.server", () => ({
           limit() {
             return this;
           },
-          is() {
+          is(field: string, value: unknown) {
+            filters[field] = value;
             return this;
           },
           neq() {
@@ -170,7 +174,11 @@ mock.module("@/integrations/supabase/client.server", () => ({
             onfulfilled: (value: { data: unknown[]; error: null }) => unknown,
             onrejected?: (reason: unknown) => unknown,
           ) {
-            return Promise.resolve({ data: [], error: null }).then(onfulfilled, onrejected);
+            privateReads.push({ table, filters: { ...filters } });
+            return Promise.resolve({
+              data: [{ id: filters["project_id"] ? "project-row" : "personal-row" }],
+              error: null,
+            }).then(onfulfilled, onrejected);
           },
         };
         return query;
@@ -213,6 +221,7 @@ beforeEach(() => {
   roles = ["admin"];
   scopes = ["mcp:connect", "control:write"];
   tables.length = 0;
+  privateReads.length = 0;
   resource.verified = true;
   connectionProvider = "twilio";
   connectionReadOnly = false;
@@ -223,6 +232,50 @@ beforeEach(() => {
   assignedConnections.clear();
   connectionToolReads = 0;
   hubstaffRequests = 0;
+});
+
+test("project runtime private reads never query owner personal memory or knowledge", async () => {
+  keyBoundary = {
+    projectId: "fixture-project",
+    organizationId: "fixture-org",
+    workspaceId: "fixture-workspace",
+  };
+  for (const [scope, tool] of [
+    ["memory:read", "list_my_memory"],
+    ["knowledge:read", "list_my_knowledge"],
+  ] as const) {
+    scopes = [scope];
+    privateReads.length = 0;
+    const payload = JSON.parse((await (await call(tool)).json()).result.content[0].text);
+    expect(payload.personal).toEqual([]);
+    expect(payload.project).toEqual([{ id: "project-row" }]);
+    expect(privateReads).toHaveLength(1);
+    expect(privateReads[0]!.filters).toEqual({
+      user_id: "fixture-user",
+      project_id: "fixture-project",
+    });
+    await expect(call(tool, { project_id: "another-project" })).rejects.toThrow(
+      "different project",
+    );
+    expect(privateReads).toHaveLength(1);
+  }
+});
+
+test("unbound owner private reads retain personal and explicitly authorized project records", async () => {
+  for (const [scope, tool] of [
+    ["memory:read", "list_my_memory"],
+    ["knowledge:read", "list_my_knowledge"],
+  ] as const) {
+    scopes = [scope];
+    privateReads.length = 0;
+    const payload = JSON.parse(
+      (await (await call(tool, { project_id: "fixture-project" })).json()).result.content[0].text,
+    );
+    expect(payload.personal).toEqual([{ id: "personal-row" }]);
+    expect(payload.project).toEqual([{ id: "project-row" }]);
+    expect(privateReads).toHaveLength(2);
+    expect(privateReads.every((read) => read.filters["user_id"] === "fixture-user")).toBe(true);
+  }
 });
 
 test("project connection catalogs contain only assigned accounts", async () => {
@@ -281,6 +334,9 @@ test("control decisions reject non-admins and bounded keys before approval write
   await expect(call("decide_control_approval", args)).rejects.toThrow("Admin role");
   expect(tables).not.toContain("control_approvals");
   roles = ["admin"];
+  await expect(call("decide_control_approval", args)).rejects.toThrow("control write scope");
+  expect(tables).not.toContain("control_approvals");
+  scopes = ["mcp:connect", "control:write"];
   for (const boundary of [
     { projectId: "project" },
     { workspaceId: "workspace" },
@@ -444,7 +500,7 @@ test("private read grants pass the MCP entry gate without mcp:connect", async ()
     expect(response.status).toBe(200);
     const { result } = await response.json();
     expect(JSON.parse(result.content[0].text)).toMatchObject({
-      personal: [],
+      personal: [{ id: "personal-row" }],
       project: [],
       user_owned_only: true,
     });
