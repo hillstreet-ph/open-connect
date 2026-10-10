@@ -14,9 +14,15 @@
     "authorized_task_autonomy",
     "capability_matching",
     "connection_discovery",
-    "credential_metadata_routing"
+    "credential_metadata_routing",
+    "exact_origin_account_matching"
   ],
-  "tools": { "status": "get_auto_mode", "toggle": "set_auto_mode", "discover": "auto_discover" },
+  "tools": {
+    "status": "get_auto_mode",
+    "toggle": "set_auto_mode",
+    "discover": "auto_discover",
+    "credentials": "match_browser_credentials"
+  },
   "approval_policy": "host_and_provider_enforced",
   "credential_transport": "opaque_reference_only",
   "execution_in_discovery": false,

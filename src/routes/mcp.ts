@@ -1,4 +1,11 @@
+import {
+  AUTO_MODE_OUTPUT_SCHEMA,
+  AUTO_DISCOVERY_OUTPUT_SCHEMA,
+  AUTO_STATUS_OUTPUT_SCHEMA,
+  BROWSER_CREDENTIAL_MATCH_OUTPUT_SCHEMA,
+} from "@/lib/auto-mcp-contract";
 import type { Json } from "@/integrations/supabase/types";
+import { matchBrowserCredentials } from "@/lib/browser-credential-matching";
 import { autoInstructions, readAutoMode, writeAutoMode } from "@/lib/auto-mode.server";
 import { COMMAND_CENTER_HTML } from "@/lib/command-center";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -65,6 +72,7 @@ type McpTool = {
   title?: string;
   description: string;
   inputSchema: Record<string, unknown>;
+  outputSchema?: Record<string, unknown>;
   annotations?: Record<string, boolean>;
   _meta?: Record<string, unknown>;
 };
@@ -115,6 +123,7 @@ const PLATFORM_TOOLS: McpTool[] = [
   {
     name: "open_connect_status",
     description: "Gateway status: resources, connections, models",
+    outputSchema: AUTO_STATUS_OUTPUT_SCHEMA,
     inputSchema: { type: "object", properties: {} },
     annotations: {
       readOnlyHint: true,
@@ -122,13 +131,16 @@ const PLATFORM_TOOLS: McpTool[] = [
       openWorldHint: false,
     },
     _meta: {
-      ui: { resourceUri: COMMAND_CENTER_URI },
+      ui: { resourceUri: COMMAND_CENTER_URI, visibility: ["model", "app"] },
+      "openai/widgetAccessible": true,
       "ui/resourceUri": COMMAND_CENTER_URI,
       "openai/outputTemplate": COMMAND_CENTER_URI,
     },
   },
   {
     name: "get_auto_mode",
+    outputSchema: AUTO_MODE_OUTPUT_SCHEMA,
+    _meta: { ui: { visibility: ["model", "app"] }, "openai/widgetAccessible": true },
     description:
       "Read the authenticated account's scoped Auto autonomy and discovery preference. Host approvals remain enforced.",
     inputSchema: { type: "object", properties: {} },
@@ -136,6 +148,8 @@ const PLATFORM_TOOLS: McpTool[] = [
   },
   {
     name: "set_auto_mode",
+    outputSchema: AUTO_MODE_OUTPUT_SCHEMA,
+    _meta: { ui: { visibility: ["model", "app"] }, "openai/widgetAccessible": true },
     description:
       "Save Auto on/off for the authenticated account and key context. Enables task autonomy and discovery, not permission bypass or secret access.",
     inputSchema: {
@@ -153,6 +167,7 @@ const PLATFORM_TOOLS: McpTool[] = [
   },
   {
     name: "auto_discover",
+    outputSchema: AUTO_DISCOVERY_OUTPUT_SCHEMA,
     description:
       "When Auto is enabled and an authorized task needs a capability, match verified Marketplace tools and skills to the goal. Returns metadata and next steps, never executes or reveals credentials.",
     inputSchema: {
@@ -249,6 +264,22 @@ const PLATFORM_TOOLS: McpTool[] = [
       destructiveHint: false,
       openWorldHint: false,
     },
+  },
+  {
+    name: "match_browser_credentials",
+    outputSchema: BROWSER_CREDENTIAL_MATCH_OUTPUT_SCHEMA,
+    description:
+      "Match owned password metadata to an exact HTTPS origin and optional account. Returns credential IDs and password/TOTP availability only. Does not reveal secrets, generate codes, inject credentials, or sign in. Use the browser host's secure authentication capability.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        origin: { type: "string", maxLength: 500 },
+        account: { type: "string", maxLength: 320 },
+      },
+      required: ["origin"],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   },
   {
     name: "calculate",
@@ -930,6 +961,7 @@ const TOOL_SCOPES: Record<string, string> = {
   list_my_knowledge: "knowledge:read",
   list_workspace_projects: "resources:read",
   list_credential_metadata: "secrets:read",
+  match_browser_credentials: "secrets:read",
   calculate: "mcp:connect",
   list_connections: "connections:read",
   preview_composio_sync: "connections:read",
@@ -1133,7 +1165,7 @@ export const Route = createFileRoute("/mcp")({
             const results = ranked.map((item) => ({
               id: item.slug,
               title: item.name,
-              url: `https://open-connect.site/resources/${item.slug}`,
+              url: `https://open-connect.site/resources?resource=${encodeURIComponent(item.slug)}`,
               score: item.score,
               matched_terms: item.matchedTerms,
             }));
@@ -1148,7 +1180,7 @@ export const Route = createFileRoute("/mcp")({
                     id: item.slug,
                     title: item.name,
                     text: item.description ?? "",
-                    url: `https://open-connect.site/resources/${item.slug}`,
+                    url: `https://open-connect.site/resources?resource=${encodeURIComponent(item.slug)}`,
                     metadata: {
                       type: item.resource_type,
                       installation_type: item.installation_type,
@@ -1175,7 +1207,8 @@ export const Route = createFileRoute("/mcp")({
                 .select("id", { count: "exact", head: true })
                 .eq("user_id", key.userId)
                 .eq("status", "connected");
-              if (!response.error) connections = response.count;
+              if (!response.error && typeof response.count === "number")
+                connections = response.count;
             } catch {
               // Status must remain available even when the optional connection counter is not.
             }
@@ -1314,6 +1347,28 @@ export const Route = createFileRoute("/mcp")({
                 projects: visibleProjects,
               });
             }
+          } else if (name === "match_browser_credentials") {
+            if (key.projectId || key.workspaceId || key.organizationId)
+              return gatewayError(
+                "Browser password matching requires a personal credential context.",
+                403,
+                "insufficient_scope",
+              );
+            // Validate before accessing the owner's password metadata.
+            matchBrowserCredentials([], args["origin"], args["account"]);
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const { data, error } = await supabaseAdmin
+              .from("credential_secrets")
+              .select("id,name,website,username,email_address,vault_secret_id,totp_vault_secret_id")
+              .eq("user_id", key.userId)
+              .eq("secret_type", "password")
+              .order("id")
+              .limit(1001);
+            if (error) throw new Error("Credential metadata could not be read.");
+            if ((data?.length ?? 0) > 1000)
+              throw new Error("Too many credential records to establish an unambiguous match.");
+            const payload = matchBrowserCredentials(data ?? [], args["origin"], args["account"]);
+            result = { ...textResult(payload), structuredContent: payload };
           } else if (name === "list_credential_metadata") {
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
             const { data, error } = await supabaseAdmin
