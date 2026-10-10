@@ -34,9 +34,15 @@ Forum destinations use `telegram_message_thread_id` on both the account runtime 
 
 Existing forwarding is independent of player Verify. Incoming text/MMS is queued; voice records the inbound track and forwards protected audio after the recording completes. It is not a live Telegram voice bridge or transcription service.
 
+Twilio filtered the genuine inbound SMS OTP test on 10 October 2026 with error `30038` (OTP Message Body Filtered), redacted its code and marked it failed before webhook delivery. This is a provider restriction, not a forwarding queue failure. Do not alter code templates or disable protections to evade this restriction. Contact Twilio Support about supported inbound use cases before purchasing more numbers. See [Twilio error 30038](https://www.twilio.com/docs/api/errors/30038).
+
 For future numbers, purchase only after number suitability and cost are resolved. Set the friendly name prefix `HillStreet / OTP`; the existing worker automatically enrolls matching numbers and verifies webhook readback. It preserves explicitly disabled numbers and avoids numbers assigned to TwiML applications or trunks.
 
-Telegram chooses login-code delivery. Twilio sees only actual SMS/calls sent to the number. A bot cannot read a user's private Telegram login messages or register a user account. In-app codes require an authorized user session, such as the existing Open-TGate account connection. No real Telegram signup acceptance or real inbound voice delivery has been verified.
+Telegram chooses login-code delivery. Twilio sees only actual SMS/calls sent to the number. A bot cannot read a user's private Telegram login messages or register a user account. In-app codes require an authorized user session, such as the existing Open-TGate account connection. A genuine Twilio Verify voice OTP test on 10 October 2026 reached the owned number, produced a completed 37-second inbound recording and was delivered by the worker to the configured Telegram forum destination on its first attempt. Read event and message IDs from private operational records. The isolated `HillStreet Internal OTP` service uses six-digit generated codes and `DtmfInputRequired=false` for this owned-number recording test; the player service remains separate. This verifies that call recording and audio forwarding work; Telegram signup acceptance remains unverified.
+
+## Primary compliance profile
+
+Document-backed corrections were saved to the existing business EndUser, authorized representative EndUser and PH Address records on 10 October 2026. The corrected policy evaluation returned `compliant`. The primary profile remains rejected: Twilio rejected its root update through the API and explicitly required Console. Do not treat an evaluation pass as approval or work around the primary-profile restriction. Complete notification email, optional callback cleanup and resubmission in the authenticated Console. Keep legal documents and identifying details in private storage. The existing website returned HTTP 403 during inspection; confirm that it is a working public site for the registered business before resubmission.
 
 ## Admin invitation request
 
@@ -47,7 +53,7 @@ Requested Twilio organization: **KobePlay Organization**.
 | First requested administrator (recorded in the private operations skill)  | Administrator  | Invitation not sent or verified |
 | Second requested administrator (recorded in the private operations skill) | Administrator  | Invitation not sent or verified |
 
-Inspect the actual Twilio organization and current membership through its authorized organization admin interface. The connected account API and documentation MCP do not expose an authenticated invitation action. Do not replace these invitations with unrelated Open-Connect memberships.
+Inspect the actual Twilio organization and current membership through its authorized organization admin interface. The connected account API and documentation MCP do not expose an authenticated invitation action. Organization-level APIs require OAuth; an account Auth Token does not authorize those APIs. The requested Gmail addresses need the supported external-user/account administrator invitation flow rather than managed users under a verified company domain. Inspect the actual organization in Console first. Do not replace these invitations with unrelated Open-Connect memberships. See [organization OAuth authentication](https://www.twilio.com/docs/iam/oauth-apps/org-oauth-apps) and [email-domain restrictions](https://www.twilio.com/docs/api/errors/25017).
 
 ## Operations and validation
 
