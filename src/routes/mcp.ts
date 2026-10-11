@@ -32,6 +32,7 @@ import {
   isRemoteMcpProvider,
   normalizeRemoteMcpAuthType,
   normalizeRemoteMcpEndpoint,
+  type RemoteMcpProvider,
 } from "@/lib/remote-mcp";
 
 const WWW_AUTH =
@@ -2098,6 +2099,7 @@ export const Route = createFileRoute("/mcp")({
             if (remoteMcpMetadata && existing?.status === "connected") {
               const { validateRemoteMcpConfiguration } = await import("@/lib/custom-mcp.server");
               await validateRemoteMcpConfiguration({
+                provider: provider as RemoteMcpProvider,
                 ownerUserId: key.userId,
                 credentialReference: credentialRef,
                 endpointUrl: remoteMcpMetadata.endpoint_url,

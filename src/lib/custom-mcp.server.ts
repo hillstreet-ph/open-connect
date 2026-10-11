@@ -1,7 +1,7 @@
 import { fetchMcpTools, McpCatalogError, withMcpClient } from "./mcp-client.server.ts";
 import { callTwilioTool, twilioFailureResult, twilioTools } from "./twilio.server.ts";
 import { callTelegramTool, telegramFailureResult, telegramTools } from "./telegram.server.ts";
-import { isRemoteMcpProvider } from "./remote-mcp.ts";
+import { isRemoteMcpProvider, type RemoteMcpProvider } from "./remote-mcp.ts";
 
 export { isRemoteMcpProvider } from "./remote-mcp.ts";
 
@@ -113,6 +113,7 @@ async function resolveCredential(ownerUserId: string, reference: string | null) 
 }
 
 export async function validateRemoteMcpConfiguration(input: {
+  provider: RemoteMcpProvider;
   ownerUserId: string;
   credentialReference: string;
   endpointUrl: string;
@@ -129,14 +130,14 @@ export async function validateRemoteMcpConfiguration(input: {
     ]);
     const setup = normalizeConnectionSetup(
       {
-        provider: "apify_mcp",
+        provider: input.provider,
         endpoint_url: input.endpointUrl,
         api_key: credential,
         auth_type: input.authType,
       },
       {
-        provider: "apify_mcp",
-        display_name: "Apify MCP",
+        provider: input.provider,
+        display_name: input.provider === "apify_mcp" ? "Apify MCP" : "Custom MCP server",
         scopes: [],
         oauth: false,
       },

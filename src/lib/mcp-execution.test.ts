@@ -841,10 +841,40 @@ test("Apify MCP endpoint configuration updates the owned connection without repl
   });
   expect(remoteMcpValidations).toEqual([
     {
+      provider: "apify_mcp",
       ownerUserId: "fixture-user",
       credentialReference: credentialRef,
       endpointUrl: "https://mcp.apify.com/",
       authType: "bearer",
+    },
+  ]);
+});
+
+test("Custom MCP endpoint configuration preserves public auth-free validation", async () => {
+  const credentialRef = `credential://custom_mcp/${"a".repeat(8)}-aaaa-aaaa-aaaa-${"a".repeat(12)}`;
+  const response = await call("configure_connection", {
+    provider: "custom_mcp",
+    credential_ref: credentialRef,
+    display_name: "Public Custom MCP",
+    scopes: ["tools:list", "tools:invoke"],
+    endpoint_url: "https://mcp.example.com/mcp",
+    auth_type: "none",
+  });
+
+  expect(response.status).toBe(200);
+  expect(connectionUpdates).toHaveLength(1);
+  expect(connectionUpdates[0]!.values["metadata"]).toEqual({
+    source: "fixture",
+    endpoint_url: "https://mcp.example.com/mcp",
+    auth_type: "none",
+  });
+  expect(remoteMcpValidations).toEqual([
+    {
+      provider: "custom_mcp",
+      ownerUserId: "fixture-user",
+      credentialReference: credentialRef,
+      endpointUrl: "https://mcp.example.com/mcp",
+      authType: "none",
     },
   ]);
 });
