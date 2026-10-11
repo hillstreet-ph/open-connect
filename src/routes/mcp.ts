@@ -1547,17 +1547,16 @@ export const Route = createFileRoute("/mcp")({
             const { listCustomMcpTools, remoteMcpFailureResult } =
               await import("@/lib/custom-mcp.server");
             try {
-              result = textResult(
-                await listCustomMcpTools(
-                  key.userId,
-                  String(args["connection_id"] ?? ""),
-                  key.projectId ?? undefined,
-                ),
+              const payload = await listCustomMcpTools(
+                key.userId,
+                String(args["connection_id"] ?? ""),
+                key.projectId ?? undefined,
               );
+              result = { ...textResult(payload), structuredContent: payload };
             } catch (error) {
               const failure = remoteMcpFailureResult(error);
               if (!failure) throw error;
-              result = { ...textResult(failure), isError: true };
+              result = { ...textResult(failure), structuredContent: failure, isError: true };
             }
           } else if (name === "call_connection_tool") {
             const { callCustomMcpTool, listCustomMcpTools } =
