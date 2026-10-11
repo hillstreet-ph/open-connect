@@ -72,13 +72,20 @@ async function assertProjectConnectionAccess(
   }
 }
 
+export function isRemoteMcpProvider(provider: string) {
+  return provider === "custom_mcp" || provider === "apify_mcp";
+}
+
 export async function assertToolConnectionAccess(
   userId: string,
   connection: { id: string; user_id: string; provider: string; status: string },
   projectId?: string,
   checkProject = assertProjectConnectionAccess,
 ) {
-  if (!["custom_mcp", "twilio", "telegram"].includes(connection.provider)) {
+  if (
+    !isRemoteMcpProvider(connection.provider) &&
+    !["twilio", "telegram"].includes(connection.provider)
+  ) {
     throw new Error("No executable adapter is configured for this connection.");
   }
   if (connection.status !== "connected") throw new Error("Connection is not verified.");
@@ -131,7 +138,8 @@ export function authorizeToolForConnectionSnapshot(
 }
 
 async function materializeCustomMcpConnection(data: ToolConnection) {
-  if (data.provider !== "custom_mcp") throw new Error("Only Custom MCP connections use this tool.");
+  if (!isRemoteMcpProvider(data.provider))
+    throw new Error("Only remote MCP connections use this tool.");
 
   const metadata = (data.metadata ?? {}) as Record<string, unknown>;
   const endpoint = String(metadata["endpoint_url"] ?? "");
