@@ -24,6 +24,8 @@ let connectionProvider = "twilio";
 let connectionReadOnly = false;
 let connectionError = false;
 let connectionDiscoveryError = false;
+let connectionExists = true;
+let connectionStatus = "connected";
 const connectionCalls: unknown[] = [];
 const connectionUpdates: Array<{
   values: Record<string, unknown>;
@@ -286,7 +288,13 @@ mock.module("@/integrations/supabase/client.server", () => ({
           },
           range: async () => ({ data: [], error: null }),
           maybeSingle: async () => ({
-            data: { id: "fixture-connection", metadata: { source: "fixture" } },
+            data: connectionExists
+              ? {
+                  id: "fixture-connection",
+                  status: connectionStatus,
+                  metadata: { source: "fixture" },
+                }
+              : null,
             error: null,
           }),
           update(value: Record<string, unknown>) {
@@ -338,6 +346,8 @@ beforeEach(() => {
   connectionReadOnly = false;
   connectionError = false;
   connectionDiscoveryError = false;
+  connectionExists = true;
+  connectionStatus = "connected";
   connectionCalls.length = 0;
   connectionUpdates.length = 0;
   managedReads = 0;
@@ -795,6 +805,72 @@ test("Telegram destination configuration rejects missing control access and inva
     }),
   ).rejects.toThrow("supergroup");
   expect(connectionUpdates).toEqual([]);
+});
+
+test("Apify MCP endpoint configuration updates the owned connection without replacing its credential", async () => {
+  const credentialRef = `credential://apify_mcp/${"a".repeat(8)}-aaaa-aaaa-aaaa-${"a".repeat(12)}`;
+  const response = await call("configure_connection", {
+    provider: "apify_mcp",
+    credential_ref: credentialRef,
+    display_name: "Apify MCP",
+    scopes: ["tools:list", "tools:invoke"],
+    endpoint_url: "https://mcp.apify.com",
+    auth_type: "bearer",
+  });
+
+  expect(response.status).toBe(200);
+  expect(connectionUpdates).toHaveLength(1);
+  expect(connectionUpdates[0]!.values["credential_reference"]).toBe(credentialRef);
+  expect(connectionUpdates[0]!.values["metadata"]).toEqual({
+    source: "fixture",
+    endpoint_url: "https://mcp.apify.com/",
+    auth_type: "bearer",
+  });
+  expect(connectionUpdates[0]!.filters).toMatchObject({
+    id: "fixture-connection",
+    user_id: "fixture-user",
+  });
+});
+
+test("Apify MCP endpoint configuration never creates a duplicate connection", async () => {
+  connectionExists = false;
+  const credentialRef = `credential://apify_mcp/${"a".repeat(8)}-aaaa-aaaa-aaaa-${"a".repeat(12)}`;
+  await expect(
+    call("configure_connection", {
+      provider: "apify_mcp",
+      credential_ref: credentialRef,
+      endpoint_url: "https://mcp.apify.com",
+      auth_type: "bearer",
+    }),
+  ).rejects.toThrow("existing owned connection");
+  expect(connectionUpdates).toEqual([]);
+});
+
+test("Apify MCP endpoint configuration rejects a credential bound to another provider", async () => {
+  const credentialRef = `credential://github/${"a".repeat(8)}-aaaa-aaaa-aaaa-${"a".repeat(12)}`;
+  await expect(
+    call("configure_connection", {
+      provider: "apify_mcp",
+      credential_ref: credentialRef,
+      endpoint_url: "https://mcp.apify.com",
+      auth_type: "bearer",
+    }),
+  ).rejects.toThrow("owned credential reference");
+  expect(connectionUpdates).toEqual([]);
+});
+
+test("Apify MCP endpoint configuration does not promote an unverified connection", async () => {
+  connectionStatus = "configured_unverified";
+  const credentialRef = `credential://apify_mcp/${"a".repeat(8)}-aaaa-aaaa-aaaa-${"a".repeat(12)}`;
+  const response = await call("configure_connection", {
+    provider: "apify_mcp",
+    credential_ref: credentialRef,
+    endpoint_url: "https://mcp.apify.com",
+    auth_type: "bearer",
+  });
+
+  expect(response.status).toBe(200);
+  expect(connectionUpdates[0]!.values["status"]).toBe("configured_unverified");
 });
 
 test("adding Twilio execution preserves the project requirement for Custom MCP writes", async () => {

@@ -1,6 +1,9 @@
 import { fetchMcpTools, McpCatalogError, withMcpClient } from "./mcp-client.server.ts";
 import { callTwilioTool, twilioFailureResult, twilioTools } from "./twilio.server.ts";
 import { callTelegramTool, telegramFailureResult, telegramTools } from "./telegram.server.ts";
+import { isRemoteMcpProvider } from "./remote-mcp.ts";
+
+export { isRemoteMcpProvider } from "./remote-mcp.ts";
 
 const REMOTE_MCP_FAILURES = {
   connection_metadata_invalid: {
@@ -151,10 +154,6 @@ async function assertProjectConnectionAccess(
       .maybeSingle();
     if (error || !grant) throw new Error("Connection is not shared with this project.");
   }
-}
-
-export function isRemoteMcpProvider(provider: string) {
-  return provider === "custom_mcp" || provider === "apify_mcp";
 }
 
 export async function assertToolConnectionAccess(

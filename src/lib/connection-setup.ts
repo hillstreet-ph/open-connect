@@ -1,3 +1,5 @@
+import { isRemoteMcpProvider, normalizeRemoteMcpEndpoint } from "./remote-mcp.ts";
+
 export type ConnectionSetupInput = {
   provider: string;
   display_name?: string;
@@ -32,24 +34,8 @@ export function normalizeConnectionSetup(input: ConnectionSetupInput, app: Conne
   }
   let endpointUrl = (input?.endpoint_url ?? "").trim();
 
-  if (provider === "custom_mcp") {
-    if (!endpointUrl) throw new Error("MCP endpoint URL is required");
-    const parsed = new URL(endpointUrl);
-    if (parsed.protocol !== "https:") {
-      throw new Error("MCP endpoint must use HTTPS");
-    }
-    const hostname = parsed.hostname.toLowerCase().replace(/^\[|\]$/g, "");
-    if (
-      /^(?:0\.|127\.|10\.|100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.|192\.168\.|169\.254\.|172\.(?:1[6-9]|2\d|3[01])\.)/.test(
-        hostname,
-      ) ||
-      hostname === "::1" ||
-      /^(?:fc|fd|fe8|fe9|fea|feb)/.test(hostname) ||
-      hostname.endsWith(".local")
-    ) {
-      throw new Error("MCP endpoint cannot target a private network address");
-    }
-    endpointUrl = parsed.toString();
+  if (isRemoteMcpProvider(provider)) {
+    endpointUrl = normalizeRemoteMcpEndpoint(provider, endpointUrl);
   } else if (endpointUrl) {
     const parsed = new URL(endpointUrl);
     if (parsed.protocol !== "https:") throw new Error("Provider endpoint must use HTTPS");

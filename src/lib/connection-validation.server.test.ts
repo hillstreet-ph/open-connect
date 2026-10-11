@@ -33,6 +33,29 @@ test("validates a custom MCP server with initialize", async () => {
   assert.equal(result.accountId, "fixture");
 });
 
+test("validates the Apify remote MCP provider with initialize", async () => {
+  const setup = normalizeConnectionSetup(
+    { provider: "apify_mcp", endpoint_url: "https://mcp.apify.com", api_key: "test-secret" },
+    app("apify_mcp"),
+  );
+  const result = await validateConnectionCredential(setup, async (_url, init) => {
+    if (init?.method === "GET") return new Response(null, { status: 405 });
+    const message = JSON.parse(String(init?.body));
+    if (!message.id && message.id !== 0) return new Response(null, { status: 202 });
+    return Response.json({
+      jsonrpc: "2.0",
+      id: message.id,
+      result: {
+        protocolVersion: "2025-06-18",
+        capabilities: {},
+        serverInfo: { name: "apify-fixture", version: "1" },
+      },
+    });
+  });
+  assert.equal(result.verified, true);
+  assert.equal(result.accountId, "apify-fixture");
+});
+
 test("does not mark unsupported provider validation as verified", async () => {
   const setup = normalizeConnectionSetup(
     { provider: "proton_pass", api_key: "test-secret" },

@@ -42,6 +42,46 @@ test("allows a public custom MCP endpoint without a stored credential", () => {
   assert.equal(setup.apiKey, "");
 });
 
+test("requires the canonical endpoint for the Apify remote MCP provider", () => {
+  assert.throws(
+    () =>
+      normalizeConnectionSetup(
+        {
+          provider: "apify_mcp",
+          api_key: "test-secret",
+          auth_type: "bearer",
+        },
+        app("apify_mcp"),
+      ),
+    /MCP endpoint URL is required/,
+  );
+
+  const setup = normalizeConnectionSetup(
+    {
+      provider: "apify_mcp",
+      endpoint_url: "https://mcp.apify.com",
+      api_key: "test-secret",
+      auth_type: "bearer",
+    },
+    app("apify_mcp"),
+  );
+  assert.equal(setup.endpointUrl, "https://mcp.apify.com/");
+
+  assert.throws(
+    () =>
+      normalizeConnectionSetup(
+        {
+          provider: "apify_mcp",
+          endpoint_url: "https://mcp.example.com",
+          api_key: "test-secret",
+          auth_type: "bearer",
+        },
+        app("apify_mcp"),
+      ),
+    /must use https:\/\/mcp\.apify\.com/,
+  );
+});
+
 test("rejects insecure localhost MCP endpoints because execution requires HTTPS", () => {
   assert.throws(
     () =>
