@@ -4,7 +4,9 @@ import {
   assertToolConnectionAccess,
   authorizeToolForConnectionSnapshot,
   connectionAuthHeaders,
+  CredentialResolutionError,
   isRemoteMcpProvider,
+  remoteMcpCredentialFailureCode,
   remoteMcpFailureResult,
   RemoteMcpDiscoveryError,
 } from "./custom-mcp.server.ts";
@@ -43,6 +45,8 @@ test("remote MCP discovery failures expose only stable safe diagnostics", () => 
   const fixtures = [
     ["connection_metadata_invalid", false],
     ["connection_credential_unavailable", false],
+    ["credential_broker_unavailable", true],
+    ["remote_mcp_catalog_invalid", false],
     ["remote_mcp_unavailable", true],
   ] as const;
 
@@ -53,6 +57,25 @@ test("remote MCP discovery failures expose only stable safe diagnostics", () => 
     assert.equal(result?.secrets_exposed, false);
     assert.doesNotMatch(JSON.stringify(result), /credential:\/\/|bearer|upstream-secret/i);
   }
+});
+
+test("credential discovery separates permanent configuration from transient broker failures", () => {
+  assert.equal(
+    remoteMcpCredentialFailureCode(new CredentialResolutionError("invalid_reference")),
+    "connection_credential_unavailable",
+  );
+  assert.equal(
+    remoteMcpCredentialFailureCode(new CredentialResolutionError("credential_missing")),
+    "connection_credential_unavailable",
+  );
+  assert.equal(
+    remoteMcpCredentialFailureCode(new CredentialResolutionError("broker_unavailable")),
+    "credential_broker_unavailable",
+  );
+  assert.equal(
+    remoteMcpCredentialFailureCode(new Error("temporary module or network failure")),
+    "credential_broker_unavailable",
+  );
 });
 
 test("remote MCP discovery classifier preserves unrelated authorization errors", () => {
