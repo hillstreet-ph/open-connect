@@ -2,6 +2,45 @@ import { fetchMcpTools, withMcpClient } from "./mcp-client.server.ts";
 import { callTwilioTool, twilioFailureResult, twilioTools } from "./twilio.server.ts";
 import { callTelegramTool, telegramFailureResult, telegramTools } from "./telegram.server.ts";
 
+const REMOTE_MCP_FAILURES = {
+  connection_metadata_invalid: {
+    message: "The remote MCP endpoint configuration is invalid.",
+    retryable: false,
+  },
+  connection_credential_unavailable: {
+    message: "The remote MCP credential is unavailable from the credential broker.",
+    retryable: false,
+  },
+  remote_mcp_unavailable: {
+    message: "The remote MCP server did not return a tool catalog.",
+    retryable: true,
+  },
+} as const;
+
+export type RemoteMcpFailureCode = keyof typeof REMOTE_MCP_FAILURES;
+
+export class RemoteMcpDiscoveryError extends Error {
+  readonly code: RemoteMcpFailureCode;
+
+  constructor(code: RemoteMcpFailureCode) {
+    super(REMOTE_MCP_FAILURES[code].message);
+    this.name = "RemoteMcpDiscoveryError";
+    this.code = code;
+  }
+}
+
+export function remoteMcpFailureResult(error: unknown) {
+  if (!(error instanceof RemoteMcpDiscoveryError)) return null;
+  const failure = REMOTE_MCP_FAILURES[error.code];
+  return {
+    status: "unavailable",
+    code: error.code,
+    message: failure.message,
+    retryable: failure.retryable,
+    secrets_exposed: false,
+  };
+}
+
 export function connectionAuthHeaders(authType: string, credential: string) {
   if (!credential || authType === "none") return {};
   if (authType === "api_key") return { "X-API-Key": credential };
@@ -144,8 +183,20 @@ async function materializeCustomMcpConnection(data: ToolConnection) {
   const metadata = (data.metadata ?? {}) as Record<string, unknown>;
   const endpoint = String(metadata["endpoint_url"] ?? "");
   const authType = String(metadata["auth_type"] ?? "none");
-  if (!endpoint.startsWith("https://")) throw new Error("Connection endpoint is not valid.");
-  const credential = await resolveCredential(data.user_id, data.credential_reference);
+  try {
+    const parsed = new URL(endpoint);
+    if (parsed.protocol !== "https:" || !parsed.hostname || parsed.username || parsed.password) {
+      throw new Error("invalid endpoint");
+    }
+  } catch {
+    throw new RemoteMcpDiscoveryError("connection_metadata_invalid");
+  }
+  let credential: string;
+  try {
+    credential = await resolveCredential(data.user_id, data.credential_reference);
+  } catch {
+    throw new RemoteMcpDiscoveryError("connection_credential_unavailable");
+  }
   return {
     id: data.id,
     name: data.display_name,
@@ -169,7 +220,11 @@ async function listToolsForConnection(saved: ToolConnection) {
       ? telegramTools(saved.scopes ?? [])
       : await (async () => {
           const connection = await materializeCustomMcpConnection(saved);
-          return fetchMcpTools(connection.endpoint, connection.headers);
+          try {
+            return await fetchMcpTools(connection.endpoint, connection.headers);
+          } catch {
+            throw new RemoteMcpDiscoveryError("remote_mcp_unavailable");
+          }
         })();
 }
 

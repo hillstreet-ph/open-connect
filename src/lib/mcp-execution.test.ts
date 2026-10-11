@@ -23,6 +23,7 @@ const autoPreferences = new Map<string, boolean>();
 let connectionProvider = "twilio";
 let connectionReadOnly = false;
 let connectionError = false;
+let connectionDiscoveryError = false;
 const connectionCalls: unknown[] = [];
 const connectionUpdates: Array<{
   values: Record<string, unknown>;
@@ -51,6 +52,7 @@ mock.module("@/lib/managed-connectors.server", () => ({
 mock.module("@/lib/custom-mcp.server", () => ({
   listCustomMcpTools: async () => {
     connectionToolReads++;
+    if (connectionDiscoveryError) throw new Error("fixture remote MCP unavailable");
     return {
       connection: { id: "fixture-connection", provider: connectionProvider },
       tools: [{ name: "fixture-operation", annotations: { readOnlyHint: connectionReadOnly } }],
@@ -60,6 +62,16 @@ mock.module("@/lib/custom-mcp.server", () => ({
     connectionCalls.push(args);
     return { content: [{ type: "text", text: "{}" }], isError: connectionError };
   },
+  remoteMcpFailureResult: (error: unknown) =>
+    error instanceof Error && error.message === "fixture remote MCP unavailable"
+      ? {
+          status: "unavailable",
+          code: "remote_mcp_unavailable",
+          message: "The remote MCP server did not return a tool catalog.",
+          retryable: true,
+          secrets_exposed: false,
+        }
+      : null,
 }));
 
 mock.module("@/lib/hubstaff-admin.server", () => ({
@@ -325,6 +337,7 @@ beforeEach(() => {
   connectionProvider = "twilio";
   connectionReadOnly = false;
   connectionError = false;
+  connectionDiscoveryError = false;
   connectionCalls.length = 0;
   connectionUpdates.length = 0;
   managedReads = 0;
@@ -408,6 +421,27 @@ test("project tool discovery denies unassigned owner accounts before broker acce
   assignedConnections.add(assignedConnection.id);
   expect((await call("list_connection_tools", args)).status).toBe(200);
   expect(connectionToolReads).toBe(1);
+});
+
+test("remote MCP discovery returns a safe actionable tool error", async () => {
+  keyBoundary = { projectId: "fixture-project" };
+  scopes = ["mcp:connect", "connections:read"];
+  assignedConnections.add(assignedConnection.id);
+  connectionDiscoveryError = true;
+
+  const response = await call("list_connection_tools", {
+    connection_id: assignedConnection.id,
+  });
+  const body = await response.json();
+  const payload = JSON.parse(body.result.content[0].text);
+  expect(body.result.isError).toBe(true);
+  expect(payload).toEqual({
+    status: "unavailable",
+    code: "remote_mcp_unavailable",
+    message: "The remote MCP server did not return a tool catalog.",
+    retryable: true,
+    secrets_exposed: false,
+  });
 });
 
 test("project execution denies unassigned owner accounts before broker access", async () => {

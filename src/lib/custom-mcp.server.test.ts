@@ -5,6 +5,8 @@ import {
   authorizeToolForConnectionSnapshot,
   connectionAuthHeaders,
   isRemoteMcpProvider,
+  remoteMcpFailureResult,
+  RemoteMcpDiscoveryError,
 } from "./custom-mcp.server.ts";
 
 test("creates only the configured Custom MCP authentication header", () => {
@@ -35,6 +37,26 @@ test("existing Apify MCP provider uses the remote MCP adapter", () => {
   assert.equal(isRemoteMcpProvider("apify_mcp"), true);
   assert.equal(isRemoteMcpProvider("custom_mcp"), true);
   assert.equal(isRemoteMcpProvider("unknown_provider"), false);
+});
+
+test("remote MCP discovery failures expose only stable safe diagnostics", () => {
+  const fixtures = [
+    ["connection_metadata_invalid", false],
+    ["connection_credential_unavailable", false],
+    ["remote_mcp_unavailable", true],
+  ] as const;
+
+  for (const [code, retryable] of fixtures) {
+    const result = remoteMcpFailureResult(new RemoteMcpDiscoveryError(code));
+    assert.equal(result?.code, code);
+    assert.equal(result?.retryable, retryable);
+    assert.equal(result?.secrets_exposed, false);
+    assert.doesNotMatch(JSON.stringify(result), /credential:\/\/|bearer|upstream-secret/i);
+  }
+});
+
+test("remote MCP discovery classifier preserves unrelated authorization errors", () => {
+  assert.equal(remoteMcpFailureResult(new Error("Project access denied.")), null);
 });
 
 test("Apify MCP enforces personal ownership and connected status", async () => {
