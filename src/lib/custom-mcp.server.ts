@@ -1,6 +1,53 @@
-import { fetchMcpTools, withMcpClient } from "./mcp-client.server.ts";
+import { fetchMcpTools, McpCatalogError, withMcpClient } from "./mcp-client.server.ts";
 import { callTwilioTool, twilioFailureResult, twilioTools } from "./twilio.server.ts";
 import { callTelegramTool, telegramFailureResult, telegramTools } from "./telegram.server.ts";
+
+const REMOTE_MCP_FAILURES = {
+  connection_metadata_invalid: {
+    message: "The remote MCP endpoint configuration is invalid.",
+    retryable: false,
+  },
+  connection_credential_unavailable: {
+    message: "The remote MCP credential is unavailable from the credential broker.",
+    retryable: false,
+  },
+  credential_broker_unavailable: {
+    message: "The credential broker is temporarily unavailable.",
+    retryable: true,
+  },
+  remote_mcp_catalog_invalid: {
+    message: "The remote MCP tool catalog violates supported pagination limits.",
+    retryable: false,
+  },
+  remote_mcp_unavailable: {
+    message: "The remote MCP server did not return a tool catalog.",
+    retryable: true,
+  },
+} as const;
+
+export type RemoteMcpFailureCode = keyof typeof REMOTE_MCP_FAILURES;
+
+export class RemoteMcpDiscoveryError extends Error {
+  readonly code: RemoteMcpFailureCode;
+
+  constructor(code: RemoteMcpFailureCode) {
+    super(REMOTE_MCP_FAILURES[code].message);
+    this.name = "RemoteMcpDiscoveryError";
+    this.code = code;
+  }
+}
+
+export function remoteMcpFailureResult(error: unknown) {
+  if (!(error instanceof RemoteMcpDiscoveryError)) return null;
+  const failure = REMOTE_MCP_FAILURES[error.code];
+  return {
+    status: "unavailable",
+    code: error.code,
+    message: failure.message,
+    retryable: failure.retryable,
+    secrets_exposed: false,
+  };
+}
 
 export function connectionAuthHeaders(authType: string, credential: string) {
   if (!credential || authType === "none") return {};
@@ -8,18 +55,52 @@ export function connectionAuthHeaders(authType: string, credential: string) {
   return { Authorization: `Bearer ${credential}` };
 }
 
+type CredentialResolutionFailureCode =
+  "invalid_reference" | "credential_missing" | "broker_unavailable";
+
+export class CredentialResolutionError extends Error {
+  readonly code: CredentialResolutionFailureCode;
+  readonly retryable: boolean;
+
+  constructor(code: CredentialResolutionFailureCode) {
+    super(
+      code === "broker_unavailable"
+        ? "Credential broker unavailable."
+        : "Connection credential is unavailable.",
+    );
+    this.name = "CredentialResolutionError";
+    this.code = code;
+    this.retryable = code === "broker_unavailable";
+  }
+}
+
+export function remoteMcpCredentialFailureCode(error: unknown): RemoteMcpFailureCode {
+  return error instanceof CredentialResolutionError && !error.retryable
+    ? "connection_credential_unavailable"
+    : "credential_broker_unavailable";
+}
+
+export function isMissingConnectionCredentialRpcError(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+  const rpcError = error as { code?: unknown; message?: unknown };
+  return rpcError.code === "P0001" && rpcError.message === "connection credential not found";
+}
+
 async function resolveCredential(ownerUserId: string, reference: string | null) {
   if (!reference) return "";
   const match = reference.match(/^credential:\/\/[^/]+\/([0-9a-f-]{36})$/i);
-  if (!match) throw new Error("Connection has an invalid credential reference.");
+  if (!match) throw new CredentialResolutionError("invalid_reference");
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data, error } = await supabaseAdmin.rpc("resolve_connection_credential", {
     p_user_id: ownerUserId,
     p_credential_id: match[1]!,
   });
-  if (error || typeof data !== "string" || !data) {
-    throw new Error("Connection credential could not be resolved.");
+  if (error) {
+    throw new CredentialResolutionError(
+      isMissingConnectionCredentialRpcError(error) ? "credential_missing" : "broker_unavailable",
+    );
   }
+  if (typeof data !== "string" || !data) throw new CredentialResolutionError("credential_missing");
   try {
     const payload = JSON.parse(data) as { credential?: unknown };
     return typeof payload.credential === "string" ? payload.credential : data;
@@ -144,8 +225,23 @@ async function materializeCustomMcpConnection(data: ToolConnection) {
   const metadata = (data.metadata ?? {}) as Record<string, unknown>;
   const endpoint = String(metadata["endpoint_url"] ?? "");
   const authType = String(metadata["auth_type"] ?? "none");
-  if (!endpoint.startsWith("https://")) throw new Error("Connection endpoint is not valid.");
-  const credential = await resolveCredential(data.user_id, data.credential_reference);
+  try {
+    const parsed = new URL(endpoint);
+    if (parsed.protocol !== "https:" || !parsed.hostname || parsed.username || parsed.password) {
+      throw new Error("invalid endpoint");
+    }
+  } catch {
+    throw new RemoteMcpDiscoveryError("connection_metadata_invalid");
+  }
+  let credential: string;
+  try {
+    if (authType !== "none" && !data.credential_reference) {
+      throw new CredentialResolutionError("credential_missing");
+    }
+    credential = await resolveCredential(data.user_id, data.credential_reference);
+  } catch (error) {
+    throw new RemoteMcpDiscoveryError(remoteMcpCredentialFailureCode(error));
+  }
   return {
     id: data.id,
     name: data.display_name,
@@ -169,7 +265,14 @@ async function listToolsForConnection(saved: ToolConnection) {
       ? telegramTools(saved.scopes ?? [])
       : await (async () => {
           const connection = await materializeCustomMcpConnection(saved);
-          return fetchMcpTools(connection.endpoint, connection.headers);
+          try {
+            return await fetchMcpTools(connection.endpoint, connection.headers);
+          } catch (error) {
+            if (error instanceof McpCatalogError) {
+              throw new RemoteMcpDiscoveryError("remote_mcp_catalog_invalid");
+            }
+            throw new RemoteMcpDiscoveryError("remote_mcp_unavailable");
+          }
         })();
 }
 
