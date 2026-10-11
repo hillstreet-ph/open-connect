@@ -112,6 +112,44 @@ async function resolveCredential(ownerUserId: string, reference: string | null) 
   }
 }
 
+export async function validateRemoteMcpConfiguration(input: {
+  ownerUserId: string;
+  credentialReference: string;
+  endpointUrl: string;
+  authType: "none" | "bearer" | "api_key" | "personal_access_token";
+}) {
+  let credential = "";
+  try {
+    if (input.authType !== "none") {
+      credential = await resolveCredential(input.ownerUserId, input.credentialReference);
+    }
+    const [{ normalizeConnectionSetup }, { validateConnectionCredential }] = await Promise.all([
+      import("./connection-setup.ts"),
+      import("./connection-validation.server.ts"),
+    ]);
+    const setup = normalizeConnectionSetup(
+      {
+        provider: "apify_mcp",
+        endpoint_url: input.endpointUrl,
+        api_key: credential,
+        auth_type: input.authType,
+      },
+      {
+        provider: "apify_mcp",
+        display_name: "Apify MCP",
+        scopes: [],
+        oauth: false,
+      },
+    );
+    return await validateConnectionCredential(setup);
+  } catch (error) {
+    if (error instanceof CredentialResolutionError) {
+      throw new RemoteMcpDiscoveryError(remoteMcpCredentialFailureCode(error));
+    }
+    throw new RemoteMcpDiscoveryError("remote_mcp_unavailable");
+  }
+}
+
 async function assertProjectConnectionAccess(
   actorUserId: string,
   ownerUserId: string,

@@ -2029,6 +2029,9 @@ export const Route = createFileRoute("/mcp")({
                 "Run Sync Composio accounts as the authenticated administrator after approval, then assign selected connectors to projects.",
             });
           } else if (name === "configure_connection") {
+            if (key.projectId || key.workspaceId || key.organizationId) {
+              throw new Error("Use a personal API key to configure personal connections.");
+            }
             await requireControlWrite(key);
             const provider = normalizeConnectionProvider(args["provider"]);
             const credentialRef = String(args["credential_ref"] ?? "").trim();
@@ -2091,6 +2094,16 @@ export const Route = createFileRoute("/mcp")({
             if (existingError) throw new Error(existingError.message);
             if (remoteMcpMetadata && !existing) {
               throw new Error("Remote MCP endpoint updates require an existing owned connection.");
+            }
+            if (remoteMcpMetadata && existing?.status === "connected") {
+              const { validateRemoteMcpConfiguration } = await import("@/lib/custom-mcp.server");
+              await validateRemoteMcpConfiguration({
+                ownerUserId: key.userId,
+                credentialReference: credentialRef,
+                endpointUrl: remoteMcpMetadata.endpoint_url,
+                authType: remoteMcpMetadata.auth_type as
+                  "none" | "bearer" | "api_key" | "personal_access_token",
+              });
             }
             const connectionQuery = existing
               ? supabaseAdmin
