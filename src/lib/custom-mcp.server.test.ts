@@ -5,6 +5,7 @@ import {
   authorizeToolForConnectionSnapshot,
   connectionAuthHeaders,
   CredentialResolutionError,
+  isMissingConnectionCredentialRpcError,
   isRemoteMcpProvider,
   remoteMcpCredentialFailureCode,
   remoteMcpFailureResult,
@@ -76,6 +77,37 @@ test("credential discovery separates permanent configuration from transient brok
     remoteMcpCredentialFailureCode(new Error("temporary module or network failure")),
     "credential_broker_unavailable",
   );
+});
+
+test("credential discovery recognizes only the broker's stable missing-credential error", () => {
+  const missingCredentialError = {
+    code: "P0001",
+    message: "connection credential not found",
+    details: null,
+    hint: null,
+  };
+
+  assert.equal(isMissingConnectionCredentialRpcError(missingCredentialError), true);
+  assert.equal(
+    remoteMcpCredentialFailureCode(new CredentialResolutionError("credential_missing")),
+    "connection_credential_unavailable",
+  );
+
+  assert.equal(
+    isMissingConnectionCredentialRpcError({
+      ...missingCredentialError,
+      message: "temporary broker failure",
+    }),
+    false,
+  );
+  assert.equal(
+    isMissingConnectionCredentialRpcError({
+      ...missingCredentialError,
+      code: "08006",
+    }),
+    false,
+  );
+  assert.equal(isMissingConnectionCredentialRpcError(new Error("network failure")), false);
 });
 
 test("remote MCP discovery classifier preserves unrelated authorization errors", () => {

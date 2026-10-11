@@ -80,6 +80,12 @@ export function remoteMcpCredentialFailureCode(error: unknown): RemoteMcpFailure
     : "credential_broker_unavailable";
 }
 
+export function isMissingConnectionCredentialRpcError(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+  const rpcError = error as { code?: unknown; message?: unknown };
+  return rpcError.code === "P0001" && rpcError.message === "connection credential not found";
+}
+
 async function resolveCredential(ownerUserId: string, reference: string | null) {
   if (!reference) return "";
   const match = reference.match(/^credential:\/\/[^/]+\/([0-9a-f-]{36})$/i);
@@ -89,7 +95,11 @@ async function resolveCredential(ownerUserId: string, reference: string | null) 
     p_user_id: ownerUserId,
     p_credential_id: match[1]!,
   });
-  if (error) throw new CredentialResolutionError("broker_unavailable");
+  if (error) {
+    throw new CredentialResolutionError(
+      isMissingConnectionCredentialRpcError(error) ? "credential_missing" : "broker_unavailable",
+    );
+  }
   if (typeof data !== "string" || !data) throw new CredentialResolutionError("credential_missing");
   try {
     const payload = JSON.parse(data) as { credential?: unknown };
