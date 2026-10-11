@@ -28,6 +28,12 @@ import {
 import { streamableMcpResponse } from "@/lib/mcp-transport.server";
 import { calculateExpression } from "@/lib/calculator";
 import { hasRole, type AppRole } from "@/lib/rbac";
+import {
+  isRemoteMcpProvider,
+  normalizeRemoteMcpAuthType,
+  normalizeRemoteMcpEndpoint,
+  type RemoteMcpProvider,
+} from "@/lib/remote-mcp";
 
 const WWW_AUTH =
   'Bearer realm="open-connect", resource_metadata="https://open-connect.site/.well-known/oauth-protected-resource"';
@@ -671,6 +677,11 @@ const PLATFORM_TOOLS: McpTool[] = [
           },
           required: ["chat_id", "message_thread_id"],
           additionalProperties: false,
+        },
+        endpoint_url: { type: "string", format: "uri" },
+        auth_type: {
+          type: "string",
+          enum: ["none", "bearer", "api_key", "personal_access_token"],
         },
       },
       required: ["provider", "credential_ref"],
@@ -2019,6 +2030,9 @@ export const Route = createFileRoute("/mcp")({
                 "Run Sync Composio accounts as the authenticated administrator after approval, then assign selected connectors to projects.",
             });
           } else if (name === "configure_connection") {
+            if (key.projectId || key.workspaceId || key.organizationId) {
+              throw new Error("Use a personal API key to configure personal connections.");
+            }
             await requireControlWrite(key);
             const provider = normalizeConnectionProvider(args["provider"]);
             const credentialRef = String(args["credential_ref"] ?? "").trim();
@@ -2031,6 +2045,21 @@ export const Route = createFileRoute("/mcp")({
               : [];
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
             const displayName = String(args["display_name"] ?? provider);
+            let remoteMcpMetadata: { endpoint_url: string; auth_type: string } | undefined;
+            if (args["endpoint_url"] !== undefined || isRemoteMcpProvider(provider)) {
+              if (!isRemoteMcpProvider(provider)) {
+                throw new Error("MCP endpoint requires a remote MCP provider.");
+              }
+              if (
+                !new RegExp(`^credential://${provider}/[0-9a-f-]{36}$`, "i").test(credentialRef)
+              ) {
+                throw new Error("Remote MCP endpoint requires its owned credential reference.");
+              }
+              remoteMcpMetadata = {
+                endpoint_url: normalizeRemoteMcpEndpoint(provider, args["endpoint_url"]),
+                auth_type: normalizeRemoteMcpAuthType(args["auth_type"]),
+              };
+            }
             let destinationMetadata:
               { telegram_chat_id: string; telegram_message_thread_id: number } | undefined;
             if (args["telegram_destination"] !== undefined) {
@@ -2058,27 +2087,41 @@ export const Route = createFileRoute("/mcp")({
             }
             const { data: existing, error: existingError } = await supabaseAdmin
               .from("app_connections")
-              .select("id,metadata")
+              .select("id,status,metadata")
               .eq("user_id", key.userId)
               .eq("provider", provider)
               .eq("credential_reference", credentialRef)
               .maybeSingle();
             if (existingError) throw new Error(existingError.message);
-
+            if (remoteMcpMetadata && !existing) {
+              throw new Error("Remote MCP endpoint updates require an existing owned connection.");
+            }
+            if (remoteMcpMetadata && existing?.status === "connected") {
+              const { validateRemoteMcpConfiguration } = await import("@/lib/custom-mcp.server");
+              await validateRemoteMcpConfiguration({
+                provider: provider as RemoteMcpProvider,
+                ownerUserId: key.userId,
+                credentialReference: credentialRef,
+                endpointUrl: remoteMcpMetadata.endpoint_url,
+                authType: remoteMcpMetadata.auth_type as
+                  "none" | "bearer" | "api_key" | "personal_access_token",
+              });
+            }
             const connectionQuery = existing
               ? supabaseAdmin
                   .from("app_connections")
                   .update({
                     display_name: displayName,
-                    status: "connected",
+                    status: remoteMcpMetadata ? existing.status : "connected",
                     scopes,
                     credential_reference: credentialRef,
                     updated_at: new Date().toISOString(),
-                    ...(destinationMetadata
+                    ...(destinationMetadata || remoteMcpMetadata
                       ? {
                           metadata: {
                             ...((existing.metadata as Record<string, Json>) ?? {}),
                             ...destinationMetadata,
+                            ...remoteMcpMetadata,
                           },
                         }
                       : {}),

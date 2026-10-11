@@ -24,7 +24,11 @@ let connectionProvider = "twilio";
 let connectionReadOnly = false;
 let connectionError = false;
 let connectionDiscoveryError = false;
+let connectionExists = true;
+let connectionStatus = "connected";
 const connectionCalls: unknown[] = [];
+const remoteMcpValidations: unknown[] = [];
+let remoteMcpValidationError = false;
 const connectionUpdates: Array<{
   values: Record<string, unknown>;
   filters: Record<string, unknown>;
@@ -50,6 +54,11 @@ mock.module("@/lib/managed-connectors.server", () => ({
 }));
 
 mock.module("@/lib/custom-mcp.server", () => ({
+  validateRemoteMcpConfiguration: async (input: unknown) => {
+    remoteMcpValidations.push(input);
+    if (remoteMcpValidationError) throw new Error("Remote MCP validation failed.");
+    return { verified: true, detail: "MCP initialized" };
+  },
   listCustomMcpTools: async () => {
     connectionToolReads++;
     if (connectionDiscoveryError) throw new Error("fixture remote MCP unavailable");
@@ -286,7 +295,13 @@ mock.module("@/integrations/supabase/client.server", () => ({
           },
           range: async () => ({ data: [], error: null }),
           maybeSingle: async () => ({
-            data: { id: "fixture-connection", metadata: { source: "fixture" } },
+            data: connectionExists
+              ? {
+                  id: "fixture-connection",
+                  status: connectionStatus,
+                  metadata: { source: "fixture" },
+                }
+              : null,
             error: null,
           }),
           update(value: Record<string, unknown>) {
@@ -338,7 +353,11 @@ beforeEach(() => {
   connectionReadOnly = false;
   connectionError = false;
   connectionDiscoveryError = false;
+  connectionExists = true;
+  connectionStatus = "connected";
   connectionCalls.length = 0;
+  remoteMcpValidations.length = 0;
+  remoteMcpValidationError = false;
   connectionUpdates.length = 0;
   managedReads = 0;
   keyBoundary = {};
@@ -795,6 +814,147 @@ test("Telegram destination configuration rejects missing control access and inva
     }),
   ).rejects.toThrow("supergroup");
   expect(connectionUpdates).toEqual([]);
+});
+
+test("Apify MCP endpoint configuration updates the owned connection without replacing its credential", async () => {
+  const credentialRef = `credential://apify_mcp/${"a".repeat(8)}-aaaa-aaaa-aaaa-${"a".repeat(12)}`;
+  const response = await call("configure_connection", {
+    provider: "apify_mcp",
+    credential_ref: credentialRef,
+    display_name: "Apify MCP",
+    scopes: ["tools:list", "tools:invoke"],
+    endpoint_url: "https://mcp.apify.com",
+    auth_type: "bearer",
+  });
+
+  expect(response.status).toBe(200);
+  expect(connectionUpdates).toHaveLength(1);
+  expect(connectionUpdates[0]!.values["credential_reference"]).toBe(credentialRef);
+  expect(connectionUpdates[0]!.values["metadata"]).toEqual({
+    source: "fixture",
+    endpoint_url: "https://mcp.apify.com/",
+    auth_type: "bearer",
+  });
+  expect(connectionUpdates[0]!.filters).toMatchObject({
+    id: "fixture-connection",
+    user_id: "fixture-user",
+  });
+  expect(remoteMcpValidations).toEqual([
+    {
+      provider: "apify_mcp",
+      ownerUserId: "fixture-user",
+      credentialReference: credentialRef,
+      endpointUrl: "https://mcp.apify.com/",
+      authType: "bearer",
+    },
+  ]);
+});
+
+test("Custom MCP endpoint configuration preserves public auth-free validation", async () => {
+  const credentialRef = `credential://custom_mcp/${"a".repeat(8)}-aaaa-aaaa-aaaa-${"a".repeat(12)}`;
+  const response = await call("configure_connection", {
+    provider: "custom_mcp",
+    credential_ref: credentialRef,
+    display_name: "Public Custom MCP",
+    scopes: ["tools:list", "tools:invoke"],
+    endpoint_url: "https://mcp.example.com/mcp",
+    auth_type: "none",
+  });
+
+  expect(response.status).toBe(200);
+  expect(connectionUpdates).toHaveLength(1);
+  expect(connectionUpdates[0]!.values["metadata"]).toEqual({
+    source: "fixture",
+    endpoint_url: "https://mcp.example.com/mcp",
+    auth_type: "none",
+  });
+  expect(remoteMcpValidations).toEqual([
+    {
+      provider: "custom_mcp",
+      ownerUserId: "fixture-user",
+      credentialReference: credentialRef,
+      endpointUrl: "https://mcp.example.com/mcp",
+      authType: "none",
+    },
+  ]);
+});
+
+test("Apify MCP endpoint configuration rejects bounded keys before reads or writes", async () => {
+  const args = {
+    provider: "apify_mcp",
+    credential_ref: `credential://apify_mcp/${"a".repeat(8)}-aaaa-aaaa-aaaa-${"a".repeat(12)}`,
+    endpoint_url: "https://mcp.apify.com",
+    auth_type: "bearer",
+  };
+
+  for (const boundary of [
+    { projectId: "fixture-project" },
+    { workspaceId: "fixture-workspace" },
+    { organizationId: "fixture-org" },
+  ]) {
+    keyBoundary = boundary;
+    await expect(call("configure_connection", args)).rejects.toThrow("personal API key");
+  }
+
+  expect(tables).toEqual([]);
+  expect(remoteMcpValidations).toEqual([]);
+  expect(connectionUpdates).toEqual([]);
+});
+
+test("Apify MCP endpoint configuration validates before preserving connected status", async () => {
+  const args = {
+    provider: "apify_mcp",
+    credential_ref: `credential://apify_mcp/${"a".repeat(8)}-aaaa-aaaa-aaaa-${"a".repeat(12)}`,
+    endpoint_url: "https://mcp.apify.com/not-a-real-path",
+    auth_type: "bearer",
+  };
+  remoteMcpValidationError = true;
+
+  await expect(call("configure_connection", args)).rejects.toThrow("Remote MCP validation failed");
+
+  expect(remoteMcpValidations).toHaveLength(1);
+  expect(connectionUpdates).toEqual([]);
+});
+
+test("Apify MCP endpoint configuration never creates a duplicate connection", async () => {
+  connectionExists = false;
+  const credentialRef = `credential://apify_mcp/${"a".repeat(8)}-aaaa-aaaa-aaaa-${"a".repeat(12)}`;
+  await expect(
+    call("configure_connection", {
+      provider: "apify_mcp",
+      credential_ref: credentialRef,
+      endpoint_url: "https://mcp.apify.com",
+      auth_type: "bearer",
+    }),
+  ).rejects.toThrow("existing owned connection");
+  expect(connectionUpdates).toEqual([]);
+});
+
+test("Apify MCP endpoint configuration rejects a credential bound to another provider", async () => {
+  const credentialRef = `credential://github/${"a".repeat(8)}-aaaa-aaaa-aaaa-${"a".repeat(12)}`;
+  await expect(
+    call("configure_connection", {
+      provider: "apify_mcp",
+      credential_ref: credentialRef,
+      endpoint_url: "https://mcp.apify.com",
+      auth_type: "bearer",
+    }),
+  ).rejects.toThrow("owned credential reference");
+  expect(connectionUpdates).toEqual([]);
+});
+
+test("Apify MCP endpoint configuration does not promote an unverified connection", async () => {
+  connectionStatus = "configured_unverified";
+  const credentialRef = `credential://apify_mcp/${"a".repeat(8)}-aaaa-aaaa-aaaa-${"a".repeat(12)}`;
+  const response = await call("configure_connection", {
+    provider: "apify_mcp",
+    credential_ref: credentialRef,
+    endpoint_url: "https://mcp.apify.com",
+    auth_type: "bearer",
+  });
+
+  expect(response.status).toBe(200);
+  expect(connectionUpdates[0]!.values["status"]).toBe("configured_unverified");
 });
 
 test("adding Twilio execution preserves the project requirement for Custom MCP writes", async () => {

@@ -1,6 +1,9 @@
 import { fetchMcpTools, McpCatalogError, withMcpClient } from "./mcp-client.server.ts";
 import { callTwilioTool, twilioFailureResult, twilioTools } from "./twilio.server.ts";
 import { callTelegramTool, telegramFailureResult, telegramTools } from "./telegram.server.ts";
+import { isRemoteMcpProvider, type RemoteMcpProvider } from "./remote-mcp.ts";
+
+export { isRemoteMcpProvider } from "./remote-mcp.ts";
 
 const REMOTE_MCP_FAILURES = {
   connection_metadata_invalid: {
@@ -109,6 +112,45 @@ async function resolveCredential(ownerUserId: string, reference: string | null) 
   }
 }
 
+export async function validateRemoteMcpConfiguration(input: {
+  provider: RemoteMcpProvider;
+  ownerUserId: string;
+  credentialReference: string;
+  endpointUrl: string;
+  authType: "none" | "bearer" | "api_key" | "personal_access_token";
+}) {
+  let credential = "";
+  try {
+    if (input.authType !== "none") {
+      credential = await resolveCredential(input.ownerUserId, input.credentialReference);
+    }
+    const [{ normalizeConnectionSetup }, { validateConnectionCredential }] = await Promise.all([
+      import("./connection-setup.ts"),
+      import("./connection-validation.server.ts"),
+    ]);
+    const setup = normalizeConnectionSetup(
+      {
+        provider: input.provider,
+        endpoint_url: input.endpointUrl,
+        api_key: credential,
+        auth_type: input.authType,
+      },
+      {
+        provider: input.provider,
+        display_name: input.provider === "apify_mcp" ? "Apify MCP" : "Custom MCP server",
+        scopes: [],
+        oauth: false,
+      },
+    );
+    return await validateConnectionCredential(setup);
+  } catch (error) {
+    if (error instanceof CredentialResolutionError) {
+      throw new RemoteMcpDiscoveryError(remoteMcpCredentialFailureCode(error));
+    }
+    throw new RemoteMcpDiscoveryError("remote_mcp_unavailable");
+  }
+}
+
 async function assertProjectConnectionAccess(
   actorUserId: string,
   ownerUserId: string,
@@ -151,10 +193,6 @@ async function assertProjectConnectionAccess(
       .maybeSingle();
     if (error || !grant) throw new Error("Connection is not shared with this project.");
   }
-}
-
-export function isRemoteMcpProvider(provider: string) {
-  return provider === "custom_mcp" || provider === "apify_mcp";
 }
 
 export async function assertToolConnectionAccess(
