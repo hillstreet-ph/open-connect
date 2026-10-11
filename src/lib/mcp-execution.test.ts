@@ -419,7 +419,8 @@ test("project tool discovery denies unassigned owner accounts before broker acce
   await expect(call("list_connection_tools", args)).rejects.toThrow("not assigned");
   expect(connectionToolReads).toBe(0);
   assignedConnections.add(assignedConnection.id);
-  expect((await call("list_connection_tools", args)).status).toBe(200);
+  const body = await (await call("list_connection_tools", args)).json();
+  expect(body.result.structuredContent).toEqual(JSON.parse(body.result.content[0].text));
   expect(connectionToolReads).toBe(1);
 });
 
@@ -435,6 +436,7 @@ test("remote MCP discovery returns a safe actionable tool error", async () => {
   const body = await response.json();
   const payload = JSON.parse(body.result.content[0].text);
   expect(body.result.isError).toBe(true);
+  expect(body.result.structuredContent).toEqual(payload);
   expect(payload).toEqual({
     status: "unavailable",
     code: "remote_mcp_unavailable",
