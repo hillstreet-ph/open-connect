@@ -2016,12 +2016,26 @@ export const Route = createFileRoute("/mcp")({
             const { planComposioAccountMapping, planComposioSync } =
               await import("@/lib/composio-sync");
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-            const externalAccountId =
-              typeof args["external_account_id"] === "string"
-                ? args["external_account_id"].trim()
-                : "";
+            const hasExternalAccountId = Object.prototype.hasOwnProperty.call(
+              args,
+              "external_account_id",
+            );
+            const externalAccountValue = args["external_account_id"];
+            if (
+              hasExternalAccountId &&
+              (typeof externalAccountValue !== "string" ||
+                !externalAccountValue.trim() ||
+                externalAccountValue.trim().length > 256)
+            ) {
+              throw new Error(
+                "External Composio account ID must be a non-empty string of at most 256 characters.",
+              );
+            }
+            const externalAccountId = hasExternalAccountId
+              ? (externalAccountValue as string).trim()
+              : null;
             const [accounts, catalog] = await Promise.all([
-              externalAccountId
+              externalAccountId !== null
                 ? listOwnedManagedConnectionsForIdentity(key.userId, externalAccountId)
                 : listOwnedManagedConnections(key.userId),
               listComposioToolkits(),
