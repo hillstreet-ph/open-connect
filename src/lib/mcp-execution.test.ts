@@ -567,6 +567,20 @@ test("Composio preview reads one configured external account without exposing br
   expect(tables).toEqual(["user_roles", "app_connections"]);
 });
 
+test("Composio account preview rejects malformed explicit identities without broad enumeration", async () => {
+  scopes = ["mcp:connect", "connections:read"];
+
+  for (const externalAccountId of ["   ", 42, "x".repeat(257)]) {
+    await expect(
+      call("preview_composio_sync", { external_account_id: externalAccountId }),
+    ).rejects.toThrow(/non-empty string of at most 256 characters/);
+  }
+
+  expect(managedIdentityReads).toEqual([]);
+  expect(managedReads).toBe(0);
+  expect(tables).toEqual(["user_roles", "user_roles", "user_roles"]);
+});
+
 test("Composio preview rejects non-admins and bounded API keys before broker access", async () => {
   scopes = ["mcp:connect", "connections:read"];
   roles = ["user"];
