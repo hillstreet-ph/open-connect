@@ -7,6 +7,8 @@ let roles = ["admin"];
 let scopes = ["mcp:connect", "control:write"];
 let keyBoundary: Record<string, string> = {};
 let managedReads = 0;
+const managedIdentityReads: string[] = [];
+let savedConnectionRows: Array<Record<string, unknown>> = [];
 const resource = {
   slug: "fixture-approved-tool",
   name: "Approved fixture",
@@ -51,6 +53,11 @@ mock.module("@/lib/managed-connectors.server", () => ({
     return [{ id: "ca_fixture", provider: "gmail" }];
   },
   listComposioToolkits: async () => [{ slug: "gmail", name: "Gmail" }],
+  listOwnedManagedConnectionsForIdentity: async (userId: string, externalAccountId: string) => {
+    expect(userId).toBe("fixture-user");
+    managedIdentityReads.push(externalAccountId);
+    return [{ id: "ca_apify", provider: "apify" }];
+  },
 }));
 
 mock.module("@/lib/custom-mcp.server", () => ({
@@ -293,7 +300,7 @@ mock.module("@/integrations/supabase/client.server", () => ({
           order() {
             return this;
           },
-          range: async () => ({ data: [], error: null }),
+          range: async () => ({ data: savedConnectionRows, error: null }),
           maybeSingle: async () => ({
             data: connectionExists
               ? {
@@ -360,6 +367,8 @@ beforeEach(() => {
   remoteMcpValidationError = false;
   connectionUpdates.length = 0;
   managedReads = 0;
+  managedIdentityReads.length = 0;
+  savedConnectionRows = [];
   keyBoundary = {};
   assignedConnections.clear();
   connectionToolReads = 0;
@@ -514,6 +523,47 @@ test("Composio preview performs owned-account reads without import or project wr
     { account_id: "ca_fixture", provider: "gmail", display_name: "Gmail" },
   ]);
   expect(managedReads).toBe(1);
+  expect(tables).toEqual(["user_roles", "app_connections"]);
+});
+
+test("Composio preview reads one configured external account without exposing broker metadata", async () => {
+  scopes = ["mcp:connect", "connections:read"];
+  savedConnectionRows = [
+    {
+      id: "535544b6-2033-4d2e-b6e4-05295e5659f5",
+      provider: "apify",
+      display_name: "Apify",
+      status: "connected",
+      provider_account_id: "ca_apify",
+      credential_reference: "composio://connected-account/ca_apify",
+      metadata: { proxy_password: "must-not-leak" },
+    },
+  ];
+
+  const response = await call("preview_composio_sync", {
+    external_account_id: "apify_sequin-mainan",
+  });
+  const { result } = await response.json();
+  const preview = JSON.parse(result.content[0].text);
+
+  expect(managedIdentityReads).toEqual(["apify_sequin-mainan"]);
+  expect(preview.account_mapping).toEqual({
+    external_account_id: "apify_sequin-mainan",
+    matched: 1,
+    existing: 1,
+    candidate_count: 0,
+    connections: [
+      {
+        provider: "apify",
+        display_name: "Apify",
+        sync_state: "existing",
+        connection_id: "535544b6-2033-4d2e-b6e4-05295e5659f5",
+      },
+    ],
+  });
+  expect(JSON.stringify(preview.account_mapping)).not.toMatch(
+    /ca_apify|credential_reference|provider_account_id|proxy_password|must-not-leak/,
+  );
   expect(tables).toEqual(["user_roles", "app_connections"]);
 });
 

@@ -18,6 +18,12 @@ returns import candidates, matched/existing counts and toolkit count. It does
 not write, assign connections or expose credential references. Organization,
 workspace and project keys cannot enumerate this personal import preview.
 
+To verify one already configured identity mapping without enumerating other
+aliases, pass its exact `external_account_id`. This account-specific preview
+returns provider/display labels, import state and an existing Open-Connect
+connection ID when present. It omits broker account IDs, credential references,
+provider metadata and raw account payloads. Unconfigured identities are rejected.
+
 Imports deduplicate by opaque broker account reference across provider aliases.
 Different accounts remain separate. Existing duplicate records are preserved
 for explicit reconciliation. Importing an account does not establish tool

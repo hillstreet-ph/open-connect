@@ -650,7 +650,19 @@ const PLATFORM_TOOLS: McpTool[] = [
     name: "preview_composio_sync",
     description:
       "Preview owned ACTIVE Composio accounts missing from the personal connector library. Read-only; never imports accounts or assigns project access.",
-    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    inputSchema: {
+      type: "object",
+      properties: {
+        external_account_id: {
+          type: "string",
+          minLength: 1,
+          maxLength: 256,
+          description:
+            "Optional exact configured Composio external account ID. Returns a redacted account-specific mapping without broker account IDs or credential references.",
+        },
+      },
+      additionalProperties: false,
+    },
     annotations: {
       readOnlyHint: true,
       destructiveHint: false,
@@ -1996,23 +2008,35 @@ export const Route = createFileRoute("/mcp")({
               throw new Error("Use a personal API key to preview personal Composio accounts.");
             if (!hasRole(await loadRoles(key.userId), "admin"))
               throw new Error("Forbidden: admin required");
-            const { listOwnedManagedConnections, listComposioToolkits } =
-              await import("@/lib/managed-connectors.server");
-            const { planComposioSync } = await import("@/lib/composio-sync");
+            const {
+              listOwnedManagedConnections,
+              listOwnedManagedConnectionsForIdentity,
+              listComposioToolkits,
+            } = await import("@/lib/managed-connectors.server");
+            const { planComposioAccountMapping, planComposioSync } =
+              await import("@/lib/composio-sync");
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const externalAccountId =
+              typeof args["external_account_id"] === "string"
+                ? args["external_account_id"].trim()
+                : "";
             const [accounts, catalog] = await Promise.all([
-              listOwnedManagedConnections(key.userId),
+              externalAccountId
+                ? listOwnedManagedConnectionsForIdentity(key.userId, externalAccountId)
+                : listOwnedManagedConnections(key.userId),
               listComposioToolkits(),
             ]);
             const saved: Array<{
+              id: string;
               provider: string;
+              display_name: string | null;
               provider_account_id: string | null;
               credential_reference: string | null;
             }> = [];
             for (let offset = 0; ; offset += 200) {
               const { data: page, error } = await supabaseAdmin
                 .from("app_connections")
-                .select("provider,provider_account_id,credential_reference")
+                .select("id,provider,display_name,provider_account_id,credential_reference")
                 .eq("user_id", key.userId)
                 .order("id", { ascending: true })
                 .range(offset, offset + 199);
@@ -2020,8 +2044,19 @@ export const Route = createFileRoute("/mcp")({
               saved.push(...(page ?? []));
               if ((page?.length ?? 0) < 200) break;
             }
+            const plan = planComposioSync(accounts, saved, catalog);
+            const accountMapping = externalAccountId
+              ? planComposioAccountMapping(externalAccountId, accounts, saved, catalog)
+              : null;
             result = textResult({
-              ...planComposioSync(accounts, saved, catalog),
+              ...(accountMapping
+                ? {
+                    matched: plan.matched,
+                    existing: plan.existing,
+                    candidate_count: plan.candidates.length,
+                    account_mapping: accountMapping,
+                  }
+                : plan),
               toolkit_count: catalog.length,
               dry_run: true,
               secrets_exposed: false,

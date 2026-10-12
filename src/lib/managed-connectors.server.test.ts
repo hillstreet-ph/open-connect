@@ -4,6 +4,7 @@ import {
   managedConnectorReady,
   connectionMethod,
   listOwnedManagedConnections,
+  listOwnedManagedConnectionsForIdentity,
   managedIdentityIds,
   createManagedConnectionLink,
   listComposioToolkits,
@@ -22,6 +23,26 @@ test("identity aliases are scoped to one explicitly configured application user"
   } finally {
     if (original === undefined) delete process.env["COMPOSIO_USER_MAPPINGS"];
     else process.env["COMPOSIO_USER_MAPPINGS"] = original;
+  }
+});
+
+test("account-specific reads reject identities outside the configured user mapping", async () => {
+  const original = process.env["COMPOSIO_USER_MAPPINGS"];
+  const originalKey = process.env["COMPOSIO_API_KEY"];
+  try {
+    process.env["COMPOSIO_USER_MAPPINGS"] = JSON.stringify({
+      owner: ["apify_sequin-mainan"],
+    });
+    process.env["COMPOSIO_API_KEY"] = "test-key";
+    await assert.rejects(
+      listOwnedManagedConnectionsForIdentity("owner", "another-account"),
+      /not configured for this user/,
+    );
+  } finally {
+    if (original === undefined) delete process.env["COMPOSIO_USER_MAPPINGS"];
+    else process.env["COMPOSIO_USER_MAPPINGS"] = original;
+    if (originalKey === undefined) delete process.env["COMPOSIO_API_KEY"];
+    else process.env["COMPOSIO_API_KEY"] = originalKey;
   }
 });
 
