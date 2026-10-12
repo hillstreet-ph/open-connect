@@ -289,6 +289,18 @@ export async function listOwnedManagedConnections(userId: string) {
   return [...accounts.values()];
 }
 
+/** Read one configured identity without enumerating any other configured aliases. */
+export async function listOwnedManagedConnectionsForIdentity(
+  userId: string,
+  externalAccountId: string,
+) {
+  const requested = externalAccountId.trim();
+  if (!requested || !managedIdentityIds(userId).includes(requested)) {
+    throw new Error("External Composio account is not configured for this user.");
+  }
+  return listManagedIdentityConnections(requested);
+}
+
 async function listManagedIdentityConnections(userId: string) {
   const apiKey = process.env["COMPOSIO_API_KEY"]?.trim();
   if (!apiKey) throw new Error("Composio is not configured.");
