@@ -28,6 +28,8 @@ and opaque references, not raw credential writes or browser password injection. 
 does not install an executor or create a permanent browser session. After a server tool-schema
 change, refresh the existing app using the host's supported app settings.
 
-Rollout: apply `20261014121000_admin_oauth_consent.sql` before publishing the new scope in discovery.
+Rollout: deploy and verify the MCP per-tool scope checks first, then apply
+`20261014121000_admin_oauth_consent.sql`. During the short interval, requests for the
+newly advertised scope fail closed until the database allowlist is updated.
 Rollback can restore the prior consent/exchange definitions and discovery metadata; no existing
 key grants or account roles are rewritten by this migration.

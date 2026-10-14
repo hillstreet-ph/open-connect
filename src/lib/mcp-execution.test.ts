@@ -699,7 +699,7 @@ test("control mutations return explicit scope denials before private reads or wr
     "configure_connection",
     "install_capability",
   ]) {
-    const response = await call(tool);
+    const response = await call(tool, tool === "hubstaff_admin_request" ? { method: "POST", path: "/test" } : {});
     expect(response.status).toBe(403);
     expect(await response.json()).toEqual({
       error: {
@@ -727,14 +727,18 @@ test("control-only OAuth consent cannot read private data or invoke unrelated pr
     "list_models",
     "search",
     "set_auto_mode",
+    "e2b_create_sandbox",
+    "e2b_kill_sandbox",
+    "hubstaff_admin_request",
   ]) {
-    const response = await call(tool);
+    const response = await call(tool, tool === "hubstaff_admin_request" ? { method: "POST", path: "/test" } : {});
     expect(response.status).toBe(403);
     expect((await response.json()).error.code).toBe("insufficient_scope");
   }
   expect(tables).toEqual([]);
   expect(credentialReads).toEqual([]);
   expect(connectionCalls).toEqual([]);
+  expect(hubstaffRequests).toBe(0);
 });
 
 test("unverified catalog entries remain ineligible for installation", async () => {
@@ -797,8 +801,12 @@ test("Hubstaff GET requests require and accept the advertised tools invoke scope
   expect(hubstaffRequests).toBe(1);
 });
 
-test("Hubstaff writes preserve the existing connections invoke control gate", async () => {
+test("Hubstaff writes require the advertised tools invoke scope", async () => {
   scopes = ["mcp:connect", "connections:invoke"];
+  const denied = await call("hubstaff_admin_request", { method: "PATCH", path: "/v2/organizations/1" });
+  expect(denied.status).toBe(403);
+  expect(hubstaffRequests).toBe(0);
+  scopes = ["mcp:connect", "tools:invoke"];
   const response = await call("hubstaff_admin_request", {
     method: "PATCH",
     path: "/v2/organizations/1",

@@ -798,7 +798,6 @@ async function requireProviderWrite(key: AuthedKey) {
   if (
     !hasRole(roles, "admin") ||
     !(
-      hasScope(key, "control:write") ||
       hasScope(key, "tools:invoke") ||
       hasScope(key, "connections:invoke")
     )
@@ -1011,18 +1010,6 @@ const TOOL_SCOPES: Record<string, string> = {
   install_capability: "control:write",
 };
 
-const SELF_GUARDED_WRITE_TOOLS = new Set([
-  "execute_plan",
-  "decide_control_approval",
-  "create_capability_draft",
-  "record_run_outcome",
-  "configure_connection",
-  "install_capability",
-  "e2b_create_sandbox",
-  "e2b_kill_sandbox",
-  "hubstaff_admin_request",
-]);
-
 function canUseTool(key: AuthedKey, toolName: string) {
   const required = TOOL_SCOPES[toolName] ?? "tools:invoke";
   // Control consent must not imply unrelated private-read or provider grants.
@@ -1157,10 +1144,6 @@ export const Route = createFileRoute("/mcp")({
         } else if (body.method === "tools/call") {
           const name = body.params?.name;
           const args = body.params?.arguments ?? {};
-          const hubstaffRead =
-            name === "hubstaff_admin_request" &&
-            String(args["method"] ?? "GET").toUpperCase() === "GET";
-
           // Self-guarded provider writes retain their invoke grants. Control-plane
           // tools must report missing scope before their role/data guards throw.
           if (name && TOOL_SCOPES[name] === "control:write" && !hasScope(key, "control:write")) {
@@ -1173,7 +1156,7 @@ export const Route = createFileRoute("/mcp")({
 
           if (
             !name ||
-            (!canUseTool(key, name) && (!SELF_GUARDED_WRITE_TOOLS.has(name) || hubstaffRead))
+            !canUseTool(key, name)
           ) {
             return gatewayError(
               `Key cannot invoke ${name || "this tool"} in its selected scope.`,
