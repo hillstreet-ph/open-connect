@@ -1,15 +1,14 @@
-import asyncio
-import copy
 import json
 import tempfile
 import unittest
+from unittest.mock import AsyncMock, MagicMock, patch
 from pathlib import Path
 import httpx
 
 from core import MonitorBlocked, Store, format_alert, money, normalize
 from delivery import deliver
 from source import collect, same_listing, validate_config
-from worker import acquire_lock
+from worker import acquire_lock, healthy, now_iso, prepare_runtime
 
 NOW = '2026-10-14T10:00:00+00:00'
 
@@ -162,7 +161,9 @@ class DeliveryTests(unittest.IsolatedAsyncioTestCase):
             async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
                 try:
                     await deliver(db, item, client, 'fixture-only', {'chat_id': '-100123', 'topic_id': 9}, 100)
-                except MonitorBlocked: pass
+                except MonitorBlocked:
+                    # Assert the durable result below even when delivery correctly stops.
+                    pass
             row = dict(db.db.execute('SELECT * FROM outbox').fetchone()); db.close()
             return row
 
@@ -184,6 +185,38 @@ class DeliveryTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((row['state'], row['retry_at']), ('pending', 220))
         row = await self.attempt(lambda _: httpx.Response(403, json={'ok': False}))
         self.assertEqual(row['state'], 'failed')
+
+
+class RuntimeTests(unittest.IsolatedAsyncioTestCase):
+    def test_standby_is_never_monitoring_health(self):
+        state = {'state': 'standby', 'checked_at': now_iso()}
+        self.assertFalse(healthy(state))
+        self.assertTrue(healthy(state, runtime_only=True))
+        self.assertFalse(healthy({'state': 'blocked', 'checked_at': now_iso()}, runtime_only=True))
+
+    def test_stale_and_future_heartbeat_rejected(self):
+        for date in ('2000-01-01T00:00:00+00:00', '2100-01-01T00:00:00+00:00'):
+            self.assertFalse(healthy({'state': 'standby', 'checked_at': date}, runtime_only=True))
+
+    async def test_root_runtime_rejected(self):
+        with tempfile.TemporaryDirectory() as d, patch('worker.os.geteuid', return_value=0):
+            with self.assertRaisesRegex(MonitorBlocked, 'non_root_runtime_required'):
+                await prepare_runtime(Path(d), standby=False)
+
+    async def test_preflight_uses_disposable_blank_sandboxed_browser(self):
+        page = AsyncMock(); page.evaluate.return_value = 2
+        context = AsyncMock(); context.pages = [page]
+        engine = MagicMock(); engine.chromium.launch_persistent_context = AsyncMock(return_value=context)
+        manager = AsyncMock(); manager.__aenter__.return_value = engine
+        with tempfile.TemporaryDirectory() as d, patch('worker.os.geteuid', return_value=10001), patch('playwright.async_api.async_playwright', return_value=manager):
+            await prepare_runtime(Path(d), standby=False)
+            page.goto.assert_awaited_once_with('about:blank')
+            args, kwargs = engine.chromium.launch_persistent_context.call_args
+            self.assertTrue(kwargs['chromium_sandbox'])
+            self.assertFalse(Path(args[0]).exists())
+            self.assertFalse((Path(d) / 'profile-verified').exists())
+            self.assertFalse(healthy(json.loads((Path(d) / 'health.json').read_text()), runtime_only=True))
+            context.close.assert_awaited_once()
 
 
 if __name__ == '__main__': unittest.main()

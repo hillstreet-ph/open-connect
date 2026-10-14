@@ -1,6 +1,6 @@
 # Read-only browser cashout monitor
 
-**Implementation candidate; not activated.** This service polls an operator-verified cashout
+**Live monitoring requires operator activation.** This service polls an operator-verified cashout
 listing and sends changes to a private Telegram forum topic. It has no payment/approval
 functions, public HTTP listener, credential-fill endpoint, cookie export, or ChatGPT session
 import. It does not implement the generic `agent-browser` action broker; do not point
@@ -42,6 +42,25 @@ Existing Telegram delivery evidence and real destination IDs belong in the priva
 document/configuration, not this public repository. No production configuration is checked in.
 
 ## Operator handoff and verification
+
+Before installing credentials, deploy the published image by digest with command
+`python worker.py standby --data-dir /data`. This performs a one-time non-root, writable-storage
+and sandboxed Chromium check using a disposable **about:blank** profile, then keeps a
+redacted `standby / operator_setup_required` heartbeat. It never opens KobePlay, reads
+the production profile, sends Telegram messages, or enables itself when files change.
+`python worker.py preflight --data-dir /data` performs the same check and exits.
+
+Use `python worker.py health --runtime-only` only for the standby runtime probe. The
+default `health` command deliberately fails in standby: a running container is not a
+working monitor. Do not use the runtime-only probe as a cashout monitoring SLA.
+If Chromium sandbox initialization fails, stop the service and fix host compatibility;
+never add `--no-sandbox`, run as root, or repeatedly restart it. Bind no public ports.
+Keep secrets and player records out of the volume until its encryption and access controls
+are verified. Standby confirms write access, not encryption or backup configuration.
+
+Stop standby before the operator handoff below; it holds the single-worker lock.
+After verified configuration and sign-in, explicitly replace the startup command with
+`python worker.py run --data-dir /data` and use the default monitoring health check.
 
 Install requirements and Chromium in the authorized runtime. Keep runtime and login image
 versions identical. Give UID 10001 exclusive access to the profile/state volume. Use the
