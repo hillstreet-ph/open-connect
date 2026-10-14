@@ -1,0 +1,7 @@
+__pycache__/
+.venv/
+*.sqlite3*
+monitor.json
+profile/
+data/
+.env*
