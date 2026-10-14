@@ -27,6 +27,7 @@ export const OAUTH_SCOPES_SUPPORTED = [
   "tools:invoke",
   "secrets:read",
   "agents:invoke",
+  "control:write",
 ] as const;
 
 const VERIFIER_RE = /^[A-Za-z0-9\-._~]{43,128}$/;

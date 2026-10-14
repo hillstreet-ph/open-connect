@@ -23,6 +23,8 @@ Never place tokens, passwords, session cookies, private keys, or recovery codes 
 
 ## Repair access and connector readiness
 
+Read [admin access](references/admin-access.md) for OAuth, host approval settings, credential management and tool refresh.
+
 Inspect the active key's actual scopes and project context before invoking private knowledge, memory, or provider writes. A Developer profile includes memory/knowledge reads and normal execution scopes; Administrator adds `control:write` and still requires the account's real Admin role. A key profile never grants another tenant's membership or a provider's OAuth permission.
 
 Use the signed-in Integrations → AI agents key card to select an existing active key and Apply permissions. This invokes `oc_update_owned_key_access` through authenticated owner management, preserves its secret, project context and expiry, and records previous/next permissions in the control audit ledger. Restore supported prior grants through the same operation for rollback. Legacy profiles use Custom with supported prior scopes; wildcard and obsolete grants cannot be restored. Do not edit revoked/expired keys or rotate them to hide an access error.

@@ -162,7 +162,8 @@
               "tools:invoke": "Invoke governed tools",
               "secrets:read": "Read credential metadata; values remain server-side",
               "models:invoke": "Invoke model aliases",
-              "agents:invoke": "Invoke agent capabilities"
+              "agents:invoke": "Invoke agent capabilities",
+              "control:write": "Admin-authorized control operations; requires explicit consent and an Admin account"
             }
           }
         }

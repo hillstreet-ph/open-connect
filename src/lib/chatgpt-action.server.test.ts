@@ -87,3 +87,30 @@ test("MCP tool errors do not become successful Actions responses", async () => {
     globalThis.fetch = original;
   }
 });
+
+test("preserves authorization errors and rejects protocol errors or malformed success", async () => {
+  const original = globalThis.fetch;
+  try {
+    for (const [status, body, expected] of [
+      [403, { error: { code: "insufficient_scope" } }, 403],
+      [200, { error: { code: -32603, message: "Failure" } }, 502],
+      [200, null, 502],
+      [200, {}, 502],
+      [200, { result: {} }, 502],
+    ] as const) {
+      globalThis.fetch = async () => Response.json(body, { status });
+      const response = await forwardChatGptAction(
+        new Request("https://open-connect.site/api/v1/actions/write", {
+          method: "POST",
+          headers: { authorization: "Bearer test" },
+          body: JSON.stringify({ action: "configure_connection", input: {} }),
+        }),
+        "write",
+      );
+      assert.equal(response.status, expected);
+      assert.notEqual((await response.json()).ok, true);
+    }
+  } finally {
+    globalThis.fetch = original;
+  }
+});

@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { safeOAuthReturn, validateOAuthRequest } from "./oauth-policy.ts";
+import { OAUTH_SCOPES, safeOAuthReturn, validateOAuthRequest } from "./oauth-policy.ts";
+import { OAUTH_SCOPES_SUPPORTED } from "./oauth.server.ts";
 const req = {
   response_type: "code",
   client_id: "test",
@@ -47,6 +48,13 @@ test("allows private memory and knowledge reads when explicitly requested", () =
   assert.equal(validateOAuthRequest({ ...req, scope }).scope, scope);
 });
 
+test("accepts explicit control scope without adding it to default consent", () => {
+  const scope = "mcp:connect control:write";
+  assert.equal(validateOAuthRequest({ ...req, scope }).scope, scope);
+  assert.equal(validateOAuthRequest(req).scope.includes("control:write"), false);
+  assert.deepEqual(OAUTH_SCOPES_SUPPORTED, OAUTH_SCOPES);
+});
+
 test("database OAuth allowlist accepts advertised private read scopes", async () => {
   const { readFile } = await import("node:fs/promises");
   const migration = await readFile(
@@ -73,6 +81,7 @@ test("static discovery advertises only implemented OAuth grants", async () => {
   assert.deepEqual(metadata.grant_types_supported, ["authorization_code"]);
   assert.ok(metadata.scopes_supported.includes("memory:read"));
   assert.ok(metadata.scopes_supported.includes("knowledge:read"));
+  assert.deepEqual(metadata.scopes_supported, [...OAUTH_SCOPES]);
   assert.deepEqual(metadata.token_endpoint_auth_methods_supported, ["none"]);
   assert.equal(metadata.logo_uri, "https://open-connect.site/open-connect-mark.png");
 });
@@ -87,4 +96,5 @@ test("static protected-resource metadata advertises private read grants", async 
   );
   assert.ok(metadata.scopes_supported.includes("memory:read"));
   assert.ok(metadata.scopes_supported.includes("knowledge:read"));
+  assert.deepEqual(metadata.scopes_supported, [...OAUTH_SCOPES]);
 });
