@@ -9,6 +9,7 @@ RUN pip install --no-cache-dir -r requirements.txt \
 COPY core.py delivery.py source.py worker.py ./
 USER monitor
 VOLUME ["/data"]
-HEALTHCHECK --interval=60s --timeout=10s --start-period=60s CMD ["python", "worker.py", "health"]
+# Container readiness includes explicit standby; monitoring readiness is `health` alone.
+HEALTHCHECK --interval=60s --timeout=10s --start-period=60s CMD ["python", "worker.py", "health", "--runtime-only"]
 ENTRYPOINT ["python", "worker.py"]
 CMD ["run"]

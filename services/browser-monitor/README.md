@@ -43,24 +43,30 @@ document/configuration, not this public repository. No production configuration 
 
 ## Operator handoff and verification
 
-Before installing credentials, deploy the published image by digest with command
-`python worker.py standby --data-dir /data`. This performs a one-time non-root, writable-storage
+Before installing credentials, deploy the published image by digest with image arguments
+`standby --data-dir /data`. The image already has `ENTRYPOINT ["python", "worker.py"]`;
+for Docker/Compose, override only CMD/`command` with those arguments. For Zeabur's
+explicit source fields, set `command: ["python", "worker.py"]` and
+`args: ["standby", "--data-dir", "/data"]`. This performs a one-time non-root, writable-storage
 and sandboxed Chromium check using a disposable **about:blank** profile, then keeps a
 redacted `standby / operator_setup_required` heartbeat. It never opens KobePlay, reads
 the production profile, sends Telegram messages, or enables itself when files change.
 `python worker.py preflight --data-dir /data` performs the same check and exits.
 
-Use `python worker.py health --runtime-only` only for the standby runtime probe. The
-default `health` command deliberately fails in standby: a running container is not a
-working monitor. Do not use the runtime-only probe as a cashout monitoring SLA.
+The image's built-in HEALTHCHECK runs `python worker.py health --runtime-only` to
+measure container readiness, including explicit standby. The default `health` command
+deliberately fails in standby: a running container is not a working monitor. Use
+`python worker.py health` as the separate monitoring-readiness check after activation.
+Do not use Docker's runtime-only probe as a cashout monitoring SLA.
 If Chromium sandbox initialization fails, stop the service and fix host compatibility;
 never add `--no-sandbox`, run as root, or repeatedly restart it. Bind no public ports.
 Keep secrets and player records out of the volume until its encryption and access controls
 are verified. Standby confirms write access, not encryption or backup configuration.
 
 Stop standby before the operator handoff below; it holds the single-worker lock.
-After verified configuration and sign-in, explicitly replace the startup command with
-`python worker.py run --data-dir /data` and use the default monitoring health check.
+After verified configuration and sign-in, explicitly replace the image arguments with
+`run --data-dir /data` (preserve the entrypoint), and configure the separate monitoring
+readiness check to run `python worker.py health` without `--runtime-only`.
 
 Install requirements and Chromium in the authorized runtime. Keep runtime and login image
 versions identical. Give UID 10001 exclusive access to the profile/state volume. Use the
