@@ -1055,6 +1055,7 @@ export const Route = createFileRoute("/mcp")({
         if (!key) return unauthorized("Missing or invalid Open-Connect key.");
         if (
           !hasScope(key, "mcp:connect") &&
+          !hasScope(key, "control:write") &&
           !hasScope(key, "models:read") &&
           !hasScope(key, "models:invoke") &&
           !hasScope(key, "resources:read") &&
@@ -1063,7 +1064,7 @@ export const Route = createFileRoute("/mcp")({
           !hasScope(key, "tools:invoke")
         ) {
           return gatewayError(
-            "Key is missing an MCP read or model scope.",
+            "Key is missing an accepted MCP scope.",
             403,
             "insufficient_scope",
           );

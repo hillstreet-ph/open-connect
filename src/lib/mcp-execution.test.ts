@@ -715,7 +715,7 @@ test("control mutations return explicit scope denials before private reads or wr
 });
 
 test("control-only OAuth consent cannot read private data or invoke unrelated providers", async () => {
-  scopes = ["mcp:connect", "control:write"];
+  scopes = ["control:write"];
   for (const tool of [
     "list_my_memory",
     "list_my_knowledge",
@@ -863,7 +863,8 @@ test("native Telegram sends require admin and provider invoke grants before exec
   expect(connectionCalls).toHaveLength(1);
 });
 
-test("Telegram destination configuration preserves metadata and updates only the owned bot", async () => {
+test("control-only grant configures only the owned connection without mcp:connect", async () => {
+  scopes = ["control:write"];
   const credentialRef = `credential://telegram/${"a".repeat(8)}-aaaa-aaaa-aaaa-${"a".repeat(12)}`;
   const response = await call("configure_connection", {
     provider: "telegram",
