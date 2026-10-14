@@ -1,0 +1,29 @@
+{
+  "mapping_verified": false,
+  "live_enabled": false,
+  "destination_verified": false,
+  "listing_url": "https://kobeplayhq.com/",
+  "listing_scope": "all-statuses",
+  "expected_account": "",
+  "account_selector": "",
+  "ready_selector": "",
+  "empty_selector": "",
+  "rows_selector": "",
+  "total_selector": "",
+  "next_page_selector": "",
+  "source_timezone": "Asia/Manila",
+  "timestamp_format": null,
+  "poll_seconds": 60,
+  "max_pages": 20,
+  "chat_id": "",
+  "topic_id": 0,
+  "statuses": {},
+  "fields": {
+    "request_id": "",
+    "username": "",
+    "amount": "",
+    "currency": "",
+    "requested_at": "",
+    "status": ""
+  }
+}
