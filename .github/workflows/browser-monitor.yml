@@ -30,7 +30,7 @@ jobs:
           push: false
           load: true
           tags: open-connect-browser-monitor:ci
-      - name: Verify isolated image and fail-closed example
+      - name: Verify non-root runtime and imports
         run: |
           test "$(docker inspect --format '{{.Config.User}}' open-connect-browser-monitor:ci)" = monitor
           docker run --rm --entrypoint python open-connect-browser-monitor:ci -c 'import core, source, delivery, worker'

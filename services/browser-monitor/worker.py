@@ -124,6 +124,10 @@ def main():
         asyncio.run(run(config, args.data_dir, args.mode, args.telegram_secret_file))
     except (MonitorBlocked, OSError, ValueError, KeyError) as exc:
         code = str(exc) if isinstance(exc, MonitorBlocked) else 'configuration_or_runtime_unavailable'
+        if code == 'profile_already_in_use':
+            # A rejected second process must not overwrite the active worker's health.
+            print(json.dumps({'state': 'blocked', 'reason': code}), flush=True)
+            return 1
         args.data_dir.mkdir(parents=True, exist_ok=True)
         write_health(args.data_dir, 'blocked', code)
         return 1
