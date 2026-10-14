@@ -5,6 +5,7 @@ import fcntl
 import json
 import os
 import signal
+import tempfile
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -37,6 +38,53 @@ def acquire_lock(data_dir: Path):
         handle.close()
         raise MonitorBlocked('profile_already_in_use') from None
     return handle
+
+
+def healthy(health: dict, runtime_only: bool = False) -> bool:
+    age = (datetime.now(timezone.utc) - datetime.fromisoformat(health['checked_at'])).total_seconds()
+    states = {'monitoring', 'dry_run'}
+    if runtime_only:
+        states.add('standby')
+    return health['state'] in states and 0 <= age <= 180
+
+
+async def prepare_runtime(data_dir: Path, standby: bool):
+    """Test this host using a disposable blank browser; never load site credentials."""
+    if os.geteuid() == 0:
+        raise MonitorBlocked('non_root_runtime_required')
+    from playwright.async_api import async_playwright
+    lock = acquire_lock(data_dir)
+    try:
+        with tempfile.TemporaryDirectory(prefix='preflight-', dir=data_dir) as directory:
+            async with async_playwright() as engine:
+                context = await engine.chromium.launch_persistent_context(
+                    directory, headless=True, chromium_sandbox=True,
+                    accept_downloads=False, service_workers='block',
+                )
+                try:
+                    page = context.pages[0] if context.pages else await context.new_page()
+                    await page.goto('about:blank')
+                    if await page.evaluate('1 + 1') != 2:
+                        raise MonitorBlocked('browser_preflight_failed')
+                finally:
+                    await context.close()
+        if not standby:
+            write_health(data_dir, 'runtime_verified', 'monitor_not_started')
+            return
+        stop = asyncio.Event()
+        loop = asyncio.get_running_loop()
+        for sig in (signal.SIGTERM, signal.SIGINT):
+            loop.add_signal_handler(sig, stop.set)
+        while not stop.is_set():
+            write_health(data_dir, 'standby', 'operator_setup_required')
+            try:
+                await asyncio.wait_for(stop.wait(), timeout=60)
+            except TimeoutError:
+                # Refresh the runtime heartbeat without accessing the backend.
+                continue
+        write_health(data_dir, 'stopped', 'operator_setup_required')
+    finally:
+        lock.close()
 
 
 async def run(config, data_dir: Path, mode: str, secret_file: Path):
@@ -97,7 +145,8 @@ async def run(config, data_dir: Path, mode: str, secret_file: Path):
                         try:
                             await asyncio.wait_for(stop.wait(), timeout=config.get('poll_seconds', 60))
                         except TimeoutError:
-                            pass
+                            # The polling interval elapsed; collect the next snapshot.
+                            continue
             finally:
                 await context.close()
     finally:
@@ -108,7 +157,8 @@ async def run(config, data_dir: Path, mode: str, secret_file: Path):
 def main():
     os.umask(0o077)
     parser = argparse.ArgumentParser()
-    parser.add_argument('mode', choices=['run', 'check', 'login', 'health'])
+    parser.add_argument('mode', choices=['run', 'check', 'login', 'health', 'preflight', 'standby'])
+    parser.add_argument('--runtime-only', action='store_true', help='Health only: accept standby; does not prove monitoring')
     parser.add_argument('--config', type=Path, default=Path('/run/config/monitor.json'))
     parser.add_argument('--data-dir', type=Path, default=Path('/data'))
     parser.add_argument('--telegram-secret-file', type=Path, default=Path('/run/secrets/telegram_bot_token'))
@@ -116,8 +166,10 @@ def main():
     try:
         if args.mode == 'health':
             health = json.loads((args.data_dir / 'health.json').read_text())
-            age = (datetime.now(timezone.utc) - datetime.fromisoformat(health['checked_at'])).total_seconds()
-            raise SystemExit(0 if health['state'] in {'monitoring', 'dry_run'} and 0 <= age <= 180 else 1)
+            raise SystemExit(0 if healthy(health, args.runtime_only) else 1)
+        if args.mode in {'preflight', 'standby'}:
+            asyncio.run(prepare_runtime(args.data_dir, args.mode == 'standby'))
+            return 0
         config = json.loads(args.config.read_text())
         if args.mode == 'check':
             config['live_enabled'] = False
