@@ -19,6 +19,7 @@
     "models:invoke",
     "tools:invoke",
     "secrets:read",
-    "agents:invoke"
+    "agents:invoke",
+    "control:write"
   ]
 }

@@ -49,6 +49,18 @@ test("publishes an importable OpenAPI contract and plugin manifest", () => {
   assert.match(JSON.stringify(manifest), /openapi\.json/);
 });
 
+test("the write Action requests explicit admin consent", () => {
+  const spec = JSON.parse(
+    readFileSync(new URL("../../public/openapi.json", import.meta.url), "utf8"),
+  );
+  const grants = spec.paths["/api/v1/actions/write"].post.security[0].OAuth2;
+  assert.ok(grants.includes("control:write"));
+  assert.equal(
+    spec.paths["/api/v1/actions/read"].post.security[0].OAuth2.includes("control:write"),
+    false,
+  );
+});
+
 test("cloud and library actions match the published contract", () => {
   const spec = JSON.parse(
     readFileSync(new URL("../../public/openapi.json", import.meta.url), "utf8"),
@@ -83,6 +95,33 @@ test("MCP tool errors do not become successful Actions responses", async () => {
     );
     assert.equal(response.status, 502);
     assert.equal((await response.json()).ok, false);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test("preserves authorization errors and rejects protocol errors or malformed success", async () => {
+  const original = globalThis.fetch;
+  try {
+    for (const [status, body, expected] of [
+      [403, { error: { code: "insufficient_scope" } }, 403],
+      [200, { error: { code: -32603, message: "Failure" } }, 502],
+      [200, null, 502],
+      [200, {}, 502],
+      [200, { result: {} }, 502],
+    ] as const) {
+      globalThis.fetch = async () => Response.json(body, { status });
+      const response = await forwardChatGptAction(
+        new Request("https://open-connect.site/api/v1/actions/write", {
+          method: "POST",
+          headers: { authorization: "Bearer test" },
+          body: JSON.stringify({ action: "configure_connection", input: {} }),
+        }),
+        "write",
+      );
+      assert.equal(response.status, expected);
+      assert.notEqual((await response.json()).ok, true);
+    }
   } finally {
     globalThis.fetch = original;
   }

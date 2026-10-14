@@ -797,11 +797,7 @@ async function requireProviderWrite(key: AuthedKey) {
   const roles = await loadRoles(key.userId);
   if (
     !hasRole(roles, "admin") ||
-    !(
-      hasScope(key, "control:write") ||
-      hasScope(key, "tools:invoke") ||
-      hasScope(key, "connections:invoke")
-    )
+    !(hasScope(key, "tools:invoke") || hasScope(key, "connections:invoke"))
   )
     throw new Error("Admin role and provider invoke scope required.");
   return roles;
@@ -1011,22 +1007,10 @@ const TOOL_SCOPES: Record<string, string> = {
   install_capability: "control:write",
 };
 
-const SELF_GUARDED_WRITE_TOOLS = new Set([
-  "execute_plan",
-  "decide_control_approval",
-  "create_capability_draft",
-  "record_run_outcome",
-  "configure_connection",
-  "install_capability",
-  "e2b_create_sandbox",
-  "e2b_kill_sandbox",
-  "hubstaff_admin_request",
-]);
-
 function canUseTool(key: AuthedKey, toolName: string) {
   const required = TOOL_SCOPES[toolName] ?? "tools:invoke";
-  // Preserve pre-profile keys that used the original aggregate write grant.
-  return hasScope(key, required) || hasScope(key, "control:write");
+  // Control consent must not imply unrelated private-read or provider grants.
+  return hasScope(key, required);
 }
 
 export const Route = createFileRoute("/mcp")({
@@ -1068,6 +1052,7 @@ export const Route = createFileRoute("/mcp")({
         if (!key) return unauthorized("Missing or invalid Open-Connect key.");
         if (
           !hasScope(key, "mcp:connect") &&
+          !hasScope(key, "control:write") &&
           !hasScope(key, "models:read") &&
           !hasScope(key, "models:invoke") &&
           !hasScope(key, "resources:read") &&
@@ -1075,11 +1060,7 @@ export const Route = createFileRoute("/mcp")({
           !hasScope(key, "knowledge:read") &&
           !hasScope(key, "tools:invoke")
         ) {
-          return gatewayError(
-            "Key is missing an MCP read or model scope.",
-            403,
-            "insufficient_scope",
-          );
+          return gatewayError("Key is missing an accepted MCP scope.", 403, "insufficient_scope");
         }
 
         const body = (await request.json().catch(() => null)) as {
@@ -1157,10 +1138,6 @@ export const Route = createFileRoute("/mcp")({
         } else if (body.method === "tools/call") {
           const name = body.params?.name;
           const args = body.params?.arguments ?? {};
-          const hubstaffRead =
-            name === "hubstaff_admin_request" &&
-            String(args["method"] ?? "GET").toUpperCase() === "GET";
-
           // Self-guarded provider writes retain their invoke grants. Control-plane
           // tools must report missing scope before their role/data guards throw.
           if (name && TOOL_SCOPES[name] === "control:write" && !hasScope(key, "control:write")) {
@@ -1171,10 +1148,7 @@ export const Route = createFileRoute("/mcp")({
             );
           }
 
-          if (
-            !name ||
-            (!canUseTool(key, name) && (!SELF_GUARDED_WRITE_TOOLS.has(name) || hubstaffRead))
-          ) {
+          if (!name || !canUseTool(key, name)) {
             return gatewayError(
               `Key cannot invoke ${name || "this tool"} in its selected scope.`,
               403,

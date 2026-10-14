@@ -62,6 +62,16 @@ jobs:
             -f supabase/tests/organization_policy_grants.sql \
             -f supabase/migrations/20261010094318_restore_organization_policy_grants.sql \
             -f supabase/tests/organization_policy_grants.sql
+      - name: Exercise explicit admin OAuth consent and PKCE boundaries
+        env:
+          PGPASSWORD: disposable-ci-only
+        run: |
+          createdb -h localhost -U postgres oauth_boundary
+          psql -h localhost -U postgres -d oauth_boundary -v ON_ERROR_STOP=1 \
+            -f supabase/tests/key_access_fixture.sql \
+            -f supabase/tests/admin_oauth_fixture.sql \
+            -f supabase/migrations/20261014121000_admin_oauth_consent.sql \
+            -f supabase/tests/admin_oauth_consent.sql
   test:
     runs-on: ubuntu-latest
     defaults:

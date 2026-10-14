@@ -644,6 +644,7 @@ test("tool discovery exposes a stable titled platform catalog without duplicate 
 });
 
 test("approved resource invocation is an explicit tool error without an executor", async () => {
+  scopes = ["mcp:connect", "tools:invoke"];
   const response = await call("resource_fixture_approved_tool", {
     action: "invoke",
   });
@@ -698,7 +699,10 @@ test("control mutations return explicit scope denials before private reads or wr
     "configure_connection",
     "install_capability",
   ]) {
-    const response = await call(tool);
+    const response = await call(
+      tool,
+      tool === "hubstaff_admin_request" ? { method: "POST", path: "/test" } : {},
+    );
     expect(response.status).toBe(403);
     expect(await response.json()).toEqual({
       error: {
@@ -711,6 +715,36 @@ test("control mutations return explicit scope denials before private reads or wr
   expect(tables).toEqual([]);
   expect(connectionUpdates).toEqual([]);
   expect(connectionCalls).toEqual([]);
+});
+
+test("control-only OAuth consent cannot read private data or invoke unrelated providers", async () => {
+  scopes = ["control:write"];
+  for (const tool of [
+    "list_my_memory",
+    "list_my_knowledge",
+    "list_credential_metadata",
+    "match_browser_credentials",
+    "list_connections",
+    "list_connection_tools",
+    "call_connection_tool",
+    "list_models",
+    "search",
+    "set_auto_mode",
+    "e2b_create_sandbox",
+    "e2b_kill_sandbox",
+    "hubstaff_admin_request",
+  ]) {
+    const response = await call(
+      tool,
+      tool === "hubstaff_admin_request" ? { method: "POST", path: "/test" } : {},
+    );
+    expect(response.status).toBe(403);
+    expect((await response.json()).error.code).toBe("insufficient_scope");
+  }
+  expect(tables).toEqual([]);
+  expect(credentialReads).toEqual([]);
+  expect(connectionCalls).toEqual([]);
+  expect(hubstaffRequests).toBe(0);
 });
 
 test("unverified catalog entries remain ineligible for installation", async () => {
@@ -773,8 +807,15 @@ test("Hubstaff GET requests require and accept the advertised tools invoke scope
   expect(hubstaffRequests).toBe(1);
 });
 
-test("Hubstaff writes preserve the existing connections invoke control gate", async () => {
+test("Hubstaff writes require the advertised tools invoke scope", async () => {
   scopes = ["mcp:connect", "connections:invoke"];
+  const denied = await call("hubstaff_admin_request", {
+    method: "PATCH",
+    path: "/v2/organizations/1",
+  });
+  expect(denied.status).toBe(403);
+  expect(hubstaffRequests).toBe(0);
+  scopes = ["mcp:connect", "tools:invoke"];
   const response = await call("hubstaff_admin_request", {
     method: "PATCH",
     path: "/v2/organizations/1",
@@ -831,7 +872,8 @@ test("native Telegram sends require admin and provider invoke grants before exec
   expect(connectionCalls).toHaveLength(1);
 });
 
-test("Telegram destination configuration preserves metadata and updates only the owned bot", async () => {
+test("control-only grant configures only the owned connection without mcp:connect", async () => {
+  scopes = ["control:write"];
   const credentialRef = `credential://telegram/${"a".repeat(8)}-aaaa-aaaa-aaaa-${"a".repeat(12)}`;
   const response = await call("configure_connection", {
     provider: "telegram",
@@ -1034,6 +1076,7 @@ test("adding Twilio execution preserves the project requirement for Custom MCP w
 });
 
 test("connection failures propagate as MCP tool errors instead of successful wrappers", async () => {
+  scopes = ["mcp:connect", "connections:invoke"];
   connectionError = true;
   const response = await call("call_connection_tool", {
     connection_id: "fixture-connection",
