@@ -644,6 +644,7 @@ test("tool discovery exposes a stable titled platform catalog without duplicate 
 });
 
 test("approved resource invocation is an explicit tool error without an executor", async () => {
+  scopes = ["mcp:connect", "tools:invoke"];
   const response = await call("resource_fixture_approved_tool", {
     action: "invoke",
   });
@@ -710,6 +711,29 @@ test("control mutations return explicit scope denials before private reads or wr
   }
   expect(tables).toEqual([]);
   expect(connectionUpdates).toEqual([]);
+  expect(connectionCalls).toEqual([]);
+});
+
+test("control-only OAuth consent cannot read private data or invoke unrelated providers", async () => {
+  scopes = ["mcp:connect", "control:write"];
+  for (const tool of [
+    "list_my_memory",
+    "list_my_knowledge",
+    "list_credential_metadata",
+    "match_browser_credentials",
+    "list_connections",
+    "list_connection_tools",
+    "call_connection_tool",
+    "list_models",
+    "search",
+    "set_auto_mode",
+  ]) {
+    const response = await call(tool);
+    expect(response.status).toBe(403);
+    expect((await response.json()).error.code).toBe("insufficient_scope");
+  }
+  expect(tables).toEqual([]);
+  expect(credentialReads).toEqual([]);
   expect(connectionCalls).toEqual([]);
 });
 
@@ -1034,6 +1058,7 @@ test("adding Twilio execution preserves the project requirement for Custom MCP w
 });
 
 test("connection failures propagate as MCP tool errors instead of successful wrappers", async () => {
+  scopes = ["mcp:connect", "connections:invoke"];
   connectionError = true;
   const response = await call("call_connection_tool", {
     connection_id: "fixture-connection",

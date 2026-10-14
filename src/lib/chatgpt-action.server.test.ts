@@ -49,6 +49,18 @@ test("publishes an importable OpenAPI contract and plugin manifest", () => {
   assert.match(JSON.stringify(manifest), /openapi\.json/);
 });
 
+test("the write Action requests explicit admin consent", () => {
+  const spec = JSON.parse(
+    readFileSync(new URL("../../public/openapi.json", import.meta.url), "utf8"),
+  );
+  const grants = spec.paths["/api/v1/actions/write"].post.security[0].OAuth2;
+  assert.ok(grants.includes("control:write"));
+  assert.equal(
+    spec.paths["/api/v1/actions/read"].post.security[0].OAuth2.includes("control:write"),
+    false,
+  );
+});
+
 test("cloud and library actions match the published contract", () => {
   const spec = JSON.parse(
     readFileSync(new URL("../../public/openapi.json", import.meta.url), "utf8"),

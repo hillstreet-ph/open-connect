@@ -1025,8 +1025,8 @@ const SELF_GUARDED_WRITE_TOOLS = new Set([
 
 function canUseTool(key: AuthedKey, toolName: string) {
   const required = TOOL_SCOPES[toolName] ?? "tools:invoke";
-  // Preserve pre-profile keys that used the original aggregate write grant.
-  return hasScope(key, required) || hasScope(key, "control:write");
+  // Control consent must not imply unrelated private-read or provider grants.
+  return hasScope(key, required);
 }
 
 export const Route = createFileRoute("/mcp")({

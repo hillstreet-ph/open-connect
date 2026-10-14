@@ -89,7 +89,13 @@
         "x-openai-isConsequential": true,
         "security": [
           {
-            "OAuth2": ["mcp:connect", "resources:write", "tools:invoke", "connections:invoke"]
+            "OAuth2": [
+              "mcp:connect",
+              "resources:write",
+              "tools:invoke",
+              "connections:invoke",
+              "control:write"
+            ]
           },
           {
             "BearerAuth": []
