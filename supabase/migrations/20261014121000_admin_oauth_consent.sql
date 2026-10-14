@@ -102,7 +102,7 @@ BEGIN
  INSERT INTO public.api_keys(user_id,name,key_prefix,key_hash,scopes,expires_at)
  VALUES(grant_row.user_id,'OAuth: '||(SELECT client_name FROM public.oauth_clients WHERE client_id=p_client_id),left(raw_key,14),encode(extensions.digest(raw_key,'sha256'),'hex'),grant_row.scopes,now()+interval '30 days');
  RETURN jsonb_build_object('access_token',raw_key,'token_type','Bearer','expires_in',2592000,'scope',array_to_string(grant_row.scopes,' '));
-END $function$
+END $function$;
 
 REVOKE ALL ON FUNCTION public.oc_exchange_oauth_code(text, text, text, text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.oc_exchange_oauth_code(text, text, text, text) TO anon, authenticated;
