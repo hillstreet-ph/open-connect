@@ -797,10 +797,7 @@ async function requireProviderWrite(key: AuthedKey) {
   const roles = await loadRoles(key.userId);
   if (
     !hasRole(roles, "admin") ||
-    !(
-      hasScope(key, "tools:invoke") ||
-      hasScope(key, "connections:invoke")
-    )
+    !(hasScope(key, "tools:invoke") || hasScope(key, "connections:invoke"))
   )
     throw new Error("Admin role and provider invoke scope required.");
   return roles;
@@ -1063,11 +1060,7 @@ export const Route = createFileRoute("/mcp")({
           !hasScope(key, "knowledge:read") &&
           !hasScope(key, "tools:invoke")
         ) {
-          return gatewayError(
-            "Key is missing an accepted MCP scope.",
-            403,
-            "insufficient_scope",
-          );
+          return gatewayError("Key is missing an accepted MCP scope.", 403, "insufficient_scope");
         }
 
         const body = (await request.json().catch(() => null)) as {
@@ -1155,10 +1148,7 @@ export const Route = createFileRoute("/mcp")({
             );
           }
 
-          if (
-            !name ||
-            !canUseTool(key, name)
-          ) {
+          if (!name || !canUseTool(key, name)) {
             return gatewayError(
               `Key cannot invoke ${name || "this tool"} in its selected scope.`,
               403,
