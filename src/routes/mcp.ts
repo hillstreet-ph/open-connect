@@ -1,4 +1,9 @@
 import {
+  adminAccess,
+  manageResource,
+  ResourceManagementError,
+} from "@/lib/admin-management.server";
+import {
   AUTO_MODE_OUTPUT_SCHEMA,
   AUTO_DISCOVERY_OUTPUT_SCHEMA,
   AUTO_STATUS_OUTPUT_SCHEMA,
@@ -97,6 +102,217 @@ let catalogCache: {
 } | null = null;
 
 const PLATFORM_TOOLS: McpTool[] = [
+  {
+    name: "get_admin_access",
+    description:
+      "Report actual administrator role, key scopes and management capability limits. Does not change grants.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      required: [],
+      additionalProperties: false,
+    },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
+  },
+  {
+    name: "get_owned_resource",
+    description:
+      "Read one owned resource including its current revision for a subsequent edit. Personal keys only.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        id: {
+          type: "string",
+          format: "uuid",
+        },
+      },
+      required: ["id"],
+      additionalProperties: false,
+    },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
+  },
+  {
+    name: "get_credential_management",
+    description:
+      "Return the authenticated Secrets screen for creating, retrieving, editing and deleting credential values. This does not perform the operation or return secrets.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      required: [],
+      additionalProperties: false,
+    },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
+  },
+  {
+    name: "create_resource",
+    description:
+      "Create a private, unverified resource owned by the authenticated administrator. Supports tools, toolkits, skills and other library types. Requires Admin, control:write and resources:write with a personal key.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: {
+          type: "string",
+          maxLength: 120,
+        },
+        description: {
+          type: "string",
+          maxLength: 4000,
+        },
+        version: {
+          type: "string",
+          maxLength: 40,
+        },
+        license: {
+          type: "string",
+          maxLength: 80,
+        },
+        slug: {
+          type: "string",
+          pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          maxLength: 80,
+        },
+        resource_type: {
+          type: "string",
+          enum: [
+            "skill",
+            "mcp",
+            "tool",
+            "plugin",
+            "agent",
+            "prompt",
+            "guide",
+            "app",
+            "model",
+            "toolkit",
+            "memory",
+            "knowledge",
+          ],
+        },
+      },
+      required: ["name", "slug", "resource_type"],
+      additionalProperties: false,
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
+  },
+  {
+    name: "update_resource",
+    description:
+      "Edit owned resource metadata using its current revision. Editing resets security review and unpublishes the resource. Requires Admin, control:write and resources:write with a personal key.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        id: {
+          type: "string",
+          format: "uuid",
+        },
+        expected_updated_at: {
+          type: "string",
+          description: "Exact updated_at from get_owned_resource or the last successful write.",
+        },
+        name: {
+          type: "string",
+          maxLength: 120,
+        },
+        description: {
+          type: "string",
+          maxLength: 4000,
+        },
+        version: {
+          type: "string",
+          maxLength: 40,
+        },
+        license: {
+          type: "string",
+          maxLength: 80,
+        },
+      },
+      required: ["id", "expected_updated_at"],
+      additionalProperties: false,
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true,
+      openWorldHint: false,
+    },
+  },
+  {
+    name: "upload_resource_content",
+    description:
+      "Upload up to 256 KiB of Markdown, JSON or text into an owned resource. Replaces the current package, resets review and unpublishes. Never upload credentials. ZIP files use signed-in Studio. Requires Admin, control:write and resources:write with a personal key.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        id: {
+          type: "string",
+          format: "uuid",
+        },
+        expected_updated_at: {
+          type: "string",
+          description: "Exact updated_at from get_owned_resource or the last successful write.",
+        },
+        filename: {
+          type: "string",
+        },
+        content: {
+          type: "string",
+        },
+      },
+      required: ["id", "expected_updated_at", "filename", "content"],
+      additionalProperties: false,
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true,
+      openWorldHint: false,
+    },
+  },
+  {
+    name: "set_resource_publication",
+    description:
+      "Publish or unpublish one owned resource after explicit authorization. Publishing requires prior independent security verification. Requires Admin, control:write and resources:write with a personal key.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        id: {
+          type: "string",
+          format: "uuid",
+        },
+        expected_updated_at: {
+          type: "string",
+          description: "Exact updated_at from get_owned_resource or the last successful write.",
+        },
+        published: {
+          type: "boolean",
+        },
+        confirm: {
+          type: "boolean",
+        },
+      },
+      required: ["id", "expected_updated_at", "published", "confirm"],
+      additionalProperties: false,
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true,
+      openWorldHint: true,
+    },
+  },
   {
     name: "search",
     description:
@@ -868,7 +1084,20 @@ function chatGptTools() {
   // Hiding write tools here prevents clients from discovering their OAuth requirements.
   return PLATFORM_TOOLS.map((tool) => {
     const securitySchemes = [
-      { type: "oauth2", scopes: [TOOL_SCOPES[tool.name] ?? "tools:invoke"] },
+      {
+        type: "oauth2",
+        scopes: [
+          TOOL_SCOPES[tool.name] ?? "tools:invoke",
+          ...([
+            "create_resource",
+            "update_resource",
+            "upload_resource_content",
+            "set_resource_publication",
+          ].includes(tool.name)
+            ? ["control:write"]
+            : []),
+        ],
+      },
     ];
     return {
       ...tool,
@@ -967,7 +1196,21 @@ function fireLog(key: AuthedKey, statusCode: number) {
   });
 }
 
+const RESOURCE_WRITE_TOOLS = [
+  "create_resource",
+  "update_resource",
+  "upload_resource_content",
+  "set_resource_publication",
+];
+
 const TOOL_SCOPES: Record<string, string> = {
+  get_admin_access: "mcp:connect",
+  get_owned_resource: "resources:read",
+  get_credential_management: "secrets:read",
+  create_resource: "resources:write",
+  update_resource: "resources:write",
+  upload_resource_content: "resources:write",
+  set_resource_publication: "resources:write",
   search: "resources:read",
   fetch: "resources:read",
   open_connect_status: "mcp:connect",
@@ -1140,7 +1383,11 @@ export const Route = createFileRoute("/mcp")({
           const args = body.params?.arguments ?? {};
           // Self-guarded provider writes retain their invoke grants. Control-plane
           // tools must report missing scope before their role/data guards throw.
-          if (name && TOOL_SCOPES[name] === "control:write" && !hasScope(key, "control:write")) {
+          if (
+            name &&
+            (TOOL_SCOPES[name] === "control:write" || RESOURCE_WRITE_TOOLS.includes(name)) &&
+            !hasScope(key, "control:write")
+          ) {
             return gatewayError(
               `Key requires control:write to invoke ${name}.`,
               403,
@@ -1156,7 +1403,78 @@ export const Route = createFileRoute("/mcp")({
             );
           }
 
-          if (name === "search") {
+          if (name === "get_admin_access") {
+            result = textResult(adminAccess(key, hasRole(await loadRoles(key.userId), "admin")));
+          } else if (name === "get_credential_management") {
+            if (key.projectId || key.workspaceId || key.organizationId)
+              return gatewayError(
+                "Credential management requires a personal context.",
+                403,
+                "insufficient_scope",
+              );
+            result = textResult({
+              url: "https://open-connect.site/secrets",
+              actions: ["create", "reveal", "update", "delete"],
+              authentication_required: true,
+              operation_performed: false,
+              secret_values_exposed: false,
+              secure_injection_available: false,
+            });
+          } else if (name === "get_owned_resource") {
+            if (key.projectId || key.workspaceId || key.organizationId)
+              return gatewayError(
+                "Owned resource reads require a personal context.",
+                403,
+                "insufficient_scope",
+              );
+            if (typeof args["id"] !== "string" || !/^[0-9a-f-]{36}$/i.test(args["id"]))
+              return gatewayError("Invalid resource id.", 400, "invalid_request");
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const { data, error } = await supabaseAdmin
+              .from("resources")
+              .select(
+                "id,slug,name,description,resource_type,version,license,published,verified,package_filename,package_size,updated_at",
+              )
+              .eq("id", args["id"])
+              .eq("owner_id", key.userId)
+              .maybeSingle();
+            if (error || !data) return gatewayError("Owned resource not found.", 404, "not_found");
+            result = textResult({ resource: data });
+          } else if (
+            [
+              "create_resource",
+              "update_resource",
+              "upload_resource_content",
+              "set_resource_publication",
+            ].includes(name)
+          ) {
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            try {
+              result = textResult(
+                await manageResource(
+                  supabaseAdmin as SupabaseClient,
+                  key,
+                  hasRole(await loadRoles(key.userId), "admin"),
+                  name,
+                  args,
+                ),
+              );
+              catalogCache = null;
+            } catch (error) {
+              result = {
+                ...textResult({
+                  error: {
+                    code: "resource_management_error",
+                    message:
+                      error instanceof ResourceManagementError
+                        ? error.message
+                        : "Resource management is temporarily unavailable.",
+                  },
+                }),
+                isError: true,
+              };
+            }
+          } else if (name === "search") {
             const query = String(args["query"] ?? "").trim();
             const catalog = await getCatalog();
             const ranked = rankCapabilities(
