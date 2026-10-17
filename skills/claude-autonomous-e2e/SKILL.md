@@ -4,7 +4,7 @@ description: Autonomous end-to-end setup for any authorized need from Claude (Co
 license: MIT
 metadata:
   version: "1.0.0"
-  catalog: config/claude-library/index.json
+  catalog: config/claude-library/index.generated.json
   companion_skills: [auto, open-connect-agent]
 ---
 
@@ -26,8 +26,8 @@ authorization, or destructive/irreversible steps.
 In order, stopping once the need is covered:
 
 1. **Host tools already loaded** (connectors, MCP servers, shell, file tools).
-2. **Claude library catalog** — `config/claude-library/` (`index.json` plus `resources-NN.json`
-   shards; also indexed in the Open-Connect library as `claude-skills-plugins-catalog`).
+2. **Claude library catalog** — `config/claude-library/` (`index.generated.json` plus
+   `resources-NN.generated.json` shards; also indexed in the Open-Connect library as `claude-skills-plugins-catalog`).
    Match by `name`, `description`,
    and plugin `skills`. Prefer records with `duplicate_of` set: that Open-Connect resource is the
    canonical, reviewed copy.
