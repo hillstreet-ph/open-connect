@@ -1,13 +1,26 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { test } from "node:test";
-import { hasSecret, parseFrontmatter, validateCatalog } from "./sync-claude-library.mjs";
+import {
+  SHARD_BYTES,
+  hasSecret,
+  parseFrontmatter,
+  readCatalog,
+  validateCatalog,
+} from "./sync-claude-library.mjs";
 
 const script = resolve(import.meta.dirname, "sync-claude-library.mjs");
-const committed = resolve(import.meta.dirname, "../config/claude-library.catalog.json");
+const committed = resolve(import.meta.dirname, "../config/claude-library");
 
 function fixture() {
   const base = mkdtempSync(join(tmpdir(), "claude-lib-"));
@@ -43,7 +56,7 @@ function fixture() {
     library,
     JSON.stringify({ resources: [{ slug: "github-e2e-setup", type: "skill" }] }),
   );
-  return { base, skills, plugins, library, out: join(base, "catalog.json") };
+  return { base, skills, plugins, library, out: join(base, "catalog") };
 }
 
 test("parses folded frontmatter", () => {
@@ -56,7 +69,7 @@ test("detects secret-like values", () => {
   assert.equal(hasSecret("plain text"), false);
 });
 
-test("builds a metadata-only catalog with license, dedupe and quarantine", () => {
+test("builds a metadata-only catalog with license, dedupe and quarantine", async () => {
   const f = fixture();
   execFileSync(process.execPath, [
     script,
@@ -69,7 +82,7 @@ test("builds a metadata-only catalog with license, dedupe and quarantine", () =>
     "--out",
     f.out,
   ]);
-  const catalog = JSON.parse(readFileSync(f.out, "utf8"));
+  const catalog = await readCatalog(f.out);
   assert.deepEqual(validateCatalog(catalog), []);
   assert.equal(catalog.counts.account_skills, 3);
   assert.equal(catalog.counts.plugins, 1);
@@ -81,11 +94,15 @@ test("builds a metadata-only catalog with license, dedupe and quarantine", () =>
   assert.equal(bySlug["claude-plugin-beta"].license, "Apache-2.0");
   assert.equal(bySlug["claude-plugin-beta"].marketplace, "test-market");
   assert.deepEqual(bySlug["claude-plugin-beta"].skills, ["one"]);
-  assert.ok(!readFileSync(f.out, "utf8").includes("AKIA"));
+  for (const name of readdirSync(f.out)) {
+    assert.ok(!readFileSync(join(f.out, name), "utf8").includes("AKIA"));
+  }
 });
 
-test("committed catalog is valid and within the library upload limit", () => {
-  const text = readFileSync(committed, "utf8");
-  assert.ok(Buffer.byteLength(text) <= 256 * 1024);
-  assert.deepEqual(validateCatalog(JSON.parse(text)), []);
+test("committed catalog is valid and every shard stays small", async () => {
+  const catalog = await readCatalog(committed);
+  assert.deepEqual(validateCatalog(catalog), []);
+  for (const name of catalog.shards) {
+    assert.ok(statSync(join(committed, name)).size <= SHARD_BYTES + 4096, name);
+  }
 });

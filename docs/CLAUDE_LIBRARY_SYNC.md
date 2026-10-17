@@ -25,7 +25,8 @@ the existing reviewed pipelines (`docs/VENDORED_SKILLS.md`) or private library u
 ~/.claude/skills/synced, ~/.claude/plugins/synced
         │  npm run claude-library:sync
         ▼
-config/claude-library.catalog.json     # metadata only, one resource per line, < 256 KiB
+config/claude-library/index.json         # policy, counts, shard list
+config/claude-library/resources-NN.json  # metadata only, one resource per line, ≤ 40 KiB each
         │  PR → required checks → main
         ▼
 Open-Connect library resource `claude-skills-plugins-catalog` (private, review required)
