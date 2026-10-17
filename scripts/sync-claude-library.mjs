@@ -3,8 +3,8 @@
 // Open-Connect library from a Claude client's local skill and plugin roots.
 //
 // Nothing here installs, executes, uploads, or vendors third-party code.
-// Each record carries provenance, a declared license, a content hash, and a
-// duplicate pointer to an existing Open-Connect library resource when one exists.
+// Each record carries provenance, a declared license, a content fingerprint,
+// and a duplicate pointer to an existing Open-Connect library resource.
 //
 // Usage:
 //   node scripts/sync-claude-library.mjs [--skills <dir>]... [--plugins <dir>]...
@@ -12,12 +12,14 @@
 //        [--out config/claude-library] [--check]
 //
 // Defaults: every directory under ~/.claude/skills/synced and
-// ~/.claude/plugins/synced (the Claude/Cowork synced account roots).
+// ~/.claude/plugins/synced (the Claude/Cowork synced account roots). A missing
+// default root aborts the run so a partial scan never overwrites the catalog.
 // --check validates an existing catalog without scanning or writing.
 //
-// Output: <out>/index.json (policy, counts, shard list) plus resources-NN.json
-// shards of at most SHARD_BYTES each, one resource per line, so every file
-// stays reviewable and small enough for connector-based commits.
+// Output: <out>/index.generated.json (policy, counts, shard list) plus
+// resources-NN.generated.json shards of at most SHARD_BYTES UTF-8 bytes each,
+// one resource per line, so every file stays reviewable and small enough for
+// connector-based commits.
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
@@ -27,8 +29,22 @@ import { basename, join, relative, resolve, sep } from "node:path";
 const root = resolve(import.meta.dirname, "..");
 const SCHEMA_VERSION = "1.0.0";
 const MAX_DESCRIPTION = 280;
+const MAX_SCAN_BYTES = 1024 * 1024;
 export const SHARD_BYTES = 40 * 1024;
+export const INDEX_FILE = "index.generated.json";
+const SHARD_PATTERN = /^resources-\d+\.generated\.json$/;
 const SKIP_DIRS = new Set(["node_modules", ".git", "__pycache__", ".venv", "dist", "build"]);
+const BINARY_EXT =
+  /\.(png|jpe?g|gif|webp|ico|pdf|zip|gz|tgz|woff2?|ttf|otf|mp[34]|mov|wasm|so|dylib|pyc|db|sqlite)$/i;
+
+export const REQUIRED_POLICY = Object.freeze({
+  mode: "metadata_only",
+  executable: false,
+  vendored_content: false,
+  auto_install: false,
+  auto_publish: false,
+  require_security_review: true,
+});
 
 export const SECRET_PATTERNS = [
   /AKIA[0-9A-Z]{16}/,
@@ -79,7 +95,11 @@ async function childDirs(dir) {
 }
 
 async function defaultRoots(kind) {
-  return childDirs(join(homedir(), ".claude", kind, "synced"));
+  const base = join(homedir(), ".claude", kind, "synced");
+  if (!existsSync(base)) throw new Error(`default ${kind} root not found: ${base}`);
+  const roots = await childDirs(base);
+  if (!roots.length) throw new Error(`default ${kind} root is empty: ${base}`);
+  return roots;
 }
 
 export function parseFrontmatter(text) {
@@ -119,6 +139,20 @@ export function normalizeSlug(value) {
     .slice(0, 80);
 }
 
+function sha(text) {
+  return createHash("sha256").update(text).digest("hex").slice(0, 16);
+}
+
+// Slug body for a resource: its name, else its directory, else a stable hash,
+// so a fully non-ASCII name can never yield an empty slug.
+export function slugBody(...candidates) {
+  for (const candidate of candidates) {
+    const slug = normalizeSlug(candidate ?? "");
+    if (slug) return slug;
+  }
+  return `x${sha(candidates.join("|")).slice(0, 12)}`;
+}
+
 function clip(text) {
   const clean = String(text || "")
     .replace(/\s+/g, " ")
@@ -128,10 +162,6 @@ function clip(text) {
 
 export function hasSecret(text) {
   return SECRET_PATTERNS.some((pattern) => pattern.test(text));
-}
-
-function sha(text) {
-  return createHash("sha256").update(text).digest("hex").slice(0, 16);
 }
 
 async function detectLicense(dir, declared) {
@@ -165,17 +195,37 @@ async function findSkillDirs(base) {
   return found.sort();
 }
 
-async function countFiles(dir) {
-  let count = 0;
+async function listFiles(dir) {
+  const files = [];
   async function visit(current) {
-    for (const entry of await readdir(current, { withFileTypes: true })) {
+    const entries = await readdir(current, { withFileTypes: true });
+    for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+      const path = join(current, entry.name);
       if (entry.isDirectory()) {
-        if (!SKIP_DIRS.has(entry.name)) await visit(join(current, entry.name));
-      } else count += 1;
+        if (!SKIP_DIRS.has(entry.name)) await visit(path);
+      } else if (entry.isFile()) files.push(path);
     }
   }
   await visit(dir);
-  return count;
+  return files;
+}
+
+// Scans every file under dir: fingerprints the whole tree (relative path +
+// content) and flags secret-like text in any text file, not only SKILL.md.
+export async function inspectTree(dir) {
+  const hash = createHash("sha256");
+  let secret = false;
+  const files = await listFiles(dir);
+  for (const file of files) {
+    const bytes = await readFile(file);
+    hash.update(relative(dir, file).split(sep).join("/"));
+    hash.update("\0");
+    hash.update(bytes);
+    if (!secret && bytes.length <= MAX_SCAN_BYTES && !BINARY_EXT.test(file)) {
+      secret = hasSecret(bytes.toString("utf8"));
+    }
+  }
+  return { files: files.length, sha256: hash.digest("hex").slice(0, 16), secret };
 }
 
 async function readJson(path) {
@@ -186,27 +236,37 @@ async function readJson(path) {
   }
 }
 
-async function loadLibrary(path) {
-  const slugs = new Map();
+// Library index keyed by normalized slug and declared name. An unreadable or
+// malformed snapshot aborts the sync so duplicate pointers are never lost.
+export async function loadLibrary(path) {
   const snapshot = await readJson(path);
-  for (const item of snapshot?.resources ?? []) slugs.set(item.slug, item.slug);
-  const vendored = await readJson(resolve(root, "config/vendored-skills.generated.json"));
-  for (const item of vendored?.resources ?? []) slugs.set(item.slug, item.slug);
-  // Index by bare name too, so "github-e2e-setup" matches "open-github-e2e-setup" or "-xxxx" suffixes.
-  const byStem = new Map();
-  for (const slug of slugs.keys()) {
-    const stem = slug.replace(/^open-/, "").replace(/-[a-z0-9]{4}$/, "");
-    if (!byStem.has(stem)) byStem.set(stem, slug);
-    if (!byStem.has(slug)) byStem.set(slug, slug);
+  if (!Array.isArray(snapshot?.resources) || !snapshot.resources.length) {
+    throw new Error(`library snapshot missing or invalid: ${path}`);
   }
-  return byStem;
+  const vendored = await readJson(resolve(root, "config/vendored-skills.generated.json"));
+  const index = new Map();
+  const add = (key, slug) => {
+    const normalized = normalizeSlug(key ?? "");
+    if (!normalized) return;
+    // Hyphen-insensitive alias so "Full-Stack X" matches "fullstack-x".
+    for (const alias of [normalized, `~${normalized.replace(/-/g, "")}`]) {
+      if (!index.has(alias)) index.set(alias, slug);
+    }
+  };
+  for (const item of [...snapshot.resources, ...(vendored?.resources ?? [])]) {
+    add(item.slug, item.slug);
+    add(item.name, item.slug);
+  }
+  return index;
 }
 
 function duplicateOf(library, ...candidates) {
   for (const candidate of candidates) {
-    const slug = normalizeSlug(candidate);
-    if (library.has(slug)) return library.get(slug);
-    if (library.has(slug.replace(/^open-/, ""))) return library.get(slug.replace(/^open-/, ""));
+    const slug = normalizeSlug(candidate ?? "");
+    if (!slug) continue;
+    for (const alias of [slug, `open-${slug}`, `~${slug.replace(/-/g, "")}`]) {
+      if (library.has(alias)) return library.get(alias);
+    }
   }
   return null;
 }
@@ -218,18 +278,17 @@ async function scanSkills(roots, library) {
       const text = await readFile(join(dir, "SKILL.md"), "utf8");
       const fm = parseFrontmatter(text);
       const name = (fm.name || basename(dir)).trim();
-      const description = clip(fm.description);
-      const quarantined = hasSecret(text);
+      const tree = await inspectTree(dir);
       records.push({
-        slug: `claude-skill-${normalizeSlug(name)}`,
+        slug: `claude-skill-${slugBody(name, basename(dir), dir)}`,
         name,
         kind: "account_skill",
-        description: quarantined ? "" : description,
+        description: tree.secret ? "" : clip(fm.description),
         license: await detectLicense(dir, fm.license),
-        sha256: sha(text),
-        files: await countFiles(dir),
-        duplicate_of: duplicateOf(library, name),
-        review_state: quarantined ? "quarantined_metadata" : "pending_security_review",
+        sha256: tree.sha256,
+        files: tree.files,
+        duplicate_of: duplicateOf(library, name, basename(dir)),
+        review_state: tree.secret ? "quarantined_metadata" : "pending_security_review",
       });
     }
   }
@@ -244,38 +303,38 @@ async function scanPlugins(roots, library) {
       if (!manifest) continue;
       const id = basename(dir);
       const meta = (await readJson(join(base, `${id}.meta.json`))) ?? {};
-      const skillDirs = await findSkillDirs(join(dir, "skills"));
       const skills = [];
-      let quarantined = false;
-      for (const skillDir of skillDirs) {
+      for (const skillDir of await findSkillDirs(join(dir, "skills"))) {
         const text = await readFile(join(skillDir, "SKILL.md"), "utf8");
-        if (hasSecret(text)) quarantined = true;
         skills.push(parseFrontmatter(text).name || basename(skillDir));
       }
+      const tree = await inspectTree(dir);
       const listCount = async (sub) =>
         existsSync(join(dir, sub)) ? (await readdir(join(dir, sub))).length : 0;
       const repository =
         typeof manifest.repository === "string" ? manifest.repository : manifest.repository?.url;
       records.push({
-        slug: `claude-plugin-${normalizeSlug(id)}`,
+        slug: `claude-plugin-${slugBody(id, manifest.name, dir)}`,
         id,
         name: manifest.name || id,
         kind: "plugin",
         version: manifest.version ?? null,
         author: manifest.author?.name ?? null,
-        description: clip(manifest.description),
+        description: tree.secret ? "" : clip(manifest.description),
         marketplace: meta.marketplace_name ?? null,
         server_plugin_id: meta.server_plugin_id ?? null,
         installation: meta.installation_preference ?? null,
         homepage: manifest.homepage ?? null,
         repository: repository ?? null,
         license: await detectLicense(dir, manifest.license),
+        sha256: tree.sha256,
+        files: tree.files,
         has_mcp: existsSync(join(dir, ".mcp.json")),
         commands: await listCount("commands"),
         agents: await listCount("agents"),
         skills: [...new Set(skills)].sort(),
-        duplicate_of: duplicateOf(library, id, manifest.name || id, `open-${id}-kit`),
-        review_state: quarantined ? "quarantined_metadata" : "pending_security_review",
+        duplicate_of: duplicateOf(library, id, manifest.name, `open-${id}-kit`),
+        review_state: tree.secret ? "quarantined_metadata" : "pending_security_review",
       });
     }
   }
@@ -285,8 +344,10 @@ async function scanPlugins(roots, library) {
 export function validateCatalog(catalog) {
   const errors = [];
   if (catalog?.schema_version !== SCHEMA_VERSION) errors.push("schema_version mismatch");
-  if (catalog?.policy?.executable !== false || catalog?.policy?.vendored_content !== false)
-    errors.push("policy must be metadata-only and non-executable");
+  for (const [key, expected] of Object.entries(REQUIRED_POLICY)) {
+    if (catalog?.policy?.[key] !== expected)
+      errors.push(`policy.${key} must be ${JSON.stringify(expected)}`);
+  }
   const seen = new Set();
   for (const record of catalog?.resources ?? []) {
     if (!/^claude-(skill|plugin)-[a-z0-9-]+$/.test(record.slug))
@@ -311,35 +372,43 @@ function compact(record) {
   );
 }
 
-// Splits the catalog into an index plus size-bounded shards. Returns
-// { "index.json": text, "resources-01.json": text, ... }.
+const SHARD_OPEN = "[\n  ";
+const SHARD_JOIN = ",\n  ";
+const SHARD_CLOSE = "\n]\n";
+
+// Splits the catalog into an index plus shards whose UTF-8 size, including
+// the surrounding JSON, never exceeds SHARD_BYTES (a single oversized record
+// gets a shard of its own). Returns { "<file>": text, ... }.
 export function serializeCatalog(catalog) {
   const { resources, ...head } = catalog;
+  const frame = Buffer.byteLength(SHARD_OPEN) + Buffer.byteLength(SHARD_CLOSE);
+  const joint = Buffer.byteLength(SHARD_JOIN);
   const shards = [];
   let current = [];
-  let size = 0;
+  let size = frame;
   for (const record of resources) {
     const line = JSON.stringify(compact(record));
-    if (current.length && size + line.length + 4 > SHARD_BYTES) {
+    const lineBytes = Buffer.byteLength(line);
+    if (current.length && size + joint + lineBytes > SHARD_BYTES) {
       shards.push(current);
       current = [];
-      size = 0;
+      size = frame;
     }
+    size += lineBytes + (current.length ? joint : 0);
     current.push(line);
-    size += line.length + 4;
   }
   if (current.length) shards.push(current);
+  const names = shards.map((_, i) => `resources-${String(i + 1).padStart(2, "0")}.generated.json`);
   const files = {};
-  const names = shards.map((_, i) => `resources-${String(i + 1).padStart(2, "0")}.json`);
   shards.forEach((lines, i) => {
-    files[names[i]] = `[\n  ${lines.join(",\n  ")}\n]\n`;
+    files[names[i]] = `${SHARD_OPEN}${lines.join(SHARD_JOIN)}${SHARD_CLOSE}`;
   });
-  files["index.json"] = `${JSON.stringify({ ...head, shards: names }, null, 2)}\n`;
+  files[INDEX_FILE] = `${JSON.stringify({ ...head, shards: names }, null, 2)}\n`;
   return files;
 }
 
 export async function readCatalog(dir) {
-  const index = await readJson(join(dir, "index.json"));
+  const index = await readJson(join(dir, INDEX_FILE));
   if (!index) return null;
   const resources = [];
   for (const name of index.shards ?? [])
@@ -351,19 +420,31 @@ export async function readCatalog(dir) {
 async function writeCatalog(dir, catalog) {
   await mkdir(dir, { recursive: true });
   for (const name of await readdir(dir)) {
-    if (/^(index|resources-\d+)\.json$/.test(name)) await rm(join(dir, name));
+    if (name === INDEX_FILE || SHARD_PATTERN.test(name)) await rm(join(dir, name));
   }
   const files = serializeCatalog(catalog);
   for (const [name, text] of Object.entries(files)) await writeFile(join(dir, name), text);
   return Object.keys(files).length;
 }
 
-function dedupeSlugs(records) {
-  const used = new Map();
+// Assigns unique slugs against every slug already taken, truncating the base
+// before appending a suffix so the suffix is never sliced away.
+export function dedupeSlugs(records) {
+  const taken = new Set();
   for (const record of records) {
-    const count = (used.get(record.slug) ?? 0) + 1;
-    used.set(record.slug, count);
-    if (count > 1) record.slug = `${record.slug}-${count}`.slice(0, 80);
+    if (!taken.has(record.slug)) {
+      taken.add(record.slug);
+      continue;
+    }
+    for (let n = 2; ; n += 1) {
+      const suffix = `-${n}`;
+      const candidate = `${record.slug.slice(0, 80 - suffix.length).replace(/-+$/, "")}${suffix}`;
+      if (!taken.has(candidate)) {
+        record.slug = candidate;
+        taken.add(candidate);
+        break;
+      }
+    }
   }
   return records;
 }
@@ -388,20 +469,14 @@ async function main() {
   const library = await loadLibrary(args.library);
   const skills = await scanSkills(skillRoots, library);
   const plugins = await scanPlugins(pluginRoots, library);
-  const resources = dedupeSlugs([...skills, ...plugins]).sort((a, b) =>
-    a.slug.localeCompare(b.slug),
-  );
+  // Sort before and after dedupe so suffix assignment is deterministic.
+  const resources = [...skills, ...plugins].sort((a, b) => a.slug.localeCompare(b.slug));
+  dedupeSlugs(resources);
+  resources.sort((a, b) => a.slug.localeCompare(b.slug));
   const catalog = {
     schema_version: SCHEMA_VERSION,
     registry_id: "open-connect-claude-library",
-    policy: {
-      mode: "metadata_only",
-      executable: false,
-      vendored_content: false,
-      auto_install: false,
-      auto_publish: false,
-      require_security_review: true,
-    },
+    policy: { ...REQUIRED_POLICY },
     source: "claude-synced-account",
     counts: {
       total: resources.length,
