@@ -9,20 +9,25 @@
 // Usage:
 //   node scripts/sync-claude-library.mjs [--skills <dir>]... [--plugins <dir>]...
 //        [--library config/open-connect-library.snapshot.json]
-//        [--out config/claude-library.catalog.json] [--check]
+//        [--out config/claude-library] [--check]
 //
 // Defaults: every directory under ~/.claude/skills/synced and
 // ~/.claude/plugins/synced (the Claude/Cowork synced account roots).
 // --check validates an existing catalog without scanning or writing.
+//
+// Output: <out>/index.json (policy, counts, shard list) plus resources-NN.json
+// shards of at most SHARD_BYTES each, one resource per line, so every file
+// stays reviewable and small enough for connector-based commits.
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
-import { readFile, readdir, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, join, relative, resolve, sep } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
 const SCHEMA_VERSION = "1.0.0";
 const MAX_DESCRIPTION = 280;
+export const SHARD_BYTES = 40 * 1024;
 const SKIP_DIRS = new Set(["node_modules", ".git", "__pycache__", ".venv", "dist", "build"]);
 
 export const SECRET_PATTERNS = [
@@ -60,7 +65,7 @@ function parseArgs(argv) {
       else args[flag.slice(2)] = resolve(value);
     } else throw new Error(`unknown argument: ${flag}`);
   }
-  args.out ??= resolve(root, "config/claude-library.catalog.json");
+  args.out ??= resolve(root, "config/claude-library");
   args.library ??= resolve(root, "config/open-connect-library.snapshot.json");
   return args;
 }
@@ -306,13 +311,51 @@ function compact(record) {
   );
 }
 
-// One resource per line keeps diffs reviewable while staying under the
-// 256 KiB Open-Connect library upload limit.
+// Splits the catalog into an index plus size-bounded shards. Returns
+// { "index.json": text, "resources-01.json": text, ... }.
 export function serializeCatalog(catalog) {
   const { resources, ...head } = catalog;
-  const lines = resources.map((record) => `  ${JSON.stringify(compact(record))}`);
-  const header = JSON.stringify(head).slice(0, -1);
-  return `${header},"resources":[\n${lines.join(",\n")}\n]}\n`;
+  const shards = [];
+  let current = [];
+  let size = 0;
+  for (const record of resources) {
+    const line = JSON.stringify(compact(record));
+    if (current.length && size + line.length + 4 > SHARD_BYTES) {
+      shards.push(current);
+      current = [];
+      size = 0;
+    }
+    current.push(line);
+    size += line.length + 4;
+  }
+  if (current.length) shards.push(current);
+  const files = {};
+  const names = shards.map((_, i) => `resources-${String(i + 1).padStart(2, "0")}.json`);
+  shards.forEach((lines, i) => {
+    files[names[i]] = `[\n  ${lines.join(",\n  ")}\n]\n`;
+  });
+  files["index.json"] = `${JSON.stringify({ ...head, shards: names }, null, 2)}\n`;
+  return files;
+}
+
+export async function readCatalog(dir) {
+  const index = await readJson(join(dir, "index.json"));
+  if (!index) return null;
+  const resources = [];
+  for (const name of index.shards ?? [])
+    resources.push(...((await readJson(join(dir, name))) ?? []));
+  const { shards, ...head } = index;
+  return { ...head, shards, resources };
+}
+
+async function writeCatalog(dir, catalog) {
+  await mkdir(dir, { recursive: true });
+  for (const name of await readdir(dir)) {
+    if (/^(index|resources-\d+)\.json$/.test(name)) await rm(join(dir, name));
+  }
+  const files = serializeCatalog(catalog);
+  for (const [name, text] of Object.entries(files)) await writeFile(join(dir, name), text);
+  return Object.keys(files).length;
 }
 
 function dedupeSlugs(records) {
@@ -328,7 +371,7 @@ function dedupeSlugs(records) {
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.check) {
-    const errors = validateCatalog(await readJson(args.out));
+    const errors = validateCatalog(await readCatalog(args.out));
     if (errors.length) {
       console.error(errors.join("\n"));
       process.exit(1);
@@ -372,9 +415,13 @@ async function main() {
   };
   const errors = validateCatalog(catalog);
   if (errors.length) throw new Error(errors.join("\n"));
-  await writeFile(args.out, serializeCatalog(catalog));
+  const fileCount = await writeCatalog(args.out, catalog);
   console.log(
-    JSON.stringify({ out: relative(root, args.out).split(sep).join("/"), ...catalog.counts }),
+    JSON.stringify({
+      out: relative(root, args.out).split(sep).join("/"),
+      files: fileCount,
+      ...catalog.counts,
+    }),
   );
 }
 
