@@ -26,3 +26,19 @@
    after deployment; a package version bump alone does not refresh cached tool schemas or grants.
 8. Report source validation, deployment, plugin release, live client grants and successful operations
    separately. Do not call unsupported operations enabled or a standby worker actively monitoring.
+
+
+## Resource management (discover before use)
+
+Call `get_admin_access` to distinguish the actual account role from token grants.
+Discover the live schema before assuming a deployment or connector refresh is complete.
+For personal Admin keys with both `resources:write` and `control:write`:
+
+1. Search existing personal resources to avoid duplicates. Read `get_owned_resource` before editing.
+2. Create a private draft with `create_resource`; use type `toolkit`, `tool`, `skill`, or the matching resource type.
+3. Upload plain Markdown, JSON or text with `upload_resource_content` (maximum 256 KiB). Use authenticated Studio for ZIP packages. Never upload private keys or credential exports.
+4. Pass the exact returned `updated_at` as `expected_updated_at` to every upload/edit/publication request. A conflict requires rereading the record.
+5. Metadata edits and uploads reset verification and unpublish the resource. Complete the separate security review before `set_resource_publication` with `confirm=true` and explicit user authorization to publish.
+6. Read back the resource. Creation/upload is not publication, installation, or execution. Project/workspace/organization keys cannot manage the personal library.
+
+Use `get_credential_management` for the authenticated Secrets screen. It provides a destination only, not a completed credential action. Credential creation, value retrieval, editing and deletion occur in that authenticated UI. `list_credential_metadata` remains metadata-only; do not claim raw-value access or secure injection through MCP. Keep credentials out of resource packages and tool arguments.

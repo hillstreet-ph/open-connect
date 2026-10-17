@@ -1199,3 +1199,59 @@ test("browser matching selects owned metadata only and satisfies its output cont
   expect(credentialReads[0]?.fields.split(",")).not.toContain("secret_value");
   expect(JSON.stringify(result)).not.toMatch(/fixture-vault|fixture-totp/);
 });
+
+test("resource management advertises both write scopes and enforces role and personal context", async () => {
+  const discovered = (await (await listTools()).json()).result.tools;
+  for (const name of [
+    "create_resource",
+    "update_resource",
+    "upload_resource_content",
+    "set_resource_publication",
+  ]) {
+    const tool = discovered.find((item: { name: string }) => item.name === name);
+    expect(tool.securitySchemes[0].scopes).toEqual(["resources:write", "control:write"]);
+    scopes = ["mcp:connect", "control:write"];
+    expect((await call(name)).status).toBe(403);
+    scopes = ["mcp:connect", "resources:write"];
+    expect((await call(name)).status).toBe(403);
+    scopes = ["mcp:connect", "control:write", "resources:write"];
+    roles = ["member"];
+    expect((await (await call(name)).json()).result.isError).toBe(true);
+    roles = ["admin"];
+    keyBoundary = { projectId: "fixture-project" };
+    expect(
+      JSON.parse((await (await call(name)).json()).result.content[0].text).error.message,
+    ).toContain("personal key");
+    keyBoundary = {};
+  }
+});
+
+test("admin access reports effective capability and credential handoff does not expose secrets", async () => {
+  scopes = ["mcp:connect", "control:write", "resources:write", "secrets:read"];
+  const result = JSON.parse((await (await call("get_admin_access")).json()).result.content[0].text);
+  expect(result.administrator).toBe(true);
+  expect(result.capabilities.resource_management).toBe(true);
+  expect(result.capabilities.credential_value_read_via_mcp).toBe(false);
+  const handoff = JSON.parse(
+    (await (await call("get_credential_management")).json()).result.content[0].text,
+  );
+  expect(handoff.url).toBe("https://open-connect.site/secrets");
+  expect(handoff.operation_performed).toBe(false);
+  expect(credentialReads).toHaveLength(0);
+  keyBoundary = { organizationId: "fixture-org" };
+  expect((await call("get_credential_management")).status).toBe(403);
+  await expect(call("get_owned_resource")).resolves.toHaveProperty("status", 403);
+});
+
+test("resource validation failures are actionable JSON tool errors", async () => {
+  scopes = ["mcp:connect", "control:write", "resources:write"];
+  const response = await call("create_resource", {
+    name: "Name",
+    slug: "../bad",
+    resource_type: "skill",
+  });
+  expect(response.status).toBe(200);
+  const payload = (await response.json()).result;
+  expect(payload.isError).toBe(true);
+  expect(JSON.parse(payload.content[0].text).error.message).toContain("lowercase slug");
+});
