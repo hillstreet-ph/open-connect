@@ -9,9 +9,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const Route = createFileRoute("/_authenticated/connections/oauth/callback")({
   validateSearch: (search: Record<string, unknown>) => ({
-    code: typeof search.code === "string" ? search.code : "",
-    state: typeof search.state === "string" ? search.state : "",
-    error: typeof search.error === "string" ? search.error : "",
+    code: typeof search["code"] === "string" ? search["code"] : "",
+    state: typeof search["state"] === "string" ? search["state"] : "",
+    error: typeof search["error"] === "string" ? search["error"] : "",
   }),
   head: () => ({ meta: [{ title: "GitHub authorization — Open-Connect" }] }),
   component: OAuthCallbackPage,

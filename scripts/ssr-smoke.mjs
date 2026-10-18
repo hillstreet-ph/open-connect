@@ -31,7 +31,7 @@ try {
     }
   }
   assert.ok(reachable, "SSR server did not become reachable");
-  for (const path of ["/", "/auth", "/models", "/resources"]) {
+  for (const path of ["/", "/auth", "/models", "/resources", "/resources?resource=auto"]) {
     const response = await fetch(`${origin}${path}`, { signal: AbortSignal.timeout(30000) });
     assert.equal(response.status, 200, `${path} must render successfully`);
     const html = await response.text();

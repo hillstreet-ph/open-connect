@@ -57,7 +57,7 @@ test("acknowledges MCP notifications without an invalid JSON-RPC response", asyn
       body: JSON.stringify(body),
     }),
     body,
-    { jsonrpc: "2.0", id: null, result: {} },
+    null,
   );
 
   assert.equal(response.status, 202);
@@ -78,11 +78,7 @@ test("connects with the official MCP client and lists tools", async () => {
       params?: { protocolVersion?: string };
     };
     if (body.id === undefined) {
-      return streamableMcpResponse(request, body, {
-        jsonrpc: "2.0",
-        id: null,
-        result: {},
-      });
+      return streamableMcpResponse(request, body, null);
     }
 
     const result =
@@ -115,7 +111,7 @@ test("connects with the official MCP client and lists tools", async () => {
   const transport = new StreamableHTTPClientTransport(new URL("https://open-connect.site/mcp"), {
     fetch: fetchImpl,
   });
-  await client.connect(transport);
+  await client.connect(transport as Parameters<Client["connect"]>[0]);
   const listed = await client.listTools();
 
   assert.deepEqual(

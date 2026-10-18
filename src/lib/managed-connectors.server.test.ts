@@ -4,6 +4,7 @@ import {
   managedConnectorReady,
   connectionMethod,
   listOwnedManagedConnections,
+  listOwnedManagedConnectionsForIdentity,
   managedIdentityIds,
   createManagedConnectionLink,
   listComposioToolkits,
@@ -22,6 +23,26 @@ test("identity aliases are scoped to one explicitly configured application user"
   } finally {
     if (original === undefined) delete process.env["COMPOSIO_USER_MAPPINGS"];
     else process.env["COMPOSIO_USER_MAPPINGS"] = original;
+  }
+});
+
+test("account-specific reads reject identities outside the configured user mapping", async () => {
+  const original = process.env["COMPOSIO_USER_MAPPINGS"];
+  const originalKey = process.env["COMPOSIO_API_KEY"];
+  try {
+    process.env["COMPOSIO_USER_MAPPINGS"] = JSON.stringify({
+      owner: ["apify_sequin-mainan"],
+    });
+    process.env["COMPOSIO_API_KEY"] = "test-key";
+    await assert.rejects(
+      listOwnedManagedConnectionsForIdentity("owner", "another-account"),
+      /not configured for this user/,
+    );
+  } finally {
+    if (original === undefined) delete process.env["COMPOSIO_USER_MAPPINGS"];
+    else process.env["COMPOSIO_USER_MAPPINGS"] = original;
+    if (originalKey === undefined) delete process.env["COMPOSIO_API_KEY"];
+    else process.env["COMPOSIO_API_KEY"] = originalKey;
   }
 });
 
@@ -152,13 +173,136 @@ test("managed toolkit authorization is created on demand and reused by the conne
       callbackUrl: "https://open-connect.site/connections",
     });
     assert.equal(link.connected_account_id, "ca_dynamic");
-    assert.equal(calls[0].method, "GET");
-    assert.equal(calls[1].method, "POST");
-    assert.deepEqual(calls[1].body, {
+    assert.equal(calls[0]!.method, "GET");
+    assert.equal(calls[1]!.method, "POST");
+    assert.deepEqual(calls[1]!.body, {
       toolkit: { slug: "dynamic_app" },
       auth_config: { type: "use_composio_managed_auth" },
     });
-    assert.equal((calls[2].body as { auth_config_id?: string }).auth_config_id, "ac_dynamic");
+    assert.equal((calls[2]!.body as { auth_config_id?: string }).auth_config_id, "ac_dynamic");
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalKey === undefined) delete process.env["COMPOSIO_API_KEY"];
+    else process.env["COMPOSIO_API_KEY"] = originalKey;
+    if (originalConfigs === undefined) delete process.env["COMPOSIO_AUTH_CONFIGS"];
+    else process.env["COMPOSIO_AUTH_CONFIGS"] = originalConfigs;
+  }
+});
+
+test("custom MCP auth selection preserves overrides and fails closed on ambiguity", async (t) => {
+  const originalFetch = globalThis.fetch;
+  const originalKey = process.env["COMPOSIO_API_KEY"];
+  const originalConfigs = process.env["COMPOSIO_AUTH_CONFIGS"];
+  const config = {
+    id: "ac_custom",
+    toolkit: { slug: "custom_example" },
+    is_composio_managed: false,
+    status: "ENABLED",
+  };
+  const input = {
+    provider: "custom_example",
+    toolkitSlug: "CUSTOM_EXAMPLE",
+    userId: "user-a",
+    callbackUrl: "https://open-connect.site/connections",
+  };
+  const cases = [
+    {
+      name: "unique config on later page",
+      pages: [{ items: [], next_cursor: "next" }, { items: [config, config] }],
+      expected: "ac_custom",
+    },
+    {
+      name: "disabled, foreign, managed and malformed configs are excluded",
+      pages: [
+        {
+          items: [
+            config,
+            { ...config, id: "ac_disabled", status: "DISABLED" },
+            { ...config, id: "ac_foreign", toolkit: { slug: "custom_other" } },
+            { ...config, id: "ac_managed", is_composio_managed: true },
+            { ...config, id: "invalid" },
+          ],
+        },
+      ],
+      expected: "ac_custom",
+    },
+    {
+      name: "missing custom config never creates managed auth",
+      pages: [{ items: [] }],
+      error: /No enabled custom auth config/,
+    },
+    {
+      name: "ambiguity across pages requires explicit selection",
+      pages: [{ items: [config], next_cursor: "next" }, { items: [{ ...config, id: "ac_other" }] }],
+      error: /Multiple enabled custom auth configs/,
+    },
+    {
+      name: "repeated pagination cursor fails closed",
+      pages: [
+        { items: [config], next_cursor: "repeat" },
+        { items: [config], next_cursor: "repeat" },
+      ],
+      error: /pagination did not advance/,
+    },
+    {
+      name: "explicit provider config retains priority",
+      pages: [],
+      override: "ac_selected",
+      expected: "ac_selected",
+    },
+  ];
+  try {
+    process.env["COMPOSIO_API_KEY"] = "test-key";
+    for (const scenario of cases) {
+      await t.test(scenario.name, async () => {
+        if (scenario.override) {
+          process.env["COMPOSIO_AUTH_CONFIGS"] = JSON.stringify({
+            custom_example: scenario.override,
+          });
+        } else {
+          delete process.env["COMPOSIO_AUTH_CONFIGS"];
+        }
+        let reads = 0;
+        let links = 0;
+        globalThis.fetch = async (request, init) => {
+          const url = new URL(String(request));
+          if (url.pathname.endsWith("/auth_configs")) {
+            assert.equal(
+              init?.method ?? "GET",
+              "GET",
+              "custom auth must never be created automatically",
+            );
+            assert.equal(url.searchParams.get("toolkit_slug"), "CUSTOM_EXAMPLE");
+            assert.equal(url.searchParams.get("is_composio_managed"), "false");
+            assert.equal(url.searchParams.get("show_disabled"), "false");
+            if (reads > 0)
+              assert.equal(url.searchParams.get("cursor"), scenario.pages[reads - 1]!.next_cursor);
+            assert.ok(reads < scenario.pages.length);
+            return new Response(JSON.stringify(scenario.pages[reads++]));
+          }
+          assert.ok(url.pathname.endsWith("/connected_accounts/link"));
+          assert.equal(init?.method, "POST");
+          const body = JSON.parse(String(init?.body));
+          assert.equal(body.auth_config_id, scenario.expected);
+          assert.equal(body.user_id, "user-a");
+          assert.equal(body.callback_url, input.callbackUrl);
+          assert.deepEqual(body.experimental, { account_type: "PRIVATE" });
+          links++;
+          return new Response(JSON.stringify({ connected_account_id: "ca_custom" }));
+        };
+        if (scenario.error) {
+          await assert.rejects(createManagedConnectionLink(input), scenario.error);
+          assert.equal(links, 0);
+        } else {
+          assert.equal(
+            (await createManagedConnectionLink(input)).connected_account_id,
+            "ca_custom",
+          );
+          assert.equal(links, 1);
+        }
+        assert.equal(reads, scenario.pages.length);
+      });
+    }
   } finally {
     globalThis.fetch = originalFetch;
     if (originalKey === undefined) delete process.env["COMPOSIO_API_KEY"];
@@ -205,8 +349,8 @@ test("Composio toolkit discovery follows cursors and exposes supported auth meth
       toolkits.map(({ slug }) => slug),
       ["sample_oauth", "sample_key"],
     );
-    assert.deepEqual(toolkits[0].authMethods, ["OAUTH2", "API_KEY"]);
-    assert.equal(toolkits[0].category, "Productivity");
+    assert.deepEqual(toolkits[0]!.authMethods, ["OAUTH2", "API_KEY"]);
+    assert.equal(toolkits[0]!.category, "Productivity");
     assert.equal(calls, 2);
   } finally {
     globalThis.fetch = originalFetch;

@@ -112,7 +112,7 @@ describe("capability discovery relevance", () => {
   it("matches common runtime aliases and resource categories", () => {
     assert.equal(rankCapabilities("shell", candidates)[0]?.slug, "terminal");
     assert.equal(
-      rankCapabilities("skills", [{ ...candidates[0], resourceType: "skills" }])[0]?.slug,
+      rankCapabilities("skills", [{ ...candidates[0]!, resourceType: "skills" }])[0]?.slug,
       "browser",
     );
   });

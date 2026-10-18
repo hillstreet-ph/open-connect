@@ -2,6 +2,22 @@ import { CfWorkerJsonSchemaValidator } from "@modelcontextprotocol/sdk/validatio
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 
+export type McpCatalogFailureCode = "pagination_repeated" | "page_limit_exceeded";
+
+export class McpCatalogError extends Error {
+  readonly code: McpCatalogFailureCode;
+
+  constructor(code: McpCatalogFailureCode) {
+    super(
+      code === "pagination_repeated"
+        ? "MCP catalog pagination repeated a cursor."
+        : "MCP catalog exceeds the supported page limit.",
+    );
+    this.name = "McpCatalogError";
+    this.code = code;
+  }
+}
+
 /** One initialized session per operation; supports JSON and streamed SSE replies. */
 export async function withMcpClient<T>(
   endpoint: string,
@@ -39,9 +55,10 @@ export async function withMcpClient<T>(
     { capabilities: {}, jsonSchemaValidator: new CfWorkerJsonSchemaValidator() },
   );
   try {
-    await client.connect(transport, { timeout: 20000 });
+    await client.connect(transport as Parameters<Client["connect"]>[0], { timeout: 20000 });
     return await operation(client);
-  } catch {
+  } catch (error) {
+    if (error instanceof McpCatalogError) throw error;
     // A remote error may echo authorization headers; never forward it to the browser.
     throw new Error(
       "MCP request failed. Check the endpoint, credential, protocol support, and provider availability.",
@@ -69,10 +86,10 @@ export async function fetchMcpTools(
         tools.push(...result.tools);
         cursor = result.nextCursor;
         if (!cursor) return tools;
-        if (seen.has(cursor)) throw new Error("MCP pagination repeated a cursor.");
+        if (seen.has(cursor)) throw new McpCatalogError("pagination_repeated");
         seen.add(cursor);
       }
-      throw new Error("MCP catalog exceeds the supported page limit.");
+      throw new McpCatalogError("page_limit_exceeded");
     },
     send,
   );

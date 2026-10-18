@@ -1,3 +1,4 @@
+import AUTO_SKILL_MARKDOWN from "../../skills/auto/SKILL.md?raw";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { hasRole, type AppRole } from "@/lib/rbac";
@@ -13,7 +14,11 @@ function skillManifest(resource: {
   version: string | null;
   author?: string | null;
   installation_config?: unknown;
+  verified?: boolean;
+  source?: string | null;
 }) {
+  if (resource.slug === "auto" && resource.verified && resource.source === "open-connect")
+    return AUTO_SKILL_MARKDOWN;
   const config =
     resource.installation_config && typeof resource.installation_config === "object"
       ? JSON.stringify(resource.installation_config, null, 2)
@@ -200,7 +205,7 @@ export const getResourceDownloadUrl = createServerFn({ method: "POST" })
     const { data: resource, error } = await context.supabase
       .from("resources")
       .select(
-        "id, name, slug, description, resource_type, version, author, package_path, package_filename, owner_id, published, installation_config",
+        "id, name, slug, description, resource_type, version, author, package_path, package_filename, owner_id, published, installation_config, verified, source",
       )
       .eq("id", data.id)
       .maybeSingle();
@@ -247,7 +252,7 @@ export const getResourceView = createServerFn({ method: "POST" })
     const { data: resource, error } = await context.supabase
       .from("resources")
       .select(
-        "id, slug, name, description, resource_type, version, author, license, verified, featured, supported_clients, package_path, package_filename, package_size, installation_config, published, owner_id",
+        "id, slug, name, description, resource_type, version, author, license, verified, featured, supported_clients, package_path, package_filename, package_size, installation_config, published, owner_id, source",
       )
       .eq("id", data.id)
       .maybeSingle();

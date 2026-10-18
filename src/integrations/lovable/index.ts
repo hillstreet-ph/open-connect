@@ -24,7 +24,7 @@ export const lovable = {
           redirectTo:
             opts?.redirect_uri ??
             `${typeof window !== "undefined" ? window.location.origin : ""}/auth`,
-          queryParams: opts?.extraParams,
+          ...(opts?.extraParams ? { queryParams: opts.extraParams } : {}),
         },
       });
       if (error) return { error, redirected: false as const };

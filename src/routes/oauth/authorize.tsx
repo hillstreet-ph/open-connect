@@ -86,6 +86,13 @@ function AuthorizePage() {
               <li key={s}>{s}</li>
             ))}
           </ul>
+          {request.scope.split(" ").includes("control:write") ? (
+            <p className="mb-4 text-sm">
+              Administrator access lets this client configure connections and request control
+              operations. An Admin account is required. Provider permissions and operation approval
+              rules still apply.
+            </p>
+          ) : null}
           {loading ? (
             <p>Checking sign-in…</p>
           ) : user ? (

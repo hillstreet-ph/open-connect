@@ -9,7 +9,8 @@ const FIELD_RANGES = [
 function fieldMatches(field: string, value: number, min: number, max: number): boolean {
   if (field === "*") return true;
   return field.split(",").some((part) => {
-    const [rangePart, stepText] = part.split("/");
+    const [rangePart = "", stepText] = part.split("/");
+    if (!rangePart) return false;
     const step = stepText === undefined ? 1 : Number(stepText);
     if (!Number.isInteger(step) || step < 1) return false;
     let start = min;
@@ -40,7 +41,8 @@ export function parseCron(expression: string): string[] {
     const [min, max] = FIELD_RANGES[index]!;
     if (
       !field.split(",").every((part) => {
-        const [rangePart, stepText] = part.split("/");
+        const [rangePart = "", stepText] = part.split("/");
+        if (!rangePart) return false;
         if (stepText !== undefined && (!/^\d+$/.test(stepText) || Number(stepText) < 1))
           return false;
         if (rangePart === "*") return true;

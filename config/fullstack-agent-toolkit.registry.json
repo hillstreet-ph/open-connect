@@ -24,6 +24,7 @@
     "compute": ["terminal", "remote_terminal", "sandbox_compute", "computer_use"]
   },
   "toolkits": [
+    {"id":"open_connect_access","mcp":"open-connect","skills":["open-connect-agent"],"capabilities":["key.access.inspect","key.access.update_owned","key.access.audit","project.boundary.verify"],"management":{"ui":"/integrations?section=ai-agents","rpc":"oc_update_owned_key_access","probe":"scripts/open-connect-access-check.mjs","profile":"open-connect-plugin","authorization":"authenticated-owner; control:write requires Admin","context_policy":"preserve organization/workspace/project/expiry","status":"source-implemented-live-verification-required"}},
     {"id":"github","mcp":"github","capabilities":["repo.read","branch.write","issue.manage","pr.manage","actions.inspect","actions.rerun","release.coordinate"]},
     {"id":"dockerhub","mcp":"composio:docker_hub","capabilities":["repository.inspect","image.build","image.scan","image.push","tag.promote","digest.verify"]},
     {"id":"cloudflare","mcp":"cloudflare","skills":["building-ai-agent-on-cloudflare"],"capabilities":["workers","pages","workers_ai","agents_sdk","durable_objects","workflows","queues","r2","d1","vectorize","ai_gateway","browser_rendering","zero_trust"]},

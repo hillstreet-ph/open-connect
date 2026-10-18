@@ -76,7 +76,7 @@ export async function verifySchedulerOidc(
     return crypto.subtle.verify(
       "RSASSA-PKCS1-v1_5",
       key,
-      decodeSegment(segments[2]!),
+      new Uint8Array(decodeSegment(segments[2]!)).buffer,
       new TextEncoder().encode(`${segments[0]}.${segments[1]}`),
     );
   } catch {

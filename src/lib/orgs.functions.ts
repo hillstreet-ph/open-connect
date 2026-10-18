@@ -74,7 +74,7 @@ export const createOrganization = createServerFn({ method: "POST" })
   });
 
 async function requireOrganizationManager(
-  supabase: Parameters<Parameters<typeof createServerFn>[0]>[0] extends never ? never : unknown,
+  supabase: unknown,
   organizationId: string,
   userId: string,
 ) {
@@ -168,11 +168,13 @@ export const listOrganizationPeople = createServerFn({ method: "GET" })
 
 export const createOrganizationGroup = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input: { organizationId: string; name: string; description?: string }) => ({
-    organizationId: input.organizationId,
-    name: input.name.trim(),
-    description: input.description?.trim() || null,
-  }))
+  .validator(
+    (input: { organizationId: string; name: string; description?: string | undefined }) => ({
+      organizationId: input.organizationId,
+      name: input.name.trim(),
+      description: input.description?.trim() || null,
+    }),
+  )
   .handler(async ({ data, context }) => {
     if (!data.organizationId || !data.name) throw new Error("Organization and group name required");
     await requireOrganizationManager(context.supabase, data.organizationId, context.userId);
@@ -197,7 +199,7 @@ export const inviteOrganizationMember = createServerFn({ method: "POST" })
       organizationId: string;
       email: string;
       role: "admin" | "developer" | "member";
-      groupId?: string;
+      groupId?: string | undefined;
     }) => ({
       organizationId: input.organizationId,
       email: input.email.trim().toLowerCase(),
@@ -283,7 +285,7 @@ export const inviteOrganizationMember = createServerFn({ method: "POST" })
 
 export const listProjects = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((input?: { organizationId?: string }) => ({
+  .validator((input?: { organizationId?: string | undefined }) => ({
     organizationId: input?.organizationId ?? null,
   }))
   .handler(async ({ data, context }) => {
@@ -301,7 +303,7 @@ export const listProjects = createServerFn({ method: "GET" })
 
 export const listWorkspaces = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((input?: { organizationId?: string }) => ({
+  .validator((input?: { organizationId?: string | undefined }) => ({
     organizationId: input?.organizationId ?? null,
   }))
   .handler(async ({ data, context }) => {
@@ -318,11 +320,13 @@ export const listWorkspaces = createServerFn({ method: "GET" })
 
 export const createWorkspace = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input: { organizationId: string; name: string; description?: string }) => ({
-    organizationId: input.organizationId,
-    name: input.name.trim(),
-    description: input.description?.trim() || null,
-  }))
+  .validator(
+    (input: { organizationId: string; name: string; description?: string | undefined }) => ({
+      organizationId: input.organizationId,
+      name: input.name.trim(),
+      description: input.description?.trim() || null,
+    }),
+  )
   .handler(async () => {
     throw new Error(
       "Open-Connect uses one HillStreet workspace. Ask an organization Admin to create a project instead.",
@@ -398,11 +402,13 @@ export const ensureProjectEnvironments = createServerFn({ method: "POST" })
 
 export const createProject = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input: { organizationId: string; name: string; description?: string }) => ({
-    organizationId: input.organizationId,
-    name: (input?.name ?? "").trim(),
-    description: (input?.description ?? "").trim() || null,
-  }))
+  .validator(
+    (input: { organizationId: string; name: string; description?: string | undefined }) => ({
+      organizationId: input.organizationId,
+      name: (input?.name ?? "").trim(),
+      description: (input?.description ?? "").trim() || null,
+    }),
+  )
   .handler(async ({ data, context }) => {
     if (!data.name) throw new Error("Project name required");
     if (!data.organizationId) throw new Error("Pick an organization");

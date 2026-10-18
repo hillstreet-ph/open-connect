@@ -11,12 +11,15 @@
     "mcp:connect",
     "resources:read",
     "resources:write",
+    "memory:read",
+    "knowledge:read",
     "connections:read",
     "connections:invoke",
     "models:read",
     "models:invoke",
     "tools:invoke",
     "secrets:read",
-    "agents:invoke"
+    "agents:invoke",
+    "control:write"
   ]
 }

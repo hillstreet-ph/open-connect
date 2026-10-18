@@ -1,7 +1,8 @@
 import type { normalizeConnectionSetup } from "./connection-setup";
+import { isRemoteMcpProvider } from "./remote-mcp.ts";
 
 type Setup = ReturnType<typeof normalizeConnectionSetup>;
-type Validation = { verified: boolean; accountId?: string; detail: string };
+type Validation = { verified: boolean; accountId?: string | undefined; detail: string };
 
 const DEFAULT_BASES: Record<string, string> = {
   cloudflare: "https://api.cloudflare.com/client/v4",
@@ -40,7 +41,7 @@ export async function validateConnectionCredential(
   send: typeof fetch = fetch,
 ): Promise<Validation> {
   const bearer = { Authorization: `Bearer ${setup.apiKey}` };
-  if (setup.provider === "custom_mcp") {
+  if (isRemoteMcpProvider(setup.provider)) {
     const { withMcpClient } = await import("./mcp-client.server.ts");
     const headers =
       setup.authType === "none"

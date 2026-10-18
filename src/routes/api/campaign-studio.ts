@@ -10,14 +10,14 @@ import {
 import { createClient } from "@supabase/supabase-js";
 
 const OPENAI_API = "https://api.openai.com/v1/responses";
-const TEXT_MODEL = process.env.OPENAI_CAMPAIGN_MODEL || "gpt-6-astra";
-const IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || "gpt-image-2.5-sunburst";
+const TEXT_MODEL = process.env["OPENAI_CAMPAIGN_MODEL"] || "gpt-6-astra";
+const IMAGE_MODEL = process.env["OPENAI_IMAGE_MODEL"] || "gpt-image-2.5-sunburst";
 
 function openAIHeaders(key: string) {
   return {
     Authorization: `Bearer ${key}`,
     "Content-Type": "application/json",
-    "OpenAI-Project": process.env.OPENAI_PROJECT_ID || "proj_P1GhW0FJdBA5g3dpuKN8BZh8",
+    "OpenAI-Project": process.env["OPENAI_PROJECT_ID"] || "proj_P1GhW0FJdBA5g3dpuKN8BZh8",
   };
 }
 
@@ -29,8 +29,8 @@ function json(body: unknown, status = 200) {
 }
 
 async function authenticatedUserId(request: Request): Promise<string | null> {
-  const url = process.env.SUPABASE_URL;
-  const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;
+  const url = process.env["SUPABASE_URL"];
+  const publishableKey = process.env["SUPABASE_PUBLISHABLE_KEY"];
   const authorization = request.headers.get("authorization");
   if (!url || !publishableKey || !authorization?.startsWith("Bearer ")) return null;
 
@@ -56,7 +56,7 @@ export const Route = createFileRoute("/api/campaign-studio")({
         if (!(await authenticatedUserId(request))) {
           return json({ error: "Sign in to use Campaign Studio." }, 401);
         }
-        const key = process.env.OPENAI_API_KEY;
+        const key = process.env["OPENAI_API_KEY"];
         if (!key) return json({ error: "Campaign Studio is not configured." }, 503);
 
         const raw = await request.json().catch(() => null);

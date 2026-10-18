@@ -304,7 +304,7 @@ export async function resolveAutoFreeRoutes(upstreams: Upstream[]): Promise<Auto
   const routes: AutoFreeRoute[] = [];
   for (const upstream of upstreams) {
     const cacheKey = createHash("sha256")
-      .update(`${upstream.name}\n${upstream.baseUrl}\n${upstream.headers.Authorization ?? ""}`)
+      .update(`${upstream.name}\n${upstream.baseUrl}\n${upstream.headers["Authorization"] ?? ""}`)
       .digest("hex");
     let catalog = autoFreeCatalogCache.get(cacheKey);
     if (!catalog || catalog.expiresAt <= Date.now()) {

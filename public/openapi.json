@@ -3,7 +3,7 @@
   "info": {
     "title": "Open-Connect ChatGPT Actions",
     "description": "Governed access to Open-Connect resources, connections, models, capability planning, and owner-approved control operations.",
-    "version": "1.1.0"
+    "version": "1.2.0"
   },
   "servers": [
     {
@@ -52,7 +52,10 @@
                       "list_credential_metadata",
                       "list_connection_tools",
                       "e2b_health",
-                      "e2b_list_sandboxes"
+                      "e2b_list_sandboxes",
+                      "get_admin_access",
+                      "get_owned_resource",
+                      "get_credential_management"
                     ]
                   },
                   "input": {
@@ -89,7 +92,13 @@
         "x-openai-isConsequential": true,
         "security": [
           {
-            "OAuth2": ["mcp:connect", "resources:write", "tools:invoke", "connections:invoke"]
+            "OAuth2": [
+              "mcp:connect",
+              "resources:write",
+              "tools:invoke",
+              "connections:invoke",
+              "control:write"
+            ]
           },
           {
             "BearerAuth": []
@@ -114,7 +123,11 @@
                       "configure_connection",
                       "call_connection_tool",
                       "e2b_create_sandbox",
-                      "e2b_kill_sandbox"
+                      "e2b_kill_sandbox",
+                      "create_resource",
+                      "update_resource",
+                      "upload_resource_content",
+                      "set_resource_publication"
                     ]
                   },
                   "input": {
@@ -162,7 +175,8 @@
               "tools:invoke": "Invoke governed tools",
               "secrets:read": "Read credential metadata; values remain server-side",
               "models:invoke": "Invoke model aliases",
-              "agents:invoke": "Invoke agent capabilities"
+              "agents:invoke": "Invoke agent capabilities",
+              "control:write": "Admin-authorized control operations; requires explicit consent and an Admin account"
             }
           }
         }

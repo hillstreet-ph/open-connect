@@ -42,12 +42,14 @@ function useProfile() {
 
   const displayName =
     profileQuery.data?.display_name ||
-    (user?.user_metadata?.display_name as string | undefined) ||
+    (user?.user_metadata?.["display_name"] as string | undefined) ||
     user?.email?.split("@")[0] ||
     "Account";
   const email = user?.email ?? "";
   const avatarUrl =
-    profileQuery.data?.avatar_url ?? (user?.user_metadata?.avatar_url as string | undefined) ?? "";
+    profileQuery.data?.avatar_url ??
+    (user?.user_metadata?.["avatar_url"] as string | undefined) ??
+    "";
 
   return { user, loading, displayName, email, avatarUrl };
 }

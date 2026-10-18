@@ -1,3 +1,17 @@
+import {
+  adminAccess,
+  manageResource,
+  ResourceManagementError,
+} from "@/lib/admin-management.server";
+import {
+  AUTO_MODE_OUTPUT_SCHEMA,
+  AUTO_DISCOVERY_OUTPUT_SCHEMA,
+  AUTO_STATUS_OUTPUT_SCHEMA,
+  BROWSER_CREDENTIAL_MATCH_OUTPUT_SCHEMA,
+} from "@/lib/auto-mcp-contract";
+import type { Json } from "@/integrations/supabase/types";
+import { matchBrowserCredentials } from "@/lib/browser-credential-matching";
+import { autoInstructions, readAutoMode, writeAutoMode } from "@/lib/auto-mode.server";
 import { COMMAND_CENTER_HTML } from "@/lib/command-center";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createFileRoute } from "@tanstack/react-router";
@@ -18,9 +32,23 @@ import {
 } from "@/lib/autonomous-control";
 import { streamableMcpResponse } from "@/lib/mcp-transport.server";
 import { calculateExpression } from "@/lib/calculator";
+import { hasRole, type AppRole } from "@/lib/rbac";
+import {
+  isRemoteMcpProvider,
+  normalizeRemoteMcpAuthType,
+  normalizeRemoteMcpEndpoint,
+  type RemoteMcpProvider,
+} from "@/lib/remote-mcp";
 
 const WWW_AUTH =
   'Bearer realm="open-connect", resource_metadata="https://open-connect.site/.well-known/oauth-protected-resource"';
+
+function normalizeConnectionProvider(value: unknown) {
+  const provider = String(value ?? "")
+    .trim()
+    .toLowerCase();
+  return provider === "hubstaff" || provider === "hubstaff-admin" ? "hubstaff_admin" : provider;
+}
 
 const CATALOG_TTL_MS = 45_000;
 const MODEL_ALIASES = [
@@ -55,11 +83,13 @@ type McpTool = {
   title?: string;
   description: string;
   inputSchema: Record<string, unknown>;
+  outputSchema?: Record<string, unknown>;
   annotations?: Record<string, boolean>;
   _meta?: Record<string, unknown>;
 };
 
-const COMMAND_CENTER_URI = "ui://open-connect/command-center-v1.html";
+const COMMAND_CENTER_URI = "ui://open-connect/command-center-v2.html";
+const LEGACY_COMMAND_CENTER_URI = "ui://open-connect/command-center-v1.html";
 
 /** Isolate-level cache (Cloudflare warm isolates reuse this). */
 let catalogCache: {
@@ -72,6 +102,217 @@ let catalogCache: {
 } | null = null;
 
 const PLATFORM_TOOLS: McpTool[] = [
+  {
+    name: "get_admin_access",
+    description:
+      "Report actual administrator role, key scopes and management capability limits. Does not change grants.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      required: [],
+      additionalProperties: false,
+    },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
+  },
+  {
+    name: "get_owned_resource",
+    description:
+      "Read one owned resource including its current revision for a subsequent edit. Personal keys only.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        id: {
+          type: "string",
+          format: "uuid",
+        },
+      },
+      required: ["id"],
+      additionalProperties: false,
+    },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
+  },
+  {
+    name: "get_credential_management",
+    description:
+      "Return the authenticated Secrets screen for creating, retrieving, editing and deleting credential values. This does not perform the operation or return secrets.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      required: [],
+      additionalProperties: false,
+    },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
+  },
+  {
+    name: "create_resource",
+    description:
+      "Create a private, unverified resource owned by the authenticated administrator. Supports tools, toolkits, skills and other library types. Requires Admin, control:write and resources:write with a personal key.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: {
+          type: "string",
+          maxLength: 120,
+        },
+        description: {
+          type: "string",
+          maxLength: 4000,
+        },
+        version: {
+          type: "string",
+          maxLength: 40,
+        },
+        license: {
+          type: "string",
+          maxLength: 80,
+        },
+        slug: {
+          type: "string",
+          pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          maxLength: 80,
+        },
+        resource_type: {
+          type: "string",
+          enum: [
+            "skill",
+            "mcp",
+            "tool",
+            "plugin",
+            "agent",
+            "prompt",
+            "guide",
+            "app",
+            "model",
+            "toolkit",
+            "memory",
+            "knowledge",
+          ],
+        },
+      },
+      required: ["name", "slug", "resource_type"],
+      additionalProperties: false,
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
+  },
+  {
+    name: "update_resource",
+    description:
+      "Edit owned resource metadata using its current revision. Editing resets security review and unpublishes the resource. Requires Admin, control:write and resources:write with a personal key.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        id: {
+          type: "string",
+          format: "uuid",
+        },
+        expected_updated_at: {
+          type: "string",
+          description: "Exact updated_at from get_owned_resource or the last successful write.",
+        },
+        name: {
+          type: "string",
+          maxLength: 120,
+        },
+        description: {
+          type: "string",
+          maxLength: 4000,
+        },
+        version: {
+          type: "string",
+          maxLength: 40,
+        },
+        license: {
+          type: "string",
+          maxLength: 80,
+        },
+      },
+      required: ["id", "expected_updated_at"],
+      additionalProperties: false,
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true,
+      openWorldHint: false,
+    },
+  },
+  {
+    name: "upload_resource_content",
+    description:
+      "Upload up to 256 KiB of Markdown, JSON or text into an owned resource. Replaces the current package, resets review and unpublishes. Never upload credentials. ZIP files use signed-in Studio. Requires Admin, control:write and resources:write with a personal key.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        id: {
+          type: "string",
+          format: "uuid",
+        },
+        expected_updated_at: {
+          type: "string",
+          description: "Exact updated_at from get_owned_resource or the last successful write.",
+        },
+        filename: {
+          type: "string",
+        },
+        content: {
+          type: "string",
+        },
+      },
+      required: ["id", "expected_updated_at", "filename", "content"],
+      additionalProperties: false,
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true,
+      openWorldHint: false,
+    },
+  },
+  {
+    name: "set_resource_publication",
+    description:
+      "Publish or unpublish one owned resource after explicit authorization. Publishing requires prior independent security verification. Requires Admin, control:write and resources:write with a personal key.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        id: {
+          type: "string",
+          format: "uuid",
+        },
+        expected_updated_at: {
+          type: "string",
+          description: "Exact updated_at from get_owned_resource or the last successful write.",
+        },
+        published: {
+          type: "boolean",
+        },
+        confirm: {
+          type: "boolean",
+        },
+      },
+      required: ["id", "expected_updated_at", "published", "confirm"],
+      additionalProperties: false,
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true,
+      openWorldHint: true,
+    },
+  },
   {
     name: "search",
     description:
@@ -104,6 +345,7 @@ const PLATFORM_TOOLS: McpTool[] = [
   {
     name: "open_connect_status",
     description: "Gateway status: resources, connections, models",
+    outputSchema: AUTO_STATUS_OUTPUT_SCHEMA,
     inputSchema: { type: "object", properties: {} },
     annotations: {
       readOnlyHint: true,
@@ -111,9 +353,55 @@ const PLATFORM_TOOLS: McpTool[] = [
       openWorldHint: false,
     },
     _meta: {
+      ui: { resourceUri: COMMAND_CENTER_URI, visibility: ["model", "app"] },
+      "openai/widgetAccessible": true,
       "ui/resourceUri": COMMAND_CENTER_URI,
       "openai/outputTemplate": COMMAND_CENTER_URI,
     },
+  },
+  {
+    name: "get_auto_mode",
+    outputSchema: AUTO_MODE_OUTPUT_SCHEMA,
+    _meta: { ui: { visibility: ["model", "app"] }, "openai/widgetAccessible": true },
+    description:
+      "Read the authenticated account's scoped Auto autonomy and discovery preference. Host approvals remain enforced.",
+    inputSchema: { type: "object", properties: {} },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  },
+  {
+    name: "set_auto_mode",
+    outputSchema: AUTO_MODE_OUTPUT_SCHEMA,
+    _meta: { ui: { visibility: ["model", "app"] }, "openai/widgetAccessible": true },
+    description:
+      "Save Auto on/off for the authenticated account and key context. Enables task autonomy and discovery, not permission bypass or secret access.",
+    inputSchema: {
+      type: "object",
+      properties: { enabled: { type: "boolean" } },
+      required: ["enabled"],
+      additionalProperties: false,
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      openWorldHint: false,
+      idempotentHint: true,
+    },
+  },
+  {
+    name: "auto_discover",
+    outputSchema: AUTO_DISCOVERY_OUTPUT_SCHEMA,
+    description:
+      "When Auto is enabled and an authorized task needs a capability, match verified Marketplace tools and skills to the goal. Returns metadata and next steps, never executes or reveals credentials.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        goal: { type: "string", minLength: 1, maxLength: 2000 },
+        limit: { type: "integer", minimum: 1, maximum: 10 },
+      },
+      required: ["goal"],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   },
   {
     name: "list_resources",
@@ -147,7 +435,7 @@ const PLATFORM_TOOLS: McpTool[] = [
   {
     name: "list_my_memory",
     description:
-      "Read the authenticated user's private Memory library. When project_id is supplied, also include that user's memory explicitly stored in that accessible project. Without project_id, only personal memory is returned.",
+      "Read the authenticated user's private Memory library. When project_id is supplied, also include that user's memory explicitly stored in that accessible project. Without project_id, only personal memory is returned. Project-bound keys return only their project records, never personal records.",
     inputSchema: {
       type: "object",
       properties: {
@@ -164,7 +452,7 @@ const PLATFORM_TOOLS: McpTool[] = [
   {
     name: "list_my_knowledge",
     description:
-      "Read the authenticated user's private Knowledge library. When project_id is supplied, also include that user's knowledge explicitly stored in that accessible project. Without project_id, only personal knowledge is returned.",
+      "Read the authenticated user's private Knowledge library. When project_id is supplied, also include that user's knowledge explicitly stored in that accessible project. Without project_id, only personal knowledge is returned. Project-bound keys return only their project records, never personal records.",
     inputSchema: {
       type: "object",
       properties: {
@@ -198,6 +486,22 @@ const PLATFORM_TOOLS: McpTool[] = [
       destructiveHint: false,
       openWorldHint: false,
     },
+  },
+  {
+    name: "match_browser_credentials",
+    outputSchema: BROWSER_CREDENTIAL_MATCH_OUTPUT_SCHEMA,
+    description:
+      "Match owned password metadata to an exact HTTPS origin and optional account. Returns credential IDs and password/TOTP availability only. Does not reveal secrets, generate codes, inject credentials, or sign in. Use the browser host's secure authentication capability.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        origin: { type: "string", maxLength: 500 },
+        account: { type: "string", maxLength: 320 },
+      },
+      required: ["origin"],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   },
   {
     name: "calculate",
@@ -239,7 +543,7 @@ const PLATFORM_TOOLS: McpTool[] = [
   },
   {
     name: "list_connection_tools",
-    description: "Discover tools from one verified Custom MCP connection.",
+    description: "Discover tools from one accessible Twilio or verified Custom MCP connection.",
     inputSchema: {
       type: "object",
       properties: { connection_id: { type: "string" } },
@@ -254,7 +558,7 @@ const PLATFORM_TOOLS: McpTool[] = [
   {
     name: "call_connection_tool",
     description:
-      "Call a tool on one verified Custom MCP connection. Write-capable actions require a project-scoped key with connections:invoke; destructive tools also require confirm=true.",
+      "Call a tool on one accessible Twilio or verified Custom MCP connection. Twilio writes require admin access. Custom MCP writes require a project-scoped key with connections:invoke; destructive tools also require confirm=true.",
     inputSchema: {
       type: "object",
       properties: {
@@ -432,6 +736,33 @@ const PLATFORM_TOOLS: McpTool[] = [
     },
   },
   {
+    name: "list_control_approvals",
+    description:
+      "Inspect your own approval requests, including their exact target and expiry. Does not expose other users' requests.",
+    inputSchema: { type: "object", properties: {} },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  },
+  {
+    name: "decide_control_approval",
+    description:
+      "Record an explicit decision on your own pending, unexpired approval. Requires a personal admin key and confirm=true. Records authorization without starting execution.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        approval_id: { type: "string" },
+        decision: { type: "string", enum: ["approved", "denied"] },
+        confirm: { type: "boolean" },
+      },
+      required: ["approval_id", "decision", "confirm"],
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: false,
+    },
+  },
+  {
     name: "recommend_toolchain",
     description:
       "Find the smallest approved plugin, skill, tool, app, or MCP bundle matching a goal.",
@@ -532,6 +863,30 @@ const PLATFORM_TOOLS: McpTool[] = [
     },
   },
   {
+    name: "preview_composio_sync",
+    description:
+      "Preview owned ACTIVE Composio accounts missing from the personal connector library. Read-only; never imports accounts or assigns project access.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        external_account_id: {
+          type: "string",
+          minLength: 1,
+          maxLength: 256,
+          description:
+            "Optional exact configured Composio external account ID. Returns a redacted account-specific mapping without broker account IDs or credential references.",
+        },
+      },
+      additionalProperties: false,
+    },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true,
+    },
+  },
+  {
     name: "configure_connection",
     description:
       "Use this when binding a provider through an opaque credential:// reference; raw secret values are rejected.",
@@ -542,6 +897,20 @@ const PLATFORM_TOOLS: McpTool[] = [
         display_name: { type: "string" },
         credential_ref: { type: "string" },
         scopes: { type: "array", items: { type: "string" } },
+        telegram_destination: {
+          type: "object",
+          properties: {
+            chat_id: { type: "string", description: "Numeric Telegram supergroup ID" },
+            message_thread_id: { type: "integer", minimum: 1 },
+          },
+          required: ["chat_id", "message_thread_id"],
+          additionalProperties: false,
+        },
+        endpoint_url: { type: "string", format: "uri" },
+        auth_type: {
+          type: "string",
+          enum: ["none", "bearer", "api_key", "personal_access_token"],
+        },
       },
       required: ["provider", "credential_ref"],
     },
@@ -554,10 +923,10 @@ const PLATFORM_TOOLS: McpTool[] = [
   },
 ];
 
-async function loadRoles(userId: string): Promise<string[]> {
+async function loadRoles(userId: string): Promise<AppRole[]> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data } = await supabaseAdmin.from("user_roles").select("role").eq("user_id", userId);
-  return (data ?? []).map((row: { role: string }) => row.role);
+  return (data ?? []).map((row: { role: AppRole }) => row.role);
 }
 
 async function loadAuthorizedOrganizationIds(key: AuthedKey): Promise<string[]> {
@@ -615,15 +984,38 @@ async function assertProjectAccess(key: AuthedKey, projectId: string) {
   return project;
 }
 
+/** A project key may use only connections deliberately assigned to that project. */
+async function requireProjectConnectionGrant(key: AuthedKey, connectionId: string) {
+  if (!key.projectId) return;
+  await assertProjectAccess(key, key.projectId);
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: grant, error } = await supabaseAdmin
+    .from("project_connections")
+    .select("id")
+    .eq("project_id", key.projectId)
+    .eq("connection_id", connectionId)
+    .maybeSingle();
+  if (error || !grant) throw new Error("Connection is not assigned to this API key's project.");
+}
+
 async function requireControlWrite(key: AuthedKey) {
   const roles = await loadRoles(key.userId);
-  const authorizedRole = roles.includes("admin");
-  const authorizedScope =
-    hasScope(key, "control:write") ||
-    hasScope(key, "tools:invoke") ||
-    hasScope(key, "connections:invoke");
+  const authorizedRole = hasRole(roles, "admin");
+  const authorizedScope = hasScope(key, "control:write");
   if (!authorizedRole || !authorizedScope)
     throw new Error("Admin role and control write scope required.");
+  return roles;
+}
+
+// Provider writes retain their advertised invoke scopes; control-plane mutations
+// require the distinct control:write grant above.
+async function requireProviderWrite(key: AuthedKey) {
+  const roles = await loadRoles(key.userId);
+  if (
+    !hasRole(roles, "admin") ||
+    !(hasScope(key, "tools:invoke") || hasScope(key, "connections:invoke"))
+  )
+    throw new Error("Admin role and provider invoke scope required.");
   return roles;
 }
 
@@ -692,7 +1084,20 @@ function chatGptTools() {
   // Hiding write tools here prevents clients from discovering their OAuth requirements.
   return PLATFORM_TOOLS.map((tool) => {
     const securitySchemes = [
-      { type: "oauth2", scopes: [TOOL_SCOPES[tool.name] ?? "tools:invoke"] },
+      {
+        type: "oauth2",
+        scopes: [
+          TOOL_SCOPES[tool.name] ?? "tools:invoke",
+          ...([
+            "create_resource",
+            "update_resource",
+            "upload_resource_content",
+            "set_resource_publication",
+          ].includes(tool.name)
+            ? ["control:write"]
+            : []),
+        ],
+      },
     ];
     return {
       ...tool,
@@ -791,18 +1196,37 @@ function fireLog(key: AuthedKey, statusCode: number) {
   });
 }
 
+const RESOURCE_WRITE_TOOLS = [
+  "create_resource",
+  "update_resource",
+  "upload_resource_content",
+  "set_resource_publication",
+];
+
 const TOOL_SCOPES: Record<string, string> = {
+  get_admin_access: "mcp:connect",
+  get_owned_resource: "resources:read",
+  get_credential_management: "secrets:read",
+  create_resource: "resources:write",
+  update_resource: "resources:write",
+  upload_resource_content: "resources:write",
+  set_resource_publication: "resources:write",
   search: "resources:read",
   fetch: "resources:read",
   open_connect_status: "mcp:connect",
+  get_auto_mode: "mcp:connect",
+  set_auto_mode: "tools:invoke",
+  auto_discover: "resources:read",
   list_resources: "resources:read",
   list_personal_resources: "resources:read",
   list_my_memory: "memory:read",
   list_my_knowledge: "knowledge:read",
   list_workspace_projects: "resources:read",
   list_credential_metadata: "secrets:read",
+  match_browser_credentials: "secrets:read",
   calculate: "mcp:connect",
   list_connections: "connections:read",
+  preview_composio_sync: "connections:read",
   list_models: "models:read",
   inspect_connections: "connections:read",
   list_connection_tools: "connections:read",
@@ -817,27 +1241,19 @@ const TOOL_SCOPES: Record<string, string> = {
   plan_goal: "resources:read",
   recommend_toolchain: "resources:read",
   resolve_capability: "resources:read",
-  execute_plan: "tools:invoke",
-  create_capability_draft: "resources:write",
-  record_run_outcome: "resources:write",
-  configure_connection: "connections:invoke",
+  execute_plan: "control:write",
+  list_control_approvals: "resources:read",
+  decide_control_approval: "control:write",
+  create_capability_draft: "control:write",
+  record_run_outcome: "control:write",
+  configure_connection: "control:write",
+  install_capability: "control:write",
 };
-
-const SELF_GUARDED_WRITE_TOOLS = new Set([
-  "execute_plan",
-  "create_capability_draft",
-  "record_run_outcome",
-  "configure_connection",
-  "install_capability",
-  "e2b_create_sandbox",
-  "e2b_kill_sandbox",
-  "hubstaff_admin_request",
-]);
 
 function canUseTool(key: AuthedKey, toolName: string) {
   const required = TOOL_SCOPES[toolName] ?? "tools:invoke";
-  // Preserve pre-profile keys that used the original aggregate write grant.
-  return hasScope(key, required) || hasScope(key, "control:write");
+  // Control consent must not imply unrelated private-read or provider grants.
+  return hasScope(key, required);
 }
 
 export const Route = createFileRoute("/mcp")({
@@ -854,7 +1270,7 @@ export const Route = createFileRoute("/mcp")({
         }
         return json({
           name: "open-connect",
-          version: "1.0.1",
+          version: "1.0.2",
           protocol: "mcp",
           planes: ["resources", "connections", "models", "credentials"],
           endpoints: {
@@ -879,15 +1295,15 @@ export const Route = createFileRoute("/mcp")({
         if (!key) return unauthorized("Missing or invalid Open-Connect key.");
         if (
           !hasScope(key, "mcp:connect") &&
+          !hasScope(key, "control:write") &&
           !hasScope(key, "models:read") &&
           !hasScope(key, "models:invoke") &&
-          !hasScope(key, "resources:read")
+          !hasScope(key, "resources:read") &&
+          !hasScope(key, "memory:read") &&
+          !hasScope(key, "knowledge:read") &&
+          !hasScope(key, "tools:invoke")
         ) {
-          return gatewayError(
-            "Key is missing mcp, models, or resources scope.",
-            403,
-            "insufficient_scope",
-          );
+          return gatewayError("Key is missing an accepted MCP scope.", 403, "insufficient_scope");
         }
 
         const body = (await request.json().catch(() => null)) as {
@@ -905,9 +1321,11 @@ export const Route = createFileRoute("/mcp")({
           return gatewayError("JSON-RPC method required.", 400, "invalid_request");
         }
 
-        let result: unknown = { ok: true };
+        let result: Record<string, unknown> = { ok: true };
 
         if (body.method === "initialize") {
+          const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+          const auto = await readAutoMode(supabaseAdmin as SupabaseClient, key);
           result = {
             protocolVersion: body.params?.protocolVersion ?? "2025-06-18",
             capabilities: {
@@ -916,11 +1334,10 @@ export const Route = createFileRoute("/mcp")({
             },
             serverInfo: {
               name: "open-connect",
-              version: "1.0.1",
+              version: "1.0.2",
               planes: ["resources", "connections", "models", "credentials"],
             },
-            instructions:
-              "Use read-only discovery tools before write tools. Hubstaff, E2B, connection, and credential actions are scoped to the authenticated Open-Connect account and role.",
+            instructions: autoInstructions(auto.enabled),
           };
         } else if (body.method === "tools/list") {
           result = { tools: chatGptTools() };
@@ -938,7 +1355,7 @@ export const Route = createFileRoute("/mcp")({
         } else if (body.method === "resources/read") {
           const uri = (body.params as { uri?: string } | undefined)?.uri;
           result =
-            uri === COMMAND_CENTER_URI
+            uri === COMMAND_CENTER_URI || uri === LEGACY_COMMAND_CENTER_URI
               ? {
                   contents: [
                     {
@@ -964,8 +1381,21 @@ export const Route = createFileRoute("/mcp")({
         } else if (body.method === "tools/call") {
           const name = body.params?.name;
           const args = body.params?.arguments ?? {};
+          // Self-guarded provider writes retain their invoke grants. Control-plane
+          // tools must report missing scope before their role/data guards throw.
+          if (
+            name &&
+            (TOOL_SCOPES[name] === "control:write" || RESOURCE_WRITE_TOOLS.includes(name)) &&
+            !hasScope(key, "control:write")
+          ) {
+            return gatewayError(
+              `Key requires control:write to invoke ${name}.`,
+              403,
+              "insufficient_scope",
+            );
+          }
 
-          if (!name || (!canUseTool(key, name) && !SELF_GUARDED_WRITE_TOOLS.has(name))) {
+          if (!name || !canUseTool(key, name)) {
             return gatewayError(
               `Key cannot invoke ${name || "this tool"} in its selected scope.`,
               403,
@@ -973,7 +1403,78 @@ export const Route = createFileRoute("/mcp")({
             );
           }
 
-          if (name === "search") {
+          if (name === "get_admin_access") {
+            result = textResult(adminAccess(key, hasRole(await loadRoles(key.userId), "admin")));
+          } else if (name === "get_credential_management") {
+            if (key.projectId || key.workspaceId || key.organizationId)
+              return gatewayError(
+                "Credential management requires a personal context.",
+                403,
+                "insufficient_scope",
+              );
+            result = textResult({
+              url: "https://open-connect.site/secrets",
+              actions: ["create", "reveal", "update", "delete"],
+              authentication_required: true,
+              operation_performed: false,
+              secret_values_exposed: false,
+              secure_injection_available: false,
+            });
+          } else if (name === "get_owned_resource") {
+            if (key.projectId || key.workspaceId || key.organizationId)
+              return gatewayError(
+                "Owned resource reads require a personal context.",
+                403,
+                "insufficient_scope",
+              );
+            if (typeof args["id"] !== "string" || !/^[0-9a-f-]{36}$/i.test(args["id"]))
+              return gatewayError("Invalid resource id.", 400, "invalid_request");
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const { data, error } = await supabaseAdmin
+              .from("resources")
+              .select(
+                "id,slug,name,description,resource_type,version,license,published,verified,package_filename,package_size,updated_at",
+              )
+              .eq("id", args["id"])
+              .eq("owner_id", key.userId)
+              .maybeSingle();
+            if (error || !data) return gatewayError("Owned resource not found.", 404, "not_found");
+            result = textResult({ resource: data });
+          } else if (
+            [
+              "create_resource",
+              "update_resource",
+              "upload_resource_content",
+              "set_resource_publication",
+            ].includes(name)
+          ) {
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            try {
+              result = textResult(
+                await manageResource(
+                  supabaseAdmin as SupabaseClient,
+                  key,
+                  hasRole(await loadRoles(key.userId), "admin"),
+                  name,
+                  args,
+                ),
+              );
+              catalogCache = null;
+            } catch (error) {
+              result = {
+                ...textResult({
+                  error: {
+                    code: "resource_management_error",
+                    message:
+                      error instanceof ResourceManagementError
+                        ? error.message
+                        : "Resource management is temporarily unavailable.",
+                  },
+                }),
+                isError: true,
+              };
+            }
+          } else if (name === "search") {
             const query = String(args["query"] ?? "").trim();
             const catalog = await getCatalog();
             const ranked = rankCapabilities(
@@ -990,7 +1491,7 @@ export const Route = createFileRoute("/mcp")({
             const results = ranked.map((item) => ({
               id: item.slug,
               title: item.name,
-              url: `https://open-connect.site/resources/${item.slug}`,
+              url: `https://open-connect.site/resources?resource=${encodeURIComponent(item.slug)}`,
               score: item.score,
               matched_terms: item.matchedTerms,
             }));
@@ -1005,7 +1506,7 @@ export const Route = createFileRoute("/mcp")({
                     id: item.slug,
                     title: item.name,
                     text: item.description ?? "",
-                    url: `https://open-connect.site/resources/${item.slug}`,
+                    url: `https://open-connect.site/resources?resource=${encodeURIComponent(item.slug)}`,
                     metadata: {
                       type: item.resource_type,
                       installation_type: item.installation_type,
@@ -1032,11 +1533,15 @@ export const Route = createFileRoute("/mcp")({
                 .select("id", { count: "exact", head: true })
                 .eq("user_id", key.userId)
                 .eq("status", "connected");
-              if (!response.error) connections = response.count;
+              if (!response.error && typeof response.count === "number")
+                connections = response.count;
             } catch {
               // Status must remain available even when the optional connection counter is not.
             }
-            result = textResult({
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const auto = await readAutoMode(supabaseAdmin as SupabaseClient, key);
+            const status = {
+              auto,
               gateway: "open-connect.site",
               planes: {
                 resources: { published: catalog.count },
@@ -1051,7 +1556,63 @@ export const Route = createFileRoute("/mcp")({
               },
               scopes: key.scopes,
               user_id: key.userId,
-            });
+            };
+            result = { ...textResult(status), structuredContent: status };
+          } else if (
+            name === "get_auto_mode" ||
+            name === "set_auto_mode" ||
+            name === "auto_discover"
+          ) {
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const auto =
+              name === "set_auto_mode"
+                ? await writeAutoMode(supabaseAdmin as SupabaseClient, key, args["enabled"])
+                : await readAutoMode(supabaseAdmin as SupabaseClient, key);
+            let payload: Record<string, unknown> = {
+              auto,
+              instructions: autoInstructions(auto.enabled),
+            };
+            if (name === "auto_discover") {
+              const goal = String(args["goal"] ?? "").trim();
+              if (!goal || goal.length > 2000)
+                return gatewayError("goal must contain 1–2000 characters", 400, "invalid_request");
+              const requestedLimit = Number(args["limit"] ?? 5);
+              const limit = Number.isFinite(requestedLimit)
+                ? Math.min(10, Math.max(1, Math.trunc(requestedLimit)))
+                : 5;
+              const catalog = auto.enabled === true ? await getCatalog() : null;
+              const matches = catalog
+                ? rankCapabilities(
+                    goal,
+                    [...catalog.bySlug.values()].filter(isExecutable).map((item) => ({
+                      slug: item.slug,
+                      name: item.name,
+                      description: item.description,
+                      resourceType: item.resource_type,
+                      installationType: item.installation_type,
+                    })),
+                    limit,
+                  )
+                : [];
+              payload = {
+                ...payload,
+                goal,
+                matches,
+                execution_performed: false,
+                values_exposed: false,
+                status: !auto.available
+                  ? "unavailable"
+                  : !auto.enabled
+                    ? "disabled"
+                    : matches.length
+                      ? "matched"
+                      : "no_match",
+                next_action: matches.length
+                  ? "Inspect matched metadata, then discover the actual host or connection tool schema and verify authorized access."
+                  : "Use an existing host tool or report the missing capability; do not assume a catalog entry is executable.",
+              };
+            }
+            result = { ...textResult(payload), structuredContent: payload };
           } else if (name === "calculate") {
             const expression = String(args["expression"] ?? "");
             result = textResult({
@@ -1112,6 +1673,28 @@ export const Route = createFileRoute("/mcp")({
                 projects: visibleProjects,
               });
             }
+          } else if (name === "match_browser_credentials") {
+            if (key.projectId || key.workspaceId || key.organizationId)
+              return gatewayError(
+                "Browser password matching requires a personal credential context.",
+                403,
+                "insufficient_scope",
+              );
+            // Validate before accessing the owner's password metadata.
+            matchBrowserCredentials([], args["origin"], args["account"]);
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const { data, error } = await supabaseAdmin
+              .from("credential_secrets")
+              .select("id,name,website,username,email_address,vault_secret_id,totp_vault_secret_id")
+              .eq("user_id", key.userId)
+              .eq("secret_type", "password")
+              .order("id")
+              .limit(1001);
+            if (error) throw new Error("Credential metadata could not be read.");
+            if ((data?.length ?? 0) > 1000)
+              throw new Error("Too many credential records to establish an unambiguous match.");
+            const payload = matchBrowserCredentials(data ?? [], args["origin"], args["account"]);
+            result = { ...textResult(payload), structuredContent: payload };
           } else if (name === "list_credential_metadata") {
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
             const { data, error } = await supabaseAdmin
@@ -1165,7 +1748,7 @@ export const Route = createFileRoute("/mcp")({
               return data ?? [];
             };
             const [personal, project] = await Promise.all([
-              readRows(null),
+              key.projectId ? Promise.resolve([]) : readRows(null),
               requestedProject ? readRows(requestedProject) : Promise.resolve([]),
             ]);
             result = textResult({
@@ -1213,16 +1796,16 @@ export const Route = createFileRoute("/mcp")({
               project_id: requestedProject || null,
             });
           } else if (name === "inspect_connections") {
-            const provider = String(args["provider"] ?? "").trim();
+            const provider = normalizeConnectionProvider(args["provider"]);
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
             let ownedQuery = supabaseAdmin
               .from("app_connections")
               .select("id,provider,display_name,status,scopes,credential_reference,last_used_at")
               .eq("user_id", key.userId);
             if (provider) ownedQuery = ownedQuery.eq("provider", provider);
-            const { data: owned, error: ownedError } = await ownedQuery
-              .order("created_at", { ascending: false })
-              .limit(100);
+            const { data: owned, error: ownedError } = key.projectId
+              ? { data: [], error: null }
+              : await ownedQuery.order("created_at", { ascending: false }).limit(100);
             if (ownedError) throw new Error(ownedError.message);
             const visible = new Map<string, Record<string, unknown>>();
             for (const connection of owned ?? []) {
@@ -1275,18 +1858,26 @@ export const Route = createFileRoute("/mcp")({
             }
             result = textResult({ connections: [...visible.values()] });
           } else if (name === "list_connection_tools") {
-            const { listCustomMcpTools } = await import("@/lib/custom-mcp.server");
-            result = textResult(
-              await listCustomMcpTools(
+            await requireProjectConnectionGrant(key, String(args["connection_id"] ?? ""));
+            const { listCustomMcpTools, remoteMcpFailureResult } =
+              await import("@/lib/custom-mcp.server");
+            try {
+              const payload = await listCustomMcpTools(
                 key.userId,
                 String(args["connection_id"] ?? ""),
                 key.projectId ?? undefined,
-              ),
-            );
+              );
+              result = { ...textResult(payload), structuredContent: payload };
+            } catch (error) {
+              const failure = remoteMcpFailureResult(error);
+              if (!failure) throw error;
+              result = { ...textResult(failure), structuredContent: failure, isError: true };
+            }
           } else if (name === "call_connection_tool") {
             const { callCustomMcpTool, listCustomMcpTools } =
               await import("@/lib/custom-mcp.server");
             const connectionId = String(args["connection_id"] ?? "");
+            await requireProjectConnectionGrant(key, connectionId);
             const toolName = String(args["tool_name"] ?? "");
             const catalog = await listCustomMcpTools(
               key.userId,
@@ -1296,7 +1887,12 @@ export const Route = createFileRoute("/mcp")({
             const tool = catalog.tools.find((item) => item["name"] === toolName);
             if (!tool) throw new Error("Connected MCP tool was not found.");
             const annotations = (tool["annotations"] ?? {}) as Record<string, unknown>;
-            if (annotations["readOnlyHint"] !== true) {
+            if (
+              annotations["readOnlyHint"] !== true &&
+              ["twilio", "telegram"].includes(catalog.connection.provider)
+            ) {
+              await requireProviderWrite(key);
+            } else if (annotations["readOnlyHint"] !== true) {
               if (!key.projectId) {
                 throw new Error(
                   "Write-capable connection actions require a project-scoped API key.",
@@ -1313,15 +1909,17 @@ export const Route = createFileRoute("/mcp")({
               args["arguments"] && typeof args["arguments"] === "object"
                 ? (args["arguments"] as Record<string, unknown>)
                 : {};
-            result = textResult(
-              await callCustomMcpTool(
-                key.userId,
-                connectionId,
-                toolName,
-                toolArguments,
-                key.projectId ?? undefined,
-              ),
+            const connectionResult = await callCustomMcpTool(
+              key.userId,
+              connectionId,
+              toolName,
+              toolArguments,
+              key.projectId ?? undefined,
             );
+            result = {
+              ...textResult(connectionResult),
+              ...(connectionResult.isError ? { isError: true } : {}),
+            };
           } else if (name === "e2b_health") {
             const { e2bConfig, e2bHealth } = await import("@/lib/e2b.server");
             if (!e2bConfig().configured) throw new Error("E2B is not configured");
@@ -1335,7 +1933,7 @@ export const Route = createFileRoute("/mcp")({
             if (!e2bConfig().configured) throw new Error("E2B is not configured");
             result = textResult(await listE2bSandboxes(Number(args["limit"] ?? 100)));
           } else if (name === "e2b_create_sandbox") {
-            await requireControlWrite(key);
+            await requireProviderWrite(key);
             const { createE2bSandbox, e2bConfig } = await import("@/lib/e2b.server");
             if (!e2bConfig().configured) throw new Error("E2B is not configured");
             const metadata =
@@ -1355,7 +1953,7 @@ export const Route = createFileRoute("/mcp")({
               }),
             );
           } else if (name === "e2b_kill_sandbox") {
-            await requireControlWrite(key);
+            await requireProviderWrite(key);
             if (args["confirm"] !== true) throw new Error("Explicit confirm=true is required");
             const { e2bConfig, killE2bSandbox } = await import("@/lib/e2b.server");
             if (!e2bConfig().configured) throw new Error("E2B is not configured");
@@ -1365,16 +1963,16 @@ export const Route = createFileRoute("/mcp")({
               await import("@/lib/hubstaff-admin.server");
             if (!hubstaffAdminConfig().configured)
               throw new Error("Hubstaff Admin is not configured");
-            result = textResult(await hubstaffAdminIdentity());
+            result = textResult(await hubstaffAdminIdentity(key.userId));
           } else if (name === "hubstaff_admin_list_organizations") {
             const { hubstaffAdminConfig, listHubstaffOrganizations } =
               await import("@/lib/hubstaff-admin.server");
             if (!hubstaffAdminConfig().configured)
               throw new Error("Hubstaff Admin is not configured");
-            result = textResult(await listHubstaffOrganizations());
+            result = textResult(await listHubstaffOrganizations(key.userId));
           } else if (name === "hubstaff_admin_request") {
             const method = String(args["method"] ?? "GET").toUpperCase();
-            if (method !== "GET") await requireControlWrite(key);
+            if (method !== "GET") await requireProviderWrite(key);
             if (method === "DELETE" && args["confirm"] !== true) {
               throw new Error("Explicit confirm=true is required for DELETE");
             }
@@ -1387,7 +1985,7 @@ export const Route = createFileRoute("/mcp")({
                 ? (args["body"] as Record<string, unknown>)
                 : undefined;
             result = textResult(
-              await hubstaffAdminRequest({
+              await hubstaffAdminRequest(key.userId, {
                 method,
                 path: String(args["path"] ?? ""),
                 ...(body ? { body } : {}),
@@ -1432,6 +2030,38 @@ export const Route = createFileRoute("/mcp")({
                 })),
               ),
             );
+          } else if (name === "list_control_approvals" || name === "decide_control_approval") {
+            if (key.projectId || key.workspaceId || key.organizationId)
+              throw new Error("Use a personal API key for personal control approvals.");
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const db = supabaseAdmin as import("@supabase/supabase-js").SupabaseClient;
+            if (name === "list_control_approvals") {
+              const { data, error } = await db
+                .from("control_approvals")
+                .select(
+                  "id,action,target,environment,state,expires_at,parameters_digest,decided_at",
+                )
+                .eq("tenant_id", key.userId)
+                .eq("requested_by", key.userId)
+                .order("created_at", { ascending: false })
+                .limit(100);
+              if (error) throw new Error("Could not read your approval requests.");
+              result = textResult({ approvals: data ?? [], execution_started: false });
+            } else {
+              await requireControlWrite(key);
+              const { decideControlApproval } = await import("@/lib/control-approvals.server");
+              result = textResult(
+                await decideControlApproval(
+                  db,
+                  key.userId,
+                  String(args["approval_id"] ?? ""),
+                  String(
+                    args["decision"] ?? "",
+                  ) as import("@/lib/control-approvals.server").ApprovalDecision,
+                  args["confirm"] === true,
+                ),
+              );
+            }
           } else if (name === "execute_plan") {
             await requireControlWrite(key);
             const catalog = await getCatalog();
@@ -1497,22 +2127,31 @@ export const Route = createFileRoute("/mcp")({
                 },
               });
             }
+            let approvalRequest: { id: string; expires_at: string } | null = null;
             if (plan.approvalRequired) {
-              await controlDb.from("control_approvals").insert({
-                tenant_id: key.userId,
-                requested_by: key.userId,
-                action: "execute_plan",
-                target: plan.goal,
-                environment: plan.environment,
-                risk: "protected",
-                parameters_digest: plan.id,
-                expires_at: new Date(Date.now() + 15 * 60_000).toISOString(),
-              });
+              const { data: approval, error: approvalError } = await controlDb
+                .from("control_approvals")
+                .insert({
+                  tenant_id: key.userId,
+                  requested_by: key.userId,
+                  action: "execute_plan",
+                  target: plan.goal,
+                  environment: plan.environment,
+                  risk: "protected",
+                  parameters_digest: plan.id,
+                  expires_at: new Date(Date.now() + 15 * 60_000).toISOString(),
+                })
+                .select("id,expires_at")
+                .single();
+              if (approvalError || !approval)
+                throw new Error("Could not create the required approval request.");
+              approvalRequest = approval;
             }
             result = textResult({
               correlation_id: plan.id,
               state,
               plan,
+              approval_request: approvalRequest,
               autonomous_steps_executed: plan.approvalRequired
                 ? ["discover"]
                 : ["discover", "plan"],
@@ -1656,11 +2295,87 @@ export const Route = createFileRoute("/mcp")({
             if (!isExecutable(item))
               throw new Error(`Capability is ${reviewState(item)} and cannot be installed.`);
             result = executionUnavailable("install", item);
+          } else if (name === "preview_composio_sync") {
+            if (key.projectId || key.workspaceId || key.organizationId)
+              throw new Error("Use a personal API key to preview personal Composio accounts.");
+            if (!hasRole(await loadRoles(key.userId), "admin"))
+              throw new Error("Forbidden: admin required");
+            const {
+              listOwnedManagedConnections,
+              listOwnedManagedConnectionsForIdentity,
+              listComposioToolkits,
+            } = await import("@/lib/managed-connectors.server");
+            const { planComposioAccountMapping, planComposioSync } =
+              await import("@/lib/composio-sync");
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const hasExternalAccountId = Object.prototype.hasOwnProperty.call(
+              args,
+              "external_account_id",
+            );
+            const externalAccountValue = args["external_account_id"];
+            if (
+              hasExternalAccountId &&
+              (typeof externalAccountValue !== "string" ||
+                !externalAccountValue.trim() ||
+                externalAccountValue.trim().length > 256)
+            ) {
+              throw new Error(
+                "External Composio account ID must be a non-empty string of at most 256 characters.",
+              );
+            }
+            const externalAccountId = hasExternalAccountId
+              ? (externalAccountValue as string).trim()
+              : null;
+            const [accounts, catalog] = await Promise.all([
+              externalAccountId !== null
+                ? listOwnedManagedConnectionsForIdentity(key.userId, externalAccountId)
+                : listOwnedManagedConnections(key.userId),
+              listComposioToolkits(),
+            ]);
+            const saved: Array<{
+              id: string;
+              provider: string;
+              display_name: string | null;
+              provider_account_id: string | null;
+              credential_reference: string | null;
+            }> = [];
+            for (let offset = 0; ; offset += 200) {
+              const { data: page, error } = await supabaseAdmin
+                .from("app_connections")
+                .select("id,provider,display_name,provider_account_id,credential_reference")
+                .eq("user_id", key.userId)
+                .order("id", { ascending: true })
+                .range(offset, offset + 199);
+              if (error) throw new Error("Could not preview saved connectors.");
+              saved.push(...(page ?? []));
+              if ((page?.length ?? 0) < 200) break;
+            }
+            const plan = planComposioSync(accounts, saved, catalog);
+            const accountMapping = externalAccountId
+              ? planComposioAccountMapping(externalAccountId, accounts, saved, catalog)
+              : null;
+            result = textResult({
+              ...(accountMapping
+                ? {
+                    matched: plan.matched,
+                    existing: plan.existing,
+                    candidate_count: plan.candidates.length,
+                    account_mapping: accountMapping,
+                  }
+                : plan),
+              toolkit_count: catalog.length,
+              dry_run: true,
+              secrets_exposed: false,
+              apply_url: "https://open-connect.site/connections",
+              next_action:
+                "Run Sync Composio accounts as the authenticated administrator after approval, then assign selected connectors to projects.",
+            });
           } else if (name === "configure_connection") {
+            if (key.projectId || key.workspaceId || key.organizationId) {
+              throw new Error("Use a personal API key to configure personal connections.");
+            }
             await requireControlWrite(key);
-            const provider = String(args["provider"] ?? "")
-              .trim()
-              .toLowerCase();
+            const provider = normalizeConnectionProvider(args["provider"]);
             const credentialRef = String(args["credential_ref"] ?? "").trim();
             if (!provider || !isOpaqueCredentialReference(credentialRef))
               throw new Error(
@@ -1670,13 +2385,94 @@ export const Route = createFileRoute("/mcp")({
               ? args["scopes"].filter((scope): scope is string => typeof scope === "string")
               : [];
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-            const { data, error } = await supabaseAdmin
+            const displayName = String(args["display_name"] ?? provider);
+            let remoteMcpMetadata: { endpoint_url: string; auth_type: string } | undefined;
+            if (args["endpoint_url"] !== undefined || isRemoteMcpProvider(provider)) {
+              if (!isRemoteMcpProvider(provider)) {
+                throw new Error("MCP endpoint requires a remote MCP provider.");
+              }
+              if (
+                !new RegExp(`^credential://${provider}/[0-9a-f-]{36}$`, "i").test(credentialRef)
+              ) {
+                throw new Error("Remote MCP endpoint requires its owned credential reference.");
+              }
+              remoteMcpMetadata = {
+                endpoint_url: normalizeRemoteMcpEndpoint(provider, args["endpoint_url"]),
+                auth_type: normalizeRemoteMcpAuthType(args["auth_type"]),
+              };
+            }
+            let destinationMetadata:
+              { telegram_chat_id: string; telegram_message_thread_id: number } | undefined;
+            if (args["telegram_destination"] !== undefined) {
+              if (provider !== "telegram")
+                throw new Error("Telegram destination requires Telegram provider.");
+              if (!/^credential:\/\/telegram\/[0-9a-f-]{36}$/i.test(credentialRef))
+                throw new Error("Telegram destination requires an owned bot credential reference.");
+              const { telegramDestination } = await import("@/lib/telegram.server");
+              const value = args["telegram_destination"] as Record<string, unknown> | null;
+              if (
+                !value ||
+                Object.keys(value).some(
+                  (field) => !["chat_id", "message_thread_id"].includes(field),
+                )
+              )
+                throw new Error("Invalid Telegram destination fields.");
+              const destination = telegramDestination({
+                telegram_chat_id: value["chat_id"],
+                telegram_message_thread_id: value["message_thread_id"],
+              });
+              destinationMetadata = {
+                telegram_chat_id: destination.chat_id,
+                telegram_message_thread_id: destination.message_thread_id,
+              };
+            }
+            const { data: existing, error: existingError } = await supabaseAdmin
               .from("app_connections")
-              .upsert(
-                {
+              .select("id,status,metadata")
+              .eq("user_id", key.userId)
+              .eq("provider", provider)
+              .eq("credential_reference", credentialRef)
+              .maybeSingle();
+            if (existingError) throw new Error(existingError.message);
+            if (remoteMcpMetadata && !existing) {
+              throw new Error("Remote MCP endpoint updates require an existing owned connection.");
+            }
+            if (remoteMcpMetadata && existing?.status === "connected") {
+              const { validateRemoteMcpConfiguration } = await import("@/lib/custom-mcp.server");
+              await validateRemoteMcpConfiguration({
+                provider: provider as RemoteMcpProvider,
+                ownerUserId: key.userId,
+                credentialReference: credentialRef,
+                endpointUrl: remoteMcpMetadata.endpoint_url,
+                authType: remoteMcpMetadata.auth_type as
+                  "none" | "bearer" | "api_key" | "personal_access_token",
+              });
+            }
+            const connectionQuery = existing
+              ? supabaseAdmin
+                  .from("app_connections")
+                  .update({
+                    display_name: displayName,
+                    status: remoteMcpMetadata ? existing.status : "connected",
+                    scopes,
+                    credential_reference: credentialRef,
+                    updated_at: new Date().toISOString(),
+                    ...(destinationMetadata || remoteMcpMetadata
+                      ? {
+                          metadata: {
+                            ...((existing.metadata as Record<string, Json>) ?? {}),
+                            ...destinationMetadata,
+                            ...remoteMcpMetadata,
+                          },
+                        }
+                      : {}),
+                  })
+                  .eq("id", existing.id)
+                  .eq("user_id", key.userId)
+              : supabaseAdmin.from("app_connections").insert({
                   user_id: key.userId,
                   provider,
-                  display_name: String(args["display_name"] ?? provider),
+                  display_name: displayName,
                   provider_account_id: key.userId,
                   status: "connected",
                   scopes,
@@ -1685,10 +2481,10 @@ export const Route = createFileRoute("/mcp")({
                     source: "chatgpt-mcp",
                     mode: "capability_grant",
                     secrets_exposed: false,
+                    ...destinationMetadata,
                   },
-                },
-                { onConflict: "user_id,provider,provider_account_id" },
-              )
+                });
+            const { data, error } = await connectionQuery
               .select("id,provider,display_name,status,scopes")
               .single();
             if (error) throw new Error(error.message);
@@ -1717,18 +2513,33 @@ export const Route = createFileRoute("/mcp")({
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
             const connections: Array<Record<string, unknown>> = [];
             const pageSize = 200;
-            for (let offset = 0; ; offset += pageSize) {
-              const { data: page, error } = await supabaseAdmin
-                .from("app_connections")
-                .select("id, provider, display_name, status, scopes")
-                .eq("user_id", key.userId)
-                .eq("status", "connected")
-                .order("created_at", { ascending: false })
-                .order("id", { ascending: true })
-                .range(offset, offset + pageSize - 1);
-              if (error) throw new Error("Could not list connected apps.");
-              connections.push(...(page ?? []));
-              if ((page?.length ?? 0) < pageSize) break;
+            if (key.projectId) {
+              await assertProjectAccess(key, key.projectId);
+              const { data: shared, error } = await supabaseAdmin
+                .from("project_connections")
+                .select("app_connections!inner(id,provider,display_name,status,scopes)")
+                .eq("project_id", key.projectId)
+                .eq("app_connections.status", "connected");
+              if (error) throw new Error("Could not list this project's connected apps.");
+              connections.push(
+                ...(shared ?? []).flatMap((row) =>
+                  row.app_connections ? [row.app_connections] : [],
+                ),
+              );
+            } else {
+              for (let offset = 0; ; offset += pageSize) {
+                const { data: page, error } = await supabaseAdmin
+                  .from("app_connections")
+                  .select("id, provider, display_name, status, scopes")
+                  .eq("user_id", key.userId)
+                  .eq("status", "connected")
+                  .order("created_at", { ascending: false })
+                  .order("id", { ascending: true })
+                  .range(offset, offset + pageSize - 1);
+                if (error) throw new Error("Could not list connected apps.");
+                connections.push(...(page ?? []));
+                if ((page?.length ?? 0) < pageSize) break;
+              }
             }
             result = textResult({
               data: connections,
@@ -1789,11 +2600,17 @@ export const Route = createFileRoute("/mcp")({
         }
 
         fireLog(key, 200);
-        return streamableMcpResponse(request, body, {
-          jsonrpc: "2.0",
-          id: body.id ?? null,
-          result,
-        });
+        return streamableMcpResponse(
+          request,
+          body,
+          body.id === undefined
+            ? null
+            : {
+                jsonrpc: "2.0",
+                id: body.id,
+                result,
+              },
+        );
       },
     },
   },

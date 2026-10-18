@@ -210,7 +210,7 @@ function Home() {
       <section className="border-b border-border/50 lg:hidden">
         <div className="flex gap-2 overflow-x-auto px-4 py-3 scrollbar-none">
           {megaFeatures
-            .flatMap((c) => c.items)
+            .flatMap<(typeof megaFeatures)[number]["items"][number]>((c) => c.items)
             .slice(0, 6)
             .map((item) => (
               <Link
@@ -379,7 +379,9 @@ function Home() {
                 <span className="text-primary">oc_live_…</span>
               </div>
               <Button asChild size="sm" className="mt-3 w-full">
-                <Link to="/integrations">Full integration guide</Link>
+                <Link to="/integrations" search={{ section: "ai-agents" }}>
+                  Full integration guide
+                </Link>
               </Button>
             </CardContent>
           </Card>

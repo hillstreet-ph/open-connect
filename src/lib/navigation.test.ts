@@ -297,8 +297,8 @@ test("every sidebar destination uses workspace chrome and matches page search la
     "utf8",
   );
   const items = [...sidebar.matchAll(/to: "([^"\n]+)", label: "([^"\n]+)"/g)].map((match) => ({
-    to: match[1],
-    label: match[2],
+    to: match[1]!,
+    label: match[2]!,
   }));
   assert.ok(items.length > 10);
   assert.deepEqual(

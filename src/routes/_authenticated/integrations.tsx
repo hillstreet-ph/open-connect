@@ -50,7 +50,7 @@ function parseIntegrationSection(value: unknown): IntegrationSection {
 
 export const Route = createFileRoute("/_authenticated/integrations")({
   validateSearch: (search: Record<string, unknown>) => ({
-    section: parseIntegrationSection(search.section),
+    section: parseIntegrationSection(search["section"]),
   }),
   head: () => ({
     meta: [
@@ -388,7 +388,8 @@ function IntegrationsPage() {
                       <div className="min-w-0">
                         <p className="font-medium">{item.display_name}</p>
                         <p className="truncate text-xs text-muted-foreground">
-                          {String(metadata.endpoint_url ?? "")} · {item.status.replaceAll("_", " ")}
+                          {String(metadata["endpoint_url"] ?? "")} ·{" "}
+                          {item.status.replaceAll("_", " ")}
                         </p>
                       </div>
                       <Button

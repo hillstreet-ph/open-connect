@@ -1,4 +1,7 @@
 const READ_ACTIONS = [
+  "get_admin_access",
+  "get_owned_resource",
+  "get_credential_management",
   "list_personal_resources",
   "list_workspace_projects",
   "list_credential_metadata",
@@ -19,6 +22,10 @@ const READ_ACTIONS = [
 ] as const;
 
 const WRITE_ACTIONS = [
+  "create_resource",
+  "update_resource",
+  "upload_resource_content",
+  "set_resource_publication",
   "call_connection_tool",
   "e2b_create_sandbox",
   "e2b_kill_sandbox",
@@ -112,8 +119,12 @@ export async function forwardChatGptAction(request: Request, mode: ChatGptAction
   if (!upstream.ok || payload?.error) {
     return json(
       payload ?? { error: { code: "gateway_error", message: "Gateway unavailable." } },
-      upstream.status,
+      upstream.ok ? 502 : upstream.status,
     );
+  }
+
+  if (!payload?.result || !Array.isArray(payload.result.content)) {
+    return json({ error: { code: "gateway_error", message: "Invalid gateway response." } }, 502);
   }
 
   const text = payload?.result?.content?.find((item) => item.type === "text")?.text;

@@ -3,6 +3,8 @@ export const OAUTH_SCOPES = [
   "mcp:connect",
   "resources:read",
   "resources:write",
+  "memory:read",
+  "knowledge:read",
   "connections:read",
   "connections:invoke",
   "models:read",
@@ -10,6 +12,7 @@ export const OAUTH_SCOPES = [
   "tools:invoke",
   "secrets:read",
   "agents:invoke",
+  "control:write",
 ] as const;
 export function safeOAuthReturn(value: unknown): string {
   if (typeof value !== "string" || !value.startsWith("/oauth/authorize?") || /[\\\r\n]/.test(value))

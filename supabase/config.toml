@@ -23,3 +23,11 @@ verify_jwt = true
 
 [functions.connection-webhook]
 verify_jwt = false
+
+# Twilio validates its request signature; the worker validates a vault-backed key.
+[functions.hillstreet-otp-forwarder]
+verify_jwt = false
+
+[functions.hillstreet-otp-worker]
+verify_jwt = false
+entrypoint = "./functions/hillstreet-otp-worker/worker.ts"

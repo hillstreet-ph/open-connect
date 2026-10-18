@@ -83,7 +83,7 @@ export const listProjectAccess = createServerFn({ method: "GET" })
     );
     const roles = new Map(
       (assigned ?? []).map(
-        (row: { user_id: string; role: ProjectRole }) => [row.user_id, row.role] as const,
+        (row) => [row.user_id, PROJECT_ROLES.find((role) => role === row.role) ?? null] as const,
       ),
     );
     return {

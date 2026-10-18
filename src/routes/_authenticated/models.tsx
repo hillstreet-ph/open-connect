@@ -408,7 +408,9 @@ function ModelsPage() {
           </Link>
         </Button>
         <Button asChild variant="outline">
-          <Link to="/integrations">Integrations</Link>
+          <Link to="/integrations" search={{ section: "ai-agents" }}>
+            Integrations
+          </Link>
         </Button>
       </div>
     </div>

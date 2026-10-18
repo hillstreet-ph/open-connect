@@ -1,9 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fetchMcpTools, withMcpClient } from "./mcp-client.server.ts";
+import { fetchMcpTools, McpCatalogError, withMcpClient } from "./mcp-client.server.ts";
 
-function fixture(stream = false) {
+function fixture(
+  stream = false,
+  cursorForPage: (page: number) => string | undefined = (page) =>
+    page === 0 ? "page2" : undefined,
+) {
   const methods: string[] = [];
+  let toolPage = 0;
   const send: typeof fetch = async (_url, init) => {
     assert.equal(init?.redirect, "manual");
     const headers = new Headers(init?.headers);
@@ -27,11 +32,12 @@ function fixture(stream = false) {
     } else if (message.method === "notifications/initialized")
       return new Response(null, { status: 202 });
     else if (message.method === "tools/list") {
+      const nextCursor = cursorForPage(toolPage++);
       result = {
         tools: [
           { name: message.params?.cursor ? "second" : "first", inputSchema: { type: "object" } },
         ],
-        ...(!message.params?.cursor ? { nextCursor: "page2" } : {}),
+        ...(nextCursor ? { nextCursor } : {}),
       };
     } else if (message.method === "tools/call")
       result = { content: [{ type: "text", text: "done" }] };
@@ -56,7 +62,7 @@ for (const stream of [false, true]) {
       f.send,
     );
     assert.deepEqual(
-      tools.map((t) => t.name),
+      tools.map((t) => t["name"]),
       ["first", "second"],
     );
     assert.deepEqual(f.methods, [
@@ -89,6 +95,19 @@ test("redirect and upstream errors never expose response bodies or credentials",
         async () => new Response("secret", { status }),
       ),
       (e: Error) => !e.message.includes("secret") && e.message.includes("MCP request failed"),
+    );
+  }
+});
+
+test("preserves deterministic catalog failures for retry classification", async () => {
+  for (const [code, cursorForPage] of [
+    ["pagination_repeated", () => "same-cursor"],
+    ["page_limit_exceeded", (page: number) => `page-${page + 1}`],
+  ] as const) {
+    const f = fixture(false, cursorForPage);
+    await assert.rejects(
+      fetchMcpTools("https://mcp.example/mcp", { Authorization: "Bearer fixture" }, f.send),
+      (error: Error) => error instanceof McpCatalogError && error.code === code,
     );
   }
 });

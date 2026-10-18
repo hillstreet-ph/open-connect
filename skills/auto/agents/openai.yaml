@@ -1,0 +1,6 @@
+interface:
+  display_name: Auto
+  short_description: Autonomous tasks and relevant tool discovery
+  default_prompt: Use $auto to complete this authorized task and find the tools needed.
+policy:
+  allow_implicit_invocation: true

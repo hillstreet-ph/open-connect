@@ -1026,16 +1026,16 @@ function SecretsPage() {
                             variant="outline"
                             className="gap-2 font-mono"
                             aria-label={`Copy 2FA code for ${row.name}`}
-                            onClick={() => copyTotp(row.id, totpCodes[row.id].code)}
+                            onClick={() => copyTotp(row.id, totpCodes[row.id]!.code)}
                           >
                             {copiedId === row.id ? (
                               <Check className="size-3.5" />
                             ) : (
                               <Clipboard className="size-3.5" />
                             )}
-                            {totpCodes[row.id].code}
+                            {totpCodes[row.id]!.code}
                             <span className="font-sans text-[10px] text-muted-foreground">
-                              {totpCodes[row.id].seconds}s
+                              {totpCodes[row.id]!.seconds}s
                             </span>
                           </Button>
                         ) : (
@@ -1080,7 +1080,7 @@ function SecretsPage() {
                           size="icon"
                           variant="outline"
                           aria-label={`Copy credential value for ${row.name}`}
-                          onClick={() => copyCredential(row.id, revealedValues[row.id])}
+                          onClick={() => copyCredential(row.id, revealedValues[row.id]!)}
                         >
                           {copiedId === row.id ? (
                             <Check className="size-4" />

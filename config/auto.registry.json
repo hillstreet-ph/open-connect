@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0.0",
+  "id": "auto",
+  "name": "Auto",
+  "version": "2.0.0",
+  "publisher": "Open-Connect",
+  "category": "developer",
+  "clients": ["ChatGPT", "Codex", "Open-Connect"],
+  "mcp_url": "https://open-connect.site/mcp",
+  "skill_path": "skills/auto/SKILL.md",
+  "default_enabled": true,
+  "implicit_invocation": true,
+  "capabilities": [
+    "authorized_task_autonomy",
+    "capability_matching",
+    "connection_discovery",
+    "credential_metadata_routing",
+    "exact_origin_account_matching"
+  ],
+  "tools": {
+    "status": "get_auto_mode",
+    "toggle": "set_auto_mode",
+    "discover": "auto_discover",
+    "credentials": "match_browser_credentials"
+  },
+  "approval_policy": "host_and_provider_enforced",
+  "credential_transport": "opaque_reference_only",
+  "execution_in_discovery": false,
+  "security_review": "first_party_instructions_only_no_secret_access_no_approval_bypass"
+}

@@ -45,7 +45,7 @@ test("Responses API helpers extract structured text and generated images", () =>
 test("campaign API enforces bearer auth before reading the OpenAI key", () => {
   const route = readFileSync("src/routes/api/campaign-studio.ts", "utf8");
   const authCheck = route.indexOf("authenticatedUserId(request)");
-  const keyRead = route.indexOf("process.env.OPENAI_API_KEY");
+  const keyRead = route.indexOf('process.env["OPENAI_API_KEY"]');
   assert.ok(authCheck >= 0);
   assert.ok(keyRead > authCheck);
 });
