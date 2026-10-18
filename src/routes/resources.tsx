@@ -339,7 +339,7 @@ function MarketplaceContent() {
                           <Badge variant="secondary" className="text-[10px] uppercase">
                             {item.resource_type}
                           </Badge>
-                          {item.verified ? (
+                          {executable ? (
                             <Badge
                               variant="outline"
                               className="border-accent/50 text-[10px] text-accent"
