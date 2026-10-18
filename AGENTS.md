@@ -22,3 +22,6 @@
   `docs/VENDORED_SKILLS.md`.
 - Marketplace rows stay metadata-only. Anything installable must be `verified: true` and pass a
   separate security review; discovery never publishes to Supabase directly.
+- A migration that has reached production is frozen: never edit it in place, because environments
+  record it as applied and will not run it again. Ship follow-ups in a new migration with a later
+  timestamp.
