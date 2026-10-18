@@ -11,20 +11,41 @@ async function walk(dir) {
   for (const item of await readdir(dir, { withFileTypes: true })) {
     if (skip.has(item.name)) continue;
     const full = join(dir, item.name);
-    if (item.isDirectory()) { await walk(full); continue; }
+    if (item.isDirectory()) {
+      await walk(full);
+      continue;
+    }
     if (!item.isFile()) continue;
     const path = relative(root, full).replaceAll("\\", "/");
-    const candidate = path.startsWith(".skills/") ||
+    const candidate =
+      path.startsWith(".skills/") ||
       /^supabase\/migrations\/.*seed.*\.sql$/i.test(path) ||
-      ["supabase/functions/oc-api/index.ts", "supabase/functions/oc-mcp/index.ts", "supabase/functions/oc-plugin/index.ts"].includes(path);
+      [
+        "supabase/functions/oc-api/index.ts",
+        "supabase/functions/oc-mcp/index.ts",
+        "supabase/functions/oc-plugin/index.ts",
+      ].includes(path);
     if (!candidate) continue;
     const bytes = await readFile(full);
     const digest = createHash("sha256").update(bytes).digest("hex");
-    const type = path.startsWith(".skills/") ? "skill-file" : path.endsWith(".sql") ? "legacy-seed" : "legacy-function";
-    out.push({ path, type, size: bytes.length, sha256: digest, review_state: "pending", publishable: false });
+    const type = path.startsWith(".skills/")
+      ? "skill-file"
+      : path.endsWith(".sql")
+        ? "legacy-seed"
+        : "legacy-function";
+    out.push({
+      path,
+      type,
+      size: bytes.length,
+      sha256: digest,
+      review_state: "pending",
+      publishable: false,
+    });
   }
 }
 await stat(root);
 await walk(root);
 out.sort((a, b) => a.path.localeCompare(b.path));
-process.stdout.write(JSON.stringify({ source: "v1-open-connect", count: out.length, entries: out }, null, 2) + "\n");
+process.stdout.write(
+  JSON.stringify({ source: "v1-open-connect", count: out.length, entries: out }, null, 2) + "\n",
+);
