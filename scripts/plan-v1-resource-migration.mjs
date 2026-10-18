@@ -5,12 +5,14 @@ import { basename } from "node:path";
 
 const [inventoryPath, catalogPath] = process.argv.slice(2);
 if (!inventoryPath || !catalogPath) {
-  throw new Error("Usage: node scripts/plan-v1-resource-migration.mjs inventory.json current-catalog.json");
+  throw new Error(
+    "Usage: node scripts/plan-v1-resource-migration.mjs inventory.json current-catalog.json",
+  );
 }
 const inventory = JSON.parse(await readFile(inventoryPath, "utf8"));
 const catalog = JSON.parse(await readFile(catalogPath, "utf8"));
 if (!Array.isArray(inventory.entries)) throw new Error("Invalid inventory entries");
-const current = Array.isArray(catalog) ? catalog : catalog.data ?? catalog.resources;
+const current = Array.isArray(catalog) ? catalog : (catalog.data ?? catalog.resources);
 if (!Array.isArray(current)) throw new Error("Invalid current catalog");
 const canonical = (value) =>
   String(value ?? "")
