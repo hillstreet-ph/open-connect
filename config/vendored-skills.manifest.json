@@ -8,7 +8,12 @@
     "auto_publish": false,
     "require_license": true,
     "require_security_review": true,
-    "excluded_paths": ["schemas", "node_modules", ".git", "__pycache__"],
+    "excluded_paths": [
+      "schemas",
+      "node_modules",
+      ".git",
+      "__pycache__"
+    ],
     "excluded_extensions": [
       ".py",
       ".js",
@@ -48,7 +53,12 @@
       "category": "developer",
       "path": "openhands-extensions",
       "upstream_index": "marketplaces/openhands-extensions.json",
-      "description": "Official OpenHands skills and plugins repository."
+      "description": "Official OpenHands skills and plugins repository.",
+      "commit": "d05780951082d4d83f785cb1d4c7f2be6d1c14a5",
+      "commit_date": "2026-10-17T15:34:41Z",
+      "vendored_paths": [
+        "skills"
+      ]
     },
     {
       "id": "openhands-core",
@@ -62,7 +72,12 @@
       "category": "developer",
       "path": "openhands-core",
       "upstream_index": ".agents/skills",
-      "description": "In-repository agent skills maintained in the OpenHands monorepo. OpenHands/openhands resolves to the same repository as OpenHands/OpenHands."
+      "description": "In-repository agent skills maintained in the OpenHands monorepo. OpenHands/openhands resolves to the same repository as OpenHands/OpenHands.",
+      "commit": "852132d38dbc15e03d6825bbacbeb971c72575be",
+      "commit_date": "2026-10-17T22:09:58Z",
+      "vendored_paths": [
+        ".agents/skills"
+      ]
     },
     {
       "id": "manus-skills",
@@ -88,7 +103,12 @@
         "tier4-specialized": "developer",
         "utility-skills": "productivity",
         "workflow-skills": "developer"
-      }
+      },
+      "commit": "48c760280dab4df57951e31057720926b271f530",
+      "commit_date": "2026-03-01T13:54:05Z",
+      "vendored_paths": [
+        "skills"
+      ]
     },
     {
       "id": "openclaw",
@@ -106,7 +126,26 @@
         "skills": "productivity",
         "custodian": "infrastructure",
         "agents": "developer"
-      }
+      },
+      "commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
+      "commit_date": "2026-10-18T02:00:18Z",
+      "vendored_paths": [
+        ".agents/skills",
+        "skills"
+      ]
     }
-  ]
+  ],
+  "dedupe_renames": [
+    {
+      "from": "open-manus-skills-theme-factory",
+      "to": "open-openhands-extensions-theme-factory",
+      "reason": "identical_content"
+    },
+    {
+      "from": "open-manus-skills-serverless-debugging-2",
+      "to": "open-manus-skills-serverless-debugging",
+      "reason": "superseded_revision"
+    }
+  ],
+  "resolved_at": "2026-10-18T02:07:22.258Z"
 }

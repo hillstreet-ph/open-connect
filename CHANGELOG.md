@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Deduplicated the vendored skill catalog and gave every vendored skill a real version.
+  Identical content vendored from two repositories now collapses to one canonical entry (the
+  higher-trust source wins) with the other recorded as an alias. The same skill name appearing in
+  two directories of one repository is treated as a superseded revision, with the longer body kept
+  as canonical and the older one recorded as lineage. Numeric slug suffixes are gone. Each skill
+  now carries a SHA-256 content hash, a semver version (`1.0.0+<hash>` when upstream declares
+  none), and the pinned upstream commit, so the catalog went from 251 rows to 249 canonical rows.
+  Added `npm run skills:sync` / `skills:sync:write`, a weekly upstream drift workflow, and a
+  migration prune clause that removes vendored rows no longer in the catalog.
 - Fixed the marketplace publish job, which failed with `registry source upsert failed: HTTP 400`.
   Registry rows that omit `enabled` were treated as disabled, so the bulk `registry_sources` upsert
   sent rows with two different key sets and PostgREST rejected the request. Absent now means enabled,
