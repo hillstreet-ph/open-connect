@@ -10,10 +10,12 @@ export function AddToLibraryButton({
   collectionId,
   alreadyInLibrary = false,
   resourceType,
+  metadataOnly = false,
 }: {
   resourceId: string;
   collectionId?: string | undefined;
   resourceType?: string;
+  metadataOnly?: boolean;
   alreadyInLibrary?: boolean;
 }) {
   const qc = useQueryClient();
@@ -22,7 +24,9 @@ export function AddToLibraryButton({
     mutationFn: () => add({ data: { resourceId, collectionId: collectionId || undefined } }),
     onSuccess: () => {
       toast.success(
-        resourceType === "skill"
+        metadataOnly
+          ? "Saved as a metadata reference; not installed or verified"
+          : resourceType === "skill"
           ? "Added to your Library and Skills collection"
           : collectionId
             ? "Added to Library and collection"
@@ -50,7 +54,7 @@ export function AddToLibraryButton({
       ) : (
         <Library className="mr-1 size-3.5" />
       )}
-      {alreadyInLibrary ? "In Library" : "Add to Library"}
+      {alreadyInLibrary ? "In Library" : metadataOnly ? "Save reference" : "Add to Library"}
     </Button>
   );
 }
