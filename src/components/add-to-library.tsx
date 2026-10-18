@@ -28,9 +28,9 @@ export function AddToLibraryButton({
           ? "Saved as a metadata reference; not installed or verified"
           : resourceType === "skill"
             ? "Added to your Library and Skills collection"
-          : collectionId
-            ? "Added to Library and collection"
-            : "Added to your Library",
+            : collectionId
+              ? "Added to Library and collection"
+              : "Added to your Library",
       );
       void qc.invalidateQueries({ queryKey: ["resource-library"] });
       void qc.invalidateQueries({ queryKey: ["project-resources"] });
