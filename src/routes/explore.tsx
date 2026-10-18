@@ -46,7 +46,9 @@ export function useMarketplace() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("resources")
-        .select("id, slug, name, description, resource_type, category_slug, verified, featured, installation_config")
+        .select(
+          "id, slug, name, description, resource_type, category_slug, verified, featured, installation_config",
+        )
         .eq("published", true)
         .order("featured", { ascending: false })
         .order("name");
@@ -160,7 +162,12 @@ function ExplorePage() {
                     <Badge variant="secondary" className="uppercase">
                       {item.resource_type}
                     </Badge>
-                    {item.verified && typeof item.installation_config === "object" && item.installation_config !== null && !Array.isArray(item.installation_config) && (item.installation_config as Record<string, unknown>)["review_state"] === "approved" ? (
+                    {item.verified &&
+                    typeof item.installation_config === "object" &&
+                    item.installation_config !== null &&
+                    !Array.isArray(item.installation_config) &&
+                    (item.installation_config as Record<string, unknown>)["review_state"] ===
+                      "approved" ? (
                       <Badge variant="outline" className="border-accent/50 text-accent">
                         Verified
                       </Badge>
