@@ -1,0 +1,38 @@
+name: V1 reusable resource inventory
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - scripts/inventory-v1-resources.mjs
+      - .github/workflows/v1-resource-inventory.yml
+permissions:
+  contents: read
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout target
+        uses: actions/checkout@v4
+        with:
+          path: open-connect
+          persist-credentials: false
+      - name: Checkout legacy source
+        uses: actions/checkout@v4
+        with:
+          repository: hillstreet-ph/v1-open-connect
+          ref: main
+          path: v1-open-connect
+          persist-credentials: false
+      - name: Validate inventory syntax
+        run: node --check open-connect/scripts/inventory-v1-resources.mjs
+      - name: Build read-only inventory
+        run: node open-connect/scripts/inventory-v1-resources.mjs v1-open-connect > inventory.json
+      - name: Validate report
+        run: |
+          node -e 'const fs=require("fs");const x=JSON.parse(fs.readFileSync("inventory.json"));if(!x.count||x.count!==x.entries.length||x.entries.some(e=>e.publishable!==false||e.review_state!=="pending"||!/^[a-f0-9]{64}$/.test(e.sha256)))process.exit(1);console.log("Inventory candidates:",x.count)'
+      - name: Upload inventory report
+        uses: actions/upload-artifact@v4
+        with:
+          name: v1-resource-inventory
+          path: inventory.json
+          retention-days: 14
