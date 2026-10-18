@@ -30,13 +30,21 @@ config/vendored-skills.manifest.json   # source of truth: repo, license, path, c
 skills/vendor/**/SKILL.md              # vendored upstream sources
 config/vendored-skills.generated.json  # marketplace catalog (metadata only)
 public/downloads/skills/<slug>/SKILL.md# static download package
-supabase/migrations/20261006000000_vendored_upstream_skills.sql  # published catalog rows
+supabase/migrations/20261006000000_vendored_upstream_skills.sql  # frozen: original vendoring
+supabase/migrations/20261006010000_vendored_skill_dedupe_renames.sql  # catalog update + dedupe
 ```
 
-- `npm run skills:generate` rebuilds the catalog, the static download packages, and the migration
-  from the manifest. It is idempotent and safe to re-run.
+- `npm run skills:generate` rebuilds the catalog and the static download packages from the
+  manifest. It is idempotent and safe to re-run.
+- `20261006000000_vendored_upstream_skills.sql` is frozen. Every environment that ran the original
+  vendoring recorded it as applied, so it is never regenerated. Catalog updates ship in
+  `20261006010000_vendored_skill_dedupe_renames.sql`, which re-points references to a duplicate
+  before retiring it (the resource foreign keys cascade on delete) and then removes retired rows.
+- Slugs retired by deduplication are listed in the manifest as `dedupe_renames`, so the mapping to
+  the canonical row survives in every environment, not just the one that generated it.
 - `npm run skills:validate` fails if any resource is executable, lacks a license, duplicates a
-  slug, or points at a missing vendored `SKILL.md`.
+  slug, points at a missing vendored `SKILL.md`, or carries a `content_hash` that no longer matches
+  the vendored file.
 - `src/lib/vendored-skills.test.ts` asserts the catalog, downloads, and registries stay consistent
   in CI.
 

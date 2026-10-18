@@ -10,7 +10,9 @@
   now carries a SHA-256 content hash, a semver version (`1.0.0+<hash>` when upstream declares
   none), and the pinned upstream commit, so the catalog went from 251 rows to 249 canonical rows.
   Added `npm run skills:sync` / `skills:sync:write`, a weekly upstream drift workflow, and a
-  migration prune clause that removes vendored rows no longer in the catalog.
+  follow-up migration (`20261006010000_vendored_skill_dedupe_renames.sql`) that re-points references
+  to a duplicate before retiring it and removes vendored rows no longer in the catalog. The original
+  vendoring migration is left frozen, because environments that already ran it would not re-run it.
 - Fixed the marketplace publish job, which failed with `registry source upsert failed: HTTP 400`.
   Registry rows that omit `enabled` were treated as disabled, so the bulk `registry_sources` upsert
   sent rows with two different key sets and PostgREST rejected the request. Absent now means enabled,
