@@ -411,12 +411,12 @@ function MarketplaceContent() {
                               </Button>
                             </div>
                             <AddToLibraryButton
-                                resourceId={item.id}
-                                collectionId={defaultCollectionId || undefined}
-                                resourceType={item.resource_type}
-                                alreadyInLibrary={inLibrary}
-                                metadataOnly={!executable}
-                              />
+                              resourceId={item.id}
+                              collectionId={defaultCollectionId || undefined}
+                              resourceType={item.resource_type}
+                              alreadyInLibrary={inLibrary}
+                              metadataOnly={!executable}
+                            />
                           </div>
                         ) : (
                           <Button asChild size="sm" variant="outline">
