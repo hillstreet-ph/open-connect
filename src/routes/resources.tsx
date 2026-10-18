@@ -410,14 +410,13 @@ function MarketplaceContent() {
                                 {executable ? "Download" : "Metadata"}
                               </Button>
                             </div>
-                            {executable ? (
-                              <AddToLibraryButton
+                            <AddToLibraryButton
                                 resourceId={item.id}
                                 collectionId={defaultCollectionId || undefined}
                                 resourceType={item.resource_type}
                                 alreadyInLibrary={inLibrary}
+                                metadataOnly={!executable}
                               />
-                            ) : null}
                           </div>
                         ) : (
                           <Button asChild size="sm" variant="outline">
