@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Validates the vendored upstream skill catalog against the manifest and the
 // vendored source tree. Metadata-only: it never installs or executes upstream code.
+import { createHash } from "node:crypto";
 import { readFile, stat } from "node:fs/promises";
 import { resolve } from "node:path";
 
@@ -48,7 +49,11 @@ for (const resource of catalog.resources) {
   if (!resource.version || !semver.test(resource.version)) {
     throw new Error(`missing or non-semver version for ${resource.slug}: ${resource.version}`);
   }
-  if (/-[0-9]+$/.test(resource.slug)) {
+  // A slug ending in "-<n>" is only a collision artifact when the same slug
+  // without the suffix is also present; upstream names such as "claude-3" are
+  // legitimate. Slug uniqueness is enforced separately above.
+  const suffix = /-([0-9]+)$/.exec(resource.slug);
+  if (suffix && slugs.has(resource.slug.slice(0, -suffix[0].length))) {
     throw new Error(`slug carries an unresolved collision suffix: ${resource.slug}`);
   }
   const config = resource.installation_config || {};
@@ -68,11 +73,22 @@ for (const resource of catalog.resources) {
   }
   contentHashes.set(config.content_hash, resource.slug);
   const skillPath = resolve(root, config.vendored_path, "SKILL.md");
+  let skillText;
   try {
     const info = await stat(skillPath);
     if (!info.isFile()) throw new Error("not a file");
+    skillText = await readFile(skillPath, "utf8");
   } catch {
     throw new Error(`missing vendored SKILL.md for ${resource.slug}: ${config.vendored_path}`);
+  }
+  // The catalog hash is the revision marker, so verify it against the file
+  // itself. Otherwise edited vendored content would keep its old version.
+  const recomputed = createHash("sha256").update(skillText).digest("hex");
+  if (recomputed !== config.content_hash) {
+    throw new Error(
+      `content hash does not match vendored file for ${resource.slug}: ` +
+        `catalog ${config.content_hash}, file ${recomputed}`,
+    );
   }
   if (!allowedCategories.has(resource.category_slug) && resource.category_slug !== "connections") {
     throw new Error(`unexpected category for ${resource.slug}: ${resource.category_slug}`);

@@ -45,6 +45,7 @@
       "version": "1.0.0+52c7c48e",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 8091,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/tier3-advanced/analytics-dashboard",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -85,6 +86,7 @@
       "version": "1.0.0+41bd6a8a",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 12315,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/tier1-foundation/api-endpoint-builder",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -125,6 +127,7 @@
       "version": "1.0.0+5cd31684",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 5121,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/automation-skills/autonomous-github-sync",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -165,6 +168,7 @@
       "version": "1.0.0+13422569",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 7776,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/automation-skills/autonomous-sync-script",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -205,6 +209,7 @@
       "version": "1.0.0+0da6a381",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 9466,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/design-skills/brainstorm-logos",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -245,6 +250,7 @@
       "version": "1.0.0+206c63e8",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2505,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/workflow-skills/brainstorming",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -285,6 +291,7 @@
       "version": "1.0.0+4efbb1d1",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 8013,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/design-skills/brand-driven-ux-overhaul",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -325,6 +332,7 @@
       "version": "1.0.0+a1f28807",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 11939,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/design-skills/canvas-design",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -365,6 +373,7 @@
       "version": "1.0.0+090b1ce2",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 558,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/tier4-specialized/cron-job-scheduler",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -405,6 +414,7 @@
       "version": "1.0.0+511f9575",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 12333,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/tier1-foundation/database-schema-generator",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -445,6 +455,7 @@
       "version": "1.0.0+0faa6927",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 12148,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/utility-skills/debug-mining-engine",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -485,6 +496,7 @@
       "version": "1.0.0+10680fe9",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 7692,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/tier2-automation/deployment-automation",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -525,6 +537,7 @@
       "version": "1.0.0+c6289176",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 6104,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/workflow-skills/dispatching-parallel-agents",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -565,6 +578,7 @@
       "version": "1.0.0+2e47d788",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 15815,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/utility-skills/doc-coauthoring",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -605,6 +619,7 @@
       "version": "1.0.0+71cfc398",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 17141,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/utility-skills/docx",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -645,6 +660,7 @@
       "version": "1.0.0+c795284f",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2094,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/tier3-advanced/email-system-builder",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -685,6 +701,7 @@
       "version": "1.0.0+f5ea37d2",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 9514,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/tier2-automation/error-monitoring-setup",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -725,6 +742,7 @@
       "version": "1.0.0+dece7c0c",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 23224,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/design-skills/excel-generator",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -765,6 +783,7 @@
       "version": "1.0.0+d099fa42",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2550,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/workflow-skills/executing-plans",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -805,6 +824,7 @@
       "version": "1.0.0+631cf6f4",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 1887,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/tier3-advanced/feature-flag-system",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -845,6 +865,7 @@
       "version": "1.0.0+2de5fe2b",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 6231,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/workflow-skills/feature-verification",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -885,6 +906,7 @@
       "version": "1.0.0+a4559e5c",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 599,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/tier4-specialized/file-upload-system",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -925,6 +947,7 @@
       "version": "1.0.0+dd2f82c6",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 4250,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/workflow-skills/finishing-a-development-branch",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -965,6 +988,7 @@
       "version": "1.0.0+b81e2ff8",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 4440,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/design-skills/frontend-design",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -1005,6 +1029,7 @@
       "version": "1.0.0+76385608",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 9342,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/analysis-skills/get-to-know-a-client",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -1045,6 +1070,7 @@
       "version": "1.0.0+05042dca",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 4160,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/automation-skills/github-gem-seeker",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -1085,6 +1111,7 @@
       "version": "1.0.0+2c874f50",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 8764,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/tier2-automation/github-workflow-automation",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -1125,6 +1152,7 @@
       "version": "1.0.0+2405d1bf",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 11952,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/design-skills/inspirational-music-video-production",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -1165,6 +1193,7 @@
       "version": "1.0.0+aaf9a176",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 1746,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/utility-skills/internet-skill-finder",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -1205,6 +1234,7 @@
       "version": "1.0.0+22244c03",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 5870,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/analysis-skills/investigate-before-recommend",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -1245,6 +1275,7 @@
       "version": "1.0.0+9d3c38a5",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 4324,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/integration-skills/manus-mcp-configurator",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -1285,6 +1316,7 @@
       "version": "1.0.0+cbeff502",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 3749,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/integration-skills/mcp-auto-recovery",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -1325,6 +1357,7 @@
       "version": "1.0.0+0f4592dc",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 9092,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/integration-skills/mcp-builder",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -1365,6 +1398,7 @@
       "version": "1.0.0+09fef609",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 7437,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/integration-skills/mcp-connector-tester",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -1405,6 +1439,7 @@
       "version": "1.0.0+776304ca",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 8670,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/integration-skills/mcp-ecosystem-optimizer",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -1445,6 +1480,7 @@
       "version": "1.0.0+47aaa3b3",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 7354,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/development-skills/multiplayer-game-builder",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -1485,6 +1521,7 @@
       "version": "1.0.0+eaac4be2",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 568,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/tier4-specialized/notification-system",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -1525,6 +1562,7 @@
       "version": "1.0.0+63803f4e",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 9755,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/automation-skills/organize-github-repos",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -1565,6 +1603,7 @@
       "version": "1.0.0+5a45b309",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 1463,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/tier4-specialized/payment-integration",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -1605,6 +1644,7 @@
       "version": "1.0.0+9f78b835",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 8072,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/utility-skills/pdf",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -1645,6 +1685,7 @@
       "version": "1.0.0+e5b0df91",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 9182,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/utility-skills/pptx",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -1685,6 +1726,7 @@
       "version": "1.0.0+0c6eacda",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 8508,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/analysis-skills/production-system-audit",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -1725,6 +1767,7 @@
       "version": "1.0.0+79c44ed2",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 7204,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/utility-skills/project-handoff-ingestion",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -1765,6 +1808,7 @@
       "version": "1.0.0+79423281",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 11349,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/development-skills/promo-code-system",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -1805,6 +1849,7 @@
       "version": "1.0.0+7269b681",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 7760,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/development-skills/realistic-ai-persona-builder",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -1845,6 +1890,7 @@
       "version": "1.0.0+c9382e92",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 6314,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/workflow-skills/receiving-code-review",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -1885,6 +1931,7 @@
       "version": "1.0.0+2da31af2",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2700,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/workflow-skills/requesting-code-review",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -1925,6 +1972,7 @@
       "version": "1.0.0+7722e7c0",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 9921,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/development-skills/role-based-access-control",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -1965,6 +2013,7 @@
       "version": "1.0.0+14b7a003",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 579,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/tier4-specialized/search-implementation",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -2005,6 +2054,7 @@
       "version": "1.0.0+7143c4e4",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 12231,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/development-skills/serverless-debugging",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -2054,6 +2104,7 @@
       "version": "1.0.0+81e1c6c8",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 4675,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/analysis-skills/similarweb-analytics",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -2094,6 +2145,7 @@
       "version": "1.0.0+815c4349",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 11392,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/utility-skills/skill-arsenal-builder",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -2134,6 +2186,7 @@
       "version": "1.0.0+fe8cc463",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 10298,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/utility-skills/skill-creator",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -2174,6 +2227,7 @@
       "version": "1.0.0+93609f96",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 9313,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/utility-skills/skill-demo-builder",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -2214,6 +2268,7 @@
       "version": "1.0.0+2654b050",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 1520,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/workflow-skills/skill-development-workflow",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -2254,6 +2309,7 @@
       "version": "1.0.0+18901593",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 6112,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/analysis-skills/stock-analysis",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -2294,6 +2350,7 @@
       "version": "1.0.0+994b89a5",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 9976,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/workflow-skills/subagent-driven-development",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -2334,6 +2391,7 @@
       "version": "1.0.0+1515b98d",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 12888,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/analysis-skills/system-architect",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -2374,6 +2432,7 @@
       "version": "1.0.0+37d63ffd",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 10323,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/workflow-skills/systematic-debugging",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -2414,6 +2473,7 @@
       "version": "1.0.0+01b645c9",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 11954,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/workflow-skills/systematic-feature-builder",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -2454,6 +2514,7 @@
       "version": "1.0.0+7dee67b4",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 9867,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/workflow-skills/test-driven-development",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -2494,6 +2555,7 @@
       "version": "1.0.0+5f495c98",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 15095,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/tier1-foundation/testing-framework",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -2534,6 +2596,7 @@
       "version": "1.0.0+1c18411b",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 1902,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/tier3-advanced/user-authentication-system",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -2574,6 +2637,7 @@
       "version": "1.0.0+de9dcde3",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 5635,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/automation-skills/using-git-worktrees",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -2614,6 +2678,7 @@
       "version": "1.0.0+ea52d15a",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 4201,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/workflow-skills/verification-before-completion",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -2654,6 +2719,7 @@
       "version": "1.0.0+932b624f",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 10358,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/development-skills/vertical-expansion-blueprint",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -2694,6 +2760,7 @@
       "version": "1.0.0+a5e9172f",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 15697,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/design-skills/video-generator",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -2734,6 +2801,7 @@
       "version": "1.0.0+22415e2f",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 13688,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/integration-skills/voice-ai-integration",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -2774,6 +2842,7 @@
       "version": "1.0.0+2046e5b9",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 3264,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/workflow-skills/writing-plans",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -2814,6 +2883,7 @@
       "version": "1.0.0+dd316db7",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 11463,
       "installation_config": {
         "vendored_path": "skills/vendor/manus-skills/utility-skills/xlsx",
         "upstream_repo": "https://github.com/master-kanor/manus-skills",
@@ -2854,6 +2924,7 @@
       "version": "1.0.0+31721928",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 6821,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/1password",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -2863,7 +2934,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "31721928c499579bad04ab1a61e14b22b6fd01c5dfa328aa911f9ea3e22ebfdf",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -2894,6 +2965,7 @@
       "version": "1.0.0+1767d764",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 4211,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/custodian/add-model-provider",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -2903,7 +2975,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "1767d76487a405fb7c4c581fd88d5207cdf64eaac577eaac6c32420bcc15bdad",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -2934,6 +3006,7 @@
       "version": "1.0.0+eb367e81",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2669,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/agent-transcript",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -2943,7 +3016,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "eb367e819a4161004d0c2d877397850efff7bbef2e7e47c7315a3b402d901f79",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -2974,6 +3047,7 @@
       "version": "1.0.0+d280e7ff",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 1979,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/apple-notes",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -2983,7 +3057,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "d280e7ffffeb182172da7afad23528ef9f73ee4905ab88ebb124046aa6e6aed7",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -3014,6 +3088,7 @@
       "version": "1.0.0+08413d06",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 3039,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/apple-reminders",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -3023,7 +3098,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "08413d063e71c7ad7e4691e81a1063b455b816957ce7898576c2653542e8303d",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -3054,6 +3129,7 @@
       "version": "1.0.0+3846c0fa",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 16935,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/auto-qa",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -3063,7 +3139,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "3846c0fa517abaa8ec8767814e883b5a155181d4d687cd65a3f1bd4bf84c6302",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -3094,6 +3170,7 @@
       "version": "1.0.0+bf7ec923",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 20043,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/autoreview",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -3103,7 +3180,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "bf7ec9230033aeafde6aea49ffdacd84ff7f80c59d0c885f7b5ed20ce1817846",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -3134,6 +3211,7 @@
       "version": "1.0.0+10836e95",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2651,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/bear-notes",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -3143,7 +3221,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "10836e95358f59969972c161a38984e4f38695357aa56b51795743c85f55318d",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -3174,6 +3252,7 @@
       "version": "1.0.0+dc6b343e",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 1417,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/blogwatcher",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -3183,7 +3262,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "dc6b343e2c655215d15ddcc6e134d76d5b7973a6a1e5d59ee61fb9e0a902c670",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -3214,6 +3293,7 @@
       "version": "1.0.0+977fde68",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 1022,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/blucli",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -3223,7 +3303,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "977fde68700d0839357acdd3926cd19d646de5be3acbc3d0a1d71e00694bd619",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -3254,6 +3334,7 @@
       "version": "1.0.0+53a7e4cb",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 1825,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/camsnap",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -3263,7 +3344,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "53a7e4cb6c1903d3c4022ee15943d38b7ac8b894dd96e1466935c5a043b37efc",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -3294,6 +3375,7 @@
       "version": "1.0.0+460787e0",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 1221,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/channel-message-flows",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -3303,7 +3385,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "460787e07598ffc9bd6b128e89f109eb68abc1cd4844666730ed66b0c9f5e229",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -3334,6 +3416,7 @@
       "version": "1.0.0+669bdc56",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 10191,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/claw-score",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -3343,7 +3426,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "669bdc56fc3ea8d295f6a15494600031189f541e290016fadb44ba9c147b4b39",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -3374,6 +3457,7 @@
       "version": "1.0.0+42a64b59",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 3970,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/clawdtributor",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -3383,7 +3467,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "42a64b5934bab95385b6dfeca1306705dcabb5a605526e71ac815e68c6f4a9f2",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -3414,6 +3498,7 @@
       "version": "1.0.0+667007fa",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2894,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/clawhub",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -3423,7 +3508,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "667007fa578dc292690ab7fbb9ddda80427fd6cb474ec6dc830edc670e3c41e1",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -3454,6 +3539,7 @@
       "version": "1.0.0+118de8d5",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 12152,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/clawsweeper",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -3463,7 +3549,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "118de8d5c2c782805a77f31e74e8599a82dfa070abe465196aaf1edc49dc2b25",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -3494,6 +3580,7 @@
       "version": "1.0.0+13c8eccd",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 3906,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/custodian/cloud-image-bake",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -3503,7 +3590,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "13c8eccdba99dde0649063ea561f424e398f30b630cf838814fdd95d2ac96c96",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -3534,6 +3621,7 @@
       "version": "1.0.0+cabfef83",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 10606,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/coding-agent",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -3543,7 +3631,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "cabfef83abacbecaf73081677a9fb1c718770594dfd729aafae93581dae2b242",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -3574,6 +3662,7 @@
       "version": "1.0.0+4f8afce2",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 3793,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/custodian/configure-channel",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -3583,7 +3672,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "4f8afce2bd716c1513e270a34c41da467bb46d7913d996ecd544635613fa5296",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -3614,6 +3703,7 @@
       "version": "1.0.0+116b9ad9",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 7274,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/control-ui",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -3623,7 +3713,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "116b9ad9bef7a9ecceae3a39800880e017f302a3620fb8d8ab43f9d554fc77e6",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -3654,6 +3744,7 @@
       "version": "1.0.0+8fe74820",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 11360,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/control-ui-e2e",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -3663,7 +3754,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "8fe748209a9dceef4dcc44482627f5d37fb2410904df87bb4ea1b21b4682ad9b",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -3694,6 +3785,7 @@
       "version": "1.0.0+95aa567a",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 14852,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/crabbox",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -3703,7 +3795,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "95aa567a64c202e4a1d1deceea215199bcb96f3c367fdc75e3cbe6191fc8fb76",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -3734,6 +3826,7 @@
       "version": "1.0.0+2bff0dd0",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 1699,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/deslop",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -3743,7 +3836,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "2bff0dd0f09fa7bece492057ef675085f55f9a65d663f0c2083c390f9836e084",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -3774,6 +3867,7 @@
       "version": "1.0.0+646eaebc",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2683,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/custodian/diagnose-gateway",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -3783,7 +3877,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "646eaebcab128bc023b5b0ca07cec94f5d3f24de5bf40122b0b1d3d0bbc5cb2e",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -3814,6 +3908,7 @@
       "version": "1.0.0+6195e03f",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2357,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/diagram-maker",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -3823,7 +3918,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "6195e03fcb04a1a68c4af72165e0c85efcd2719af79380d82e42996ea89ad74a",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -3854,6 +3949,7 @@
       "version": "1.0.0+343c71a2",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 1101,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/discord-clawd",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -3863,7 +3959,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "343c71a2b59689f793b53021866a329d703eff51d15c66256723369e7c7ab45c",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -3894,6 +3990,7 @@
       "version": "1.0.0+ce18b1c5",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 6420,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/discord-e2e",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -3903,7 +4000,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "ce18b1c5f78a84b91374a4b970836dc2f1f7246e453c3a858180045c8783ec3b",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -3934,6 +4031,7 @@
       "version": "1.0.0+a44a1247",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2081,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/discord-user-post",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -3943,7 +4041,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "a44a124729b62ff8dd5af1789a804642365f904b7650f8f77fabc1bd5e96b462",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -3974,6 +4072,7 @@
       "version": "1.0.0+7a12b5bd",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2790,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/discrawl",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -3983,7 +4082,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "7a12b5bd321bc051feb7fc04d5b1c558838dca0bb8ff3148096fd500028125c2",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -4014,6 +4113,7 @@
       "version": "1.0.0+3e46252f",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 1047,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/eightctl",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -4023,7 +4123,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "3e46252f398017429c79101fe6049f81755882e35a8c6150803c4c8822205ba3",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -4054,6 +4154,7 @@
       "version": "1.0.0+1aad5769",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 1129,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/gemini",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -4063,7 +4164,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "1aad57691db927cf26b489e15bab4eb909e390ebca361c128f98ab5bcf4bdf43",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -4094,6 +4195,7 @@
       "version": "1.0.0+e7a64973",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 6320,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/gh-issues",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -4103,7 +4205,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "e7a64973e186211725e18a45d076803abc07915e348fd94691e7acaea367d54a",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -4134,6 +4236,7 @@
       "version": "1.0.0+ac3981d0",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2610,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/gifgrep",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -4143,7 +4246,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "ac3981d030c96e79100328fb4cf84a317cecaef1c4e186d0acca21b9aef0dbe5",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -4174,6 +4277,7 @@
       "version": "1.0.0+3b7e2615",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2759,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/gitcrawl",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -4183,7 +4287,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "3b7e2615b7f6ec9c96d461075f38767aa8d66682c0e43eab112c429e7e5c8ee4",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -4214,6 +4318,7 @@
       "version": "1.0.0+efee8964",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 3649,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/github",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -4223,7 +4328,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "efee896479d9257a19ed787e324b005be28c62ac6446bd8f193798dce6574731",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -4254,6 +4359,7 @@
       "version": "1.0.0+d54a8e52",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 6679,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/gog",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -4263,7 +4369,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "d54a8e52b1e00bb5d33b46915fd549f8b792ef3a383fe40e92b195d11d2d5255",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -4294,6 +4400,7 @@
       "version": "1.0.0+81139f4e",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 1473,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/goplaces",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -4303,7 +4410,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "81139f4e645a6355e23d15f94ee6d6ef3bfce8eb4a5716dad298880e2b38e24b",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -4334,6 +4441,7 @@
       "version": "1.0.0+d8f15d0e",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 1335,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/graincrawl",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -4343,7 +4451,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "d8f15d0eba6a1a1a38ec7b5059110dcc0fe2c5f54ffcb189e5e42c8b1f4346c1",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -4374,6 +4482,7 @@
       "version": "1.0.0+b41044ae",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2909,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/healthcheck",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -4383,7 +4492,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "b41044aeb25afe95daa5c8ef6f2d6b8d197f6a0b113b0888deaa4dd69e42b59b",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -4414,6 +4523,7 @@
       "version": "1.0.0+040f5f73",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 1693,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/himalaya",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -4423,7 +4533,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "040f5f7304ec39c20e1ea61ed1fabc05108eb16820516ffd8c09b29528e188bb",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -4454,6 +4564,7 @@
       "version": "1.0.0+010ed9b2",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 1612,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/mcporter",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -4463,7 +4574,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "010ed9b265e58d45d1e95e6deac5e60b1e46e6ebab00fc3fe30429a1048e236e",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -4494,6 +4605,7 @@
       "version": "1.0.0+682db7cb",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2566,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/meme-maker",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -4503,7 +4615,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "682db7cba34a3d3ca791f7cccaee9488810c731d6622d8886a9bcca77c59d2f3",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -4534,6 +4646,7 @@
       "version": "1.0.0+f4e40f00",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2550,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/model-usage",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -4543,7 +4656,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "f4e40f006365acc5f519a55f4efacb6c722788026792e498fcf46dc1a0f0c1d1",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -4574,6 +4687,7 @@
       "version": "1.0.0+d8ab6db7",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 954,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/nano-pdf",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -4583,7 +4697,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "d8ab6db7572b0df862820dd3481c14ae306173a1dbcad7f07f9e48ada8efbe91",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -4614,6 +4728,7 @@
       "version": "1.0.0+334c20d3",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 6553,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/node-connect",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -4623,7 +4738,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "334c20d3973238ba44a8b5885f0f6adf50342f5324940e1880bd75f61b86bfda",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -4654,6 +4769,7 @@
       "version": "1.0.0+50d2f682",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 3576,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/node-inspect-debugger",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -4663,7 +4779,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "50d2f6828eaf4bbf7ccbaec5af928f9af978e93b7c679b0f3c8afe2a80ab7d52",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -4694,6 +4810,7 @@
       "version": "1.0.0+295fde5d",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 1116,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/notcrawl",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -4703,7 +4820,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "295fde5d976a86fb2cf65aa35c32430183b47752a5707cd1ce5b76ee1f4abe38",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -4734,6 +4851,7 @@
       "version": "1.0.0+d45e2c12",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 3867,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/notion",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -4743,7 +4861,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "d45e2c1270d58c7878c13467ab27780530de2af89fb8b307c662b5d4859dc555",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -4774,6 +4892,7 @@
       "version": "1.0.0+d4ed3ce5",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2942,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/obsidian",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -4783,7 +4902,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "d4ed3ce53146bd6538c47f81da2382fc790598ec1400d34b7d1f73a8839053b4",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -4814,6 +4933,7 @@
       "version": "1.0.0+802e31d7",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 914,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/openai-whisper",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -4823,7 +4943,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "802e31d7310316fc25a5ec4fbe29308a0897c039cd2ae897f59fc25128ab4644",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -4854,6 +4974,7 @@
       "version": "1.0.0+afff70c7",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2073,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/openai-whisper-api",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -4863,7 +4984,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "afff70c706a9bae250b046b741e9930340ca87cc1689a82d4415dd4d6b45bfa1",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -4894,6 +5015,7 @@
       "version": "1.0.0+a98b9e28",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 24115,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/openclaw-changelog-update",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -4903,7 +5025,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "a98b9e28689893f01ea6adccd818678526c6dcaf826055305031f68be1a1ed60",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -4934,6 +5056,7 @@
       "version": "1.0.0+de084776",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 52010,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/openclaw-ci-limits",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -4943,7 +5066,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "de0847767c5e8d2c0c526901e815bc8f353d317106c150cd7d2ae11519a45158",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -4974,6 +5097,7 @@
       "version": "1.0.0+69d67857",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 7591,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/openclaw-debugging",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -4983,7 +5107,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "69d678575065197052676bb5d171a09c54981ebce982c5a2a90eda6e01045e21",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -5014,6 +5138,7 @@
       "version": "1.0.0+73372d0e",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2370,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/openclaw-docker-e2e-authoring",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -5023,7 +5148,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "73372d0e73c006a4867785f0bf48ad13126b28124e63308f22a5a48fac79491c",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -5054,6 +5179,7 @@
       "version": "1.0.0+d516ee15",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2963,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/openclaw-ghsa-maintainer",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -5063,7 +5189,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "d516ee1587d64678966eaca8b6775801fe6bcc202b95a095ca9071f9e06c156d",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -5094,6 +5220,7 @@
       "version": "1.0.0+9e58dde9",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 14901,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/openclaw-live-updater",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -5103,7 +5230,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "9e58dde9ac17d523bc04f52327b81a187010447633f5b77b816ef8e6bba582de",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -5134,6 +5261,7 @@
       "version": "1.0.0+b1ac9f1d",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 33784,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/openclaw-parallels-smoke",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -5143,7 +5271,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "b1ac9f1dcfdafb73220c75d2723cfec78599100c5dad9ef72d974450bc75d7c5",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -5174,6 +5302,7 @@
       "version": "1.0.0+3b514d34",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 8497,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/openclaw-pr-maintainer",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -5183,7 +5312,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "3b514d34660c96b093ebbd0d78fa07a400ffaa019657ec8aaf4fcb545004ceeb",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -5214,6 +5343,7 @@
       "version": "1.0.0+e003a817",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 11617,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/openclaw-qa-testing",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -5223,7 +5353,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "e003a81751cc140bd003658f02c10c80930599883479dbed0dccb582dce8111f",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -5254,6 +5384,7 @@
       "version": "1.0.0+71e06f55",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 7671,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/openclaw-refactor-docs",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -5263,7 +5394,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "71e06f55fe8e941c4b818247b750d64e8e1cb2bccfb00c681c4840e52b8db17a",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -5294,6 +5425,7 @@
       "version": "1.0.0+3d26dace",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 3945,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/openclaw-release-validation",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -5303,7 +5435,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "3d26dacebe67e42902c6c2515742dbb90b44f78515a7986bed0dacee6fb23a50",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -5334,6 +5466,7 @@
       "version": "1.0.0+256d0e02",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 7098,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/openclaw-repair-sweep",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -5343,7 +5476,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "256d0e020421ce3871d75d35b9ef040b2d918e478370c506dd439051008c19aa",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -5374,6 +5507,7 @@
       "version": "1.0.0+631d6d7d",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 10030,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/openclaw-secret-scanning-maintainer",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -5383,7 +5517,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "631d6d7d8aa24fbe45027bc3f9d60a91e21564818a1dd53b0c159dc18bdbcdd8",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -5414,6 +5548,7 @@
       "version": "1.0.0+d955a63a",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 7489,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/openclaw-test-heap-leaks",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -5423,7 +5558,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "d955a63a222c920a2055df33fda5cf4684f9334f135ac29deb0754178d11f9d5",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -5454,6 +5589,7 @@
       "version": "1.0.0+a66ff36b",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 11508,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/openclaw-test-performance",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -5463,7 +5599,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "a66ff36b6de9b06fba4cf2710d83f31cae609513b84fbe9a23f096d894bb6f67",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -5494,6 +5630,7 @@
       "version": "1.0.0+0ed5a08d",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 7597,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/openclaw-testing",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -5503,7 +5640,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "0ed5a08d9f5687301c1423081cacad9f5836990707e56e75d92643c622d35c2a",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -5534,6 +5671,7 @@
       "version": "1.0.0+ff6fbf3d",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 5940,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/openclaw-update",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -5543,7 +5681,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "ff6fbf3d14ec97a21d1ac83beba688a8dac3374b4f209187e02b2458ee1edae7",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -5574,6 +5712,7 @@
       "version": "1.0.0+db350ab4",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2423,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/openhue",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -5583,7 +5722,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "db350ab41088193693c991dbe601a3b39b619feedfccec1784e77c3161c11c89",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -5614,6 +5753,7 @@
       "version": "1.0.0+b150b967",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 4882,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/oracle",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -5623,7 +5763,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "b150b967b1326bec594bf24f8bddf10aeb78b49a64c91091dcdf5fdad35402c1",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -5654,6 +5794,7 @@
       "version": "1.0.0+890a7c2b",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2337,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/ordercli",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -5663,7 +5804,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "890a7c2b4bbcec79c894ac9a4b76c11f734fa01b76b258a77e6429230b95a3c8",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -5694,6 +5835,7 @@
       "version": "1.0.0+56550ce1",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 3151,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/parallels-discord-roundtrip",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -5703,7 +5845,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "56550ce160d97c1a0975f5886292aac303abc84d09335f873c12cc664ff67177",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -5734,6 +5876,7 @@
       "version": "1.0.0+be53d9a4",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 4340,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/peekaboo",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -5743,7 +5886,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "be53d9a46c6bb331dc62be48b26d4f83495737e8d0b263fe52aafd58bfa6a33e",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -5774,6 +5917,7 @@
       "version": "1.0.0+0ee2c05d",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 9765,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/proof-video",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -5783,7 +5927,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "0ee2c05d7d9695771a9a11224b8a51dea1ad358aa369370eb217fec957bfc718",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -5814,6 +5958,7 @@
       "version": "1.0.0+1b61f6b4",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 5179,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/prototype-openclaw-tui",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -5823,7 +5968,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "1b61f6b423e9da25a03715211f7f55235b669628a261f1b4f81d0a1e1a340f2d",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -5854,6 +5999,7 @@
       "version": "1.0.0+dd4600a2",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2530,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/python-debugpy",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -5863,7 +6009,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "dd4600a228fcdce153e4e318c2b8644e6f7f3964826958e89b5bae90db4877d3",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -5894,6 +6040,7 @@
       "version": "1.0.0+218cdfdd",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 4329,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/release-openclaw-announcement",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -5903,7 +6050,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "218cdfdd6573a2c26481127f7f19fbc164d2403e9de34c07a2704c65a7047da9",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -5934,6 +6081,7 @@
       "version": "1.0.0+64ddfc63",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 58233,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/release-openclaw-ci",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -5943,7 +6091,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "64ddfc63571d62b8f1b4a22d48da6e05da3915ac72d28d0feaf90297a9d1791e",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -5974,6 +6122,7 @@
       "version": "1.0.0+369b6f99",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 8152,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/release-openclaw-mac",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -5983,7 +6132,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "369b6f99c3ed102b998b1790dec3d466ee82ee1e7763d4e0789a1a6f6d809923",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -6014,6 +6163,7 @@
       "version": "1.0.0+cb158b54",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 11453,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/release-openclaw-maintainer",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -6023,7 +6173,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "cb158b5405ffcb1068d38a903d2cb2886b00938b385001e44128cc48f379078c",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -6054,6 +6204,7 @@
       "version": "1.0.0+c83bdef2",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 12395,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/release-openclaw-plugin-testing",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -6063,7 +6214,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "c83bdef2035f878a16cfd78d7909bf821135e4543a1e6d433715c9a9d2a68ae8",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -6094,6 +6245,7 @@
       "version": "1.0.0+d8efa1be",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2353,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/sag",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -6103,7 +6255,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "d8efa1bea9d9b441eb289a6f64826b5ded51837a30a66103bb91223f3bb2cc7f",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -6134,6 +6286,7 @@
       "version": "1.0.0+7eac4f2c",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 6898,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/security-triage",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -6143,7 +6296,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "7eac4f2c85c121da269a3f91a6c540c9f311e3b8efac2a93807c6c862f26c42d",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -6174,6 +6327,7 @@
       "version": "1.0.0+f3a4d30d",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 4033,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/sherpa-onnx-tts",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -6183,7 +6337,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "f3a4d30d0e7e14e76dcb5245e197e3dcf490e3f9e8298466e86e4f33847f532d",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -6214,6 +6368,7 @@
       "version": "1.0.0+3b7b9382",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2304,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/skill-creator",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -6223,7 +6378,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "3b7b93823a496cedc957fc91bbc8f8be132f2edd095dcaa46cee5394c742f0e4",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -6254,6 +6409,7 @@
       "version": "1.0.0+ac796b67",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 6980,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/slack-e2e",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -6263,7 +6419,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "ac796b6745c8a1f77a0472a1127d305754a0af945aef583d81ca07eb856a2c11",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -6294,6 +6450,7 @@
       "version": "1.0.0+96af3faf",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 1260,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/slacrawl",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -6303,7 +6460,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "96af3faf409ed7ad46b43994127c94f3efb431648028d83fb65f21fa15e6f18e",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -6334,6 +6491,7 @@
       "version": "1.0.0+d72b3708",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 1316,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/songsee",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -6343,7 +6501,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "d72b37088b7a09d781183ab0ff38adcda0e3596db79d902c117b57dda73a432a",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -6374,6 +6532,7 @@
       "version": "1.0.0+d048a8c8",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2457,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/sonoscli",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -6383,7 +6542,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "d048a8c8eb9ebbb1e6000baca132f581c7d74bebf81df18f81b11410e466f6e8",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -6414,6 +6573,7 @@
       "version": "1.0.0+1258cde2",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 1891,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/spike",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -6423,7 +6583,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "1258cde2d0e5326706536aeeef06d5366fd65e7e1c174c66130b2ac53a4344d1",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -6454,6 +6614,7 @@
       "version": "1.0.0+00f50640",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 1688,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/spotify-player",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -6463,7 +6624,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "00f506401fa1126278b36412c3b352f288d19449e338d1f54fb843ebab634fba",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -6494,6 +6655,7 @@
       "version": "1.0.0+b6d9be0f",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2125,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/summarize",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -6503,7 +6665,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "b6d9be0ff47e646280a0ff40203823d7ca36913ab1bea25575b2de4afb3cc0df",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -6534,6 +6696,7 @@
       "version": "1.0.0+84c1d4e4",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 16013,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/tag-duplicate-prs-issues",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -6543,7 +6706,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "84c1d4e491e76e3f24e3a47a02833d6946ae906de2dbaefbf47d5cde0a10a845",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -6574,6 +6737,7 @@
       "version": "1.0.0+67a93dc4",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 5828,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/technical-documentation",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -6583,7 +6747,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": "MIT",
         "content_hash": "67a93dc4b2263d23de63d6d3e6fca6447f4f594fe856c1514db79d94b65d3c5a",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -6614,6 +6778,7 @@
       "version": "1.0.0+ae4c244c",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 7285,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/telegram-e2e-userbot",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -6623,7 +6788,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "ae4c244cb42dc97bdc90a89a9afa5c93527e0cd6c5997012d0ee2f10ff3008a5",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -6654,6 +6819,7 @@
       "version": "1.0.0+01c42123",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 7750,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/test-audit",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -6663,7 +6829,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "01c421239797a8950fe1287f293d2e05f127e69ac457d1b9cdf9b296ac77eacd",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -6694,6 +6860,7 @@
       "version": "1.0.0+917110e2",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 3390,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/things-mac",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -6703,7 +6870,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "917110e26bc6a630d614acf47d05e84da5f81fb88c0d263f5987962dca2a05c2",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -6734,6 +6901,7 @@
       "version": "1.0.0+8aeaa6f3",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2564,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/tmux",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -6743,7 +6911,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "8aeaa6f3dfe06d58e09721778b8c9e654bcbd47590f26f442c4dc87c9349c572",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -6774,6 +6942,7 @@
       "version": "1.0.0+dc524f73",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2956,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/trello",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -6783,7 +6952,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "dc524f73bd87b8089d061187bb26add41101ee82e288a1597a2d7b89fd934222",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -6814,6 +6983,7 @@
       "version": "1.0.0+7fa44045",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 15304,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/update-team-server",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -6823,7 +6993,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "7fa440450a0f7cb43f64829a4683e5bdb1fa83a1997dd7d838b4bac3f55c5a98",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -6854,6 +7024,7 @@
       "version": "1.0.0+ef4f2c09",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 9756,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/agents/verify-release",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -6863,7 +7034,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "ef4f2c0972c0c71d33a8e21fd896c37c8ed2a3e492aa2785934cb9bedc58ea9d",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -6894,6 +7065,7 @@
       "version": "1.0.0+94259bbb",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 9412,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/visualize",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -6903,7 +7075,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "94259bbb4d06ab0927d540780c2ef095c6bfe17cbb7248ce485c82656290338a",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -6934,6 +7106,7 @@
       "version": "1.0.0+62ab4821",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2905,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/weather",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -6943,7 +7116,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "62ab4821aa873949d1c1091836be1659a42b32caadce4bd145f5505a1ceaeec1",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -6974,6 +7147,7 @@
       "version": "1.0.0+0e5e736c",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2702,
       "installation_config": {
         "vendored_path": "skills/vendor/openclaw/skills/xurl",
         "upstream_repo": "https://github.com/openclaw/openclaw",
@@ -6983,7 +7157,7 @@
         "ingestion_mode": "vendored_source",
         "license_declared": null,
         "content_hash": "0e5e736c382f0943e2c4ab974b593fe5b0b0a6ff7471f56f7ef9db69c19025f6",
-        "upstream_commit": "33b5bee3901b89b094931a79980c071bc9589200",
+        "upstream_commit": "aa11c6c05c5c0ee276db2bcd516932495632f300",
         "upstream_ref": "main"
       },
       "supported_clients": [
@@ -7014,6 +7188,7 @@
       "version": "1.0.0+271f0262",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 1207,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-core/desktop-electron",
         "upstream_repo": "https://github.com/OpenHands/OpenHands",
@@ -7054,6 +7229,7 @@
       "version": "1.0.0+f61a9c9c",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 1232,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-core/e2e-testing",
         "upstream_repo": "https://github.com/OpenHands/OpenHands",
@@ -7094,6 +7270,7 @@
       "version": "1.0.0+e046cdd9",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 1559,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-core/frontend-api-contracts",
         "upstream_repo": "https://github.com/OpenHands/OpenHands",
@@ -7134,6 +7311,7 @@
       "version": "1.0.0+66a97b8e",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 1296,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-core/frontend-development",
         "upstream_repo": "https://github.com/OpenHands/OpenHands",
@@ -7174,6 +7352,7 @@
       "version": "1.0.0+9ad078ab",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 1501,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-core/local-stack-runtime",
         "upstream_repo": "https://github.com/OpenHands/OpenHands",
@@ -7214,6 +7393,7 @@
       "version": "1.0.0+95ff1168",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 9670,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-core/pr-design-doc",
         "upstream_repo": "https://github.com/OpenHands/OpenHands",
@@ -7254,6 +7434,7 @@
       "version": "1.0.0+84ceedbe",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 1222,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-core/telemetry-analytics",
         "upstream_repo": "https://github.com/OpenHands/OpenHands",
@@ -7294,6 +7475,7 @@
       "version": "1.0.0+93422a18",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 1166,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/add-javadoc",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -7334,6 +7516,7 @@
       "version": "1.0.0+dfe7467e",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2243,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/add-skill",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -7374,6 +7557,7 @@
       "version": "1.0.0+40562401",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 9959,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/agent-canvas-environment",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -7414,6 +7598,7 @@
       "version": "1.0.0+c7321d4a",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 7254,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/agent-creator",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -7454,6 +7639,7 @@
       "version": "1.0.0+f91fb602",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2051,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/agent-memory",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -7494,6 +7680,7 @@
       "version": "1.0.0+00859818",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2849,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/agent-sdk-builder",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -7534,6 +7721,7 @@
       "version": "1.0.0+4e949fd8",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 3914,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/azure-devops",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -7574,6 +7762,7 @@
       "version": "1.0.0+3d750177",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 3074,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/bitbucket",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -7614,6 +7803,7 @@
       "version": "1.0.0+3686ec21",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 4212,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/bitbucket-cloud",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -7654,6 +7844,7 @@
       "version": "1.0.0+677fa32f",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 3974,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/bitbucket-data-center",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -7694,6 +7885,7 @@
       "version": "1.0.0+06b10c7f",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 21070,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/canvas-extension-api",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -7734,6 +7926,7 @@
       "version": "1.0.0+f4a3bf94",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 8455,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/code-review",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -7774,6 +7967,7 @@
       "version": "1.0.0+ba5cfc29",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 5033,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/code-simplifier",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -7814,6 +8008,7 @@
       "version": "1.0.0+c67db102",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2864,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/datadog",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -7854,6 +8049,7 @@
       "version": "1.0.0+6704eb29",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2266,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/deno",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -7894,6 +8090,7 @@
       "version": "1.0.0+ff1cc685",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 4352,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/discord",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -7934,6 +8131,7 @@
       "version": "1.0.0+d4c69e41",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 922,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/docker",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -7974,6 +8172,7 @@
       "version": "1.0.0+ebd2645e",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 3182,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/evidence-based-citations",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -8014,6 +8213,7 @@
       "version": "1.0.0+4abf0757",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 337,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/flarglebargle",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -8054,6 +8254,7 @@
       "version": "1.0.0+982cecaa",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 4443,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/frontend-design",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -8094,6 +8295,7 @@
       "version": "1.0.0+c596e0d1",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 6622,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/github",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -8134,6 +8336,7 @@
       "version": "1.0.0+3bc93161",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 1888,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/github-actions",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -8174,6 +8377,7 @@
       "version": "1.0.0+2da13b34",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 12164,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/github-agents-md-maintainer",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -8214,6 +8418,7 @@
       "version": "1.0.0+536cb763",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 1952,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/github-delivery-watchdog",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -8254,6 +8459,7 @@
       "version": "1.0.0+602425d9",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 17616,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/github-issue-to-pr",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -8294,6 +8500,7 @@
       "version": "1.0.0+92f840e2",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 1748,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/github-issue-triage",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -8334,6 +8541,7 @@
       "version": "1.0.0+8b1c2f74",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 9137,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/github-pr-review",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -8374,6 +8582,7 @@
       "version": "1.0.0+6c1b48f5",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 27234,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/github-pr-reviewer",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -8414,6 +8623,7 @@
       "version": "1.0.0+8a51a228",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 12247,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/github-repo-monitor",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -8454,6 +8664,7 @@
       "version": "1.0.0+060b1363",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 1210,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/github-stale-ci-pr-closer",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -8494,6 +8705,7 @@
       "version": "1.0.0+cba8cdc7",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2514,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/gitlab",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -8534,6 +8746,7 @@
       "version": "1.0.0+839fa39a",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 19407,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/gitlab-issue-to-mr",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -8574,6 +8787,7 @@
       "version": "1.0.0+aaf8c7ca",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 3724,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/incident-retrospective",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -8614,6 +8828,7 @@
       "version": "1.0.0+58249391",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 15153,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/iterate",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -8654,6 +8869,7 @@
       "version": "1.0.0+5ffb5f6d",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 16511,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/jira-issue-to-pr",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -8694,6 +8910,7 @@
       "version": "1.0.0+11f5663b",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 1540,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/jupyter",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -8734,6 +8951,7 @@
       "version": "1.0.0+e1c28130",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 1303,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/kubernetes",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -8774,6 +8992,7 @@
       "version": "1.0.0+146a6ec9",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 6300,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/learn-from-code-review",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -8814,6 +9033,7 @@
       "version": "1.0.0+a1a9c642",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 7555,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/linear",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -8854,6 +9074,7 @@
       "version": "1.0.0+7168190a",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 3215,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/linear-triage",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -8894,6 +9115,7 @@
       "version": "1.0.0+2e801836",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 12909,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/news-digest",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -8934,6 +9156,7 @@
       "version": "1.0.0+2ae4b383",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 3786,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/notion",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -8974,6 +9197,7 @@
       "version": "1.0.0+f29251d1",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 440,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/npm",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -9014,6 +9238,7 @@
       "version": "1.0.0+ca29ad6b",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 18604,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/openhands-api",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -9054,6 +9279,7 @@
       "version": "1.0.0+9c445cc4",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 48717,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/openhands-automation",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -9094,6 +9320,7 @@
       "version": "1.0.0+b7baa048",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 15206,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/openhands-enterprise-troubleshooting",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -9134,6 +9361,7 @@
       "version": "1.0.0+102b75f8",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 27555,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/openhands-sdk",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -9174,6 +9402,7 @@
       "version": "1.0.0+cf92e9e0",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 1278,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/pdflatex",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -9214,6 +9443,7 @@
       "version": "1.0.0+2ef939ec",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 6023,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/plain-english-content",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -9254,6 +9484,7 @@
       "version": "1.0.0+5de2431f",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 6897,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/prd",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -9294,6 +9525,7 @@
       "version": "1.0.0+d0c65cb8",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 17224,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/qa-changes",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -9334,6 +9566,7 @@
       "version": "1.0.0+5250f2d1",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 854,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/release-notes",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -9374,6 +9607,7 @@
       "version": "1.0.0+56d718a1",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 3356,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/research-brief",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -9414,6 +9648,7 @@
       "version": "1.0.0+887a8c46",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 1367,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/security",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -9454,6 +9689,7 @@
       "version": "1.0.0+855b3519",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 3149,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/simplified-technical-english",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -9494,6 +9730,7 @@
       "version": "1.0.0+651c6a4d",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 20969,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/skill-creator",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -9534,6 +9771,7 @@
       "version": "1.0.0+2699798b",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 12730,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/slack-channel-monitor",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -9574,6 +9812,7 @@
       "version": "1.0.0+9b371806",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 3378,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/slack-standup-digest",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -9614,6 +9853,7 @@
       "version": "1.0.0+4351d37a",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 7777,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/spark-version-upgrade",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -9654,6 +9894,7 @@
       "version": "1.0.0+ca7cca10",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 3371,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/ssh",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -9694,6 +9935,7 @@
       "version": "1.0.0+e4c39d4c",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2637,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/swift-linux",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -9734,6 +9976,7 @@
       "version": "1.0.0+ddd62777",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 4888,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/technical-writing",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -9774,6 +10017,7 @@
       "version": "1.0.0+c35893e2",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 3124,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/theme-factory",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -9824,6 +10068,7 @@
       "version": "1.0.0+d590187f",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2485,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/ticket-to-code-change",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -9864,6 +10109,7 @@
       "version": "1.0.0+c53faa66",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 4606,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/upstream-fork-sync",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -9904,6 +10150,7 @@
       "version": "1.0.0+56bd6d2c",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 3221,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/use-jev",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -9944,6 +10191,7 @@
       "version": "1.0.0+e321822e",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 2639,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/uv",
         "upstream_repo": "https://github.com/OpenHands/extensions",
@@ -9984,6 +10232,7 @@
       "version": "1.0.0+40606340",
       "license": "MIT",
       "installation_type": "skill-source",
+      "source_bytes": 3240,
       "installation_config": {
         "vendored_path": "skills/vendor/openhands-extensions/vercel",
         "upstream_repo": "https://github.com/OpenHands/extensions",

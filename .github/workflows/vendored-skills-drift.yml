@@ -31,8 +31,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -euo pipefail
-          node --experimental-strip-types scripts/sync-vendored-upstreams.mjs > drift.json
+          set -uo pipefail
+          node --experimental-strip-types scripts/sync-vendored-upstreams.mjs > drift.json || true
           cat drift.json
           drifted=$(node -e "process.stdout.write(String(require('./drift.json').drifted))")
           echo "drifted=${drifted}" >> "$GITHUB_OUTPUT"
@@ -58,3 +58,4 @@ jobs:
           DRIFTED: ${{ steps.drift.outputs.drifted }}
         run: |
           echo "::warning title=Vendored skills are behind upstream::${DRIFTED} source(s) moved past their pinned commit. Re-vendor to stay current."
+          exit 1
