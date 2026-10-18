@@ -14,6 +14,9 @@ const catalog = JSON.parse(
 if (catalog.policy?.ingestion_mode !== "metadata_only" || catalog.policy?.install !== false) {
   throw new Error("catalog must remain metadata-only and non-installing");
 }
+if (catalog.policy?.review_required !== true) {
+  throw new Error("catalog must require independent review");
+}
 if (!Array.isArray(catalog.candidates)) throw new Error("catalog candidates must be an array");
 if (catalog.candidates.length < registry.default_policy.minimum_candidates) {
   throw new Error(`catalog has only ${catalog.candidates.length} candidates`);
