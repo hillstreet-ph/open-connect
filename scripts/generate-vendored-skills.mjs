@@ -2,8 +2,9 @@
 // Generates the vendored skill catalog, static download packages, and the
 // marketplace migration from config/vendored-skills.manifest.json.
 // Metadata-only: nothing here installs or executes upstream code.
-import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { resolve, join, relative, sep } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
@@ -13,6 +14,31 @@ const manifest = JSON.parse(
 
 const CLIENT_TARGETS = ["ChatGPT", "Claude", "Codex", "Open-Connect"];
 const RESOURCE_TYPE = "skill";
+
+// Official first-party sources win when the same skill content is vendored from
+// more than one repository.
+const TRUST_RANK = { official_first_party: 0, verified_community: 1 };
+
+function sha256Hex(value) {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function isSemver(value) {
+  return /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(value);
+}
+
+// Upstream frontmatter is inconsistent, so a declared version is trusted only
+// when it is real semver; otherwise the content hash carries the revision.
+function resolveVersion(declared, hash) {
+  return isSemver(declared) ? declared : `1.0.0+${hash.slice(0, 8)}`;
+}
+
+// Two vendored skills are the same skill when they declare the same name within
+// the same upstream repository. The identity deliberately excludes the
+// directory, because upstream reorganises folders without renaming skills.
+function skillIdentity(repositoryUrl, name) {
+  return `${repositoryUrl.replace(/\/+$/, "").toLowerCase()}::${name.trim().toLowerCase()}`;
+}
 
 function normalizeOpenSlug(value) {
   const body = value
@@ -74,8 +100,23 @@ async function pathExists(path) {
   return existsSync(path);
 }
 
+// Read the catalog this generator produced last time. It is the authority on
+// which download packages this generator owns, so pruning stale packages never
+// touches directories owned by other marketplace sources.
+const catalogPath = resolve(root, "config/vendored-skills.generated.json");
+const previousSlugs = new Set();
+if (await pathExists(catalogPath)) {
+  try {
+    const previous = JSON.parse(await readFile(catalogPath, "utf8"));
+    for (const entry of previous.resources ?? []) previousSlugs.add(entry.slug);
+  } catch {
+    warnings.push("previous vendored catalog was unreadable; skipped stale package pruning");
+  }
+}
+
 const resources = [];
 const usedSlugs = new Map();
+const duplicates = [];
 const warnings = [];
 
 for (const source of manifest.sources) {
@@ -95,14 +136,8 @@ for (const source of manifest.sources) {
       warnings.push(`no name for ${source.id}/${relPath}`);
       continue;
     }
-    let slug = normalizeOpenSlug(`${source.id}-${name}`);
-    if (usedSlugs.has(slug)) {
-      const count = usedSlugs.get(slug) + 1;
-      usedSlugs.set(slug, count);
-      slug = `${slug}-${count}`.slice(0, 80);
-    } else {
-      usedSlugs.set(slug, 1);
-    }
+    const slug = normalizeOpenSlug(`${source.id}-${name}`);
+    const identity = skillIdentity(source.repo, name);
     const rawLicense = (fm.license || "").trim();
     const license =
       rawLicense && /^(MIT|Apache|BSD|ISC|GPL|MPL|CC|Unlicense)/i.test(rawLicense)
@@ -110,6 +145,7 @@ for (const source of manifest.sources) {
         : source.license;
     const category = source.group_categories?.[group] || source.category;
     const description = (fm.description || `${source.name} skill: ${name}.`).slice(0, 500);
+    const contentHash = sha256Hex(text);
     resources.push({
       slug,
       name,
@@ -120,7 +156,7 @@ for (const source of manifest.sources) {
       source: "vendored-upstream",
       source_url: source.repo,
       repository_url: source.repo,
-      version: "1.0.0",
+      version: resolveVersion(fm.version, contentHash),
       license,
       installation_type: "skill-source",
       installation_config: {
@@ -131,17 +167,129 @@ for (const source of manifest.sources) {
         executable: false,
         ingestion_mode: "vendored_source",
         license_declared: rawLicense || null,
+        content_hash: contentHash,
+        upstream_commit: source.commit || null,
+        upstream_ref: source.ref,
       },
       supported_clients: CLIENT_TARGETS,
       verified: false,
       featured: false,
       published: true,
       source_id: source.id,
+      trust: source.trust,
+      identity,
       group: group || null,
       rel_path: relPath,
     });
   }
 }
+
+const rank = (entry) => TRUST_RANK[entry.trust] ?? 9;
+
+function aliasOf(loser) {
+  return {
+    source_id: loser.source_id,
+    repository_url: loser.repository_url,
+    slug: loser.slug,
+    vendored_path: loser.installation_config.vendored_path,
+    rel_path: loser.rel_path,
+    content_hash: loser.installation_config.content_hash,
+  };
+}
+
+// A dropped entry that shared a slug with the winner can only be identified by
+// its vendored path.
+function droppedId(winner, loser) {
+  return loser.slug === winner.slug ? loser.rel_path : loser.slug;
+}
+
+function recordSuperseded(winner, loser, reason) {
+  const lineage = new Set([...(winner.installation_config.superseded ?? [])]);
+  lineage.add({
+    id: droppedId(winner, loser),
+    slug: loser.slug,
+    rel_path: loser.rel_path,
+    content_hash: loser.installation_config.content_hash,
+    reason,
+  });
+  winner.installation_config.superseded = [...lineage].sort((a, b) => a.id.localeCompare(b.id));
+  duplicates.push({
+    canonical_slug: winner.slug,
+    duplicate_slug: droppedId(winner, loser),
+    content_hash: loser.installation_config.content_hash,
+    canonical_content_hash: winner.installation_config.content_hash,
+    reason,
+    kept_source_id: winner.source_id,
+    dropped_source_id: loser.source_id,
+  });
+}
+
+// Pass 1: the same content vendored from several repositories is one entry. The
+// highest-trust source is canonical and the others are kept as aliases so no
+// upstream provenance is lost.
+const canonicalByHash = new Map();
+const afterHash = [];
+for (const resource of resources) {
+  const hash = resource.installation_config.content_hash;
+  const existing = canonicalByHash.get(hash);
+  if (!existing) {
+    canonicalByHash.set(hash, resource);
+    afterHash.push(resource);
+    continue;
+  }
+  const winner = rank(resource) < rank(existing) ? resource : existing;
+  const loser = winner === resource ? existing : resource;
+  if (winner !== existing) {
+    afterHash[afterHash.indexOf(existing)] = resource;
+    canonicalByHash.set(hash, resource);
+  }
+  const aliases = new Set([...(winner.installation_config.aliases ?? [])]);
+  aliases.add(aliasOf(loser));
+  winner.installation_config.aliases = [...aliases].sort((a, b) =>
+    a.source_id.localeCompare(b.source_id),
+  );
+  duplicates.push({
+    canonical_slug: winner.slug,
+    duplicate_slug: loser.slug,
+    content_hash: hash,
+    canonical_content_hash: hash,
+    reason: "identical_content",
+    kept_source_id: winner.source_id,
+    dropped_source_id: loser.source_id,
+  });
+}
+
+// Pass 2: the same skill name within one upstream repository can appear in more
+// than one directory. That is a superseded revision, not a distinct resource.
+// The longest body is the newest revision; shorter ones are recorded as
+// lineage so the version history stays auditable.
+const byIdentity = new Map();
+for (const resource of afterHash) {
+  const group = byIdentity.get(resource.identity) ?? [];
+  group.push(resource);
+  byIdentity.set(resource.identity, group);
+}
+
+const deduped = [];
+for (const group of byIdentity.values()) {
+  if (group.length === 1) {
+    deduped.push(group[0]);
+    continue;
+  }
+  const ordered = [...group].sort((a, b) => {
+    const byLength = b.description.length - a.description.length;
+    if (byLength !== 0) return byLength;
+    return a.slug.localeCompare(b.slug);
+  });
+  const [winner, ...superseded] = ordered;
+  for (const loser of superseded) {
+    recordSuperseded(winner, loser, "superseded_revision");
+  }
+  deduped.push(winner);
+}
+
+resources.length = 0;
+resources.push(...deduped);
 
 resources.sort((a, b) => a.slug.localeCompare(b.slug));
 
@@ -157,6 +305,8 @@ const catalog = {
   },
   generated_from: "config/vendored-skills.manifest.json",
   count: resources.length,
+  duplicate_count: duplicates.length,
+  duplicates,
   resources,
 };
 
@@ -165,8 +315,21 @@ await writeFile(
   `${JSON.stringify(catalog, null, 2)}\n`,
 );
 
-// Static download packages: one canonical SKILL.md per slug.
+// Static download packages: one canonical SKILL.md per slug. Packages this
+// generator published previously but no longer produces (renamed, deduped, or
+// removed upstream) are pruned. The previous catalog is the authority on which
+// directories this generator owns, so packages belonging to other marketplace
+// sources are never touched.
 const downloadsRoot = resolve(root, "public/downloads/skills");
+const currentSlugs = new Set(resources.map((resource) => resource.slug));
+let prunedPackages = 0;
+for (const slug of previousSlugs) {
+  if (currentSlugs.has(slug)) continue;
+  const stale = resolve(downloadsRoot, slug);
+  if (!(await pathExists(stale))) continue;
+  await rm(stale, { recursive: true, force: true });
+  prunedPackages += 1;
+}
 for (const resource of resources) {
   const target = resolve(downloadsRoot, resource.slug);
   await mkdir(target, { recursive: true });
@@ -259,6 +422,14 @@ on conflict (slug) do update set
   featured = false,
   published = true,
   updated_at = now();
+
+-- Prune vendored rows whose slugs no longer exist in the catalog (deduped or
+-- removed upstream). Scoped strictly to the vendored-upstream source.
+delete from public.resources
+where source = 'vendored-upstream'
+  and slug <> all (array[
+${resources.map((r) => `    ${sqlLiteral(r.slug)}`).join(",\n")}
+  ]);
 `;
 
 await writeFile(
@@ -268,7 +439,13 @@ await writeFile(
 
 console.log(
   JSON.stringify(
-    { resources: resources.length, categories: categorySlugs.length, warnings },
+    {
+      resources: resources.length,
+      categories: categorySlugs.length,
+      duplicates: duplicates.length,
+      prunedPackages,
+      warnings,
+    },
     null,
     2,
   ),

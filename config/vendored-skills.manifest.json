@@ -8,7 +8,12 @@
     "auto_publish": false,
     "require_license": true,
     "require_security_review": true,
-    "excluded_paths": ["schemas", "node_modules", ".git", "__pycache__"],
+    "excluded_paths": [
+      "schemas",
+      "node_modules",
+      ".git",
+      "__pycache__"
+    ],
     "excluded_extensions": [
       ".py",
       ".js",
@@ -48,7 +53,9 @@
       "category": "developer",
       "path": "openhands-extensions",
       "upstream_index": "marketplaces/openhands-extensions.json",
-      "description": "Official OpenHands skills and plugins repository."
+      "description": "Official OpenHands skills and plugins repository.",
+      "commit": "d05780951082d4d83f785cb1d4c7f2be6d1c14a5",
+      "commit_date": "2026-10-17T15:34:41Z"
     },
     {
       "id": "openhands-core",
@@ -62,7 +69,9 @@
       "category": "developer",
       "path": "openhands-core",
       "upstream_index": ".agents/skills",
-      "description": "In-repository agent skills maintained in the OpenHands monorepo. OpenHands/openhands resolves to the same repository as OpenHands/OpenHands."
+      "description": "In-repository agent skills maintained in the OpenHands monorepo. OpenHands/openhands resolves to the same repository as OpenHands/OpenHands.",
+      "commit": "852132d38dbc15e03d6825bbacbeb971c72575be",
+      "commit_date": "2026-10-17T22:09:58Z"
     },
     {
       "id": "manus-skills",
@@ -88,7 +97,9 @@
         "tier4-specialized": "developer",
         "utility-skills": "productivity",
         "workflow-skills": "developer"
-      }
+      },
+      "commit": "48c760280dab4df57951e31057720926b271f530",
+      "commit_date": "2026-03-01T13:54:05Z"
     },
     {
       "id": "openclaw",
@@ -106,7 +117,10 @@
         "skills": "productivity",
         "custodian": "infrastructure",
         "agents": "developer"
-      }
+      },
+      "commit": "33b5bee3901b89b094931a79980c071bc9589200",
+      "commit_date": "2026-10-18T01:36:24Z"
     }
-  ]
+  ],
+  "resolved_at": "2026-10-18T01:37:07.719Z"
 }

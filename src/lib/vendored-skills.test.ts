@@ -69,6 +69,110 @@ test("vendored skill catalog is metadata-only with unique open slugs", () => {
   }
 });
 
+test("vendored catalog records version and upstream provenance for every skill", () => {
+  const catalog = readJson("config/vendored-skills.generated.json") as {
+    resources: Array<{
+      slug: string;
+      version: string;
+      installation_config: {
+        content_hash: string;
+        upstream_commit: string | null;
+        upstream_ref: string;
+        aliases?: unknown[];
+        superseded?: unknown[];
+      };
+    }>;
+  };
+  const semver = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/;
+  const hashes = new Map<string, string>();
+  for (const resource of catalog.resources) {
+    const config = resource.installation_config;
+    assert.match(resource.version, semver, `non-semver version for ${resource.slug}`);
+    assert.match(config.content_hash, /^[a-f0-9]{64}$/, `bad hash for ${resource.slug}`);
+    assert.ok(config.upstream_commit, `missing upstream commit for ${resource.slug}`);
+    assert.ok(config.upstream_ref, `missing upstream ref for ${resource.slug}`);
+    const prior = hashes.get(config.content_hash);
+    assert.equal(prior, undefined, `content duplicated across ${resource.slug} and ${prior}`);
+    hashes.set(config.content_hash, resource.slug);
+  }
+});
+
+test("vendored catalog resolves duplicate content and superseded revisions", () => {
+  const catalog = readJson("config/vendored-skills.generated.json") as {
+    duplicate_count: number;
+    duplicates: Array<{
+      reason: string;
+      canonical_slug: string;
+      duplicate_slug: string;
+      content_hash: string;
+      canonical_content_hash: string;
+    }>;
+    resources: Array<{
+      slug: string;
+      installation_config: {
+        content_hash: string;
+        aliases?: Array<{ slug: string; content_hash: string }>;
+        superseded?: Array<{ id: string; content_hash: string; rel_path: string }>;
+      };
+    }>;
+  };
+  assert.equal(catalog.duplicate_count, catalog.duplicates.length);
+
+  const bySlug = new Map(catalog.resources.map((r) => [r.slug, r]));
+  const reasons = new Set(catalog.duplicates.map((d) => d.reason));
+  for (const reason of reasons) {
+    assert.ok(
+      ["identical_content", "superseded_revision"].includes(reason),
+      `unexpected duplicate reason: ${reason}`,
+    );
+  }
+
+  for (const record of catalog.duplicates) {
+    const canonical = bySlug.get(record.canonical_slug);
+    assert.ok(canonical, `missing canonical entry ${record.canonical_slug}`);
+    const config = canonical.installation_config;
+    if (record.reason === "identical_content") {
+      assert.ok(
+        (config.aliases ?? []).some(
+          (alias) =>
+            alias.slug === record.duplicate_slug && alias.content_hash === record.content_hash,
+        ),
+        `alias not recorded for ${record.duplicate_slug}`,
+      );
+      assert.ok(
+        !bySlug.has(record.duplicate_slug),
+        `dropped duplicate still present: ${record.duplicate_slug}`,
+      );
+    } else {
+      assert.ok(
+        (config.superseded ?? []).some(
+          (entry) =>
+            entry.id === record.duplicate_slug && entry.content_hash === record.content_hash,
+        ),
+        `superseded lineage not recorded for ${record.duplicate_slug}`,
+      );
+      assert.notEqual(
+        record.content_hash,
+        record.canonical_content_hash,
+        `superseded revision should not be identical content: ${record.duplicate_slug}`,
+      );
+    }
+  }
+});
+
+test("no vendored slug carries an unresolved collision suffix", () => {
+  const catalog = readJson("config/vendored-skills.generated.json") as {
+    resources: Array<{ slug: string }>;
+  };
+  for (const resource of catalog.resources) {
+    assert.doesNotMatch(
+      resource.slug,
+      /-[0-9]+$/,
+      `slug carries an unresolved collision suffix: ${resource.slug}`,
+    );
+  }
+});
+
 test("vendored sources contain no executable upstream code", () => {
   const manifest = readJson("config/vendored-skills.manifest.json") as {
     policy: { excluded_extensions: string[]; excluded_executables: string };

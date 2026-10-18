@@ -1,0 +1,60 @@
+name: Vendored skills — upstream drift
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Weekly, so a moved upstream is noticed without rebuilding the catalog daily.
+    - cron: "17 6 * * 1"
+
+concurrency:
+  group: vendored-skills-drift
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Report upstream drift
+        id: drift
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          node --experimental-strip-types scripts/sync-vendored-upstreams.mjs > drift.json
+          cat drift.json
+          drifted=$(node -e "process.stdout.write(String(require('./drift.json').drifted))")
+          echo "drifted=${drifted}" >> "$GITHUB_OUTPUT"
+
+      - name: Summarize drift
+        if: always()
+        run: |
+          {
+            echo "### Vendored skills upstream drift"
+            echo
+            if [ -f drift.json ]; then
+              echo '```json'
+              cat drift.json
+              echo '```'
+            fi
+            echo
+            echo "Run \`npm run skills:sync:write && npm run skills:generate\` to pin the new commits."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail when upstream has moved
+        if: steps.drift.outputs.drifted != '0'
+        env:
+          DRIFTED: ${{ steps.drift.outputs.drifted }}
+        run: |
+          echo "::warning title=Vendored skills are behind upstream::${DRIFTED} source(s) moved past their pinned commit. Re-vendor to stay current."

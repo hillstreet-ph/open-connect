@@ -2,7 +2,7 @@
   "name": "open-connect",
   "version": "1.0.0",
   "private": true,
-  "description": "Open-Connect single AI gateway — MCP, models, skills, plugins, connectors on open-connect.site",
+  "description": "Open-Connect single AI gateway \u2014 MCP, models, skills, plugins, connectors on open-connect.site",
   "sideEffects": false,
   "type": "module",
   "scripts": {
@@ -27,7 +27,9 @@
     "credentials:exec:auto": "node scripts/credential-broker.mjs exec-auto --",
     "capabilities:recommend": "node scripts/capability-router.mjs",
     "agent:start": "node scripts/credential-broker.mjs exec openai-agent -- bash scripts/openai-agents-session.sh",
-    "test:ssr": "node scripts/ssr-smoke.mjs"
+    "test:ssr": "node scripts/ssr-smoke.mjs",
+    "skills:sync": "node --experimental-strip-types scripts/sync-vendored-upstreams.mjs",
+    "skills:sync:write": "node --experimental-strip-types scripts/sync-vendored-upstreams.mjs --write"
   },
   "dependencies": {
     "@cfworker/json-schema": "^4.1.1",
