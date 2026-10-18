@@ -2,7 +2,7 @@
 // Validates the vendored upstream skill catalog against the manifest and the
 // vendored source tree. Metadata-only: it never installs or executes upstream code.
 import { createHash } from "node:crypto";
-import { readFile, stat } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
@@ -75,8 +75,8 @@ for (const resource of catalog.resources) {
   const skillPath = resolve(root, config.vendored_path, "SKILL.md");
   let skillText;
   try {
-    const info = await stat(skillPath);
-    if (!info.isFile()) throw new Error("not a file");
+    // readFile throws for a missing path or a directory, so no separate stat is
+    // needed and the content cannot change between a check and the read.
     skillText = await readFile(skillPath, "utf8");
   } catch {
     throw new Error(`missing vendored SKILL.md for ${resource.slug}: ${config.vendored_path}`);

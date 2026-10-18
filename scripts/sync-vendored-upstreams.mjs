@@ -39,8 +39,16 @@ function headers() {
   return value;
 }
 
+const API_ORIGIN = "https://api.github.com";
+
 async function github(path) {
-  const response = await fetch(`https://api.github.com/${path}`, { headers: headers() });
+  // Build the URL explicitly and pin the origin, so a manifest value can only
+  // ever select a path on the GitHub API rather than redirect the request.
+  const url = new URL(path.replace(/^\/+/, ""), `${API_ORIGIN}/`);
+  if (url.origin !== API_ORIGIN) {
+    throw new Error(`refusing to request outside ${API_ORIGIN}: ${url.href}`);
+  }
+  const response = await fetch(url, { headers: headers() });
   if (!response.ok) {
     throw new Error(`HTTP ${response.status} ${await response.text()}`);
   }
