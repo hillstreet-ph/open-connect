@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0.0",
+  "registry_id": "open-connect-claude-marketplace",
+  "policy": {
+    "mode": "metadata_only",
+    "executable": false,
+    "vendored_content": false,
+    "auto_install": false,
+    "auto_publish": false,
+    "require_security_review": true
+  },
+  "source": "claude-marketplaces+claude-account",
+  "counts": {
+    "total": 509,
+    "plugins": 403,
+    "account_skills": 106,
+    "upstream_listings": 519,
+    "already_in_library": 16,
+    "skipped": 0
+  },
+  "shards": [
+    "resources-01.generated.json",
+    "resources-02.generated.json",
+    "resources-03.generated.json",
+    "resources-04.generated.json",
+    "resources-05.generated.json",
+    "resources-06.generated.json",
+    "resources-07.generated.json",
+    "resources-08.generated.json",
+    "resources-09.generated.json",
+    "resources-10.generated.json",
+    "resources-11.generated.json",
+    "resources-12.generated.json",
+    "resources-13.generated.json",
+    "resources-14.generated.json"
+  ]
+}
