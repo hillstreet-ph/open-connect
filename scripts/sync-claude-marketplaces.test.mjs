@@ -9,6 +9,7 @@ import {
   buildCatalog,
   buildPrivateRows,
   buildPublicRows,
+  manifestUrl,
   normalizeRow,
   planSync,
   pluginUrls,
@@ -255,4 +256,13 @@ test("normalized rows carry exactly the resource columns", () => {
   assert.equal(row.owner_id, null);
   assert.equal(row.description, null);
   assert.equal(Object.keys(row).length, 18);
+});
+
+test("manifest URLs stay on the pinned raw GitHub origin", () => {
+  assert.equal(
+    manifestUrl("anthropics/claude-plugins-official").href,
+    "https://raw.githubusercontent.com/anthropics/claude-plugins-official/HEAD/.claude-plugin/marketplace.json",
+  );
+  for (const bad of ["https://evil.example/x", "//evil.example/x", "a/../b", "anthropics", "a/b/c"])
+    assert.throws(() => manifestUrl(bad), /invalid marketplace repository/, bad);
 });

@@ -306,6 +306,20 @@ export function planSync(desired, existing) {
   return plan;
 }
 
+const RAW_ORIGIN = "https://raw.githubusercontent.com";
+
+// Builds the manifest URL on a pinned origin from a strictly validated
+// owner/repo, so a registry value can only select a repository, never
+// redirect the request elsewhere.
+export function manifestUrl(repository) {
+  if (!/^[A-Za-z0-9-]+\/[A-Za-z0-9._-]+$/.test(String(repository)) || repository.includes("..")) {
+    throw new Error(`invalid marketplace repository: ${repository}`);
+  }
+  const url = new URL(`${repository}/HEAD/.claude-plugin/marketplace.json`, `${RAW_ORIGIN}/`);
+  if (url.origin !== RAW_ORIGIN) throw new Error(`refusing to request outside ${RAW_ORIGIN}`);
+  return url;
+}
+
 async function loadMarketplaces(registry, dir) {
   const result = {};
   for (const marketplace of registry.marketplaces) {
@@ -314,9 +328,10 @@ async function loadMarketplaces(registry, dir) {
       result[marketplace.name] = JSON.parse(await readFile(file, "utf8"));
       continue;
     }
-    const url = `https://raw.githubusercontent.com/${marketplace.repository}/HEAD/.claude-plugin/marketplace.json`;
-    const response = await fetch(url, { signal: AbortSignal.timeout(30_000) });
-    if (!response.ok) throw new Error(`fetch failed ${response.status}: ${url}`);
+    const response = await fetch(manifestUrl(marketplace.repository), {
+      signal: AbortSignal.timeout(30_000),
+    });
+    if (!response.ok) throw new Error(`fetch failed ${response.status}: ${response.url}`);
     result[marketplace.name] = await response.json();
   }
   return result;
