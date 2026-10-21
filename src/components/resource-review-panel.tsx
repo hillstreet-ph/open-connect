@@ -1,37 +1,130 @@
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, Send, ShieldCheck, ShieldOff } from "lucide-react";
+import { BadgeCheck, Loader2, Search, Send, ShieldCheck, ShieldOff, X } from "lucide-react";
 import { toast } from "sonner";
-import { listResourcesForReview, updateResourceReview } from "@/lib/resource-review.functions";
+import {
+  bulkUpdateResourceReview,
+  listResourcesForReview,
+  updateResourceReview,
+} from "@/lib/resource-review.functions";
+import { reviewActionLabel, type ReviewAction } from "@/lib/resource-review-bulk";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 
-type ReviewAction = "verify" | "unverify" | "publish" | "unpublish";
+const BULK_ACTIONS: { action: ReviewAction; icon: typeof ShieldCheck }[] = [
+  { action: "verify", icon: ShieldCheck },
+  { action: "verify_publish", icon: BadgeCheck },
+  { action: "publish", icon: Send },
+  { action: "unpublish", icon: ShieldOff },
+];
+
+const BULK_DESCRIPTIONS: Record<ReviewAction, string> = {
+  verify:
+    "Marks the selected resources as verified. Confirm you have checked each source and license.",
+  verify_publish:
+    "Marks the selected resources as verified and lists them on the Marketplace. Confirm you have checked each source and license.",
+  publish: "Lists the selected resources on the Marketplace. Unverified resources are skipped.",
+  unpublish: "Removes the selected resources from the Marketplace. Nothing is deleted.",
+  unverify: "Removes verification and unpublishes the selected resources.",
+};
 
 export function ResourceReviewPanel() {
   const queryClient = useQueryClient();
   const listFn = useServerFn(listResourcesForReview);
   const updateFn = useServerFn(updateResourceReview);
+  const bulkFn = useServerFn(bulkUpdateResourceReview);
+  const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  const [filter, setFilter] = useState("");
+  const [pending, setPending] = useState<ReviewAction | null>(null);
   const queue = useQuery({
     queryKey: ["resources-review-queue"],
     queryFn: () => listFn({}),
+  });
+  const invalidate = () => {
+    void queryClient.invalidateQueries({ queryKey: ["resources-review-queue"] });
+    void queryClient.invalidateQueries({ queryKey: ["marketplace"] });
+    void queryClient.invalidateQueries({ queryKey: ["resources-marketplace"] });
+  };
+  const visible = useMemo(() => {
+    const needle = filter.trim().toLowerCase();
+    const rows = queue.data ?? [];
+    if (!needle) return rows;
+    return rows.filter((row) =>
+      [row.name, row.slug, row.source, row.resource_type, row.description]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(needle)),
+    );
+  }, [queue.data, filter]);
+  const visibleIds = useMemo(() => visible.map((row) => row.id), [visible]);
+  const selectedIds = useMemo(() => {
+    const present = new Set((queue.data ?? []).map((row) => row.id));
+    return [...selected].filter((id) => present.has(id));
+  }, [selected, queue.data]);
+  const visibleSelected = visibleIds.filter((id) => selected.has(id)).length;
+  const allVisibleSelected = visibleIds.length > 0 && visibleSelected === visibleIds.length;
+  const toggle = (id: string, on: boolean) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  const toggleAllVisible = (on: boolean) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      for (const id of visibleIds) {
+        if (on) next.add(id);
+        else next.delete(id);
+      }
+      return next;
+    });
+  const bulk = useMutation({
+    mutationFn: (data: { ids: string[]; action: ReviewAction }) => bulkFn({ data }),
+    onSuccess: (result) => {
+      const skipped = [
+        result.skipped_not_verified ? `${result.skipped_not_verified} not verified` : "",
+        result.skipped_unchanged ? `${result.skipped_unchanged} already done` : "",
+        result.missing ? `${result.missing} no longer exist` : "",
+      ].filter(Boolean);
+      toast.success(
+        `${reviewActionLabel(result.action)}: ${result.updated} of ${result.requested} updated` +
+          (skipped.length ? ` (skipped ${skipped.join(", ")})` : ""),
+      );
+      setSelected(new Set());
+      invalidate();
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : "Bulk review failed"),
+    onSettled: () => setPending(null),
   });
   const update = useMutation({
     mutationFn: (data: { id: string; action: ReviewAction }) => updateFn({ data }),
     onSuccess: (_, variables) => {
       toast.success(
-        variables.action === "verify"
-          ? "Resource verified"
-          : variables.action === "publish"
-            ? "Resource published"
-            : variables.action === "unverify"
-              ? "Verification removed and resource unpublished"
-              : "Resource unpublished",
+        variables.action === "verify_publish"
+          ? "Resource verified and published"
+          : variables.action === "verify"
+            ? "Resource verified"
+            : variables.action === "publish"
+              ? "Resource published"
+              : variables.action === "unverify"
+                ? "Verification removed and resource unpublished"
+                : "Resource unpublished",
       );
-      void queryClient.invalidateQueries({ queryKey: ["resources-review-queue"] });
-      void queryClient.invalidateQueries({ queryKey: ["marketplace"] });
-      void queryClient.invalidateQueries({ queryKey: ["resources-marketplace"] });
+      invalidate();
     },
     onError: (error) =>
       toast.error(error instanceof Error ? error.message : "Resource review failed"),
@@ -69,57 +162,158 @@ export function ResourceReviewPanel() {
     );
   }
 
+  const busy = update.isPending || bulk.isPending;
+
   return (
     <div className="grid gap-3">
-      {queue.data.map((resource) => (
+      <Card className="sticky top-0 z-10 shadow-panel">
+        <CardContent className="grid gap-3 p-3">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+            <Input
+              value={filter}
+              onChange={(event) => setFilter(event.target.value)}
+              placeholder="Filter by name, type or source"
+              aria-label="Filter resources for review"
+              className="pl-8"
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={allVisibleSelected ? true : visibleSelected > 0 ? "indeterminate" : false}
+                onCheckedChange={(value) => toggleAllVisible(value === true)}
+                disabled={!visibleIds.length || busy}
+                aria-label="Select all shown resources"
+              />
+              Select all ({visibleIds.length})
+            </label>
+            <span className="text-sm text-muted-foreground" role="status">
+              {selectedIds.length} selected of {queue.data.length}
+            </span>
+            {selectedIds.length ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setSelected(new Set())}
+                disabled={busy}
+              >
+                <X className="mr-1 size-4" />
+                Clear
+              </Button>
+            ) : null}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {BULK_ACTIONS.map(({ action, icon: Icon }) => (
+              <Button
+                key={action}
+                size="sm"
+                variant={action === "unpublish" ? "outline" : "default"}
+                disabled={!selectedIds.length || busy}
+                onClick={() => setPending(action)}
+              >
+                {bulk.isPending && bulk.variables?.action === action ? (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                ) : (
+                  <Icon className="mr-2 size-4" />
+                )}
+                {reviewActionLabel(action)}
+                {selectedIds.length ? ` (${selectedIds.length})` : ""}
+              </Button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <AlertDialog open={pending !== null} onOpenChange={(open) => !open && setPending(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pending ? reviewActionLabel(pending) : ""} {selectedIds.length} resource
+              {selectedIds.length === 1 ? "" : "s"}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pending ? BULK_DESCRIPTIONS[pending] : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulk.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={bulk.isPending}
+              onClick={() => {
+                if (pending) bulk.mutate({ ids: selectedIds, action: pending });
+              }}
+            >
+              {pending ? reviewActionLabel(pending) : "Confirm"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {!visible.length ? (
+        <p className="text-sm text-muted-foreground" role="status">
+          No resources match this filter.
+        </p>
+      ) : null}
+
+      {visible.map((resource) => (
         <Card key={resource.id} className="shadow-panel">
           <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0 space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="font-medium">{resource.name}</h3>
-                <Badge variant="secondary" className="uppercase">
-                  {resource.resource_type}
-                </Badge>
-                <Badge variant={resource.verified ? "default" : "outline"}>
-                  {resource.verified ? "Verified" : "Needs verification"}
-                </Badge>
-                <Badge variant={resource.published ? "default" : "outline"}>
-                  {resource.published ? "Published" : "Draft"}
-                </Badge>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                {resource.description || "No description"}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {resource.source || "Source not listed"}
-                {" · "}
-                {resource.license || "License not listed"}
-                {resource.version ? ` · v${resource.version}` : ""}
-              </p>
-              {resource.source_url || resource.repository_url ? (
-                <div className="flex flex-wrap gap-3 text-sm">
-                  {resource.source_url ? (
-                    <a
-                      className="text-primary underline underline-offset-4"
-                      href={resource.source_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Source
-                    </a>
-                  ) : null}
-                  {resource.repository_url ? (
-                    <a
-                      className="text-primary underline underline-offset-4"
-                      href={resource.repository_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Repository
-                    </a>
-                  ) : null}
+            <div className="flex min-w-0 gap-3">
+              <Checkbox
+                className="mt-1"
+                checked={selected.has(resource.id)}
+                onCheckedChange={(value) => toggle(resource.id, value === true)}
+                disabled={busy}
+                aria-label={`Select ${resource.name}`}
+              />
+              <div className="min-w-0 space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="font-medium">{resource.name}</h3>
+                  <Badge variant="secondary" className="uppercase">
+                    {resource.resource_type}
+                  </Badge>
+                  <Badge variant={resource.verified ? "default" : "outline"}>
+                    {resource.verified ? "Verified" : "Needs verification"}
+                  </Badge>
+                  <Badge variant={resource.published ? "default" : "outline"}>
+                    {resource.published ? "Published" : "Draft"}
+                  </Badge>
                 </div>
-              ) : null}
+                <p className="text-sm text-muted-foreground">
+                  {resource.description || "No description"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {resource.source || "Source not listed"}
+                  {" · "}
+                  {resource.license || "License not listed"}
+                  {resource.version ? ` · v${resource.version}` : ""}
+                </p>
+                {resource.source_url || resource.repository_url ? (
+                  <div className="flex flex-wrap gap-3 text-sm">
+                    {resource.source_url ? (
+                      <a
+                        className="text-primary underline underline-offset-4"
+                        href={resource.source_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Source
+                      </a>
+                    ) : null}
+                    {resource.repository_url ? (
+                      <a
+                        className="text-primary underline underline-offset-4"
+                        href={resource.repository_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Repository
+                      </a>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
             </div>
             <div className="flex shrink-0 flex-wrap gap-2">
               <Button
@@ -131,7 +325,7 @@ export function ResourceReviewPanel() {
                     action: resource.verified ? "unverify" : "verify",
                   })
                 }
-                disabled={update.isPending}
+                disabled={busy}
               >
                 {update.isPending ? (
                   <Loader2 className="mr-2 size-4 animate-spin" />
@@ -151,7 +345,7 @@ export function ResourceReviewPanel() {
                     action: resource.published ? "unpublish" : "publish",
                   })
                 }
-                disabled={update.isPending || (!resource.verified && !resource.published)}
+                disabled={busy || (!resource.verified && !resource.published)}
                 title={
                   !resource.verified && !resource.published ? "Verify before publishing" : undefined
                 }
