@@ -5,15 +5,16 @@ import {
 } from "@/lib/resource-categories";
 import { WorkspaceShell } from "@/components/workspace-shell";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
-import { Download, ExternalLink, Eye, Lock, Search } from "lucide-react";
+import { Download, ExternalLink, Eye, Library, Loader2, Lock, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { getResourceDownloadUrl, getResourceView } from "@/lib/resources.functions";
 import { resourceCategories } from "@/lib/nav";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { AddToLibraryButton } from "@/components/add-to-library";
-import { listLibraryResources, listResourceProjectAssignments } from "@/lib/library.functions";
+import {
+  addResourcesToLibrary,
+  listLibraryResources,
+  listResourceProjectAssignments,
+} from "@/lib/library.functions";
 import { listResourceCollections } from "@/lib/resource-collections.functions";
 import {
   resolveDefaultMarketplaceCollection,
@@ -84,6 +89,9 @@ function MarketplaceContent() {
   const listLibrary = useServerFn(listLibraryResources);
   const listCollections = useServerFn(listResourceCollections);
   const listAssignments = useServerFn(listResourceProjectAssignments);
+  const addManyFn = useServerFn(addResourcesToLibrary);
+  const queryClient = useQueryClient();
+  const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const library = useQuery({
     queryKey: ["resource-library"],
     queryFn: () => listLibrary({ data: {} }),
@@ -175,6 +183,64 @@ function MarketplaceContent() {
       );
     });
   }, [data, query, type, purpose, linkedResource]);
+
+  const libraryIds = useMemo(
+    () =>
+      new Set(
+        (library.data ?? [])
+          .map((row) => row.resources?.id)
+          .filter((id): id is string => typeof id === "string"),
+      ),
+    [library.data],
+  );
+  const selectableIds = useMemo(
+    () => results.filter((item) => !libraryIds.has(item.id)).map((item) => item.id),
+    [results, libraryIds],
+  );
+  const selectedIds = useMemo(
+    () => [...selected].filter((id) => !libraryIds.has(id)),
+    [selected, libraryIds],
+  );
+  const shownSelected = selectableIds.filter((id) => selected.has(id)).length;
+  const allShownSelected = selectableIds.length > 0 && shownSelected === selectableIds.length;
+  const toggleSelected = (id: string, on: boolean) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  const toggleAllShown = (on: boolean) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      for (const id of selectableIds) {
+        if (on) next.add(id);
+        else next.delete(id);
+      }
+      return next;
+    });
+  const addMany = useMutation({
+    mutationFn: (resourceIds: string[]) =>
+      addManyFn({ data: { resourceIds, collectionId: defaultCollectionId || null } }),
+    onSuccess: (result) => {
+      const notes = [
+        result.already_in_library ? `${result.already_in_library} already in Library` : "",
+        result.missing ? `${result.missing} unavailable` : "",
+        result.collection_full ? `${result.collection_full} not added to the full collection` : "",
+      ].filter(Boolean);
+      toast.success(
+        `Added ${result.added} of ${result.requested} to your Library` +
+          (notes.length ? ` (${notes.join(", ")})` : ""),
+      );
+      setSelected(new Set());
+      void queryClient.invalidateQueries({ queryKey: ["resource-library"] });
+      void queryClient.invalidateQueries({ queryKey: ["project-resources"] });
+      void queryClient.invalidateQueries({ queryKey: ["resource-collections"] });
+      void queryClient.invalidateQueries({ queryKey: ["resource-project-assignments"] });
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Could not add to library"),
+  });
 
   const counts = useMemo(() => {
     const map: Record<string, number> = { all: data?.length ?? 0 };
@@ -290,6 +356,47 @@ function MarketplaceContent() {
             </div>
           </div>
 
+          {user && !isLoading && !isError ? (
+            <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-background/95 p-2 backdrop-blur">
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={allShownSelected ? true : shownSelected > 0 ? "indeterminate" : false}
+                  onCheckedChange={(value) => toggleAllShown(value === true)}
+                  disabled={!selectableIds.length || addMany.isPending}
+                  aria-label="Select all shown resources not yet in your Library"
+                />
+                Select all ({selectableIds.length})
+              </label>
+              <span className="text-xs text-muted-foreground" role="status">
+                {selectedIds.length} selected
+              </span>
+              {selectedIds.length ? (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setSelected(new Set())}
+                  disabled={addMany.isPending}
+                >
+                  <X className="mr-1 size-3.5" />
+                  Clear
+                </Button>
+              ) : null}
+              <Button
+                size="sm"
+                className="ml-auto"
+                disabled={!selectedIds.length || addMany.isPending}
+                onClick={() => addMany.mutate(selectedIds)}
+              >
+                {addMany.isPending ? (
+                  <Loader2 className="mr-1 size-3.5 animate-spin" />
+                ) : (
+                  <Library className="mr-1 size-3.5" />
+                )}
+                Add selected to Library{selectedIds.length ? ` (${selectedIds.length})` : ""}
+              </Button>
+            </div>
+          ) : null}
+
           {isError ? (
             <p role="alert">
               Could not load Marketplace.{" "}
@@ -317,9 +424,7 @@ function MarketplaceContent() {
                   const canonicalUrl =
                     typeof config["canonical_url"] === "string" ? config["canonical_url"] : null;
                   const executable = item.verified && reviewState === "approved";
-                  const inLibrary = (library.data ?? []).some(
-                    (row) => row.resources?.id === item.id,
-                  );
+                  const inLibrary = libraryIds.has(item.id);
                   const collectionNames = (collections.data ?? [])
                     .filter((collection) =>
                       collection.toolkit_items.some((entry) => entry.resource_id === item.id),
@@ -336,6 +441,14 @@ function MarketplaceContent() {
                     <Card key={item.id} className="shadow-panel">
                       <CardHeader className="p-3 pb-1">
                         <div className="flex flex-wrap items-center gap-1.5">
+                          {user && !inLibrary ? (
+                            <Checkbox
+                              checked={selected.has(item.id)}
+                              onCheckedChange={(value) => toggleSelected(item.id, value === true)}
+                              disabled={addMany.isPending}
+                              aria-label={`Select ${item.name}`}
+                            />
+                          ) : null}
                           <Badge variant="secondary" className="text-[10px] uppercase">
                             {item.resource_type}
                           </Badge>
