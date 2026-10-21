@@ -44,6 +44,44 @@ Open-Connect library resource `claude-skills-plugins-catalog` (private, review r
 - Every text file in a skill or plugin (not only `SKILL.md`) is scanned; a match records the
   resource as `quarantined_metadata` with its description removed. Placeholders such as `xoxb-YOUR-TOKEN` also trigger it; that is intentional.
 
+## Marketplace publication
+
+`scripts/sync-claude-marketplaces.mjs` puts the catalog on the open-connect.site marketplace
+(`public.resources`) as metadata-only rows. Discovery never publishes directly:
+
+```
+upstream marketplace.json ×7 + config/claude-library
+        │  claude-marketplace-catalog.yml (daily 06:17 UTC, on input change, on demand)
+        ▼   --write → automation/claude-marketplace-catalog → review PR
+config/claude-marketplace/index.generated.json + resources-NN.generated.json
+        │  merge to main → claude-marketplace-sync.yml (production environment)
+        ▼   --check, then --publish from the committed catalog only
+public.resources (published, verified = false)
+```
+
+| Input                                                                         | Rows                                                                     | Visibility                                                |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------- |
+| `config/claude-marketplaces.registry.json` → each upstream `marketplace.json` | `claude-plugin-*`, `resource_type = plugin`, source `claude-marketplace` | published, `verified = false`                             |
+| `config/claude-library` account skills                                        | `claude-skill-*`, `resource_type = skill`, source `claude-account`       | published, `verified = false`, owned by the library owner |
+
+- A plugin offered by several marketplaces is one row; the others are listed in
+  `installation_config.also_listed_in`. Each row carries the upstream URL, license and the
+  `/plugin install <name>@<marketplace>` command. No plugin code, skill body or MCP configuration is
+  copied.
+- The library owner is the owner of the `claude-skills-plugins-catalog` resource. Without it,
+  account-skill rows are skipped and plugin rows still sync.
+- Rows from any other source, and any resource whose slug or name already exists, are never
+  written: the catalog drops matches against `config/open-connect-library.snapshot.json` and
+  `config/vendored-skills.generated.json`, and publication re-checks the live table. Quarantined
+  and `duplicate_of` account skills are never written.
+- On later syncs only metadata is refreshed. `published`, `verified`, `featured`, the owner and a
+  non-pending `installation_config.review_state` set by an admin are preserved. A plugin that
+  disappears upstream is unpublished, never deleted, unless an admin verified it.
+- An unreachable or mismatched upstream manifest aborts the run before anything is written.
+- `npm run claude-marketplace:drift` reports how far the committed catalog is behind upstream,
+  `claude-marketplace:write` regenerates it and `claude-marketplace:check` validates it. Rollback is
+  `update public.resources set published = false where source in ('claude-marketplace', 'claude-account')`.
+
 ## Autonomous setup
 
 `skills/claude-autonomous-e2e/SKILL.md` is the orchestrator skill that uses this catalog together
@@ -53,5 +91,7 @@ plan by risk tier → execute → verify → report. It is published to the libr
 
 ## Review and publication
 
-Nothing here installs or publishes automatically. Library resources are created private and
-unverified; publishing requires independent security review and explicit owner approval.
+Nothing here installs anything. Marketplace rows publish only from the reviewed, committed
+`config/claude-marketplace` catalog and stay `verified = false`; marking a row verified or
+installable requires independent security review and explicit owner approval. Library resources
+created through the Open-Connect MCP start private and unverified.
