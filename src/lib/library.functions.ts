@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
+import { normalizeLibraryBulkInput, planCollectionAdd } from "@/lib/library-bulk";
 
 const LIBRARY_SLUG = "open-connect-personal-library";
 
@@ -164,6 +165,109 @@ export const addResourceToLibrary = createServerFn({ method: "POST" })
       if (itemError) throw new Error(itemError.message);
     }
     return { ok: true };
+  });
+
+const BULK_CHUNK = 200;
+
+function chunked<T>(items: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
+}
+
+/**
+ * Adds many Marketplace resources to the caller's Library in one request.
+ * Reads go through the caller's RLS-scoped client, so only resources the user
+ * can see are added. Skills also join the Skills collection; other types join
+ * the chosen collection until it reaches its item limit.
+ */
+export const addResourcesToLibrary = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { resourceIds: string[]; collectionId?: string | null }) =>
+    normalizeLibraryBulkInput(input),
+  )
+  .handler(async ({ data, context }) => {
+    const found: { id: string; resource_type: string }[] = [];
+    for (const ids of chunked(data.resourceIds, BULK_CHUNK)) {
+      const { data: rows, error } = await context.supabase
+        .from("resources")
+        .select("id, resource_type")
+        .in("id", ids);
+      if (error) throw new Error(error.message);
+      found.push(...(rows ?? []));
+    }
+    if (!found.length) throw new Error("None of the selected resources were found.");
+
+    const libraryId = await ensureLibrary(context);
+    const { data: libraryRows, error: libraryReadError } = await context.supabase
+      .from("toolkit_items")
+      .select("resource_id")
+      .eq("toolkit_id", libraryId);
+    if (libraryReadError) throw new Error(libraryReadError.message);
+    const alreadyInLibrary = new Set((libraryRows ?? []).map((row) => row.resource_id));
+    const newIds = found.map((row) => row.id).filter((id) => !alreadyInLibrary.has(id));
+    for (const ids of chunked(newIds, BULK_CHUNK)) {
+      const { error } = await context.supabase.from("toolkit_items").upsert(
+        ids.map((resource_id) => ({ toolkit_id: libraryId, resource_id, position: 0 })),
+        { onConflict: "toolkit_id,resource_id" },
+      );
+      if (error) throw new Error(error.message);
+    }
+
+    const skillIds = found.filter((row) => row.resource_type === "skill").map((row) => row.id);
+    if (skillIds.length) {
+      const skillsCollectionId = await ensureSkillsCollection(context);
+      for (const ids of chunked(skillIds, BULK_CHUNK)) {
+        const { error } = await context.supabase.from("toolkit_items").upsert(
+          ids.map((resource_id) => ({ toolkit_id: skillsCollectionId, resource_id, position: 0 })),
+          { onConflict: "toolkit_id,resource_id" },
+        );
+        if (error) throw new Error(error.message);
+      }
+    }
+
+    let collectionAdded = 0;
+    let collectionFull = 0;
+    const otherIds = found.filter((row) => row.resource_type !== "skill").map((row) => row.id);
+    if (data.collectionId && otherIds.length) {
+      const { data: collection, error: collectionError } = await context.supabase
+        .from("toolkits")
+        .select("id")
+        .eq("id", data.collectionId)
+        .eq("user_id", context.userId)
+        .like("slug", "collection-%")
+        .maybeSingle();
+      if (collectionError) throw new Error(collectionError.message);
+      if (!collection) throw new Error("Collection not found.");
+      const { data: currentItems, error: itemsError } = await context.supabase
+        .from("toolkit_items")
+        .select("resource_id")
+        .eq("toolkit_id", collection.id);
+      if (itemsError) throw new Error(itemsError.message);
+      const plan = planCollectionAdd(
+        otherIds,
+        (currentItems ?? []).map((item) => item.resource_id),
+      );
+      if (plan.add.length) {
+        const { error } = await context.supabase.from("toolkit_items").upsert(
+          plan.add.map((resource_id) => ({ toolkit_id: collection.id, resource_id, position: 0 })),
+          { onConflict: "toolkit_id,resource_id" },
+        );
+        if (error) throw new Error(error.message);
+      }
+      collectionAdded = plan.add.length;
+      collectionFull = plan.overflow.length;
+    }
+
+    return {
+      requested: data.resourceIds.length,
+      added: newIds.length,
+      already_in_library: found.length - newIds.length,
+      missing: data.resourceIds.length - found.length,
+      skills: skillIds.length,
+      collection_added: collectionAdded,
+      collection_full: collectionFull,
+    };
   });
 
 export const removeResourceFromLibrary = createServerFn({ method: "POST" })
