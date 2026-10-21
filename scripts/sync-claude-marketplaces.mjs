@@ -306,17 +306,29 @@ export function planSync(desired, existing) {
   return plan;
 }
 
-const RAW_ORIGIN = "https://raw.githubusercontent.com";
+// The only manifests this script may fetch. A registry value selects an entry
+// here; no file data ever becomes part of a request URL. Adding a marketplace
+// is a reviewed code change.
+const MANIFEST_URLS = Object.freeze({
+  "anthropics/claude-plugins-official":
+    "https://raw.githubusercontent.com/anthropics/claude-plugins-official/HEAD/.claude-plugin/marketplace.json",
+  "anthropics/knowledge-work-plugins":
+    "https://raw.githubusercontent.com/anthropics/knowledge-work-plugins/HEAD/.claude-plugin/marketplace.json",
+  "anthropics/claude-tag-plugins":
+    "https://raw.githubusercontent.com/anthropics/claude-tag-plugins/HEAD/.claude-plugin/marketplace.json",
+  "anthropics/life-sciences":
+    "https://raw.githubusercontent.com/anthropics/life-sciences/HEAD/.claude-plugin/marketplace.json",
+  "anthropics/financial-services":
+    "https://raw.githubusercontent.com/anthropics/financial-services/HEAD/.claude-plugin/marketplace.json",
+  "anthropics/healthcare":
+    "https://raw.githubusercontent.com/anthropics/healthcare/HEAD/.claude-plugin/marketplace.json",
+  "anthropics/claude-for-legal":
+    "https://raw.githubusercontent.com/anthropics/claude-for-legal/HEAD/.claude-plugin/marketplace.json",
+});
 
-// Builds the manifest URL on a pinned origin from a strictly validated
-// owner/repo, so a registry value can only select a repository, never
-// redirect the request elsewhere.
 export function manifestUrl(repository) {
-  if (!/^[A-Za-z0-9-]+\/[A-Za-z0-9._-]+$/.test(String(repository)) || repository.includes("..")) {
-    throw new Error(`invalid marketplace repository: ${repository}`);
-  }
-  const url = new URL(`${repository}/HEAD/.claude-plugin/marketplace.json`, `${RAW_ORIGIN}/`);
-  if (url.origin !== RAW_ORIGIN) throw new Error(`refusing to request outside ${RAW_ORIGIN}`);
+  const url = Object.hasOwn(MANIFEST_URLS, repository) ? MANIFEST_URLS[repository] : null;
+  if (!url) throw new Error(`marketplace repository not allowlisted: ${repository}`);
   return url;
 }
 

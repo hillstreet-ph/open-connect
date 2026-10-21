@@ -258,11 +258,28 @@ test("normalized rows carry exactly the resource columns", () => {
   assert.equal(Object.keys(row).length, 18);
 });
 
-test("manifest URLs stay on the pinned raw GitHub origin", () => {
+test("manifest URLs come only from the allowlist", () => {
   assert.equal(
-    manifestUrl("anthropics/claude-plugins-official").href,
+    manifestUrl("anthropics/claude-plugins-official"),
     "https://raw.githubusercontent.com/anthropics/claude-plugins-official/HEAD/.claude-plugin/marketplace.json",
   );
-  for (const bad of ["https://evil.example/x", "//evil.example/x", "a/../b", "anthropics", "a/b/c"])
-    assert.throws(() => manifestUrl(bad), /invalid marketplace repository/, bad);
+  for (const bad of [
+    "https://evil.example/x",
+    "anthropics/other",
+    "a/../b",
+    "constructor",
+    "__proto__",
+  ])
+    assert.throws(() => manifestUrl(bad), /not allowlisted/, bad);
+});
+
+test("every committed marketplace is allowlisted", () => {
+  const committed = JSON.parse(
+    readFileSync(
+      resolve(import.meta.dirname, "../config/claude-marketplaces.registry.json"),
+      "utf8",
+    ),
+  );
+  for (const marketplace of committed.marketplaces)
+    assert.match(manifestUrl(marketplace.repository), /^https:\/\/raw\.githubusercontent\.com\//);
 });
