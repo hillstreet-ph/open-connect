@@ -1,0 +1,90 @@
+name: Claude marketplace catalog
+
+# Regenerates config/claude-marketplace from the upstream Claude plugin
+# marketplaces and the committed Claude library catalog, then opens a review
+# pull request. Nothing here writes to Supabase; publication happens only after
+# the reviewed catalog is merged (claude-marketplace-sync.yml).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - config/claude-marketplaces.registry.json
+      - config/claude-library/**
+      - config/open-connect-library.snapshot.json
+      - scripts/sync-claude-marketplaces.mjs
+      - scripts/sync-claude-library.mjs
+      - .github/workflows/claude-marketplace-catalog.yml
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+concurrency:
+  group: open-connect-claude-marketplace-catalog
+  cancel-in-progress: false
+
+jobs:
+  catalog:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Test sync logic
+        run: node --test scripts/sync-claude-library.test.mjs scripts/sync-claude-marketplaces.test.mjs
+      - name: Regenerate catalog from upstream marketplaces
+        run: node scripts/sync-claude-marketplaces.mjs --write
+      - name: Validate regenerated catalog
+        run: node scripts/sync-claude-marketplaces.mjs --check
+      - name: Create or update catalog review pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if [ -z "$(git status --porcelain -- config/claude-marketplace)" ]; then
+            echo "Claude marketplace catalog is current."
+            exit 0
+          fi
+          branch="automation/claude-marketplace-catalog"
+          snapshot=$(mktemp -d)
+          cp -R config/claude-marketplace/. "$snapshot/"
+          git restore --source=HEAD --staged --worktree -- config/claude-marketplace 2>/dev/null || true
+          git clean -fdq -- config/claude-marketplace
+          git config user.name "open-connect-marketplace[bot]"
+          git config user.email "open-connect-marketplace[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+            git fetch origin "$branch:refs/remotes/origin/$branch"
+            git switch --create "$branch" --track "origin/$branch"
+            git merge --no-edit --no-ff origin/main
+          else
+            git switch --create "$branch" origin/main
+          fi
+          rm -rf config/claude-marketplace
+          mkdir -p config/claude-marketplace
+          cp -R "$snapshot/." config/claude-marketplace/
+          git add -A -- config/claude-marketplace
+          if git diff --cached --quiet; then
+            echo "Review branch already holds this catalog."
+          else
+            git commit -m "chore(marketplace): refresh Claude marketplace catalog"
+          fi
+          git push origin "HEAD:refs/heads/$branch"
+          if [ -z "$(gh pr list --head "$branch" --base main --state open --json number --jq '.[0].number // empty')" ]; then
+            gh pr create \
+              --base main \
+              --head "$branch" \
+              --title "chore(marketplace): refresh Claude marketplace catalog" \
+              --body "Automated metadata-only refresh of the Claude plugin marketplaces and account skills. Rows publish as unverified listings after merge; nothing is installable through Open-Connect until verified."
+          fi
+          # GITHUB_TOKEN events do not trigger pull_request workflows.
+          gh workflow run ci.yml --ref "$branch"

@@ -1,0 +1,55 @@
+name: Publish Claude marketplace catalog
+
+# Publishes the reviewed, committed config/claude-marketplace catalog to the
+# open-connect.site marketplace as metadata-only, unverified rows. It never
+# reads upstream; claude-marketplace-catalog.yml proposes changes for review.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - config/claude-marketplace/**
+      - scripts/sync-claude-marketplaces.mjs
+      - .github/workflows/claude-marketplace-sync.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: open-connect-claude-marketplace-sync
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    steps:
+      - uses: actions/checkout@v7
+      - name: Detect committed catalog
+        id: catalog
+        run: |
+          if [ -f config/claude-marketplace/index.generated.json ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "No committed Claude marketplace catalog yet; the catalog workflow opens it for review." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/setup-node@v4
+        if: steps.catalog.outputs.present == 'true'
+        with:
+          node-version: 22
+      - name: Test sync logic
+        if: steps.catalog.outputs.present == 'true'
+        run: node --test scripts/sync-claude-library.test.mjs scripts/sync-claude-marketplaces.test.mjs
+      - name: Validate committed catalog
+        if: steps.catalog.outputs.present == 'true'
+        run: node scripts/sync-claude-marketplaces.mjs --check
+      - name: Publish metadata-only rows
+        if: steps.catalog.outputs.present == 'true'
+        env:
+          SUPABASE_URL: https://huadtiuuoiriqrjpjxhr.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/sync-claude-marketplaces.mjs --publish
