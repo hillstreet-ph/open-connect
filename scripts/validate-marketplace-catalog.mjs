@@ -24,7 +24,9 @@ if (
   registry.default_policy?.require_license !== true ||
   registry.default_policy?.require_security_review !== true
 ) {
-  throw new Error("registry must enforce metadata-only, non-publishing, non-installing, licensed, security-reviewed discovery");
+  throw new Error(
+    "registry must enforce metadata-only, non-publishing, non-installing, licensed, security-reviewed discovery",
+  );
 }
 if (!Array.isArray(catalog.candidates)) throw new Error("catalog candidates must be an array");
 if (catalog.candidates.length < registry.default_policy.minimum_candidates) {
