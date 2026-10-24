@@ -8,6 +8,9 @@ export function BackButton({ fallback = "/dashboard" }: { fallback?: "/dashboard
   const canGoBack = useRouterState({
     select: (state) => (state.location.state.__TSR_index ?? 0) > 0,
   });
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  // Nothing to go back to: a direct visit to the fallback page itself.
+  if (!canGoBack && pathname === fallback) return null;
   return (
     <Button
       variant="ghost"
