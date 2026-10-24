@@ -14,6 +14,11 @@ import type { Json } from "@/integrations/supabase/types";
 import { matchBrowserCredentials } from "@/lib/browser-credential-matching";
 import { autoInstructions, readAutoMode, writeAutoMode } from "@/lib/auto-mode.server";
 import { COMMAND_CENTER_HTML } from "@/lib/command-center";
+import {
+  CLOUD_BROWSER_FRAME_DOMAINS,
+  CLOUD_BROWSER_WIDGET_HTML,
+  CLOUD_BROWSER_WIDGET_URI,
+} from "@/lib/cloud-browser-widget";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createFileRoute } from "@tanstack/react-router";
 import {
@@ -91,6 +96,14 @@ type McpTool = {
 
 const COMMAND_CENTER_URI = "ui://open-connect/command-center-v2.html";
 const LEGACY_COMMAND_CENTER_URI = "ui://open-connect/command-center-v1.html";
+const WIDGET_META = {
+  ui: { resourceUri: CLOUD_BROWSER_WIDGET_URI, visibility: ["model", "app"] },
+  "ui/resourceUri": CLOUD_BROWSER_WIDGET_URI,
+  "openai/outputTemplate": CLOUD_BROWSER_WIDGET_URI,
+  "openai/widgetAccessible": true,
+  "openai/toolInvocation/invoking": "Opening cloud browser…",
+  "openai/toolInvocation/invoked": "Cloud browser ready",
+};
 
 /** Isolate-level cache (Cloudflare warm isolates reuse this). */
 let catalogCache: {
@@ -578,6 +591,118 @@ const PLATFORM_TOOLS: McpTool[] = [
     },
   },
   {
+    name: "cloud_browser_run",
+    description:
+      "Use this when a task needs a real web browser: open a site, log in with saved sign-ins, click, fill forms, or read pages behind a login. Starts the user's Open-Connect cloud browser (TinyFish Chrome) with their saved Browser Context Profile (cookies and sessions) by default and returns immediately with run_id, a live streaming_url, and view_url on open-connect.site. Poll cloud_browser_get_run every 15-30s until terminal. Never put passwords in the goal.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        url: { type: "string", description: "Starting URL, e.g. https://web.telegram.org" },
+        goal: { type: "string", description: "Plain-language task for the browser agent." },
+        use_profile: {
+          type: "boolean",
+          description: "Use saved sign-ins (default true). false starts a fresh browser.",
+        },
+        profile_id: { type: "string", description: "Specific Browser Context Profile id." },
+        stealth: { type: "boolean", description: "Anti-detection browser for protected sites." },
+        proxy_country_code: { type: "string", description: "Two-letter proxy exit country." },
+        max_duration_seconds: { type: "integer", minimum: 30, maximum: 3600 },
+      },
+      required: ["url", "goal"],
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
+    _meta: WIDGET_META,
+  },
+  {
+    name: "cloud_browser_get_run",
+    description:
+      "Use this to check a cloud browser run: status, live streaming_url while running, recent actions, and the final result.",
+    inputSchema: {
+      type: "object",
+      properties: { run_id: { type: "string" } },
+      required: ["run_id"],
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+    _meta: WIDGET_META,
+  },
+  {
+    name: "cloud_browser_list_runs",
+    description:
+      "List recent cloud browser runs (newest first), including runs started from open-connect.site or other agents.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        limit: { type: "integer", minimum: 1, maximum: 50 },
+        status: {
+          type: "string",
+          enum: ["PENDING", "RUNNING", "COMPLETED", "FAILED", "CANCELLED"],
+        },
+      },
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+  },
+  {
+    name: "cloud_browser_cancel_run",
+    description: "Stop a running cloud browser run when the user asks to stop it.",
+    inputSchema: {
+      type: "object",
+      properties: { run_id: { type: "string" } },
+      required: ["run_id"],
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true,
+    },
+    _meta: { ui: { visibility: ["model", "app"] }, "openai/widgetAccessible": true },
+  },
+  {
+    name: "cloud_browser_profiles",
+    description:
+      "List the user's saved Browser Context Profiles and, for the default profile, which sites have saved sign-ins (cookie counts only; no cookie values).",
+    inputSchema: { type: "object", properties: {} },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+  },
+  {
+    name: "cloud_browser_create_session",
+    description:
+      "Create a raw remote Chrome session for Playwright/Puppeteer/CDP control. Returns session_id and cdp_url. Billed until closed: always call cloud_browser_close_session afterwards.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        url: { type: "string" },
+        timeout_seconds: { type: "integer", minimum: 5, maximum: 86400 },
+      },
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
+  },
+  {
+    name: "cloud_browser_close_session",
+    description: "Close a raw remote browser session to stop billing.",
+    inputSchema: {
+      type: "object",
+      properties: { session_id: { type: "string" } },
+      required: ["session_id"],
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true,
+    },
+  },
+  {
     name: "e2b_health",
     description: "Check whether the configured E2B sandbox API is reachable.",
     inputSchema: { type: "object", properties: {} },
@@ -1020,6 +1145,82 @@ async function requireProviderWrite(key: AuthedKey) {
   return roles;
 }
 
+/** Cloud browser tools run with the caller's own TinyFish key from the vault. */
+async function handleCloudBrowserTool(userId: string, name: string, args: Record<string, unknown>) {
+  const { cloudBrowserClient, cloudBrowserViewUrl, CloudBrowserNotConnectedError } =
+    await import("@/lib/tinyfish.server");
+  const tf = await import("@/lib/tinyfish");
+  let client: import("@/lib/tinyfish").TinyFishClient;
+  try {
+    ({ client } = await cloudBrowserClient(userId));
+  } catch (error) {
+    if (error instanceof CloudBrowserNotConnectedError) {
+      const payload = {
+        status: "not_connected",
+        code: error.code,
+        message: error.message,
+        setup_url: "https://open-connect.site/connections",
+      };
+      return { ...textResult(payload), structuredContent: payload, isError: true };
+    }
+    throw error;
+  }
+  const withView = <T extends { run_id: string }>(run: T) => ({
+    ...run,
+    view_url: cloudBrowserViewUrl(run.run_id),
+  });
+  let payload: unknown;
+  if (name === "cloud_browser_run") {
+    payload = withView(await tf.startRunWithLiveView(client, tf.normalizeStartRun(args)));
+  } else if (name === "cloud_browser_get_run") {
+    payload = withView(tf.summarizeRun(await client.getRun(tf.assertRunId(args["run_id"]))));
+  } else if (name === "cloud_browser_list_runs") {
+    const status = String(args["status"] ?? "");
+    const listed = await client.listRuns({
+      limit: Math.min(Number(args["limit"] ?? 10) || 10, 50),
+      ...(["PENDING", "RUNNING", "COMPLETED", "FAILED", "CANCELLED"].includes(status)
+        ? { status: status as import("@/lib/tinyfish").TinyFishRunStatus }
+        : {}),
+    });
+    payload = {
+      runs: (listed.data ?? []).map((run) => withView(tf.summarizeRun(run))),
+      view_url: cloudBrowserViewUrl(),
+    };
+  } else if (name === "cloud_browser_cancel_run") {
+    const runId = tf.assertRunId(args["run_id"]);
+    await client.cancelRun(runId);
+    payload = withView(tf.summarizeRun(await client.getRun(runId)));
+  } else if (name === "cloud_browser_profiles") {
+    const { profiles } = await client.listProfiles();
+    const preferred = profiles.find((profile) => profile.is_default) ?? profiles[0];
+    const detail = preferred ? await client.getProfile(preferred.id).catch(() => null) : null;
+    payload = {
+      profiles: profiles.map((profile) => ({
+        id: profile.id,
+        name: profile.name,
+        is_default: profile.is_default === true,
+        saved_sites: profile.domain_count ?? 0,
+      })),
+      default_profile_sites: (detail?.domains ?? []).map((domain) => ({
+        domain: domain.domain,
+        cookies: domain.cookie_count ?? 0,
+      })),
+    };
+  } else if (name === "cloud_browser_create_session") {
+    const url = typeof args["url"] === "string" && args["url"] ? String(args["url"]) : undefined;
+    payload = await client.createBrowserSession({
+      ...(url ? { url } : {}),
+      timeout_seconds: Number(args["timeout_seconds"] ?? 600),
+    });
+  } else if (name === "cloud_browser_close_session") {
+    await client.closeBrowserSession(tf.assertSessionId(args["session_id"]));
+    payload = { closed: true, session_id: String(args["session_id"]) };
+  } else {
+    throw new Error("Unknown cloud browser tool.");
+  }
+  return { ...textResult(payload), structuredContent: payload };
+}
+
 function unauthorized(message: string) {
   return new Response(
     JSON.stringify({
@@ -1232,6 +1433,13 @@ const TOOL_SCOPES: Record<string, string> = {
   inspect_connections: "connections:read",
   list_connection_tools: "connections:read",
   call_connection_tool: "connections:invoke",
+  cloud_browser_run: "tools:invoke",
+  cloud_browser_get_run: "connections:read",
+  cloud_browser_list_runs: "connections:read",
+  cloud_browser_cancel_run: "tools:invoke",
+  cloud_browser_profiles: "connections:read",
+  cloud_browser_create_session: "tools:invoke",
+  cloud_browser_close_session: "tools:invoke",
   e2b_health: "connections:read",
   e2b_list_sandboxes: "connections:read",
   e2b_create_sandbox: "tools:invoke",
@@ -1351,6 +1559,12 @@ export const Route = createFileRoute("/mcp")({
                 description: "Autonomous control status and execution view",
                 mimeType: "text/html;profile=mcp-app",
               },
+              {
+                uri: CLOUD_BROWSER_WIDGET_URI,
+                name: "Open-Connect Cloud Browser",
+                description: "Live view of a cloud browser run",
+                mimeType: "text/html;profile=mcp-app",
+              },
             ],
           };
         } else if (body.method === "resources/read") {
@@ -1378,7 +1592,35 @@ export const Route = createFileRoute("/mcp")({
                     },
                   ],
                 }
-              : { contents: [] };
+              : uri === CLOUD_BROWSER_WIDGET_URI
+                ? {
+                    contents: [
+                      {
+                        uri: CLOUD_BROWSER_WIDGET_URI,
+                        mimeType: "text/html;profile=mcp-app",
+                        text: CLOUD_BROWSER_WIDGET_HTML,
+                        _meta: {
+                          ui: {
+                            domain: "https://open-connect.site",
+                            prefersBorder: true,
+                            csp: {
+                              connectDomains: ["https://open-connect.site"],
+                              resourceDomains: [],
+                              frameDomains: CLOUD_BROWSER_FRAME_DOMAINS,
+                            },
+                          },
+                          "openai/widgetCSP": {
+                            connect_domains: ["https://open-connect.site"],
+                            resource_domains: [],
+                            frame_domains: CLOUD_BROWSER_FRAME_DOMAINS,
+                          },
+                          "openai/widgetDescription":
+                            "Live cloud browser view with status, steps and result",
+                        },
+                      },
+                    ],
+                  }
+                : { contents: [] };
         } else if (body.method === "tools/call") {
           const name = body.params?.name;
           const args = body.params?.arguments ?? {};
@@ -1925,6 +2167,8 @@ export const Route = createFileRoute("/mcp")({
               ...textResult(connectionResult),
               ...(connectionResult.isError ? { isError: true } : {}),
             };
+          } else if (name.startsWith("cloud_browser_")) {
+            result = await handleCloudBrowserTool(key.userId, name, args);
           } else if (name === "e2b_health") {
             const { e2bConfig, e2bHealth } = await import("@/lib/e2b.server");
             if (!e2bConfig().configured) throw new Error("E2B is not configured");

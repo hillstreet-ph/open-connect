@@ -94,7 +94,8 @@ export function isMissingConnectionCredentialRpcError(error: unknown) {
   return rpcError.code === "P0001" && rpcError.message === "connection credential not found";
 }
 
-async function resolveCredential(ownerUserId: string, reference: string | null) {
+/** Resolve a vault credential reference for its owner. Never log or return the value to clients. */
+export async function resolveCredential(ownerUserId: string, reference: string | null) {
   if (!reference) return "";
   const match = reference.match(/^credential:\/\/[^/]+\/([0-9a-f-]{36})$/i);
   if (!match) throw new CredentialResolutionError("invalid_reference");
