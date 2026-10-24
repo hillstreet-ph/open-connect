@@ -1,3 +1,4 @@
+import { BackButton } from "@/components/back-button";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -52,6 +53,7 @@ export function SiteHeader() {
       ) : null}
 
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-3 px-4 sm:h-[3.75rem] sm:px-6">
+        {pathname !== "/" ? <BackButton fallback="/" /> : null}
         <BrandLogo />
 
         <nav

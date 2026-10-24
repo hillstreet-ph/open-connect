@@ -558,7 +558,7 @@ const PLATFORM_TOOLS: McpTool[] = [
   {
     name: "call_connection_tool",
     description:
-      "Call a tool on one accessible Twilio or verified Custom MCP connection. Twilio writes require admin access. Custom MCP writes require a project-scoped key with connections:invoke; destructive tools also require confirm=true.",
+      "Call a tool on one accessible Twilio or verified Custom MCP connection. Twilio writes require admin access. Custom MCP writes require connections:invoke and either a project-scoped key or a personal administrator key with control:write; destructive tools also require confirm=true.",
     inputSchema: {
       type: "object",
       properties: {
@@ -1894,9 +1894,13 @@ export const Route = createFileRoute("/mcp")({
               await requireProviderWrite(key);
             } else if (annotations["readOnlyHint"] !== true) {
               if (!key.projectId) {
-                throw new Error(
-                  "Write-capable connection actions require a project-scoped API key.",
-                );
+                if (key.organizationId || key.workspaceId)
+                  throw new Error(
+                    "Use a personal administrator key or a project-scoped key for connection writes.",
+                  );
+                // Personal connections are owner-checked by listCustomMcpTools.
+                // Explicit administrator grants can invoke them without an artificial project.
+                await requireControlWrite(key);
               }
               if (!hasScope(key, "connections:invoke")) {
                 throw new Error("Key cannot invoke write-capable connection actions.");

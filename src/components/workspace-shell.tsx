@@ -1,3 +1,4 @@
+import { BackButton } from "@/components/back-button";
 import type { ReactNode } from "react";
 import { useRouterState } from "@tanstack/react-router";
 import { AppSidebar } from "@/components/app-sidebar";
@@ -21,6 +22,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
         <SidebarInset className="min-w-0">
           <header className="sticky top-0 z-20 flex h-12 items-center gap-3 border-b border-border/80 bg-background/95 px-3 backdrop-blur sm:h-14 sm:px-4">
             <SidebarTrigger className="-ml-1" />
+            <BackButton />
             <div className="min-w-0 flex-1">
               <p className="truncate font-display text-sm font-semibold tracking-tight sm:text-base">
                 {title}
