@@ -1,0 +1,54 @@
+{
+  "complete-prompts-library": {
+    "path": "resources/migrated/custom-skills/archives/be6ed374520a9f0f313520f99716d660dc775d3c948ec70963cc67964234bc8e/complete-prompts-library.pdf",
+    "sha256": "be6ed374520a9f0f313520f99716d660dc775d3c948ec70963cc67964234bc8e"
+  },
+  "cloudflare-e2e-setup": {
+    "path": "resources/migrated/custom-skills/archives/4d66fedc94abe2610435fd01db20afbdc0e3703c890a19586775260c9c586a2a/cloudflare-e2e-setup.zip",
+    "sha256": "4d66fedc94abe2610435fd01db20afbdc0e3703c890a19586775260c9c586a2a"
+  },
+  "complete-e2e-prompt": {
+    "path": "resources/migrated/custom-skills/archives/167a82cd1b3bb4e13218d573f3afec890d3cdc7fdec73fecd9199dd38eaa0261/complete-e2e-prompt.zip",
+    "sha256": "167a82cd1b3bb4e13218d573f3afec890d3cdc7fdec73fecd9199dd38eaa0261"
+  },
+  "credentials-e2e-setup": {
+    "path": "resources/migrated/custom-skills/archives/900d77c69bfa0cdcc279e3a0f49fa0b8ec940103928e711a3cc935950f11bc5b/credentials-e2e-setup.zip",
+    "sha256": "900d77c69bfa0cdcc279e3a0f49fa0b8ec940103928e711a3cc935950f11bc5b"
+  },
+  "docker-e2e-setup": {
+    "path": "resources/migrated/custom-skills/archives/7ac2ee69e1365f11e8c48e28cc246ccda4b9a9bf04e0dd32c03a35febc7d7e60/docker-e2e-setup.zip",
+    "sha256": "7ac2ee69e1365f11e8c48e28cc246ccda4b9a9bf04e0dd32c03a35febc7d7e60"
+  },
+  "gh-cf-sb-setup": {
+    "path": "resources/migrated/custom-skills/archives/58b0c6b93e2bd5d5699df8acafad1f448cd3c2aae54f1b17add720ba8a00db01/gh-cf-sb-setup.zip",
+    "sha256": "58b0c6b93e2bd5d5699df8acafad1f448cd3c2aae54f1b17add720ba8a00db01"
+  },
+  "gh-cf-sb-zb-setup": {
+    "path": "resources/migrated/custom-skills/archives/d2d789569b5867ec752fa2e77eada3b90cbc66f8520cf6ed1686122ba1f5e669/gh-cf-sb-zb-setup.zip",
+    "sha256": "d2d789569b5867ec752fa2e77eada3b90cbc66f8520cf6ed1686122ba1f5e669"
+  },
+  "gh-dh-cf-sb-zb-setup": {
+    "path": "resources/migrated/custom-skills/archives/b07dd12c19daa21423d83f11aa231ddaf4b94a22218b68ded9a119199858ffe5/gh-dh-cf-sb-zb-setup.zip",
+    "sha256": "b07dd12c19daa21423d83f11aa231ddaf4b94a22218b68ded9a119199858ffe5"
+  },
+  "github-e2e-setup": {
+    "path": "resources/migrated/custom-skills/archives/2009e63c2258735b45828ffab87a162417f0426c122614ad872408cdfd39ef63/github-e2e-setup.zip",
+    "sha256": "2009e63c2258735b45828ffab87a162417f0426c122614ad872408cdfd39ef63"
+  },
+  "inspect-analyze-e2e": {
+    "path": "resources/migrated/custom-skills/archives/a5fcfa1d39b6bb4d350b6b5cf4cc034962e2e79d68c6b3734be0bdf38ed35243/inspect-analyze-e2e.zip",
+    "sha256": "a5fcfa1d39b6bb4d350b6b5cf4cc034962e2e79d68c6b3734be0bdf38ed35243"
+  },
+  "railway-e2e-setup": {
+    "path": "resources/migrated/custom-skills/archives/e393ec8bf735b8e788b72b6d21f3852bf4e42933fbd3897e9d8873d71adace77/railway-e2e-setup.zip",
+    "sha256": "e393ec8bf735b8e788b72b6d21f3852bf4e42933fbd3897e9d8873d71adace77"
+  },
+  "supabase-e2e-setup": {
+    "path": "resources/migrated/custom-skills/archives/e22db9360902f35ab521f1085ae58cf44674eedd20ccd20ae07a3c06eaf42eb4/supabase-e2e-setup.zip",
+    "sha256": "e22db9360902f35ab521f1085ae58cf44674eedd20ccd20ae07a3c06eaf42eb4"
+  },
+  "zeabur-e2e-setup": {
+    "path": "resources/migrated/custom-skills/archives/096bcb4c538f29d5f7fa263c83e4e8d22e81061684b1f61d2c7e1aa7f2fa2ea2/zeabur-e2e-setup.zip",
+    "sha256": "096bcb4c538f29d5f7fa263c83e4e8d22e81061684b1f61d2c7e1aa7f2fa2ea2"
+  }
+}

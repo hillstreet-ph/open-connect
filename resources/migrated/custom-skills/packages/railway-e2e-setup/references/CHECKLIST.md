@@ -1,0 +1,23 @@
+# Railway E2E Checklist
+
+- [ ] Correct workspace/project/environment
+- [ ] Existing production inventoried
+- [ ] Source classified
+- [ ] Railway IaC / legacy config audited
+- [ ] Service roots/build/start/pre-deploy detected
+- [ ] Actual port detected
+- [ ] Meaningful healthcheck verified
+- [ ] Variable/shared/reference/sealed contract reviewed
+- [ ] Private/public networking reviewed
+- [ ] Persistent paths classified
+- [ ] Volumes/mounts verified
+- [ ] Volume backup/recovery checked
+- [ ] DB/cache ownership determined
+- [ ] Workers/Cron/functions reviewed
+- [ ] Duplicate schedulers prevented
+- [ ] Staging verified
+- [ ] Known-good rollback state recorded
+- [ ] Production verified
+- [ ] Continuous monitoring defined
+- [ ] No duplicate resources
+- [ ] Portability/cost reviewed

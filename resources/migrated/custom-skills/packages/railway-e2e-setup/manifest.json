@@ -1,0 +1,53 @@
+{
+  "name": "railway-e2e-setup",
+  "version": "1.0.0",
+  "entrypoint": "SKILL.md",
+  "modes": [
+    "NEW_PROJECT",
+    "EXISTING_PROJECT",
+    "GITHUB_DEPLOYMENT",
+    "DOCKER_IMAGE_DEPLOYMENT",
+    "RAILPACK_DEPLOYMENT",
+    "EXISTING_PRODUCTION",
+    "MULTI_SERVICE",
+    "COMPOSE_MIGRATION",
+    "PLATFORM_MIGRATION",
+    "RECOVERY"
+  ],
+  "capabilities": [
+    "projects",
+    "environments",
+    "services",
+    "github-deployment",
+    "docker-image-deployment",
+    "railpack",
+    "infrastructure-as-code",
+    "variables",
+    "shared-variables",
+    "reference-variables",
+    "sealed-variables",
+    "private-networking",
+    "public-networking",
+    "ports",
+    "healthchecks",
+    "volumes",
+    "volume-backups",
+    "databases",
+    "cache",
+    "workers",
+    "cron",
+    "functions",
+    "staging",
+    "production",
+    "monitoring",
+    "rollback",
+    "recovery",
+    "portability"
+  ],
+  "integrates_with": [
+    "github-e2e-setup",
+    "docker-e2e-setup",
+    "cloudflare-e2e-setup",
+    "supabase-e2e-setup"
+  ]
+}

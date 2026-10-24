@@ -27,6 +27,8 @@ jobs:
         run: bun run lint
       - name: Unit and navigation tests
         run: bun run test
+      - name: Consolidated resource integrity
+        run: python3 scripts/consolidate_resources.py
       - name: Marketplace branch history regression tests
         run: python3 scripts/update-marketplace-branch.test.py
       - name: Production health contract tests

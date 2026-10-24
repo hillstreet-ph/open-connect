@@ -1,0 +1,30 @@
+{
+  "name": "credentials-e2e-setup",
+  "version": "1.0.0",
+  "entrypoint": "SKILL.md",
+  "type": "credential-orchestrator",
+  "supported_domains": [
+    "api_keys",
+    "tokens",
+    "oauth",
+    "service_accounts",
+    "database_credentials",
+    "webhook_secrets",
+    "signing_keys",
+    "encryption_keys",
+    "environment_variables",
+    "ci_cd_secrets",
+    "runtime_secrets"
+  ],
+  "provider_policy": {
+    "discover_before_create": true,
+    "real_values_only": true,
+    "reuse_valid_existing": true,
+    "no_unnecessary_revocation": true,
+    "least_privilege": true,
+    "no_secret_values_in_reports": true,
+    "provider_action_required_when_interactive": true
+  },
+  "repair_limit_per_failure": 3,
+  "completion_state": "VERIFIED"
+}

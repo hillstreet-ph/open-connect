@@ -1,0 +1,37 @@
+{
+  "name": "gh-cf-sb-setup",
+  "version": "1.0.0",
+  "entrypoint": "SKILL.md",
+  "type": "e2e-profile",
+  "required_skills": [
+    "github-e2e-setup",
+    "supabase-e2e-setup",
+    "cloudflare-e2e-setup"
+  ],
+  "providers": {
+    "github": "required",
+    "supabase": "required",
+    "cloudflare": "required",
+    "dockerhub": "not_required",
+    "railway": "not_required",
+    "zeabur": "not_required"
+  },
+  "startup_modes": [
+    "NEW",
+    "SOURCE_IMPORT",
+    "CLONE",
+    "FORK",
+    "EXISTING_REPOSITORY",
+    "EXISTING_PRODUCTION",
+    "MIGRATION",
+    "RECOVERY"
+  ],
+  "incompatible_if": [
+    "requires_dedicated_persistent_server",
+    "requires_unsupported_long_running_process",
+    "requires_docker_only_runtime",
+    "requires_persistent_local_filesystem_not_provided_by_architecture"
+  ],
+  "completion_state": "PRODUCTION_VERIFIED",
+  "repair_limit_per_failure": 3
+}

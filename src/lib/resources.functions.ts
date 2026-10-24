@@ -205,7 +205,7 @@ export const getResourceDownloadUrl = createServerFn({ method: "POST" })
     const { data: resource, error } = await context.supabase
       .from("resources")
       .select(
-        "id, name, slug, description, resource_type, version, author, package_path, package_filename, owner_id, published, installation_config, verified, source",
+        "id, name, slug, description, resource_type, version, author, package_path, package_filename, owner_id, published, installation_config, verified, source, source_url",
       )
       .eq("id", data.id)
       .maybeSingle();
@@ -232,6 +232,12 @@ export const getResourceDownloadUrl = createServerFn({ method: "POST" })
         expires_in: 3600,
       };
     }
+
+    const { migratedResourceDownload } = await import("@/lib/migrated-resource-download");
+    const { default: migratedPackages } =
+      await import("../../config/resource-migration.downloads.json");
+    const migrated = migratedResourceDownload(resource, migratedPackages);
+    if (migrated) return migrated;
 
     const markdown = skillManifest(resource);
     const filename = `${resource.slug || resource.name}.md`;
