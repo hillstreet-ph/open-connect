@@ -41,6 +41,9 @@ Open-Connect library resource `claude-skills-plugins-catalog` (private, review r
   allow installation, publication or skipped review, a bad or duplicate slug, an invalid review
   state, or secret-like metadata. `scripts/sync-claude-library.test.mjs` runs in
   `npm run test:registry`.
+- The Claude client can keep extra copies of one synced plugin in sibling folders named
+  `<plugin>~g<N>` (same `server_plugin_id`). The sync treats them as one plugin: the slug comes
+  from the name without the marker, and the copy with the highest version is kept.
 - Every text file in a skill or plugin (not only `SKILL.md`) is scanned; a match records the
   resource as `quarantined_metadata` with its description removed. Placeholders such as `xoxb-YOUR-TOKEN` also trigger it; that is intentional.
 

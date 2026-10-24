@@ -295,14 +295,58 @@ async function scanSkills(roots, library) {
   return records;
 }
 
+// The Claude client keeps extra copies of a synced plugin in sibling folders
+// named `<plugin>~g<N>`. They are the same plugin (same server_plugin_id), not
+// new ones, so the generation marker never reaches the slug.
+export function pluginBaseId(dirName) {
+  return dirName.replace(/~g\d+$/, "");
+}
+
+function versionParts(version) {
+  return String(version ?? "")
+    .split(/[.+-]/)
+    .map((part) => (/^\d+$/.test(part) ? Number(part) : -1));
+}
+
+export function compareVersions(a, b) {
+  const x = versionParts(a);
+  const y = versionParts(b);
+  for (let i = 0; i < Math.max(x.length, y.length); i += 1) {
+    const diff = (x[i] ?? -1) - (y[i] ?? -1);
+    if (diff) return diff;
+  }
+  return 0;
+}
+
+// Keeps one record per plugin when the same plugin was synced more than once:
+// the highest version wins, then the folder without a generation marker.
+export function collapsePluginCopies(records) {
+  const byKey = new Map();
+  for (const record of records) {
+    const key = record.server_plugin_id ?? `${record.marketplace ?? ""}/${record.id}`;
+    const current = byKey.get(key);
+    if (!current) {
+      byKey.set(key, record);
+      continue;
+    }
+    const order =
+      compareVersions(record.version, current.version) ||
+      Number(current.copy) - Number(record.copy) ||
+      current.folder.localeCompare(record.folder);
+    if (order > 0) byKey.set(key, record);
+  }
+  return [...byKey.values()].map(({ copy: _copy, folder: _folder, ...record }) => record);
+}
+
 async function scanPlugins(roots, library) {
   const records = [];
   for (const base of roots) {
     for (const dir of await childDirs(base)) {
       const manifest = await readJson(join(dir, ".claude-plugin", "plugin.json"));
       if (!manifest) continue;
-      const id = basename(dir);
-      const meta = (await readJson(join(base, `${id}.meta.json`))) ?? {};
+      const folder = basename(dir);
+      const id = pluginBaseId(folder);
+      const meta = (await readJson(join(base, `${folder}.meta.json`))) ?? {};
       const skills = [];
       for (const skillDir of await findSkillDirs(join(dir, "skills"))) {
         const text = await readFile(join(skillDir, "SKILL.md"), "utf8");
@@ -335,10 +379,12 @@ async function scanPlugins(roots, library) {
         skills: [...new Set(skills)].sort(),
         duplicate_of: duplicateOf(library, id, manifest.name, `open-${id}-kit`),
         review_state: tree.secret ? "quarantined_metadata" : "pending_security_review",
+        folder,
+        copy: folder !== id,
       });
     }
   }
-  return records;
+  return collapsePluginCopies(records);
 }
 
 export function validateCatalog(catalog) {
