@@ -12,7 +12,8 @@ provenance/recovery sources, never new runtime dependencies.
 | `open-custom-skills` main                                                     | `05680a40658a5e4173605819e98b3971aa9c9335` | All 14 tracked files inventoried            |
 | `open-custom-skills` branch `codex/openconnect-marketplace-skills-2026-10-04` | `0e57ba93a2bf7326655653a053b891b5033e2926` | 29 differing files inventoried against main |
 
-The user explicitly authorized public copies of reviewed private custom-skill documents and
+The historical inventory described custom skills as private; live GitHub metadata now reports
+both source repositories public. The user explicitly authorized public copies of reviewed custom-skill documents and
 prompt-library content on 2026-10-24. That authorization is recorded in
 `config/resource-migration.sources.json`; it does not invent a license for unspecified content.
 
@@ -101,6 +102,8 @@ Both source repositories remain intact. This migration does not authorize deleti
       support. Preserve only through an authorized backup or approved replacement; never publish secrets.
 - [ ] Inventory and preserve any required GitHub issues, PR discussions, releases/assets, wiki,
       Git LFS objects, deployment configuration and repository settings. Git bundles do not contain these.
+      Live metadata shows no releases and wikis disabled in either source. V1 has two PR records
+      (one open); custom skills has one open PR. Their discussion/history preservation remains separate.
 - [ ] Check live consumers, installed plugins/skills, webhooks, CI, provider callbacks and download
       links for dependencies on either source repository. A successful source migration does not
       establish that these integrations can survive deletion.

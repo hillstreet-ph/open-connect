@@ -7,14 +7,14 @@
       "id": "v1-open-connect",
       "repository": "https://github.com/hillstreet-ph/v1-open-connect",
       "commit": "85a69bf42892b00d063087295d0287f64c5a077b",
-      "visibility": "public",
+      "visibility": "public_at_validation",
       "runtime_dependency": false
     },
     {
       "id": "open-custom-skills",
       "repository": "https://github.com/hillstreet-ph/open-custom-skills",
       "commit": "05680a40658a5e4173605819e98b3971aa9c9335",
-      "visibility": "private_at_migration",
+      "visibility": "public_at_validation",
       "runtime_dependency": false
     },
     {
@@ -23,7 +23,7 @@
       "commit": "0e57ba93a2bf7326655653a053b891b5033e2926",
       "ref": "refs/remotes/origin/codex/openconnect-marketplace-skills-2026-10-04",
       "comparison_base": "05680a40658a5e4173605819e98b3971aa9c9335",
-      "visibility": "private_at_migration",
+      "visibility": "public_at_validation",
       "runtime_dependency": false
     }
   ]
