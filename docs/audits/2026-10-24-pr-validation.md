@@ -45,3 +45,9 @@ Reviewer Verify actions explicitly approve while preserving other configuration.
 Existing operational/feature issues remain open unless their acceptance criteria are actually verified. Connector dashboard tokens, external callbacks/provider execution, isolated monitoring, shared-platform security findings, deployment-ledger work and source-retirement gates cannot be declared complete from application unit tests. Supabase advisor findings include shared schemas outside this release and remain tracked under #80; no blanket role grants or global RLS changes are made.
 
 Run importer integrity/tests, full application tests, strict TypeScript, ESLint, production build, SSR routes and catalog validation on the final combined tree. Independent reviews and exact-commit production health/OAuth/public-page checks are required before reporting deployment success.
+
+## Dependency advisory remediation
+
+A pre-merge Bun audit identified 27 advisories (3 critical, 10 high, 11 moderate, 3 low). The release patches React Start to 1.168.60 and its matching React Router to 1.170.41 (server core 1.169.39), Vite to 8.3.5 and Zod to 4.6.7. Narrow exact overrides retain compatible major lines for body-parser 2.4.0, brace-expansion 5.0.12, fast-uri 3.1.9, Hono 4.13.13, ip-address 10.7.4, js-yaml 4.3.2, launch-editor 2.14.2, shell-quote 1.12.0 and source-map-js 1.2.2.
+
+`bun audit --json` returns `{}` after installation. CI audits dependencies to prevent silent regression. These results concern this Bun dependency graph; they do not assert that GitHub advisory records for other manifests, Python/container images or excluded legacy sources are all resolved. Overrides can be removed when the parents' regenerated locks resolve patched compatible versions without them.
