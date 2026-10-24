@@ -519,14 +519,18 @@ function MarketplaceContent() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => downloadMutation.mutate(item.id)}
-                                disabled={downloadMutation.isPending}
+                                onClick={() =>
+                                  executable
+                                    ? downloadMutation.mutate(item.id)
+                                    : viewMutation.mutate(item.id)
+                                }
+                                disabled={downloadMutation.isPending || viewMutation.isPending}
                                 title={
                                   executable ? undefined : "Metadata only until review is approved"
                                 }
                               >
                                 <Download className="mr-1 size-3.5" />
-                                {executable ? "Download" : "Metadata"}
+                                {executable ? "Download" : "View metadata"}
                               </Button>
                             </div>
                             <AddToLibraryButton

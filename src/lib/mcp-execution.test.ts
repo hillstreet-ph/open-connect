@@ -356,6 +356,7 @@ beforeEach(() => {
   tables.length = 0;
   privateReads.length = 0;
   resource.verified = true;
+  resource.installation_config = { review_state: "approved" };
   connectionProvider = "twilio";
   connectionReadOnly = false;
   connectionError = false;
@@ -753,6 +754,16 @@ test("unverified catalog entries remain ineligible for installation", async () =
     "cannot be installed",
   );
   expect(tables).not.toContain("capability_installations");
+});
+
+test("verified resources with missing or quarantined review state cannot install", async () => {
+  for (const config of [{}, null, [], { review_state: "quarantined_metadata" }]) {
+    resource.installation_config = config as typeof resource.installation_config;
+    await expect(call("install_capability", { resource_id: resource.slug })).rejects.toThrow(
+      "cannot be installed",
+    );
+    expect(tables).not.toContain("capability_installations");
+  }
 });
 
 test("read tokens discover write scope requirements without gaining execution rights", async () => {
