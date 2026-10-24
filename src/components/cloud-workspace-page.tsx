@@ -9,10 +9,39 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { extractLiveViewUrls } from "@/lib/cloud-live-view";
+
+/** Common provider tools surfaced as one-tap starting points (TinyFish names first). */
+const QUICK_START_TOOLS: Record<keyof typeof descriptions, string[]> = {
+  browser: [
+    "run_web_automation",
+    "create_browser_session",
+    "list_browser_sessions",
+    "close_browser_session",
+    "start_profile_setup_session",
+    "save_profile_setup_session",
+    "fetch",
+    "search",
+  ],
+  computer: ["create_sandbox", "computer_use", "screenshot"],
+  terminal: ["run_command", "execute_command", "create_sandbox"],
+  phone: ["create_device", "list_devices"],
+};
+
+const ARGUMENT_TEMPLATES: Record<string, Record<string, unknown>> = {
+  run_web_automation: {
+    url: "https://example.com",
+    goal: "Describe the task in plain language",
+    browser_profile: "lite",
+  },
+  create_browser_session: { url: "https://example.com", timeout_seconds: 600 },
+  start_profile_setup_session: { profile_id: "default", url: "https://example.com/login" },
+};
 
 const descriptions = {
   computer: "Run desktop automation through a personal or project-shared provider connection.",
-  browser: "Discover and run browser tools through a personal or project-shared connection.",
+  browser:
+    "Drive a real cloud browser — natural-language tasks, saved sign-in profiles, live view and raw CDP sessions — through a personal or project-shared connection.",
   terminal: "Run terminal tools through a personal or project-shared connection.",
   phone: "Use cloud phone tools through a personal or project-shared connection.",
 };
@@ -35,7 +64,9 @@ export function CloudWorkspacePage({ kind }: { kind: keyof typeof descriptions }
     queryFn: () => getConnections({ data: { projectId } }),
     retry: false,
   });
-  const candidates = connections.data ?? [];
+  const candidates = (connections.data ?? []).filter(
+    (item) => !item.kinds || item.kinds.includes(kind),
+  );
   const catalog = useQuery({
     queryKey: ["cloud-tools", projectId, connectionId],
     queryFn: () => discover({ data: { projectId: projectId || undefined, connectionId } }),
@@ -47,6 +78,9 @@ export function CloudWorkspacePage({ kind }: { kind: keyof typeof descriptions }
     /session|profile|browser.context|cookie/i.test(`${tool.name} ${tool.description}`),
   );
   const destructive = selectedTool?.destructive === true;
+  const quickStart = (catalog.data?.tools ?? []).filter((tool) =>
+    QUICK_START_TOOLS[kind].includes(tool.name),
+  );
   const execution = useMutation({
     mutationFn: async () => {
       let args: unknown;
@@ -68,6 +102,17 @@ export function CloudWorkspacePage({ kind }: { kind: keyof typeof descriptions }
       });
     },
   });
+  const selectTool = (name: string) => {
+    setToolName(name);
+    const template = ARGUMENT_TEMPLATES[name];
+    if (template) {
+      const args = { ...template };
+      // TinyFish requires a fresh session id for every automation run.
+      if (name === "run_web_automation") args["session_id"] = crypto.randomUUID();
+      setArgumentsText(JSON.stringify(args, null, 2));
+    }
+  };
+  const liveViews = execution.isSuccess ? extractLiveViewUrls(execution.data.result) : [];
   const resetTool = () => {
     setToolName("");
     setArgumentsText("{}");
@@ -126,8 +171,9 @@ export function CloudWorkspacePage({ kind }: { kind: keyof typeof descriptions }
               ) : null}
               {!connections.isLoading && !connections.isError && candidates.length === 0 ? (
                 <p>
-                  No available cloud connection. Connect your provider or ask an Admin to share a
-                  project connection in the project settings.
+                  {kind === "browser"
+                    ? "No cloud browser connected. Add a TinyFish API key (agent.tinyfish.ai/api-keys) in Connections, or connect any browser MCP server."
+                    : "No available cloud connection. Connect your provider or ask an Admin to share a project connection in the project settings."}
                 </p>
               ) : null}
               <Label htmlFor={`provider-${kind}`}>Available connection</Label>
@@ -200,7 +246,7 @@ export function CloudWorkspacePage({ kind }: { kind: keyof typeof descriptions }
                     disabled={execution.isPending}
                     onClick={() => {
                       resetTool();
-                      setToolName(tool.name);
+                      selectTool(tool.name);
                     }}
                   >
                     {tool.name}
@@ -213,6 +259,29 @@ export function CloudWorkspacePage({ kind }: { kind: keyof typeof descriptions }
                 session or profile tools to manage saved sign-ins.
               </p>
             )}
+          </CardContent>
+        </Card>
+      ) : null}
+      {quickStart.length ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Quick start</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-2">
+            {quickStart.map((tool) => (
+              <Button
+                key={tool.name}
+                variant={toolName === tool.name ? "default" : "outline"}
+                size="sm"
+                disabled={execution.isPending}
+                onClick={() => {
+                  resetTool();
+                  selectTool(tool.name);
+                }}
+              >
+                {tool.name.replace(/_/g, " ")}
+              </Button>
+            ))}
           </CardContent>
         </Card>
       ) : null}
@@ -230,7 +299,7 @@ export function CloudWorkspacePage({ kind }: { kind: keyof typeof descriptions }
               disabled={execution.isPending}
               onChange={(event) => {
                 resetTool();
-                setToolName(event.target.value);
+                selectTool(event.target.value);
               }}
             >
               <option value="">Select a tool ({catalog.data.tools.length} available)</option>
@@ -277,6 +346,32 @@ export function CloudWorkspacePage({ kind }: { kind: keyof typeof descriptions }
               </>
             ) : null}
             {execution.isError ? <p role="alert">{execution.error.message}</p> : null}
+            {liveViews.length ? (
+              <div className="space-y-3 rounded-md border p-3">
+                <p className="text-sm font-medium">Live session</p>
+                <p className="text-xs text-muted-foreground">
+                  Watch or take over the cloud session. Sign in by hand here — never paste passwords
+                  into task goals.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {liveViews.map((url, index) => (
+                    <Button key={url} asChild size="sm">
+                      <a href={url} target="_blank" rel="noopener noreferrer">
+                        Open live view{liveViews.length > 1 ? ` ${index + 1}` : ""}
+                      </a>
+                    </Button>
+                  ))}
+                </div>
+                <iframe
+                  title="Live cloud session"
+                  src={liveViews[0]}
+                  className="h-[28rem] w-full rounded-md border bg-muted"
+                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                  allow="clipboard-read; clipboard-write"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+            ) : null}
             {execution.isSuccess ? (
               <pre role="status" className="max-h-96 overflow-auto rounded-md bg-muted p-3 text-xs">
                 {execution.data.result}
