@@ -1,0 +1,60 @@
+$schema: https://api.gitbook.com/gitbook-docs.yaml
+version: 1
+site:
+  title: Open-Connect Documentation
+  structure:
+    - type: section
+      key: section-platform
+      title: Platform
+      path: platform
+      default: true
+      children:
+        - type: space
+          key: space-documentation
+          title: Documentation
+          path: documentation
+          default: true
+          content:
+            directory: ./docs
+    - type: section
+      key: section-operations
+      title: Operations
+      path: operations
+      children:
+        - type: space
+          key: space-deployment
+          title: Deployment
+          path: deployment
+          default: true
+          content:
+            directory: ./deploy
+        - type: space
+          key: space-credential-contracts
+          title: Credential Contracts
+          path: credentials
+          content:
+            directory: ./credentials
+    - type: section
+      key: section-agents-services
+      title: Agents & Services
+      path: agents-services
+      children:
+        - type: space
+          key: space-agent-examples
+          title: Agent Examples
+          path: examples
+          default: true
+          content:
+            directory: ./examples/openai-agents-curl
+        - type: space
+          key: space-browser-monitor
+          title: Browser Monitor
+          path: browser-monitor
+          content:
+            directory: ./services/browser-monitor
+        - type: space
+          key: space-zeabur-mcp-bridge
+          title: Zeabur MCP Bridge
+          path: zeabur-mcp-bridge
+          content:
+            directory: ./services/zeabur-mcp-bridge
