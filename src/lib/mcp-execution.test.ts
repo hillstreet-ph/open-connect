@@ -1063,16 +1063,32 @@ test("Apify MCP endpoint configuration does not promote an unverified connection
   expect(connectionUpdates[0]!.values["status"]).toBe("configured_unverified");
 });
 
-test("adding Twilio execution preserves the project requirement for Custom MCP writes", async () => {
-  scopes = ["mcp:connect", "connections:invoke"];
+test("personal Custom MCP writes require explicit admin control and connection invoke grants", async () => {
   connectionProvider = "custom_mcp";
-  await expect(
-    call("call_connection_tool", {
-      connection_id: "fixture-connection",
-      tool_name: "fixture-operation",
-    }),
-  ).rejects.toThrow("project-scoped");
+  const args = { connection_id: "fixture-connection", tool_name: "fixture-operation" };
+  scopes = ["mcp:connect", "connections:invoke"];
+  await expect(call("call_connection_tool", args)).rejects.toThrow("control write scope");
   expect(connectionCalls).toEqual([]);
+  scopes.push("control:write");
+  roles = ["developer"];
+  await expect(call("call_connection_tool", args)).rejects.toThrow("Admin role");
+  expect(connectionCalls).toEqual([]);
+  roles = ["admin"];
+  expect((await call("call_connection_tool", args)).status).toBe(200);
+  expect(connectionCalls).toHaveLength(1);
+});
+
+test("project Custom MCP writes still require an explicitly assigned connection", async () => {
+  connectionProvider = "custom_mcp";
+  roles = ["developer"];
+  scopes = ["mcp:connect", "connections:invoke"];
+  keyBoundary = { projectId: "fixture-project" };
+  const args = { connection_id: "fixture-connection", tool_name: "fixture-operation" };
+  await expect(call("call_connection_tool", args)).rejects.toThrow("not assigned");
+  expect(connectionCalls).toEqual([]);
+  assignedConnections.add("fixture-connection");
+  expect((await call("call_connection_tool", args)).status).toBe(200);
+  expect(connectionCalls).toHaveLength(1);
 });
 
 test("connection failures propagate as MCP tool errors instead of successful wrappers", async () => {
