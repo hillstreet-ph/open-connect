@@ -1,6 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { OAUTH_SCOPES, safeOAuthReturn, validateOAuthRequest } from "./oauth-policy.ts";
+import {
+  OAUTH_SCOPES,
+  safeOAuthReturn,
+  validateOAuthRequest,
+  consentScopes,
+} from "./oauth-policy.ts";
+import { scopesForProfile } from "./access-profiles.ts";
 import { OAUTH_SCOPES_SUPPORTED } from "./oauth.server.ts";
 const req = {
   response_type: "code",
@@ -9,6 +15,15 @@ const req = {
   code_challenge: "a".repeat(43),
   code_challenge_method: "S256",
 };
+test("consent preserves client requests and permits explicit role-checked profiles", () => {
+  const requested = "mcp:connect resources:read";
+  assert.deepEqual(consentScopes("requested", requested, false), requested.split(" "));
+  for (const profile of ["read_only", "builder", "developer"])
+    assert.deepEqual(consentScopes(profile, requested, false), scopesForProfile(profile));
+  assert.deepEqual(consentScopes("administrator", requested, true), [...OAUTH_SCOPES]);
+  assert.throws(() => consentScopes("administrator", requested, false), /Admin account/);
+  assert.throws(() => consentScopes("requested", "admin:*", true), /Unsupported/);
+});
 test("retains local consent return and blocks external redirects", () => {
   assert.equal(safeOAuthReturn("/oauth/authorize?state=x"), "/oauth/authorize?state=x");
   for (const s of ["//evil.test", "https://evil.test", "/\\evil.test", "/dashboard"])

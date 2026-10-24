@@ -17,6 +17,33 @@ Only an Admin or legacy Owner can approve this scope. The server checks the role
 again when exchanging the authorization code, and when executing control operations.
 Default consent stays read-only. Existing tokens are not upgraded by this deployment.
 
+The consent screen offers Requested, Read only, Builder, Developer, and (for Admin/Owner accounts)
+Administrator profiles. Administrator explicitly includes every supported scope, including
+`resources:write`, `connections:invoke`, `tools:invoke`, and `control:write`. Choosing a profile
+shows its exact scope list before approval. A non-admin cannot approve a client request containing
+`control:write`; they can select a lower profile. Database checks remain authoritative.
+
+Apply `20261024113601_restrict_oauth_consent_to_authenticated.sql` after the administrator
+consent migration. It removes any legacy explicit `anon` EXECUTE grant, which revoking PUBLIC
+alone does not remove. Public PKCE token exchange remains available; consent requires sign-in.
+
+## AI client configuration
+
+Use `https://open-connect.site/mcp` as a **Streamable HTTP MCP** endpoint, with OAuth dynamic
+registration and PKCE S256. Compatible clients may use a dedicated bearer API key instead.
+Do not paste a key into a URL, prompt, skill, or shared configuration. Keep model access at
+`https://open-connect.site/v1` separate from the MCP tools endpoint.
+
+ChatGPT, Manus, Claude, Grok, Mistral, and Hermes each control their own MCP installation,
+OAuth support, tool refresh, and action approvals. Use the host's supported MCP settings or
+an authorized MCP bridge; an endpoint URL does not enable MCP in a host that lacks support.
+After authorization, call `open_connect_status`, then `get_admin_access` and the relevant
+provider's bounded read operation. Verify the resulting grants through that exact host.
+Passing the official MCP client transport tests does not establish a completed installation
+inside every third-party AI client. Reconnect after a token expires or consent changes.
+
+See [Cloud workspaces](CLOUD_WORKSPACES.md) for cloud execution and saved-session requirements.
+
 For an existing connection, use the signed-in **API keys & MCP** page to update the exact owned
 active key's access profile, or reconnect with a client request that includes `control:write`.
 The owner key update preserves its token, expiry and organization/workspace/project boundary.

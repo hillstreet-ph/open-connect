@@ -71,6 +71,8 @@ jobs:
             -f supabase/tests/key_access_fixture.sql \
             -f supabase/tests/admin_oauth_fixture.sql \
             -f supabase/migrations/20261014121000_admin_oauth_consent.sql \
+            -c 'GRANT EXECUTE ON FUNCTION public.oc_authorize_oauth_client(text,text,text,text[]) TO anon' \
+            -f supabase/migrations/20261024113601_restrict_oauth_consent_to_authenticated.sql \
             -f supabase/tests/admin_oauth_consent.sql
   test:
     runs-on: ubuntu-latest
