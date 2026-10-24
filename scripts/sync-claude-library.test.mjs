@@ -14,9 +14,12 @@ import { test } from "node:test";
 import {
   REQUIRED_POLICY,
   SHARD_BYTES,
+  collapsePluginCopies,
+  compareVersions,
   dedupeSlugs,
   hasSecret,
   parseFrontmatter,
+  pluginBaseId,
   readCatalog,
   serializeCatalog,
   slugBody,
@@ -191,5 +194,47 @@ test("committed catalog is valid and every shard stays within the byte limit", a
   for (const name of catalog.shards) {
     assert.match(name, /\.generated\.json$/);
     assert.ok(statSync(join(committed, name)).size <= SHARD_BYTES, name);
+  }
+});
+
+test("strips the client's ~gN copy marker from plugin folder names", () => {
+  assert.equal(pluginBaseId("engineering~g2"), "engineering");
+  assert.equal(pluginBaseId("sales"), "sales");
+  assert.equal(pluginBaseId("a~g"), "a~g");
+});
+
+test("compares plugin versions numerically", () => {
+  assert.ok(compareVersions("2.1.0", "2.0.1") > 0);
+  assert.ok(compareVersions("1.10.0", "1.9.9") > 0);
+  assert.equal(compareVersions("1.2.0", "1.2.0"), 0);
+  assert.ok(compareVersions(null, "0.0.1") < 0);
+});
+
+test("collapses synced copies of one plugin, keeping the highest version", () => {
+  const rows = collapsePluginCopies([
+    { id: "sales", server_plugin_id: "p1", version: "2.1.0", folder: "sales", copy: false },
+    { id: "sales", server_plugin_id: "p1", version: "2.0.1", folder: "sales~g2", copy: true },
+    { id: "eng", server_plugin_id: "p2", version: "1.0.0", folder: "eng~g2", copy: true },
+    { id: "eng", server_plugin_id: "p2", version: "1.0.0", folder: "eng", copy: false },
+    {
+      id: "solo",
+      server_plugin_id: null,
+      marketplace: "m",
+      version: "1",
+      folder: "solo~g3",
+      copy: true,
+    },
+  ]);
+  assert.deepEqual(
+    rows.map((row) => [row.id, row.version]),
+    [
+      ["sales", "2.1.0"],
+      ["eng", "1.0.0"],
+      ["solo", "1"],
+    ],
+  );
+  for (const row of rows) {
+    assert.ok(!("folder" in row));
+    assert.ok(!("copy" in row));
   }
 });
