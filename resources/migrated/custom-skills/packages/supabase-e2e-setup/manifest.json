@@ -1,0 +1,50 @@
+{
+  "name": "supabase-e2e-setup",
+  "version": "1.0.0",
+  "entrypoint": "SKILL.md",
+  "modes": [
+    "NEW_PROJECT",
+    "EXISTING_PROJECT",
+    "EXISTING_PRODUCTION",
+    "CONNECT_EXISTING_APPLICATION",
+    "DATABASE_MIGRATION",
+    "AUTH_MIGRATION",
+    "STORAGE_MIGRATION",
+    "RECOVERY"
+  ],
+  "capabilities": [
+    "postgresql",
+    "schema",
+    "migrations",
+    "auth",
+    "oauth",
+    "rls",
+    "storage",
+    "s3",
+    "rest",
+    "rpc",
+    "realtime",
+    "edge-functions",
+    "cron",
+    "jobs",
+    "queues",
+    "pgvector",
+    "fts",
+    "vault",
+    "extensions",
+    "backups",
+    "pitr",
+    "recovery"
+  ],
+  "integrates_with": [
+    "github-e2e-setup",
+    "docker-e2e-setup",
+    "cloudflare-e2e-setup",
+    "railway-e2e-setup",
+    "zeabur-e2e-setup"
+  ],
+  "runtime_choice": [
+    "Railway",
+    "Zeabur"
+  ]
+}

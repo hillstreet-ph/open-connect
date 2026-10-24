@@ -1,0 +1,26 @@
+# Supabase E2E Checklist
+
+- [ ] Correct organization/project
+- [ ] Production data/users/files inventoried
+- [ ] Backup/recovery capability checked
+- [ ] Schema modeled
+- [ ] PK/FK/constraints/indexes reviewed
+- [ ] Migration history controlled
+- [ ] Auth configured
+- [ ] OAuth/site/redirect URLs verified
+- [ ] Profiles/roles modeled
+- [ ] RLS enabled where required
+- [ ] Cross-user isolation tested
+- [ ] Storage buckets/policies verified
+- [ ] S3 configured only if required
+- [ ] REST/RPC/Realtime reviewed
+- [ ] Edge Functions validated
+- [ ] Cron/jobs/queues validated
+- [ ] Vector/search authorization verified
+- [ ] Secrets/Vault boundaries reviewed
+- [ ] Extensions audited
+- [ ] GitHub/provider integrations verified
+- [ ] Staging verified
+- [ ] Production migration/deployment verified
+- [ ] Backup/PITR/restore documented
+- [ ] No duplicate resources introduced
