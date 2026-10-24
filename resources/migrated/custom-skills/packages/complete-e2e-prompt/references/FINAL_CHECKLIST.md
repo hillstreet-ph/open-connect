@@ -1,0 +1,23 @@
+# Complete E2E Checklist
+
+- [ ] Startup mode classified
+- [ ] All existing providers discovered
+- [ ] Production state inventoried
+- [ ] Backup/recovery checked before risky work
+- [ ] Provider ownership assigned
+- [ ] Railway XOR Zeabur selected by default
+- [ ] Fork/upstream governance verified if applicable
+- [ ] CI/security verified
+- [ ] Supabase DB/Auth/RLS/Storage verified as applicable
+- [ ] Docker immutable artifact verified as applicable
+- [ ] Selected runtime verified
+- [ ] Cloudflare edge verified
+- [ ] Staging E2E verified
+- [ ] Production gate passed
+- [ ] Production E2E verified
+- [ ] Continuous monitoring defined
+- [ ] Backup verified
+- [ ] Rollback ready
+- [ ] Disaster recovery documented
+- [ ] Duplicate infrastructure audit passed
+- [ ] Final report evidence-backed

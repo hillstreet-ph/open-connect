@@ -1,0 +1,34 @@
+{
+  "name": "gh-dh-cf-sb-zb-setup",
+  "version": "1.0.0",
+  "entrypoint": "SKILL.md",
+  "type": "e2e-profile",
+  "required_skills": [
+    "github-e2e-setup",
+    "docker-e2e-setup",
+    "supabase-e2e-setup",
+    "zeabur-e2e-setup",
+    "cloudflare-e2e-setup"
+  ],
+  "providers": {
+    "github": "required",
+    "dockerhub": "required",
+    "supabase": "required",
+    "zeabur": "required",
+    "cloudflare": "required",
+    "railway": "not_required"
+  },
+  "release_invariant": "staging_digest_equals_production_digest",
+  "startup_modes": [
+    "NEW",
+    "SOURCE_IMPORT",
+    "CLONE",
+    "FORK",
+    "EXISTING_REPOSITORY",
+    "EXISTING_PRODUCTION",
+    "MIGRATION",
+    "RECOVERY"
+  ],
+  "repair_limit_per_failure": 3,
+  "completion_state": "PRODUCTION_VERIFIED"
+}
