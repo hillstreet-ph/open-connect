@@ -1,8 +1,15 @@
+import { resourceConfig } from "./resource-approval.ts";
 type MigratedPackages = Record<string, { path: string; sha256: string }>;
 
 /** Only reviewed legacy catalog entries may use the canonical migrated package. */
 export function migratedResourceDownload(
-  resource: { slug: string; source_url: string | null; verified: boolean; published: boolean },
+  resource: {
+    slug: string;
+    source_url: string | null;
+    verified: boolean;
+    published: boolean;
+    installation_config?: unknown;
+  },
   packages: MigratedPackages,
 ) {
   if (
@@ -11,6 +18,8 @@ export function migratedResourceDownload(
     resource.source_url !== "https://github.com/hillstreet-ph/open-custom-skills"
   )
     return null;
+  const config = resourceConfig(resource.installation_config);
+  if (Object.hasOwn(config, "review_state") && config["review_state"] !== "approved") return null;
   const artifact = Object.hasOwn(packages, resource.slug) ? packages[resource.slug] : undefined;
   if (!artifact) return null;
   const versionedPath =

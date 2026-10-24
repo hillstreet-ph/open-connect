@@ -38,8 +38,8 @@ test("unverify always unpublishes; verify_publish sets both", () => {
 test("publish skips unverified resources and no-ops", () => {
   const rows = [
     { id: A, verified: false, published: false },
-    { id: B, verified: true, published: false },
-    { id: C, verified: true, published: true },
+    { id: B, verified: true, published: false, installation_config: { review_state: "approved" } },
+    { id: C, verified: true, published: true, installation_config: { review_state: "approved" } },
   ];
   assert.deepEqual(planBulkReview(rows, "publish"), {
     apply: [B],
@@ -51,4 +51,10 @@ test("publish skips unverified resources and no-ops", () => {
   assert.deepEqual(planBulkReview(rows, "verify_publish").apply, [A, B]);
   assert.deepEqual(planBulkReview(rows, "verify").apply, [A]);
   assert.deepEqual(planBulkReview(rows, "unpublish").apply, [C]);
+});
+
+test("verified but pending rows need explicit approval; publish cannot approve", () => {
+  const rows = [{ id: A, verified: true, published: false }];
+  assert.deepEqual(planBulkReview(rows, "verify").apply, [A]);
+  assert.deepEqual(planBulkReview(rows, "publish").apply, []);
 });

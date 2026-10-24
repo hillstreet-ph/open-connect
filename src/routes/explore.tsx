@@ -1,3 +1,4 @@
+import { isResourceApproved } from "@/lib/resource-approval";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -162,12 +163,7 @@ function ExplorePage() {
                     <Badge variant="secondary" className="uppercase">
                       {item.resource_type}
                     </Badge>
-                    {item.verified &&
-                    typeof item.installation_config === "object" &&
-                    item.installation_config !== null &&
-                    !Array.isArray(item.installation_config) &&
-                    (item.installation_config as Record<string, unknown>)["review_state"] ===
-                      "approved" ? (
+                    {isResourceApproved(item) ? (
                       <Badge variant="outline" className="border-accent/50 text-accent">
                         Verified
                       </Badge>

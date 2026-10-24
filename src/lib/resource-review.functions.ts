@@ -1,3 +1,5 @@
+import { writeResourceReview } from "@/lib/resource-review-store";
+import { isResourceApproved } from "@/lib/resource-approval";
 import { createServerFn } from "@tanstack/react-start";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -8,7 +10,6 @@ import {
   isReviewAction,
   normalizeBulkReviewInput,
   planBulkReview,
-  reviewUpdate,
 } from "@/lib/resource-review-bulk";
 
 const ID_CHUNK = 200;
@@ -33,9 +34,11 @@ export const listResourcesForReview = createServerFn({ method: "GET" })
     const { data, error } = await supabaseAdmin
       .from("resources")
       .select(
-        "id, slug, name, description, resource_type, source, source_url, repository_url, version, license, verified, published, created_at",
+        "id, slug, name, description, resource_type, source, source_url, repository_url, version, license, verified, published, installation_config, created_at",
       )
-      .or("published.eq.false,verified.eq.false")
+      .or(
+        "published.eq.false,verified.eq.false,installation_config->>review_state.is.null,installation_config->>review_state.neq.approved",
+      )
       .order("created_at", { ascending: false })
       .limit(MAX_BULK_REVIEW);
     if (error) throw new Error(error.message);
@@ -55,22 +58,22 @@ export const updateResourceReview = createServerFn({ method: "POST" })
 
     const { data: resource, error: readError } = await supabaseAdmin
       .from("resources")
-      .select("id, verified, published")
+      .select("id, verified, published, installation_config, updated_at")
       .eq("id", data.id)
       .maybeSingle();
     if (readError) throw new Error(readError.message);
     if (!resource) throw new Error("Resource not found");
-    if (data.action === "publish" && !resource.verified) {
+    if (data.action === "publish" && !isResourceApproved(resource)) {
       throw new Error("Verify this resource before publishing it");
     }
 
-    const { data: updated, error } = await supabaseAdmin
-      .from("resources")
-      .update({ ...reviewUpdate(data.action), updated_at: new Date().toISOString() })
-      .eq("id", data.id)
-      .select("id, name, verified, published")
-      .single();
-    if (error) throw new Error(error.message);
+    const updated = await writeResourceReview(
+      supabaseAdmin,
+      resource,
+      data.action,
+      new Date().toISOString(),
+    );
+    if (!updated) throw new Error("Resource changed during review. Reload and review again.");
     return updated;
   });
 
@@ -84,11 +87,17 @@ export const bulkUpdateResourceReview = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await requireResourceReviewer(context.supabase, context.userId);
 
-    const found: { id: string; verified: boolean; published: boolean }[] = [];
+    const found: {
+      id: string;
+      verified: boolean;
+      published: boolean;
+      installation_config: unknown;
+      updated_at: string;
+    }[] = [];
     for (const ids of chunk(data.ids, ID_CHUNK)) {
       const { data: rows, error } = await supabaseAdmin
         .from("resources")
-        .select("id, verified, published")
+        .select("id, verified, published, installation_config, updated_at")
         .in("id", ids);
       if (error) throw new Error(error.message);
       found.push(...(rows ?? []));
@@ -99,22 +108,21 @@ export const bulkUpdateResourceReview = createServerFn({ method: "POST" })
     const missing = data.ids.filter((id) => !foundIds.has(id)).length;
     const now = new Date().toISOString();
     let updated = 0;
-    for (const ids of chunk(plan.apply, ID_CHUNK)) {
-      let query = supabaseAdmin
-        .from("resources")
-        .update({ ...reviewUpdate(data.action), updated_at: now })
-        .in("id", ids);
-      // Re-check verification at write time so a concurrent unverify wins.
-      if (data.action === "publish") query = query.eq("verified", true);
-      const { data: rows, error } = await query.select("id");
-      if (error) throw new Error(error.message);
-      updated += rows?.length ?? 0;
+    let skippedConflict = 0;
+    const byId = new Map(found.map((row) => [row.id, row]));
+    for (const ids of chunk(plan.apply, 10)) {
+      const results = await Promise.all(
+        ids.map((id) => writeResourceReview(supabaseAdmin, byId.get(id)!, data.action, now)),
+      );
+      updated += results.filter(Boolean).length;
+      skippedConflict += results.filter((row) => !row).length;
     }
 
     return {
       action: data.action,
       requested: data.ids.length,
       updated,
+      skipped_conflict: skippedConflict,
       skipped_not_verified: plan.skipped.filter((s) => s.reason === "not_verified").length,
       skipped_unchanged: plan.skipped.filter((s) => s.reason === "already_done").length,
       missing,
