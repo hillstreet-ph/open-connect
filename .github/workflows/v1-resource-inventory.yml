@@ -31,7 +31,7 @@ jobs:
         run: |
           node -e 'const fs=require("fs");const x=JSON.parse(fs.readFileSync("inventory.json"));if(!x.count||x.count!==x.entries.length||x.entries.some(e=>e.publishable!==false||e.review_state!=="pending"||!/^[a-f0-9]{64}$/.test(e.sha256)))process.exit(1);console.log("Inventory candidates:",x.count)'
       - name: Upload inventory report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: v1-resource-inventory
           path: inventory.json
