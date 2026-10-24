@@ -1078,6 +1078,24 @@ test("personal Custom MCP writes require explicit admin control and connection i
   expect(connectionCalls).toHaveLength(1);
 });
 
+test("organization and workspace keys cannot use personal administrator connection writes", async () => {
+  connectionProvider = "custom_mcp";
+  scopes = ["mcp:connect", "connections:invoke", "control:write"];
+  for (const boundary of [
+    { organizationId: "fixture-org" },
+    { workspaceId: "fixture-workspace" },
+  ]) {
+    keyBoundary = boundary;
+    await expect(
+      call("call_connection_tool", {
+        connection_id: "fixture-connection",
+        tool_name: "fixture-operation",
+      }),
+    ).rejects.toThrow("personal administrator key");
+  }
+  expect(connectionCalls).toEqual([]);
+});
+
 test("project Custom MCP writes still require an explicitly assigned connection", async () => {
   connectionProvider = "custom_mcp";
   roles = ["developer"];

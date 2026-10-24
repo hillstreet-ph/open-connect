@@ -1894,6 +1894,10 @@ export const Route = createFileRoute("/mcp")({
               await requireProviderWrite(key);
             } else if (annotations["readOnlyHint"] !== true) {
               if (!key.projectId) {
+                if (key.organizationId || key.workspaceId)
+                  throw new Error(
+                    "Use a personal administrator key or a project-scoped key for connection writes.",
+                  );
                 // Personal connections are owner-checked by listCustomMcpTools.
                 // Explicit administrator grants can invoke them without an artificial project.
                 await requireControlWrite(key);
