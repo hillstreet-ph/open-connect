@@ -1,3 +1,5 @@
+import { ACCESS_PROFILES } from "@/lib/access-profiles";
+import { useRoles } from "@/hooks/use-roles";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
@@ -20,6 +22,8 @@ export const Route = createFileRoute("/oauth/authorize")({
 function AuthorizePage() {
   const search = Route.useSearch();
   const { user, loading } = useAuth();
+  const { isAdmin, loading: rolesLoading } = useRoles();
+  const [access, setAccess] = useState<"requested" | "administrator">("requested");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   let request: ReturnType<typeof validateOAuthRequest> | undefined;
@@ -29,6 +33,10 @@ function AuthorizePage() {
   } catch (e) {
     invalid = e instanceof Error ? e.message : "Invalid request";
   }
+  const grantedScopes =
+    access === "administrator" && isAdmin
+      ? [...ACCESS_PROFILES.administrator]
+      : (request?.scope.split(" ") ?? []);
   async function consent() {
     if (!request || !user) return;
     setBusy(true);
@@ -40,7 +48,7 @@ function AuthorizePage() {
           p_client_id: request.client_id,
           p_redirect_uri: request.redirect_uri,
           p_challenge: request.code_challenge,
-          p_scopes: request.scope.split(" "),
+          p_scopes: grantedScopes,
         } as never,
       );
       if (failure) throw new Error(failure.message);
@@ -80,13 +88,27 @@ function AuthorizePage() {
         <>
           <p className="mt-4 break-all text-sm">Client: {request.client_id}</p>
           <p className="break-all text-sm">Return to: {new URL(request.redirect_uri).origin}</p>
-          <h2 className="mt-4 font-medium">Requested permissions</h2>
+          {user && !rolesLoading && isAdmin ? (
+            <label className="mt-4 flex flex-col gap-2 text-sm">
+              Access profile
+              <select
+                className="rounded-md border bg-background p-2"
+                value={access}
+                disabled={busy}
+                onChange={(event) => setAccess(event.target.value as "requested" | "administrator")}
+              >
+                <option value="requested">Permissions requested by this client</option>
+                <option value="administrator">Administrator — all Open-Connect permissions</option>
+              </select>
+            </label>
+          ) : null}
+          <h2 className="mt-4 font-medium">Permissions to allow</h2>
           <ul className="mb-4 list-disc pl-5 text-sm">
-            {request.scope.split(" ").map((s) => (
+            {grantedScopes.map((s) => (
               <li key={s}>{s}</li>
             ))}
           </ul>
-          {request.scope.split(" ").includes("control:write") ? (
+          {grantedScopes.includes("control:write") ? (
             <p className="mb-4 text-sm">
               Administrator access lets this client configure connections and request control
               operations. An Admin account is required. Provider permissions and operation approval
@@ -99,7 +121,7 @@ function AuthorizePage() {
             <>
               <p className="mb-3 text-sm">Signed in as {user.email}</p>
               <button
-                disabled={busy}
+                disabled={busy || rolesLoading}
                 onClick={() => void consent()}
                 className="rounded-md bg-primary px-4 py-2 text-primary-foreground disabled:opacity-50"
               >

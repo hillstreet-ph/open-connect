@@ -1,3 +1,4 @@
+import { REMOTE_MCP_PROVIDERS, isRemoteMcpProvider } from "@/lib/remote-mcp";
 import { credentialMetadata } from "@/lib/secrets.functions";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ProjectResourceRow } from "@/lib/resource-categories";
@@ -155,7 +156,7 @@ export const listProjectCloudConnections = createServerFn({ method: "GET" })
         .from("app_connections")
         .select("id, provider, display_name, status, scopes")
         .eq("user_id", context.userId)
-        .eq("provider", "custom_mcp")
+        .in("provider", [...REMOTE_MCP_PROVIDERS])
         .eq("status", "connected"),
     ]);
     if (sharedResult.error) throw new Error(sharedResult.error.message);
@@ -187,7 +188,13 @@ export const listProjectCloudConnections = createServerFn({ method: "GET" })
       : [];
     for (const row of sharedRows) {
       const connection = row.app_connections;
-      if (!connection?.id || connection.provider !== "custom_mcp") continue;
+      if (
+        !connection?.id ||
+        !connection.provider ||
+        !isRemoteMcpProvider(connection.provider) ||
+        connection.status !== "connected"
+      )
+        continue;
       const existing = available.get(connection.id);
       available.set(connection.id, {
         id: connection.id,
