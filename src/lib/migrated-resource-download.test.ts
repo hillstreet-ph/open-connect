@@ -68,3 +68,13 @@ test("downloads keep each content revision isolated", () => {
     /Invalid/,
   );
 });
+
+test("an explicit nonapproved state disables legacy package compatibility", () => {
+  assert.equal(
+    migratedResourceDownload(
+      { ...resource, installation_config: { review_state: "quarantined_metadata" } },
+      registry,
+    ),
+    null,
+  );
+});

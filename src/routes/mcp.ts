@@ -1,3 +1,4 @@
+import { resourceReviewState, isResourceApproved } from "@/lib/resource-approval";
 import {
   adminAccess,
   manageResource,
@@ -71,11 +72,11 @@ type ResourceRow = {
 };
 
 function reviewState(resource: ResourceRow) {
-  return String(resource.installation_config?.["review_state"] ?? "approved");
+  return resourceReviewState(resource);
 }
 
 function isExecutable(resource: ResourceRow) {
-  return resource.verified && reviewState(resource) === "approved";
+  return isResourceApproved(resource);
 }
 
 type McpTool = {
@@ -1321,7 +1322,7 @@ export const Route = createFileRoute("/mcp")({
           return gatewayError("JSON-RPC method required.", 400, "invalid_request");
         }
 
-        let result: Record<string, unknown> = { ok: true };
+        let result: Record<string, unknown>;
 
         if (body.method === "initialize") {
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

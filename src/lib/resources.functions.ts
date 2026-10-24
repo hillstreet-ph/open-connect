@@ -1,3 +1,4 @@
+import { canDownloadResource } from "@/lib/resource-approval";
 import AUTO_SKILL_MARKDOWN from "../../skills/auto/SKILL.md?raw";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -57,7 +58,7 @@ export const listMyResources = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("resources")
       .select(
-        "id, slug, name, description, resource_type, version, published, verified, package_path, package_filename, package_size, package_mime, created_at, updated_at",
+        "id, slug, name, description, resource_type, version, published, verified, package_path, package_filename, package_size, package_mime, installation_config, created_at, updated_at",
       )
       .eq("owner_id", context.userId)
       .order("created_at", { ascending: false });
@@ -216,6 +217,16 @@ export const getResourceDownloadUrl = createServerFn({ method: "POST" })
       throw new Error("Not allowed");
     }
 
+    const { migratedResourceDownload } = await import("@/lib/migrated-resource-download");
+    const { default: migratedPackages } =
+      await import("../../config/resource-migration.downloads.json");
+    const migrated = migratedResourceDownload(resource, migratedPackages);
+    if (
+      !canDownloadResource(resource, context.userId, !resource.package_path && Boolean(migrated))
+    ) {
+      throw new Error("Resource requires an approved security review before download");
+    }
+
     if (resource.package_path) {
       const { data: signed, error: signError } = await context.supabase.storage
         .from(BUCKET)
@@ -233,10 +244,6 @@ export const getResourceDownloadUrl = createServerFn({ method: "POST" })
       };
     }
 
-    const { migratedResourceDownload } = await import("@/lib/migrated-resource-download");
-    const { default: migratedPackages } =
-      await import("../../config/resource-migration.downloads.json");
-    const migrated = migratedResourceDownload(resource, migratedPackages);
     if (migrated) return migrated;
 
     const markdown = skillManifest(resource);

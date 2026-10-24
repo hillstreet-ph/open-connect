@@ -392,6 +392,7 @@ export async function callCustomMcpTool(
         })
         .eq("id", auditId);
       if (auditError) {
+        // eslint-disable-next-line preserve-caught-error -- Provider errors can contain credentials; expose only this safe message.
         throw new Error("The provider action failed and its audit record could not be finalized.");
       }
     }

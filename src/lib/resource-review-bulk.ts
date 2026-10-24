@@ -1,3 +1,4 @@
+import { isResourceApproved, resourceReviewState } from "./resource-approval.ts";
 export const REVIEW_ACTIONS = [
   "verify",
   "unverify",
@@ -54,21 +55,26 @@ export function reviewUpdate(action: ReviewAction): { verified?: boolean; publis
  * skipped. "publish" never publishes an unverified resource; rows already in
  * the target state are skipped so the count reflects real changes.
  */
-export function planBulkReview<T extends { id: string; verified: boolean; published: boolean }>(
+export function planBulkReview<
+  T extends { id: string; verified: boolean; published: boolean; installation_config?: unknown },
+>(
   resources: T[],
   action: ReviewAction,
 ): { apply: string[]; skipped: { id: string; reason: string }[] } {
   const apply: string[] = [];
   const skipped: { id: string; reason: string }[] = [];
   for (const resource of resources) {
-    if (action === "publish" && !resource.verified) {
+    if (action === "publish" && !isResourceApproved(resource)) {
       skipped.push({ id: resource.id, reason: "not_verified" });
       continue;
     }
     const target = reviewUpdate(action);
     const unchanged =
       (target.verified === undefined || target.verified === resource.verified) &&
-      (target.published === undefined || target.published === resource.published);
+      (target.published === undefined || target.published === resource.published) &&
+      (!(action === "verify" || action === "verify_publish") ||
+        resourceReviewState(resource) === "approved") &&
+      (action !== "unverify" || resourceReviewState(resource) === "pending_security_review");
     if (unchanged) {
       skipped.push({ id: resource.id, reason: "already_done" });
       continue;

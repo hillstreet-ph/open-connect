@@ -25,6 +25,22 @@
       "comparison_base": "05680a40658a5e4173605819e98b3971aa9c9335",
       "visibility": "public_at_validation",
       "runtime_dependency": false
+    },
+    {
+      "id": "manus-skills",
+      "repository": "https://github.com/master-kanor/manus-skills",
+      "commit": "48c760280dab4df57951e31057720926b271f530",
+      "visibility": "public_at_validation",
+      "runtime_dependency": false,
+      "policy": "explicit_mit_documents_only"
+    },
+    {
+      "id": "manuskills",
+      "repository": "https://github.com/master-kanor/manuskills",
+      "commit": "e8053ae457ac737a43dda4d06a32bb48f211408e",
+      "visibility": "public_at_validation",
+      "runtime_dependency": false,
+      "policy": "snapshot_comparison_only_never_publish_archive"
     }
   ]
 }

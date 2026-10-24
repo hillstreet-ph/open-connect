@@ -79,6 +79,29 @@ class MigrationTests(unittest.TestCase):
         self.assertIsNone(migration.declared_license(b'# Skill without license'))
         self.assertIsNone(migration.declared_license(b'---\nlicense: Proprietary\n---\nbody'))
 
+    def test_snapshot_inventory_preserves_bytes_without_extracting_runtime(self):
+        blob = self.archive([('open-connect-main/.env', 'private configuration'),
+                             ('open-connect-main/.skills/demo/SKILL.md', '# Demo')])
+        files = migration.snapshot_members(blob)
+        self.assertEqual(files['.env'][1], b'private configuration')
+        self.assertEqual(files['.skills/demo/SKILL.md'][1], b'# Demo')
+
+    def test_snapshot_rejects_unsafe_and_ambiguous_paths(self):
+        for path in ['../escape', 'open-connect-main/../escape', 'other/file.md',
+                     'open-connect-main/a//b.md', 'open-connect-main/C:/x']:
+            with self.subTest(path=path), self.assertRaises(ValueError):
+                migration.snapshot_members(self.archive([(path, 'text')]))
+        with self.assertRaises(ValueError):
+            migration.snapshot_members(self.archive([('open-connect-main/a.md', 'one'),
+                                                     ('open-connect-main/a.md', 'two')]))
+
+    def test_explicit_mit_does_not_override_a_restricted_local_license(self):
+        files = {'demo/SKILL.md': ('100644', b'---\nlicense: MIT\n---\nbody'),
+                 'demo/LICENSE.txt': ('100644', b'All rights reserved. Do not distribute.')}
+        self.assertEqual(migration.mit_package_roots(files), set())
+        files.pop('demo/LICENSE.txt')
+        self.assertEqual(migration.mit_package_roots(files), {'demo'})
+
     def test_pdf_review_rejects_javascript_and_accepts_document_pages(self):
         from pypdf import PdfWriter
         writer = PdfWriter()

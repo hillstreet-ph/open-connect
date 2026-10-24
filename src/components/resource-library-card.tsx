@@ -1,3 +1,4 @@
+import { isResourceApproved } from "@/lib/resource-approval";
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -363,7 +364,7 @@ export function ResourceLibraryCard({
                       <Badge variant={r.published ? "default" : "outline"} className="mr-2">
                         {r.published ? "Published" : "Draft"}
                       </Badge>
-                      {r.verified ? <Badge variant="outline">Verified</Badge> : null}
+                      {isResourceApproved(r) ? <Badge variant="outline">Verified</Badge> : null}
                       {r.package_filename || r.slug || "untitled"}
                       {typeof r.package_size === "number" && r.package_size > 0
                         ? ` · ${formatBytes(r.package_size)}`

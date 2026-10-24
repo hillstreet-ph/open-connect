@@ -1,3 +1,6 @@
+import { canDownloadResource, resourceReviewState } from "@/lib/resource-approval";
+import { migratedResourceDownload } from "@/lib/migrated-resource-download";
+import migratedPackages from "../../config/resource-migration.downloads.json";
 import {
   groupResourcesByPurpose,
   resourceCategoryForType,
@@ -122,7 +125,7 @@ function MarketplaceContent() {
       const { data, error } = await supabase
         .from("resources")
         .select(
-          "id, slug, name, description, resource_type, category_slug, author, version, license, verified, featured, supported_clients, package_path, package_filename, package_size, installation_type, installation_config",
+          "id, slug, name, description, resource_type, category_slug, author, version, license, verified, featured, supported_clients, package_path, package_filename, package_size, installation_type, installation_config, source_url",
         )
         .eq("published", true)
         .order("featured", { ascending: false })
@@ -420,10 +423,13 @@ function MarketplaceContent() {
                     item.installation_config && typeof item.installation_config === "object"
                       ? (item.installation_config as Record<string, unknown>)
                       : {};
-                  const reviewState = String(config["review_state"] ?? "approved");
+                  const reviewState = resourceReviewState(item);
                   const canonicalUrl =
                     typeof config["canonical_url"] === "string" ? config["canonical_url"] : null;
-                  const executable = item.verified && reviewState === "approved";
+                  const publicItem = { ...item, published: true };
+                  const migrated =
+                    !item.package_path && migratedResourceDownload(publicItem, migratedPackages);
+                  const executable = canDownloadResource(publicItem, "", Boolean(migrated));
                   const inLibrary = libraryIds.has(item.id);
                   const collectionNames = (collections.data ?? [])
                     .filter((collection) =>
@@ -452,7 +458,7 @@ function MarketplaceContent() {
                           <Badge variant="secondary" className="text-[10px] uppercase">
                             {item.resource_type}
                           </Badge>
-                          {item.verified ? (
+                          {executable ? (
                             <Badge
                               variant="outline"
                               className="border-accent/50 text-[10px] text-accent"
@@ -513,14 +519,18 @@ function MarketplaceContent() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => downloadMutation.mutate(item.id)}
-                                disabled={downloadMutation.isPending}
+                                onClick={() =>
+                                  executable
+                                    ? downloadMutation.mutate(item.id)
+                                    : viewMutation.mutate(item.id)
+                                }
+                                disabled={downloadMutation.isPending || viewMutation.isPending}
                                 title={
                                   executable ? undefined : "Metadata only until review is approved"
                                 }
                               >
                                 <Download className="mr-1 size-3.5" />
-                                {executable ? "Download" : "Metadata"}
+                                {executable ? "Download" : "View metadata"}
                               </Button>
                             </div>
                             <AddToLibraryButton

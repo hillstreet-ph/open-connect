@@ -1,3 +1,4 @@
+import { isResourceApproved } from "@/lib/resource-approval";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -96,8 +97,11 @@ export function ResourceReviewPanel() {
     mutationFn: (data: { ids: string[]; action: ReviewAction }) => bulkFn({ data }),
     onSuccess: (result) => {
       const skipped = [
-        result.skipped_not_verified ? `${result.skipped_not_verified} not verified` : "",
+        result.skipped_not_verified ? `${result.skipped_not_verified} not approved` : "",
         result.skipped_unchanged ? `${result.skipped_unchanged} already done` : "",
+        result.skipped_conflict
+          ? `${result.skipped_conflict} changed during review; reload and retry`
+          : "",
         result.missing ? `${result.missing} no longer exist` : "",
       ].filter(Boolean);
       toast.success(
@@ -273,8 +277,8 @@ export function ResourceReviewPanel() {
                   <Badge variant="secondary" className="uppercase">
                     {resource.resource_type}
                   </Badge>
-                  <Badge variant={resource.verified ? "default" : "outline"}>
-                    {resource.verified ? "Verified" : "Needs verification"}
+                  <Badge variant={isResourceApproved(resource) ? "default" : "outline"}>
+                    {isResourceApproved(resource) ? "Verified" : "Needs verification"}
                   </Badge>
                   <Badge variant={resource.published ? "default" : "outline"}>
                     {resource.published ? "Published" : "Draft"}
@@ -318,23 +322,23 @@ export function ResourceReviewPanel() {
             <div className="flex shrink-0 flex-wrap gap-2">
               <Button
                 size="sm"
-                variant={resource.verified ? "outline" : "default"}
+                variant={isResourceApproved(resource) ? "outline" : "default"}
                 onClick={() =>
                   update.mutate({
                     id: resource.id,
-                    action: resource.verified ? "unverify" : "verify",
+                    action: isResourceApproved(resource) ? "unverify" : "verify",
                   })
                 }
                 disabled={busy}
               >
                 {update.isPending ? (
                   <Loader2 className="mr-2 size-4 animate-spin" />
-                ) : resource.verified ? (
+                ) : isResourceApproved(resource) ? (
                   <ShieldOff className="mr-2 size-4" />
                 ) : (
                   <ShieldCheck className="mr-2 size-4" />
                 )}
-                {resource.verified ? "Remove verification" : "Verify"}
+                {isResourceApproved(resource) ? "Remove verification" : "Verify"}
               </Button>
               <Button
                 size="sm"
@@ -345,9 +349,11 @@ export function ResourceReviewPanel() {
                     action: resource.published ? "unpublish" : "publish",
                   })
                 }
-                disabled={busy || (!resource.verified && !resource.published)}
+                disabled={busy || (!isResourceApproved(resource) && !resource.published)}
                 title={
-                  !resource.verified && !resource.published ? "Verify before publishing" : undefined
+                  !isResourceApproved(resource) && !resource.published
+                    ? "Verify before publishing"
+                    : undefined
                 }
               >
                 {resource.published ? (

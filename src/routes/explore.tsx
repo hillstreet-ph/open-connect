@@ -1,3 +1,4 @@
+import { isResourceApproved } from "@/lib/resource-approval";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -46,7 +47,9 @@ export function useMarketplace() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("resources")
-        .select("id, slug, name, description, resource_type, category_slug, verified, featured")
+        .select(
+          "id, slug, name, description, resource_type, category_slug, verified, featured, installation_config",
+        )
         .eq("published", true)
         .order("featured", { ascending: false })
         .order("name");
@@ -160,7 +163,7 @@ function ExplorePage() {
                     <Badge variant="secondary" className="uppercase">
                       {item.resource_type}
                     </Badge>
-                    {item.verified ? (
+                    {isResourceApproved(item) ? (
                       <Badge variant="outline" className="border-accent/50 text-accent">
                         Verified
                       </Badge>

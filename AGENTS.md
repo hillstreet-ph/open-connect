@@ -35,4 +35,5 @@
 - Never hand-edit `resources/migrated/**` or generated download/lock registries. Regenerate with `scripts/consolidate_resources.py` from reviewed pinned sources, then run its offline integrity check.
 - Do not execute legacy SQL, copy restricted-license/executable support, silently overwrite existing resource IDs or review status, or mark a source repository safe to delete merely because names/slugs match.
 - Content-addressed package archives are append-only. Retain old versions so prior deployments and rollbacks keep their matching download bytes and checksums.
+- `master-kanor/manus-skills` and `master-kanor/manuskills` are also pinned migration sources. Snapshot ZIPs are comparison evidence only; never publish whole application snapshots, environment files, executable support or restricted-license packages.
 - Keep new candidates unverified and unpublished until their actual content, license and runtime dependencies have been reviewed. Do not delete or archive the source repositories without explicit authorization and a completed retirement checklist.
