@@ -77,6 +77,21 @@ export async function validateConnectionCredential(
     return { verified: true, accountId: setup.accountLabel, detail: "Docker Hub login verified" };
   }
 
+  if (setup.provider === "tinyfish") {
+    const payload = (await (
+      await checkedFetch(
+        "https://agent.tinyfish.ai/v1/profiles",
+        { headers: { "X-API-Key": setup.apiKey, Accept: "application/json" } },
+        send,
+      )
+    ).json()) as { profiles?: unknown[] };
+    if (!Array.isArray(payload.profiles)) throw new Error("TinyFish did not validate the key.");
+    return {
+      verified: true,
+      detail: `TinyFish key verified (${payload.profiles.length} browser profiles)`,
+    };
+  }
+
   if (setup.provider === "cloudflare") {
     const payload = (await (
       await checkedFetch(`${base(setup)}/user/tokens/verify`, { headers: bearer }, send)
