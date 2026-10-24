@@ -1,198 +1,292 @@
 {
   "name": "open-connect.site connectors",
-  "description": "Composio toolkit and skill inventory synced to open-connect.site. Primary account: kairocasino8@gmail.com. Managed by Composio, synced to open-connect.site connectors.",
+  "description": "Consolidated Composio inventory for open-connect.site: active auth configs (connected accounts), custom MCP apps, and published skills. Primary account: kairocasino8@gmail.com.",
   "updated": "2026-10-24",
   "primaryAccount": "kairocasino8@gmail.com",
   "githubOrganization": "hillstreet-ph",
   "canonicalRepository": "hillstreet-ph/open-connect",
-  "toolkits": [
-    {
-      "slug": "airtable",
-      "status": "active"
-    },
-    {
-      "slug": "anthropic_administrator",
-      "status": "active"
-    },
-    {
-      "slug": "apify",
-      "status": "active"
-    },
-    {
-      "slug": "browser_use",
-      "status": "active"
-    },
-    {
-      "slug": "cloudflare",
-      "status": "active"
-    },
-    {
-      "slug": "cloudflare_api_key",
-      "status": "active"
-    },
-    {
-      "slug": "cloudflare_browser_rendering",
-      "status": "active"
-    },
-    {
-      "slug": "cloudflare_mcp",
-      "status": "active"
-    },
-    {
-      "slug": "custom_open_connect",
-      "status": "active"
-    },
-    {
-      "slug": "custom_zeabur_mcp_bridge",
-      "status": "broken"
-    },
-    {
-      "slug": "databricks",
-      "status": "active"
-    },
-    {
-      "slug": "docker_hub",
-      "status": "active"
-    },
-    {
-      "slug": "dropbox",
-      "status": "active"
-    },
-    {
-      "slug": "e2b",
-      "status": "active"
-    },
-    {
-      "slug": "firecrawl",
-      "status": "active"
-    },
-    {
-      "slug": "github",
-      "status": "active"
-    },
-    {
-      "slug": "gmail",
-      "status": "active"
-    },
-    {
-      "slug": "googlecalendar",
-      "status": "active"
-    },
-    {
-      "slug": "googledocs",
-      "status": "active"
-    },
-    {
-      "slug": "googledrive",
-      "status": "active"
-    },
-    {
-      "slug": "googlephotos",
-      "status": "active"
-    },
-    {
-      "slug": "googlesheets",
-      "status": "active"
-    },
-    {
-      "slug": "googlesuper",
-      "status": "active"
-    },
-    {
-      "slug": "kernel_mcp",
-      "status": "active"
-    },
-    {
-      "slug": "notion",
-      "status": "active"
-    },
-    {
-      "slug": "openai",
-      "status": "active"
-    },
-    {
-      "slug": "railway",
-      "status": "removed"
-    },
-    {
-      "slug": "sentry",
-      "status": "active"
-    },
-    {
-      "slug": "sentry_mcp",
-      "status": "active"
-    },
-    {
-      "slug": "supabase",
-      "status": "active"
-    },
-    {
-      "slug": "supabase_mcp",
-      "status": "active"
-    },
-    {
-      "slug": "supabase_read_mcp",
-      "status": "active"
-    },
-    {
-      "slug": "telegram",
-      "status": "active"
-    }
-  ],
-  "toolkitCount": 33,
-  "skills": [
-    {
-      "name": "open-system-space",
-      "type": "project",
-      "repo": "hillstreet-ph/open-system-space"
-    },
-    {
-      "name": "open-box-space",
-      "type": "project",
-      "repo": "hillstreet-ph/open-box-space"
-    },
-    {
-      "name": "open-teleset-site",
-      "type": "project",
-      "repo": "hillstreet-ph/open-teleset-site"
-    },
-    {
-      "name": "open-tgate-site",
-      "type": "project",
-      "repo": "hillstreet-ph/open-tgate-site"
-    },
-    {
-      "name": "open-connect-site",
-      "type": "project",
-      "repo": "hillstreet-ph/open-connect"
-    },
-    {
-      "name": "zeabur-deployment-ops",
-      "type": "project"
-    },
-    {
-      "name": "chatgpt-apps",
-      "type": "project"
-    },
-    {
-      "name": "claude-ai-apps",
-      "type": "project"
-    },
-    {
-      "name": "manus-ai-automation",
-      "type": "project"
-    }
-  ],
-  "vibeSkills": {
-    "count": 24,
-    "note": "24 Vibe skills published to Composio, one copy each."
-  },
-  "customMcp": {
-    "note": "Register additional custom MCP servers at https://dashboard.composio.dev/~/org/connect/apps?add-custom-mcp=true",
-    "endpoints": [
-      "https://open-connect.site/mcp",
-      "https://open-tgate.site/mcp",
-      "https://open-system.space/mcp"
+  "authConfigs": {
+    "model": "Composio connected accounts; Composio-managed auth with runtime connect links via COMPOSIO_MANAGE_CONNECTIONS.",
+    "connectedToolkits": [
+      {
+        "slug": "airtable",
+        "authConfig": "connected-account",
+        "status": "active"
+      },
+      {
+        "slug": "anthropic_administrator",
+        "authConfig": "connected-account",
+        "status": "active"
+      },
+      {
+        "slug": "apify",
+        "authConfig": "connected-account",
+        "status": "active"
+      },
+      {
+        "slug": "browser_use",
+        "authConfig": "connected-account",
+        "status": "active"
+      },
+      {
+        "slug": "cloudflare",
+        "authConfig": "connected-account",
+        "status": "active"
+      },
+      {
+        "slug": "cloudflare_api_key",
+        "authConfig": "connected-account",
+        "status": "active"
+      },
+      {
+        "slug": "cloudflare_browser_rendering",
+        "authConfig": "connected-account",
+        "status": "active"
+      },
+      {
+        "slug": "cloudflare_mcp",
+        "authConfig": "connected-account",
+        "status": "active"
+      },
+      {
+        "slug": "custom_open_connect",
+        "authConfig": "connected-account",
+        "status": "active"
+      },
+      {
+        "slug": "custom_open_tgate",
+        "authConfig": "connected-account",
+        "status": "active"
+      },
+      {
+        "slug": "databricks",
+        "authConfig": "connected-account",
+        "status": "active"
+      },
+      {
+        "slug": "docker_hub",
+        "authConfig": "connected-account",
+        "status": "active"
+      },
+      {
+        "slug": "dropbox",
+        "authConfig": "connected-account",
+        "status": "active"
+      },
+      {
+        "slug": "e2b",
+        "authConfig": "connected-account",
+        "status": "active"
+      },
+      {
+        "slug": "firecrawl",
+        "authConfig": "connected-account",
+        "status": "active"
+      },
+      {
+        "slug": "github",
+        "authConfig": "connected-account",
+        "status": "active"
+      },
+      {
+        "slug": "gmail",
+        "authConfig": "connected-account",
+        "status": "active"
+      },
+      {
+        "slug": "googlecalendar",
+        "authConfig": "connected-account",
+        "status": "active"
+      },
+      {
+        "slug": "googledocs",
+        "authConfig": "connected-account",
+        "status": "active"
+      },
+      {
+        "slug": "googledrive",
+        "authConfig": "connected-account",
+        "status": "active"
+      },
+      {
+        "slug": "googlephotos",
+        "authConfig": "connected-account",
+        "status": "active"
+      },
+      {
+        "slug": "googlesheets",
+        "authConfig": "connected-account",
+        "status": "active"
+      },
+      {
+        "slug": "googlesuper",
+        "authConfig": "connected-account",
+        "status": "active"
+      },
+      {
+        "slug": "kernel_mcp",
+        "authConfig": "connected-account",
+        "status": "active"
+      },
+      {
+        "slug": "manus",
+        "authConfig": "connected-account",
+        "status": "active"
+      },
+      {
+        "slug": "notion",
+        "authConfig": "connected-account",
+        "status": "active"
+      },
+      {
+        "slug": "openai",
+        "authConfig": "connected-account",
+        "status": "active"
+      },
+      {
+        "slug": "sentry",
+        "authConfig": "connected-account",
+        "status": "active"
+      },
+      {
+        "slug": "sentry_mcp",
+        "authConfig": "connected-account",
+        "status": "active"
+      },
+      {
+        "slug": "supabase",
+        "authConfig": "connected-account",
+        "status": "active"
+      },
+      {
+        "slug": "supabase_mcp",
+        "authConfig": "connected-account",
+        "status": "active"
+      },
+      {
+        "slug": "supabase_read_mcp",
+        "authConfig": "connected-account",
+        "status": "active"
+      },
+      {
+        "slug": "telegram",
+        "authConfig": "connected-account",
+        "status": "active"
+      }
+    ],
+    "connectedToolkitsCount": 33,
+    "notes": [
+      "GitHub: two accounts under master-kanor (Charles Tanauan), default github_snaste-reveal.",
+      "Manus and Google Docs: active under alias kairocasino8.",
+      "Railway: removed per user request and excluded from this inventory."
     ]
+  },
+  "customMcpApps": {
+    "active": [
+      {
+        "toolkit": "custom_open_connect",
+        "endpoint": "https://open-connect.site/mcp",
+        "auth": "Bearer API key (Composio custom MCP registration)",
+        "verifiedToolCall": true
+      },
+      {
+        "toolkit": "custom_open_tgate",
+        "endpoint": "https://open-tgate.site/mcp",
+        "auth": "Composio custom MCP registration",
+        "verifiedToolCall": true
+      },
+      {
+        "toolkit": "custom_gitbook",
+        "endpoint": "https://mcp.gitbook.com/mcp",
+        "auth": "Bearer GitBook API key",
+        "verifiedToolCall": true
+      },
+      {
+        "toolkit": "custom_composio_mcp",
+        "endpoint": "https://connect.composio.dev/mcp",
+        "auth": "Bearer Composio API key",
+        "verifiedToolCall": false,
+        "note": "Exposes the full Composio meta toolset: search tools, manage connections, multi-execute, get schemas, use skill, remote bash."
+      }
+    ],
+    "deferred": [
+      {
+        "app": "zeabur-mcp-bridge",
+        "status": "not working; deferred",
+        "resolution": "hillstreet-ph/zeabur-mcp-bridge prepared (stdio-to-HTTP bridge); requires Zeabur dashboard import with ZEABUR_TOKEN, then Composio registration. Root cause and steps documented in docs/KNOWN_ISSUES.md."
+      },
+      {
+        "app": "open-teleset.site",
+        "status": "registered, tool sync pending",
+        "resolution": "Retry sync in Composio dashboard or re-add with a fresh superuser token; endpoint verified live (Administrator authentication required)."
+      },
+      {
+        "app": "open-system.space",
+        "status": "not yet registered",
+        "resolution": "One dashboard entry with Bearer API key."
+      },
+      {
+        "app": "open-box.space",
+        "status": "not yet registered",
+        "resolution": "One dashboard entry with Bearer API key."
+      }
+    ],
+    "registrationUrl": "https://dashboard.composio.dev/~/org/connect/apps?add-custom-mcp=true"
+  },
+  "deployments": {
+    "githubPages": [
+      "https://hillstreet-ph.github.io/open-system-space/",
+      "https://hillstreet-ph.github.io/open-box-space/",
+      "https://hillstreet-ph.github.io/open-teleset-site/",
+      "https://hillstreet-ph.github.io/open-tgate-site/"
+    ],
+    "zeabur": "Satellite repos carry zbpack.json {\"type\":\"static\"}; bridge repo hillstreet-ph/zeabur-mcp-bridge carries a Node service config."
+  },
+  "skills": {
+    "vibeSkillsCount": 24,
+    "projectSkills": [
+      "open-system-space",
+      "open-box-space",
+      "open-teleset-site",
+      "open-tgate-site",
+      "open-connect-site",
+      "zeabur-deployment-ops",
+      "chatgpt-apps",
+      "claude-ai-apps",
+      "manus-ai-automation"
+    ],
+    "mcpToolkitSkills": [
+      {
+        "title": "Open-Connect.site MCP Toolkit",
+        "id": "sk_LopabQmiOR-3",
+        "tools": 46
+      },
+      {
+        "title": "Zeabur MCP Bridge Toolkit",
+        "id": "sk_kkAXhr8dBz6T",
+        "tools": 29
+      },
+      {
+        "title": "Open-Teleset.site MCP Toolkit",
+        "id": "sk_byGCCA0_jxc4",
+        "tools": 28
+      },
+      {
+        "title": "Open-System.space MCP Toolkit",
+        "id": "sk_FCb2rDUAI8k0",
+        "tools": 29
+      },
+      {
+        "title": "Open-Box.space MCP Toolkit",
+        "id": "sk_ythuca39Pjbd",
+        "tools": 25
+      },
+      {
+        "title": "Open-TGate.site MCP Toolkit",
+        "id": "sk_R4TRsLJkXXET",
+        "tools": 19
+      }
+    ],
+    "note": "Composio runtime skills are read-only and delivered through COMPOSIO_SEARCH_TOOLS responses; these published skills provide the tool sequences and pitfalls for the custom MCP apps."
   }
 }

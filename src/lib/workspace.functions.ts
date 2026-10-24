@@ -1,4 +1,9 @@
-import { REMOTE_MCP_PROVIDERS, isRemoteMcpProvider } from "@/lib/remote-mcp";
+import {
+  EXECUTABLE_MCP_PROVIDERS,
+  cloudKindsForProvider,
+  isExecutableMcpProvider,
+  type CloudWorkspaceKind,
+} from "@/lib/remote-mcp";
 import { credentialMetadata } from "@/lib/secrets.functions";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ProjectResourceRow } from "@/lib/resource-categories";
@@ -157,7 +162,7 @@ export const listProjectCloudConnections = createServerFn({ method: "GET" })
         .from("app_connections")
         .select("id, provider, display_name, status, scopes")
         .eq("user_id", context.userId)
-        .in("provider", [...REMOTE_MCP_PROVIDERS])
+        .in("provider", [...EXECUTABLE_MCP_PROVIDERS])
         .eq("status", "connected"),
     ]);
     if (sharedResult.error) throw new Error(sharedResult.error.message);
@@ -171,10 +176,15 @@ export const listProjectCloudConnections = createServerFn({ method: "GET" })
         status: string;
         scopes: string[];
         access: string;
+        kinds: readonly CloudWorkspaceKind[];
       }
     >();
     for (const connection of ownResult.data ?? []) {
-      available.set(connection.id, { ...connection, access: "Personal" });
+      available.set(connection.id, {
+        ...connection,
+        access: "Personal",
+        kinds: cloudKindsForProvider(connection.provider),
+      });
     }
     const sharedRows = Array.isArray(sharedResult.data)
       ? (sharedResult.data as Array<{
@@ -192,7 +202,7 @@ export const listProjectCloudConnections = createServerFn({ method: "GET" })
       if (
         !connection?.id ||
         !connection.provider ||
-        !isRemoteMcpProvider(connection.provider) ||
+        !isExecutableMcpProvider(connection.provider) ||
         connection.status !== "connected"
       )
         continue;
@@ -204,6 +214,7 @@ export const listProjectCloudConnections = createServerFn({ method: "GET" })
         status: connection.status ?? "unknown",
         scopes: connection.scopes ?? [],
         access: existing ? "Personal · shared with project" : "Shared with project",
+        kinds: cloudKindsForProvider(connection.provider),
       });
     }
     return Array.from(available.values()).sort((a, b) =>
