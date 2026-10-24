@@ -6,7 +6,13 @@ declare
   verifier text := repeat('v', 43);
   challenge text;
   result jsonb;
-  requested text[] := array['mcp:connect', 'control:write'];
+  requested text[] := array[
+    'openid', 'mcp:connect', 'resources:read', 'resources:write',
+    'memory:read', 'knowledge:read', 'connections:read', 'connections:invoke',
+    'models:read', 'models:invoke', 'tools:invoke', 'secrets:read',
+    'agents:invoke', 'control:write'
+  ];
+  actor uuid;
   before_count bigint;
 begin
   challenge := translate(rtrim(encode(extensions.digest(verifier, 'sha256'), 'base64'), '='), '+/', '-_');
@@ -16,6 +22,20 @@ begin
   if not has_function_privilege('anon', 'public.oc_exchange_oauth_code(text,text,text,text)', 'execute') then
     raise exception 'Public PKCE exchange is unavailable';
   end if;
+  -- Both canonical Admin and legacy Owner must receive all explicitly approved scopes.
+  foreach actor in array array[
+    '00000000-0000-4000-8000-000000000001'::uuid,
+    '00000000-0000-4000-8000-000000000003'::uuid
+  ] loop
+    execute 'set local role authenticated';
+    perform set_config('request.jwt.claim.sub', actor::text, true);
+    code := public.oc_authorize_oauth_client('fixture-client', 'https://example.test/callback', challenge, requested);
+    execute 'set local role anon';
+    result := public.oc_exchange_oauth_code(code, verifier, 'fixture-client', 'https://example.test/callback');
+    if result->>'scope' <> array_to_string(requested, ' ') then
+      raise exception 'Full Admin/Owner scope round-trip failed';
+    end if;
+  end loop;
   execute 'set local role authenticated';
   perform set_config('request.jwt.claim.sub', '', true);
   begin

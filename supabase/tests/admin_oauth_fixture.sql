@@ -13,3 +13,5 @@ create table public.oauth_authorization_codes (
 revoke all on public.oauth_clients, public.oauth_authorization_codes from public, anon, authenticated;
 insert into public.oauth_clients values
   ('fixture-client', 'Disposable OAuth fixture', array['https://example.test/callback']);
+insert into public.user_roles values
+  ('00000000-0000-4000-8000-000000000003', 'admin');

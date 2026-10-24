@@ -19,7 +19,7 @@ export function BackButton({ fallback = "/dashboard" }: { fallback?: "/dashboard
       }}
     >
       <ArrowLeft className="size-4" aria-hidden="true" />
-      <span className="hidden sm:inline">Back</span>
+      <span>Back</span>
     </Button>
   );
 }

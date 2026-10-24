@@ -2,11 +2,9 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertCloudWorkspaceToolAllowed } from "@/lib/cloud-workspace-policy";
+import { cloudConnectionInput } from "@/lib/cloud-workspace-input";
 
-const connectionInput = z.object({
-  projectId: z.string().uuid(),
-  connectionId: z.string().uuid(),
-});
+const connectionInput = cloudConnectionInput;
 
 export const discoverCloudTools = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
