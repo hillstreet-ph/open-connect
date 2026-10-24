@@ -23,6 +23,20 @@
         "endpoint": "https://open-tgate.site/mcp",
         "status": "active",
         "verifiedToolCall": true
+      },
+      {
+        "toolkit": "custom_gitbook",
+        "endpoint": "https://mcp.gitbook.com/mcp",
+        "status": "active",
+        "verifiedToolCall": true,
+        "note": "Bearer gb_api key; 4 curated tools plus full operation catalog via search and invoke_operation."
+      },
+      {
+        "toolkit": "custom_composio_mcp",
+        "endpoint": "https://connect.composio.dev/mcp",
+        "status": "active",
+        "verifiedToolCall": false,
+        "note": "Composio hosted MCP; exposes the full meta toolset (search, manage connections, multi-execute, get schemas, use skill, remote bash)."
       }
     ],
     "pendingRegistration": [
@@ -30,7 +44,8 @@
         "app": "open-teleset.site",
         "endpoint": "https://open-teleset.site/mcp",
         "auth": "Bearer superuser token",
-        "tools": 28
+        "tools": 28,
+        "note": "Registered in dashboard but tool sync rejected; retry sync or re-add with a fresh superuser token."
       },
       {
         "app": "open-system.space",
@@ -46,16 +61,22 @@
       },
       {
         "app": "zeabur-mcp-bridge",
-        "endpoint": "Zeabur MCP endpoint",
-        "auth": "Bearer Zeabur API token",
+        "endpoint": "deployed service URL of hillstreet-ph/zeabur-mcp-bridge",
+        "auth": "ZEABUR_TOKEN set server-side as environment variable",
         "tools": 29
       }
     ],
     "registrationUrl": "https://dashboard.composio.dev/~/org/connect/apps?add-custom-mcp=true",
     "knownIssues": [
       "The hub's internal connection to the open-tgate-mcp resource returns HTTP 500 on tool listing (server-side defect in open-connect.site); the direct Composio registration of open-tgate works correctly.",
-      "The Zeabur MCP bridge connection returns HTTP 500; GitHub-based deployment is the fallback."
+      "RESOLVED: the Zeabur MCP server is a local stdio process (npx @zeabur/mcp-server with ZEABUR_TOKEN) with no remote HTTP URL, which made direct Composio registration structurally impossible. Solution: hillstreet-ph/zeabur-mcp-bridge wraps it with an MCP stdio-to-HTTP proxy (mcp-proxy) for hosted deployment. Set ZEABUR_TOKEN as a service environment variable; never commit the token to a public repository."
     ]
+  },
+  "zeaburBridge": {
+    "repository": "hillstreet-ph/zeabur-mcp-bridge",
+    "architecture": "@zeabur/mcp-server (stdio) wrapped by mcp-proxy to expose HTTP on port 8080",
+    "deploy": "Import the repository as a Zeabur service; set ZEABUR_TOKEN from the Zeabur dashboard (Settings, API tokens); endpoint is the service URL.",
+    "security": "Protect the endpoint via Zeabur private networking or an authenticated open-tgate.site gateway route before registering publicly."
   },
   "deployments": {
     "githubPages": [
@@ -64,7 +85,7 @@
       "https://hillstreet-ph.github.io/open-teleset-site/",
       "https://hillstreet-ph.github.io/open-tgate-site/"
     ],
-    "zeabur": "All satellite repos carry zbpack.json {\"type\":\"static\"}; import via Zeabur dashboard."
+    "zeabur": "All satellite repos carry zbpack.json {\"type\":\"static\"}; import via the Zeabur dashboard."
   },
   "skills": {
     "vibeSkillsCount": 24,

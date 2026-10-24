@@ -1,6 +1,6 @@
 # Composio Sync — open-connect.site connectors
 
-Final state as of 2026-10-24. Primary account: kairocasino8@gmail.com. GitHub organization: hillstreet-ph.
+State as of 2026-10-24 (final). Primary account: kairocasino8@gmail.com. GitHub organization: hillstreet-ph.
 
 ## Canonical repository
 - hillstreet-ph/open-connect is the original and canonical open-connect.site application.
@@ -8,17 +8,25 @@ Final state as of 2026-10-24. Primary account: kairocasino8@gmail.com. GitHub or
 
 ## Custom MCP registrations in Composio
 - custom_open_connect — ACTIVE, verified with a live tool call.
-- custom_open_tgate — ACTIVE, verified with a live tool call (live Telegram account data returned).
+- custom_open_tgate — ACTIVE, verified with a live tool call (live Telegram account data).
+- custom_gitbook — ACTIVE (https://mcp.gitbook.com/mcp, Bearer gb_api key), verified with a live operation-search call.
+- custom_composio_mcp — ACTIVE (https://connect.composio.dev/mcp), exposes the full Composio meta toolset.
 
-Pending registration (dashboard entry required at https://dashboard.composio.dev/~/org/connect/apps?add-custom-mcp=true):
-- open-teleset.site — https://open-teleset.site/mcp — Bearer superuser token — 28 tools.
-- open-system.space — https://open-system.space/mcp — Bearer API key — 29 tools.
-- open-box.space — https://open-box.space/mcp — Bearer API key — 25 tools.
-- Zeabur MCP Bridge — Zeabur MCP endpoint — Bearer Zeabur API token — 29 tools.
+Pending:
+- open-teleset.site — registered but tool sync rejected; retry sync or re-add with a fresh superuser token.
+- open-system.space — https://open-system.space/mcp — Bearer API key.
+- open-box.space — https://open-box.space/mcp — Bearer API key.
+- zeabur-mcp-bridge — deploy hillstreet-ph/zeabur-mcp-bridge (see below), then register the service URL.
+
+## Zeabur MCP Bridge (resolved)
+The official @zeabur/mcp-server is a local stdio process (npx with ZEABUR_TOKEN) with no remote HTTP URL; direct Composio registration was structurally impossible. hillstreet-ph/zeabur-mcp-bridge resolves this by wrapping the server with an MCP stdio-to-HTTP proxy (mcp-proxy):
+1. Import the repository as a Zeabur service (zbpack.json, type node, port 8080).
+2. Set ZEABUR_TOKEN as the service environment variable (Zeabur dashboard, Settings, API tokens). Never commit the token to a public repository.
+3. Protect the endpoint (Zeabur private networking or an authenticated open-tgate.site gateway route).
+4. Register the service URL in Composio, then remove the broken connection custom_zeabur_mcp_bridge_oord-anacid.
 
 ## Known issues
 - The hub's internal connection to the open-tgate-mcp resource returns HTTP 500 on tool listing; server-side defect in open-connect.site. The direct Composio registration of open-tgate is unaffected.
-- The Zeabur MCP bridge connection returns HTTP 500; GitHub-based deployment is the fallback.
 
 ## Deployments
 - GitHub Pages (live): open-system-space, open-box-space, open-teleset-site, open-tgate-site.
