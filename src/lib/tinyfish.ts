@@ -257,7 +257,7 @@ export async function startRunWithLiveView(
   if (!started.run_id) throw new Error("TinyFish did not return a run id.");
   const sleep = options.sleep ?? ((ms: number) => new Promise((r) => setTimeout(r, ms)));
   const deadline = Date.now() + (options.waitMs ?? 9000);
-  let run: TinyFishRun | null = null;
+  let run: TinyFishRun | null;
   do {
     await sleep(options.intervalMs ?? 1500);
     try {
