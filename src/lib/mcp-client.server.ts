@@ -60,6 +60,7 @@ export async function withMcpClient<T>(
   } catch (error) {
     if (error instanceof McpCatalogError) throw error;
     // A remote error may echo authorization headers; never forward it to the browser.
+    // eslint-disable-next-line preserve-caught-error -- Do not serialize remote credential-bearing errors as a cause.
     throw new Error(
       "MCP request failed. Check the endpoint, credential, protocol support, and provider availability.",
     );
