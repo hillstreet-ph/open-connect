@@ -169,7 +169,7 @@ def git(root, *args):
     return subprocess.check_output(['git', '-C', str(root), *args])
 
 
-def source_files(root, commit):
+def source_files(root, commit, inventory_gitlinks=False):
     entries = git(root, 'ls-tree', '-rz', '--full-tree', commit).split(b'\0')
     result = {}
     for entry in entries:
@@ -177,11 +177,54 @@ def source_files(root, commit):
             continue
         header, name = entry.split(b'\t', 1)
         mode, kind, oid = header.decode().split()
+        if kind == 'commit' and mode == '160000' and inventory_gitlinks:
+            result[name.decode()] = (mode, oid.encode())
+            continue
         if kind != 'blob':
             raise ValueError('Submodules need explicit migration review')
         path = name.decode()
         result[path] = (mode, git(root, 'cat-file', 'blob', oid.decode() if isinstance(oid, bytes) else oid))
     return result
+
+
+def snapshot_members(blob):
+    """Inventory a legacy snapshot in memory; never extract or run its contents."""
+    result, total = {}, 0
+    with zipfile.ZipFile(io.BytesIO(blob)) as archive:
+        if len(archive.infolist()) > 5000:
+            raise ValueError('Snapshot member limit exceeded')
+        for item in archive.infolist():
+            raw = item.filename.rstrip('/') if item.is_dir() else item.filename
+            path = PurePosixPath(raw)
+            if (path.is_absolute() or '..' in path.parts or '\\' in raw or ':' in raw
+                    or str(path) != raw or not raw.startswith('open-connect-main/')
+                    and raw != 'open-connect-main'
+                    or stat.S_ISLNK(item.external_attr >> 16)):
+                raise ValueError('Unsafe snapshot member')
+            if item.is_dir():
+                continue
+            name = raw.removeprefix('open-connect-main/')
+            total += item.file_size
+            if name in result or item.file_size > 32_000_000 or total > 64_000_000:
+                raise ValueError('Duplicate or oversized snapshot member')
+            result[name] = ('100644', archive.read(item))
+    return result
+
+
+def mit_package_roots(files):
+    roots = set()
+    for path, (_, content) in files.items():
+        if not path.endswith('/SKILL.md') or not declared_license(content):
+            continue
+        root = str(PurePosixPath(path).parent)
+        licenses = [blob for name, (_, blob) in files.items()
+                    if str(PurePosixPath(name).parent) == root
+                    and PurePosixPath(name).name.lower() in {'license', 'license.md', 'license.txt'}]
+        # An explicit frontmatter declaration cannot override conflicting terms.
+        if all(b'Permission is hereby granted, free of charge' in blob
+               and b'MIT' in blob for blob in licenses):
+            roots.add(root)
+    return roots
 
 
 def canonical_index():
@@ -212,7 +255,7 @@ def retain_versioned_archives(previous, outputs, root=ROOT):
             outputs[name] = content
 
 
-def generate(v1, custom, catalog):
+def generate(v1, custom, catalog, manus=None, snapshot=None):
     config = json.loads((ROOT / 'config/resource-migration.sources.json').read_text())
     current = json.loads(catalog.read_text())
     current = current if isinstance(current, list) else current['resources']
@@ -220,18 +263,53 @@ def generate(v1, custom, catalog):
     existing = canonical_index()
     outputs, entries, candidates, sources, sql_exports = {}, [], [], [], []
     for source in config['sources']:
-        local = v1 if source['id'] == 'v1-open-connect' else custom
+        local = {'v1-open-connect': v1, 'open-custom-skills': custom,
+                 'open-custom-skills-extra-skills': custom, 'manus-skills': manus,
+                 'manuskills': snapshot}[source['id']]
+        if local is None:
+            raise ValueError('Missing pinned source clone: ' + source['id'])
         commit = source['commit']
         if git(local, 'rev-parse', '--verify', source.get('ref', 'HEAD')).decode().strip() != commit:
             raise ValueError('Source HEAD does not match pinned commit')
-        files = source_files(local, commit)
+        files = source_files(local, commit, inventory_gitlinks=source['id'] == 'manus-skills')
         sources.append({**source, 'tracked_files': len(files), 'deletion_ready': False})
+        if source['id'] == 'manuskills':
+            comparison = source_files(v1, config['sources'][0]['commit'])
+            known = {digest(blob): path for path, blob in outputs.items()}
+            for path, (_, blob) in sorted(files.items()):
+                record = {'source': source['id'], 'path': path, 'sha256': digest(blob),
+                          'size': len(blob), 'decision': 'snapshot_repository_metadata_only'}
+                entries.append(record)
+                if path != 'open-connect-main.zip':
+                    continue
+                members = snapshot_members(blob)
+                sources[-1]['snapshot_members_inventoried'] = len(members)
+                record['decision'] = 'snapshot_compared_never_published'
+                for name, (_, content) in sorted(members.items()):
+                    identical = comparison.get(name, (None, None))[1] == content
+                    member = {'source': source['id'], 'path': path + '!/' + name,
+                              'sha256': digest(content), 'size': len(content),
+                              'decision': 'identical_to_pinned_v1' if identical else 'snapshot_configuration_not_ported'}
+                    if PurePosixPath(name).name.startswith('.env'):
+                        member['decision'] = 'environment_configuration_excluded'
+                    elif content_blocker(content) == 'possible_secret':
+                        member['decision'] = 'possible_secret_excluded'
+                    if identical:
+                        member['comparison_source_path'] = name
+                    if digest(content) in known:
+                        member['existing_identical_paths'] = [known[digest(content)]]
+                    entries.append(member)
+            continue
         if source.get('comparison_base'):
             base = source_files(local, source['comparison_base'])
             files = {path: value for path, value in files.items() if base.get(path) != value}
             sources[-1]['changed_files_inventoried'] = len(files)
         licensed = set()
         blocked_packages = set()
+        manus_roots = mit_package_roots(files) if source['id'] == 'manus-skills' else set()
+        blocked_manus = {root for root in manus_roots if any(
+            path.startswith(root + '/') and content_blocker(blob) == 'possible_secret'
+            for path, (_, blob) in files.items())}
         if source['id'] == 'v1-open-connect':
             for path, (_, content) in files.items():
                 if re.fullmatch(r'\.skills/[^/]+/SKILL\.md', path) and declared_license(content):
@@ -244,6 +322,27 @@ def generate(v1, custom, catalog):
             reason, destination = 'legacy_application_or_configuration_not_ported', None
             if mode == '120000':
                 reason = 'symlink_excluded'
+            elif mode == '160000':
+                reason = 'submodule_pointer_not_fetched_or_executed'
+                record['gitlink_commit'] = blob.decode()
+            elif source['id'] == 'manus-skills':
+                package = next((root for root in sorted(manus_roots)
+                                if path.startswith(root + '/')), None)
+                if package in blocked_manus:
+                    reason = 'package_possible_secret_excluded'
+                elif package is None:
+                    reason = 'license_or_entrypoint_review_required'
+                elif Path(path).suffix.lower() not in TEXT_SUFFIXES or content_blocker(blob):
+                    reason = content_blocker(blob) or 'runtime_or_binary_support_excluded'
+                else:
+                    destination = f'{PREFIX}/manus-skills/' + path
+                    reason = 'migrated_mit_document'
+                    if path.endswith('/SKILL.md'):
+                        slug = 'manus-' + PurePosixPath(package).name
+                        candidates.append({'slug': slug, 'source': source['id'], 'source_package': package,
+                            'resource_type': 'skill', 'content_path': destination, 'content_hash': digest(blob),
+                            'license': 'MIT', 'decision': 'new_review_candidate',
+                            'published': False, 'verified': False, 'executable': False})
             elif source['id'] == 'v1-open-connect' and path.startswith('.skills/'):
                 parts = path.split('/')
                 if parts[1] in blocked_packages:
@@ -339,8 +438,9 @@ def generate(v1, custom, catalog):
         item['readiness'] = 'review_only_not_installable'
         if 'content_path' in item:
             is_v1 = item['content_path'].startswith(f'{PREFIX}/v1-skills/')
-            source_id = 'v1-open-connect' if is_v1 else 'open-custom-skills-extra-skills'
-            source_prefix = ('.skills/' if is_v1 else 'skills/') + item.get('legacy_slug', item['slug']) + '/'
+            source_id = item.get('source', 'v1-open-connect' if is_v1 else 'open-custom-skills-extra-skills')
+            source_prefix = (item['source_package'] + '/' if 'source_package' in item else
+                             ('.skills/' if is_v1 else 'skills/') + item.get('legacy_slug', item['slug']) + '/')
             item['excluded_support'] = [
                 {'path': entry['path'], 'reason': entry['decision']}
                 for entry in entries if entry['source'] == source_id and entry['path'].startswith(source_prefix)
@@ -411,12 +511,14 @@ def main():
     parser.add_argument('--v1', type=Path)
     parser.add_argument('--custom', type=Path)
     parser.add_argument('--catalog', type=Path)
+    parser.add_argument('--manus', type=Path)
+    parser.add_argument('--snapshot', type=Path)
     parser.add_argument('--write', action='store_true')
     args = parser.parse_args()
     if args.write:
         if not all([args.v1, args.custom, args.catalog]):
             parser.error('--write requires --v1, --custom, --catalog')
-        outputs = generate(args.v1, args.custom, args.catalog)
+        outputs = generate(args.v1, args.custom, args.catalog, args.manus, args.snapshot)
         # Prune only unchanged artifacts owned by the previous generated lock.
         # This removes newly quarantined packages without deleting user edits.
         if (ROOT / LOCK).is_file():
