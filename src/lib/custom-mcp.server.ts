@@ -1,7 +1,12 @@
 import { fetchMcpTools, McpCatalogError, withMcpClient } from "./mcp-client.server.ts";
 import { callTwilioTool, twilioFailureResult, twilioTools } from "./twilio.server.ts";
 import { callTelegramTool, telegramFailureResult, telegramTools } from "./telegram.server.ts";
-import { isRemoteMcpProvider, type RemoteMcpProvider } from "./remote-mcp.ts";
+import {
+  HOSTED_MCP_PRESETS,
+  isExecutableMcpProvider,
+  isHostedMcpProvider,
+  type RemoteMcpProvider,
+} from "./remote-mcp.ts";
 
 export { isRemoteMcpProvider } from "./remote-mcp.ts";
 
@@ -202,7 +207,7 @@ export async function assertToolConnectionAccess(
   checkProject = assertProjectConnectionAccess,
 ) {
   if (
-    !isRemoteMcpProvider(connection.provider) &&
+    !isExecutableMcpProvider(connection.provider) &&
     !["twilio", "telegram"].includes(connection.provider)
   ) {
     throw new Error("No executable adapter is configured for this connection.");
@@ -257,12 +262,14 @@ export function authorizeToolForConnectionSnapshot(
 }
 
 async function materializeCustomMcpConnection(data: ToolConnection) {
-  if (!isRemoteMcpProvider(data.provider))
+  if (!isExecutableMcpProvider(data.provider))
     throw new Error("Only remote MCP connections use this tool.");
 
   const metadata = (data.metadata ?? {}) as Record<string, unknown>;
-  const endpoint = String(metadata["endpoint_url"] ?? "");
-  const authType = String(metadata["auth_type"] ?? "none");
+  // Hosted presets ignore stored metadata so a credential only reaches its vendor.
+  const preset = isHostedMcpProvider(data.provider) ? HOSTED_MCP_PRESETS[data.provider] : null;
+  const endpoint = preset ? preset.endpoint : String(metadata["endpoint_url"] ?? "");
+  const authType = preset ? preset.authType : String(metadata["auth_type"] ?? "none");
   try {
     const parsed = new URL(endpoint);
     if (parsed.protocol !== "https:" || !parsed.hostname || parsed.username || parsed.password) {

@@ -12,23 +12,8 @@ const CODE_TTL_MS = 10 * 60 * 1000;
 /** Only S256 is advertised and accepted. */
 export const PKCE_METHOD_S256 = "S256" as const;
 
-/** Full autonomous scopes advertised to AI clients */
-export const OAUTH_SCOPES_SUPPORTED = [
-  "openid",
-  "mcp:connect",
-  "resources:read",
-  "resources:write",
-  "memory:read",
-  "knowledge:read",
-  "connections:read",
-  "connections:invoke",
-  "models:read",
-  "models:invoke",
-  "tools:invoke",
-  "secrets:read",
-  "agents:invoke",
-  "control:write",
-] as const;
+export { AVAILABLE_KEY_SCOPES as OAUTH_SCOPES_SUPPORTED } from "./access-profiles.ts";
+import { AVAILABLE_KEY_SCOPES as OAUTH_SCOPES_SUPPORTED } from "./access-profiles.ts";
 
 const VERIFIER_RE = /^[A-Za-z0-9\-._~]{43,128}$/;
 const CHALLENGE_RE = /^[A-Za-z0-9\-_]{43,128}$/;

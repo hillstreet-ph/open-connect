@@ -1,19 +1,28 @@
-export const OAUTH_SCOPES = [
-  "openid",
-  "mcp:connect",
-  "resources:read",
-  "resources:write",
-  "memory:read",
-  "knowledge:read",
-  "connections:read",
-  "connections:invoke",
-  "models:read",
-  "models:invoke",
-  "tools:invoke",
-  "secrets:read",
-  "agents:invoke",
-  "control:write",
-] as const;
+import {
+  AVAILABLE_KEY_SCOPES,
+  scopesForProfile,
+  requireKeyScopeAuthority,
+  type AccessProfile,
+} from "./access-profiles.ts";
+
+export type ConsentProfile = "requested" | Exclude<AccessProfile, "custom">;
+
+export function consentScopes(
+  profile: ConsentProfile,
+  requested: string,
+  isAdmin: boolean,
+): string[] {
+  const scopes =
+    profile === "requested"
+      ? [...new Set(requested.split(/\s+/).filter(Boolean))]
+      : scopesForProfile(profile);
+  if (scopes.some((scope) => !(AVAILABLE_KEY_SCOPES as readonly string[]).includes(scope)))
+    throw new Error("Unsupported OAuth permission.");
+  requireKeyScopeAuthority(isAdmin ? ["admin"] : [], scopes);
+  return scopes;
+}
+
+export const OAUTH_SCOPES = AVAILABLE_KEY_SCOPES;
 export function safeOAuthReturn(value: unknown): string {
   if (typeof value !== "string" || !value.startsWith("/oauth/authorize?") || /[\\\r\n]/.test(value))
     return "/dashboard";

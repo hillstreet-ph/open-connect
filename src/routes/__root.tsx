@@ -15,7 +15,6 @@ import appCss from "../styles.css?url";
 import { reportError } from "../lib/error-reporting";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
-import { BackButton } from "@/components/back-button";
 import { Toaster } from "@/components/ui/sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { isAppPath } from "@/lib/shell";
@@ -159,11 +158,6 @@ function RootComponent() {
           {/* Marketing chrome only outside ops workspace */}
           {inApp ? null : <SiteHeader />}
           <main className={inApp ? "flex-1 bg-background" : "flex-1"}>
-            {inApp || pathname === "/" ? null : (
-              <div className="mx-auto w-full max-w-7xl px-3 pt-3 sm:px-4">
-                <BackButton pathname={pathname} inApp={false} />
-              </div>
-            )}
             <Outlet />
           </main>
           {inApp ? null : <SiteFooter />}

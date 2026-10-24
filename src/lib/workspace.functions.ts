@@ -1,3 +1,9 @@
+import {
+  EXECUTABLE_MCP_PROVIDERS,
+  cloudKindsForProvider,
+  isExecutableMcpProvider,
+  type CloudWorkspaceKind,
+} from "@/lib/remote-mcp";
 import { credentialMetadata } from "@/lib/secrets.functions";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ProjectResourceRow } from "@/lib/resource-categories";
@@ -142,20 +148,21 @@ export const listProjectConnections = createServerFn({ method: "GET" })
     return Array.isArray(rows) ? rows : [];
   });
 
-/** Own connected cloud providers plus connections explicitly shared with the selected project. */
+/** Own connected cloud providers, optionally including connections shared with a project. */
 export const listProjectCloudConnections = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .validator((input: { projectId: string }) => ({ projectId: input?.projectId ?? "" }))
+  .validator((input: { projectId?: string }) => ({ projectId: input?.projectId ?? "" }))
   .handler(async ({ data, context }) => {
-    if (!data.projectId) throw new Error("projectId required");
     const db = context.supabase as SupabaseClient;
     const [sharedResult, ownResult] = await Promise.all([
-      db.rpc("list_project_connections", { p_project_id: data.projectId }),
+      data.projectId
+        ? db.rpc("list_project_connections", { p_project_id: data.projectId })
+        : Promise.resolve({ data: [], error: null }),
       context.supabase
         .from("app_connections")
         .select("id, provider, display_name, status, scopes")
         .eq("user_id", context.userId)
-        .eq("provider", "custom_mcp")
+        .in("provider", [...EXECUTABLE_MCP_PROVIDERS])
         .eq("status", "connected"),
     ]);
     if (sharedResult.error) throw new Error(sharedResult.error.message);
@@ -169,10 +176,15 @@ export const listProjectCloudConnections = createServerFn({ method: "GET" })
         status: string;
         scopes: string[];
         access: string;
+        kinds: readonly CloudWorkspaceKind[];
       }
     >();
     for (const connection of ownResult.data ?? []) {
-      available.set(connection.id, { ...connection, access: "Personal" });
+      available.set(connection.id, {
+        ...connection,
+        access: "Personal",
+        kinds: cloudKindsForProvider(connection.provider),
+      });
     }
     const sharedRows = Array.isArray(sharedResult.data)
       ? (sharedResult.data as Array<{
@@ -187,7 +199,13 @@ export const listProjectCloudConnections = createServerFn({ method: "GET" })
       : [];
     for (const row of sharedRows) {
       const connection = row.app_connections;
-      if (!connection?.id || connection.provider !== "custom_mcp") continue;
+      if (
+        !connection?.id ||
+        !connection.provider ||
+        !isExecutableMcpProvider(connection.provider) ||
+        connection.status !== "connected"
+      )
+        continue;
       const existing = available.get(connection.id);
       available.set(connection.id, {
         id: connection.id,
@@ -196,6 +214,7 @@ export const listProjectCloudConnections = createServerFn({ method: "GET" })
         status: connection.status ?? "unknown",
         scopes: connection.scopes ?? [],
         access: existing ? "Personal · shared with project" : "Shared with project",
+        kinds: cloudKindsForProvider(connection.provider),
       });
     }
     return Array.from(available.values()).sort((a, b) =>

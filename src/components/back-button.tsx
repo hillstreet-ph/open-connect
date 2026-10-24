@@ -1,30 +1,28 @@
-import { useCanGoBack, useNavigate, useRouter } from "@tanstack/react-router";
+import { useRouter, useRouterState } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { backFallback } from "@/lib/back-navigation";
 
-/**
- * Renders the same markup on server and client; history is only consulted on
- * click so hydration never diverges.
- */
-export function BackButton({ pathname, inApp }: { pathname: string; inApp: boolean }) {
+/** Router-owned history avoids sending a direct-entry visitor back to another site. */
+export function BackButton({ fallback = "/dashboard" }: { fallback?: "/dashboard" | "/" }) {
   const router = useRouter();
-  const navigate = useNavigate();
-  const canGoBack = useCanGoBack();
+  const canGoBack = useRouterState({
+    select: (state) => (state.location.state.__TSR_index ?? 0) > 0,
+  });
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  // Nothing to go back to: a direct visit to the fallback page itself.
+  if (!canGoBack && pathname === fallback) return null;
   return (
     <Button
-      type="button"
       variant="ghost"
       size="sm"
-      className="h-8 gap-1 px-2"
       aria-label="Go back"
       onClick={() => {
         if (canGoBack) router.history.back();
-        else void navigate({ to: backFallback(pathname, inApp) });
+        else void router.navigate({ to: fallback });
       }}
     >
-      <ArrowLeft className="size-4" aria-hidden />
-      <span className="hidden sm:inline">Back</span>
+      <ArrowLeft className="size-4" aria-hidden="true" />
+      <span>Back</span>
     </Button>
   );
 }

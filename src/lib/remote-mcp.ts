@@ -6,6 +6,52 @@ export function isRemoteMcpProvider(provider: string): provider is RemoteMcpProv
   return REMOTE_MCP_PROVIDERS.includes(provider as RemoteMcpProvider);
 }
 
+export type CloudWorkspaceKind = "browser" | "computer" | "terminal" | "phone";
+
+/**
+ * Brokered provider connections whose vendor publishes an official hosted MCP
+ * endpoint. The endpoint and auth header are fixed here (never read from
+ * user-editable metadata), so a stored API key can only be sent to the vendor.
+ */
+export const HOSTED_MCP_PRESETS = {
+  custom_tinyfish_mcp: {
+    label: "TinyFish cloud browser",
+    endpoint: "https://agent.tinyfish.ai/mcp",
+    authType: "api_key",
+    kinds: ["browser"],
+  },
+} as const satisfies Record<
+  string,
+  {
+    label: string;
+    endpoint: string;
+    authType: "api_key" | "bearer";
+    kinds: readonly CloudWorkspaceKind[];
+  }
+>;
+
+export type HostedMcpProvider = keyof typeof HOSTED_MCP_PRESETS;
+
+export function isHostedMcpProvider(provider: string): provider is HostedMcpProvider {
+  return Object.prototype.hasOwnProperty.call(HOSTED_MCP_PRESETS, provider);
+}
+
+/** Providers whose tools can be listed and invoked through an MCP client. */
+export const EXECUTABLE_MCP_PROVIDERS = [
+  ...REMOTE_MCP_PROVIDERS,
+  ...(Object.keys(HOSTED_MCP_PRESETS) as HostedMcpProvider[]),
+] as const;
+
+export function isExecutableMcpProvider(provider: string) {
+  return isRemoteMcpProvider(provider) || isHostedMcpProvider(provider);
+}
+
+/** Cloud workspace pages a connection belongs on. Generic MCP servers fit all. */
+export function cloudKindsForProvider(provider: string): readonly CloudWorkspaceKind[] {
+  if (isHostedMcpProvider(provider)) return HOSTED_MCP_PRESETS[provider].kinds;
+  return ["browser", "computer", "terminal", "phone"];
+}
+
 export function normalizeRemoteMcpEndpoint(provider: string, value: unknown) {
   if (!isRemoteMcpProvider(provider)) throw new Error("Remote MCP provider required");
   const endpoint = String(value ?? "").trim();

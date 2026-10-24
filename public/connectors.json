@@ -1,0 +1,115 @@
+{
+  "name": "open-connect.site connectors",
+  "description": "Composio toolkit and skill inventory synced to open-connect.site. Primary account: kairocasino8@gmail.com.",
+  "updated": "2026-10-24",
+  "primaryAccount": "kairocasino8@gmail.com",
+  "githubOrganization": "hillstreet-ph",
+  "canonicalRepository": "hillstreet-ph/open-connect",
+  "duplicateRepository": {
+    "name": "hillstreet-ph/open-connect-site",
+    "status": "deleted",
+    "deletedAt": "2026-10-24"
+  },
+  "customMcp": {
+    "registeredInComposio": [
+      {
+        "toolkit": "custom_open_connect",
+        "endpoint": "https://open-connect.site/mcp",
+        "status": "active",
+        "verifiedToolCall": true
+      },
+      {
+        "toolkit": "custom_open_tgate",
+        "endpoint": "https://open-tgate.site/mcp",
+        "status": "active",
+        "verifiedToolCall": true
+      }
+    ],
+    "pendingRegistration": [
+      {
+        "app": "open-teleset.site",
+        "endpoint": "https://open-teleset.site/mcp",
+        "auth": "Bearer superuser token",
+        "tools": 28
+      },
+      {
+        "app": "open-system.space",
+        "endpoint": "https://open-system.space/mcp",
+        "auth": "Bearer API key",
+        "tools": 29
+      },
+      {
+        "app": "open-box.space",
+        "endpoint": "https://open-box.space/mcp",
+        "auth": "Bearer API key",
+        "tools": 25
+      },
+      {
+        "app": "zeabur-mcp-bridge",
+        "endpoint": "Zeabur MCP endpoint",
+        "auth": "Bearer Zeabur API token",
+        "tools": 29
+      }
+    ],
+    "registrationUrl": "https://dashboard.composio.dev/~/org/connect/apps?add-custom-mcp=true",
+    "knownIssues": [
+      "The hub's internal connection to the open-tgate-mcp resource returns HTTP 500 on tool listing (server-side defect in open-connect.site); the direct Composio registration of open-tgate works correctly.",
+      "The Zeabur MCP bridge connection returns HTTP 500; GitHub-based deployment is the fallback."
+    ]
+  },
+  "deployments": {
+    "githubPages": [
+      "https://hillstreet-ph.github.io/open-system-space/",
+      "https://hillstreet-ph.github.io/open-box-space/",
+      "https://hillstreet-ph.github.io/open-teleset-site/",
+      "https://hillstreet-ph.github.io/open-tgate-site/"
+    ],
+    "zeabur": "All satellite repos carry zbpack.json {\"type\":\"static\"}; import via Zeabur dashboard."
+  },
+  "skills": {
+    "vibeSkillsCount": 24,
+    "projectSkills": [
+      "open-system-space",
+      "open-box-space",
+      "open-teleset-site",
+      "open-tgate-site",
+      "open-connect-site",
+      "zeabur-deployment-ops",
+      "chatgpt-apps",
+      "claude-ai-apps",
+      "manus-ai-automation"
+    ],
+    "mcpToolkitSkills": [
+      {
+        "title": "Open-Connect.site MCP Toolkit",
+        "id": "sk_LopabQmiOR-3",
+        "tools": 46
+      },
+      {
+        "title": "Zeabur MCP Bridge Toolkit",
+        "id": "sk_kkAXhr8dBz6T",
+        "tools": 29
+      },
+      {
+        "title": "Open-Teleset.site MCP Toolkit",
+        "id": "sk_byGCCA0_jxc4",
+        "tools": 28
+      },
+      {
+        "title": "Open-System.space MCP Toolkit",
+        "id": "sk_FCb2rDUAI8k0",
+        "tools": 29
+      },
+      {
+        "title": "Open-Box.space MCP Toolkit",
+        "id": "sk_ythuca39Pjbd",
+        "tools": 25
+      },
+      {
+        "title": "Open-TGate.site MCP Toolkit",
+        "id": "sk_R4TRsLJkXXET",
+        "tools": 19
+      }
+    ]
+  }
+}
