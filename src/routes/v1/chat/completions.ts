@@ -1,3 +1,4 @@
+import { modelForUpstream } from "@/lib/model-provider-state";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   authenticateKey,
@@ -40,7 +41,10 @@ export const Route = createFileRoute("/v1/chat/completions")({
         const autoFree = isAutoFreeModel(requestedModel);
         const routes = autoFree
           ? await resolveAutoFreeRoutes(upstreams)
-          : upstreams.map((upstream) => ({ upstream, model: resolveModelId(requestedModel) }));
+          : upstreams.map((upstream) => ({
+              upstream,
+              model: modelForUpstream(resolveModelId(requestedModel), upstream.name),
+            }));
         if (routes.length === 0) {
           return gatewayError(
             "No connected OpenRouter free router or zero-cost LiteLLM model is available.",

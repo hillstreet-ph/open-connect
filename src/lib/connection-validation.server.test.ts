@@ -64,3 +64,31 @@ test("does not mark unsupported provider validation as verified", async () => {
   const result = await validateConnectionCredential(setup);
   assert.equal(result.verified, false);
 });
+
+test("compatible model providers validate against canonical API URLs and reject HTML responses", async () => {
+  const cases = [
+    ["kilo", "https://ai-gateway.kilo.ai/api/v1/models"],
+    ["commandcode", "https://api.commandcode.ai/provider/v1/models"],
+    ["huggingface", "https://router.huggingface.co/v1/models"],
+    ["groq", "https://api.groq.com/openai/v1/models"],
+  ];
+  for (const [provider, endpoint] of cases) {
+    const setup = normalizeConnectionSetup(
+      { provider: provider!, api_key: "test-secret", endpoint_url: "https://wrong.example/" },
+      app(provider!),
+    );
+    const result = await validateConnectionCredential(setup, async (url, init) => {
+      assert.equal(String(url), endpoint);
+      assert.equal(
+        (init?.headers as Record<string, string>)["Authorization"],
+        "Bearer test-secret",
+      );
+      return Response.json({ data: [] });
+    });
+    assert.equal(result.verified, true);
+    await assert.rejects(
+      validateConnectionCredential(setup, async () => new Response("<html>login</html>")),
+      /valid model catalog/,
+    );
+  }
+});

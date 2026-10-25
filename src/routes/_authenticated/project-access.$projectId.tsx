@@ -75,11 +75,6 @@ function ProjectAccessPage() {
             project only. A person can have different roles across projects.
           </p>
         </div>
-        <Button asChild variant="outline" size="sm">
-          <Link to="/projects/$projectId" params={{ projectId }}>
-            Back to project
-          </Link>
-        </Button>
       </div>
 
       <Card className="shadow-panel">

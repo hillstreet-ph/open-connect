@@ -296,9 +296,6 @@ export function MemoryKnowledgePage({
     >
       {!studioMode ? (
         <>
-          <Link to="/settings" className="inline-flex text-sm text-primary hover:underline">
-            ← Back to Settings
-          </Link>
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <Badge variant="outline" className="mb-2 border-primary/40 text-primary">
