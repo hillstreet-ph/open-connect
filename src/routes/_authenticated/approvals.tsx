@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 type Approval = {
@@ -24,6 +24,10 @@ export const Route = createFileRoute("/_authenticated/approvals")({
 function ApprovalsPage() {
   const { user } = useAuth();
   const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
   const approvals = useQuery({
     queryKey: ["control-approvals", user?.id],
     enabled: Boolean(user?.id),
