@@ -384,7 +384,9 @@ export async function callCustomMcpTool(
     } else {
       const custom = await materializeCustomMcpConnection(connection);
       result = await withMcpClient(custom.endpoint, custom.headers, (client) =>
-        client.callTool({ name: toolName, arguments: args }, undefined, { timeout: 30000 }),
+        client.callTool({ name: toolName, arguments: args }, undefined, {
+          timeout: toolName === "run_agent_team" ? 60000 : 30000,
+        }),
       );
     }
   } catch (error) {

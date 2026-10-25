@@ -58,8 +58,11 @@ function widget(openai: object = {}) {
   ])
     elements.set(id, element());
   const listeners = new Map<string, (e: object) => void>();
-  const requests: { id: string; method: string; params: { name?: string; arguments?: object } }[] =
-    [];
+  const requests: {
+    id: string | number;
+    method: string;
+    params: { name?: string; arguments?: object };
+  }[] = [];
   const timers = new Map<number, () => void>();
   let timerId = 0;
   const parent = {
@@ -90,7 +93,12 @@ function widget(openai: object = {}) {
     discover: elements.get("discover")!,
     team: elements.get("team")!,
     results: elements.get("results")!,
-    reply: (id: string, result: unknown) =>
+    reject: (id: string | number, message: string) =>
+      listeners.get("message")!({
+        source: parent,
+        data: { jsonrpc: "2.0", id, error: { message } },
+      }),
+    reply: (id: string | number, result: unknown) =>
       listeners.get("message")!({ source: parent, data: { jsonrpc: "2.0", id, result } }),
     send: (params: unknown, trusted = true) =>
       listeners.get("message")!({
@@ -170,6 +178,7 @@ test("saves toggle through the scoped tool and retains previous state on failure
   const w = widget();
   await connect(w);
   let task = w.toggle.events["click"]!();
+  await flush();
   const call = w.requests.at(-1)!;
   assert.equal(call.params.name, "set_auto_mode");
   assert.equal(JSON.stringify(call.params.arguments), '{"enabled":false}');
@@ -177,6 +186,7 @@ test("saves toggle through the scoped tool and retains previous state on failure
   await task;
   assert.equal(w.toggle.textContent, "Auto Off");
   task = w.toggle.events["click"]!();
+  await flush();
   w.reply(w.requests.at(-1)!.id, { isError: true, content: [{ type: "text", text: "Denied" }] });
   await task;
   assert.equal(w.toggle.textContent, "Auto Off");
@@ -216,6 +226,7 @@ test("goal actions respect grants and render matching and worker results as text
     },
   });
   let task = w.discover.events["click"]!();
+  await flush();
   let call = w.requests.at(-1)!;
   assert.equal(call.params.name, "auto_discover");
   w.reply(call.id, {
@@ -226,6 +237,7 @@ test("goal actions respect grants and render matching and worker results as text
   await task;
   assert.ok(w.results.textContent.includes("<script>"));
   task = w.team.events["click"]!();
+  await flush();
   call = w.requests.at(-1)!;
   assert.equal(call.params.name, "run_agent_team");
   w.reply(call.id, {
@@ -245,4 +257,91 @@ test("goal actions respect grants and render matching and worker results as text
   assert.ok(w.results.textContent.includes("First\n\nReviewer"));
   w.send({ structuredContent: { ...status, auto: { enabled: false, scope: "personal" } } });
   assert.equal(w.team.disabled, true);
+});
+
+test("prefers the standard bridge even when legacy callTool exists", async () => {
+  let legacyCalls = 0;
+  const w = widget({
+    callTool: () => {
+      legacyCalls++;
+      throw new Error("Unknown tool");
+    },
+  });
+  await connect(w);
+  assert.equal(legacyCalls, 0);
+  assert.equal(typeof w.requests[0]!.id, "number");
+});
+test("unwraps nested host action responses and reports stale tools without replay", async () => {
+  const w = widget();
+  await connect(w);
+  w.send({
+    structuredContent: {
+      ...status,
+      scopes: ["resources:read", "models:invoke", "agents:invoke"],
+      auto: { enabled: true, scope: "personal" },
+    },
+  });
+  w.goal.value = "Plan a task";
+  let task = w.discover.events["click"]!();
+  await flush();
+  w.reply(w.requests.at(-1)!.id, {
+    result: {
+      toolOutput: {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({ matches: [{ name: "Available tool", description: "Matched" }] }),
+          },
+        ],
+      },
+    },
+  });
+  await task;
+  assert.match(w.results.textContent, /Available tool/);
+  task = w.team.events["click"]!();
+  await flush();
+  const count = w.requests.length;
+  w.reject(w.requests.at(-1)!.id, "Unknown tool");
+  await task;
+  assert.match(w.results.textContent, /outdated Open-Connect tool list/);
+  assert.equal(w.requests.length, count);
+  assert.equal(w.team.disabled, false);
+});
+test("explains empty goals and unavailable discovery instead of reporting no match", async () => {
+  const w = widget();
+  await connect(w);
+  w.send({ structuredContent: { ...status, scopes: ["resources:read"] } });
+  await w.discover.events["click"]!();
+  assert.match(w.results.textContent, /Enter a goal/);
+  w.goal.value = "Find tools";
+  const task = w.discover.events["click"]!();
+  await flush();
+  w.reply(w.requests.at(-1)!.id, { structuredContent: { status: "unavailable" } });
+  await task;
+  assert.match(w.results.textContent, /discovery is unavailable/);
+});
+
+test("legacy-only hosts fall back after a rejected handshake, before any tool invocation", async () => {
+  const calls: string[] = [];
+  const w = widget({
+    callTool: async (name: string) => {
+      calls.push(name);
+      return { structuredContent: status };
+    },
+  });
+  w.reject(w.requests[0]!.id, "Method not found");
+  await flush();
+  assert.deepEqual(calls, ["open_connect_status"]);
+  assert.equal(w.toggle.textContent, "Auto On");
+});
+test("returned error envelopes never appear as an empty capability match", async () => {
+  const w = widget();
+  await connect(w);
+  w.send({ structuredContent: { ...status, scopes: ["resources:read"] } });
+  w.goal.value = "Find tools";
+  const task = w.discover.events["click"]!();
+  await flush();
+  w.reply(w.requests.at(-1)!.id, { toolOutput: { error: { message: "Unknown tool" } } });
+  await task;
+  assert.match(w.results.textContent, /outdated Open-Connect tool list/);
 });
