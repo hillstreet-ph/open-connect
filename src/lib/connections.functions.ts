@@ -17,6 +17,13 @@ import {
  */
 const CATALOG = [
   {
+    provider: "custom_api",
+    display_name: "Custom API profile",
+    category: "Custom",
+    scopes: [],
+    oauth: false,
+  },
+  {
     provider: "cloudflare_api_key",
     display_name: "Cloudflare API",
     category: "Infrastructure",
@@ -409,516 +416,325 @@ export const listAppConnections = createServerFn({ method: "GET" })
         ...connection,
         identity: connectionIdentity(metadata),
         metadata:
-          ["custom_mcp", "supabase", "databricks", "litellm"].includes(connection.provider) &&
-          metadata &&
-          typeof metadata === "object" &&
-          !Array.isArray(metadata)
-            ? {
-                endpoint_url:
-                  connection.provider === "custom_mcp" &&
-                  typeof metadata["endpoint_url"] === "string"
-                    ? metadata["endpoint_url"]
-                    : connectionEndpoint(metadata["endpoint_url"]),
-                auth_type: connectionAuthType(metadata),
-              }
-            : {},
-        ...(isModelGateway
-          ? {
-              gateway_ready: connection.status === "connected" && hasGatewayReference,
-            }
-          : {}),
-      };
-    });
-  });
+          ["custom_mcp", "custom_api", "supabase", "databricks", "li…14870 tokens truncated…s('to="/settings"'));
+  assert.ok(!userMenu.includes('to="/integrations"'));
+  assert.ok(!userMenu.includes('to="/api-keys"'));
+  assert.ok(
+    settings.indexOf('value="data">Data & privacy') <
+      settings.indexOf('value="integrations">Integrations'),
+  );
+  for (const section of ["api-key", "apps", "ai-agents", "custom-mcp"]) {
+    assert.ok(settings.includes('href="/integrations?section=' + section + '"'));
+  }
+  assert.ok(settings.includes('title="Connectors"'));
+  assert.ok(settings.includes('title="AI Gateway"'));
+  assert.ok(!settings.includes('title="Integrations"'));
+  assert.ok(settings.includes('title="Memory"'));
+  assert.ok(settings.includes('title="Knowledge"'));
+  assert.ok(!settings.includes('title="Memory & knowledge"'));
+  assert.ok(!settings.includes('to="/api-keys"'));
+});
 
-export const syncComposioConnections = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { data: roleRows, error: roleError } = await context.supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", context.userId);
-    if (roleError) throw new Error(roleError.message);
-    const roles = (roleRows ?? []).map((row: { role: AppRole }) => row.role);
-    const effectiveRoles: AppRole[] = roles.length ? roles : ["user"];
-    if (!hasRole(effectiveRoles, "admin")) {
-      throw new Error("Forbidden: admin required");
-    }
+test("Toolkit creation reads from the personal library, not the Marketplace catalog", () => {
+  const source = readFileSync(
+    path.resolve(process.cwd(), "src/components/toolkit-creator.tsx"),
+    "utf8",
+  );
+  assert.match(source, /listLibraryResources/);
+  assert.doesNotMatch(source, /useMarketplace/);
+});
 
-    const { listOwnedManagedConnections, listComposioToolkits } =
-      await import("@/lib/managed-connectors.server");
-    const [accounts, toolkits] = await Promise.all([
-      listOwnedManagedConnections(context.userId),
-      listComposioToolkits(),
-    ]);
-    const syncCatalog = new Map<string, { display_name: string }>(
-      CATALOG.map((item) => [item.provider, { display_name: item.display_name }]),
+test("Open-Connect exposes one HillStreet workspace with project-only creation", () => {
+  const sourceRoot = path.resolve(process.cwd(), "src");
+  const projects = readFileSync(
+    path.join(sourceRoot, "routes/_authenticated/projects.tsx"),
+    "utf8",
+  );
+  const switcher = readFileSync(path.join(sourceRoot, "components/workspace-switcher.tsx"), "utf8");
+  const organizationFunctions = readFileSync(
+    path.join(sourceRoot, "lib/orgs.functions.ts"),
+    "utf8",
+  );
+
+  assert.match(projects, /One workspace for every HillStreet project/);
+  assert.doesNotMatch(projects, /Create workspace/);
+  assert.doesNotMatch(switcher, /Switch workspace|View all workspaces/);
+  assert.match(organizationFunctions, /uses one HillStreet workspace/);
+  assert.match(organizationFunctions, /\.eq\("slug", "hillstreet"\)/);
+});
+
+test("Projects can only select resources from the installed workspace library", () => {
+  const sourceRoot = path.resolve(process.cwd(), "src");
+  const projectPage = readFileSync(
+    path.join(sourceRoot, "routes/_authenticated/projects.$projectId.tsx"),
+    "utf8",
+  );
+  const workspaceFunctions = readFileSync(
+    path.join(sourceRoot, "lib/workspace.functions.ts"),
+    "utf8",
+  );
+
+  assert.match(projectPage, /Shared workspace library/);
+  assert.doesNotMatch(projectPage, /Add from marketplace catalog/);
+  assert.match(workspaceFunctions, /open-connect-personal-library/);
+  assert.match(workspaceFunctions, /Install this resource into your workspace library first/);
+  assert.doesNotMatch(workspaceFunctions, /\.eq\("published", true\)/);
+});
+
+test("Project deletion is confirmed, privileged, audited, and keeps library resources", () => {
+  const sourceRoot = path.resolve(process.cwd(), "src");
+  const projectPage = readFileSync(
+    path.join(sourceRoot, "routes/_authenticated/projects.$projectId.tsx"),
+    "utf8",
+  );
+  const organizationFunctions = readFileSync(
+    path.join(sourceRoot, "lib/orgs.functions.ts"),
+    "utf8",
+  );
+
+  assert.match(projectPage, /Delete project permanently\?/);
+  assert.match(projectPage, /Installed workspace-library resources are\s+not deleted/);
+  assert.match(projectPage, /isAdmin/);
+  assert.match(organizationFunctions, /requireOrganizationManager/);
+  assert.match(organizationFunctions, /projects\.delete/);
+  assert.match(organizationFunctions, /control_audit_events/);
+});
+
+test("Projects support audited renaming and metadata-only shared credentials", () => {
+  const sourceRoot = path.resolve(process.cwd(), "src");
+  const projectPage = readFileSync(
+    path.join(sourceRoot, "routes/_authenticated/projects.$projectId.tsx"),
+    "utf8",
+  );
+  const organizationFunctions = readFileSync(
+    path.join(sourceRoot, "lib/orgs.functions.ts"),
+    "utf8",
+  );
+  const migration = readFileSync(
+    path.resolve(process.cwd(), "supabase/migrations/20260924040000_project_credential_scopes.sql"),
+    "utf8",
+  );
+
+  assert.match(projectPage, /Rename project/);
+  assert.match(projectPage, /Shared credentials/);
+  assert.match(projectPage, /Connections · MCP · AI Gateway/);
+  assert.match(organizationFunctions, /projects\.rename/);
+  assert.match(migration, /join public\.credential_secrets/);
+  assert.doesNotMatch(migration, /vault\.decrypted_secrets|secret_value/);
+});
+
+test("Memory and Knowledge stay private, searchable, and project-organized", () => {
+  const sourceRoot = path.resolve(process.cwd(), "src");
+  const studio = readFileSync(path.join(sourceRoot, "routes/_authenticated/studio.tsx"), "utf8");
+  const memoryPage = readFileSync(
+    path.join(sourceRoot, "routes/_authenticated/memory.tsx"),
+    "utf8",
+  );
+  const projectPage = readFileSync(
+    path.join(sourceRoot, "routes/_authenticated/projects.$projectId.tsx"),
+    "utf8",
+  );
+
+  assert.match(studio, /publishablePackageTypes/);
+  assert.doesNotMatch(
+    studio.match(/const publishablePackageTypes = \[([^\]]+)\]/)?.[1] ?? "",
+    /memory|knowledge/,
+  );
+  assert.match(studio, /Memory and Knowledge stay private/);
+  assert.match(memoryPage, /Search memory title, content, and tags/);
+  assert.match(memoryPage, /projectNames\.get/);
+  assert.match(projectPage, /Private context assigned from Studio/);
+});
+
+test("installed project resources are grouped into professional categories", () => {
+  const groups = groupProjectResources([
+    { id: "a", resources: { id: "1", name: "Agent", resource_type: "agent" } },
+    { id: "s", resources: { id: "2", name: "Skill", resource_type: "skill" } },
+    { id: "m", resources: { id: "3", name: "Memory", resource_type: "memory" } },
+    { id: "x", resources: { id: "4", name: "MCP", resource_type: "mcp" } },
+  ]);
+
+  assert.deepEqual(
+    groups.map((group) => [group.label, group.items.length]),
+    [
+      ["Agents", 1],
+      ["Skills", 1],
+      ["MCP Servers", 1],
+      ["Memory", 1],
+    ],
+  );
+});
+
+test("resource purposes combine catalog aliases without mixing types or losing uncategorized items", () => {
+  const rows = [
+    { id: "a", resources: { resource_type: "skill", category_slug: "development" } },
+    { id: "b", resources: { resource_type: "plugin", category_slug: "developer" } },
+    { id: "c", resources: { resource_type: "skill", category_slug: "business" } },
+    { id: "d", resources: { resource_type: "mcp", category_slug: null } },
+    { id: "e", resources: null },
+    { id: "f", resources: { resource_type: "agent", category_slug: "customer-support" } },
+  ];
+  assert.deepEqual(
+    groupResourcesByPurpose(rows).map(({ label, items }) => [label, items.map((row) => row.id)]),
+    [
+      ["Business", ["c"]],
+      ["Customer Support", ["f"]],
+      ["Developer", ["a", "b"]],
+      ["General", ["d"]],
+    ],
+  );
+  assert.deepEqual(groupResourcesByPurpose([]), []);
+});
+
+test("every sidebar destination uses workspace chrome and matches page search labels", () => {
+  const sidebar = readFileSync(
+    path.resolve(process.cwd(), "src/components/app-sidebar.tsx"),
+    "utf8",
+  );
+  const items = [...sidebar.matchAll(/to: "([^"\n]+)", label: "([^"\n]+)"/g)].map((match) => ({
+    to: match[1]!,
+    label: match[2]!,
+  }));
+  assert.ok(items.length > 10);
+  assert.deepEqual(
+    items.map((item) => item.to).sort(),
+    flatAppNav()
+      .map((item) => item.to)
+      .sort(),
+  );
+  for (const item of items) {
+    assert.ok(isAppPath(item.to), `${item.to} must not show duplicate public chrome`);
+    assert.equal(flatAppNav().find((nav) => nav.to === item.to)?.label, item.label);
+  }
+  assert.equal(isAppPath("/mcp"), false, "MCP protocol endpoint is not a workspace page");
+  assert.equal(isAppPath("/tools-unrelated"), false);
+});
+
+test("Discover keeps Marketplace and Resources while resource types stay in the library", () => {
+  assert.deepEqual(
+    appCategories.find((group) => group.id === "discover")?.items.map((item) => item.label),
+    ["Marketplace", "Resources"],
+  );
+  assert.equal(
+    flatAppNav().some((item) => item.to === "/others"),
+    false,
+  );
+});
+
+test("Connections keeps Connectors, Credentials, and AI Gateway", () => {
+  assert.deepEqual(
+    appCategories.find((group) => group.id === "connections")?.items.map((item) => item.label),
+    ["Connectors", "Credentials", "AI Gateway"],
+  );
+});
+
+test("Marketplace and Resources expose only installable package categories", () => {
+  assert.deepEqual(
+    resourceCategories.map((category) => category.label),
+    ["All", "Skills", "MCP", "Tools", "Plugins", "Agents", "Prompts", "Toolkits", "Others"],
+  );
+
+  const groups = groupResourcesByType([
+    { id: "s", resources: { resource_type: "skill" } },
+    { id: "m", resources: { resource_type: "model" } },
+    { id: "x", resources: { resource_type: "custom-integration" } },
+  ]);
+  assert.deepEqual(
+    groups.map((group) => [group.label, group.items.length]),
+    [
+      ["Skills", 1],
+      ["Others", 2],
+    ],
+  );
+});
+
+test("Guides, apps, models, memory, and knowledge are excluded from Marketplace and the library list", () => {
+  const marketplace = readFileSync(path.resolve(process.cwd(), "src/routes/resources.tsx"), "utf8");
+  const library = readFileSync(
+    path.resolve(process.cwd(), "src/components/resource-library-page.tsx"),
+    "utf8",
+  );
+
+  assert.match(marketplace, /\["guide", "app", "model", "memory", "knowledge"\]/);
+  assert.match(library, /\["guide", "app", "model", "memory", "knowledge"\]/);
+  for (const type of ["guide", "app", "model", "memory", "knowledge"]) {
+    assert.equal(
+      resourceCategories.some((category) => category.value === type),
+      false,
     );
-    for (const toolkit of toolkits) {
-      if (!syncCatalog.has(toolkit.slug))
-        syncCatalog.set(toolkit.slug, { display_name: toolkit.name });
-    }
-    const saved: Array<{
-      provider: string;
-      provider_account_id: string | null;
-      credential_reference: string | null;
-    }> = [];
-    for (let offset = 0; ; offset += 200) {
-      const { data, error } = await context.supabase
-        .from("app_connections")
-        .select("provider,provider_account_id,credential_reference")
-        .eq("user_id", context.userId)
-        .order("id")
-        .range(offset, offset + 199);
-      if (error) throw new Error(error.message);
-      saved.push(...(data ?? []));
-      if ((data?.length ?? 0) < 200) break;
-    }
-    const plan = composioImportBatches(
-      context.userId,
-      accounts,
-      saved,
-      [...syncCatalog].map(([slug, app]) => ({ slug, name: app.display_name })),
-    );
-    let imported = 0;
-    for (const records of plan.batches) {
-      const { error } = await context.supabase.from("app_connections").insert(records);
-      if (error?.code === "23505") {
-        throw new Error("Another sync updated these accounts. Run sync again to refresh.");
-      }
-      if (error) throw new Error(error.message);
-      imported += records.length;
-    }
-    return { imported, existing: plan.existing, matched: plan.matched };
-  });
+  }
+});
 
-export const connectApp = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .validator((input: { provider: string; connection_id?: string }) => ({
-    provider: (input?.provider ?? "").trim().toLowerCase(),
-    connection_id: input?.connection_id,
-  }))
-  .handler(async ({ data, context }) => {
-    const { managedConnectorReady, connectionMethod, listComposioToolkits } =
-      await import("@/lib/managed-connectors.server");
-    const toolkit = (await listComposioToolkits()).find((item) => item.slug === data.provider);
-    const app =
-      CATALOG.find((item) => item.provider === data.provider) ??
-      (toolkit
-        ? {
-            provider: toolkit.slug,
-            display_name: toolkit.name,
-            category: toolkit.category,
-            scopes: [] as string[],
-            oauth: toolkit.authMethods.includes("OAUTH2"),
-          }
-        : undefined);
-    if (!app) throw new Error("Unknown application");
-    const ready = managedConnectorReady(app.provider) || Boolean(toolkit);
-    const method = connectionMethod(app.provider, app.oauth, ready);
-    if (method === "api_key")
-      throw new Error("This provider uses a verified API key or token connection.");
+test("Resources provides Library, Collections, Memory, and Knowledge views", () => {
+  const source = readFileSync(
+    path.resolve(process.cwd(), "src/components/resource-library-page.tsx"),
+    "utf8",
+  );
 
-    if (method === "managed_oauth") {
-      const { createManagedConnectionLink } = await import("@/lib/managed-connectors.server");
-      const callbackUrl = `${(process.env["VITE_APP_URL"] || "https://open-connect.site").replace(
-        /\/$/,
-        "",
-      )}/connections?connected=${encodeURIComponent(app.provider)}`;
-      const link = await createManagedConnectionLink({
-        provider: app.provider,
-        toolkitSlug: toolkit?.slug ?? app.provider,
-        userId: context.userId,
-        callbackUrl,
-      });
-      const record = {
-        user_id: context.userId,
-        provider: app.provider,
-        display_name: app.display_name,
-        status: "pending",
-        scopes: [] as string[],
-        credential_reference: `composio://connected-account/${link.connected_account_id}`,
-        provider_account_id: link.connected_account_id,
-        metadata: {
-          source: "open-connect",
-          mode: "managed_oauth",
-          broker: "composio",
-          authorization_required: true,
-          requested_scopes: [...app.scopes],
-          expires_at: link.expires_at,
-          full_scopes: false,
-        },
-      };
-      const { data: connection, error } = await context.supabase
-        .from("app_connections")
-        // Every hosted authorization creates a new opaque connected-account ID.
-        // Insert directly because the database protects this tuple with an
-        // expression index (COALESCE(provider_account_id, '')), which cannot be
-        // addressed by PostgREST's column-only onConflict parameter.
-        .insert(record)
-        .select("id,provider,display_name,status,scopes,created_at")
-        .single();
-      if (error) throw new Error(error.message);
-      return { ...connection, authorization_url: link.redirect_url };
-    }
+  assert.match(source, /\["library", "collections", "memory", "knowledge"\]/);
+  assert.match(source, /view === "memory"/);
+  assert.match(source, /view === "knowledge"/);
+  assert.match(source, /resourceCategories\.map\(\(filter\) =>/);
+  assert.match(source, /aria-label="Filter resources by category"/);
+  assert.match(source, /aria-pressed=\{category === filter\.value\}/);
+  assert.match(source, /rounded-full border px-3 py-1\.5 text-xs transition-colors/);
+  assert.doesNotMatch(source, /<select[\s\S]*?aria-label="Resource category"/);
+});
 
-    const { buildGitHubAuthorizationUrl, oauthConfig, sha256 } =
-      await import("@/lib/provider-oauth.server");
-    const config = oauthConfig(app.provider);
-    if (data.connection_id) {
-      const { data: target, error } = await context.supabase
-        .from("app_connections")
-        .select("id")
-        .eq("id", data.connection_id)
-        .eq("user_id", context.userId)
-        .eq("provider", app.provider)
-        .single();
-      if (error || !target) throw new Error("Reconnect account not found.");
-    }
-    const state = `${crypto.randomUUID()}${crypto.randomUUID()}`;
-    const stateHash = await sha256(state);
-    const expiresAt = new Date(Date.now() + 10 * 60_000).toISOString();
+test("selected library resources can be added while creating a collection", () => {
+  const sourceRoot = path.resolve(process.cwd(), "src");
+  const panel = readFileSync(
+    path.join(sourceRoot, "components/resource-collections-panel.tsx"),
+    "utf8",
+  );
+  const functions = readFileSync(
+    path.join(sourceRoot, "lib/resource-collections.functions.ts"),
+    "utf8",
+  );
 
-    const { data: existing, error: existingError } = await context.supabase
-      .from("app_connections")
-      .select("id,credential_reference")
-      .eq("provider", app.provider)
-      .eq("user_id", context.userId)
-      .is("provider_account_id", null)
-      .maybeSingle();
-    if (existingError) throw new Error(existingError.message);
+  assert.match(panel, /resourceIds: selectedResourceIds/);
+  assert.match(panel, /will be added to this collection/);
+  assert.match(panel, /Create & add/);
+  assert.ok(functions.includes("data.resourceIds.map"));
+  assert.match(functions, /const newIds/);
+});
 
-    const record = {
-      user_id: context.userId,
-      provider: app.provider,
-      display_name: app.display_name,
-      status: "pending",
-      scopes: [] as string[],
-      provider_account_id: null,
-      metadata: {
-        source: "open-connect",
-        mode: "oauth",
-        authorization_required: true,
-        requested_scopes: [...app.scopes],
-        oauth_state_hash: stateHash,
-        oauth_state_expires_at: expiresAt,
-        reconnect_connection_id: data.connection_id ?? null,
-        full_scopes: false,
-      },
-    };
+test("Marketplace skill installs automatically join the Skills collection", () => {
+  const sourceRoot = path.resolve(process.cwd(), "src");
+  const library = readFileSync(path.join(sourceRoot, "lib/library.functions.ts"), "utf8");
+  const marketplace = readFileSync(path.join(sourceRoot, "routes/resources.tsx"), "utf8");
+  const button = readFileSync(path.join(sourceRoot, "components/add-to-library.tsx"), "utf8");
+  const install = library.slice(
+    library.indexOf("export const addResourceToLibrary"),
+    library.indexOf("export const removeResourceFromLibrary"),
+  );
 
-    const query = existing?.id
-      ? context.supabase.from("app_connections").update(record).eq("id", existing.id)
-      : context.supabase.from("app_connections").insert({ ...record, credential_reference: null });
-    const { data: connection, error } = await query
-      .select("id, provider, display_name, status, scopes, created_at")
-      .single();
-    if (error) throw new Error(error.message);
+  assert.match(library, /async function ensureSkillsCollection/);
+  assert.match(library, /name: "Skills"/);
+  assert.match(library, /installedSkills\.map/);
+  assert.match(install, /resource\.resource_type === "skill"/);
+  assert.match(install, /collectionId = await ensureSkillsCollection\(context\)/);
+  assert.match(marketplace, /Skills are automatically added to your Library and Skills collection/);
+  assert.match(button, /Added to your Library and Skills collection/);
+});
 
-    return {
-      ...connection,
-      authorization_url: buildGitHubAuthorizationUrl({
-        clientId: config.clientId,
-        appUrl: config.appUrl,
-        state,
-      }),
-    };
-  });
+test("Marketplace installs stay in the personal library and agent context reads are user scoped", () => {
+  const sourceRoot = path.resolve(process.cwd(), "src");
+  const library = readFileSync(path.join(sourceRoot, "lib/library.functions.ts"), "utf8");
+  const mcp = readFileSync(path.join(sourceRoot, "routes/mcp.ts"), "utf8");
+  const scopes = readFileSync(path.join(sourceRoot, "lib/access-profiles.ts"), "utf8");
+  const install = library.slice(
+    library.indexOf("export const addResourceToLibrary"),
+    library.indexOf("export const removeResourceFromLibrary"),
+  );
 
-export const completeOAuthConnection = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .validator((input: { provider: string; code: string; state: string }) => ({
-    provider: (input?.provider ?? "").trim().toLowerCase(),
-    code: (input?.code ?? "").trim(),
-    state: (input?.state ?? "").trim(),
-  }))
-  .handler(async ({ data, context }) => {
-    if (!data.code || !data.state) throw new Error("The provider callback is incomplete.");
-
-    const { exchangeGitHubCode, oauthConfig, sha256, selectOAuthConnectionTarget } =
-      await import("@/lib/provider-oauth.server");
-    const config = oauthConfig(data.provider);
-    const { data: pending, error: pendingError } = await context.supabase
-      .from("app_connections")
-      .select("id,metadata,credential_reference")
-      .eq("user_id", context.userId)
-      .eq("provider", data.provider)
-      .eq("status", "pending")
-      .is("provider_account_id", null)
-      .maybeSingle();
-    if (pendingError) throw new Error(pendingError.message);
-    if (!pending) throw new Error("No matching authorization request was found.");
-
-    const metadata = (pending.metadata ?? {}) as Record<string, unknown>;
-    const expectedHash = String(metadata["oauth_state_hash"] ?? "");
-    const expiresAt = Date.parse(String(metadata["oauth_state_expires_at"] ?? ""));
-    const actualHash = await sha256(data.state);
-    if (
-      !expectedHash ||
-      actualHash !== expectedHash ||
-      !Number.isFinite(expiresAt) ||
-      expiresAt < Date.now()
-    ) {
-      throw new Error(
-        "The authorization request expired or failed state verification. Start again.",
-      );
-    }
-
-    const verified = await exchangeGitHubCode({
-      code: data.code,
-      clientId: config.clientId,
-      clientSecret: config.clientSecret,
-      appUrl: config.appUrl,
-    });
-    const reconnectId =
-      typeof metadata["reconnect_connection_id"] === "string"
-        ? metadata["reconnect_connection_id"]
-        : null;
-    const { data: matching, error: matchError } = await context.supabase
-      .from("app_connections")
-      .select("id,provider_account_id,credential_reference")
-      .eq("user_id", context.userId)
-      .eq("provider", data.provider)
-      .eq("provider_account_id", verified.accountId)
-      .maybeSingle();
-    if (matchError) throw new Error("Could not verify the existing provider account.");
-    const target = selectOAuthConnectionTarget(pending, matching, reconnectId);
-    const { data: secret, error: secretError } = await context.supabase.rpc(
-      "create_credential_secret",
-      {
-        p_name: `GitHub OAuth · ${verified.accountLogin}`,
-        p_secret_type: "oauth_token",
-        p_scopes: ["connections"],
-        p_secret_value: JSON.stringify({
-          version: 1,
-          auth_type: "oauth",
-          credential: verified.accessToken,
-        }),
-      },
-    );
-    if (secretError) throw new Error(secretError.message);
-    const secretId = String((secret as { id?: string } | null)?.id ?? "");
-    if (!secretId) throw new Error("Credential Vault did not return a reference.");
-
-    const { data: connected, error: updateError } = await context.supabase
-      .from("app_connections")
-      .update({
-        status: "connected",
-        scopes: verified.scopes,
-        credential_reference: `credential://github/${secretId}`,
-        provider_account_id: verified.accountId,
-        metadata: {
-          source: "open-connect",
-          mode: "oauth",
-          account_login: verified.accountLogin,
-          validation: { verified: true, checked_at: new Date().toISOString() },
-          full_scopes: false,
-        },
-      })
-      .eq("id", target.id)
-      .eq("user_id", context.userId)
-      .select("id,provider,display_name,status,scopes,provider_account_id,created_at")
-      .single();
-    if (updateError) {
-      await context.supabase.rpc("delete_credential_secret", {
-        p_id: secretId,
-      });
-      throw new Error(updateError.message);
-    }
-
-    if (target.id !== pending.id) {
-      await context.supabase
-        .from("app_connections")
-        .delete()
-        .eq("id", pending.id)
-        .eq("user_id", context.userId)
-        .eq("status", "pending");
-    }
-    const oldSecretId = target.credential_reference?.match(
-      /^credential:\/\/[^/]+\/([0-9a-f-]{36})$/i,
-    )?.[1];
-    if (oldSecretId && oldSecretId !== secretId) {
-      await context.supabase.rpc("delete_credential_secret", {
-        p_id: oldSecretId,
-      });
-    }
-    return connected;
-  });
-
-export const disconnectApp = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .validator((input: { id: string }) => ({ id: input.id }))
-  .handler(async ({ data, context }) => {
-    const { data: connection, error: readError } = await context.supabase
-      .from("app_connections")
-      .select("provider,credential_reference,metadata")
-      .eq("user_id", context.userId)
-      .eq("id", data.id)
-      .maybeSingle();
-    if (readError) throw new Error(readError.message);
-    const managedAccountId = connection?.credential_reference?.match(
-      /^composio:\/\/connected-account\/([^/]+)$/,
-    )?.[1];
-    const imported =
-      (connection?.metadata as Record<string, unknown> | null)?.["source"] === "composio-sync";
-    if (managedAccountId && connection?.provider && !imported) {
-      const { deleteManagedConnection } = await import("@/lib/managed-connectors.server");
-      await deleteManagedConnection(connection.provider, managedAccountId);
-    }
-    const { error } = await context.supabase
-      .from("app_connections")
-      .delete()
-      .eq("user_id", context.userId)
-      .eq("id", data.id);
-    if (error) throw new Error(error.message);
-    const secretId = connection?.credential_reference?.match(
-      /^credential:\/\/[^/]+\/([0-9a-f-]{36})$/i,
-    )?.[1];
-    if (secretId)
-      await context.supabase.rpc("delete_credential_secret", {
-        p_id: secretId,
-      });
-    return { ok: true };
-  });
-
-export const configureAppConnection = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .validator((input: ConnectionSetupInput) => input)
-  .handler(async ({ data, context }) => {
-    if (
-      data.connection_id &&
-      !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(data.connection_id)
-    ) {
-      throw new Error("Invalid connection reference.");
-    }
-    const providerId = data.provider.trim().toLowerCase();
-    const gatewayProvider = AI_GATEWAY_PROVIDERS.find((item) => item.id === providerId);
-    const app =
-      CATALOG.find((item) => item.provider === providerId) ??
-      (providerId === "custom_mcp"
-        ? {
-            provider: "custom_mcp",
-            display_name: (data.display_name ?? "").trim() || "Custom MCP server",
-            scopes: [] as const,
-            oauth: false,
-          }
-        : gatewayProvider
-          ? {
-              provider: gatewayProvider.id,
-              display_name: gatewayProvider.name,
-              scopes: [] as const,
-              oauth: false,
-            }
-          : undefined);
-    if (!app) throw new Error("Unknown application");
-    const setup = normalizeConnectionSetup(data, app);
-    const { validateConnectionCredential } = await import("@/lib/connection-validation.server");
-    const validation = await validateConnectionCredential(setup);
-    let secretId = "";
-    if (setup.apiKey) {
-      const secretPayload = JSON.stringify({
-        version: 1,
-        auth_type: setup.authType,
-        credential: setup.apiKey,
-      });
-      const { data: secret, error: secretError } = await context.supabase.rpc(
-        "create_credential_secret",
-        {
-          p_name: `${setup.displayName} · ${setup.accountLabel}`,
-          p_secret_type: "api_key",
-          p_scopes: ["connections"],
-          p_secret_value: secretPayload,
-        },
-      );
-      if (secretError) throw new Error(secretError.message);
-      secretId = String((secret as { id?: string } | null)?.id ?? "");
-      if (!secretId) throw new Error("Credential vault did not return a reference");
-    }
-    let existingQuery = context.supabase
-      .from("app_connections")
-      .select("id,provider_account_id,credential_reference,metadata")
-      .eq("user_id", context.userId)
-      .eq("provider", setup.provider)
-      .order("created_at", { ascending: false });
-    if (data.connection_id) existingQuery = existingQuery.eq("id", data.connection_id);
-    const { data: existingConnections, error: existingError } = await existingQuery;
-    if (existingError) {
-      if (secretId)
-        await context.supabase.rpc("delete_credential_secret", {
-          p_id: secretId,
-        });
-      throw new Error("Could not check your existing provider connection.");
-    }
-    const existing = (existingConnections ?? []).find((item) => {
-      if (data.connection_id) return item.id === data.connection_id;
-      if (data.new_account === true) return false;
-      const metadata = item.metadata as Record<string, unknown> | null;
-      return (
-        metadata?.["source"] === "open-connect" &&
-        metadata?.["account_label"] === setup.accountLabel
-      );
-    });
-    if (data.connection_id && !existing) {
-      if (secretId) await context.supabase.rpc("delete_credential_secret", { p_id: secretId });
-      throw new Error("Connection not found for this account and provider.");
-    }
-    const accountId = existing?.provider_account_id ?? `credential-${crypto.randomUUID()}`;
-    const record = {
-      user_id: context.userId,
-      provider: setup.provider,
-      display_name: setup.displayName,
-      provider_account_id: accountId,
-      status: validation.verified ? "connected" : "configured_unverified",
-      scopes: [...setup.app.scopes],
-      credential_reference: secretId ? `credential://${setup.provider}/${secretId}` : null,
-      metadata: {
-        source: "open-connect",
-        mode: setup.provider === "custom_mcp" ? "custom_mcp" : "brokered_secret",
-        auth_type: setup.authType,
-        account_label: setup.accountLabel,
-        endpoint_url: setup.endpointUrl || null,
-        validation: {
-          verified: validation.verified,
-          detail: validation.detail,
-          provider_account_id: validation.accountId ?? null,
-          checked_at: new Date().toISOString(),
-        },
-        full_scopes: false,
-      },
-    };
-
-    const query = context.supabase.from("app_connections");
-    const { data: connection, error } = existing
-      ? await query
-          .update(record)
-          .eq("id", existing.id)
-          .eq("user_id", context.userId)
-          .select("id, provider, display_name, status, scopes, provider_account_id, created_at")
-          .single()
-      : await query
-          .insert(record)
-          .select("id, provider, display_name, status, scopes, provider_account_id, created_at")
-          .single();
-    if (error) {
-      if (secretId) {
-        await context.supabase.rpc("delete_credential_secret", {
-          p_id: secretId,
-        });
-      }
-      throw new Error(error.message);
-    }
-    const oldReference = existing?.credential_reference;
-    const oldSecretId = oldReference?.match(/^credential:\/\/[^/]+\/([0-9a-f-]{36})$/i)?.[1];
-    if (oldSecretId && oldSecretId !== secretId) {
-      const { data: references, error: referenceError } = await context.supabase
-        .from("app_connections")
-        .select("id")
-        .eq("credential_reference", oldReference ?? "");
-      if (!referenceError && !references?.length) {
-        await context.supabase.rpc("delete_credential_secret", {
-          p_id: oldSecretId,
-        });
-      }
-    }
-    return { ...connection, validation };
-  });
+  assert.match(library, /LIBRARY_SLUG = "open-connect-personal-library"/);
+  assert.match(install, /toolkit_items/);
+  assert.doesNotMatch(install, /project_resources/);
+  assert.match(mcp, /name === "list_my_memory"/);
+  assert.match(mcp, /name === "list_my_knowledge"/);
+  assert.match(mcp, /key.userId/);
+  assert.match(mcp, /resolveUserUpstreams/);
+  assert.match(scopes, /"memory:read"/);
+  assert.match(scopes, /"knowledge:read"/);
+});

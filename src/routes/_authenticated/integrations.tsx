@@ -143,6 +143,7 @@ function IntegrationsPage() {
   const [telegramOpen, setTelegramOpen] = useState(false);
   const [botLabel, setBotLabel] = useState("");
   const [botToken, setBotToken] = useState("");
+  const [mcpAuthHeader, setMcpAuthHeader] = useState("X-API-Key");
   const [mcpName, setMcpName] = useState("");
   const [mcpUrl, setMcpUrl] = useState("");
   const [mcpAuthType, setMcpAuthType] = useState<
@@ -206,6 +207,7 @@ function IntegrationsPage() {
           endpoint_url: mcpUrl.trim(),
           api_key: mcpCredential,
           auth_type: mcpAuthType,
+          auth_header: mcpAuthHeader,
         },
       }),
     onSuccess: (result) => {
@@ -319,11 +321,24 @@ function IntegrationsPage() {
             </div>
             <CardTitle className="mt-3 text-base">Remote MCP servers</CardTitle>
             <CardDescription>
-              Add a remote MCP endpoint for your account. Any credential is validated and stored in
-              the secure vault.
+              Add the exact Streamable HTTP MCP endpoint for your account. Composio Connect uses
+              OAuth or a consumer key in the x-consumer-api-key header, not a project API key. Any
+              credential is validated and stored in the secure vault.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 px-5 pb-5">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setMcpName("Composio");
+                setMcpUrl("https://connect.composio.dev/mcp");
+                setMcpAuthType("api_key");
+                setMcpAuthHeader("x-consumer-api-key");
+                setMcpCredential("");
+              }}
+            >
+              Use Composio MCP preset
+            </Button>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="mcp-name">Name</Label>
@@ -358,6 +373,17 @@ function IntegrationsPage() {
                   <option value="personal_access_token">Personal access token</option>
                 </select>
               </div>
+              {mcpAuthType === "api_key" && (
+                <div className="space-y-2">
+                  <Label htmlFor="mcp-header">Credential header name</Label>
+                  <Input
+                    id="mcp-header"
+                    value={mcpAuthHeader}
+                    onChange={(e) => setMcpAuthHeader(e.target.value)}
+                    placeholder="X-API-Key or x-consumer-api-key"
+                  />
+                </div>
+              )}
               {mcpAuthType !== "none" ? (
                 <div className="space-y-2">
                   <Label htmlFor="mcp-credential">Credential</Label>

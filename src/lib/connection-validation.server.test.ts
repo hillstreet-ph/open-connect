@@ -92,3 +92,20 @@ test("compatible model providers validate against canonical API URLs and reject 
     );
   }
 });
+
+test("custom API profiles remain unverified and never probe arbitrary REST URLs", async () => {
+  const setup = normalizeConnectionSetup(
+    {
+      provider: "custom_api",
+      endpoint_url: "https://api.example.com/v1",
+      api_key: "",
+      auth_type: "none",
+      display_name: "My API",
+    },
+    app("custom_api"),
+  );
+  const result = await validateConnectionCredential(setup, async () => {
+    throw new Error("Must not execute a request");
+  });
+  assert.equal(result.verified, false);
+});

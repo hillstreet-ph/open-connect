@@ -1,3 +1,4 @@
+import { ContextStoragePanel } from "@/components/context-storage-panel";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -128,6 +129,7 @@ function AccountDataControls({ studio, userId }: { studio: boolean; userId: stri
     setEditor({ id: d.id, title: d.title, content: d.content, resource_type: d.resource_type });
   return (
     <div className="space-y-5" id={studio ? undefined : "data-controls"}>
+      {!studio && <ContextStoragePanel />}
       {!studio && (
         <Card>
           <CardHeader>

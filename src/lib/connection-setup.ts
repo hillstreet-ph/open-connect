@@ -1,3 +1,4 @@
+import { normalizeAuthHeader } from "./connection-auth-header.ts";
 import { isRemoteMcpProvider, normalizeRemoteMcpEndpoint } from "./remote-mcp.ts";
 
 export type ConnectionSetupInput = {
@@ -8,6 +9,8 @@ export type ConnectionSetupInput = {
   account_label?: string;
   endpoint_url?: string;
   api_key: string;
+  auth_header?: string;
+  description?: string;
   auth_type?: "none" | "bearer" | "api_key" | "personal_access_token";
 };
 
@@ -24,18 +27,28 @@ export function normalizeConnectionSetup(input: ConnectionSetupInput, app: Conne
   if (app.oauth) throw new Error("Use provider authorization for this application");
 
   const apiKey = (input?.api_key ?? "").trim();
-  if (provider !== "custom_mcp" && apiKey.length < 8) {
+  if (!["custom_mcp", "custom_api"].includes(provider) && apiKey.length < 8) {
     throw new Error("Credential must contain at least 8 characters");
   }
 
   const accountLabel = (input?.account_label ?? "Default account").trim().slice(0, 100);
   const displayName = (input?.display_name ?? app.display_name).trim().slice(0, 120);
-  const authType = input?.auth_type ?? (provider === "custom_mcp" && !apiKey ? "none" : "bearer");
-  if (provider === "custom_mcp" && authType !== "none" && apiKey.length < 8) {
+  const authType =
+    input?.auth_type ??
+    (["custom_mcp", "custom_api"].includes(provider) && !apiKey ? "none" : "bearer");
+  if (["custom_mcp", "custom_api"].includes(provider) && authType !== "none" && apiKey.length < 8) {
     throw new Error("Credential must contain at least 8 characters when authentication is enabled");
   }
   let endpointUrl = (input?.endpoint_url ?? "").trim();
 
+  if (!["none", "bearer", "api_key", "personal_access_token"].includes(authType))
+    throw new Error("Unsupported authentication type");
+  const authHeader = normalizeAuthHeader(input.auth_header);
+  const description = String(input.description ?? "")
+    .trim()
+    .slice(0, 1000);
+  if (provider === "custom_api")
+    endpointUrl = normalizeRemoteMcpEndpoint("custom_mcp", endpointUrl);
   if (isRemoteMcpProvider(provider)) {
     endpointUrl = normalizeRemoteMcpEndpoint(provider, endpointUrl);
   } else if (endpointUrl) {
@@ -44,5 +57,15 @@ export function normalizeConnectionSetup(input: ConnectionSetupInput, app: Conne
     endpointUrl = parsed.toString();
   }
 
-  return { app, provider, apiKey, accountLabel, displayName, authType, endpointUrl };
+  return {
+    app,
+    provider,
+    apiKey,
+    accountLabel,
+    displayName,
+    authType,
+    authHeader,
+    description,
+    endpointUrl,
+  };
 }
