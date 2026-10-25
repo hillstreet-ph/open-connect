@@ -80,6 +80,18 @@ export function assertSessionId(value: unknown): string {
   return id;
 }
 
+export function assertProfileId(value: unknown): string {
+  const id = String(value ?? "").trim();
+  if (!PROFILE_ID.test(id)) throw new Error("Invalid Browser Context Profile id.");
+  return id;
+}
+
+export function normalizeProfileInput(input: { name?: string; set_as_default?: boolean }) {
+  const name = input.name?.trim();
+  if (!name || name.length > 100) throw new Error("Profile name must be 1–100 characters.");
+  return { name, set_as_default: input.set_as_default === true };
+}
+
 /** Validate and normalize a run request before it leaves Open-Connect. */
 export function normalizeStartRun(input: Record<string, unknown>): StartRunInput {
   const rawUrl = String(input["url"] ?? "").trim();
@@ -122,7 +134,7 @@ export function startRunBody(input: StartRunInput) {
     url: input.url,
     goal: input.goal,
     api_integration: "open-connect",
-    ...(input.use_profile ? { use_profile: true } : {}),
+    use_profile: input.use_profile !== false,
     ...(input.profile_id ? { profile_id: input.profile_id } : {}),
     ...(input.browser_profile ? { browser_profile: input.browser_profile } : {}),
     ...(input.proxy_country_code
@@ -211,6 +223,30 @@ export function createTinyFishClient(apiKey: string, send: typeof fetch = fetch)
         method: "POST",
       }),
     listProfiles: () => request<{ profiles: TinyFishProfile[] }>("/v1/profiles"),
+    createProfile: (input: { name: string; set_as_default?: boolean }) =>
+      request<TinyFishProfile>("/v1/profiles", {
+        method: "POST",
+        body: JSON.stringify(normalizeProfileInput(input)),
+      }),
+    updateProfile: (profileId: string, input: { name: string; set_as_default?: boolean }) =>
+      request<TinyFishProfile>(`/v1/profiles/${encodeURIComponent(assertProfileId(profileId))}`, {
+        method: "PATCH",
+        body: JSON.stringify(normalizeProfileInput(input)),
+      }),
+    startProfileSetup: (profileId: string, url: string) => {
+      const normalized = normalizeStartRun({ url, goal: "Profile sign-in setup" });
+      return request<{ session_id: string; cdp_url: string; base_url: string; expires_at: string }>(
+        `/v1/profiles/${encodeURIComponent(assertProfileId(profileId))}/setup-session`,
+        { method: "POST", body: JSON.stringify({ url: normalized.url, timeout_seconds: 900 }) },
+      );
+    },
+    finishProfileSetup: (profileId: string, sessionId: string, action: "save" | "cancel") => {
+      if (action !== "save" && action !== "cancel") throw new Error("Choose save or cancel.");
+      return request<Record<string, unknown>>(
+        `/v1/profiles/${encodeURIComponent(assertProfileId(profileId))}/${action === "save" ? "save" : "setup-session/cancel"}`,
+        { method: "POST", body: JSON.stringify({ session_id: assertSessionId(sessionId) }) },
+      );
+    },
     getProfile: (profileId: string) => {
       const id = String(profileId ?? "").trim();
       if (!PROFILE_ID.test(id)) throw new Error("Invalid Browser Context Profile id.");
@@ -266,9 +302,7 @@ export async function startRunWithLiveView(
       run = null;
     }
   } while (
-    run &&
-    !run.streaming_url &&
-    !TERMINAL_RUN_STATUSES.includes(run.status) &&
+    (!run || (!run.streaming_url && !TERMINAL_RUN_STATUSES.includes(run.status))) &&
     Date.now() < deadline
   );
   return run

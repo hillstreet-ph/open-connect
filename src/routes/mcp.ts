@@ -670,6 +670,37 @@ const PLATFORM_TOOLS: McpTool[] = [
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
   },
   {
+    name: "cloud_browser_save_profile",
+    description:
+      "Create a named Browser Context Profile or update its name/default setting. Omit profile_id to create; supply it to update. Does not sign in or save cookies. Use profile setup next.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        profile_id: { type: "string" },
+        name: { type: "string", minLength: 1, maxLength: 100 },
+        set_as_default: { type: "boolean" },
+      },
+      required: ["name"],
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+  },
+  {
+    name: "cloud_browser_profile_setup",
+    description:
+      "Set up saved sign-ins: start returns a temporary CDP browser (15-minute timeout); connect your browser controller to cdp_url, complete authorized sign-in, then save with session_id. Cancel discards unsaved state. Never put passwords in goals or tool arguments. This is not an interactive viewer URL; use TinyFish profile manager for manual sign-in. Saving captures cookies and storage for future tasks.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        action: { type: "string", enum: ["start", "save", "cancel"] },
+        profile_id: { type: "string" },
+        url: { type: "string" },
+        session_id: { type: "string" },
+      },
+      required: ["action", "profile_id"],
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+  },
+  {
     name: "cloud_browser_create_session",
     description:
       "Create a raw remote Chrome session for Playwright/Puppeteer/CDP control. Returns session_id and cdp_url. Billed until closed: always call cloud_browser_close_session afterwards.",
@@ -1206,6 +1237,33 @@ async function handleCloudBrowserTool(userId: string, name: string, args: Record
         cookies: domain.cookie_count ?? 0,
       })),
     };
+  } else if (name === "cloud_browser_save_profile") {
+    const input = {
+      name: String(args["name"] ?? ""),
+      set_as_default: args["set_as_default"] === true,
+    };
+    const profile = args["profile_id"]
+      ? await client.updateProfile(String(args["profile_id"]), input)
+      : await client.createProfile(input);
+    payload = {
+      id: profile.id,
+      name: profile.name,
+      setup_url: `https://agent.tinyfish.ai/profiles/${encodeURIComponent(profile.id)}`,
+    };
+  } else if (name === "cloud_browser_profile_setup") {
+    const profileId = tf.assertProfileId(args["profile_id"]);
+    const action = args["action"];
+    if (action === "start") {
+      if (typeof args["url"] !== "string" || !args["url"].trim())
+        throw new Error("A sign-in URL is required.");
+      payload = await client.startProfileSetup(profileId, args["url"]);
+    } else if (action === "save" || action === "cancel") {
+      payload = await client.finishProfileSetup(
+        profileId,
+        tf.assertSessionId(args["session_id"]),
+        action,
+      );
+    } else throw new Error("Choose start, save or cancel.");
   } else if (name === "cloud_browser_create_session") {
     const url = typeof args["url"] === "string" && args["url"] ? String(args["url"]) : undefined;
     payload = await client.createBrowserSession({
@@ -1438,6 +1496,8 @@ const TOOL_SCOPES: Record<string, string> = {
   cloud_browser_list_runs: "connections:read",
   cloud_browser_cancel_run: "tools:invoke",
   cloud_browser_profiles: "connections:read",
+  cloud_browser_save_profile: "tools:invoke",
+  cloud_browser_profile_setup: "tools:invoke",
   cloud_browser_create_session: "tools:invoke",
   cloud_browser_close_session: "tools:invoke",
   e2b_health: "connections:read",
@@ -2168,6 +2228,11 @@ export const Route = createFileRoute("/mcp")({
               ...(connectionResult.isError ? { isError: true } : {}),
             };
           } else if (name.startsWith("cloud_browser_")) {
+            if (
+              (name === "cloud_browser_save_profile" || name === "cloud_browser_profile_setup") &&
+              (key.projectId || key.workspaceId || key.organizationId)
+            )
+              throw new Error("Saved browser profile management requires a personal API key.");
             result = await handleCloudBrowserTool(key.userId, name, args);
           } else if (name === "e2b_health") {
             const { e2bConfig, e2bHealth } = await import("@/lib/e2b.server");

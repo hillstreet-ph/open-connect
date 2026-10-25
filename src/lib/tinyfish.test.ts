@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   createTinyFishClient,
   normalizeStartRun,
+  normalizeProfileInput,
   startRunBody,
   startRunWithLiveView,
   summarizeRun,
@@ -73,6 +74,18 @@ describe("normalizeStartRun", () => {
     });
   });
 
+  test("explicitly disables saved sign-ins for a fresh browser", () => {
+    expect(
+      startRunBody(
+        normalizeStartRun({
+          url: "https://example.com",
+          goal: "Check page",
+          use_profile: false,
+        }),
+      ).use_profile,
+    ).toBe(false);
+  });
+
   test("rejects credentials in URLs, bad schemes and empty goals", () => {
     expect(() => normalizeStartRun({ url: "https://u:p@a.com", goal: "x" })).toThrow();
     expect(() => normalizeStartRun({ url: "javascript:alert(1)", goal: "x" })).toThrow();
@@ -98,6 +111,54 @@ describe("TinyFish client", () => {
     ).toBe(true);
   });
 
+  test("creates and updates named profiles without exposing cookie values", async () => {
+    const { send, calls } = mockFetch({
+      "https://agent.tinyfish.ai/v1/profiles": () => ({ id: "prof_work", name: "Work" }),
+    });
+    const client = createTinyFishClient(KEY, send);
+    await client.createProfile({ name: " Work ", set_as_default: true });
+    await client.updateProfile("prof_work", { name: "Work updated" });
+    expect(calls[0]!.init.method).toBe("POST");
+    expect(JSON.parse(String(calls[0]!.init.body))).toEqual({ name: "Work", set_as_default: true });
+    expect(calls[1]!.url).toBe("https://agent.tinyfish.ai/v1/profiles/prof_work");
+    expect(calls[1]!.init.method).toBe("PATCH");
+    expect(() => client.updateProfile("../other", { name: "Work" })).toThrow();
+    expect(calls.length).toBe(2);
+  });
+
+  test("rejects empty and oversized profile names before sending requests", () => {
+    expect(() => normalizeProfileInput({ name: "   " })).toThrow();
+    expect(() => normalizeProfileInput({ name: "x".repeat(101) })).toThrow();
+  });
+
+  test("profile setup validates URLs and saves or cancels the exact session", async () => {
+    const { send, calls } = mockFetch({
+      "https://agent.tinyfish.ai/v1/profiles/": () => ({
+        session_id: "sess_1",
+        domains_updated: ["example.com"],
+      }),
+    });
+    const client = createTinyFishClient(KEY, send);
+    await client.startProfileSetup("prof_work", "https://example.com/login");
+    await client.finishProfileSetup("prof_work", "sess_1", "save");
+    await client.finishProfileSetup("prof_work", "sess_1", "cancel");
+    expect(calls.map((call) => new URL(call.url).pathname)).toEqual([
+      "/v1/profiles/prof_work/setup-session",
+      "/v1/profiles/prof_work/save",
+      "/v1/profiles/prof_work/setup-session/cancel",
+    ]);
+    expect(JSON.parse(String(calls[0]!.init.body))).toEqual({
+      url: "https://example.com/login",
+      timeout_seconds: 900,
+    });
+    expect(JSON.parse(String(calls[1]!.init.body))).toEqual({ session_id: "sess_1" });
+    expect(() =>
+      client.startProfileSetup("prof_work", "https://user:secret@example.com"),
+    ).toThrow();
+    expect(() => client.finishProfileSetup("prof_work", "../other", "save")).toThrow();
+    expect(calls.length).toBe(3);
+  });
+
   test("browser sessions use the Browser API host", async () => {
     const { send, calls } = mockFetch({
       [`${TINYFISH_BROWSER_API}/`]: () => ({ session_id: "br-1", cdp_url: "wss://x" }),
@@ -110,6 +171,29 @@ describe("TinyFish client", () => {
   test("rejects unsafe run ids before any request", () => {
     const client = createTinyFishClient(KEY, mockFetch({}).send);
     expect(() => client.getRun("../wallet")).toThrow();
+  });
+
+  test("retries a transient status failure without starting a second run", async () => {
+    let starts = 0;
+    let polls = 0;
+    const { send } = mockFetch({
+      "https://agent.tinyfish.ai/v1/automation/run-async": () => {
+        starts += 1;
+        return { run_id: "r1", error: null };
+      },
+      "https://agent.tinyfish.ai/v1/runs/r1": () => {
+        if (++polls === 1) throw new Error("Temporary network failure");
+        return run({ run_id: "r1", streaming_url: "https://live.tinyfish.io/stream" });
+      },
+    });
+    const result = await startRunWithLiveView(
+      createTinyFishClient(KEY, send),
+      normalizeStartRun({ url: "https://example.com", goal: "Check page" }),
+      { sleep: async () => {}, waitMs: 5000 },
+    );
+    expect(starts).toBe(1);
+    expect(polls).toBe(2);
+    expect(result.streaming_url).toBe("https://live.tinyfish.io/stream");
   });
 
   test("startRunWithLiveView returns the streaming URL once available", async () => {
