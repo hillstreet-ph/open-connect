@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { normalizeConnectionSetup, type ConnectionSetupApp } from "./connection-setup.ts";
+import {
+  duplicateConnectionSetup,
+  normalizeConnectionSetup,
+  type ConnectionSetupApp,
+} from "./connection-setup.ts";
 import { AI_GATEWAY_PROVIDERS } from "./ai-gateway-providers.ts";
 
 const app = (provider: string, oauth = false): ConnectionSetupApp => ({
@@ -175,4 +179,36 @@ test("AI Gateway providers accept provider API credentials through the gateway r
     assert.equal(setup.provider, provider.id);
     assert.equal(new URL(setup.endpointUrl).protocol, "https:");
   }
+});
+
+test("repeated native setup is detected without merging separate identities or broker accounts", () => {
+  const setup = {
+    accountLabel: "Production",
+    endpointUrl: "https://worker.example.com/mcp",
+    authType: "bearer" as const,
+  };
+  const saved = [
+    {
+      id: "existing",
+      metadata: {
+        source: "open-connect",
+        account_label: "Production",
+        endpoint_url: setup.endpointUrl,
+        auth_type: "bearer",
+      },
+    },
+  ];
+  assert.equal(duplicateConnectionSetup(setup, saved)?.id, "existing");
+  assert.equal(duplicateConnectionSetup({ ...setup, accountLabel: "Staging" }, saved), undefined);
+  assert.equal(
+    duplicateConnectionSetup({ ...setup, endpointUrl: "https://other.example.com/mcp" }, saved),
+    undefined,
+  );
+  assert.equal(duplicateConnectionSetup({ ...setup, authType: "none" }, saved), undefined);
+  assert.equal(
+    duplicateConnectionSetup(setup, [
+      { id: "broker", metadata: { ...saved[0]!.metadata, source: "composio-sync" } },
+    ]),
+    undefined,
+  );
 });

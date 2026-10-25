@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { createDirectCloudBrowser, finishDirectCloudBrowser } from "@/lib/cloud-browser.functions";
-import { BrowserController, browserPoint, type BrowserFrame } from "@/lib/browser-control";
+import {
+  BrowserController,
+  browserPoint,
+  type BrowserTab,
+  type BrowserFrame,
+} from "@/lib/browser-control";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,6 +31,8 @@ export function DirectCloudBrowser({
     finishRef.current = finish;
   }, [finish]);
   const [session, setSession] = useState<Session | null>(null);
+  const [tabs, setTabs] = useState<BrowserTab[]>([]);
+  const [activeTab, setActiveTab] = useState("");
   const [frame, setFrame] = useState<BrowserFrame | null>(null);
   const [url, setUrl] = useState("https://example.com");
   const [busy, setBusy] = useState(false);
@@ -59,6 +66,8 @@ export function DirectCloudBrowser({
     });
     controller.current = client;
     await client.connect(current.cdpUrl);
+    setTabs(await client.tabs());
+    setActiveTab(client.activeTabId);
     setReady(true);
   };
   const start = async () => {
@@ -172,6 +181,45 @@ export function DirectCloudBrowser({
                 </Button>
               ) : null}
             </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Label htmlFor="direct-tab">Browser tab</Label>
+              <select
+                id="direct-tab"
+                className="min-w-0 max-w-full rounded border bg-background px-2 py-2 text-sm"
+                value={activeTab}
+                disabled={!ready || busy}
+                onChange={(event) => {
+                  const id = event.target.value;
+                  setBusy(true);
+                  setError("");
+                  setFrame(null);
+                  void controller.current
+                    ?.selectTab(id)
+                    .then(() => setActiveTab(id))
+                    .catch(report)
+                    .finally(() => setBusy(false));
+                }}
+              >
+                {tabs.map((tab) => (
+                  <option key={tab.targetId} value={tab.targetId}>
+                    {tab.title || "Untitled tab"}
+                  </option>
+                ))}
+              </select>
+              <Button
+                variant="outline"
+                disabled={!ready || busy}
+                onClick={() => {
+                  setError("");
+                  void controller.current?.tabs().then(setTabs).catch(report);
+                }}
+              >
+                Refresh tabs
+              </Button>
+              <span className="text-xs text-muted-foreground">
+                Refresh after opening a sign-in popup, then select its tab.
+              </span>
+            </div>
             {frame ? (
               <img
                 tabIndex={0}
@@ -205,6 +253,8 @@ export function DirectCloudBrowser({
                     event.currentTarget.blur();
                     return;
                   }
+                  // Let the local paste event deliver clipboard text to onPaste.
+                  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "v") return;
                   event.preventDefault();
                   if (["Shift", "Control", "Alt", "Meta"].includes(event.key)) return;
                   const client = controller.current;

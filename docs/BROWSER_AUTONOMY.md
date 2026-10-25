@@ -107,8 +107,8 @@ Reference: https://docs.tinyfish.ai/agent-api/browser-context-profiles
 Open-Connect currently implements the TinyFish REST adapter and native task/profile console in
 PR #403. A selected profile restores saved state for a new task; it does not continue the previous
 agent's reasoning or resume the same live tab. MultiOn-style `step`/`ASK_USER` continuation and
-manual in-page takeover are separate capabilities and must not be advertised as complete without
-an implemented, tested provider path. Connecting TinyFish MCP remains an alternative through the
+Agent-run in-page takeover are separate capabilities. The direct-control mode uses a separate
+TinyFish CDP session with clicks, typing and tab selection; it does not take over an active Agent run. Connecting TinyFish MCP remains an alternative through the
 advanced connection workspace when its credential and actual tool discovery are verified.
 
 End-to-end acceptance requires a usable personal provider key, a saved sign-in setup, two successive

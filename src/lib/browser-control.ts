@@ -1,4 +1,5 @@
 /** Ephemeral, user-operated CDP connection. Never stores URLs, frames or typed text. */
+export type BrowserTab = { targetId: string; title: string; url: string };
 export type BrowserFrame = { data: string; width: number; height: number };
 type Reply = { result?: Record<string, unknown>; error?: { message?: string } };
 export function validateCdpUrl(value: string) {
@@ -38,6 +39,7 @@ export class BrowserController {
   private socket: WebSocket | null = null;
   private serial = 0;
   private targetSession = "";
+  activeTabId = "";
   private requests = new Map<
     number,
     {
@@ -96,17 +98,32 @@ export class BrowserController {
         reject(new Error("Could not connect to the remote browser."));
       };
     });
+    const pages = await this.tabs();
+    if (!pages.length) throw new Error("No browser tab is available.");
+    await this.selectTab(pages[0]!.targetId);
+  }
+  async tabs(): Promise<BrowserTab[]> {
     const targets = await this.command("Target.getTargets", {}, false);
-    const page = (targets["targetInfos"] as Array<{ targetId: string; type: string }>).find(
-      (t) => t.type === "page",
+    return (targets["targetInfos"] as Array<BrowserTab & { type: string }>).filter(
+      (target) => target.type === "page",
     );
-    if (!page) throw new Error("No browser tab is available.");
+  }
+  async selectTab(targetId: string) {
+    const pages = await this.tabs();
+    if (!pages.some((page) => page.targetId === targetId))
+      throw new Error("This tab has closed. Refresh the tab list.");
+    if (this.targetSession) {
+      await this.command("Page.stopScreencast");
+      await this.command("Target.detachFromTarget", { sessionId: this.targetSession }, false);
+      this.targetSession = "";
+    }
     const attached = await this.command(
       "Target.attachToTarget",
-      { targetId: page.targetId, flatten: true },
+      { targetId, flatten: true },
       false,
     );
     this.targetSession = String(attached["sessionId"]);
+    this.activeTabId = targetId;
     await this.command("Page.enable");
     await this.command("Page.bringToFront");
     await this.command("Page.startScreencast", {
@@ -205,6 +222,7 @@ export class BrowserController {
     const socket = this.socket;
     this.socket = null;
     this.targetSession = "";
+    this.activeTabId = "";
     socket?.close();
     for (const pending of this.requests.values()) {
       clearTimeout(pending.timer);

@@ -34,7 +34,7 @@ test("pointer mapping follows responsive image size and clamps to the viewport",
 test("CDP attaches to a page, streams frames, sends input and closes cleanly", async () => {
   const sent: Array<{
     method: string;
-    params: { type?: string; sessionId?: number };
+    params: { type?: string; sessionId?: number | string; targetId?: string };
     sessionId?: string;
   }> = [];
   let instance: FakeSocket;
@@ -56,9 +56,20 @@ test("CDP attaches to a page, streams frames, sends input and closes cleanly", a
       sent.push(message);
       const result =
         message.method === "Target.getTargets"
-          ? { targetInfos: [{ type: "page", targetId: "page1" }] }
+          ? {
+              targetInfos: [
+                { type: "page", targetId: "page1", title: "Main", url: "https://example.com" },
+                {
+                  type: "page",
+                  targetId: "popup",
+                  title: "Sign in",
+                  url: "https://example.com/login",
+                },
+                { type: "worker", targetId: "worker" },
+              ],
+            }
           : message.method === "Target.attachToTarget"
-            ? { sessionId: "attached" }
+            ? { sessionId: message.params.targetId === "popup" ? "popup-attached" : "attached" }
             : {};
       queueMicrotask(() => this.onmessage?.({ data: JSON.stringify({ id: message.id, result }) }));
     }
@@ -92,7 +103,20 @@ test("CDP attaches to a page, streams frames, sends input and closes cleanly", a
     sent.filter((m) => m.method === "Input.dispatchMouseEvent").map((m) => m.params.type),
   ).toEqual(["mouseMoved", "mousePressed", "mouseReleased"]);
   expect(sent.find((m) => m.method === "Input.insertText")?.sessionId).toBe("attached");
+  expect((await browser.tabs()).map((tab) => tab.targetId)).toEqual(["page1", "popup"]);
+  await expect(browser.selectTab("closed")).rejects.toThrow("closed");
+  expect(browser.activeTabId).toBe("page1");
+  await browser.selectTab("popup");
+  expect(browser.activeTabId).toBe("popup");
+  expect(sent.find((m) => m.method === "Target.detachFromTarget")?.params.sessionId).toBe(
+    "attached",
+  );
+  await browser.text("popup input");
+  expect(sent.filter((m) => m.method === "Input.insertText").at(-1)?.sessionId).toBe(
+    "popup-attached",
+  );
   browser.disconnect();
+  expect(browser.activeTabId).toBe("");
   expect(instance!.closed).toBe(true);
   await expect(browser.navigate("example.com")).rejects.toThrow("disconnected");
 });
