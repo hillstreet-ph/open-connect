@@ -110,7 +110,8 @@ function ConnectionsPage() {
   });
 
   const connectMutation = useMutation({
-    mutationFn: (provider: string) => connectFn({ data: { provider } }),
+    mutationFn: (input: string | { provider: string; connection_id: string }) =>
+      connectFn({ data: typeof input === "string" ? { provider: input } : input }),
     onSuccess: (result) => {
       if (result.authorization_url) {
         window.location.assign(result.authorization_url);
@@ -417,11 +418,21 @@ function ConnectionsPage() {
                       toast.info(
                         "Authorize the same provider account to reconnect. The existing connection is kept until you choose to disconnect it.",
                       );
-                      connectMutation.mutate(managedApp.provider);
+                      connectMutation.mutate({
+                        provider: managedApp.provider,
+                        connection_id: c.id,
+                      });
                     } else {
                       setReconnectId(c.id);
                       setAccountLabel(c.identity.label || "Default account");
                       setEndpointUrl(c.metadata.endpoint_url || "");
+                      setAuthType(
+                        c.metadata.auth_type === "none"
+                          ? "none"
+                          : c.metadata.auth_type === "api_key"
+                            ? "api_key"
+                            : "bearer",
+                      );
                       setApiKey("");
                       setSelectedApp({ ...managedApp, display_name: c.display_name });
                       setManagedApp(null);
