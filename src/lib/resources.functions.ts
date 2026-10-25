@@ -137,11 +137,6 @@ export const registerResourcePackage = createServerFn({ method: "POST" })
       .eq("installation_config->>content_sha256", scan.sha256)
       .maybeSingle();
     if (duplicate.error) throw new Error("Could not check package duplicates");
-    if (duplicate.data) {
-      if (duplicate.data.package_path !== data.package_path)
-        await context.supabase.storage.from(BUCKET).remove([data.package_path]);
-      return duplicate.data;
-    }
 
     const row = {
       name: data.name,
@@ -185,13 +180,15 @@ export const registerResourcePackage = createServerFn({ method: "POST" })
       supported_clients: ["chatgpt", "claude", "hermes", "custom"],
     };
 
-    const { data: inserted, error } = await context.supabase
-      .from("resources")
-      .insert(row)
-      .select(
-        "id, slug, name, description, resource_type, version, published, package_path, package_filename, package_size",
-      )
-      .single();
+    const { data: inserted, error } = duplicate.data
+      ? { data: duplicate.data, error: null }
+      : await context.supabase
+          .from("resources")
+          .insert(row)
+          .select(
+            "id, slug, name, description, resource_type, version, published, package_path, package_filename, package_size",
+          )
+          .single();
 
     if (error) throw new Error(error.message);
     const librarySlug = "open-connect-personal-library";
@@ -225,6 +222,8 @@ export const registerResourcePackage = createServerFn({ method: "POST" })
         { onConflict: "toolkit_id,resource_id" },
       );
     if (libraryError) throw new Error(libraryError.message);
+    if (duplicate.data && duplicate.data.package_path !== data.package_path)
+      await context.supabase.storage.from(BUCKET).remove([data.package_path]);
     return inserted;
   });
 

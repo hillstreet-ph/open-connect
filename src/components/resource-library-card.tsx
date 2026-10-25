@@ -163,7 +163,15 @@ export function ResourceLibraryCard({
         },
       });
     } catch (error) {
-      await supabase.storage.from(BUCKET).remove([path]);
+      // Registration may have saved the resource before its Library step failed.
+      const references = await supabase
+        .from("resources")
+        .select("id")
+        .eq("owner_id", user.id)
+        .eq("package_path", path)
+        .limit(1);
+      if (!references.error && references.data?.length === 0)
+        await supabase.storage.from(BUCKET).remove([path]);
       throw error;
     }
   }

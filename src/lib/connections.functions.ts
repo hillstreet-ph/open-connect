@@ -844,7 +844,7 @@ export const configureAppConnection = createServerFn({ method: "POST" })
     const setup = normalizeConnectionSetup(data, app);
     let existingQuery = context.supabase
       .from("app_connections")
-      .select("id,provider_account_id,credential_reference,metadata")
+      .select("id,provider_account_id,credential_reference,metadata,updated_at")
       .eq("user_id", context.userId)
       .eq("provider", setup.provider)
       .order("created_at", { ascending: false });
@@ -904,6 +904,13 @@ export const configureAppConnection = createServerFn({ method: "POST" })
       scopes: [...setup.app.scopes],
       credential_reference: secretId ? `credential://${setup.provider}/${secretId}` : null,
       metadata: {
+        disabled_tools: Array.isArray(
+          (existing?.metadata as Record<string, unknown> | null)?.["disabled_tools"],
+        )
+          ? (existing!.metadata as { disabled_tools: unknown[] }).disabled_tools.filter(
+              (tool): tool is string => typeof tool === "string",
+            )
+          : [],
         source: "open-connect",
         mode: setup.provider === "custom_mcp" ? "custom_mcp" : "brokered_secret",
         auth_type: setup.authType,
@@ -930,6 +937,7 @@ export const configureAppConnection = createServerFn({ method: "POST" })
           .update(record)
           .eq("id", existing.id)
           .eq("user_id", context.userId)
+          .eq("updated_at", existing.updated_at)
           .select("id, provider, display_name, status, scopes, provider_account_id, created_at")
           .single()
       : await query

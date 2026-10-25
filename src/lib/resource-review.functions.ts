@@ -168,13 +168,17 @@ export const inspectResourceBatch = createServerFn({ method: "POST" })
           bytes = new Uint8Array(await payload.data.arrayBuffer());
         } else {
           filename = `${row.slug}.md`;
-          bytes = new TextEncoder().encode(
-            String(
-              config["draft_markdown"] ||
-                config["prompt"] ||
-                `# ${row.name}\nMetadata-only resource; package runtime has not been validated.`,
-            ),
-          );
+          const content = config["draft_markdown"] || config["prompt"];
+          if (typeof content !== "string" || !content) {
+            results.push({
+              id,
+              state: "not_inspected",
+              detail:
+                "Downloadable package bytes were not inspected. No substitute content hash was recorded; inspect the actual source artifact separately.",
+            });
+            continue;
+          }
+          bytes = new TextEncoder().encode(content);
         }
         const scan = scanResourceBytes(filename, bytes);
         inspected = true;

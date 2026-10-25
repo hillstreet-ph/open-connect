@@ -72,7 +72,7 @@ export function ResourceReviewPanel() {
     onSuccess: (r) => {
       void queryClient.invalidateQueries({ queryKey: ["resources-review-queue"] });
       toast.info(
-        `${r.results.length} resources inspected. Blocked or changed packages require fresh review.`,
+        `${r.results.length} inspection results available below. Blocked or changed packages require fresh review.`,
       );
     },
     onError: (e) => toast.error(e.message),
@@ -210,6 +210,19 @@ export function ResourceReviewPanel() {
 
   return (
     <div className="grid gap-3">
+      {inspection.data && (
+        <details className="rounded-lg border p-3 text-sm" open>
+          <summary>Inspection results</summary>
+          <ul className="mt-2 space-y-2">
+            {inspection.data.results.map((result) => (
+              <li key={result.id}>
+                <Badge variant="outline">{result.state}</Badge>{" "}
+                <span className="break-all">{result.id}</span>: {result.detail}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
       <Card className="sticky top-0 z-10 shadow-panel">
         <CardContent className="grid gap-3 p-3">
           <div className="relative">
