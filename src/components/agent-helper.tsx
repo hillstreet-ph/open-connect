@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { MessageCircle, Send, Sparkles, X } from "lucide-react";
+import { BrowserAgentChat } from "@/components/browser-agent-chat";
 import { askAgentHelper } from "@/lib/agent-helper.functions";
 
 type Message = { role: "user" | "assistant"; content: string };
@@ -13,18 +14,22 @@ const STARTERS = [
 
 export function AgentHelper() {
   const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<"workspace" | "browser">("workspace");
+  const [browserOpened, setBrowserOpened] = useState(false);
+  const [browserRunId, setBrowserRunId] = useState<string>();
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
       content:
-        "Hi, I’m Agent-Helper. I can search Marketplace, add resources to your Library, and create tasks, schedule definitions, or manual AI automations. I can also guide you through settings and connections.",
+        "Hi, I’m Agent-Helper. I can search Marketplace, add resources to your Library, and create tasks, schedule definitions, or manual AI automations. For website tasks, select the Browser task tab. I can also guide you through settings and connections.",
     },
   ]);
   const transcriptRef = useRef<HTMLDivElement>(null);
   const sendingRef = useRef(false);
   const composerRef = useRef<HTMLTextAreaElement>(null);
+  const browserPanelRef = useRef<HTMLDivElement>(null);
   const launcherRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -33,8 +38,10 @@ export function AgentHelper() {
   }, [messages, busy, open]);
 
   useEffect(() => {
-    if (open) composerRef.current?.focus();
-  }, [open]);
+    if (!open) return;
+    if (mode === "workspace") composerRef.current?.focus();
+    else browserPanelRef.current?.querySelector<HTMLInputElement>("input")?.focus();
+  }, [open, mode]);
 
   async function sendMessage(value: string) {
     const content = value.trim().slice(0, 2000);
@@ -95,34 +102,60 @@ export function AgentHelper() {
         }
       }}
     >
-      {open ? (
-        <section
-          id="agent-helper-chat"
-          role="dialog"
-          aria-label="Agent-Helper chat"
-          className="mb-3 flex h-[min(34rem,calc(100dvh-7rem))] w-[min(23rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl"
-        >
-          <header className="flex items-center gap-3 border-b border-border px-4 py-3">
-            <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <Sparkles className="size-5" aria-hidden="true" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h2 className="text-sm font-semibold">Agent-Helper</h2>
-              <p className="text-xs text-muted-foreground">Internal setup & actions</p>
-            </div>
-            <button
-              type="button"
-              className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-              onClick={() => {
-                setOpen(false);
-                launcherRef.current?.focus();
-              }}
-              aria-label="Close Agent-Helper"
-            >
-              <X className="size-4" />
-            </button>
-          </header>
+      <section
+        hidden={!open}
+        style={!open ? { display: "none" } : undefined}
+        id="agent-helper-chat"
+        role="dialog"
+        aria-label="Agent-Helper chat"
+        className="mb-3 flex h-[min(34rem,calc(100dvh-7rem))] w-[min(23rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl"
+      >
+        <header className="flex items-center gap-3 border-b border-border px-4 py-3">
+          <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <Sparkles className="size-5" aria-hidden="true" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-sm font-semibold">Agent-Helper</h2>
+            <p className="text-xs text-muted-foreground">Workspace actions & browser tasks</p>
+          </div>
+          <button
+            type="button"
+            className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+            onClick={() => {
+              setOpen(false);
+              launcherRef.current?.focus();
+            }}
+            aria-label="Close Agent-Helper"
+          >
+            <X className="size-4" />
+          </button>
+        </header>
 
+        <div className="flex gap-2 border-b px-3 py-2" aria-label="Agent mode">
+          <button
+            type="button"
+            aria-pressed={mode === "workspace"}
+            className={`rounded border px-3 py-1 text-xs ${mode === "workspace" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+            onClick={() => setMode("workspace")}
+          >
+            Workspace
+          </button>
+          <button
+            type="button"
+            aria-pressed={mode === "browser"}
+            className={`rounded border px-3 py-1 text-xs ${mode === "browser" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+            onClick={() => {
+              setBrowserOpened(true);
+              setMode("browser");
+            }}
+          >
+            Browser task
+          </button>
+        </div>
+        <div
+          className="min-h-0 flex-1 flex-col"
+          style={{ display: mode === "workspace" ? "flex" : "none" }}
+        >
           <div
             ref={transcriptRef}
             className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-3 py-4"
@@ -200,8 +233,17 @@ export function AgentHelper() {
               <Send className="size-4" />
             </button>
           </form>
-        </section>
-      ) : null}
+        </div>
+        <div
+          ref={browserPanelRef}
+          className="min-h-0 flex-1 overflow-y-auto p-3"
+          style={{ display: mode === "browser" ? "block" : "none" }}
+        >
+          {browserOpened ? (
+            <BrowserAgentChat runId={browserRunId} onSelectRun={setBrowserRunId} />
+          ) : null}
+        </div>
+      </section>
 
       <button
         type="button"

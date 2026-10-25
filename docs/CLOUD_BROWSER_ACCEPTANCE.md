@@ -24,7 +24,7 @@ Checked 2026-10-25 (Asia/Manila). This records observed results, not a guarantee
 | Expired-login repair                | Unverified; native per-run Vault selection is not implemented                                                                    |
 | Unsupported MFA handoff             | Not tested; no MFA or CAPTCHA automation attempted                                                                               |
 | Disconnect and duplicate submission | Poll recovery regression tests exist; durable submission reconciliation still required                                           |
-| Async cancellation                  | Exposed by native adapter; live cancellation not tested here                                                                     |
+| Async cancellation                  | Startup cancellation verified in the prompt-execution follow-up below; mid-action cancellation remains unverified                                                                     |
 | Webhook retries and deduplication   | No native webhook ingestion/verification/deduplication acceptance completed                                                      |
 | Evidence retrieval                  | Final text result verified; screenshot/HTML/recording retrieval unverified                                                       |
 | Proxy schema validation             | Country-code normalization tested; live proxy behavior unverified                                                                |
@@ -117,3 +117,52 @@ https://github.com/ChromeDevTools/chrome-devtools-mcp.
 Open-source licensing does not include free cloud hosting or model inference. MultiOn is still
 reference-only; its current working API and account have not been verified. Remaining acceptance
 items above are unchanged unless explicitly marked passed in this follow-up.
+
+## Prompt execution from Agent-Helper and AI Agents (2026-10-25)
+
+Agent-Helper has a Browser task tab and `/agents` has an execution panel. These share one
+component and the existing authenticated native TinyFish server functions, rather than another
+browser backend or a workspace model pretending to perform web actions. Workspace mode retains
+its internal-only tool policy and directs web requests to Browser task mode. Browser execution
+uses the user's own connection and does not depend on a separate free model being available.
+
+Choose a starting website, enter the task, optionally select a saved profile, and choose a time
+limit. Fresh browser is the default. One submission returns an authoritative provider run ID;
+status polls until terminal, results render as text, and Stop requests provider cancellation.
+Failures distinguish an uncertain submission or status read from a confirmed completed task.
+The form prevents a second local submission while its request or returned run is active, and
+mutations do not retry automatically. This is not durable idempotency across multiple clients.
+The chat panel stays mounted when closed or switched to Workspace, preserving its in-flight
+request/run state. Closing the panel does not cancel the provider job. Runs are also in Cloud
+Browser history. `/agents?run=...` can reopen a known run; no cookie values or CDP URLs are needed.
+
+Live acceptance through the production Open-Connect MCP entry point:
+https://open-connect.site/cloud-browser?run=c1c329a0-f53b-4dee-9402-e733fb0252b3
+The fresh-profile read-only prompt completed in three steps and returned:
+
+- `page_title`: `Example Domains - IANA`
+- `visible_main_heading`: `Example Domains`
+- `final_url`: `https://www.iana.org/help/example-domains`
+
+A separate interactive remote-Chrome test used the actual React component with controlled server
+responses. It verified duplicate-click suppression (one request), exact profile selection,
+confirmed cancellation, a subsequent new task (one request), and completed-result rendering.
+This is component lifecycle evidence, not a real signed-in app-session test. Its disposable
+browser was explicitly closed.
+
+The existing `open-connect` service in the authorized `open-connect-project` Zeabur project was
+queried and reported `RUNNING`. The hosted TinyFish agent already supplies the browser worker;
+this integration does not need a new shared browser daemon or an exposed CDP port. Standard main
+branch deployment updates the existing service and Cloudflare app. No additional paid service,
+model key, credential export, or project-wide permission was introduced.
+
+Real account login renewal, saved sign-in reuse after renewal, multi-account live isolation,
+self-hosted Playwright/Stagehand workers, MultiOn integration, secure Vault injection, durable job
+reconciliation, authenticated callbacks, and the other explicitly unverified items above remain
+outside this acceptance result. Do not advertise every website or workflow as guaranteed to work.
+
+Startup cancellation was also tested through the production MCP adapter:
+https://open-connect.site/cloud-browser?run=d35346b5-2102-4e84-9e46-a7d8de68dd1f
+The cancel response initially remained PENDING. A subsequent authoritative status read confirmed
+CANCELLED, a finished timestamp and zero browser steps. An accepted stop request alone is not
+shown as a confirmed cancelled outcome. Mid-action cancellation timing remains unverified.
