@@ -6,6 +6,7 @@ import {
   startRunBody,
   startRunWithLiveView,
   summarizeRun,
+  requiresBrowserSignIn,
   TINYFISH_BROWSER_API,
   type TinyFishRun,
 } from "./tinyfish";
@@ -241,6 +242,13 @@ describe("TinyFish client", () => {
   });
 });
 
+test("completed sign-in diagnostics are not shown as authenticated success", () => {
+  expect(requiresBrowserSignIn({ authenticated: false })).toBe(true);
+  expect(requiresBrowserSignIn({ result: { authenticated: false } })).toBe(true);
+  expect(requiresBrowserSignIn({ authenticated: true })).toBe(false);
+  expect(requiresBrowserSignIn("authentication failed")).toBe(false);
+});
+
 describe("summarizeRun", () => {
   test("bounds output and marks terminal runs", () => {
     const summary = summarizeRun(
@@ -261,6 +269,10 @@ describe("cloud browser widget", () => {
   test("frames only TinyFish and Open-Connect, and polls via MCP tools", () => {
     expect(CLOUD_BROWSER_FRAME_DOMAINS.every((domain) => domain.startsWith("https://"))).toBe(true);
     expect(CLOUD_BROWSER_WIDGET_HTML).toContain("cloud_browser_get_run");
+    expect(CLOUD_BROWSER_WIDGET_HTML).toContain("[hidden]{display:none!important}");
+    expect(CLOUD_BROWSER_WIDGET_HTML).toContain("SIGN-IN REQUIRED");
+    const script = CLOUD_BROWSER_WIDGET_HTML.match(/<script>([\s\S]*?)<\/script>/)![1]!;
+    expect(() => new Function(script)).not.toThrow();
     expect(CLOUD_BROWSER_WIDGET_HTML).not.toContain("X-API-Key");
   });
 });

@@ -56,3 +56,30 @@ attached the selected saved profile, completed in three steps, and returned `aut
 `https://github.com/login`, and `Sign in to GitHub`. This is a completed diagnostic with a failed
 login-reuse outcome, not proof of a valid saved login. Renew GitHub sign-in in profile setup and save
 before rechecking. No credential injection, login attempt or account settings change was made.
+
+## Direct-control follow-up
+
+A direct-control UI now connects the signed-in user's browser to the provider's private CDP session.
+It supports live frames, clicks, wheel scrolling, address navigation, remote keyboard input, mobile
+masked text entry, reconnecting the same session, explicit closure, and profile setup save/discard.
+The Agent iframe remains observation only. The screenshot's `authenticated: false` diagnostic is
+shown as sign-in required rather than authenticated success. A finished run's closed preview is
+explained beside the result. Profile save failures are reported by domain; closure is explicit.
+
+Live protocol acceptance from a Chrome page at the Open-Connect origin received 18 frames, inserted
+and deleted fixture text, clicked a temporary test control, and followed Example Domain's link to
+`https://www.iana.org/help/example-domains`. All temporary sessions were closed. This exercised
+browser-origin WebSocket access and the same CDP controller used by the UI. A real account login,
+profile save/reuse after login, and interactive checks on every website remain unverified.
+
+Typed values, live frames and CDP URLs stay in ephemeral frontend state and are not written to
+local storage or run history. Leaving the page disconnects the controller and attempts cleanup;
+network interruption can leave a session running until provider expiry, so explicit Close remains
+necessary. Direct sessions have a five-minute inactivity timeout; profile setup expires after
+15 minutes. These are separate from the 60-second startup request deadline.
+
+The pending approvals page and dependency/workflow PRs were integrated for combined validation.
+TanStack Start was aligned to 1.169.3 to match the router 1.170.45 upgrade; the prior pair installed
+two router copies and failed server-route type checks. Duplicate approval-route registration was
+removed and the existing expiry clock retained. Dependency audit, full tests, strict typecheck,
+build, SSR, consolidated-resource integrity and production-health contract tests are required.
