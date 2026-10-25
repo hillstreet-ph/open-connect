@@ -26,7 +26,7 @@ export const HOSTED_MCP_PRESETS = {
   tinyfish: {
     label: "TinyFish cloud browser",
     endpoint: "https://agent.tinyfish.ai/mcp",
-    authType: "api_key",
+    authType: "bearer",
     kinds: ["browser"],
   },
   custom_tinyfish_mcp: {
@@ -104,4 +104,14 @@ export function normalizeRemoteMcpAuthType(value: unknown) {
     throw new Error("Unsupported remote MCP authentication type");
   }
   return authType;
+}
+
+/** Hosted direct MCP adapters cannot resolve Composio account references. */
+export function directCloudConnectionSupported(
+  provider: string,
+  reference: string | null | undefined,
+) {
+  return (
+    !isHostedMcpProvider(provider) || /^credential:\/\/[^/]+\/[0-9a-f-]{36}$/i.test(reference ?? "")
+  );
 }

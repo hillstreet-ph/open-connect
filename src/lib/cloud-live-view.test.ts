@@ -67,3 +67,19 @@ test("native browser previews reject arbitrary or insecure iframe origins", asyn
   ])
     expect(browserPreviewUrl(value)).toBeNull();
 });
+
+test("direct hosted MCP discovery excludes broker accounts without disabling their native browser route", async () => {
+  const { directCloudConnectionSupported, HOSTED_MCP_PRESETS } = await import("./remote-mcp");
+  expect(directCloudConnectionSupported("tinyfish", "composio://connected-account/account")).toBe(
+    false,
+  );
+  expect(directCloudConnectionSupported("custom_tinyfish_mcp", null)).toBe(false);
+  expect(
+    directCloudConnectionSupported(
+      "tinyfish",
+      "credential://tinyfish/00000000-0000-4000-8000-000000000001",
+    ),
+  ).toBe(true);
+  expect(directCloudConnectionSupported("custom_mcp", null)).toBe(true);
+  expect(HOSTED_MCP_PRESETS.tinyfish.authType).toBe("bearer");
+});
