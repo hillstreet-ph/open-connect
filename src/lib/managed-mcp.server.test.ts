@@ -145,5 +145,5 @@ test("provider failure returns a safe code instead of credential-bearing diagnos
     );
     assert.equal(result.isError, true);
     assert.match(JSON.stringify(result), /provider_authorization_required/);
-    assert.doesNotMatch(JSON.stringify(result), /api.telegram.org|xxxxxxxx/);
+    assert.doesNotMatch(JSON.stringify(result), /api\.telegram\.org|xxxxxxxx/);
   }));
