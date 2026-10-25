@@ -64,3 +64,32 @@ test("rejects unsafe or invalid destination inputs without echoing them", () => 
     assert.throws(() => matchBrowserCredentials([record], input), /HTTPS origin/);
   assert.throws(() => matchBrowserCredentials([record], "https://example.com", {}), /Account/);
 });
+
+test("credential reuse matches metadata without conflating accounts or purposes", async () => {
+  const { sameCredentialIdentity, normalizeCredentialValue } =
+    await import("./credential-save-policy.ts");
+  const item = {
+    name: "Work key",
+    secret_type: "api_key",
+    email_address: "Owner@example.com",
+    username: "Account",
+    website: "https://EXAMPLE.com/account",
+  };
+  assert.equal(
+    sameCredentialIdentity(item, {
+      ...item,
+      name: " work KEY ",
+      email_address: "owner@example.com",
+      website: "https://example.com/keys",
+    }),
+    true,
+  );
+  assert.equal(sameCredentialIdentity(item, { ...item, username: "Other" }), false);
+  assert.equal(
+    sameCredentialIdentity(item, { ...item, website: "https://other.example.com" }),
+    false,
+  );
+  assert.equal(sameCredentialIdentity(item, { ...item, name: "Separate deploy key" }), false);
+  assert.equal(normalizeCredentialValue("  real password  ", "password"), "  real password  ");
+  assert.equal(normalizeCredentialValue("  api-key-value  ", "api_key"), "api-key-value");
+});

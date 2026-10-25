@@ -479,6 +479,11 @@ function SecretsPage() {
           <CardTitle className="text-base">Add login or credential</CardTitle>
           <CardDescription>
             Store a password or key with an optional authenticator setup key in one encrypted item.
+            Existing entries with the same name, type, account and website are checked before
+            creation. Vault storage checks formatting; it does not prove a credential works.
+            Validate API or MCP access through its supported Connections setup. Passwords use the
+            provider's sign-in flow. Reuse working credentials; this screen does not automatically
+            revoke or rotate them.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
