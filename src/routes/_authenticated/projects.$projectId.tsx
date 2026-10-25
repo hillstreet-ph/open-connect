@@ -204,9 +204,6 @@ function ProjectWorkspacePage() {
     return (
       <div className="mx-auto max-w-3xl px-4 py-10">
         <p className="text-sm text-muted-foreground">Project not found.</p>
-        <Button asChild className="mt-4" variant="outline">
-          <Link to="/projects">Back to projects</Link>
-        </Button>
       </div>
     );
   }

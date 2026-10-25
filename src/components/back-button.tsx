@@ -1,29 +1,22 @@
-import { useRouter, useRouterState } from "@tanstack/react-router";
+import { useRouter } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-/** Return to the parent surface, independent of tab/hash and external history. */
-export function BackButton({
-  fallback = "/dashboard",
-  fallbackHash,
-}: {
-  fallbackHash?: string | undefined;
-  fallback?: "/dashboard" | "/" | "/settings" | "/projects" | "/admin";
-}) {
+import type { BackTarget } from "@/lib/back-navigation";
+/** Parent navigation never depends on external browser history or OAuth redirects. */
+export function BackButton({ target }: { target: BackTarget | null }) {
   const router = useRouter();
-  const pathname = useRouterState({ select: (state) => state.location.pathname });
-  // Home surfaces never need a back control, even after internal navigation.
-  const path = pathname.replace(/\/+$/, "") || "/";
-  if (path === "/" || path === "/dashboard") return null;
+  if (!target) return null;
   return (
     <Button
       variant="ghost"
       size="sm"
-      aria-label="Go back"
-      title="Go back"
+      aria-label={target.label}
+      title={target.label}
       className="shrink-0 gap-2 px-2 sm:px-3"
       onClick={() => {
-        void router.navigate({ to: fallback, hash: fallbackHash ?? "" });
+        if (target.to === "/projects/$projectId")
+          void router.navigate({ to: target.to, params: target.params, search: {}, hash: "" });
+        else void router.navigate({ to: target.to, search: {}, hash: target.hash || "" });
       }}
     >
       <ArrowLeft className="size-4" aria-hidden="true" />
