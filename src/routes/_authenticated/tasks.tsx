@@ -46,7 +46,7 @@ function TasksPage() {
 
   const tasks = useQuery({
     queryKey: ["tasks", user?.id, filter],
-    queryFn: () => list({ data: { status: filter === "all" ? undefined : filter } }),
+    queryFn: () => list({ data: filter === "all" ? {} : { status: filter } }),
     enabled: !!user,
     refetchInterval: 30000,
   });
