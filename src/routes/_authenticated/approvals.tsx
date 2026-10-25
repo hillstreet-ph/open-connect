@@ -16,10 +16,7 @@ type Approval = {
 
 export const Route = createFileRoute("/_authenticated/approvals")({
   head: () => ({
-    meta: [
-      { title: "Approvals — Open-Connect" },
-      { name: "robots", content: "noindex" },
-    ],
+    meta: [{ title: "Approvals — Open-Connect" }, { name: "robots", content: "noindex" }],
   }),
   component: ApprovalsPage,
 });
@@ -46,9 +43,7 @@ function ApprovalsPage() {
   });
   const rows = approvals.data ?? [];
   const pending = rows.filter((a) => a.state === "pending" && Date.parse(a.expires_at) > now);
-  const history = rows.filter(
-    (a) => a.state !== "pending" || Date.parse(a.expires_at) <= now,
-  );
+  const history = rows.filter((a) => a.state !== "pending" || Date.parse(a.expires_at) <= now);
   const renderRow = (a: Approval) => {
     const expired = a.state === "pending" && Date.parse(a.expires_at) <= now;
     return (
