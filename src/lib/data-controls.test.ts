@@ -43,3 +43,11 @@ test("JSON credentials and private keys in text are redacted before saving", () 
   for (const secret of ["json-password", "json-token", "private-cookie"])
     assert.ok(!redacted.includes(secret));
 });
+
+test("portable exports remove PEM key blocks and URL credentials", () => {
+  const value =
+    "-----BEGIN PRIVATE KEY-----\nprivate-material\n-----END PRIVATE KEY----- https://test-user:test-password@example.com";
+  const cleaned = redactDataText(value);
+  for (const secret of ["private-material", "test-user", "test-password"])
+    assert.ok(!cleaned.includes(secret));
+});

@@ -3,6 +3,11 @@ import { redactContext } from "./agent-team.ts";
 /** Redact common credential forms before automatic capture or portable export. */
 export function redactDataText(value: string): string {
   return redactContext(value)
+    .replace(
+      /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----/g,
+      "[REDACTED PRIVATE KEY]",
+    )
+    .replace(/(https?:\/\/)[^\s/@]+:[^\s/@]+@/gi, "$1[REDACTED]@")
     .replace(/\b(?:sk-(?:oc-)?|oc_live_|sb_secret_|gh[pousr]_|hf_)[A-Za-z0-9_-]{8,}/g, "[REDACTED]")
     .replace(/\bBearer\s+[^\s"']+/gi, "Bearer [REDACTED]")
     .replace(
