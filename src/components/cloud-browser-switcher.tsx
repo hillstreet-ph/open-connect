@@ -222,12 +222,24 @@ export function CloudBrowserSwitcher({
           </h2>
           <p>
             {id === "browseract"
-              ? "The local BrowserAct CLI is installed, but its daemon did not pass verification in this environment. A saved broker connection is separate from a working cloud worker. Connect a verified browser MCP worker under Connected tools to use it here."
+              ? "BrowserAct requires a compatible browser worker. A saved account alone does not verify execution. Connect your authenticated worker under Connected tools, then discover its available controls."
               : "MultiOn SDK references are available, but a current working API and account have not been verified. Connect a verified provider MCP endpoint under Connected tools before enabling execution."}
           </p>
           <button type="button" className="underline" onClick={() => onSelect("external")}>
             Open connected browser tools
           </button>
+          <a
+            href={
+              id === "browseract"
+                ? "https://github.com/browser-act/skills/tree/main/browser-act"
+                : "https://docs.multion.ai/sdks"
+            }
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline"
+          >
+            Official source
+          </a>
           <p>No task has been started by selecting this provider.</p>
         </div>
       ))}
