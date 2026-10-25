@@ -42,7 +42,7 @@ export function parseCron(expression: string): string[] {
     if (
       !field.split(",").every((part) => {
         const [rangePart = "", stepText] = part.split("/");
-        if (!rangePart) return false;
+        if (!rangePart || !/^(\*|\d+(?:-\d+)?)(?:\/\d+)?$/.test(part)) return false;
         if (stepText !== undefined && (!/^\d+$/.test(stepText) || Number(stepText) < 1))
           return false;
         if (rangePart === "*") return true;
@@ -79,7 +79,7 @@ export function cronMatches(expression: string, date: Date, timezone = "UTC"): b
   const weekday = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(
     values["weekday"] ?? "",
   );
-  return fields.every((field, index) => {
+  const matches = fields.map((field, index) => {
     const value = [
       Number(values["minute"]),
       Number(values["hour"]),
@@ -90,6 +90,12 @@ export function cronMatches(expression: string, date: Date, timezone = "UTC"): b
     const [min, max] = FIELD_RANGES[index]!;
     return fieldMatches(field, value, min, max);
   });
+  // Standard cron uses AND if either day field starts with a wildcard, including steps.
+  const dayMatches =
+    !fields[2]!.startsWith("*") && !fields[4]!.startsWith("*")
+      ? matches[2] || matches[4]
+      : matches[2] && matches[4];
+  return Boolean(matches[0] && matches[1] && matches[3] && dayMatches);
 }
 
 /** Find the next matching minute, starting strictly after `after`. */

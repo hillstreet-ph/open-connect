@@ -9,6 +9,10 @@ import { createTask, listTasks, updateTaskStatus, type TaskStatus } from "@/lib/
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { WorkTemplatePicker } from "@/components/work-template-picker";
+import { statusClass, statusLabel, TASK_STATUSES } from "@/lib/operations";
+import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/hooks/use-auth";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -23,27 +27,42 @@ export const Route = createFileRoute("/_authenticated/tasks")({
   component: TasksPage,
 });
 
-const STATUSES: TaskStatus[] = ["todo", "in_progress", "blocked", "done", "cancelled"];
+const STATUSES = TASK_STATUSES;
 
 function TasksPage() {
   const qc = useQueryClient();
+  const { user } = useAuth();
   const list = useServerFn(listTasks);
   const create = useServerFn(createTask);
   const update = useServerFn(updateTaskStatus);
   const listProj = useServerFn(listProjects);
 
+  const [description, setDescription] = useState("");
+  const [dueAt, setDueAt] = useState("");
+  const [filter, setFilter] = useState("all");
   const [title, setTitle] = useState("");
   const [projectId, setProjectId] = useState("");
   const [priority, setPriority] = useState<"low" | "medium" | "high" | "urgent">("medium");
 
-  const tasks = useQuery({ queryKey: ["tasks"], queryFn: () => list({}) });
-  const projects = useQuery({ queryKey: ["projects"], queryFn: () => listProj({}) });
+  const tasks = useQuery({
+    queryKey: ["tasks", user?.id, filter],
+    queryFn: () => list({ data: filter === "all" ? {} : { status: filter } }),
+    enabled: !!user,
+    refetchInterval: 30000,
+  });
+  const projects = useQuery({
+    queryKey: ["projects", user?.id],
+    queryFn: () => listProj({}),
+    enabled: !!user,
+  });
 
   const createMutation = useMutation({
     mutationFn: () =>
       create({
         data: {
           title,
+          description,
+          dueAt: dueAt ? new Date(dueAt).toISOString() : undefined,
           projectId: projectId || undefined,
           priority,
         },
@@ -51,6 +70,8 @@ function TasksPage() {
     onSuccess: () => {
       toast.success("Task created");
       setTitle("");
+      setDescription("");
+      setDueAt("");
       void qc.invalidateQueries({ queryKey: ["tasks"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
@@ -74,6 +95,15 @@ function TasksPage() {
         </p>
       </div>
 
+      <WorkTemplatePicker
+        kind="task"
+        draft={{ title, description, priority }}
+        onSelect={(t) => {
+          setTitle(t.title);
+          setDescription(t.description);
+          setPriority(t.priority);
+        }}
+      />
       <Card className="shadow-panel">
         <CardHeader className="pb-2">
           <CardTitle className="text-base">New task</CardTitle>
@@ -85,7 +115,8 @@ function TasksPage() {
               id="task-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Wire Open WebUI to /v1"
+              maxLength={240}
+              placeholder="What needs to be done?"
             />
           </div>
           <div className="space-y-2">
@@ -118,6 +149,25 @@ function TasksPage() {
               <option value="urgent">Urgent</option>
             </select>
           </div>
+          <div className="space-y-2 sm:col-span-3">
+            <Label htmlFor="task-description">Details</Label>
+            <Textarea
+              id="task-description"
+              maxLength={8000}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Context, checklist, or expected result"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="task-due">Due date (your local time)</Label>
+            <Input
+              id="task-due"
+              type="datetime-local"
+              value={dueAt}
+              onChange={(e) => setDueAt(e.target.value)}
+            />
+          </div>
           <div className="sm:col-span-4">
             <Button
               disabled={!title.trim() || createMutation.isPending}
@@ -134,7 +184,28 @@ function TasksPage() {
         </CardContent>
       </Card>
 
-      <div className="space-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-base font-semibold">
+          Your tasks <span className="text-muted-foreground">· {tasks.data?.length ?? 0}</span>
+        </h2>
+        <select
+          aria-label="Filter tasks by status"
+          className="h-9 rounded-md border bg-background px-3 text-sm"
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+        >
+          <option value="all">All statuses</option>
+          {STATUSES.map((s) => (
+            <option key={s} value={s}>
+              {statusLabel(s)}
+            </option>
+          ))}
+        </select>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Showing up to 100 recently updated tasks for the selected status.
+      </p>
+      <div className="space-y-2" aria-live="polite">
         {tasks.isLoading ? <p role="status">Loading tasks…</p> : null}
         {tasks.isError ? (
           <p role="alert">
@@ -145,7 +216,9 @@ function TasksPage() {
           </p>
         ) : null}
         {!tasks.isLoading && !tasks.isError && (tasks.data ?? []).length === 0 ? (
-          <p className="text-sm text-muted-foreground">No tasks yet.</p>
+          <p className="text-sm text-muted-foreground">
+            {filter === "all" ? "No tasks yet." : "No tasks with this status."}
+          </p>
         ) : (
           tasks.data?.map((t) => (
             <Card key={t.id} className="p-4 shadow-panel">
@@ -157,15 +230,34 @@ function TasksPage() {
                     ) : (
                       <Circle className="size-4 text-muted-foreground" />
                     )}
-                    <p className="font-medium">{t.title}</p>
+                    <p className="min-w-0 [overflow-wrap:anywhere] font-medium">{t.title}</p>
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {(t as { projects?: { name?: string } }).projects?.name ?? "No project"} ·{" "}
-                    {t.priority} · {t.status}
+                  {t.description ? (
+                    <p className="mt-2 whitespace-pre-wrap break-words text-sm text-muted-foreground">
+                      {t.description}
+                    </p>
+                  ) : null}
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <Badge variant="outline" className={statusClass(t.status)}>
+                      {statusLabel(t.status)}
+                    </Badge>
+                    <Badge variant="outline" className={statusClass(t.priority)}>
+                      {statusLabel(t.priority)}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {projects.data?.find((p) => p.id === t.project_id)?.name ??
+                        (t.project_id ? "Project unavailable" : "No project")}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Updated {new Date(t.updated_at).toLocaleString()}
+                    {t.due_at ? ` · Due ${new Date(t.due_at).toLocaleString()}` : ""}
                   </p>
                 </div>
                 <select
                   className="h-9 rounded-md border border-input bg-background px-2 text-xs"
+                  aria-label={`Status for ${t.title}`}
+                  disabled={statusMutation.isPending}
                   value={t.status}
                   onChange={(e) =>
                     statusMutation.mutate({ id: t.id, status: e.target.value as TaskStatus })
@@ -173,7 +265,7 @@ function TasksPage() {
                 >
                   {STATUSES.map((s) => (
                     <option key={s} value={s}>
-                      {s}
+                      {statusLabel(s)}
                     </option>
                   ))}
                 </select>

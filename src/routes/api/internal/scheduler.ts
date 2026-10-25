@@ -129,7 +129,13 @@ async function processDueSchedules() {
         .update({
           state: "failed",
           updated_at: new Date().toISOString(),
-          evidence: { schedule_id: schedule.id, error: errorText },
+          evidence: {
+            schedule_id: schedule.id,
+            automation_id: schedule.automation_id,
+            executor: "model",
+            trigger: "schedule",
+            error: errorText,
+          },
         })
         .eq("id", runId)
         .eq("user_id", schedule.user_id);
@@ -163,7 +169,8 @@ async function processDueSchedules() {
         updated_at: new Date().toISOString(),
       })
       .eq("id", schedule.id)
-      .eq("lease_owner", leaseOwner);
+      .eq("lease_owner", leaseOwner)
+      .eq("status", "active");
     if (errorText) {
       await db
         .from("automations")

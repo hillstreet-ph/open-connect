@@ -65,3 +65,24 @@ test("never exposes transport errors and refuses alternative credential destinat
     /endpoint/,
   );
 });
+
+test("successful fallback returns the result after a failed provider", async () => {
+  const { firstAutomationResponse } = await import("./automation-model.server.ts");
+  const attempted: string[] = [];
+  const result = await firstAutomationResponse(
+    ["unavailable", "working", "unused"],
+    async (route) => {
+      attempted.push(route);
+      if (route === "unavailable") throw new Error("Provider unavailable");
+      return { text: "Saved result", model: route };
+    },
+  );
+  assert.deepEqual(attempted, ["unavailable", "working"]);
+  assert.deepEqual(result, { text: "Saved result", model: "working" });
+  await assert.rejects(
+    firstAutomationResponse(["a"], async () => {
+      throw new Error("Unavailable");
+    }),
+    /Unavailable/,
+  );
+});
