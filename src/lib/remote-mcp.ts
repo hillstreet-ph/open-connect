@@ -1,4 +1,13 @@
-export const REMOTE_MCP_PROVIDERS = ["custom_mcp", "apify_mcp"] as const;
+export const REMOTE_MCP_PROVIDERS = [
+  "custom_mcp",
+  "apify_mcp",
+  "custom_zeabur_mcp",
+  "custom_zeabur",
+  "custom_zeabur_bridge",
+  "custom_open_teleset",
+  "custom_open_system",
+  "custom_open_box",
+] as const;
 
 export type RemoteMcpProvider = (typeof REMOTE_MCP_PROVIDERS)[number];
 

@@ -41,8 +41,12 @@ describe("hosted MCP presets", () => {
     expect(EXECUTABLE_MCP_PROVIDERS).toContain("custom_mcp");
   });
 
-  test("unknown brokered providers stay non-executable", () => {
-    expect(isExecutableMcpProvider("custom_zeabur")).toBe(false);
+  test("brokered Zeabur and Open custom providers are executable, unknown ones stay non-executable", () => {
+    expect(isExecutableMcpProvider("custom_zeabur")).toBe(true);
+    expect(isExecutableMcpProvider("custom_zeabur_mcp")).toBe(true);
+    expect(isExecutableMcpProvider("custom_zeabur_bridge")).toBe(true);
+    expect(isExecutableMcpProvider("custom_open_teleset")).toBe(true);
+    expect(isExecutableMcpProvider("custom_unknown_thing")).toBe(false);
     expect(cloudKindsForProvider("custom_mcp")).toHaveLength(4);
   });
 });

@@ -1,4 +1,4 @@
-# Known Issues — open-connect.site
+# Known Issues â open-connect.site
 
 ## 1. Hub internal MCP connection to open-tgate-mcp returns HTTP 500
 
@@ -25,4 +25,10 @@ Severity: High (blocks hub-mediated tool listing; direct Composio registration o
 ## 2. Pending Composio registrations (not defects)
 - open-teleset.site: registered in Composio but tool sync rejected; retry sync or re-add with a fresh superuser token.
 - open-system.space and open-box.space: not yet registered; endpoints live and documented.
-- Zeabur MCP Bridge: root cause resolved by design — see hillstreet-ph/zeabur-mcp-bridge (local stdio server wrapped with an HTTP proxy); deploy the service, set ZEABUR_TOKEN, then register the service URL.
+- Zeabur MCP Bridge: root cause resolved by design â see hillstreet-ph/zeabur-mcp-bridge (local stdio server wrapped with an HTTP proxy); deploy the service, set ZEABUR_TOKEN, then register the service URL.
+
+## Resolution 2026-10-24: executable custom MCP providers
+
+The 500 errors from list_connection_tools, call_connection_tool, and configure_connection on internal custom MCP connections (open-tgate-mcp, Zeabur MCP, Zeabur Bridge, open-teleset) were traced to src/lib/remote-mcp.ts: REMOTE_MCP_PROVIDERS contained only custom_mcp and apify_mcp, so assertToolConnectionAccess threw "No executable adapter is configured for this connection" for every other custom provider, and the MCP route surfaced the unhandled error as HTTP 500.
+
+Fix: REMOTE_MCP_PROVIDERS now also includes custom_zeabur_mcp, custom_zeabur, custom_zeabur_bridge, custom_open_teleset, custom_open_system, and custom_open_box. Tool listing and invocation route through the standard remote MCP client using the connection metadata endpoint_url and the vault credential (Bearer by default). Deploying this change to the open-connect.site service resolves the internal 500s; connections additionally need a valid endpoint_url (including the /mcp path where applicable) and an active credential in their stored metadata.
