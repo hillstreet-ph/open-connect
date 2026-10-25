@@ -15,7 +15,12 @@ export function SiteHeader() {
   const inApp = Boolean(user) && isAppPath(pathname);
   const [open, setOpen] = useState(false);
   const desktopNav = inApp ? flatAppNav() : flatPublicNav();
-  const mobileCategories = inApp ? appCategories : publicCategories;
+  const mobileCategories = (inApp ? appCategories : publicCategories)
+    .map((category) => ({
+      ...category,
+      items: category.items.filter((item) => item.to !== "/auth" && item.to !== "/dashboard"),
+    }))
+    .filter((category) => category.items.length > 0);
 
   // Reset route-local drawer state before rendering the new route.
   const [previousPath, setPreviousPath] = useState(pathname);
