@@ -55,22 +55,24 @@ test("CDP attaches to a page, streams frames, sends input and closes cleanly", a
       const message = JSON.parse(text);
       sent.push(message);
       const result =
-        message.method === "Target.getTargets"
-          ? {
-              targetInfos: [
-                { type: "page", targetId: "page1", title: "Main", url: "https://example.com" },
-                {
-                  type: "page",
-                  targetId: "popup",
-                  title: "Sign in",
-                  url: "https://example.com/login",
-                },
-                { type: "worker", targetId: "worker" },
-              ],
-            }
-          : message.method === "Target.attachToTarget"
-            ? { sessionId: message.params.targetId === "popup" ? "popup-attached" : "attached" }
-            : {};
+        message.method === "Page.getNavigationHistory"
+          ? { currentIndex: 0, entries: [{ id: 1 }, { id: 2 }] }
+          : message.method === "Target.getTargets"
+            ? {
+                targetInfos: [
+                  { type: "page", targetId: "page1", title: "Main", url: "https://example.com" },
+                  {
+                    type: "page",
+                    targetId: "popup",
+                    title: "Sign in",
+                    url: "https://example.com/login",
+                  },
+                  { type: "worker", targetId: "worker" },
+                ],
+              }
+            : message.method === "Target.attachToTarget"
+              ? { sessionId: message.params.targetId === "popup" ? "popup-attached" : "attached" }
+              : {};
       queueMicrotask(() => this.onmessage?.({ data: JSON.stringify({ id: message.id, result }) }));
     }
     close() {
@@ -93,6 +95,11 @@ test("CDP attaches to a page, streams frames, sends input and closes cleanly", a
     }),
   });
   await browser.click(30, 40);
+  expect(await browser.history(-1)).toBe(false);
+  expect(await browser.history(1)).toBe(true);
+  await browser.reload();
+  expect(sent.some((m) => m.method === "Page.navigateToHistoryEntry")).toBe(true);
+  expect(sent.some((m) => m.method === "Page.reload")).toBe(true);
   await browser.text("fixture text");
   await browser.key("Enter", "Enter");
   expect(frames).toEqual([{ data: "fixture", width: 1000, height: 700 }]);

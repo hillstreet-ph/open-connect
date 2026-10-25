@@ -25,6 +25,7 @@ import { COMMAND_CENTER_HTML } from "@/lib/command-center";
 import {
   CLOUD_BROWSER_FRAME_DOMAINS,
   CLOUD_BROWSER_WIDGET_HTML,
+  CLOUD_BROWSER_LEGACY_WIDGET_URI,
   CLOUD_BROWSER_WIDGET_URI,
 } from "@/lib/cloud-browser-widget";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -1755,11 +1756,11 @@ export const Route = createFileRoute("/mcp")({
                     },
                   ],
                 }
-              : uri === CLOUD_BROWSER_WIDGET_URI
+              : uri === CLOUD_BROWSER_WIDGET_URI || uri === CLOUD_BROWSER_LEGACY_WIDGET_URI
                 ? {
                     contents: [
                       {
-                        uri: CLOUD_BROWSER_WIDGET_URI,
+                        uri,
                         mimeType: "text/html;profile=mcp-app",
                         text: CLOUD_BROWSER_WIDGET_HTML,
                         _meta: {

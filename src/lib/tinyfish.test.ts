@@ -1,3 +1,4 @@
+import { parse, type DefaultTreeAdapterTypes } from "parse5";
 import { describe, expect, test } from "bun:test";
 import {
   createTinyFishClient,
@@ -271,8 +272,76 @@ describe("cloud browser widget", () => {
     expect(CLOUD_BROWSER_WIDGET_HTML).toContain("cloud_browser_get_run");
     expect(CLOUD_BROWSER_WIDGET_HTML).toContain("[hidden]{display:none!important}");
     expect(CLOUD_BROWSER_WIDGET_HTML).toContain("SIGN-IN REQUIRED");
-    const script = CLOUD_BROWSER_WIDGET_HTML.match(/<script>([\s\S]*?)<\/script>/)![1]!;
+    const script = widgetScript();
     expect(() => new Function(script)).not.toThrow();
     expect(CLOUD_BROWSER_WIDGET_HTML).not.toContain("X-API-Key");
   });
 });
+
+test("finished legacy task cards collapse the preview and untrusted frame origins are rejected", async () => {
+  const { runInNewContext } = await import("node:vm");
+  class Element {
+    hidden = false;
+    className = "";
+    textContent = "";
+    src = "";
+    href = "";
+    disabled = false;
+    removeAttribute(name: string) {
+      if (name === "src") this.src = "";
+    }
+  }
+  const elements = new Map<string, Element>();
+  const get = (id: string) => {
+    if (!elements.has(id)) elements.set(id, new Element());
+    return elements.get(id)!;
+  };
+  const context = {
+    URL,
+    document: { getElementById: get },
+    window: {
+      openai: {
+        callTool: async () => ({}),
+        toolOutput: {
+          run_id: "fixture",
+          status: "COMPLETED",
+          result: { heading: "IANA" },
+          view_url: "javascript:alert(1)",
+        },
+      },
+      parent: { postMessage: () => {} },
+      addEventListener: () => {},
+    },
+    setTimeout: () => 1,
+    clearTimeout: () => {},
+  };
+  const script = widgetScript();
+  runInNewContext(script, context);
+  expect(get("frame").className).toContain("ended");
+  expect(get("out").hidden).toBe(false);
+  expect(get("out").textContent).toContain("IANA");
+  expect(get("open").hidden).toBe(true);
+  runInNewContext(
+    "render({run_id:'fixture',status:'RUNNING',streaming_url:'https://untrusted.example/view'})",
+    context,
+  );
+  expect(get("view").hidden).toBe(true);
+  expect(get("full").hidden).toBe(true);
+});
+
+function widgetScript(): string {
+  function visit(node: DefaultTreeAdapterTypes.Node): string | undefined {
+    if ("tagName" in node && node.tagName === "script")
+      return node.childNodes.map((child) => ("value" in child ? child.value : "")).join("");
+    if ("childNodes" in node) {
+      for (const child of node.childNodes) {
+        const script = visit(child);
+        if (script !== undefined) return script;
+      }
+    }
+    return undefined;
+  }
+  const script = visit(parse(CLOUD_BROWSER_WIDGET_HTML));
+  if (!script) throw new Error("Widget script missing");
+  return script;
+}

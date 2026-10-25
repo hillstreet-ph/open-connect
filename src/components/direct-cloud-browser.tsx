@@ -161,6 +161,27 @@ export function DirectCloudBrowser({
             <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
+                disabled={!ready || busy}
+                onClick={() => void controller.current?.history(-1).catch(report)}
+              >
+                Back
+              </Button>
+              <Button
+                variant="outline"
+                disabled={!ready || busy}
+                onClick={() => void controller.current?.history(1).catch(report)}
+              >
+                Forward
+              </Button>
+              <Button
+                variant="outline"
+                disabled={!ready || busy}
+                onClick={() => void controller.current?.reload().catch(report)}
+              >
+                Reload
+              </Button>
+              <Button
+                variant="outline"
                 disabled={busy}
                 onClick={() => {
                   setBusy(true);

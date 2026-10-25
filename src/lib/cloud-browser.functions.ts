@@ -75,7 +75,17 @@ export const startCloudBrowserRun = createServerFn({ method: "POST" })
     const { cloudBrowserClient } = await import("@/lib/tinyfish.server");
     const { normalizeStartRun, startRunWithLiveView } = await import("@/lib/tinyfish");
     const { client } = await cloudBrowserClient(context.userId);
-    return startRunWithLiveView(client, normalizeStartRun(data), { waitMs: 6000 });
+    const run = await startRunWithLiveView(client, normalizeStartRun(data), { waitMs: 6000 });
+    const { error } = await (context.supabase as import("@supabase/supabase-js").SupabaseClient)
+      .from("agent_chats")
+      .insert({
+        user_id: context.userId,
+        title: data.goal.trim().slice(0, 120),
+        mode: "browser",
+        browser_run_id: run.run_id,
+        messages: [{ role: "user", content: data.goal }],
+      });
+    return { ...run, history_saved: !error };
   });
 
 export const getCloudBrowserRun = createServerFn({ method: "GET" })

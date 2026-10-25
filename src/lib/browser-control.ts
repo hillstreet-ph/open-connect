@@ -162,6 +162,19 @@ export class BrowserController {
     const result = await this.command("Page.navigate", { url: browserNavigationUrl(url) });
     if (result["errorText"]) throw new Error(String(result["errorText"]));
   }
+  async history(direction: -1 | 1) {
+    const result = await this.command("Page.getNavigationHistory");
+    const entries = (Array.isArray(result["entries"]) ? result["entries"] : []) as Array<{
+      id: number;
+    }>;
+    const entry = entries[Number(result["currentIndex"]) + direction];
+    if (!entry) return false;
+    await this.command("Page.navigateToHistoryEntry", { entryId: entry.id });
+    return true;
+  }
+  async reload() {
+    await this.command("Page.reload");
+  }
   async click(x: number, y: number) {
     await this.command("Input.dispatchMouseEvent", {
       type: "mouseMoved",
