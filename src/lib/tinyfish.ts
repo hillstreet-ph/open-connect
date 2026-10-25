@@ -122,7 +122,7 @@ export function startRunBody(input: StartRunInput) {
     url: input.url,
     goal: input.goal,
     api_integration: "open-connect",
-    ...(input.use_profile ? { use_profile: true } : {}),
+    use_profile: input.use_profile !== false,
     ...(input.profile_id ? { profile_id: input.profile_id } : {}),
     ...(input.browser_profile ? { browser_profile: input.browser_profile } : {}),
     ...(input.proxy_country_code
@@ -266,9 +266,7 @@ export async function startRunWithLiveView(
       run = null;
     }
   } while (
-    run &&
-    !run.streaming_url &&
-    !TERMINAL_RUN_STATUSES.includes(run.status) &&
+    (!run || (!run.streaming_url && !TERMINAL_RUN_STATUSES.includes(run.status))) &&
     Date.now() < deadline
   );
   return run

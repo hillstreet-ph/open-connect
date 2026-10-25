@@ -97,7 +97,11 @@ export function CloudBrowserConsole({
           goal,
           use_profile: profileId !== "none",
           stealth,
-          ...(profileId !== "none" && profileId !== "default" ? { profile_id: profileId } : {}),
+          ...(profileId === "default" && overview.data?.connected && overview.data.defaultProfile
+            ? { profile_id: overview.data.defaultProfile.id }
+            : profileId !== "none" && profileId !== "default"
+              ? { profile_id: profileId }
+              : {}),
         },
       }) as Promise<RunView>,
     onSuccess: (data) => {
@@ -155,11 +159,36 @@ export function CloudBrowserConsole({
     );
   }
 
+  const selectedProfile =
+    profileId === "default"
+      ? data.defaultProfile
+      : data.profiles.find((profile) => profile.id === profileId);
   const active = run.data;
   const output = active ? renderResult(active.result) : null;
 
   return (
     <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+        <span>Browser connection · {data.connection.name}</span>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={overview.isFetching}
+          onClick={() => void overview.refetch()}
+        >
+          Refresh profiles and sessions
+        </Button>
+      </div>
+      {!data.profilesAvailable ? (
+        <p role="alert">
+          Saved profiles could not be loaded. Refresh or check your TinyFish connection before
+          relying on saved sign-ins.
+        </p>
+      ) : null}
+      {run.isError ? <p role="alert">Could not load this session: {run.error.message}</p> : null}
+      {cancel.isError ? (
+        <p role="alert">Could not stop this session: {cancel.error.message}</p>
+      ) : null}
       {runId ? (
         <Card className="overflow-hidden">
           <div className="flex items-center gap-2 border-b px-3 py-2">
@@ -271,6 +300,11 @@ export function CloudBrowserConsole({
                 ))}
               <option value="none">Fresh browser (no saved sign-ins)</option>
             </select>
+            <p className="text-xs text-muted-foreground">
+              {profileId === "none"
+                ? "This task starts without saved sign-ins."
+                : "Uses the selected TinyFish Browser Context Profile. Saved cookies may expire and require signing in again."}
+            </p>
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
@@ -296,15 +330,15 @@ export function CloudBrowserConsole({
         </Card>
       )}
 
-      {data.defaultProfile ? (
+      {selectedProfile && profileId !== "none" ? (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Saved sites · {data.defaultProfile.name}</CardTitle>
+            <CardTitle className="text-base">Saved profile · {selectedProfile.name}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            {data.defaultProfile.domains.length ? (
+            {profileId === "default" && data.defaultProfile?.domains.length ? (
               <ul className="divide-y rounded-md border">
-                {data.defaultProfile.domains.map((domain) => (
+                {data.defaultProfile!.domains.map((domain) => (
                   <li key={domain.domain} className="flex items-center justify-between px-3 py-2">
                     <span>{domain.domain}</span>
                     <span className="text-muted-foreground">{domain.cookies} cookies</span>
@@ -312,11 +346,13 @@ export function CloudBrowserConsole({
                 ))}
               </ul>
             ) : (
-              <p className="text-muted-foreground">No saved sites yet.</p>
+              <p className="text-muted-foreground">
+                Open the profile manager to inspect saved sites and sign-ins.
+              </p>
             )}
             <a
               className="inline-flex items-center gap-1 underline"
-              href={`https://agent.tinyfish.ai/profiles/${encodeURIComponent(data.defaultProfile.id)}`}
+              href={`https://agent.tinyfish.ai/profiles/${encodeURIComponent(selectedProfile.id)}`}
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -326,6 +362,11 @@ export function CloudBrowserConsole({
         </Card>
       ) : null}
 
+      <p className="text-xs text-muted-foreground">
+        Browser tasks support navigation, clicks and forms through your goal. The live view shows
+        the task in progress; it does not guarantee manual mouse or keyboard control. Raw CDP
+        sessions are separate and must be closed when finished.
+      </p>
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Recent sessions</CardTitle>

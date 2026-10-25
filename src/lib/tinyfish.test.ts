@@ -73,6 +73,18 @@ describe("normalizeStartRun", () => {
     });
   });
 
+  test("explicitly disables saved sign-ins for a fresh browser", () => {
+    expect(
+      startRunBody(
+        normalizeStartRun({
+          url: "https://example.com",
+          goal: "Check page",
+          use_profile: false,
+        }),
+      ).use_profile,
+    ).toBe(false);
+  });
+
   test("rejects credentials in URLs, bad schemes and empty goals", () => {
     expect(() => normalizeStartRun({ url: "https://u:p@a.com", goal: "x" })).toThrow();
     expect(() => normalizeStartRun({ url: "javascript:alert(1)", goal: "x" })).toThrow();
@@ -110,6 +122,29 @@ describe("TinyFish client", () => {
   test("rejects unsafe run ids before any request", () => {
     const client = createTinyFishClient(KEY, mockFetch({}).send);
     expect(() => client.getRun("../wallet")).toThrow();
+  });
+
+  test("retries a transient status failure without starting a second run", async () => {
+    let starts = 0;
+    let polls = 0;
+    const { send } = mockFetch({
+      "https://agent.tinyfish.ai/v1/automation/run-async": () => {
+        starts += 1;
+        return { run_id: "r1", error: null };
+      },
+      "https://agent.tinyfish.ai/v1/runs/r1": () => {
+        if (++polls === 1) throw new Error("Temporary network failure");
+        return run({ run_id: "r1", streaming_url: "https://live.tinyfish.io/stream" });
+      },
+    });
+    const result = await startRunWithLiveView(
+      createTinyFishClient(KEY, send),
+      normalizeStartRun({ url: "https://example.com", goal: "Check page" }),
+      { sleep: async () => {}, waitMs: 5000 },
+    );
+    expect(starts).toBe(1);
+    expect(polls).toBe(2);
+    expect(result.streaming_url).toBe("https://live.tinyfish.io/stream");
   });
 
   test("startRunWithLiveView returns the streaming URL once available", async () => {

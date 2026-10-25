@@ -27,7 +27,10 @@ export const getCloudBrowserOverview = createServerFn({ method: "GET" })
       throw error;
     }
     const [profiles, runs] = await Promise.all([
-      session.client.listProfiles().catch(() => ({ profiles: [] })),
+      session.client
+        .listProfiles()
+        .then((result) => ({ ...result, available: true }))
+        .catch(() => ({ profiles: [], available: false })),
       session.client.listRuns({ limit: 15 }),
     ]);
     const defaultProfile =
@@ -38,6 +41,7 @@ export const getCloudBrowserOverview = createServerFn({ method: "GET" })
     return {
       connected: true as const,
       connection: session.connection,
+      profilesAvailable: profiles.available,
       profiles: profiles.profiles.map((item) => ({
         id: item.id,
         name: item.name,
