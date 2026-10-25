@@ -50,7 +50,9 @@ export const refreshConnectorCapabilities = createServerFn({ method: "POST" })
       .update({ metadata: { ...row.metadata, capabilities: snapshot } })
       .eq("id", row.id)
       .eq("user_id", context.userId)
-      .eq("updated_at", row.updated_at);
+      .eq("updated_at", row.updated_at)
+      .select("id")
+      .single();
     if (saveError) throw new Error("Could not save discovered capabilities");
     return { ok: true };
   });

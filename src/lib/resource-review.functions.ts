@@ -152,10 +152,11 @@ export const inspectResourceBatch = createServerFn({ method: "POST" })
         results.push({ id, state: "failed", detail: "Resource not found" });
         continue;
       }
+      const config = (row.installation_config || {}) as Record<string, unknown>;
+      let inspected = false;
       try {
         let bytes: Uint8Array;
         let filename = row.package_filename || `${row.slug}.md`;
-        const config = (row.installation_config || {}) as Record<string, unknown>;
         if (row.package_path) {
           const payload = await supabaseAdmin.storage
             .from("resource-packages")
@@ -176,6 +177,7 @@ export const inspectResourceBatch = createServerFn({ method: "POST" })
           );
         }
         const scan = scanResourceBytes(filename, bytes);
+        inspected = true;
         const changed = Boolean(
           config["content_sha256"] && config["content_sha256"] !== scan.sha256,
         );
@@ -208,6 +210,30 @@ export const inspectResourceBatch = createServerFn({ method: "POST" })
             "Static checks complete; antivirus and execution testing still require review",
         });
       } catch (error) {
+        // Missing/unreadable packages must not keep an earlier publication approval.
+        // CAS protects any resource that changed while its bytes were being inspected.
+        if (!inspected) {
+          await supabaseAdmin
+            .from("resources")
+            .update({
+              verified: false,
+              published: false,
+              installation_config: {
+                ...config,
+                review_state: "blocked",
+                scan_report: {
+                  state: "blocked",
+                  antivirus: "not_run",
+                  findings: [
+                    "Package inspection failed: content is missing, inaccessible or exceeds the limit",
+                  ],
+                },
+              },
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", id)
+            .eq("updated_at", row.updated_at);
+        }
         results.push({
           id,
           state: "failed",
