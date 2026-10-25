@@ -4,7 +4,11 @@ import { normalizeConnectionSetup, type ConnectionSetupInput } from "@/lib/conne
 import { AI_GATEWAY_PROVIDERS } from "@/lib/ai-gateway-providers";
 import { hasRole, type AppRole } from "@/lib/rbac";
 import { planComposioSync } from "@/lib/composio-sync";
-import { connectionIdentity, connectionAuthType } from "@/lib/connection-presentation";
+import {
+  connectionIdentity,
+  connectionAuthType,
+  connectionEndpoint,
+} from "@/lib/connection-presentation";
 
 /**
  * Connection catalog — professional app plane.
@@ -405,13 +409,16 @@ export const listAppConnections = createServerFn({ method: "GET" })
         ...connection,
         identity: connectionIdentity(metadata),
         metadata:
-          connection.provider === "custom_mcp" &&
+          ["custom_mcp", "supabase", "databricks", "litellm"].includes(connection.provider) &&
           metadata &&
           typeof metadata === "object" &&
           !Array.isArray(metadata)
             ? {
                 endpoint_url:
-                  typeof metadata["endpoint_url"] === "string" ? metadata["endpoint_url"] : "",
+                  connection.provider === "custom_mcp" &&
+                  typeof metadata["endpoint_url"] === "string"
+                    ? metadata["endpoint_url"]
+                    : connectionEndpoint(metadata["endpoint_url"]),
                 auth_type: connectionAuthType(metadata),
               }
             : {},
