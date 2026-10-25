@@ -32,6 +32,14 @@ function origin(value: unknown) {
     return null;
   }
 }
+function safeEndpoint(value: unknown) {
+  try {
+    const url = new URL(String(value));
+    return origin(value) && !url.search && !url.hash ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
 function snapshot(row: RepairConnection) {
   return {
     id: row.id,
@@ -40,6 +48,7 @@ function snapshot(row: RepairConnection) {
     status: row.status,
     updated_at: row.updated_at,
     endpoint_origin: origin(row.metadata["endpoint_url"]),
+    endpoint_url: safeEndpoint(row.metadata["endpoint_url"]),
     auth_type: ["none", "bearer", "api_key", "personal_access_token"].includes(
       String(row.metadata["auth_type"]),
     )

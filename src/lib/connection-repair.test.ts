@@ -129,3 +129,12 @@ test("same-origin endpoint correction and official Apify origin are validated", 
   );
   await apify.run({ endpoint_url: "https://mcp.apify.com" });
 });
+
+test("inspection never returns credential-bearing URLs or metadata", async () => {
+  const f = fixture({
+    metadata: { endpoint_url: "https://trusted.example/mcp?token=private", auth_header: "private" },
+  });
+  const result = await f.run({ action: "inspect" });
+  assert.equal(result.connection.endpoint_url, null);
+  assert.doesNotMatch(JSON.stringify(result), /token=private|auth_header/);
+});
