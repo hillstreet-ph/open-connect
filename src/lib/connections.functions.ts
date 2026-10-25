@@ -817,6 +817,7 @@ export const configureAppConnection = createServerFn({ method: "POST" })
     }
     const existing = (existingConnections ?? []).find((item) => {
       if (data.connection_id) return item.id === data.connection_id;
+      if (data.new_account === true) return false;
       const metadata = item.metadata as Record<string, unknown> | null;
       return (
         metadata?.["source"] === "open-connect" &&
