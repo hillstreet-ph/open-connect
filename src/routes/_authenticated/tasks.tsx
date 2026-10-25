@@ -227,7 +227,7 @@ function TasksPage() {
                       ) : (
                         <Circle className="size-4 text-muted-foreground" />
                       )}
-                      <p className="break-words font-medium">{t.title}</p>
+                      <p className="min-w-0 [overflow-wrap:anywhere] font-medium">{t.title}</p>
                     </div>
                     {t.description ? (
                       <p className="mt-2 whitespace-pre-wrap break-words text-sm text-muted-foreground">

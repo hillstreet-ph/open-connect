@@ -152,6 +152,7 @@ function AutomationsPage() {
             <Label htmlFor="auto-name">Name</Label>
             <Input
               id="auto-name"
+              maxLength={240}
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Summarize a project brief"
@@ -291,9 +292,9 @@ function AutomationsPage() {
             <Card key={a.id} className="p-4 shadow-panel">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Zap className="size-4 text-primary" />
-                    <p className="font-medium">{a.name}</p>
+                    <p className="min-w-0 [overflow-wrap:anywhere] font-medium">{a.name}</p>
                     <Badge
                       variant={a.enabled ? "secondary" : "outline"}
                       className={statusClass(a.enabled ? "enabled" : "disabled")}

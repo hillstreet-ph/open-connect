@@ -111,7 +111,8 @@ export const createSchedule = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data, context }) => {
-    if (!data.name) throw new Error("Schedule name required");
+    if (!data.name || data.name.length > 240)
+      throw new Error("Enter a schedule name up to 240 characters.");
     if (!data.cronExpr && !data.runAt) throw new Error("Provide cron expression or run-at time");
     if (!data.automationId)
       throw new Error("Choose an enabled AI response automation to run on this schedule.");

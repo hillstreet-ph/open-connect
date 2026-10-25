@@ -135,6 +135,7 @@ function SchedulePage() {
             <Label htmlFor="sched-name">Name</Label>
             <Input
               id="sched-name"
+              maxLength={240}
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Hourly connection health"
@@ -262,12 +263,12 @@ function SchedulePage() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="break-words font-medium">{s.name}</p>
+                    <p className="min-w-0 [overflow-wrap:anywhere] font-medium">{s.name}</p>
                     <Badge variant="outline" className={statusClass(s.status)}>
                       {statusLabel(s.status)}
                     </Badge>
                   </div>
-                  <p className="mt-1 font-mono text-xs text-muted-foreground">
+                  <p className="mt-1 break-words font-mono text-xs text-muted-foreground">
                     {s.cron_expr ?? (s.run_at ? new Date(s.run_at).toLocaleString() : "—")} ·{" "}
                     {s.timezone}
                     <br />
