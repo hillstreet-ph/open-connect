@@ -177,3 +177,69 @@ test("polling continues after task completion until browser cleanup is confirmed
   expect(providerPollInterval({ terminal: true, cleanupConfirmed: true })).toBe(false);
   expect(providerPollInterval(undefined, true)).toBe(false);
 });
+
+test("provider selection rejects unknown URL values and isolates provider/account references", async () => {
+  const { browserProvider, providerStorageKey } = await import("./browser-provider-selection");
+  expect(browserProvider("browserbase")).toBe("browserbase");
+  expect(browserProvider("javascript:alert(1)")).toBe("tinyfish");
+  expect(providerStorageKey("owner", "browser_use")).not.toBe(
+    providerStorageKey("owner", "browserbase"),
+  );
+  expect(providerStorageKey("owner", "browser_use")).not.toBe(
+    providerStorageKey("other", "browser_use"),
+  );
+});
+test("saved broker connections are not incorrectly marked as native SDK credentials", async () => {
+  const { providerConnectionStatus } = await import("./browser-provider-selection");
+  const rows = [
+    {
+      provider: "browser_use",
+      status: "connected",
+      credential_reference: "composio://connected-account/example",
+    },
+  ];
+  expect(providerConnectionStatus("browser_use", rows)).toEqual({
+    configured: false,
+    native: false,
+    brokered: true,
+  });
+  expect(
+    providerConnectionStatus("browserbase", [
+      {
+        provider: "browserbase",
+        status: "configured_unverified",
+        credential_reference: "credential://fixture",
+      },
+    ]).configured,
+  ).toBe(false);
+  expect(providerConnectionStatus("browserbase", [], true).configured).toBe(true);
+});
+test("legacy session recovery moves only its provider and cannot resurrect after clearing", async () => {
+  const { restoreProviderReference, providerStorageKey } =
+    await import("./browser-provider-selection");
+  const values = new Map([
+    ["oc-browser-provider:owner", JSON.stringify({ provider: "browser_use", id: "fixture" })],
+  ]);
+  const storage = {
+    getItem: (key: string) => values.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      values.set(key, value);
+    },
+    removeItem: (key: string) => {
+      values.delete(key);
+    },
+  };
+  expect(restoreProviderReference(storage, "owner", "browserbase")).toBeNull();
+  expect(values.has("oc-browser-provider:owner")).toBe(true);
+  expect(
+    restoreProviderReference<{ provider: string; id: string }>(storage, "owner", "browser_use"),
+  ).toEqual({
+    provider: "browser_use",
+    id: "fixture",
+  });
+  expect(values.has("oc-browser-provider:owner")).toBe(false);
+  storage.removeItem(providerStorageKey("owner", "browser_use"));
+  expect(
+    restoreProviderReference<{ provider: string; id: string }>(storage, "owner", "browser_use"),
+  ).toBeNull();
+});
