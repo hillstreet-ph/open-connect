@@ -4,6 +4,7 @@ import { normalizeConnectionSetup, type ConnectionSetupInput } from "@/lib/conne
 import { AI_GATEWAY_PROVIDERS } from "@/lib/ai-gateway-providers";
 import { hasRole, type AppRole } from "@/lib/rbac";
 import { planComposioSync } from "@/lib/composio-sync";
+import { connectionIdentity } from "@/lib/connection-presentation";
 
 /**
  * Connection catalog — professional app plane.
@@ -402,6 +403,7 @@ export const listAppConnections = createServerFn({ method: "GET" })
       );
       return {
         ...connection,
+        identity: connectionIdentity(metadata),
         metadata:
           connection.provider === "custom_mcp" &&
           metadata &&
@@ -749,6 +751,12 @@ export const configureAppConnection = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: ConnectionSetupInput) => input)
   .handler(async ({ data, context }) => {
+    if (
+      data.connection_id &&
+      !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(data.connection_id)
+    ) {
+      throw new Error("Invalid connection reference.");
+    }
     const providerId = data.provider.trim().toLowerCase();
     const gatewayProvider = AI_GATEWAY_PROVIDERS.find((item) => item.id === providerId);
     const app =
@@ -792,13 +800,14 @@ export const configureAppConnection = createServerFn({ method: "POST" })
       secretId = String((secret as { id?: string } | null)?.id ?? "");
       if (!secretId) throw new Error("Credential vault did not return a reference");
     }
-    const { data: existingConnections, error: existingError } = await context.supabase
+    let existingQuery = context.supabase
       .from("app_connections")
       .select("id,provider_account_id,credential_reference,metadata")
       .eq("user_id", context.userId)
       .eq("provider", setup.provider)
-      .order("created_at", { ascending: false })
-      .limit(25);
+      .order("created_at", { ascending: false });
+    if (data.connection_id) existingQuery = existingQuery.eq("id", data.connection_id);
+    const { data: existingConnections, error: existingError } = await existingQuery;
     if (existingError) {
       if (secretId)
         await context.supabase.rpc("delete_credential_secret", {
@@ -807,12 +816,17 @@ export const configureAppConnection = createServerFn({ method: "POST" })
       throw new Error("Could not check your existing provider connection.");
     }
     const existing = (existingConnections ?? []).find((item) => {
+      if (data.connection_id) return item.id === data.connection_id;
       const metadata = item.metadata as Record<string, unknown> | null;
       return (
         metadata?.["source"] === "open-connect" &&
         metadata?.["account_label"] === setup.accountLabel
       );
     });
+    if (data.connection_id && !existing) {
+      if (secretId) await context.supabase.rpc("delete_credential_secret", { p_id: secretId });
+      throw new Error("Connection not found for this account and provider.");
+    }
     const accountId = existing?.provider_account_id ?? `credential-${crypto.randomUUID()}`;
     const record = {
       user_id: context.userId,
