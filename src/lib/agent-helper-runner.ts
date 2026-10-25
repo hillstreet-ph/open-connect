@@ -20,7 +20,7 @@ const WRITES = new Set([
   "create_manual_ai_automation",
 ]);
 type Reply = {
-  message?: Record<string, unknown>;
+  message?: Record<string, unknown> | undefined;
   content: string;
   toolCalls: AgentHelperToolCall[];
 };
