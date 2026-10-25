@@ -1,0 +1,203 @@
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { RefreshCw, Unplug, Wrench, UserRound } from "lucide-react";
+import { getConnectionDetails } from "@/lib/connection-details.functions";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Link } from "@tanstack/react-router";
+
+type Account = {
+  id: string;
+  provider: string;
+  display_name: string;
+  status: string;
+  provider_account_id: string | null;
+  scopes: string[] | null;
+  identity: { label: string; login: string; name: string; email: string };
+};
+
+export function ConnectionAccountCard({
+  account,
+  statusLabel,
+  busy,
+  reconnectReady,
+  onReconnect,
+  onDisconnect,
+}: {
+  account: Account;
+  statusLabel: string;
+  busy: boolean;
+  reconnectReady: boolean;
+  onReconnect: () => void;
+  onDisconnect: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [search, setSearch] = useState("");
+  const detailsFn = useServerFn(getConnectionDetails);
+  const details = useQuery({
+    queryKey: ["connection-details", account.id],
+    queryFn: () => detailsFn({ data: { connectionId: account.id } }),
+    enabled: expanded,
+    staleTime: 60_000,
+  });
+  const identity = details.data?.identity ?? account.identity;
+  const title = identity.name || identity.login || identity.email || identity.label;
+  const tools = (details.data?.tools ?? []).filter((tool) =>
+    `${tool.name} ${tool.description}`.toLowerCase().includes(search.toLowerCase()),
+  );
+  return (
+    <article className="min-w-0 space-y-4 rounded-xl border bg-card p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="flex items-center gap-2 font-medium">
+            <UserRound className="size-4 shrink-0" aria-hidden="true" />
+            <span className="break-words">{title || "Account identity unavailable"}</span>
+          </p>
+          {identity.email && identity.email !== title ? (
+            <p className="mt-1 break-all text-sm text-muted-foreground">{identity.email}</p>
+          ) : null}
+          {identity.login && identity.login !== title ? (
+            <p className="text-sm text-muted-foreground">@{identity.login}</p>
+          ) : null}
+          {identity.label && identity.label !== title ? (
+            <p className="text-sm text-muted-foreground">{identity.label}</p>
+          ) : null}
+          <p className="mt-1 break-all text-xs text-muted-foreground">
+            Account reference: {account.provider_account_id || account.id}
+          </p>
+        </div>
+        <Badge variant="outline">{statusLabel}</Badge>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={busy || !reconnectReady}
+          onClick={onReconnect}
+        >
+          <RefreshCw className="size-4" aria-hidden="true" />
+          Reconnect
+        </Button>
+        <Button size="sm" variant="outline" disabled={busy} onClick={onDisconnect}>
+          <Unplug className="size-4" aria-hidden="true" />
+          {account.status === "pending" ? "Cancel verification" : "Disconnect"}
+        </Button>
+        <Button
+          size="sm"
+          variant="secondary"
+          aria-expanded={expanded}
+          aria-controls={`capabilities-${account.id}`}
+          onClick={() => setExpanded(!expanded)}
+        >
+          <Wrench className="size-4" aria-hidden="true" />
+          {expanded ? "Hide details" : "Tools, skills & capabilities"}
+        </Button>
+      </div>
+      {expanded ? (
+        <div id={`capabilities-${account.id}`} className="min-w-0 space-y-3 border-t pt-4">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-medium">Account capabilities</p>
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={details.isFetching}
+              onClick={() => void details.refetch()}
+            >
+              Refresh
+            </Button>
+          </div>
+          {details.isPending ? (
+            <p role="status" className="text-sm">
+              Loading account details…
+            </p>
+          ) : null}
+          {details.isError ? (
+            <p role="alert" className="text-sm text-destructive">
+              Could not load account details. Refresh to try again.
+            </p>
+          ) : null}
+          {details.data?.identityNotice ? (
+            <p className="text-xs text-muted-foreground">{details.data.identityNotice}</p>
+          ) : null}
+          <Tabs defaultValue="tools" className="min-w-0">
+            <TabsList className="flex h-auto flex-wrap justify-start">
+              <TabsTrigger value="tools">Tools ({details.data?.tools.length ?? 0})</TabsTrigger>
+              <TabsTrigger value="skills">Skills ({details.data?.skills.length ?? 0})</TabsTrigger>
+              <TabsTrigger value="permissions">Permissions</TabsTrigger>
+            </TabsList>
+            <TabsContent value="tools" className="space-y-3">
+              <Input
+                aria-label="Search connector tools"
+                placeholder="Search tools…"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+              {details.data?.toolsNotice ? (
+                <p className="text-xs text-muted-foreground">{details.data.toolsNotice}</p>
+              ) : null}
+              <div className="max-h-72 space-y-2 overflow-auto">
+                {tools.map((tool) => (
+                  <div key={tool.name} className="rounded-lg border p-3">
+                    <p className="break-all text-sm font-medium">{tool.name}</p>
+                    <p className="mt-1 whitespace-pre-wrap break-words text-xs text-muted-foreground">
+                      {tool.description}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              {details.isSuccess && !tools.length ? (
+                <p className="text-sm text-muted-foreground">
+                  No tools to display{search ? " for this search" : ""}.
+                </p>
+              ) : null}
+            </TabsContent>
+            <TabsContent value="skills" className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Related skills saved in your workspace. Skills guide workflows; they do not grant
+                account access.
+              </p>
+              {details.data?.skills.map((skill) => (
+                <div key={skill.id} className="rounded-lg border p-3">
+                  <p className="text-sm font-medium">{skill.name}</p>
+                  <p className="text-xs text-muted-foreground">{skill.description}</p>
+                  <Badge variant="outline">{skill.verified ? "Verified" : "Unverified"}</Badge>
+                </div>
+              ))}
+              {details.isSuccess && !details.data.skills.length ? (
+                <p className="text-sm text-muted-foreground">No related saved skills.</p>
+              ) : null}
+              <Button asChild size="sm" variant="outline">
+                <Link to="/library">Open resources</Link>
+              </Button>
+            </TabsContent>
+            <TabsContent value="permissions" className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Granted scopes reported for this connection.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {account.scopes?.map((scope) => (
+                  <Badge
+                    key={scope}
+                    variant="outline"
+                    className="max-w-full whitespace-normal break-all"
+                  >
+                    {scope}
+                  </Badge>
+                ))}
+              </div>
+              {!account.scopes?.length ? (
+                <p className="text-sm text-muted-foreground">
+                  The provider has not reported scopes. Tool listings do not imply permission to run
+                  them.
+                </p>
+              ) : null}
+            </TabsContent>
+          </Tabs>
+        </div>
+      ) : null}
+    </article>
+  );
+}
