@@ -28,7 +28,9 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ControlApprovalsPanel } from "@/components/control-approvals-panel";
 import { DataControlsPanel } from "@/components/data-controls-panel";
+import { settingsTab } from "@/lib/settings-navigation";
 import { profileDraftValue } from "@/lib/react-compat";
 import { useRoles } from "@/hooks/use-roles";
 
@@ -50,6 +52,7 @@ const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 function SettingsPage() {
   const queryClient = useQueryClient();
   const location = useLocation();
+  const navigate = Route.useNavigate();
   const { isAdmin } = useRoles();
   const fileRef = useRef<HTMLInputElement>(null);
   const [nameDraft, setNameDraft] = useState<{ userId: string; value: string } | null>(null);
@@ -189,18 +192,28 @@ function SettingsPage() {
         Manage your profile, workspace access, connected apps, data, and security.
       </p>
 
-      <Tabs defaultValue={location.hash === "data" ? "data" : "profile"} className="mt-8">
+      <Tabs
+        value={settingsTab(location.hash)}
+        onValueChange={(value) => {
+          void navigate({ hash: value, replace: true });
+        }}
+        className="mt-8"
+      >
         <TabsList
           aria-label="Settings categories"
           className="h-auto w-full flex-wrap justify-start gap-2"
         >
           <TabsTrigger value="profile">Profile</TabsTrigger>
+          <TabsTrigger value="approvals">Approval requests</TabsTrigger>
           <TabsTrigger value="security">Security & login</TabsTrigger>
           <TabsTrigger value="workspace">Workspace</TabsTrigger>
           <TabsTrigger value="apps">Apps & system</TabsTrigger>
           <TabsTrigger value="data">Data Controls</TabsTrigger>
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
         </TabsList>
+        <TabsContent value="approvals">
+          <ControlApprovalsPanel />
+        </TabsContent>
         <TabsContent value="profile">
           <Card className="shadow-panel">
             <CardHeader>

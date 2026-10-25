@@ -1,6 +1,6 @@
 import { BackButton } from "@/components/back-button";
 import type { ReactNode } from "react";
-import { useRouterState } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { useRoles } from "@/hooks/use-roles";
@@ -30,7 +30,10 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
         <SidebarInset className="min-h-0 min-w-0 overflow-hidden">
           <header className="relative z-20 flex min-h-14 shrink-0 items-center gap-2 border-b border-border/80 bg-background px-3 sm:gap-3 sm:px-4">
             <SidebarTrigger className="-ml-1" />
-            <BackButton fallback={backTarget} />
+            <BackButton
+              fallback={backTarget}
+              fallbackHash={pathname === "/integrations" ? "integrations" : undefined}
+            />
             <div className="min-w-0 flex-1">
               <p className="truncate font-display text-sm font-semibold tracking-tight sm:text-base">
                 {title}
@@ -41,6 +44,14 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
                 {roleLabel(primary)}
               </Badge>
             </div>
+            <Link
+              to="/settings"
+              hash="approvals"
+              className="shrink-0 rounded-md px-2 py-2 text-xs font-medium hover:bg-accent focus-visible:outline focus-visible:outline-2"
+              title="Review your approval requests"
+            >
+              Approvals
+            </Link>
             <WorkspaceSearch />
           </header>
           <div className="min-h-0 min-w-0 flex-1 overflow-auto overscroll-contain pb-[max(5rem,env(safe-area-inset-bottom))]">
