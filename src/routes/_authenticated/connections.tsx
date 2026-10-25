@@ -114,6 +114,7 @@ function ConnectionsPage() {
           : "No authorized accounts match your Open-Connect user. Connect an app to authorize it.",
       );
       void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
+      void queryClient.invalidateQueries({ queryKey: ["connection-details"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Composio sync failed"),
   });
@@ -128,6 +129,7 @@ function ConnectionsPage() {
       }
       toast.success("Connection saved securely");
       void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
+      void queryClient.invalidateQueries({ queryKey: ["connection-details"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Connect failed"),
   });
@@ -137,6 +139,7 @@ function ConnectionsPage() {
     onSuccess: () => {
       toast.success("Connection removed");
       void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
+      void queryClient.invalidateQueries({ queryKey: ["connection-details"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not remove connection"),
   });
@@ -173,6 +176,7 @@ function ConnectionsPage() {
       setEndpointUrl("");
       setApiKey("");
       void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
+      void queryClient.invalidateQueries({ queryKey: ["connection-details"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Connection failed"),
   });

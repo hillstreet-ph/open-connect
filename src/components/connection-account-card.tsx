@@ -44,9 +44,9 @@ export function ConnectionAccountCard({
   const [search, setSearch] = useState("");
   const detailsFn = useServerFn(getConnectionDetails);
   const details = useQuery({
-    queryKey: ["connection-details", account.id],
+    queryKey: ["connection-details", account.id, account.status],
     queryFn: () => detailsFn({ data: { connectionId: account.id } }),
-    enabled: expanded,
+    enabled: expanded || account.status === "connected",
     staleTime: 60_000,
   });
   const identity = details.data?.identity ?? account.identity;
@@ -153,6 +153,9 @@ export function ConnectionAccountCard({
             <TabsList className="flex h-auto flex-wrap justify-start">
               <TabsTrigger value="tools">Tools ({details.data?.tools.length ?? 0})</TabsTrigger>
               <TabsTrigger value="skills">Skills ({details.data?.skills.length ?? 0})</TabsTrigger>
+              <TabsTrigger value="toolkits">
+                Toolkits ({details.data?.toolkits.length ?? 0})
+              </TabsTrigger>
               <TabsTrigger value="permissions">Permissions</TabsTrigger>
             </TabsList>
             <TabsContent value="tools" className="space-y-3">
@@ -199,6 +202,23 @@ export function ConnectionAccountCard({
               <Button asChild size="sm" variant="outline">
                 <Link to="/library">Open resources</Link>
               </Button>
+            </TabsContent>
+            <TabsContent value="toolkits" className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Related toolkits already in your private library. Discovery does not install,
+                publish, or grant permissions.
+              </p>
+              {details.data?.toolkits.map((toolkit) => (
+                <div key={toolkit.id} className="rounded-lg border p-3">
+                  <p className="text-sm font-medium">{toolkit.name}</p>
+                  <p className="text-xs text-muted-foreground">{toolkit.description}</p>
+                </div>
+              ))}
+              {details.isSuccess && !details.data?.toolkits.length ? (
+                <p className="text-sm text-muted-foreground">
+                  No related toolkits in your library.
+                </p>
+              ) : null}
             </TabsContent>
             <TabsContent value="permissions" className="space-y-3">
               <p className="text-xs text-muted-foreground">
