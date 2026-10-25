@@ -3,6 +3,7 @@ import { beforeEach, expect, mock, test } from "bun:test";
 
 let post: (args: { request: Request }) => Promise<Response>;
 let authenticated = true;
+let modelCatalogReads = 0;
 let roles = ["admin"];
 let scopes = ["mcp:connect", "control:write"];
 let keyBoundary: Record<string, string> = {};
@@ -107,6 +108,16 @@ mock.module("@tanstack/react-router", () => ({
   },
 }));
 mock.module("@/lib/gateway.server", () => ({
+  resolveUserUpstreams: async (userId: string) => {
+    expect(userId).toBe("fixture-user");
+    modelCatalogReads++;
+    return [];
+  },
+  fetchMergedModelCatalog: async () => ({
+    ids: ["model-one", "model-two"],
+    upstreams: [],
+    providers: [],
+  }),
   authenticateKey: async () =>
     authenticated ? { userId: "fixture-user", scopes, ...keyBoundary } : null,
   hasScope: (_key: unknown, scope: string) => scopes.includes(scope),
@@ -156,6 +167,9 @@ mock.module("@/integrations/supabase/client.server", () => ({
         const read = { fields: "", filters: {} as Record<string, unknown> };
         credentialReads.push(read);
         const query = {
+          then(resolve: (value: unknown) => unknown) {
+            return Promise.resolve({ count: 7, error: null, data: null }).then(resolve);
+          },
           select(fields: string) {
             read.fields = fields;
             return this;
@@ -351,6 +365,7 @@ mock.module("@/lib/oauth-client.server", () => ({
 await import("../routes/mcp");
 
 beforeEach(() => {
+  modelCatalogReads = 0;
   credentialReads.length = 0;
   autoPreferences.clear();
   authenticated = true;
@@ -1377,4 +1392,23 @@ test("inspection includes all owned pages while masking credential bindings", as
   expect(
     (await call("sync_composio_accounts", { account_ids: ["account"], confirm: true })).status,
   ).toBe(403);
+});
+
+test("status counts owned credential metadata and model catalog only with personal grants", async () => {
+  scopes = ["mcp:connect", "secrets:read", "models:read"];
+  let response = await call("open_connect_status", {});
+  let data = (await response.json()).result.structuredContent;
+  expect(data.planes.credentials.count).toBe(7);
+  expect(data.planes.models.count).toBe(2);
+  expect(credentialReads).toEqual([{ fields: "id", filters: { user_id: "fixture-user" } }]);
+  expect(modelCatalogReads).toBe(1);
+  credentialReads.length = 0;
+  modelCatalogReads = 0;
+  keyBoundary = { projectId: "project-a" };
+  response = await call("open_connect_status", {});
+  data = (await response.json()).result.structuredContent;
+  expect(data.planes.credentials.count).toBeNull();
+  expect(data.planes.models.count).toBeNull();
+  expect(credentialReads).toEqual([]);
+  expect(modelCatalogReads).toBe(0);
 });

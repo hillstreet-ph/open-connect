@@ -141,7 +141,7 @@ test("initializes the bridge, preserves zero counts, and renders values as text"
   assert.equal(w.grid.children[1]!.children[1]!.textContent, "0");
   assert.deepEqual(
     w.grid.children.map((c) => c.children[0]!.textContent),
-    ["Resources", "Connections", "Credentials", "AI Gateway"],
+    ["Resources", "Connections", "Credentials", "Models"],
   );
   assert.equal(w.grid.children[2]!.children[1]!.textContent, "Not granted");
   w.send({ content: [{ type: "text", text: "bad JSON" }] });
@@ -344,4 +344,39 @@ test("returned error envelopes never appear as an empty capability match", async
   w.reply(w.requests.at(-1)!.id, { toolOutput: { error: { message: "Unknown tool" } } });
   await task;
   assert.match(w.results.textContent, /outdated Open-Connect tool list/);
+});
+
+test("credential and model cards show numeric totals, preserve zero, and distinguish unavailable reads", () => {
+  const w = widget();
+  w.send({
+    structuredContent: {
+      ...status,
+      planes: {
+        ...status.planes,
+        credentials: { available: true, count: 42 },
+        models: { available: true, count: 712 },
+      },
+    },
+  });
+  assert.equal(w.grid.children[2]!.children[1]!.textContent, "42");
+  assert.equal(w.grid.children[3]!.children[1]!.textContent, "712");
+  w.send({
+    structuredContent: {
+      ...status,
+      planes: { credentials: { available: true, count: 0 }, models: { available: true, count: 0 } },
+    },
+  });
+  assert.equal(w.grid.children[2]!.children[1]!.textContent, "0");
+  assert.equal(w.grid.children[3]!.children[1]!.textContent, "0");
+  w.send({
+    structuredContent: {
+      ...status,
+      planes: {
+        credentials: { available: true, count: null },
+        models: { available: false, count: null },
+      },
+    },
+  });
+  assert.equal(w.grid.children[2]!.children[1]!.textContent, "Unavailable");
+  assert.equal(w.grid.children[3]!.children[1]!.textContent, "Not granted");
 });
