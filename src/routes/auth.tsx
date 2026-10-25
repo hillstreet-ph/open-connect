@@ -80,7 +80,7 @@ function AuthPage() {
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/auth`,
+            emailRedirectTo: `${window.location.origin}/auth?returnTo=${encodeURIComponent(returnTo)}`,
             data: { display_name: displayName || email.split("@")[0] },
           },
         });
@@ -89,7 +89,7 @@ function AuthPage() {
         setMode("signin");
       } else if (mode === "reset") {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/auth?mode=update_password`,
+          redirectTo: `${window.location.origin}/auth?mode=update_password&returnTo=${encodeURIComponent(returnTo)}`,
         });
         if (error) throw error;
         toast.success("Password reset email sent. Open the link to set a new password.");
