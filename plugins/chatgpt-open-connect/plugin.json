@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "dev-6ac2916bd63881919b6201907c16ffc0",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "open-connect",
   "author": {
     "name": "App developer"
