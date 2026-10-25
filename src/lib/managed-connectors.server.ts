@@ -246,7 +246,30 @@ export async function getManagedConnection(_provider: string, connectedAccountId
     id?: string;
     status?: string;
     toolkit?: { slug?: string };
+    data?: Record<string, unknown>;
   }>(`/connected_accounts/${encodeURIComponent(connectedAccountId)}`, apiKey);
+}
+
+/** Catalog discovery only. Listing tools does not grant or execute them. */
+export async function listManagedTools(provider: string) {
+  const apiKey = composioApiKey();
+  if (!apiKey) throw new Error("Connector tool discovery is not configured.");
+  const query = new URLSearchParams({
+    toolkit_slug: provider,
+    limit: "100",
+    include_deprecated: "false",
+  });
+  const page = await composioRequest<{
+    items?: Array<{ slug: string; name?: string; description?: string }>;
+    next_cursor?: string | null;
+  }>(`/tools?${query}`, apiKey);
+  return {
+    tools: (page.items ?? []).map((tool) => ({
+      name: tool.slug,
+      description: tool.description ?? tool.name ?? "",
+    })),
+    hasMore: Boolean(page.next_cursor),
+  };
 }
 
 export async function deleteManagedConnection(_provider: string, connectedAccountId: string) {
