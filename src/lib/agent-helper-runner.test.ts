@@ -7,7 +7,7 @@ const call = (name: string) => ({
   toolCalls: [{ id: name, type: "function" as const, function: { name, arguments: "{}" } }],
 });
 const done = { content: "Done", toolCalls: [] };
-test("can look up a project before writing and disables tools after the write", async () => {
+test("can look up a project before writing and stops after the write", async () => {
   const executed: string[] = [];
   const tools: boolean[] = [];
   const result = await runAgentHelper({
@@ -23,7 +23,7 @@ test("can look up a project before writing and disables tools after the write", 
     },
   });
   assert.deepEqual(executed, ["list_projects", "create_task"]);
-  assert.deepEqual(tools, [true, false]);
+  assert.deepEqual(tools, [true]);
   assert.equal(result.action?.name, "create_task");
 });
 test("never executes a second write even if the model asks for one", async () => {
@@ -102,4 +102,20 @@ test("retrieves scoped context before a workspace action", async () => {
     requestNext: async () => done,
   });
   assert.deepEqual(executed, ["search_saved_context"]);
+});
+
+test("completed writes use their receipt without a model success rewrite", async () => {
+  let requests = 0;
+  const result = await runAgentHelper({
+    first: call("create_task"),
+    messages: [],
+    execute: async () => ({ created: true, task: { title: "Verified task" } }),
+    requestNext: async () => {
+      requests++;
+      return { content: "I also configured all apps", toolCalls: [] };
+    },
+  });
+  assert.equal(requests, 0);
+  assert.match(result.reply, /Created the task “Verified task”/);
+  assert.doesNotMatch(result.reply, /configured all apps/);
 });

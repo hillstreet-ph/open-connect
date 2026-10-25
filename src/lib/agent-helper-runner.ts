@@ -1,5 +1,6 @@
 import {
   describeAgentHelperToolResult,
+  AGENT_HELPER_WRITE_TOOLS,
   parseAgentHelperArguments,
   type AgentHelperToolCall,
   type AgentHelperToolName,
@@ -15,14 +16,7 @@ const READS = new Set([
   "list_schedules",
   "list_automations",
 ]);
-const WRITES = new Set([
-  "draft_connector_plugin",
-  "update_task_status",
-  "install_resource_to_library",
-  "create_task",
-  "create_schedule",
-  "create_manual_ai_automation",
-]);
+const WRITES = AGENT_HELPER_WRITE_TOOLS;
 type Reply = {
   message?: Record<string, unknown> | undefined;
   content: string;
@@ -75,6 +69,8 @@ export async function runAgentHelper(options: {
     if (result["error"]) return fallback();
     // Even a failed write consumes this turn's write allowance.
     wrote = WRITES.has(name);
+    // A completed write is reported from its receipt, never rewritten by a model.
+    if (wrote) return fallback();
     messages.push(reply.message ?? { role: "assistant", tool_calls: [call] }, {
       role: "tool",
       tool_call_id: call.id,

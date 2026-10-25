@@ -14,6 +14,33 @@ export type AgentHelperToolName =
   | "create_schedule"
   | "create_manual_ai_automation";
 
+export const AGENT_HELPER_WRITE_TOOLS = new Set<AgentHelperToolName>([
+  "draft_connector_plugin",
+  "update_task_status",
+  "install_resource_to_library",
+  "create_task",
+  "create_schedule",
+  "create_manual_ai_automation",
+]);
+
+export function helperActionQueryKeys(name: AgentHelperToolName): string[] {
+  switch (name) {
+    case "create_task":
+    case "update_task_status":
+      return ["tasks"];
+    case "create_schedule":
+      return ["schedules"];
+    case "create_manual_ai_automation":
+      return ["automations"];
+    case "install_resource_to_library":
+      return ["resource-library", "my-resources", "toolkits", "toolkit-items"];
+    case "draft_connector_plugin":
+      return ["my-resources", "resource-library", "resources-review-queue"];
+    default:
+      return [];
+  }
+}
+
 export type AgentHelperToolCall = {
   id: string;
   type: "function";

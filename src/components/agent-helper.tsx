@@ -11,6 +11,8 @@ import {
   Minimize2,
   Download,
 } from "lucide-react";
+import { helperActionQueryKeys } from "@/lib/agent-helper-policy";
+import { HelperCapabilities } from "@/components/helper-capabilities";
 import { BrowserAgentChat } from "@/components/browser-agent-chat";
 import { AgentAttachments } from "@/components/agent-attachments";
 import { askAgentHelper } from "@/lib/agent-helper.functions";
@@ -34,6 +36,7 @@ function AgentHelperPanel({ user }: { user: { id: string } }) {
   const [open, setOpen] = useState(false),
     [expanded, setExpanded] = useState(false),
     [historyOpen, setHistoryOpen] = useState(false);
+  const [capabilitiesOpen, setCapabilitiesOpen] = useState(false);
   const [mode, setMode] = useState<"workspace" | "browser">("workspace");
   const [browserOpened, setBrowserOpened] = useState(false),
     [browserRunId, setBrowserRunId] = useState<string>();
@@ -138,7 +141,14 @@ function AgentHelperPanel({ user }: { user: { id: string } }) {
       refreshHistory();
       let reply: string;
       try {
-        reply = (await askAgentHelper({ data: { messages: next.slice(-10) } })).reply;
+        const response = await askAgentHelper({ data: { messages: next.slice(-10) } });
+        reply = response.reply;
+        if (account.current !== owner) return;
+        if (response.action && !(response.action.result as Record<string, unknown>)["error"]) {
+          for (const key of helperActionQueryKeys(response.action.name)) {
+            void queryClient.invalidateQueries({ queryKey: [key] });
+          }
+        }
       } catch (failure) {
         reply =
           failure instanceof Error
@@ -282,7 +292,26 @@ function AgentHelperPanel({ user }: { user: { id: string } }) {
               {item === "workspace" ? "Workspace" : "Browser task"}
             </button>
           ))}
+          <button
+            type="button"
+            aria-expanded={capabilitiesOpen}
+            disabled={busy || fileBusy}
+            className="ml-auto rounded border px-2 py-1 text-xs hover:bg-muted"
+            onClick={() => setCapabilitiesOpen((value) => !value)}
+          >
+            Capabilities
+          </button>
         </nav>
+        {capabilitiesOpen ? (
+          <HelperCapabilities
+            onPrompt={(prompt) => {
+              setMode("workspace");
+              setHistoryOpen(false);
+              setDraft(prompt);
+              setCapabilitiesOpen(false);
+            }}
+          />
+        ) : null}
         {error ? (
           <p role="alert" className="border-b px-3 py-2 text-xs text-destructive">
             {error}
