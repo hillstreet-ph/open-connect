@@ -276,3 +276,54 @@ describe("cloud browser widget", () => {
     expect(CLOUD_BROWSER_WIDGET_HTML).not.toContain("X-API-Key");
   });
 });
+
+test("finished legacy task cards collapse the preview and untrusted frame origins are rejected", async () => {
+  const { runInNewContext } = await import("node:vm");
+  class Element {
+    hidden = false;
+    className = "";
+    textContent = "";
+    src = "";
+    href = "";
+    disabled = false;
+    removeAttribute(name: string) {
+      if (name === "src") this.src = "";
+    }
+  }
+  const elements = new Map<string, Element>();
+  const get = (id: string) => {
+    if (!elements.has(id)) elements.set(id, new Element());
+    return elements.get(id)!;
+  };
+  const context = {
+    URL,
+    document: { getElementById: get },
+    window: {
+      openai: {
+        callTool: async () => ({}),
+        toolOutput: {
+          run_id: "fixture",
+          status: "COMPLETED",
+          result: { heading: "IANA" },
+          view_url: "javascript:alert(1)",
+        },
+      },
+      parent: { postMessage: () => {} },
+      addEventListener: () => {},
+    },
+    setTimeout: () => 1,
+    clearTimeout: () => {},
+  };
+  const script = CLOUD_BROWSER_WIDGET_HTML.match(/<script>([\s\S]*?)<\/script>/)![1]!;
+  runInNewContext(script, context);
+  expect(get("frame").className).toContain("ended");
+  expect(get("out").hidden).toBe(false);
+  expect(get("out").textContent).toContain("IANA");
+  expect(get("open").hidden).toBe(true);
+  runInNewContext(
+    "render({run_id:'fixture',status:'RUNNING',streaming_url:'https://untrusted.example/view'})",
+    context,
+  );
+  expect(get("view").hidden).toBe(true);
+  expect(get("full").hidden).toBe(true);
+});

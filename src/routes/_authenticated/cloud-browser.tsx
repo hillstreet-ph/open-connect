@@ -4,9 +4,12 @@ import { CloudBrowserConsole } from "@/components/cloud-browser-console";
 import { CloudWorkspacePage } from "@/components/cloud-workspace-page";
 
 export const Route = createFileRoute("/_authenticated/cloud-browser")({
-  validateSearch: (search: Record<string, unknown>): { run?: string } => {
+  validateSearch: (search: Record<string, unknown>): { run?: string; mode?: "direct" } => {
     const run = typeof search["run"] === "string" ? search["run"].trim() : "";
-    return /^[A-Za-z0-9_-]{1,128}$/.test(run) ? { run } : {};
+    return {
+      ...(/^[A-Za-z0-9_-]{1,128}$/.test(run) ? { run } : {}),
+      ...(search["mode"] === "direct" ? { mode: "direct" as const } : {}),
+    };
   },
   head: () => ({
     meta: [{ title: "Cloud Browser — Open-Connect" }, { name: "robots", content: "noindex" }],
@@ -15,7 +18,7 @@ export const Route = createFileRoute("/_authenticated/cloud-browser")({
 });
 
 function CloudBrowserRoute() {
-  const { run } = Route.useSearch();
+  const { run, mode } = Route.useSearch();
   const navigate = Route.useNavigate();
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:px-6">
@@ -27,6 +30,7 @@ function CloudBrowserRoute() {
         </p>
       </header>
       <CloudBrowserConsole
+        initialMode={mode}
         {...(run ? { runId: run } : {})}
         onSelectRun={(runId) =>
           void navigate({ search: runId ? { run: runId } : {}, replace: false })

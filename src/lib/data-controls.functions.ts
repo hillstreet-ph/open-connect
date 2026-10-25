@@ -118,6 +118,7 @@ export const exportDataControls = createServerFn({ method: "POST" })
         "id,project_id,title,content,source_type,source_url,status,tags,created_at,updated_at",
         "user_id",
       ],
+      ["agent_chats", "id,title,mode,messages,browser_run_id,created_at,updated_at", "user_id"],
       ["data_control_activity", "id,source_kind,source_key,source_id,created_at", "user_id"],
       [
         "data_reuse_drafts",

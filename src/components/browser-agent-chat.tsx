@@ -1,4 +1,4 @@
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -8,6 +8,9 @@ import {
   getCloudBrowserRun,
   startCloudBrowserRun,
 } from "@/lib/cloud-browser.functions";
+import { AgentAttachments } from "@/components/agent-attachments";
+import { browserTaskGoal, type ChatAttachment } from "@/lib/agent-chat";
+import { browserPreviewUrl } from "@/lib/cloud-live-view";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,15 +20,21 @@ import { Textarea } from "@/components/ui/textarea";
 export function BrowserAgentChat({
   runId,
   onSelectRun,
+  onActiveChange,
+  savedPrompt,
 }: {
   runId?: string | undefined;
   onSelectRun: (id: string | undefined) => void;
+  onActiveChange?: (active: boolean) => void;
+  savedPrompt?: string | undefined;
 }) {
   const id = useId();
   const [url, setUrl] = useState("");
   const [prompt, setPrompt] = useState("");
   const [profile, setProfile] = useState("none");
   const [duration, setDuration] = useState(300);
+  const [files, setFiles] = useState<ChatAttachment[]>([]);
+  const [fileBusy, setFileBusy] = useState(false);
   const submitting = useRef(false);
   const queryClient = useQueryClient();
   const overviewFn = useServerFn(getCloudBrowserOverview);
@@ -50,7 +59,7 @@ export function BrowserAgentChat({
       startFn({
         data: {
           url: url.trim(),
-          goal: prompt.trim(),
+          goal: browserTaskGoal(prompt, files),
           use_profile: profile !== "none",
           ...(profile !== "none" ? { profile_id: profile } : {}),
           max_duration_seconds: duration,
@@ -70,6 +79,10 @@ export function BrowserAgentChat({
   const active = Boolean(runId && !run.data?.terminal);
   const data = overview.data;
   const output = run.data?.result;
+  const preview = browserPreviewUrl(run.data?.streaming_url);
+  useEffect(() => {
+    onActiveChange?.(active || start.isPending || fileBusy);
+  }, [active, start.isPending, fileBusy, onActiveChange]);
   return (
     <div className="space-y-3 text-sm">
       <p className="text-muted-foreground">
@@ -92,8 +105,9 @@ export function BrowserAgentChat({
         className="space-y-3"
         onSubmit={(event) => {
           event.preventDefault();
-          if (submitting.current || active || !data?.connected) return;
+          if (submitting.current || active || fileBusy || !data?.connected) return;
           submitting.current = true;
+          onActiveChange?.(true);
           void start
             .mutateAsync()
             .catch(() => {})
@@ -147,6 +161,12 @@ export function BrowserAgentChat({
             required
           />
         </div>
+        <AgentAttachments
+          files={files}
+          onChange={setFiles}
+          disabled={active || start.isPending}
+          onBusyChange={setFileBusy}
+        />
         <div className="flex flex-wrap items-center gap-2">
           <Label htmlFor={`${id}-duration`}>Time limit</Label>
           <select
@@ -164,7 +184,12 @@ export function BrowserAgentChat({
           <Button
             type="submit"
             disabled={
-              !data?.connected || !url.trim() || !prompt.trim() || active || start.isPending
+              !data?.connected ||
+              !url.trim() ||
+              !prompt.trim() ||
+              active ||
+              start.isPending ||
+              fileBusy
             }
           >
             {start.isPending ? "Starting agent…" : "Execute browser task"}
@@ -187,6 +212,35 @@ export function BrowserAgentChat({
           </p>
           <p className="break-all text-xs text-muted-foreground">Run: {runId}</p>
           {run.data?.goal ? <p>{run.data.goal}</p> : null}
+          {savedPrompt ? (
+            <details>
+              <summary>Saved task prompt</summary>
+              <pre className="max-h-40 overflow-auto whitespace-pre-wrap text-xs">
+                {savedPrompt}
+              </pre>
+            </details>
+          ) : null}
+          {preview && !run.data?.terminal ? (
+            <div className="space-y-1">
+              <iframe
+                src={preview}
+                title="Live task preview (read-only)"
+                referrerPolicy="no-referrer"
+                allow="fullscreen"
+                className="aspect-[16/10] w-full rounded border"
+              />
+              <p className="text-xs text-muted-foreground">
+                Live preview · the agent controls this task. Direct control opens a separate
+                interactive browser.
+              </p>
+            </div>
+          ) : null}
+          {start.data && !start.data.history_saved ? (
+            <p role="alert">
+              Task started, but its chat history was not saved. Keep the run ID; do not submit it
+              again.
+            </p>
+          ) : null}
           {run.isError ? (
             <p role="alert">
               Status unavailable: {run.error.message}. The task may still be running. Retry status
@@ -255,6 +309,13 @@ export function BrowserAgentChat({
               </Button>
             ) : null}
           </div>
+          <Link
+            className="inline-block text-xs underline"
+            to="/cloud-browser"
+            search={{ mode: "direct" }}
+          >
+            Open a new direct-control browser
+          </Link>
           {cancel.isError ? (
             <p role="alert">Stop was not confirmed: {cancel.error.message}</p>
           ) : null}

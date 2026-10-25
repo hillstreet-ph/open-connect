@@ -16,7 +16,7 @@
     "test:navigation": "node --experimental-strip-types --test src/lib/navigation.test.ts src/lib/auth-return.test.ts src/lib/shared-resources.test.ts src/lib/react-compat.test.ts",
     "test:credentials": "node --test scripts/credential-broker.test.mjs scripts/capability-router.test.mjs scripts/credential-storage.test.mjs scripts/supabase-advisor-hardening.test.mjs scripts/open-connect-access-check.test.mjs",
     "test:campaign": "node --experimental-strip-types --test src/lib/campaign-studio.test.ts",
-    "test:registry": "node --experimental-strip-types --test src/lib/registry-normalize.test.ts src/lib/databricks.server.test.ts src/lib/chatgpt-action.server.test.ts src/lib/agent-helper-policy.test.ts src/lib/agent-helper-runner.test.ts src/lib/model-catalog.test.ts src/lib/vendored-skills.test.ts scripts/sync-claude-library.test.mjs scripts/sync-claude-marketplaces.test.mjs && node --experimental-strip-types --test src/lib/resource-document.server.test.ts",
+    "test:registry": "node --experimental-strip-types --test src/lib/registry-normalize.test.ts src/lib/databricks.server.test.ts src/lib/chatgpt-action.server.test.ts src/lib/agent-helper-policy.test.ts src/lib/agent-helper-runner.test.ts src/lib/model-catalog.test.ts src/lib/vendored-skills.test.ts scripts/sync-claude-library.test.mjs scripts/sync-claude-marketplaces.test.mjs && node --experimental-strip-types --test src/lib/resource-document.server.test.ts && node --experimental-strip-types --test src/lib/agent-chat.test.ts",
     "test:otp": "node --test supabase/functions/hillstreet-otp-worker/verify-admin.test.mjs",
     "test": "node --experimental-strip-types --test src/lib/gateway-keys.test.ts src/lib/oauth-policy.test.mjs && npm run test:control && npm run test:navigation && npm run test:credentials && npm run test:campaign && npm run test:registry && npm run test:otp && bun test src/lib/mcp-execution.test.ts src/lib/cloud-live-view.test.ts src/lib/browser-control.test.ts src/lib/tinyfish.test.ts",
     "marketplace:collect": "node --experimental-strip-types scripts/collect-marketplace-resources.mjs",
@@ -97,6 +97,7 @@
     "tailwind-merge": "^3.7.0",
     "tailwindcss": "^4.2.1",
     "tw-animate-css": "^1.3.4",
+    "unpdf": "1.9.1",
     "vaul": "^1.1.2",
     "vite-tsconfig-paths": "^6.0.2",
     "zod": "4.6.7"

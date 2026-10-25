@@ -66,8 +66,10 @@ function renderResult(result: unknown) {
 export function CloudBrowserConsole({
   runId,
   onSelectRun,
+  initialMode,
 }: {
   runId?: string;
+  initialMode?: "direct" | undefined;
   onSelectRun: (runId: string | undefined) => void;
 }) {
   const queryClient = useQueryClient();
@@ -82,7 +84,13 @@ export function CloudBrowserConsole({
   const [duration, setDuration] = useState(600);
   const [historySearch, setHistorySearch] = useState("");
   const [directActive, setDirectActive] = useState(false);
-  const [mode, setMode] = useState<"agent" | "direct">("agent");
+  const [mode, setMode] = useState<"agent" | "direct">(initialMode ?? "agent");
+
+  const [lastInitialMode, setLastInitialMode] = useState(initialMode);
+  if (lastInitialMode !== initialMode) {
+    setLastInitialMode(initialMode);
+    if (initialMode && !directActive) setMode(initialMode);
+  }
 
   const overview = useQuery({
     queryKey: ["cloud-browser-overview"],
@@ -253,7 +261,13 @@ export function CloudBrowserConsole({
                 </Button>
               ) : null}
             </div>
-            <div className="aspect-[16/10] w-full bg-muted">
+            <div
+              className={
+                active?.terminal && !active.video_url
+                  ? "w-full bg-muted px-4 py-3"
+                  : "aspect-[16/10] w-full bg-muted"
+              }
+            >
               {active?.streaming_url && !active.terminal ? (
                 <iframe
                   title="Live cloud browser"

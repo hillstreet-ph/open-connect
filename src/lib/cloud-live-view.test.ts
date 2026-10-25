@@ -50,3 +50,17 @@ describe("hosted MCP presets", () => {
     expect(cloudKindsForProvider("custom_mcp")).toHaveLength(4);
   });
 });
+
+test("native browser previews reject arbitrary or insecure iframe origins", async () => {
+  const { browserPreviewUrl } = await import("./cloud-live-view");
+  expect(browserPreviewUrl("https://stream.tinyfish.io/stream/0")).toBe(
+    "https://stream.tinyfish.io/stream/0",
+  );
+  for (const value of [
+    "javascript:alert(1)",
+    "https://tinyfish.io.evil.test",
+    "http://stream.tinyfish.io",
+    "https://user:secret@stream.tinyfish.io",
+  ])
+    expect(browserPreviewUrl(value)).toBeNull();
+});

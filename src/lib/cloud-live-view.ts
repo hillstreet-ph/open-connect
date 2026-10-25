@@ -53,3 +53,20 @@ export function extractLiveViewUrls(result: unknown, limit = 5): string[] {
   visit(result, 0);
   return [...found].slice(0, limit);
 }
+
+/** The TinyFish task preview is observation-only, and never accepts arbitrary iframe origins. */
+export function browserPreviewUrl(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" &&
+      !url.username &&
+      !url.password &&
+      !url.port &&
+      ["tinyfish.io", "tinyfish.ai"].some((host) => url.hostname.endsWith(`.${host}`))
+      ? url.href
+      : null;
+  } catch {
+    return null;
+  }
+}
