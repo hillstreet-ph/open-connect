@@ -1,3 +1,4 @@
+import { publicBackTarget } from "@/lib/back-navigation";
 import { BackButton } from "@/components/back-button";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Menu, X } from "lucide-react";
@@ -14,11 +15,17 @@ export function SiteHeader() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const inApp = Boolean(user) && isAppPath(pathname);
   const [open, setOpen] = useState(false);
-  const desktopNav = inApp ? flatAppNav() : flatPublicNav();
+  const desktopNav = inApp ? flatAppNav() : flatPublicNav(pathname);
+  const backTarget = publicBackTarget(pathname);
   const mobileCategories = (inApp ? appCategories : publicCategories)
     .map((category) => ({
       ...category,
-      items: category.items.filter((item) => item.to !== "/auth" && item.to !== "/dashboard"),
+      items: category.items.filter(
+        (item) =>
+          item.to !== "/auth" &&
+          item.to !== "/dashboard" &&
+          (inApp || desktopNav.some((nav) => nav.to === item.to)),
+      ),
     }))
     .filter((category) => category.items.length > 0);
 
@@ -60,21 +67,23 @@ export function SiteHeader() {
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-3 px-4 sm:h-[3.75rem] sm:px-6">
         <BrandLogo />
 
-        <nav
-          className="hidden items-center gap-1 md:flex"
-          aria-label={inApp ? "Workspace" : "Site"}
-        >
-          {desktopNav.map((item) => (
-            <Link
-              key={item.to}
-              to={item.to}
-              className="rounded-full px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground"
-              activeProps={{ className: "text-foreground font-medium bg-muted/50" }}
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
+        {desktopNav.length > 0 && (
+          <nav
+            className="hidden items-center gap-1 md:flex"
+            aria-label={inApp ? "Workspace" : "Site"}
+          >
+            {desktopNav.map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                className="rounded-full px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground"
+                activeProps={{ className: "text-foreground font-medium bg-muted/50" }}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+        )}
 
         <div className="flex items-center gap-1.5">
           {loading ? null : inApp ? (
@@ -111,9 +120,9 @@ export function SiteHeader() {
         </div>
       </div>
 
-      {pathname !== "/" && pathname !== "/dashboard" ? (
+      {backTarget ? (
         <div className="mx-auto flex max-w-5xl items-center px-4 pb-2 sm:px-6">
-          <BackButton fallback="/" />
+          <BackButton target={backTarget} />
         </div>
       ) : null}
 
@@ -121,9 +130,9 @@ export function SiteHeader() {
       <div
         className={cn(
           "absolute inset-x-0 top-full z-40 border-t border-border/70 bg-background md:hidden",
-          pathname !== "/" && pathname !== "/dashboard"
-            ? "h-[calc(100dvh-6.25rem)]"
-            : "h-[calc(100dvh-3.5rem)]",
+          backTarget
+            ? "h-[calc(100dvh-6rem)] sm:h-[calc(100dvh-6.25rem)]"
+            : "h-[calc(100dvh-3.5rem)] sm:h-[calc(100dvh-3.75rem)]",
           open ? "block" : "hidden",
         )}
         role="dialog"

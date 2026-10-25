@@ -1,3 +1,4 @@
+import { workspaceBackTarget } from "@/lib/back-navigation";
 import { BackButton } from "@/components/back-button";
 import type { ReactNode } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
@@ -12,16 +13,10 @@ import { AgentHelper } from "@/components/agent-helper";
 
 export function WorkspaceShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const hash = useRouterState({ select: (s) => s.location.hash });
   const { primary } = useRoles();
   const title = pageTitle(pathname);
-  const backTarget =
-    pathname === "/integrations"
-      ? "/settings"
-      : pathname.startsWith("/projects/") || pathname.startsWith("/project-access/")
-        ? "/projects"
-        : pathname.startsWith("/admin/")
-          ? "/admin"
-          : "/dashboard";
+  const backTarget = workspaceBackTarget(pathname, hash);
 
   return (
     <SidebarProvider defaultOpen>
@@ -30,10 +25,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
         <SidebarInset className="min-h-0 min-w-0 overflow-hidden">
           <header className="relative z-20 flex min-h-14 shrink-0 items-center gap-2 border-b border-border/80 bg-background px-3 sm:gap-3 sm:px-4">
             <SidebarTrigger className="-ml-1" />
-            <BackButton
-              fallback={backTarget}
-              fallbackHash={pathname === "/integrations" ? "integrations" : undefined}
-            />
+            <BackButton target={backTarget} />
             <div className="min-w-0 flex-1">
               <p className="truncate font-display text-sm font-semibold tracking-tight sm:text-base">
                 {title}
@@ -73,6 +65,8 @@ function pageTitle(pathname: string): string {
     "/campaign-studio": "Campaign Studio",
     "/orgs": "Organization",
     "/integrations": "Integrations",
+    "/project-access": "Project access",
+    "/custom-oauth-callback": "App authorization",
     "/api-keys": "API keys",
     "/roles": "Access reference",
     "/guides": "Professional setup",
