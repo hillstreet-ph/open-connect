@@ -1196,6 +1196,30 @@ const PLATFORM_TOOLS: McpTool[] = [
     },
   },
   {
+    name: "repair_connection",
+    description:
+      "Inspect, validate or repair one exact owned MCP connection. Personal administrators only. API keys stay in Vault; validation must pass before an optimistic update. Never creates or deletes connections.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        connection_id: { type: "string", format: "uuid" },
+        action: { type: "string", enum: ["inspect", "validate", "apply"] },
+        expected_updated_at: { type: "string" },
+        credential_id: { type: "string", format: "uuid" },
+        endpoint_url: { type: "string", format: "uri" },
+        auth_type: { type: "string", enum: ["none", "bearer", "api_key", "personal_access_token"] },
+      },
+      required: ["connection_id", "action"],
+      additionalProperties: false,
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
+  },
+  {
     name: "configure_connection",
     description:
       "Use this when binding a provider through an opaque credential:// reference; raw secret values are rejected.",
@@ -1680,12 +1704,19 @@ const TOOL_SCOPES: Record<string, string> = {
   run_agent_team: "models:invoke",
   save_context_checkpoint: "control:write",
   capture_context_exchange: "control:write",
+  repair_connection: "control:write",
   configure_connection: "control:write",
   sync_composio_accounts: "control:write",
   install_capability: "control:write",
 };
 
 function canUseTool(key: AuthedKey, toolName: string) {
+  if (toolName === "repair_connection")
+    return (
+      hasScope(key, "control:write") &&
+      hasScope(key, "connections:invoke") &&
+      hasScope(key, "secrets:read")
+    );
   if (toolName === "sync_composio_accounts")
     return hasScope(key, "control:write") && hasScope(key, "connections:invoke");
   if (toolName === "run_agent_team")
@@ -3066,6 +3097,19 @@ export const Route = createFileRoute("/mcp")({
               project_access_assigned: false,
               secrets_exposed: false,
             });
+          } else if (name === "repair_connection") {
+            if (key.projectId || key.workspaceId || key.organizationId)
+              throw new Error("Use a personal administrator key to repair owned connections.");
+            await requireControlWrite(key);
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const { repairConnection } = await import("@/lib/connection-repair.server");
+            result = textResult(
+              await repairConnection(
+                supabaseAdmin,
+                key.userId,
+                args as unknown as import("@/lib/connection-repair").RepairInput,
+              ),
+            );
           } else if (name === "configure_connection") {
             if (key.projectId || key.workspaceId || key.organizationId) {
               throw new Error("Use a personal API key to configure personal connections.");
