@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { BrowserIntegrations } from "@/components/browser-integrations";
 import { CloudBrowserConsole } from "@/components/cloud-browser-console";
 import { CloudWorkspacePage } from "@/components/cloud-workspace-page";
 
@@ -31,7 +32,8 @@ function CloudBrowserRoute() {
           void navigate({ search: runId ? { run: runId } : {}, replace: false })
         }
       />
-      <details className="rounded-md border">
+      <BrowserIntegrations />
+      <details id="browser-mcp-tools" className="rounded-md border">
         <summary className="cursor-pointer px-4 py-3 text-sm font-medium">
           Advanced: run tools from any browser MCP connection
         </summary>
