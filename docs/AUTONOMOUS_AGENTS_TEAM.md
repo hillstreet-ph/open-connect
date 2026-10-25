@@ -35,3 +35,7 @@ Every worker tries the available free router first. Fallback then crosses connec
 The v5 card shows Resources, Connections, Credentials and Models as numeric totals. Credentials counts owned `credential_secrets` metadata with an exact HEAD query; no secret values are retrieved for this count. Models counts distinct IDs in the same AI Gateway catalog used by `list_models`, including managed IDs and models returned by connected providers. Catalog membership does not guarantee inference access, and provider catalog failures retain the gateway's managed fallback list.
 
 Credential totals require `secrets:read`; model totals require `models:read` or `models:invoke`. Both require personal context. Missing grants show Not granted, failed reads show Unavailable, and a real zero remains 0. Status calls allow 30 seconds for provider catalog loading. Legacy card resource URIs remain readable.
+
+## Access section layout
+
+The v6 card separates Access permissions from the Goal input with a block label, spacing and divider. The primary access summary uses readable AI-worker and workspace-control permission labels; exact scope names remain under Technical scope names. The Manage keys and access link opens the existing API-key integration section. These labels describe existing key grants and do not change permissions or establish administrator role access.
