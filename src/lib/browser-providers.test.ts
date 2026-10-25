@@ -168,3 +168,12 @@ test("an accepted stop response is not cleanup confirmation until the browser re
   expect(result.success).toBe(false);
   expect(result.cleanupConfirmed).toBe(false);
 });
+
+test("polling continues after task completion until browser cleanup is confirmed", async () => {
+  const { providerPollInterval } = await import("./browser-provider-status");
+  expect(providerPollInterval(undefined)).toBe(5000);
+  expect(providerPollInterval({ terminal: false, cleanupConfirmed: false })).toBe(5000);
+  expect(providerPollInterval({ terminal: true, cleanupConfirmed: false })).toBe(5000);
+  expect(providerPollInterval({ terminal: true, cleanupConfirmed: true })).toBe(false);
+  expect(providerPollInterval(undefined, true)).toBe(false);
+});

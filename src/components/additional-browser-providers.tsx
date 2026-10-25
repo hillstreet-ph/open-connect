@@ -1,3 +1,4 @@
+import { providerPollInterval } from "@/lib/browser-provider-status";
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -58,7 +59,7 @@ function ProviderPanel({ userId }: { userId: string }) {
     queryFn: () => readFn({ data: reference! }),
     enabled: Boolean(reference),
     retry: false,
-    refetchInterval: (query) => (query.state.error || query.state.data?.terminal ? false : 5000),
+    refetchInterval: (query) => providerPollInterval(query.state.data, Boolean(query.state.error)),
   });
   const start = useMutation({
     retry: false,
