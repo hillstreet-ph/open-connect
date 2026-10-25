@@ -21,3 +21,21 @@ export async function loadOwnedTasks(
   if (error) throw new Error("Could not load your tasks. Please retry.");
   return data ?? [];
 }
+
+export async function updateOwnedTaskStatus(
+  db: SupabaseClient<Database>,
+  userId: string,
+  input: { id: string; status: string; expectedUpdatedAt?: string | undefined },
+) {
+  let query = db
+    .from("tasks")
+    .update({ status: input.status, updated_at: new Date().toISOString() })
+    .eq("id", input.id)
+    .eq("user_id", userId);
+  if (input.expectedUpdatedAt) query = query.eq("updated_at", input.expectedUpdatedAt);
+  const { data, error } = await query.select("id,status,updated_at").maybeSingle();
+  if (error) throw new Error("Could not update your task. Please retry.");
+  if (!data)
+    throw new Error("Task changed or is no longer available. Refresh before trying again.");
+  return data;
+}

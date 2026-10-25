@@ -13,3 +13,13 @@ Pause stops future claims; a run already in progress may finish. Resume computes
 The task loading query deliberately selects task columns without an embedded project relation: the deployed tasks.project_id has no foreign key, so PostgREST cannot infer that relationship. Project labels come from the independently authorized project list.
 
 Database migration: `20261025165039_private_work_templates.sql`. RLS restricts templates to their owner, anonymous access is revoked, and authenticated clients may select/insert/delete. The production rollback test verified owner isolation and unique-name rejection without retaining fixtures.
+
+## Kanban and List views
+
+Tasks opens in Board view, with To do, In progress, Blocked, Done and Cancelled columns. Each column loads up to 100 matching tasks through its own owner-filtered database query. A large completed column does not prevent older pending work from loading. Counts refer to loaded cards, not global totals. List view retains its server-side status filter.
+
+Drag the card handle between columns with a mouse, or use the card's labeled status selector with touch or a keyboard. Both views update the same task ID. There is no second task store or external Kanban subscription. No duplicate status badge is displayed on each card. Polling can briefly return an old and a new copy of a moved card; the newest version is shown once.
+
+Every card move includes its last-update timestamp. The server validates the status and filters by owner, ID and timestamp. A stale move fails with a refresh message rather than overwriting another tab's update. Failed moves refresh task queries; there is no optimistic success message before the server saves.
+
+Validation suites: `task-board.test.ts`, `ops-data.server.test.ts`, `operations.test.ts`, `schedule-cron.test.ts`, `automation-model.server.test.ts` and `automation-readiness.test.ts`. The optional `supabase/tests/operations-ownership.sql` fixture checks task transitions, private templates, schedule pause/resume and owner isolation inside a transaction; callers must supply their own test-owner claims and always roll back. It does not execute an AI automation or send external messages.
