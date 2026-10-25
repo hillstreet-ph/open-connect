@@ -13,6 +13,7 @@ import {
   Plug,
   Sparkles,
   Workflow,
+  ShieldCheck,
 } from "lucide-react";
 import {
   Sidebar,
@@ -59,6 +60,7 @@ const WORK: Item[] = [
   { to: "/tasks", label: "Task", icon: ListTodo },
   { to: "/schedule", label: "Schedules", icon: CalendarClock },
   { to: "/automations", label: "Automations", icon: Workflow },
+  { to: "/approvals", label: "Approvals", icon: ShieldCheck },
 ];
 
 const CLOUD: Item[] = [

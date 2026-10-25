@@ -146,6 +146,17 @@ export function startRunBody(input: StartRunInput) {
   };
 }
 
+export function requiresBrowserSignIn(result: unknown): boolean {
+  if (!result || typeof result !== "object") return false;
+  const value = "result" in result ? (result as { result: unknown }).result : result;
+  return (
+    !!value &&
+    typeof value === "object" &&
+    "authenticated" in value &&
+    value.authenticated === false
+  );
+}
+
 /** Trim a run for agents and UI: no screenshots, bounded steps. */
 export function summarizeRun(run: TinyFishRun) {
   return {
@@ -160,6 +171,7 @@ export function summarizeRun(run: TinyFishRun) {
     streaming_url: run.streaming_url ?? null,
     video_url: run.video_url ?? null,
     result: run.result ?? null,
+    requires_sign_in: requiresBrowserSignIn(run.result),
     error: run.error ? { message: run.error.message, category: run.error.category } : null,
     terminal: TERMINAL_RUN_STATUSES.includes(run.status),
     recent_actions: (run.steps ?? [])

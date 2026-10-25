@@ -130,3 +130,68 @@ export const saveCloudBrowserProfile = createServerFn({ method: "POST" })
       : await client.createProfile(input);
     return { id: profile.id, name: profile.name };
   });
+
+export const createDirectCloudBrowser = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator(
+    z.object({
+      url: z.string().min(1).max(2048),
+      profileId: z
+        .string()
+        .regex(/^[A-Za-z0-9_-]{1,128}$/)
+        .optional(),
+    }),
+  )
+  .handler(async ({ data, context }) => {
+    const { cloudBrowserClient } = await import("@/lib/tinyfish.server");
+    const { browserNavigationUrl } = await import("@/lib/browser-control");
+    const { client } = await cloudBrowserClient(context.userId);
+    const url = browserNavigationUrl(data.url);
+    const session = data.profileId
+      ? await client.startProfileSetup(data.profileId, url)
+      : await client.createBrowserSession({ url, timeout_seconds: 300 });
+    return {
+      sessionId: session.session_id,
+      cdpUrl: session.cdp_url ?? "",
+      profileId: data.profileId ?? null,
+    };
+  });
+
+export const finishDirectCloudBrowser = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator(
+    z.object({
+      sessionId: z.string().regex(/^[A-Za-z0-9_-]{1,128}$/),
+      profileId: z
+        .string()
+        .regex(/^[A-Za-z0-9_-]{1,128}$/)
+        .nullable(),
+      save: z.boolean(),
+    }),
+  )
+  .handler(async ({ data, context }) => {
+    const { cloudBrowserClient } = await import("@/lib/tinyfish.server");
+    const { client } = await cloudBrowserClient(context.userId);
+    if (data.save && !data.profileId)
+      throw new Error("Select a profile before saving login state.");
+    if (data.profileId) {
+      const result = await client.finishProfileSetup(
+        data.profileId,
+        data.sessionId,
+        data.save ? "save" : "cancel",
+      );
+      if (data.save) await client.finishProfileSetup(data.profileId, data.sessionId, "cancel");
+      return {
+        closed: true,
+        saved: data.save,
+        domainsUpdated: Array.isArray(result["domains_updated"])
+          ? result["domains_updated"].map(String)
+          : [],
+        domainsFailed: Array.isArray(result["domains_failed"])
+          ? result["domains_failed"].map(String)
+          : [],
+      };
+    }
+    await client.closeBrowserSession(data.sessionId);
+    return { closed: true, saved: false, domainsUpdated: [], domainsFailed: [] };
+  });

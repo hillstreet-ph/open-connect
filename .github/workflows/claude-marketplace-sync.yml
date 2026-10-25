@@ -37,7 +37,7 @@ jobs:
             echo "present=false" >> "$GITHUB_OUTPUT"
             echo "No committed Claude marketplace catalog yet; the catalog workflow opens it for review." >> "$GITHUB_STEP_SUMMARY"
           fi
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         if: steps.catalog.outputs.present == 'true'
         with:
           node-version: 22
