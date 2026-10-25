@@ -20,12 +20,21 @@ export const getConnectionDetails = createServerFn({ method: "GET" })
     let identityNotice = "";
     if (managed) {
       try {
-        const { getManagedConnection } = await import("@/lib/managed-connectors.server");
+        const { getManagedConnection, getManagedAccountIdentity } =
+          await import("@/lib/managed-connectors.server");
         const remote = await getManagedConnection(
           connection.provider,
           connection.credential_reference!.split("/").pop()!,
         );
-        const remoteIdentity = connectionIdentity(remote.data);
+        let remoteIdentity = connectionIdentity(remote.data);
+        if (!remoteIdentity.email && !remoteIdentity.login && !remoteIdentity.name) {
+          remoteIdentity =
+            (await getManagedAccountIdentity(
+              connection.provider,
+              connection.credential_reference!.split("/").pop()!,
+              remote.user_id || context.userId,
+            )) ?? remoteIdentity;
+        }
         identity = Object.fromEntries(
           Object.entries(identity).map(([key, value]) => [
             key,
