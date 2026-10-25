@@ -13,3 +13,15 @@ export function connectionIdentity(value: unknown) {
     email: text("account_email") || text("email"),
   };
 }
+
+export function connectionAuthType(value: unknown): "none" | "bearer" | "api_key" {
+  const metadata =
+    value && typeof value === "object" && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
+  return metadata["auth_type"] === "none"
+    ? "none"
+    : metadata["auth_type"] === "api_key"
+      ? "api_key"
+      : "bearer";
+}
