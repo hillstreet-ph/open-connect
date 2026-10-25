@@ -1,3 +1,5 @@
+import { CloudWorkspacePage } from "./cloud-workspace-page";
+import { BROWSER_WORKERS } from "@/lib/browser-provider-selection";
 import { useAuth } from "@/hooks/use-auth";
 import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -33,6 +35,8 @@ export function CloudBrowserSwitcher({
   });
   const status = (id: BrowserProviderId) => {
     if (id === "external") return "Discover tools";
+    if (id === "playwright" || id === "stagehand" || id === "chrome_devtools")
+      return "Worker tools · discovery required";
     if (id === "browseract" || id === "multion")
       return availability.data?.[id].saved
         ? "Account saved · execution unverified"
@@ -141,6 +145,17 @@ export function CloudBrowserSwitcher({
         hidden={selected !== "tinyfish"}
       >
         {tinyfish}
+        <details className="mt-4 rounded-lg border p-4">
+          <summary className="cursor-pointer text-sm font-medium">
+            TinyFish Search, Fetch, Research and Monitor
+          </summary>
+          <p className="my-3 text-sm text-muted-foreground">
+            Agent and Browser controls are above. Select your TinyFish MCP connection below to
+            discover its additional API tools. Provider allowances and wallet charges apply;
+            discovery does not start a run.
+          </p>
+          <CloudWorkspacePage kind="browser" embedded browserFamily="tinyfish" />
+        </details>
       </div>
       <div
         role="tabpanel"
@@ -172,6 +187,27 @@ export function CloudBrowserSwitcher({
       >
         {external}
       </div>
+      {(Object.keys(BROWSER_WORKERS) as Array<keyof typeof BROWSER_WORKERS>).map((id) => (
+        <div
+          key={id}
+          role="tabpanel"
+          id={`browser-panel-${id}`}
+          aria-labelledby={`browser-tab-${id}`}
+          hidden={selected !== id}
+          className="space-y-4"
+        >
+          <p className="text-sm text-muted-foreground">{BROWSER_WORKERS[id].setup}</p>
+          <a
+            href={BROWSER_WORKERS[id].source}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm underline"
+          >
+            Official source
+          </a>
+          <CloudWorkspacePage kind="browser" embedded browserFamily={id} />
+        </div>
+      ))}
       {(["browseract", "multion"] as const).map((id) => (
         <div
           key={id}

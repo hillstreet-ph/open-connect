@@ -35,6 +35,8 @@ describe("extractLiveViewUrls", () => {
 describe("hosted MCP presets", () => {
   test("TinyFish is executable, browser-only and pinned to the vendor endpoint", () => {
     expect(isExecutableMcpProvider("custom_tinyfish_mcp")).toBe(true);
+    expect(isExecutableMcpProvider("tinyfish")).toBe(true);
+    expect(cloudKindsForProvider("tinyfish")).toEqual(["browser"]);
     expect(isRemoteMcpProvider("custom_tinyfish_mcp")).toBe(false);
     expect(cloudKindsForProvider("custom_tinyfish_mcp")).toEqual(["browser"]);
     expect(HOSTED_MCP_PRESETS.custom_tinyfish_mcp.endpoint).toBe("https://agent.tinyfish.ai/mcp");

@@ -23,6 +23,12 @@ export type CloudWorkspaceKind = "browser" | "computer" | "terminal" | "phone" |
  * user-editable metadata), so a stored API key can only be sent to the vendor.
  */
 export const HOSTED_MCP_PRESETS = {
+  tinyfish: {
+    label: "TinyFish cloud browser",
+    endpoint: "https://agent.tinyfish.ai/mcp",
+    authType: "api_key",
+    kinds: ["browser"],
+  },
   custom_tinyfish_mcp: {
     label: "TinyFish cloud browser",
     endpoint: "https://agent.tinyfish.ai/mcp",

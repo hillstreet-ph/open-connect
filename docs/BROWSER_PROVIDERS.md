@@ -54,3 +54,11 @@ The browser switcher now lists the implemented capabilities and setup limits for
 
 
 The Sandbox page also includes an administrator-only E2B manager using the existing deployment key. Status checks health and lists up to 100 environments. Creation requires a cost acknowledgement, uses the base template and a five-minute timeout, and never retries an ambiguous create. Stop requires explicit confirmation and is reported as a request, not proof of termination. UI responses include only sandbox identity, template, state and timestamps; tokens, environment variables and arbitrary metadata are excluded. The deployment account health/list were verified without creating a paid environment.
+
+## Consolidated browser selection
+
+Playwright MCP, Stagehand and Chrome DevTools now have dedicated browser tabs. Each uses the existing owner/project-authorized connection picker and filters discovered tool names to its browser family. An empty matching catalog is shown as unavailable; adding a tab does not install a cloud worker or transfer credentials. The old duplicated Provider setup guides component was removed. Embedded browser tools no longer repeat the Cloud Browser page title.
+
+TinyFish Agent and Browser controls remain in the main TinyFish panel. Its additional API tools (Search, Fetch, Research and Monitor) are available through discovery of the same saved TinyFish connection, pinned to the official hosted MCP endpoint. Only tools the endpoint actually returns are selectable. Free allowances do not imply unlimited free usage, and opening or discovering tools does not execute a paid request.
+
+Chrome DevTools can be registered in a Codex environment with `codex mcp add chrome-devtools -- npx -y chrome-devtools-mcp@latest --no-usage-statistics --no-performance-crux`. This is a local stdio registration, not an authenticated HTTP worker for the deployed Cloud Browser. A compatible Chrome runtime and secure worker bridge are separate requirements.
