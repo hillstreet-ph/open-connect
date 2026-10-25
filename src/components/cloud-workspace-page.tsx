@@ -1,3 +1,4 @@
+import { SandboxManager } from "./sandbox-manager";
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -152,6 +153,7 @@ export function CloudWorkspacePage({ kind }: { kind: keyof typeof descriptions }
         <h1 className="text-2xl font-semibold">{title}</h1>
         <p className="mt-2 text-sm text-muted-foreground">{descriptions[kind]}</p>
       </header>
+      {kind === "sandbox" ? <SandboxManager /> : null}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Workspace and connection</CardTitle>
