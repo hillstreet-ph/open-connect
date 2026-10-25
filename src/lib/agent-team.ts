@@ -21,6 +21,32 @@ export function validateTeamInput(input: Record<string, unknown>) {
     throw new Error("Supply a goal up to 4000 characters and context up to 24000 characters.");
   return { goal, context };
 }
+/** Give every worker the free router, then diversify providers before trying sibling models. */
+function workerRoutes(routes: TeamRoute[], index: number) {
+  const rotated = [...routes.slice(index), ...routes.slice(0, index)];
+  const preferred = routes.find((route) => route.model === "openrouter/free");
+  const selected: TeamRoute[] = preferred ? [preferred] : [];
+  const providerKey = (route: TeamRoute) =>
+    JSON.stringify([
+      route.upstream.name,
+      route.upstream.baseUrl,
+      Object.entries(route.upstream.headers).sort(([a], [b]) => a.localeCompare(b)),
+    ]);
+  const providers = new Set(selected.map(providerKey));
+  for (const route of rotated) {
+    if (!providers.has(providerKey(route))) {
+      selected.push(route);
+      providers.add(providerKey(route));
+    }
+    if (selected.length >= 3) return selected;
+  }
+  for (const route of rotated) {
+    if (!selected.includes(route)) selected.push(route);
+    if (selected.length >= 3) break;
+  }
+  return selected;
+}
+
 export async function runFreeAgentTeam(
   routes: TeamRoute[],
   input: { goal: string; context: string },
@@ -37,8 +63,7 @@ export async function runFreeAgentTeam(
   const roles = ["Planner", "Builder", "Reviewer"];
   const workers = await Promise.all(
     roles.map(async (role, index) => {
-      for (let attempt = 0; attempt < Math.min(3, routes.length); attempt++) {
-        const route = routes[(index + attempt) % routes.length]!;
+      for (const route of workerRoutes(routes, index)) {
         try {
           const content = (await request(route, role, input)).trim();
           if (content)

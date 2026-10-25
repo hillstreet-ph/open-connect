@@ -65,3 +65,82 @@ test("redacts quoted JSON fields, escaped strings, and credential headers", () =
   assert.equal(parsed.nested.api_key, "[REDACTED]");
   assert.ok(!redactContext('Notes: {"password":"fenced-secret"}').includes("fenced-secret"));
 });
+
+test("every worker tries the free router rather than exhausting adjacent models", async () => {
+  const available = [
+    {
+      model: "openrouter/free",
+      upstream: { name: "openrouter", baseUrl: "https://router.invalid", headers: {} },
+    },
+    ...Array.from({ length: 10 }, (_, i) => ({
+      model: `offline-${i}:free`,
+      upstream: { name: "other", baseUrl: "https://other.invalid", headers: {} },
+    })),
+  ];
+  const result = await runFreeAgentTeam(
+    available,
+    { goal: "Review", context: "" },
+    async (route) => {
+      if (route.model !== "openrouter/free") throw Error("offline");
+      return "Verified proposal";
+    },
+  );
+  assert.ok(result.workers.every((worker) => worker.status === "completed"));
+  assert.ok(result.workers.every((worker) => worker.model === "openrouter/free"));
+});
+test("bounded fallback crosses providers even when the first catalog contains many models", async () => {
+  const available = [
+    ...Array.from({ length: 10 }, (_, i) => ({
+      model: `offline-${i}:free`,
+      upstream: { name: "offline", baseUrl: "https://offline.invalid", headers: {} },
+    })),
+    {
+      model: "working:free",
+      upstream: { name: "working", baseUrl: "https://working.invalid", headers: {} },
+    },
+  ];
+  const used: string[] = [];
+  const result = await runFreeAgentTeam(
+    available,
+    { goal: "Review", context: "" },
+    async (route, role) => {
+      used.push(role + ":" + route.upstream.name);
+      if (route.upstream.name !== "working") throw Error("offline");
+      return "Verified proposal";
+    },
+  );
+  assert.ok(result.workers.every((worker) => worker.status === "completed"));
+  assert.equal(used.length, 6);
+});
+
+test("fallback keeps distinct connected credentials for the same provider eligible", async () => {
+  const available = [
+    ...Array.from({ length: 10 }, (_, i) => ({
+      model: `offline-${i}:free`,
+      upstream: {
+        name: "provider",
+        baseUrl: "https://provider.invalid",
+        headers: { Authorization: "Bearer fixture-offline" },
+      },
+    })),
+    {
+      model: "working:free",
+      upstream: {
+        name: "provider",
+        baseUrl: "https://provider.invalid",
+        headers: { Authorization: "Bearer fixture-working" },
+      },
+    },
+  ];
+  const result = await runFreeAgentTeam(
+    available,
+    { goal: "Review", context: "" },
+    async (route) => {
+      if (route.upstream.headers["Authorization"] !== "Bearer fixture-working")
+        throw Error("offline");
+      return "Proposal";
+    },
+  );
+  assert.ok(result.workers.every((worker) => worker.status === "completed"));
+  assert.doesNotMatch(JSON.stringify(result), /fixture-working|fixture-offline/);
+});
