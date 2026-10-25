@@ -13,6 +13,14 @@ import {
 import type { Json } from "@/integrations/supabase/types";
 import { matchBrowserCredentials } from "@/lib/browser-credential-matching";
 import { autoInstructions, readAutoMode, writeAutoMode } from "@/lib/auto-mode.server";
+import { saveRunLearning } from "@/lib/agent-learning.server";
+import { createHash } from "node:crypto";
+import {
+  redactContext,
+  validateTeamInput,
+  runFreeAgentTeam,
+  requestTeamWorker,
+} from "@/lib/agent-team";
 import { COMMAND_CENTER_HTML } from "@/lib/command-center";
 import {
   CLOUD_BROWSER_FRAME_DOMAINS,
@@ -31,7 +39,6 @@ import {
 } from "@/lib/gateway.server";
 import {
   buildAdaptivePlan,
-  buildLearningRecord,
   isOpaqueCredentialReference,
   rankCapabilities,
   redactEvidence,
@@ -58,6 +65,7 @@ function normalizeConnectionProvider(value: unknown) {
 
 const CATALOG_TTL_MS = 45_000;
 const MODEL_ALIASES = [
+  { id: "open-connect/auto-free", upstream: "openrouter/free" },
   { id: "open-connect/fast", upstream: "openai/gpt-4o-mini" },
   { id: "open-connect/balanced", upstream: "openai/gpt-4o-mini" },
   { id: "open-connect/reasoning", upstream: "openai/gpt-4o" },
@@ -94,7 +102,8 @@ type McpTool = {
   _meta?: Record<string, unknown>;
 };
 
-const COMMAND_CENTER_URI = "ui://open-connect/command-center-v2.html";
+const COMMAND_CENTER_URI = "ui://open-connect/command-center-v3.html";
+const V2_COMMAND_CENTER_URI = "ui://open-connect/command-center-v2.html";
 const LEGACY_COMMAND_CENTER_URI = "ui://open-connect/command-center-v1.html";
 const WIDGET_META = {
   ui: { resourceUri: CLOUD_BROWSER_WIDGET_URI, visibility: ["model", "app"] },
@@ -358,7 +367,8 @@ const PLATFORM_TOOLS: McpTool[] = [
   },
   {
     name: "open_connect_status",
-    description: "Gateway status: resources, connections, models",
+    description:
+      "Autonomous-Agents Team card: Resources, Connections, Credentials, AI Gateway, and granted key scopes",
     outputSchema: AUTO_STATUS_OUTPUT_SCHEMA,
     inputSchema: { type: "object", properties: {} },
     annotations: {
@@ -403,6 +413,7 @@ const PLATFORM_TOOLS: McpTool[] = [
   },
   {
     name: "auto_discover",
+    _meta: { ui: { visibility: ["model", "app"] }, "openai/widgetAccessible": true },
     outputSchema: AUTO_DISCOVERY_OUTPUT_SCHEMA,
     description:
       "When Auto is enabled and an authorized task needs a capability, match verified Marketplace tools and skills to the goal. Returns metadata and next steps, never executes or reveals credentials.",
@@ -416,6 +427,42 @@ const PLATFORM_TOOLS: McpTool[] = [
       additionalProperties: false,
     },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  },
+  {
+    name: "run_agent_team",
+    description:
+      "Delegate a goal to Planner, Builder, and Reviewer workers on connected catalog-verified free models only, with rotation and bounded fallback. Returns proposals, never executes tools or changes data. Requires models:invoke and agents:invoke; personal model credentials are unavailable to bounded keys.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        goal: { type: "string", minLength: 1, maxLength: 4000 },
+        context: { type: "string", maxLength: 24000 },
+      },
+      required: ["goal"],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+    _meta: { ui: { visibility: ["model", "app"] }, "openai/widgetAccessible": true },
+  },
+  {
+    name: "save_context_checkpoint",
+    description:
+      "Save a redacted, resumable conversation summary to owned Memory. Does not compact the host's conversation. Recall with list_my_memory checkpoint_session. Requires administrator control:write; saves only the supplied summary, never passive full history.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        session_id: { type: "string", minLength: 1, maxLength: 160 },
+        summary: { type: "string", minLength: 1, maxLength: 24000 },
+      },
+      required: ["session_id", "summary"],
+      additionalProperties: false,
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
   },
   {
     name: "list_resources",
@@ -454,6 +501,7 @@ const PLATFORM_TOOLS: McpTool[] = [
       type: "object",
       properties: {
         project_id: { type: "string" },
+        checkpoint_session: { type: "string", maxLength: 160 },
         limit: { type: "integer", minimum: 1, maximum: 200 },
       },
     },
@@ -471,6 +519,7 @@ const PLATFORM_TOOLS: McpTool[] = [
       type: "object",
       properties: {
         project_id: { type: "string" },
+        checkpoint_session: { type: "string", maxLength: 160 },
         limit: { type: "integer", minimum: 1, maximum: 200 },
       },
     },
@@ -668,37 +717,6 @@ const PLATFORM_TOOLS: McpTool[] = [
       "List the user's saved Browser Context Profiles and, for the default profile, which sites have saved sign-ins (cookie counts only; no cookie values).",
     inputSchema: { type: "object", properties: {} },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
-  },
-  {
-    name: "cloud_browser_save_profile",
-    description:
-      "Create a named Browser Context Profile or update its name/default setting. Omit profile_id to create; supply it to update. Does not sign in or save cookies. Use profile setup next.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        profile_id: { type: "string" },
-        name: { type: "string", minLength: 1, maxLength: 100 },
-        set_as_default: { type: "boolean" },
-      },
-      required: ["name"],
-    },
-    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
-  },
-  {
-    name: "cloud_browser_profile_setup",
-    description:
-      "Set up saved sign-ins: start returns a temporary CDP browser (15-minute timeout); connect your browser controller to cdp_url, complete authorized sign-in, then save with session_id. Cancel discards unsaved state. Never put passwords in goals or tool arguments. This is not an interactive viewer URL; use TinyFish profile manager for manual sign-in. Saving captures cookies and storage for future tasks.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        action: { type: "string", enum: ["start", "save", "cancel"] },
-        profile_id: { type: "string" },
-        url: { type: "string" },
-        session_id: { type: "string" },
-      },
-      required: ["action", "profile_id"],
-    },
-    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
   },
   {
     name: "cloud_browser_create_session",
@@ -978,7 +996,7 @@ const PLATFORM_TOOLS: McpTool[] = [
   {
     name: "record_run_outcome",
     description:
-      "Record a verified autonomous-run outcome, save redacted working memory, and promote repeated successes to knowledge.",
+      "Record a verified autonomous-run outcome, save redacted working memory, promote repeated successes to knowledge, and prepare a private Studio draft when resources:write is granted. Never publishes automatically.",
     inputSchema: {
       type: "object",
       properties: {
@@ -1237,33 +1255,6 @@ async function handleCloudBrowserTool(userId: string, name: string, args: Record
         cookies: domain.cookie_count ?? 0,
       })),
     };
-  } else if (name === "cloud_browser_save_profile") {
-    const input = {
-      name: String(args["name"] ?? ""),
-      set_as_default: args["set_as_default"] === true,
-    };
-    const profile = args["profile_id"]
-      ? await client.updateProfile(String(args["profile_id"]), input)
-      : await client.createProfile(input);
-    payload = {
-      id: profile.id,
-      name: profile.name,
-      setup_url: `https://agent.tinyfish.ai/profiles/${encodeURIComponent(profile.id)}`,
-    };
-  } else if (name === "cloud_browser_profile_setup") {
-    const profileId = tf.assertProfileId(args["profile_id"]);
-    const action = args["action"];
-    if (action === "start") {
-      if (typeof args["url"] !== "string" || !args["url"].trim())
-        throw new Error("A sign-in URL is required.");
-      payload = await client.startProfileSetup(profileId, args["url"]);
-    } else if (action === "save" || action === "cancel") {
-      payload = await client.finishProfileSetup(
-        profileId,
-        tf.assertSessionId(args["session_id"]),
-        action,
-      );
-    } else throw new Error("Choose start, save or cancel.");
   } else if (name === "cloud_browser_create_session") {
     const url = typeof args["url"] === "string" && args["url"] ? String(args["url"]) : undefined;
     payload = await client.createBrowserSession({
@@ -1496,8 +1487,6 @@ const TOOL_SCOPES: Record<string, string> = {
   cloud_browser_list_runs: "connections:read",
   cloud_browser_cancel_run: "tools:invoke",
   cloud_browser_profiles: "connections:read",
-  cloud_browser_save_profile: "tools:invoke",
-  cloud_browser_profile_setup: "tools:invoke",
   cloud_browser_create_session: "tools:invoke",
   cloud_browser_close_session: "tools:invoke",
   e2b_health: "connections:read",
@@ -1515,11 +1504,15 @@ const TOOL_SCOPES: Record<string, string> = {
   decide_control_approval: "control:write",
   create_capability_draft: "control:write",
   record_run_outcome: "control:write",
+  run_agent_team: "models:invoke",
+  save_context_checkpoint: "control:write",
   configure_connection: "control:write",
   install_capability: "control:write",
 };
 
 function canUseTool(key: AuthedKey, toolName: string) {
+  if (toolName === "run_agent_team")
+    return hasScope(key, "models:invoke") && hasScope(key, "agents:invoke");
   const required = TOOL_SCOPES[toolName] ?? "tools:invoke";
   // Control consent must not imply unrelated private-read or provider grants.
   return hasScope(key, required);
@@ -1615,7 +1608,7 @@ export const Route = createFileRoute("/mcp")({
             resources: [
               {
                 uri: COMMAND_CENTER_URI,
-                name: "Open-Connect Command Center",
+                name: "Open-Connect Autonomous-Agents Team",
                 description: "Autonomous control status and execution view",
                 mimeType: "text/html;profile=mcp-app",
               },
@@ -1630,7 +1623,9 @@ export const Route = createFileRoute("/mcp")({
         } else if (body.method === "resources/read") {
           const uri = (body.params as { uri?: string } | undefined)?.uri;
           result =
-            uri === COMMAND_CENTER_URI || uri === LEGACY_COMMAND_CENTER_URI
+            uri === COMMAND_CENTER_URI ||
+            uri === V2_COMMAND_CENTER_URI ||
+            uri === LEGACY_COMMAND_CENTER_URI
               ? {
                   contents: [
                     {
@@ -1647,7 +1642,7 @@ export const Route = createFileRoute("/mcp")({
                           },
                         },
                         "openai/widgetDescription":
-                          "Open-Connect autonomous control command center",
+                          "Open-Connect Autonomous-Agents Team: Auto and four scoped capability planes",
                       },
                     },
                   ],
@@ -1831,13 +1826,20 @@ export const Route = createFileRoute("/mcp")({
             let connections: number | null = null;
             try {
               const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-              const response = await supabaseAdmin
-                .from("app_connections")
-                .select("id", { count: "exact", head: true })
-                .eq("user_id", key.userId)
-                .eq("status", "connected");
-              if (!response.error && typeof response.count === "number")
-                connections = response.count;
+              if (
+                hasScope(key, "connections:read") &&
+                !key.organizationId &&
+                !key.workspaceId &&
+                !key.projectId
+              ) {
+                const response = await supabaseAdmin
+                  .from("app_connections")
+                  .select("id", { count: "exact", head: true })
+                  .eq("user_id", key.userId)
+                  .eq("status", "connected");
+                if (!response.error && typeof response.count === "number")
+                  connections = response.count;
+              }
             } catch {
               // Status must remain available even when the optional connection counter is not.
             }
@@ -1851,6 +1853,14 @@ export const Route = createFileRoute("/mcp")({
                 connections: {
                   connected: connections,
                   available: connections !== null,
+                },
+                credentials: {
+                  available:
+                    hasScope(key, "secrets:read") &&
+                    !key.projectId &&
+                    !key.workspaceId &&
+                    !key.organizationId,
+                  mode: "metadata_only",
                 },
                 models: {
                   endpoint: "https://open-connect.site/v1",
@@ -2046,6 +2056,11 @@ export const Route = createFileRoute("/mcp")({
                 .limit(limit);
               query = projectId ? query.eq("project_id", projectId) : query.is("project_id", null);
               if (!isMemory) query = query.neq("status", "archived");
+              if (isMemory && typeof args["checkpoint_session"] === "string")
+                query = query.eq(
+                  "metadata->>checkpoint_session",
+                  args["checkpoint_session"].slice(0, 160),
+                );
               const { data, error } = await query;
               if (error) throw new Error(error.message);
               return data ?? [];
@@ -2228,11 +2243,6 @@ export const Route = createFileRoute("/mcp")({
               ...(connectionResult.isError ? { isError: true } : {}),
             };
           } else if (name.startsWith("cloud_browser_")) {
-            if (
-              (name === "cloud_browser_save_profile" || name === "cloud_browser_profile_setup") &&
-              (key.projectId || key.workspaceId || key.organizationId)
-            )
-              throw new Error("Saved browser profile management requires a personal API key.");
             result = await handleCloudBrowserTool(key.userId, name, args);
           } else if (name === "e2b_health") {
             const { e2bConfig, e2bHealth } = await import("@/lib/e2b.server");
@@ -2470,6 +2480,67 @@ export const Route = createFileRoute("/mcp")({
                 ? ["discover"]
                 : ["discover", "plan"],
             });
+          } else if (name === "run_agent_team") {
+            if (key.projectId || key.workspaceId || key.organizationId)
+              throw new Error(
+                "Bounded keys cannot use personal model credentials. Use a personal key with models:invoke.",
+              );
+            const { resolveAutoFreeRoutes, resolveUserUpstreams } =
+              await import("@/lib/gateway.server");
+            const input = validateTeamInput(args);
+            const routes = await resolveAutoFreeRoutes(
+              await resolveUserUpstreams(key.userId, false),
+            );
+            result = textResult(await runFreeAgentTeam(routes, input, requestTeamWorker));
+          } else if (name === "save_context_checkpoint") {
+            await requireControlWrite(key);
+            if ((key.workspaceId || key.organizationId) && !key.projectId)
+              throw new Error("Choose a project-scoped or personal key for Memory checkpoints.");
+            if (key.projectId) await assertProjectAccess(key, key.projectId);
+            const session = typeof args["session_id"] === "string" ? args["session_id"].trim() : "";
+            const summary =
+              typeof args["summary"] === "string" ? redactContext(args["summary"].trim()) : "";
+            if (
+              !session ||
+              redactContext(session) !== session ||
+              session.length > 160 ||
+              !summary ||
+              summary.length > 24000
+            )
+              throw new Error(
+                "Supply session_id up to 160 characters and a summary up to 24000 characters.",
+              );
+            const digest = createHash("sha256")
+              .update(JSON.stringify([key.userId, key.projectId, session]))
+              .digest("hex");
+            const id = `${digest.slice(0, 8)}-${digest.slice(8, 12)}-4${digest.slice(13, 16)}-a${digest.slice(17, 20)}-${digest.slice(20, 32)}`;
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const { error } = await supabaseAdmin.from("memory_records").upsert(
+              {
+                id,
+                user_id: key.userId,
+                project_id: key.projectId,
+                title: "Agent context checkpoint",
+                content: summary,
+                memory_type: "summary",
+                importance: 4,
+                tags: ["context-checkpoint"],
+                metadata: {
+                  checkpoint_session: session,
+                  source: "mcp",
+                  scope: key.projectId ?? "personal",
+                },
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: "id" },
+            );
+            if (error) throw new Error("Context checkpoint could not be saved.");
+            result = textResult({
+              memory_id: id,
+              checkpoint_session: session,
+              memory_saved: true,
+              host_context_compacted: false,
+            });
           } else if (name === "create_capability_draft") {
             await requireControlWrite(key);
             const capability = String(args["capability"] ?? "")
@@ -2513,6 +2584,11 @@ export const Route = createFileRoute("/mcp")({
             });
           } else if (name === "record_run_outcome") {
             await requireControlWrite(key);
+            if (key.projectId || key.workspaceId || key.organizationId)
+              throw new Error(
+                "Run learning requires a personal administrator key; bounded keys cannot write personal learning.",
+              );
+
             const correlationId = String(args["correlation_id"] ?? "").trim();
             const status = String(args["status"] ?? "") as "succeeded" | "failed" | "blocked";
             const summary = String(args["summary"] ?? "")
@@ -2536,70 +2612,17 @@ export const Route = createFileRoute("/mcp")({
               .eq("user_id", key.userId)
               .single();
             if (!run) throw new Error("Autonomous run not found.");
-            const learning = buildLearningRecord({
+            const saved = await saveRunLearning(supabaseAdmin as SupabaseClient, {
+              userId: key.userId,
+              runId: run.id,
               goal: run.goal,
               status,
               summary,
               capabilitySlugs,
               evidence: args["evidence"],
+              createDraft: hasScope(key, "resources:write"),
             });
-            await controlDb.from("autonomous_run_events").insert({
-              user_id: key.userId,
-              run_id: run.id,
-              event_type: status === "succeeded" ? "learned" : status,
-              summary: learning.content,
-              capability_slugs: capabilitySlugs,
-              evidence: learning.evidence,
-            });
-            await controlDb.from("memory_records").insert({
-              user_id: key.userId,
-              title: learning.title,
-              content: learning.content,
-              memory_type: learning.memoryType,
-              importance: learning.importance,
-              tags: learning.tags,
-              metadata: { run_id: run.id, evidence: learning.evidence },
-            });
-            let knowledgePromoted = false;
-            if (status === "succeeded" && capabilitySlugs.length) {
-              const { count } = await controlDb
-                .from("autonomous_run_events")
-                .select("id", { count: "exact", head: true })
-                .eq("user_id", key.userId)
-                .eq("event_type", "learned")
-                .contains("capability_slugs", capabilitySlugs);
-              if (count === 3) {
-                await controlDb.from("knowledge_items").insert({
-                  user_id: key.userId,
-                  title: `Proven procedure: ${capabilitySlugs.join(", ")}`.slice(0, 240),
-                  content: learning.content,
-                  source_type: "api",
-                  status: "ready",
-                  tags: ["verified-procedure", ...capabilitySlugs].slice(0, 20),
-                  metadata: {
-                    promoted_from_run: run.id,
-                    verified_successes: 3,
-                  },
-                });
-                knowledgePromoted = true;
-              }
-            }
-            await controlDb
-              .from("autonomous_runs")
-              .update({
-                state: status === "succeeded" ? "succeeded" : "failed",
-                evidence: learning.evidence,
-                updated_at: new Date().toISOString(),
-              })
-              .eq("id", run.id)
-              .eq("user_id", key.userId);
-            result = textResult({
-              correlation_id: correlationId,
-              state: status,
-              memory_saved: true,
-              knowledge_promoted: knowledgePromoted,
-              values_exposed: false,
-            });
+            result = textResult({ correlation_id: correlationId, state: status, ...saved });
           } else if (name === "install_capability") {
             await requireControlWrite(key);
             const slug = String(args["resource_id"] ?? "").trim();

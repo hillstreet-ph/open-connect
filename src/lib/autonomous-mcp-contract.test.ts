@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const mcpRoute = readFileSync(new URL("../routes/mcp.ts", import.meta.url), "utf8");
+const learning = readFileSync(new URL("./agent-learning.server.ts", import.meta.url), "utf8");
 const operations = readFileSync(new URL("./ops.functions.ts", import.meta.url), "utf8");
 const apiKeys = readFileSync(new URL("./api-keys.functions.ts", import.meta.url), "utf8");
 const migration = readFileSync(
@@ -58,10 +59,10 @@ test("keeps missing capability creation non-executable", () => {
 });
 
 test("persists redacted learning events and memory", () => {
-  assert.match(mcpRoute, /buildLearningRecord/);
-  assert.match(mcpRoute, /from\(["']autonomous_run_events["']\)/);
+  assert.match(learning, /buildLearningRecord/);
+  assert.match(learning, /from\(["']autonomous_run_events["']\)/);
   assert.match(mcpRoute, /from\(["']memory_records["']\)/);
-  assert.match(mcpRoute, /from\(["']knowledge_items["']\)/);
+  assert.match(learning, /from\(["']knowledge_items["']\)/);
 });
 
 test("dispatches agent automations into governed autonomous runs", () => {

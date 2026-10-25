@@ -1,3 +1,5 @@
+import { useServerFn } from "@tanstack/react-start";
+import { exportContextData } from "@/lib/memory.functions";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
@@ -48,6 +50,22 @@ const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 function SettingsPage() {
   const queryClient = useQueryClient();
+  const exportFn = useServerFn(exportContextData);
+  const exportData = useMutation({
+    mutationFn: () => exportFn({}),
+    onSuccess: (data) => {
+      const url = URL.createObjectURL(
+        new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }),
+      );
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "open-connect-context.json";
+      link.click();
+      URL.revokeObjectURL(url);
+      toast.success("Memory and Knowledge export downloaded");
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : "Export failed"),
+  });
   const { isAdmin } = useRoles();
   const fileRef = useRef<HTMLInputElement>(null);
   const [nameDraft, setNameDraft] = useState<{ userId: string; value: string } | null>(null);
@@ -391,6 +409,26 @@ function SettingsPage() {
           </div>
         </TabsContent>
         <TabsContent value="data">
+          <Card className="mb-4">
+            <CardHeader>
+              <CardTitle>Data Controls</CardTitle>
+              <CardDescription>
+                Manage the context you choose to save in Open-Connect.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Clients can save redacted context checkpoints and verified run summaries to Memory.
+                Three distinct successful runs of the same procedure can create reusable Knowledge
+                and a private Studio draft when the key permits resource writes. Drafts require
+                verification before publication. Open-Connect cannot capture unseen host
+                conversations or compact another app’s history.
+              </p>
+              <Button onClick={() => exportData.mutate()} disabled={exportData.isPending}>
+                {exportData.isPending ? "Preparing export…" : "Export Memory and Knowledge"}
+              </Button>
+            </CardContent>
+          </Card>
           <div className="grid gap-4 md:grid-cols-2">
             <SettingsLinkCard
               to="/memory"

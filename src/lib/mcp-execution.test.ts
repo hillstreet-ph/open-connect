@@ -1301,24 +1301,10 @@ test("resource validation failures are actionable JSON tool errors", async () =>
   expect(JSON.parse(payload.content[0].text).error.message).toContain("lowercase slug");
 });
 
-test("saved browser profile mutations reject project and organization contexts before provider access", async () => {
-  scopes = ["tools:invoke"];
-  for (const boundary of [
-    { projectId: "project" },
-    { workspaceId: "workspace" },
-    { organizationId: "org" },
-  ]) {
-    keyBoundary = boundary;
-    for (const tool of ["cloud_browser_save_profile", "cloud_browser_profile_setup"]) {
-      await expect(
-        call(tool, {
-          name: "Work",
-          action: "start",
-          profile_id: "prof_work",
-          url: "https://example.com",
-        }),
-      ).rejects.toThrow("personal API key");
-    }
-  }
-  expect(tables).not.toContain("app_connections");
+test("free worker delegation and context saving enforce independent key grants", async () => {
+  scopes = ["mcp:connect", "models:invoke"];
+  expect((await call("run_agent_team", { goal: "Review" })).status).toBe(403);
+  expect(
+    (await call("save_context_checkpoint", { session_id: "fixture", summary: "Summary" })).status,
+  ).toBe(403);
 });

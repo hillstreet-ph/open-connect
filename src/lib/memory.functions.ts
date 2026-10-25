@@ -389,3 +389,10 @@ export const addContextToProject = createServerFn({ method: "POST" })
     }
     return { duplicate: false };
   });
+
+export const exportContextData = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { exportOwnedContext } = await import("@/lib/data-controls.server");
+    return exportOwnedContext(context.supabase, context.userId);
+  });

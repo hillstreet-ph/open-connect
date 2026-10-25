@@ -126,6 +126,12 @@ export const AUTO_STATUS_OUTPUT_SCHEMA = {
           required: ["connected", "available"],
           additionalProperties: false,
         },
+        credentials: {
+          type: "object",
+          properties: { available: boolean, mode: string },
+          required: ["available", "mode"],
+          additionalProperties: false,
+        },
         models: {
           type: "object",
           properties: { endpoint: string, aliases: strings },
@@ -133,7 +139,7 @@ export const AUTO_STATUS_OUTPUT_SCHEMA = {
           additionalProperties: false,
         },
       },
-      required: ["resources", "connections", "models"],
+      required: ["resources", "connections", "models", "credentials"],
       additionalProperties: false,
     },
   },
