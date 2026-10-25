@@ -171,7 +171,12 @@ export function summarizeRun(run: TinyFishRun) {
 
 export function createTinyFishClient(apiKey: string, send: typeof fetch = fetch) {
   if (!apiKey || apiKey.length < 8) throw new Error("TinyFish API key is not configured.");
-  async function request<T>(path: string, init: RequestInit = {}, base = TINYFISH_API): Promise<T> {
+  async function request<T>(
+    path: string,
+    init: RequestInit = {},
+    base = TINYFISH_API,
+    timeoutMs = 25_000,
+  ): Promise<T> {
     const response = await send(`${base}${path}`, {
       ...init,
       headers: {
@@ -181,7 +186,7 @@ export function createTinyFishClient(apiKey: string, send: typeof fetch = fetch)
         ...(init.headers ?? {}),
       },
       redirect: "manual",
-      signal: AbortSignal.timeout(25_000),
+      signal: AbortSignal.timeout(timeoutMs),
     });
     if (response.status === 204) return undefined as T;
     const payload = (await response.json().catch(() => ({}))) as {
@@ -238,6 +243,8 @@ export function createTinyFishClient(apiKey: string, send: typeof fetch = fetch)
       return request<{ session_id: string; cdp_url: string; base_url: string; expires_at: string }>(
         `/v1/profiles/${encodeURIComponent(assertProfileId(profileId))}/setup-session`,
         { method: "POST", body: JSON.stringify({ url: normalized.url, timeout_seconds: 900 }) },
+        TINYFISH_API,
+        60_000,
       );
     },
     finishProfileSetup: (profileId: string, sessionId: string, action: "save" | "cancel") => {
@@ -268,6 +275,7 @@ export function createTinyFishClient(apiKey: string, send: typeof fetch = fetch)
           }),
         },
         TINYFISH_BROWSER_API,
+        60_000,
       ),
     closeBrowserSession: (sessionId: string) =>
       request<unknown>(
