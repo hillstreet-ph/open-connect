@@ -19,7 +19,7 @@ export function SiteFooter() {
             <p className="font-display text-sm font-semibold">Open-Connect</p>
           </div>
           <p className="mt-2 text-sm text-muted-foreground">
-            Resources · Connections · Models — one account, one key, one gateway.
+            One workspace for resources, app connections, and AI models.
           </p>
         </div>
 
