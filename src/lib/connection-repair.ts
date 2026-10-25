@@ -54,6 +54,11 @@ function snapshot(row: RepairConnection) {
     )
       ? row.metadata["auth_type"]
       : null,
+    credential_source: row.credential_reference?.startsWith("composio://")
+      ? "composio"
+      : row.credential_reference?.startsWith("credential://")
+        ? "vault"
+        : "other",
     credential_id:
       row.credential_reference?.match(/^credential:\/\/[^/]+\/([0-9a-f-]{36})$/i)?.[1] ?? null,
     secrets_exposed: false,
@@ -83,6 +88,10 @@ export async function repairOwnedConnection(
   if (!saved || saved.user_id !== userId || saved.id !== input.connection_id)
     throw new Error("Owned connection not found.");
   if (input.action === "inspect") return { connection: snapshot(saved), applied: false };
+  if (saved.credential_reference?.startsWith("composio://"))
+    throw new Error(
+      "This is a managed Composio account. Use its provider authorization and executor; do not replace it with another account's key.",
+    );
   if (!isExecutableMcpProvider(saved.provider) || saved.provider === "custom_api")
     throw new Error("Use this provider's dedicated setup page.");
   if (!input.expected_updated_at || saved.updated_at !== input.expected_updated_at)

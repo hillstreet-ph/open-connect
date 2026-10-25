@@ -138,3 +138,10 @@ test("inspection never returns credential-bearing URLs or metadata", async () =>
   assert.equal(result.connection.endpoint_url, null);
   assert.doesNotMatch(JSON.stringify(result), /token=private|auth_header/);
 });
+
+test("managed account references cannot be silently rebound to a different API key", async () => {
+  const f = fixture({ credential_reference: "composio://connected-account/managed" });
+  assert.equal((await f.run({ action: "inspect" })).connection.credential_source, "composio");
+  await assert.rejects(f.run({ credential_id: keyId }), /managed Composio account/);
+  assert.deepEqual(f.counts(), { writes: 0, validations: 0 });
+});
