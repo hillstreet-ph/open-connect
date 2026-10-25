@@ -23,6 +23,7 @@ export const listApiKeys = createServerFn({ method: "GET" })
       .select(
         "id, name, key_prefix, scopes, access_profile, organization_id, workspace_id, project_id, last_used_at, revoked_at, expires_at, created_at",
       )
+      .is("revoked_at", null)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return (data ?? []).map((key) => ({
@@ -35,6 +36,7 @@ export const createApiKey = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator(
     (input: {
+      modelOnly?: boolean;
       name?: string;
       profile?: AccessProfile;
       scopes?: string[];
@@ -44,9 +46,13 @@ export const createApiKey = createServerFn({ method: "POST" })
     }) => {
       const profile = isAccessProfile(input?.profile ?? "") ? input.profile! : "developer";
       return {
+        modelOnly: input?.modelOnly === true,
         name: (input?.name ?? "").trim() || "Default key",
-        profile,
-        scopes: scopesForProfile(profile, input?.scopes),
+        profile: input?.modelOnly === true ? "custom" : profile,
+        scopes:
+          input?.modelOnly === true
+            ? ["models:read", "models:invoke"]
+            : scopesForProfile(profile, input?.scopes),
         organizationId: input?.organizationId || null,
         workspaceId: input?.workspaceId || null,
         projectId: input?.projectId || null,
@@ -109,7 +115,7 @@ export const createApiKey = createServerFn({ method: "POST" })
     }
 
     const { generateKey } = await import("./gateway.server");
-    const key = generateKey();
+    const key = generateKey(data.modelOnly);
     const { error } = await context.supabase.from("api_keys").insert({
       user_id: context.userId,
       name: data.name,
@@ -145,7 +151,8 @@ export const revokeApiKey = createServerFn({ method: "POST" })
     const { error } = await context.supabase
       .from("api_keys")
       .update({ revoked_at: new Date().toISOString() })
-      .eq("id", data.id);
+      .eq("id", data.id)
+      .eq("user_id", context.userId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
