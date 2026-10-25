@@ -9,7 +9,7 @@ import {
   startCloudBrowserRun,
 } from "@/lib/cloud-browser.functions";
 import { AgentAttachments } from "@/components/agent-attachments";
-import { browserTaskGoal, type ChatAttachment } from "@/lib/agent-chat";
+import { browserTaskProfile, browserTaskGoal, type ChatAttachment } from "@/lib/agent-chat";
 import { browserPreviewUrl } from "@/lib/cloud-live-view";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,7 +31,7 @@ export function BrowserAgentChat({
   const id = useId();
   const [url, setUrl] = useState("");
   const [prompt, setPrompt] = useState("");
-  const [profile, setProfile] = useState("none");
+  const [profile, setProfile] = useState("default");
   const [duration, setDuration] = useState(300);
   const [files, setFiles] = useState<ChatAttachment[]>([]);
   const [fileBusy, setFileBusy] = useState(false);
@@ -60,8 +60,7 @@ export function BrowserAgentChat({
         data: {
           url: url.trim(),
           goal: browserTaskGoal(prompt, files),
-          use_profile: profile !== "none",
-          ...(profile !== "none" ? { profile_id: profile } : {}),
+          ...browserTaskProfile(profile),
           max_duration_seconds: duration,
         },
       }),
@@ -137,6 +136,7 @@ export function BrowserAgentChat({
             disabled={active || start.isPending}
             onChange={(event) => setProfile(event.target.value)}
           >
+            <option value="default">Default profile · reuse saved sign-ins</option>
             <option value="none">Fresh browser · no saved sign-ins</option>
             {data?.connected
               ? data.profiles.map((item) => (

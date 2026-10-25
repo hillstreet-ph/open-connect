@@ -76,3 +76,11 @@ export function helperModelMessages(messages: ChatMessage[], extraFiles: ChatAtt
     throw new Error("Recent context is too large. Start a new chat with shorter excerpts.");
   return result;
 }
+
+/** Reuse saved sign-ins unless the user explicitly selects a fresh browser. */
+export function browserTaskProfile(selection = "default") {
+  if (selection === "none") return { use_profile: false };
+  if (selection === "default") return { use_profile: true };
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(selection)) throw new Error("Choose a valid browser profile.");
+  return { use_profile: true, profile_id: selection };
+}
