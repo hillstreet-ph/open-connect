@@ -32,7 +32,7 @@ const PROFILE_LABELS: Record<AccessProfile, string> = {
   custom: "Custom",
 };
 
-export function ApiKeysCard() {
+export function ApiKeysCard({ modelOnly = false }: { modelOnly?: boolean }) {
   const queryClient = useQueryClient();
   const list = useServerFn(listApiKeys);
   const create = useServerFn(createApiKey);
@@ -59,7 +59,7 @@ export function ApiKeysCard() {
       update({ data: input }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["api-keys"] });
-      toast.success("Permissions updated. Connected clients may take 30 seconds to refresh.");
+      toast.success("Permissions updated. New requests use the updated permissions.");
     },
     onError: (error) =>
       toast.error(error instanceof Error ? error.message : "Could not update permissions"),
@@ -67,7 +67,7 @@ export function ApiKeysCard() {
 
   const createMutation = useMutation({
     mutationFn: (keyName: string) =>
-      create({ data: { name: keyName, profile, projectId: projectId || undefined } }),
+      create({ data: { name: keyName, modelOnly, profile, projectId: projectId || undefined } }),
     onSuccess: (result) => {
       setFreshKey(result.key);
       setName("");
@@ -83,7 +83,8 @@ export function ApiKeysCard() {
     mutationFn: (id: string) => revoke({ data: { id } }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["api-keys"] });
-      toast.success("Key revoked");
+      setFreshKey(null);
+      toast.success("Key revoked and removed");
     },
   });
 
@@ -94,10 +95,11 @@ export function ApiKeysCard() {
           <span className="flex size-9 items-center justify-center rounded-lg bg-primary/15 text-primary">
             <KeyRound className="size-4" />
           </span>
-          <CardTitle className="mt-3 text-base">API Keys</CardTitle>
+          <CardTitle className="mt-3 text-base">{modelOnly ? "AI Gateway keys" : "API Keys"}</CardTitle>
           <CardDescription>
-            Scoped <code className="font-mono">oc_live_</code> keys authenticate your agents against{" "}
-            <code className="font-mono">/mcp</code> and <code className="font-mono">/v1</code>.
+            {modelOnly
+              ? "Create a model-scoped sk-oc- key for https://open-connect.site/v1. Connect your model providers below first."
+              : "Scoped oc_live_ keys authenticate integrations. Existing keys continue to work."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -115,11 +117,13 @@ export function ApiKeysCard() {
               placeholder="Key name (e.g. local agent)"
             />
             <select
+              disabled={modelOnly}
               aria-label="Access profile"
               className="flex h-10 rounded-md border border-input bg-background px-3 text-sm"
-              value={profile}
+              value={modelOnly ? "custom" : profile}
               onChange={(event) => setProfile(event.target.value as AccessProfile)}
             >
+              {modelOnly ? <option value="custom">Models only</option> : null}
               {(Object.keys(PROFILE_LABELS) as AccessProfile[])
                 .filter((value) => value !== "custom" && (isAdmin || value !== "administrator"))
                 .map((value) => (
@@ -147,9 +151,11 @@ export function ApiKeysCard() {
             </Button>
           </form>
           <p className="text-xs text-muted-foreground">
-            {profile === "administrator"
-              ? "Full resource, tool, action, model, agent, connection, and control access."
-              : `${ACCESS_PROFILES[profile as Exclude<AccessProfile, "custom">]?.length ?? 0} least-privilege scopes selected.`}{" "}
+            {modelOnly
+              ? "Model listing and inference only."
+              : profile === "administrator"
+                ? "Full resource, tool, action, model, agent, connection, and control access."
+                : `${ACCESS_PROFILES[profile as Exclude<AccessProfile, "custom">]?.length ?? 0} least-privilege scopes selected.`}{" "}
             Secret values remain non-exportable; agents receive opaque credential references.
           </p>
 
@@ -204,7 +210,7 @@ export function ApiKeysCard() {
                       </Badge>
                     ) : null}
                   </span>
-                  {key.active ? (
+                  {key.active && !key.key_prefix.startsWith("sk-oc-") ? (
                     <KeyAccessEditor
                       key={`${key.id}:${key.access_profile}:${key.scopes?.join(",")}`}
                       name={key.name}
@@ -239,7 +245,9 @@ export function ApiKeysCard() {
           </ul>
         </CardContent>
       </Card>
-      <McpConnectionCard key={freshKey ? "fresh" : "existing"} freshKey={freshKey} />
+      {!modelOnly ? (
+        <McpConnectionCard key={freshKey ? "fresh" : "existing"} freshKey={freshKey} />
+      ) : null}
     </div>
   );
 }

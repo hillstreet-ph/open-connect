@@ -42,6 +42,20 @@ jobs:
             -f supabase/tests/key_access_fixture.sql \
             -f supabase/migrations/20261010030000_owned_key_access.sql \
             -f supabase/tests/owned_key_access.sql
+      - name: Exercise model key verification, expiry and scope boundaries
+        env:
+          PGPASSWORD: disposable-ci-only
+        run: |
+          createdb -h localhost -U postgres model_key_boundary
+          psql -h localhost -U postgres -d model_key_boundary -v ON_ERROR_STOP=1 \
+            -f supabase/tests/key_access_fixture.sql \
+            -f supabase/tests/admin_oauth_fixture.sql \
+            -c 'ALTER TABLE public.api_keys ADD COLUMN last_used_at timestamptz' \
+            -f supabase/migrations/20261010030000_owned_key_access.sql \
+            -f supabase/migrations/20261025050811_model_gateway_sk_keys.sql \
+            -f supabase/tests/model_gateway_keys.sql \
+            -f supabase/migrations/20261025050841_delete_revoked_api_keys.sql \
+            -f supabase/tests/delete_revoked_api_keys.sql
       - name: Exercise duplicate credential values and owner boundaries
         env:
           PGPASSWORD: disposable-ci-only

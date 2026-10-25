@@ -13,7 +13,8 @@
  *   OPENROUTER_API_KEY optional explicit OpenRouter key
  *   OPENROUTER_BASE_URL optional override
  */
-import { createHash, randomBytes } from "crypto";
+import { createHash } from "crypto";
+import { generateClientKey, isClientKey } from "./gateway-keys.ts";
 import { fetchFreeModelCatalog, isAutoFreeModel } from "./model-catalog";
 
 export const KEY_PREFIX = "oc_live_";
@@ -330,9 +331,8 @@ export function hashKey(rawKey: string): string {
   return createHash("sha256").update(rawKey).digest("hex");
 }
 
-export function generateKey(): { raw: string; hash: string; prefix: string } {
-  const raw = `${KEY_PREFIX}${randomBytes(24).toString("base64url")}`;
-  return { raw, hash: hashKey(raw), prefix: raw.slice(0, KEY_PREFIX.length + 6) };
+export function generateKey(modelOnly = false): { raw: string; hash: string; prefix: string } {
+  return generateClientKey(modelOnly);
 }
 
 export type AuthedKey = {
@@ -344,9 +344,6 @@ export type AuthedKey = {
   projectId: string | null;
   accessProfile: string;
 };
-
-const AUTH_TTL_MS = 30_000;
-const authCache = new Map<string, { at: number; key: AuthedKey | null }>();
 
 export function readBearer(request: Request): string | null {
   const header = request.headers.get("authorization") ?? request.headers.get("x-api-key");
@@ -361,13 +358,9 @@ export function hasScope(key: AuthedKey, scope: string): boolean {
 
 export async function authenticateKey(request: Request): Promise<AuthedKey | null> {
   const raw = readBearer(request);
-  if (!raw || !raw.startsWith(KEY_PREFIX)) return null;
+  if (!raw || !isClientKey(raw)) return null;
 
-  const digest = hashKey(raw);
-  const now = Date.now();
-  const cached = authCache.get(digest);
-  if (cached && now - cached.at < AUTH_TTL_MS) return cached.key;
-
+  // Verify every request so deleted/revoked keys never survive in an instance cache.
   const { oauthDatabase } = await import("@/lib/oauth-client.server");
   const { data, error } = await oauthDatabase().rpc("oc_verify_gateway_key", { p_key: raw });
   if (error || !data) return null;
@@ -380,13 +373,6 @@ export async function authenticateKey(request: Request): Promise<AuthedKey | nul
     projectId: data.project_id ?? null,
     accessProfile: data.access_profile ?? "legacy",
   };
-  if (!data.expires_at) authCache.set(digest, { at: now, key });
-
-  if (authCache.size > 500) {
-    const oldest = authCache.keys().next().value;
-    if (oldest) authCache.delete(oldest);
-  }
-
   return key;
 }
 

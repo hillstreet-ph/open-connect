@@ -1,3 +1,4 @@
+import { ApiKeysCard } from "@/components/api-keys-card";
 import { testFreeModel } from "@/lib/model-check.functions";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -23,7 +24,7 @@ export const Route = createFileRoute("/_authenticated/models")({
       {
         name: "description",
         content:
-          "One OpenAI-compatible gateway for OpenRouter, OpenAI, Claude, Gemini, Grok and more. List every model with your oc_live_ key.",
+          "One OpenAI-compatible gateway for OpenRouter, OpenAI, Claude, Gemini, Grok and more. List every model with your sk-oc- key.",
       },
     ],
   }),
@@ -122,6 +123,10 @@ function ModelsPage() {
         secrets stay on the server; clients only use an Open-Connect key.
       </p>
 
+      <div className="mt-8">
+        <ApiKeysCard modelOnly />
+      </div>
+
       <Card className="mt-10 shadow-panel">
         <CardHeader>
           <CardTitle className="text-base">Point any client here</CardTitle>
@@ -136,8 +141,8 @@ function ModelsPage() {
           </div>
           <div className="rounded-lg border border-border/70 bg-background/60 px-4 py-3">
             <span className="text-muted-foreground">API key </span>
-            <span className="text-accent">oc_live_…</span>
-            <span className="ml-2 text-muted-foreground">(create at /api-keys)</span>
+            <span className="text-accent">sk-oc-…</span>
+            <span className="ml-2 text-muted-foreground">(create below)</span>
           </div>
         </CardContent>
       </Card>
@@ -155,10 +160,13 @@ function ModelsPage() {
         <CardContent className="space-y-3">
           <pre className="overflow-x-auto rounded-lg border border-border bg-muted/30 p-3 text-[11px] leading-relaxed">
             {`curl -sS https://open-connect.site/v1/models \\
-  -H "Authorization: Bearer oc_live_YOUR_KEY"`}
+  -H "Authorization: Bearer sk-oc-YOUR_KEY"`}
           </pre>
           <p className="text-xs text-muted-foreground">
-            Requires scopes models:read or models:invoke (included on new keys).
+            Use the OpenAI-compatible provider setting and the base URL above. An Open-Connect key
+            works at this gateway, not directly at OpenAI or a separate LiteLLM server. If LiteLLM
+            reports token_not_found_in_db, verify the client base URL and reconnect LiteLLM below
+            using a key issued by that LiteLLM server. Renaming a key does not register it there.
           </p>
         </CardContent>
       </Card>
