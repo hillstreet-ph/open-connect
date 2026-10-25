@@ -1,6 +1,7 @@
 begin;
--- The test subject is supplied by the operator; all writes roll back.
-select set_config('request.jwt.claim.sub','5163b0cb-504d-4061-b0d7-777ad17ba00c',true);
+-- Set open_connect.test_user_id to an existing test-account UUID before running.
+-- All writes roll back; no production account identifier is stored in this file.
+select set_config('request.jwt.claim.sub',current_setting('open_connect.test_user_id'),true);
 insert into public.data_control_settings(user_id,capture_activity,save_helper_memory,suggest_drafts,retention_days)
  values(auth.uid(),true,true,true,30) on conflict(user_id) do update set capture_activity=true,suggest_drafts=true,retention_days=30;
 do $$
@@ -40,7 +41,7 @@ set local role authenticated;
 do $$ begin
  if exists(select 1 from public.data_control_settings) or exists(select 1 from public.data_control_activity) or exists(select 1 from public.data_reuse_drafts) then raise exception 'Cross-account read leaked rows'; end if;
  begin
-  insert into public.data_control_settings(user_id) values('5163b0cb-504d-4061-b0d7-777ad17ba00c');
+  insert into public.data_control_settings(user_id) values(current_setting('open_connect.test_user_id')::uuid);
   raise exception 'Cross-account insert unexpectedly succeeded';
  exception when insufficient_privilege then null;
  end;
