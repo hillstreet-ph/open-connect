@@ -1,3 +1,5 @@
+import { z } from "zod";
+import { taskInput, TASK_STATUSES, validTimezone, validateOneTime } from "@/lib/operations";
 import type { Json } from "@/integrations/supabase/types";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -23,8 +25,9 @@ export const listTasks = createServerFn({ method: "GET" })
     let q = context.supabase
       .from("tasks")
       .select(
-        "id, title, description, status, priority, due_at, project_id, organization_id, created_at, updated_at, projects(name, slug)",
+        "id, title, description, status, priority, due_at, project_id, organization_id, created_at, updated_at",
       )
+      .eq("user_id", context.userId)
       .order("updated_at", { ascending: false })
       .limit(100);
     if (data.projectId) q = q.eq("project_id", data.projectId);
@@ -36,35 +39,26 @@ export const listTasks = createServerFn({ method: "GET" })
 
 export const createTask = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
-    (input: {
-      title: string;
-      description?: string | undefined;
-      priority?: TaskPriority;
-      projectId?: string | undefined;
-      organizationId?: string | undefined;
-      dueAt?: string;
-    }) => ({
-      title: (input?.title ?? "").trim(),
-      description: (input?.description ?? "").trim() || null,
-      priority: (input?.priority ?? "medium") as TaskPriority,
-      projectId: input?.projectId || null,
-      organizationId: input?.organizationId || null,
-      dueAt: input?.dueAt || null,
-    }),
-  )
+  .validator((input: unknown) => taskInput.parse(input))
   .handler(async ({ data, context }) => {
-    if (!data.title) throw new Error("Task title required");
+    if (data.projectId) {
+      const { data: project, error: projectError } = await context.supabase
+        .from("projects")
+        .select("id")
+        .eq("id", data.projectId)
+        .maybeSingle();
+      if (projectError || !project) throw new Error("Choose a project you can access.");
+    }
     const { data: row, error } = await context.supabase
       .from("tasks")
       .insert({
         user_id: context.userId,
         title: data.title,
-        description: data.description,
+        description: data.description ?? null,
         priority: data.priority,
-        project_id: data.projectId,
-        organization_id: data.organizationId,
-        due_at: data.dueAt,
+        project_id: data.projectId ?? null,
+        organization_id: data.organizationId ?? null,
+        due_at: data.dueAt ?? null,
         status: "todo",
       })
       .select("id, title, status, priority, created_at")
@@ -75,15 +69,15 @@ export const createTask = createServerFn({ method: "POST" })
 
 export const updateTaskStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input: { id: string; status: TaskStatus }) => ({
-    id: input.id,
-    status: input.status,
-  }))
+  .validator((input: unknown) =>
+    z.object({ id: z.uuid(), status: z.enum(TASK_STATUSES) }).parse(input),
+  )
   .handler(async ({ data, context }) => {
     const { data: row, error } = await context.supabase
       .from("tasks")
       .update({ status: data.status, updated_at: new Date().toISOString() })
       .eq("id", data.id)
+      .eq("user_id", context.userId)
       .select("id, status")
       .single();
     if (error) throw new Error(error.message);
@@ -141,7 +135,10 @@ export const createSchedule = createServerFn({ method: "POST" })
       throw new Error("Choose an automation that belongs to your account.");
     if (automation.action_type !== "model" || !automation.enabled)
       throw new Error("Schedules can currently run enabled AI response automations only.");
-    let nextRunAt = data.runAt;
+    validTimezone(data.timezone);
+    if (data.cronExpr && data.runAt)
+      throw new Error("Choose one-time or recurring timing, not both.");
+    let nextRunAt = data.runAt ? validateOneTime(data.runAt) : null;
     if (data.cronExpr) {
       nextRunAt = nextCronOccurrence(data.cronExpr, new Date(), data.timezone).toISOString();
     }
@@ -169,18 +166,42 @@ export const createSchedule = createServerFn({ method: "POST" })
 
 export const setScheduleStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input: { id: string; status: ScheduleStatus }) => ({
-    id: input.id,
-    status: input.status,
-  }))
+  .validator((input: unknown) =>
+    z.object({ id: z.uuid(), status: z.enum(["active", "paused"]) }).parse(input),
+  )
   .handler(async ({ data, context }) => {
+    const { data: schedule, error: loadError } = await context.supabase
+      .from("schedules")
+      .select("id,status,cron_expr,run_at,timezone,automation_id,updated_at")
+      .eq("id", data.id)
+      .eq("user_id", context.userId)
+      .single();
+    if (loadError || !schedule) throw new Error("Schedule not found.");
+    if (schedule.status === "completed") throw new Error("Create a new schedule for another run.");
+    let nextRunAt: string | null = null;
+    if (data.status === "active") {
+      const { data: automation, error: automationError } = await context.supabase
+        .from("automations")
+        .select("enabled,action_type")
+        .eq("id", schedule.automation_id ?? "")
+        .eq("user_id", context.userId)
+        .single();
+      if (automationError || !automation?.enabled || automation.action_type !== "model")
+        throw new Error("Enable the linked AI response automation first.");
+      nextRunAt = schedule.cron_expr
+        ? nextCronOccurrence(schedule.cron_expr, new Date(), schedule.timezone).toISOString()
+        : validateOneTime(schedule.run_at ?? "");
+    }
     const { data: row, error } = await context.supabase
       .from("schedules")
-      .update({ status: data.status, updated_at: new Date().toISOString() })
+      .update({ status: data.status, next_run_at: nextRunAt, updated_at: new Date().toISOString() })
       .eq("id", data.id)
-      .select("id, status")
-      .single();
+      .eq("user_id", context.userId)
+      .eq("updated_at", schedule.updated_at)
+      .select("id,status")
+      .maybeSingle();
     if (error) throw new Error(error.message);
+    if (!row) throw new Error("Schedule changed. Refresh before trying again.");
     return row;
   });
 
@@ -222,7 +243,15 @@ export const createAutomation = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data, context }) => {
-    if (!data.name) throw new Error("Automation name required");
+    if (!data.name || data.name.length > 240)
+      throw new Error("Enter an automation name up to 240 characters.");
+    if (!["model", "agent", "pipeline"].includes(data.actionType))
+      throw new Error("This action executor is not connected.");
+    if (
+      !["manual", "schedule"].includes(data.triggerType) ||
+      (data.triggerType === "schedule" && data.actionType !== "model")
+    )
+      throw new Error("Only AI responses support scheduling.");
     if (data.actionType === "model") {
       const { automationPrompt } = await import("@/lib/automation-model.server");
       automationPrompt(data.config);
@@ -278,7 +307,7 @@ export const runAutomation = createServerFn({ method: "POST" })
     assertAutomationRunnable(automation);
 
     if (automation.action_type === "model") {
-      const { automationPrompt, generateAutomationResponse } =
+      const { automationPrompt, generateAutomationResponse, firstAutomationResponse } =
         await import("@/lib/automation-model.server");
       const prompt = automationPrompt((automation.config ?? {}) as Record<string, unknown>);
       const { isAutoFreeModel, resolveAutoFreeRoutes, resolveUserUpstreams } =
@@ -328,14 +357,9 @@ export const runAutomation = createServerFn({ method: "POST" })
       let result: { text: string; model: string } | null = null;
       let failure: string | null = null;
       try {
-        for (const route of routes) {
-          try {
-            result = await generateAutomationResponse(prompt, route.upstream, fetch, route.model);
-            break;
-          } catch (error) {
-            failure = error instanceof Error ? error.message : "AI request failed.";
-          }
-        }
+        result = await firstAutomationResponse(routes, (route) =>
+          generateAutomationResponse(prompt, route.upstream, fetch, route.model),
+        );
       } catch (error) {
         failure = error instanceof Error ? error.message : "AI request failed.";
       }

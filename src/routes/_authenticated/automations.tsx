@@ -13,6 +13,10 @@ import {
   type ActionType,
   type TriggerType,
 } from "@/lib/ops.functions";
+import { Link } from "@tanstack/react-router";
+import { WorkTemplatePicker } from "@/components/work-template-picker";
+import { statusClass, statusLabel } from "@/lib/operations";
+import { useAuth } from "@/hooks/use-auth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,6 +40,7 @@ export const Route = createFileRoute("/_authenticated/automations")({
 
 function AutomationsPage() {
   const qc = useQueryClient();
+  const { user } = useAuth();
   const list = useServerFn(listAutomations);
   const listRuns = useServerFn(listAutomationRuns);
   const create = useServerFn(createAutomation);
@@ -48,9 +53,19 @@ function AutomationsPage() {
   const [prompt, setPrompt] = useState("");
   const [model, setModel] = useState("open-connect/auto");
 
-  const rows = useQuery({ queryKey: ["automations"], queryFn: () => list({}) });
+  const rows = useQuery({
+    queryKey: ["automations", user?.id],
+    queryFn: () => list({}),
+    enabled: !!user,
+    refetchInterval: 30000,
+  });
 
-  const runs = useQuery({ queryKey: ["automation-runs"], queryFn: () => listRuns({}) });
+  const runs = useQuery({
+    queryKey: ["automation-runs", user?.id],
+    queryFn: () => listRuns({}),
+    enabled: !!user,
+    refetchInterval: 15000,
+  });
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -72,6 +87,7 @@ function AutomationsPage() {
       toast.success("Automation created");
       setName("");
       setPrompt("");
+      if (triggerType === "schedule") toast.info("Next, choose a time on the Schedules page.");
       void qc.invalidateQueries({ queryKey: ["automations"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
@@ -117,6 +133,16 @@ function AutomationsPage() {
         </p>
       </div>
 
+      <WorkTemplatePicker
+        kind="automation"
+        draft={{ title: name, description: prompt, priority: "medium" }}
+        onSelect={(t) => {
+          setName(t.title);
+          setPrompt(t.description);
+          setActionType("model");
+          setTriggerType("manual");
+        }}
+      />
       <Card className="shadow-panel">
         <CardHeader className="pb-2">
           <CardTitle className="text-base">New automation</CardTitle>
@@ -132,14 +158,6 @@ function AutomationsPage() {
             />
           </div>
           <div className="space-y-2">
-            {runs.isError ? (
-              <p role="alert">
-                Could not load run history.{" "}
-                <Button variant="link" onClick={() => void runs.refetch()}>
-                  Retry
-                </Button>
-              </p>
-            ) : null}
             <Label htmlFor="auto-trigger">Trigger</Label>
             <select
               id="auto-trigger"
@@ -167,7 +185,7 @@ function AutomationsPage() {
               value={actionType}
               onChange={(e) => {
                 setActionType(e.target.value as ActionType);
-                if (e.target.value === "model") setTriggerType("manual");
+                if (e.target.value !== "model") setTriggerType("manual");
               }}
             >
               <option value="model">AI response (free model)</option>
@@ -202,6 +220,15 @@ function AutomationsPage() {
               Create
             </Button>
           </div>
+          {triggerType === "schedule" ? (
+            <p className="text-sm text-muted-foreground sm:col-span-3">
+              Create the automation, then{" "}
+              <Link to="/schedule" className="text-primary underline">
+                choose its schedule
+              </Link>
+              . It will not run until a schedule is saved.
+            </p>
+          ) : null}
           <div className="space-y-2 sm:col-span-3">
             {actionType === "model" ? (
               <div className="space-y-2">
@@ -239,6 +266,14 @@ function AutomationsPage() {
         </CardContent>
       </Card>
 
+      {runs.isError ? (
+        <p role="alert" className="text-sm">
+          Could not load run history.{" "}
+          <Button variant="link" onClick={() => void runs.refetch()}>
+            Retry
+          </Button>
+        </p>
+      ) : null}
       <div className="space-y-2">
         {rows.isLoading ? <p role="status">Loading automations…</p> : null}
         {rows.isError ? (
@@ -259,17 +294,29 @@ function AutomationsPage() {
                   <div className="flex items-center gap-2">
                     <Zap className="size-4 text-primary" />
                     <p className="font-medium">{a.name}</p>
-                    <Badge variant={a.enabled ? "secondary" : "outline"} className="text-[10px]">
+                    <Badge
+                      variant={a.enabled ? "secondary" : "outline"}
+                      className={statusClass(a.enabled ? "enabled" : "disabled")}
+                    >
                       {a.enabled ? "enabled" : "disabled"}
                     </Badge>
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {a.trigger_type} → {a.action_type}
                     {a.last_run_at ? ` · last ${new Date(a.last_run_at).toLocaleString()}` : ""}
-                    {a.last_status ? ` · ${a.last_status}` : ""}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
+                  {a.last_status ? (
+                    <Badge variant="outline" className={statusClass(a.last_status)}>
+                      {statusLabel(a.last_status)}
+                    </Badge>
+                  ) : null}
+                  {a.action_type === "model" ? (
+                    <Button size="sm" variant="outline" asChild>
+                      <Link to="/schedule">Schedule</Link>
+                    </Button>
+                  ) : null}
                   <Button
                     disabled={toggleMutation.isPending}
                     size="sm"
@@ -299,7 +346,14 @@ function AutomationsPage() {
                         open={r.id === runMutation.data?.correlation_id}
                       >
                         <summary className="cursor-pointer">
-                          {r.state} · {new Date(r.created_at).toLocaleString()}
+                          <span
+                            className={
+                              statusClass(r.state) + " mr-2 rounded border px-2 py-0.5 text-xs"
+                            }
+                          >
+                            {statusLabel(r.state)}
+                          </span>{" "}
+                          {new Date(r.created_at).toLocaleString()}
                           {r.evidence.model ? ` · ${r.evidence.model}` : ""}
                         </summary>
                         {r.evidence.output ? (

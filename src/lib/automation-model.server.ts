@@ -73,3 +73,19 @@ export async function generateAutomationResponse(
     model: typeof data.model === "string" ? data.model : requestModel,
   };
 }
+
+/** A failed earlier provider must not turn a successful fallback into a failed run. */
+export async function firstAutomationResponse<T>(
+  routes: readonly T[],
+  generate: (route: T) => Promise<{ text: string; model: string }>,
+) {
+  let failure: unknown = new Error("No connected model is available.");
+  for (const route of routes) {
+    try {
+      return await generate(route);
+    } catch (error) {
+      failure = error;
+    }
+  }
+  throw failure;
+}
