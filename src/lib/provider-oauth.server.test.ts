@@ -9,6 +9,7 @@ import {
 } from "./provider-oauth.server.ts";
 
 test("native OAuth reconnect replaces the existing account instead of duplicating it", () => {
+  assert.equal(selectOAuthConnectionTarget({ id: "pending" }, null, "pending").id, "pending");
   assert.equal(
     selectOAuthConnectionTarget({ id: "pending" }, { id: "existing" }, "existing").id,
     "existing",
