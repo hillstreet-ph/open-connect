@@ -94,6 +94,15 @@ their authorized scopes and honor the selected workspace's Data Controls.
 
 ## Learn from repeated authorized work
 
+When the user enables automatic capture of relevant shared exchanges, use
+`capture_context_exchange` if the host exposes it to submit the current visible
+prompt and the actual response prepared for the user. Honor the server's Data
+Controls result, including a disabled preference. This path redacts common
+secrets, deduplicates exchanges, and can suggest private prompt drafts from
+repetition. Do not submit hidden context, system instructions, unrelated records,
+or an entire conversation history. If the tool is unavailable, use supported
+summary checkpoints and report that exchange detection was not performed.
+
 Save stable preferences and decisions as concise Memory, and verified factual
 references or reusable procedures as Knowledge. This user authorizes relevant
 summaries of explicitly shared prompts and repeated workflows, not wholesale

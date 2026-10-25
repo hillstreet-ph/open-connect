@@ -68,3 +68,29 @@ account, and call `list_connection_tools` for its actual schemas before
 `call_connection_tool`. This avoids publishing duplicate tools for every catalog
 row or claiming that a host can run every third-party extension. Existing scopes,
 provider consent, and host approvals continue to apply.
+
+### Repeated context review in Data Controls
+
+Settings → Data Controls shows repeated prompts and responses across the latest
+200 automatically captured exchanges within the configured retention window.
+Matching normalizes case and whitespace only; it is not semantic AI detection.
+Identical prompt/reply pairs are deduplicated, and old records without matching
+metadata are not backfilled. The panel refreshes every 30 seconds while open.
+
+With helper-memory saving enabled, Open-Connect captures helper prompts and
+replies after completion. An external host can explicitly submit an authorized
+pair through `capture_context_exchange`; the server cannot read that host's chat
+history. The tool requires a personal administrator key with `control:write` and
+honors Data Controls. Automatic draft creation additionally requires
+`resources:write` for MCP callers. Project/workspace/organization keys cannot
+write personal host history through this tool.
+
+Three distinct saved exchanges with the same prompt create one private prompt
+draft when draft suggestions are on. Repeated responses are displayed for review
+but never treated as verified knowledge or executable instructions. The user can
+save an explicitly unverified Knowledge note or review a prompt draft. Notes are
+manual Knowledge records and remain until deleted. Drafts use the existing
+Build for review → Studio review and publication flow; nothing is automatically
+published, installed or granted provider access. Generalize source excerpts and
+remove private details before publication. Verified tool-run Knowledge and
+capability draft suggestions remain a separate evidence-based path.

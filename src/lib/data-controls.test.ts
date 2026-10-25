@@ -51,3 +51,40 @@ test("portable exports remove PEM key blocks and URL credentials", () => {
   for (const secret of ["private-material", "test-user", "test-password"])
     assert.ok(!cleaned.includes(secret));
 });
+
+test("repetition groups exact normalized text without treating repetition as verification", async () => {
+  const { normalizeRepeatedText, repeatedContext, repeatedPromptDraft } =
+    await import("./data-controls.ts");
+  assert.equal(normalizeRepeatedText("  My PROMPT\n here "), "my prompt here");
+  const metadata = {
+    auto_capture: true,
+    prompt_hash: "a".repeat(64),
+    prompt_summary: "password=hidden-value repeat goal",
+  };
+  const rows = ["one", "two", "three"].map((id) => ({ id, metadata }));
+  const groups = repeatedContext([
+    ...rows,
+    rows[0]!,
+    { id: "other", metadata: { ...metadata, auto_capture: false } },
+  ]);
+  assert.equal(groups.length, 1);
+  assert.equal(groups[0]!.count, 3);
+  assert.ok(!groups[0]!.summary.includes("hidden-value"));
+  assert.match(repeatedPromptDraft(groups[0]!).content, /unverified suggestion/);
+  assert.throws(() => repeatedPromptDraft({ ...groups[0]!, kind: "response" }));
+  assert.deepEqual(
+    repeatedContext([{ id: "bad", metadata: { ...metadata, prompt_hash: "bad" } }]),
+    [],
+  );
+});
+
+test("host exchange ingestion requires bounded explicit message text", async () => {
+  const { validateSharedExchange } = await import("./data-controls.ts");
+  assert.deepEqual(validateSharedExchange({ prompt: " goal ", response: " reply " }), {
+    prompt: "goal",
+    response: "reply",
+  });
+  assert.throws(() => validateSharedExchange({ prompt: "", response: "reply" }));
+  assert.throws(() => validateSharedExchange({ prompt: "x".repeat(8001), response: "reply" }));
+  assert.throws(() => validateSharedExchange({ prompt: { history: [] }, response: "reply" }));
+});
