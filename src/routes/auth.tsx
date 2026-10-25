@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-import { safeOAuthReturn } from "@/lib/oauth-policy";
+import { safeAuthReturn } from "@/lib/auth-return";
 
 type AuthMode = "signin" | "signup" | "reset" | "update_password";
 
@@ -17,8 +17,8 @@ export const Route = createFileRoute("/auth")({
   validateSearch: (search: Record<string, unknown>): { mode?: AuthMode; returnTo?: string } => {
     const raw = search["mode"];
     if (raw === "signup" || raw === "reset" || raw === "update_password")
-      return { mode: raw, returnTo: safeOAuthReturn(search["returnTo"]) };
-    return { returnTo: safeOAuthReturn(search["returnTo"]) };
+      return { mode: raw, returnTo: safeAuthReturn(search["returnTo"]) };
+    return { returnTo: safeAuthReturn(search["returnTo"]) };
   },
   head: () => ({
     meta: [
