@@ -23,9 +23,11 @@ import { Route as AuthenticatedApiKeysRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedApprovalsRouteImport } from './routes/_authenticated/approvals'
 import { Route as AuthenticatedAutomationsRouteImport } from './routes/_authenticated/automations'
 import { Route as AuthenticatedCampaignStudioRouteImport } from './routes/_authenticated/campaign-studio'
+import { Route as AuthenticatedCloudRouteImport } from './routes/_authenticated/cloud'
 import { Route as AuthenticatedCloudBrowserRouteImport } from './routes/_authenticated/cloud-browser'
 import { Route as AuthenticatedCloudComputerRouteImport } from './routes/_authenticated/cloud-computer'
 import { Route as AuthenticatedCloudPhoneRouteImport } from './routes/_authenticated/cloud-phone'
+import { Route as AuthenticatedCloudSandboxRouteImport } from './routes/_authenticated/cloud-sandbox'
 import { Route as AuthenticatedCloudTerminalRouteImport } from './routes/_authenticated/cloud-terminal'
 import { Route as AuthenticatedConnectionsRouteImport } from './routes/_authenticated/connections'
 import { Route as AuthenticatedCustomOauthCallbackRouteImport } from './routes/_authenticated/custom-oauth-callback'
@@ -139,6 +141,11 @@ const AuthenticatedCampaignStudioRoute =
     path: '/campaign-studio',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedCloudRoute = AuthenticatedCloudRouteImport.update({
+  id: '/cloud',
+  path: '/cloud',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedCloudBrowserRoute =
   AuthenticatedCloudBrowserRouteImport.update({
     id: '/cloud-browser',
@@ -156,6 +163,12 @@ const AuthenticatedCloudPhoneRoute = AuthenticatedCloudPhoneRouteImport.update({
   path: '/cloud-phone',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedCloudSandboxRoute =
+  AuthenticatedCloudSandboxRouteImport.update({
+    id: '/cloud-sandbox',
+    path: '/cloud-sandbox',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedCloudTerminalRoute =
   AuthenticatedCloudTerminalRouteImport.update({
     id: '/cloud-terminal',
@@ -383,9 +396,11 @@ export interface FileRoutesByFullPath {
   '/approvals': typeof AuthenticatedApprovalsRoute
   '/automations': typeof AuthenticatedAutomationsRoute
   '/campaign-studio': typeof AuthenticatedCampaignStudioRoute
+  '/cloud': typeof AuthenticatedCloudRoute
   '/cloud-browser': typeof AuthenticatedCloudBrowserRoute
   '/cloud-computer': typeof AuthenticatedCloudComputerRoute
   '/cloud-phone': typeof AuthenticatedCloudPhoneRoute
+  '/cloud-sandbox': typeof AuthenticatedCloudSandboxRoute
   '/cloud-terminal': typeof AuthenticatedCloudTerminalRoute
   '/connections': typeof AuthenticatedConnectionsRouteWithChildren
   '/custom-oauth-callback': typeof AuthenticatedCustomOauthCallbackRoute
@@ -442,9 +457,11 @@ export interface FileRoutesByTo {
   '/approvals': typeof AuthenticatedApprovalsRoute
   '/automations': typeof AuthenticatedAutomationsRoute
   '/campaign-studio': typeof AuthenticatedCampaignStudioRoute
+  '/cloud': typeof AuthenticatedCloudRoute
   '/cloud-browser': typeof AuthenticatedCloudBrowserRoute
   '/cloud-computer': typeof AuthenticatedCloudComputerRoute
   '/cloud-phone': typeof AuthenticatedCloudPhoneRoute
+  '/cloud-sandbox': typeof AuthenticatedCloudSandboxRoute
   '/cloud-terminal': typeof AuthenticatedCloudTerminalRoute
   '/connections': typeof AuthenticatedConnectionsRouteWithChildren
   '/custom-oauth-callback': typeof AuthenticatedCustomOauthCallbackRoute
@@ -503,9 +520,11 @@ export interface FileRoutesById {
   '/_authenticated/approvals': typeof AuthenticatedApprovalsRoute
   '/_authenticated/automations': typeof AuthenticatedAutomationsRoute
   '/_authenticated/campaign-studio': typeof AuthenticatedCampaignStudioRoute
+  '/_authenticated/cloud': typeof AuthenticatedCloudRoute
   '/_authenticated/cloud-browser': typeof AuthenticatedCloudBrowserRoute
   '/_authenticated/cloud-computer': typeof AuthenticatedCloudComputerRoute
   '/_authenticated/cloud-phone': typeof AuthenticatedCloudPhoneRoute
+  '/_authenticated/cloud-sandbox': typeof AuthenticatedCloudSandboxRoute
   '/_authenticated/cloud-terminal': typeof AuthenticatedCloudTerminalRoute
   '/_authenticated/connections': typeof AuthenticatedConnectionsRouteWithChildren
   '/_authenticated/custom-oauth-callback': typeof AuthenticatedCustomOauthCallbackRoute
@@ -564,9 +583,11 @@ export interface FileRouteTypes {
     | '/approvals'
     | '/automations'
     | '/campaign-studio'
+    | '/cloud'
     | '/cloud-browser'
     | '/cloud-computer'
     | '/cloud-phone'
+    | '/cloud-sandbox'
     | '/cloud-terminal'
     | '/connections'
     | '/custom-oauth-callback'
@@ -623,9 +644,11 @@ export interface FileRouteTypes {
     | '/approvals'
     | '/automations'
     | '/campaign-studio'
+    | '/cloud'
     | '/cloud-browser'
     | '/cloud-computer'
     | '/cloud-phone'
+    | '/cloud-sandbox'
     | '/cloud-terminal'
     | '/connections'
     | '/custom-oauth-callback'
@@ -683,9 +706,11 @@ export interface FileRouteTypes {
     | '/_authenticated/approvals'
     | '/_authenticated/automations'
     | '/_authenticated/campaign-studio'
+    | '/_authenticated/cloud'
     | '/_authenticated/cloud-browser'
     | '/_authenticated/cloud-computer'
     | '/_authenticated/cloud-phone'
+    | '/_authenticated/cloud-sandbox'
     | '/_authenticated/cloud-terminal'
     | '/_authenticated/connections'
     | '/_authenticated/custom-oauth-callback'
@@ -853,6 +878,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCampaignStudioRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/cloud': {
+      id: '/_authenticated/cloud'
+      path: '/cloud'
+      fullPath: '/cloud'
+      preLoaderRoute: typeof AuthenticatedCloudRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/cloud-browser': {
       id: '/_authenticated/cloud-browser'
       path: '/cloud-browser'
@@ -872,6 +904,13 @@ declare module '@tanstack/react-router' {
       path: '/cloud-phone'
       fullPath: '/cloud-phone'
       preLoaderRoute: typeof AuthenticatedCloudPhoneRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/cloud-sandbox': {
+      id: '/_authenticated/cloud-sandbox'
+      path: '/cloud-sandbox'
+      fullPath: '/cloud-sandbox'
+      preLoaderRoute: typeof AuthenticatedCloudSandboxRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/cloud-terminal': {
@@ -1199,9 +1238,11 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedApprovalsRoute: typeof AuthenticatedApprovalsRoute
   AuthenticatedAutomationsRoute: typeof AuthenticatedAutomationsRoute
   AuthenticatedCampaignStudioRoute: typeof AuthenticatedCampaignStudioRoute
+  AuthenticatedCloudRoute: typeof AuthenticatedCloudRoute
   AuthenticatedCloudBrowserRoute: typeof AuthenticatedCloudBrowserRoute
   AuthenticatedCloudComputerRoute: typeof AuthenticatedCloudComputerRoute
   AuthenticatedCloudPhoneRoute: typeof AuthenticatedCloudPhoneRoute
+  AuthenticatedCloudSandboxRoute: typeof AuthenticatedCloudSandboxRoute
   AuthenticatedCloudTerminalRoute: typeof AuthenticatedCloudTerminalRoute
   AuthenticatedConnectionsRoute: typeof AuthenticatedConnectionsRouteWithChildren
   AuthenticatedCustomOauthCallbackRoute: typeof AuthenticatedCustomOauthCallbackRoute
@@ -1237,9 +1278,11 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedApprovalsRoute: AuthenticatedApprovalsRoute,
   AuthenticatedAutomationsRoute: AuthenticatedAutomationsRoute,
   AuthenticatedCampaignStudioRoute: AuthenticatedCampaignStudioRoute,
+  AuthenticatedCloudRoute: AuthenticatedCloudRoute,
   AuthenticatedCloudBrowserRoute: AuthenticatedCloudBrowserRoute,
   AuthenticatedCloudComputerRoute: AuthenticatedCloudComputerRoute,
   AuthenticatedCloudPhoneRoute: AuthenticatedCloudPhoneRoute,
+  AuthenticatedCloudSandboxRoute: AuthenticatedCloudSandboxRoute,
   AuthenticatedCloudTerminalRoute: AuthenticatedCloudTerminalRoute,
   AuthenticatedConnectionsRoute: AuthenticatedConnectionsRouteWithChildren,
   AuthenticatedCustomOauthCallbackRoute: AuthenticatedCustomOauthCallbackRoute,

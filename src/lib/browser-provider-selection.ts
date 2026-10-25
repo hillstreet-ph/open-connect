@@ -86,3 +86,39 @@ export function restoreProviderReference<T extends { provider: string }>(
   storage.removeItem(legacyKey);
   return parsed as T;
 }
+
+/** Capabilities implemented by this adapter, rather than the vendor's entire catalog. */
+export const BROWSER_ADAPTER_CAPABILITIES = {
+  tinyfish: {
+    available: [
+      "Prompt tasks",
+      "Saved profiles and cookies",
+      "Live view",
+      "Direct browser controls",
+      "Run history and cancellation",
+    ],
+    setup:
+      "Use Profiles for secure sign-in setup. A saved cookie does not guarantee an active login.",
+  },
+  browser_use: {
+    available: [
+      "V4 prompt tasks",
+      "$1 maximum cost per run",
+      "Live view while running",
+      "Result validation",
+      "Cancellation and browser cleanup",
+    ],
+    setup:
+      "This adapter does not yet attach persistent login profiles. Use a fresh task or the provider's supported sign-in flow.",
+  },
+  browserbase: {
+    available: [
+      "Five-minute manual sessions",
+      "Live browser view",
+      "Session status",
+      "Explicit release and cleanup",
+    ],
+    setup:
+      "This adapter opens a manual browser. Prompt execution, saved contexts, proxies and CAPTCHA solving are not enabled here.",
+  },
+} as const;

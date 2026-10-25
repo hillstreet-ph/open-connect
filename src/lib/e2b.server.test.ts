@@ -1,3 +1,4 @@
+import { sandboxSummary } from "./sandbox-state.ts";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createE2bSandbox, e2bConfig, killE2bSandbox, listE2bSandboxes } from "./e2b.server.ts";
@@ -39,4 +40,19 @@ test("E2B requests use a secret header without returning it", async () => {
 
 test("E2B rejects malformed sandbox ids", async () => {
   await assert.rejects(() => killE2bSandbox("../bad"), /Invalid E2B sandbox id/);
+});
+
+test("sandbox UI summaries exclude provider tokens, environment and arbitrary metadata", () => {
+  const row = sandboxSummary({
+    sandboxID: "sandbox_123456",
+    state: "running",
+    accessToken: "private",
+    envdAccessToken: "private",
+    metadata: { secret: "private" },
+    env: { SECRET: "private" },
+  });
+  assert.equal(row.id, "sandbox_123456");
+  assert.equal(row.state, "running");
+  assert.doesNotMatch(JSON.stringify(row), /private|accessToken|metadata|SECRET/);
+  assert.equal(sandboxSummary(null).id, null);
 });

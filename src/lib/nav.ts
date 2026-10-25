@@ -64,6 +64,8 @@ export const appCategories: NavCategory[] = [
     id: "cloud",
     label: "Cloud",
     items: [
+      { to: "/cloud", label: "Cloud overview" },
+      { to: "/cloud-sandbox", label: "Sandbox" },
       { to: "/cloud-phone", label: "Cloud Phone" },
       { to: "/cloud-browser", label: "Cloud Browser" },
       { to: "/cloud-terminal", label: "Cloud Terminal" },

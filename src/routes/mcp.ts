@@ -3122,6 +3122,12 @@ export const Route = createFileRoute("/mcp")({
                 telegram_message_thread_id: destination.message_thread_id,
               };
             }
+            const browserMetadata =
+              provider === "browser_use" || provider === "browserbase"
+                ? await (
+                    await import("@/lib/browser-vault.server")
+                  ).validateOwnedBrowserReference(key.userId, provider, credentialRef)
+                : undefined;
             const { data: existing, error: existingError } = await supabaseAdmin
               .from("app_connections")
               .select("id,status,metadata")
@@ -3153,12 +3159,13 @@ export const Route = createFileRoute("/mcp")({
                     scopes,
                     credential_reference: credentialRef,
                     updated_at: new Date().toISOString(),
-                    ...(destinationMetadata || remoteMcpMetadata
+                    ...(destinationMetadata || remoteMcpMetadata || browserMetadata
                       ? {
                           metadata: {
                             ...((existing.metadata as Record<string, Json>) ?? {}),
                             ...destinationMetadata,
                             ...remoteMcpMetadata,
+                            ...browserMetadata,
                           },
                         }
                       : {}),
@@ -3178,6 +3185,7 @@ export const Route = createFileRoute("/mcp")({
                     mode: "capability_grant",
                     secrets_exposed: false,
                     ...destinationMetadata,
+                    ...browserMetadata,
                   },
                 });
             const { data, error } = await connectionQuery

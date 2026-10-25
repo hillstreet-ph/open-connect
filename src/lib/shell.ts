@@ -28,6 +28,8 @@ export const APP_ROUTE_PREFIXES = [
   "/memory",
   "/knowledge",
   "/others",
+  "/cloud",
+  "/cloud-sandbox",
   "/cloud-phone",
   "/cloud-browser",
   "/cloud-terminal",
