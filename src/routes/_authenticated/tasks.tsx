@@ -45,8 +45,8 @@ function TasksPage() {
   const [priority, setPriority] = useState<"low" | "medium" | "high" | "urgent">("medium");
 
   const tasks = useQuery({
-    queryKey: ["tasks", user?.id],
-    queryFn: () => list({}),
+    queryKey: ["tasks", user?.id, filter],
+    queryFn: () => list({ data: { status: filter === "all" ? undefined : filter } }),
     enabled: !!user,
     refetchInterval: 30000,
   });
@@ -202,6 +202,9 @@ function TasksPage() {
           ))}
         </select>
       </div>
+      <p className="text-xs text-muted-foreground">
+        Showing up to 100 recently updated tasks for the selected status.
+      </p>
       <div className="space-y-2" aria-live="polite">
         {tasks.isLoading ? <p role="status">Loading tasks…</p> : null}
         {tasks.isError ? (
@@ -213,62 +216,62 @@ function TasksPage() {
           </p>
         ) : null}
         {!tasks.isLoading && !tasks.isError && (tasks.data ?? []).length === 0 ? (
-          <p className="text-sm text-muted-foreground">No tasks yet.</p>
+          <p className="text-sm text-muted-foreground">
+            {filter === "all" ? "No tasks yet." : "No tasks with this status."}
+          </p>
         ) : (
-          tasks.data
-            ?.filter((t) => filter === "all" || t.status === filter)
-            .map((t) => (
-              <Card key={t.id} className="p-4 shadow-panel">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      {t.status === "done" ? (
-                        <CheckCircle2 className="size-4 text-primary" />
-                      ) : (
-                        <Circle className="size-4 text-muted-foreground" />
-                      )}
-                      <p className="min-w-0 [overflow-wrap:anywhere] font-medium">{t.title}</p>
-                    </div>
-                    {t.description ? (
-                      <p className="mt-2 whitespace-pre-wrap break-words text-sm text-muted-foreground">
-                        {t.description}
-                      </p>
-                    ) : null}
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <Badge variant="outline" className={statusClass(t.status)}>
-                        {statusLabel(t.status)}
-                      </Badge>
-                      <Badge variant="outline" className={statusClass(t.priority)}>
-                        {statusLabel(t.priority)}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {projects.data?.find((p) => p.id === t.project_id)?.name ??
-                          (t.project_id ? "Project unavailable" : "No project")}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      Updated {new Date(t.updated_at).toLocaleString()}
-                      {t.due_at ? ` · Due ${new Date(t.due_at).toLocaleString()}` : ""}
-                    </p>
+          tasks.data?.map((t) => (
+            <Card key={t.id} className="p-4 shadow-panel">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    {t.status === "done" ? (
+                      <CheckCircle2 className="size-4 text-primary" />
+                    ) : (
+                      <Circle className="size-4 text-muted-foreground" />
+                    )}
+                    <p className="min-w-0 [overflow-wrap:anywhere] font-medium">{t.title}</p>
                   </div>
-                  <select
-                    className="h-9 rounded-md border border-input bg-background px-2 text-xs"
-                    aria-label={`Status for ${t.title}`}
-                    disabled={statusMutation.isPending}
-                    value={t.status}
-                    onChange={(e) =>
-                      statusMutation.mutate({ id: t.id, status: e.target.value as TaskStatus })
-                    }
-                  >
-                    {STATUSES.map((s) => (
-                      <option key={s} value={s}>
-                        {statusLabel(s)}
-                      </option>
-                    ))}
-                  </select>
+                  {t.description ? (
+                    <p className="mt-2 whitespace-pre-wrap break-words text-sm text-muted-foreground">
+                      {t.description}
+                    </p>
+                  ) : null}
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <Badge variant="outline" className={statusClass(t.status)}>
+                      {statusLabel(t.status)}
+                    </Badge>
+                    <Badge variant="outline" className={statusClass(t.priority)}>
+                      {statusLabel(t.priority)}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {projects.data?.find((p) => p.id === t.project_id)?.name ??
+                        (t.project_id ? "Project unavailable" : "No project")}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Updated {new Date(t.updated_at).toLocaleString()}
+                    {t.due_at ? ` · Due ${new Date(t.due_at).toLocaleString()}` : ""}
+                  </p>
                 </div>
-              </Card>
-            ))
+                <select
+                  className="h-9 rounded-md border border-input bg-background px-2 text-xs"
+                  aria-label={`Status for ${t.title}`}
+                  disabled={statusMutation.isPending}
+                  value={t.status}
+                  onChange={(e) =>
+                    statusMutation.mutate({ id: t.id, status: e.target.value as TaskStatus })
+                  }
+                >
+                  {STATUSES.map((s) => (
+                    <option key={s} value={s}>
+                      {statusLabel(s)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </Card>
+          ))
         )}
       </div>
     </div>
