@@ -1,3 +1,4 @@
+import { providerStorageKey, restoreProviderReference } from "@/lib/browser-provider-selection";
 import { providerPollInterval } from "@/lib/browser-provider-status";
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -12,13 +13,33 @@ import {
 import type { ProviderHandle } from "@/lib/browser-providers.server";
 import { Button } from "@/components/ui/button";
 
-export function AdditionalBrowserProviders() {
+export function AdditionalBrowserProviders({
+  provider,
+  configured = false,
+}: {
+  provider: "browser_use" | "browserbase";
+  configured?: boolean;
+}) {
   const { user } = useAuth();
-  return user ? <ProviderPanel key={user.id} userId={user.id} /> : null;
+  return user ? (
+    <ProviderPanel
+      key={`${user.id}:${provider}`}
+      userId={user.id}
+      provider={provider}
+      configured={configured}
+    />
+  ) : null;
 }
-function ProviderPanel({ userId }: { userId: string }) {
-  const storageKey = `oc-browser-provider:${userId}`;
-  const [provider, setProvider] = useState<"browser_use" | "browserbase">("browser_use");
+function ProviderPanel({
+  userId,
+  provider,
+  configured,
+}: {
+  userId: string;
+  provider: "browser_use" | "browserbase";
+  configured: boolean;
+}) {
+  const storageKey = providerStorageKey(userId, provider);
   const [task, setTask] = useState("");
   const [approved, setApproved] = useState(false);
   const [reference, setReference] = useState<ProviderHandle>();
@@ -34,8 +55,8 @@ function ProviderPanel({ userId }: { userId: string }) {
     void Promise.resolve().then(() => {
       if (cancelled) return;
       try {
-        const saved = sessionStorage.getItem(storageKey);
-        if (saved) setReference(JSON.parse(saved));
+        const saved = restoreProviderReference<ProviderHandle>(sessionStorage, userId, provider);
+        if (saved) setReference(saved);
       } catch {
         /* Storage may be disabled. */
       }
@@ -44,7 +65,7 @@ function ProviderPanel({ userId }: { userId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [storageKey]);
+  }, [storageKey, userId, provider]);
   useEffect(() => {
     if (!restored) return;
     try {
@@ -94,7 +115,9 @@ function ProviderPanel({ userId }: { userId: string }) {
   })();
   return (
     <section className="space-y-3 rounded-lg border p-4" aria-label="Additional browser providers">
-      <h2 className="font-semibold">Browser Use and Browserbase</h2>
+      <h2 className="font-semibold">
+        {provider === "browser_use" ? "Browser Use V4 task" : "Browserbase manual session"}
+      </h2>
       <p className="text-sm text-muted-foreground">
         Connect your provider API key in{" "}
         <Link to="/connections" className="underline">
@@ -103,11 +126,23 @@ function ProviderPanel({ userId }: { userId: string }) {
         . Browser Use runs a prompt with a $1 cap. Browserbase opens a five-minute manual browser;
         it does not execute the prompt. Both use metered provider services.
       </p>
+      {!configured ? (
+        <p role="status" className="rounded border p-3 text-sm">
+          This adapter needs a native API key in Connections. A broker account alone is not a native
+          SDK key.
+        </p>
+      ) : null}
       <form
         className="space-y-3"
         onSubmit={(event) => {
           event.preventDefault();
-          if (submitting.current || reference || !approved || (start.isError && !reconciled))
+          if (
+            submitting.current ||
+            reference ||
+            !approved ||
+            !configured ||
+            (start.isError && !reconciled)
+          )
             return;
           submitting.current = true;
           setError("");
@@ -124,18 +159,6 @@ function ProviderPanel({ userId }: { userId: string }) {
             });
         }}
       >
-        <label className="block text-sm">
-          Provider
-          <select
-            className="ml-3 rounded border bg-background p-2"
-            disabled={Boolean(reference) || start.isPending}
-            value={provider}
-            onChange={(event) => setProvider(event.target.value as typeof provider)}
-          >
-            <option value="browser_use">Browser Use V4 agent</option>
-            <option value="browserbase">Browserbase manual session</option>
-          </select>
-        </label>
         {provider === "browser_use" ? (
           <textarea
             aria-label="Browser Use task"
@@ -161,7 +184,11 @@ function ProviderPanel({ userId }: { userId: string }) {
         <Button
           type="submit"
           disabled={
-            Boolean(reference) || start.isPending || !approved || (start.isError && !reconciled)
+            Boolean(reference) ||
+            start.isPending ||
+            !approved ||
+            !configured ||
+            (start.isError && !reconciled)
           }
         >
           {start.isPending ? "Starting…" : "Start provider browser"}

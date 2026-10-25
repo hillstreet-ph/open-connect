@@ -6,6 +6,8 @@ import {
 } from "./agent-helper-policy.ts";
 
 const READS = new Set([
+  "search_saved_context",
+  "inspect_helper_capabilities",
   "list_connectors",
   "search_marketplace",
   "list_projects",
@@ -69,6 +71,8 @@ export async function runAgentHelper(options: {
       };
     }
     action = { name, result };
+    // A model must never turn a failed or ambiguous action into a success claim.
+    if (result["error"]) return fallback();
     // Even a failed write consumes this turn's write allowance.
     wrote = WRITES.has(name);
     messages.push(reply.message ?? { role: "assistant", tool_calls: [call] }, {

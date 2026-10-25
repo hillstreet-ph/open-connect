@@ -434,11 +434,16 @@ function AgentHelperPanel({ user }: { user: { id: string } }) {
               <div className="rounded-xl border bg-muted p-4 text-sm">
                 <h3 className="font-medium">What would you like to do?</h3>
                 <p className="mt-2 text-muted-foreground">
-                  Ask a question, attach reference documents, or manage workspace tasks. Select
-                  Browser task to execute a website prompt.
+                  Ask a question, search saved memory and knowledge, attach documents, or manage
+                  workspace tasks. Select Browser task to execute a website prompt.
                 </p>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  {["Find an Airtable skill", "List my recent tasks"].map((starter) => (
+                  {[
+                    "What can you do in this workspace?",
+                    "Find an Airtable skill",
+                    "List my recent tasks",
+                    "Search my saved context for Open-Connect",
+                  ].map((starter) => (
                     <button
                       type="button"
                       key={starter}

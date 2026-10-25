@@ -74,6 +74,6 @@ test("Agent-Helper gives a verified fallback after a completed write", () => {
   );
   assert.match(
     describeAgentHelperToolResult("create_task", { error: "Project unavailable." }),
-    /No change was made/,
+    /Check the current state before retrying/,
   );
 });
