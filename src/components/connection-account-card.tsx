@@ -44,7 +44,7 @@ export function ConnectionAccountCard({
   const [search, setSearch] = useState("");
   const detailsFn = useServerFn(getConnectionDetails);
   const details = useQuery({
-    queryKey: ["connection-details", account.id],
+    queryKey: ["connection-details", account.id, account.status],
     queryFn: () => detailsFn({ data: { connectionId: account.id } }),
     enabled: expanded || account.status === "connected",
     staleTime: 60_000,

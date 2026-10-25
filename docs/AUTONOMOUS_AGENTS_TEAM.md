@@ -19,3 +19,11 @@ Key creation and access-profile selection remain in Integrations; the card links
 Learning drafts start unpublished and unverified. Frequency is not a security review or evidence that an action succeeded. A client must supply verified run outcomes, review draft content, and use the existing verification/publication flow with the required authority. The service does not observe or store unseen ChatGPT, Codex, or Claude history.
 
 Refresh/reconnect Open-Connect in each client after deployment so it reloads the new card URI, tools, and initialization instructions.
+
+## Chat card compatibility and approvals
+
+The v4 card initializes the standard MCP Apps bridge before calling tools, even when a host also exposes the older `window.openai.callTool` API. Legacy-only hosts fall back before an action is submitted. Action responses support nested MCP envelopes, and an unknown-tool response asks the user to refresh the host connection and open a new card. A submitted action is never automatically replayed through a different transport.
+
+Auto continues authorized tasks using existing grants. It does not click ChatGPT, Codex, or provider consent prompts, change another app's permission setting, or bypass protected database approvals. Open-Connect's saved Auto setting and a host's app-specific permissions are separate controls. Older cards/tool catalogs may require a host connection refresh; deploying server code cannot silently replace the host's installed catalog.
+
+The connection proxy allows the free-model team up to the existing 60-second MCP operation deadline, rather than cutting it off at 30 seconds while model fallbacks are still running. Other remote tools retain the 30-second call timeout. A timeout does not prove that upstream work never started; the card does not automatically resubmit an uncertain action.
