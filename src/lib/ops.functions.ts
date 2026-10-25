@@ -22,19 +22,8 @@ export const listTasks = createServerFn({ method: "GET" })
     status: input?.status ?? null,
   }))
   .handler(async ({ data, context }) => {
-    let q = context.supabase
-      .from("tasks")
-      .select(
-        "id, title, description, status, priority, due_at, project_id, organization_id, created_at, updated_at",
-      )
-      .eq("user_id", context.userId)
-      .order("updated_at", { ascending: false })
-      .limit(100);
-    if (data.projectId) q = q.eq("project_id", data.projectId);
-    if (data.status) q = q.eq("status", data.status);
-    const { data: rows, error } = await q;
-    if (error) throw new Error(error.message);
-    return rows ?? [];
+    const { loadOwnedTasks } = await import("@/lib/ops-data.server");
+    return loadOwnedTasks(context.supabase, context.userId, data);
   });
 
 export const createTask = createServerFn({ method: "POST" })
