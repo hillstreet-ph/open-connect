@@ -56,8 +56,13 @@ export function verifyHandle(key: string, userId: string, input: ProviderHandle)
 export function browserUseClient(apiKey: string) {
   return new BrowserUse({ apiKey, maxRetries: 0, timeout: 20000 });
 }
-export function browserbaseClient(apiKey: string) {
-  return new Browserbase({ apiKey, maxRetries: 0, timeout: 20000 });
+export function browserbaseClient(apiKey: string, send?: typeof fetch) {
+  return new Browserbase({
+    apiKey,
+    maxRetries: 0,
+    timeout: 20000,
+    ...(send ? { fetch: send } : {}),
+  });
 }
 export async function readBrowserUse(
   client: Pick<BrowserUse, "runs" | "browsers">,
