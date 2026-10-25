@@ -14,6 +14,11 @@ import { extractLiveViewUrls } from "@/lib/cloud-live-view";
 /** Common provider tools surfaced as one-tap starting points (TinyFish names first). */
 const QUICK_START_TOOLS: Record<keyof typeof descriptions, string[]> = {
   browser: [
+    "browser_navigate",
+    "browser_snapshot",
+    "browser_click",
+    "browser_tabs",
+    "browser_take_screenshot",
     "run_web_automation",
     "create_browser_session",
     "list_browser_sessions",
@@ -29,6 +34,9 @@ const QUICK_START_TOOLS: Record<keyof typeof descriptions, string[]> = {
 };
 
 const ARGUMENT_TEMPLATES: Record<string, Record<string, unknown>> = {
+  browser_navigate: { url: "https://example.com" },
+  browser_snapshot: {},
+  browser_tabs: { action: "list" },
   run_web_automation: {
     url: "https://example.com",
     goal: "Describe the task in plain language",

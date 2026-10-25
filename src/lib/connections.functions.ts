@@ -1,6 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { normalizeConnectionSetup, type ConnectionSetupInput } from "@/lib/connection-setup";
+import {
+  duplicateConnectionSetup,
+  normalizeConnectionSetup,
+  type ConnectionSetupInput,
+} from "@/lib/connection-setup";
 import { AI_GATEWAY_PROVIDERS } from "@/lib/ai-gateway-providers";
 import { hasRole, type AppRole } from "@/lib/rbac";
 import { composioImportBatches } from "@/lib/composio-sync";
@@ -829,6 +833,26 @@ export const configureAppConnection = createServerFn({ method: "POST" })
           : undefined);
     if (!app) throw new Error("Unknown application");
     const setup = normalizeConnectionSetup(data, app);
+    let existingQuery = context.supabase
+      .from("app_connections")
+      .select("id,provider_account_id,credential_reference,metadata")
+      .eq("user_id", context.userId)
+      .eq("provider", setup.provider)
+      .order("created_at", { ascending: false });
+    if (data.connection_id) existingQuery = existingQuery.eq("id", data.connection_id);
+    const { data: existingConnections, error: existingError } = await existingQuery;
+    if (existingError) {
+      throw new Error("Could not check your existing provider connection.");
+    }
+    if (
+      !data.connection_id &&
+      data.new_account === true &&
+      duplicateConnectionSetup(setup, existingConnections ?? [])
+    ) {
+      throw new Error(
+        "This endpoint and account label already have a connection. Reconnect the existing account, or use a different account label for a separate identity.",
+      );
+    }
     const { validateConnectionCredential } = await import("@/lib/connection-validation.server");
     const validation = await validateConnectionCredential(setup);
     let secretId = "";
@@ -852,30 +876,11 @@ export const configureAppConnection = createServerFn({ method: "POST" })
       secretId = String((secret as { id?: string } | null)?.id ?? "");
       if (!secretId) throw new Error("Credential vault did not return a reference");
     }
-    let existingQuery = context.supabase
-      .from("app_connections")
-      .select("id,provider_account_id,credential_reference,metadata")
-      .eq("user_id", context.userId)
-      .eq("provider", setup.provider)
-      .order("created_at", { ascending: false });
-    if (data.connection_id) existingQuery = existingQuery.eq("id", data.connection_id);
-    const { data: existingConnections, error: existingError } = await existingQuery;
-    if (existingError) {
-      if (secretId)
-        await context.supabase.rpc("delete_credential_secret", {
-          p_id: secretId,
-        });
-      throw new Error("Could not check your existing provider connection.");
-    }
-    const existing = (existingConnections ?? []).find((item) => {
-      if (data.connection_id) return item.id === data.connection_id;
-      if (data.new_account === true) return false;
-      const metadata = item.metadata as Record<string, unknown> | null;
-      return (
-        metadata?.["source"] === "open-connect" &&
-        metadata?.["account_label"] === setup.accountLabel
-      );
-    });
+    const existing = data.connection_id
+      ? (existingConnections ?? []).find((item) => item.id === data.connection_id)
+      : data.new_account === true
+        ? undefined
+        : duplicateConnectionSetup(setup, existingConnections ?? []);
     if (data.connection_id && !existing) {
       if (secretId) await context.supabase.rpc("delete_credential_secret", { p_id: secretId });
       throw new Error("Connection not found for this account and provider.");

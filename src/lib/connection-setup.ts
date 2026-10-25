@@ -69,3 +69,22 @@ export function normalizeConnectionSetup(input: ConnectionSetupInput, app: Conne
     endpointUrl,
   };
 }
+
+/** Detect repeated native setup by its logical account, without comparing or revealing secrets. */
+export function duplicateConnectionSetup<T extends { id: string; metadata: unknown }>(
+  setup: Pick<
+    ReturnType<typeof normalizeConnectionSetup>,
+    "accountLabel" | "endpointUrl" | "authType"
+  >,
+  saved: T[],
+) {
+  return saved.find((connection) => {
+    const metadata = connection.metadata as Record<string, unknown> | null;
+    return (
+      metadata?.["source"] === "open-connect" &&
+      metadata["account_label"] === setup.accountLabel &&
+      (metadata["endpoint_url"] || "") === setup.endpointUrl &&
+      metadata["auth_type"] === setup.authType
+    );
+  });
+}

@@ -44,7 +44,7 @@ An uncertain creation response must not be interpreted as proof that a provider 
 ## Remaining integration work
 
 The supplied brief also requires native Agent request controls for explicit Vault-item selection,
-structured output, step/capture budgets; direct CDP UI/control; durable job/run recovery; authenticated
+structured output, step/capture budgets; durable job/run recovery; authenticated
 completion callbacks; account mapping; browser-job schedules; retention/export/deletion; and distinct
 Search/Fetch/Research/Monitor integration. These must remain unverified until implemented and tested.
 No upstream SDK was installed, no credentials were exported, and no visibility was widened.
@@ -83,3 +83,37 @@ TanStack Start was aligned to 1.169.3 to match the router 1.170.45 upgrade; the 
 two router copies and failed server-route type checks. Duplicate approval-route registration was
 removed and the existing expiry clock retained. Dependency audit, full tests, strict typecheck,
 build, SSR, consolidated-resource integrity and production-health contract tests are required.
+
+## Browser integrations and duplicate-setup follow-up (2026-10-25)
+
+Direct control now lists and switches page targets, including sign-in popups. Refresh tabs after
+opening a new window. Live TinyFish CDP acceptance created a second page, selected it with the
+production controller, navigated that selected target and verified its URL. Two tabs were listed;
+the test session was explicitly closed. This protocol check does not establish successful OAuth,
+MFA completion or profile reuse. Ctrl/Cmd+V now reaches the local paste handler instead of being
+intercepted as a remote shortcut.
+
+The browser page provides official-source setup choices for Playwright MCP, Browser Use,
+Stagehand and Chrome DevTools MCP. These are integration guides, not installed worker claims.
+Playwright navigation, snapshot and tab-list tool shortcuts appear only when actually discovered
+from the selected MCP connection. Remote Open-Connect connections require authenticated HTTPS;
+a localhost stdio process is not reachable from the deployed gateway.
+
+Live Composio Browser Use session listing succeeded (zero active sessions), and TinyFish profile
+listing succeeded (two profiles). Open-Connect's Composio synchronization preview returned 92
+accounts already mapped and no missing candidates. These checks do not exercise every connected
+app's functionality. Multiple connections with the same display name were not deleted because
+redacted metadata does not establish that they share the same underlying identity or grants.
+
+Native connection setup now rejects repeated creation for the same provider, endpoint, account
+label and auth method before creating a vault secret. Reconnect targets an explicit owned
+connection. Implicit reuse also matches the endpoint and auth method, avoiding accidental
+replacement of a different server that happens to have the same account label. This is an
+application guard, not a database uniqueness constraint against concurrent creation.
+
+Sources: https://github.com/microsoft/playwright-mcp,
+https://github.com/browser-use/browser-use, https://github.com/browserbase/stagehand,
+https://github.com/ChromeDevTools/chrome-devtools-mcp.
+Open-source licensing does not include free cloud hosting or model inference. MultiOn is still
+reference-only; its current working API and account have not been verified. Remaining acceptance
+items above are unchanged unless explicitly marked passed in this follow-up.
