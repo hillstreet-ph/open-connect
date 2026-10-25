@@ -7,7 +7,12 @@ function redactStrings(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(redactStrings);
   if (value && typeof value === "object")
     return Object.fromEntries(
-      Object.entries(value).map(([key, item]) => [key, redactStrings(item)]),
+      Object.entries(value).map(([key, item]) => [
+        key,
+        /secret|token|password|api.?key|authorization|cookie|private.?key/i.test(key)
+          ? "[REDACTED]"
+          : redactStrings(item),
+      ]),
     );
   return value;
 }

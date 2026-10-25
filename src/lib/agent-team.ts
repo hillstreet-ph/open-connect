@@ -9,8 +9,8 @@ export function redactContext(text: string): string {
       "[REDACTED]",
     )
     .replace(
-      /((?:password|secret|token|api[_ -]?key)\s*[:=]\s*)(?:"[^"\n]*"|'[^'\n]*'|[^\s,;]+)/gi,
-      "$1[REDACTED]",
+      /((?:"|')?(?:password|secret|token|api[_ -]?key|authorization|cookie|private[_ -]?key)(?:"|')?\s*[:=]\s*)(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s,;}]+)/gi,
+      '$1"[REDACTED]"',
     );
 }
 export function validateTeamInput(input: Record<string, unknown>) {

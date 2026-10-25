@@ -42,3 +42,26 @@ test("redacts credential patterns before routing and bounds context", () => {
   assert.equal(redactContext("ordinary goal"), "ordinary goal");
   assert.throws(() => validateTeamInput({ goal: "x", context: "a".repeat(24001) }));
 });
+
+test("redacts quoted JSON fields, escaped strings, and credential headers", () => {
+  const raw = JSON.stringify({
+    password: 'secret "quoted" value',
+    token: "private-token-value",
+    nested: { api_key: "nested-secret" },
+    authorization: "Basic private-base64",
+    cookie: "session=private",
+  });
+  const result = redactContext(raw);
+  for (const secret of [
+    "quoted",
+    "private-token-value",
+    "nested-secret",
+    "private-base64",
+    "session=private",
+  ])
+    assert.ok(!result.includes(secret), secret);
+  const parsed = JSON.parse(result);
+  assert.equal(parsed.password, "[REDACTED]");
+  assert.equal(parsed.nested.api_key, "[REDACTED]");
+  assert.ok(!redactContext('Notes: {"password":"fenced-secret"}').includes("fenced-secret"));
+});
