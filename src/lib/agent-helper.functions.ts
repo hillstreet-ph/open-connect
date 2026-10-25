@@ -530,6 +530,15 @@ export const askAgentHelper = createServerFn({ method: "POST" })
         requestFreeModel(route.upstream, route.model, messages, includeTools),
       execute: (name, args) => executeInternalTool(name, args, context),
     });
+    const { captureHelperMemory } = await import("@/lib/data-controls.functions");
+    await captureHelperMemory(
+      context.supabase,
+      context.userId,
+      data.messages[data.messages.length - 1]!.content,
+      result.reply,
+    ).catch(() => {
+      console.warn("Agent-Helper reply completed, but automatic memory capture failed");
+    });
     return {
       reply: result.reply,
       action: result.action

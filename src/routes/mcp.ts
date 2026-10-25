@@ -1027,7 +1027,7 @@ const PLATFORM_TOOLS: McpTool[] = [
   {
     name: "record_run_outcome",
     description:
-      "Record a verified autonomous-run outcome, save redacted working memory, promote repeated successes to knowledge, and prepare a private Studio draft when resources:write is granted. Never publishes automatically.",
+      "Record a verified autonomous-run outcome, save redacted working memory, promote repeated successes to knowledge, and prepare a private Studio draft when resources:write is granted. For Data Controls activity and suggestions, supply evidence.verified=true only after independently checking the result. Never publishes automatically.",
     inputSchema: {
       type: "object",
       properties: {
@@ -1035,7 +1035,11 @@ const PLATFORM_TOOLS: McpTool[] = [
         status: { type: "string", enum: ["succeeded", "failed", "blocked"] },
         summary: { type: "string" },
         capability_slugs: { type: "array", items: { type: "string" } },
-        evidence: { type: "object" },
+        evidence: {
+          type: "object",
+          description:
+            "Sanitized result checks. Set verified:true only after checking successful execution; Data Controls ignores unverified learned events.",
+        },
       },
       required: ["correlation_id", "status", "summary"],
     },
