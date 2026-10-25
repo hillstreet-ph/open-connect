@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  composioImportBatches,
   composioImportRecords,
   planComposioAccountMapping,
   planComposioSync,
@@ -115,4 +116,36 @@ test("explicit imports reject foreign accounts and never add provider scopes", (
     ["ca_one"],
   );
   assert.equal(existing.records.length, 0);
+});
+
+test("website sync-all imports every candidate in bounded batches and retries existing mappings safely", () => {
+  const accounts = Array.from({ length: 252 }, (_, i) => ({ id: `ca_${i}`, provider: "gmail" }));
+  const saved = [
+    {
+      provider: "gmail",
+      provider_account_id: "ca_0",
+      credential_reference: "composio://connected-account/ca_0",
+    },
+  ];
+  const plan = composioImportBatches("owner", accounts, saved, []);
+  assert.deepEqual(
+    plan.batches.map((batch) => batch.length),
+    [100, 100, 51],
+  );
+  const rows = plan.batches.flat();
+  assert.equal(new Set(rows.map((row) => row.credential_reference)).size, 251);
+  assert.equal(plan.matched, 252);
+  assert.equal(plan.existing, 1);
+  assert.equal(composioImportBatches("owner", accounts, [...saved, ...rows], []).batches.length, 0);
+  assert.throws(
+    () =>
+      composioImportRecords(
+        "owner",
+        accounts,
+        [],
+        [],
+        accounts.map((a) => a.id),
+      ),
+    /1–100/,
+  );
 });

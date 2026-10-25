@@ -119,3 +119,26 @@ export function composioImportRecords(
     }));
   return { records, matched: plan.matched, existing: plan.existing, selected: selected.size };
 }
+
+/** Website sync-all retains bounded batches while the MCP selection stays limited to 100 IDs. */
+export function composioImportBatches(
+  userId: string,
+  accounts: ManagedAccount[],
+  saved: SavedConnection[],
+  catalog: Array<{ slug: string; name: string }>,
+) {
+  const plan = planComposioSync(accounts, saved, catalog);
+  const batches = [];
+  for (let offset = 0; offset < plan.candidates.length; offset += 100) {
+    batches.push(
+      composioImportRecords(
+        userId,
+        accounts,
+        saved,
+        catalog,
+        plan.candidates.slice(offset, offset + 100).map((account) => account.account_id),
+      ).records,
+    );
+  }
+  return { batches, matched: plan.matched, existing: plan.existing };
+}
