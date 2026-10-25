@@ -52,8 +52,7 @@ export function SiteHeader() {
         </div>
       ) : null}
 
-      <div className="mx-auto flex min-h-14 max-w-5xl flex-wrap items-center justify-between gap-2 px-3 py-2 sm:min-h-[3.75rem] sm:gap-3 sm:px-6">
-        {pathname !== "/" ? <BackButton fallback="/" /> : null}
+      <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-3 px-4 sm:h-[3.75rem] sm:px-6">
         <BrandLogo />
 
         <nav
@@ -107,11 +106,19 @@ export function SiteHeader() {
         </div>
       </div>
 
+      {pathname !== "/" && pathname !== "/dashboard" ? (
+        <div className="mx-auto flex max-w-5xl items-center px-4 pb-2 sm:px-6">
+          <BackButton fallback="/" />
+        </div>
+      ) : null}
+
       {/* Mobile full-height sheet */}
       <div
         className={cn(
-          "fixed inset-x-0 bottom-0 top-14 z-40 border-t border-border/70 bg-background md:hidden",
-          inApp && "top-[4.25rem]",
+          "absolute inset-x-0 top-full z-40 border-t border-border/70 bg-background md:hidden",
+          pathname !== "/" && pathname !== "/dashboard"
+            ? "h-[calc(100dvh-6.25rem)]"
+            : "h-[calc(100dvh-3.5rem)]",
           open ? "block" : "hidden",
         )}
         role="dialog"
