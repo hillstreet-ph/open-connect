@@ -95,7 +95,9 @@ export function ApiKeysCard({ modelOnly = false }: { modelOnly?: boolean }) {
           <span className="flex size-9 items-center justify-center rounded-lg bg-primary/15 text-primary">
             <KeyRound className="size-4" />
           </span>
-          <CardTitle className="mt-3 text-base">{modelOnly ? "AI Gateway keys" : "API Keys"}</CardTitle>
+          <CardTitle className="mt-3 text-base">
+            {modelOnly ? "AI Gateway keys" : "API Keys"}
+          </CardTitle>
           <CardDescription>
             {modelOnly
               ? "Create a model-scoped sk-oc- key for https://open-connect.site/v1. Connect your model providers below first."

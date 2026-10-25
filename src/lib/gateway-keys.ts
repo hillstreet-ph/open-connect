@@ -1,10 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 
 export function isClientKey(raw: string): boolean {
-  return (
-    raw.length <= 256 &&
-    (raw.startsWith("oc_live_") || /^sk-oc-[A-Za-z0-9_-]{32}$/.test(raw))
-  );
+  return raw.length <= 256 && (raw.startsWith("oc_live_") || /^sk-oc-[A-Za-z0-9_-]{32}$/.test(raw));
 }
 
 export function generateClientKey(modelOnly = false) {
