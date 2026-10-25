@@ -1,3 +1,4 @@
+import { connectionOwnedSecretId } from "./connection-credential-lifecycle.ts";
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
@@ -211,4 +212,15 @@ test("repeated native setup is detected without merging separate identities or b
     ]),
     undefined,
   );
+});
+
+test("disconnect and replacement cleanup preserve independently saved Vault credentials", () => {
+  const id = "00000000-0000-4000-8000-000000000001";
+  const reference = `credential://browser_use/${id}`;
+  assert.equal(connectionOwnedSecretId(reference, { credential_reuse: true }), null);
+  assert.equal(connectionOwnedSecretId(reference, {}), id);
+  assert.equal(connectionOwnedSecretId(reference, null), id);
+  assert.equal(connectionOwnedSecretId(reference, { credential_reuse: false }), id);
+  assert.equal(connectionOwnedSecretId("composio://connected-account/123", {}), null);
+  assert.equal(connectionOwnedSecretId(undefined, {}), null);
 });

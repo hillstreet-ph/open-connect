@@ -36,6 +36,10 @@ export function CloudBrowserSwitcher({
     if (availability.isError) return "Status unavailable";
     if (!availability.data) return "Checking connection…";
     const item = availability.data[id];
+    const vault = id === "tinyfish" ? null : availability.data.vault[id];
+    if (!item.configured && vault === "ambiguous")
+      return "Several saved keys · choose in Credentials";
+    if (!item.configured && vault === "unavailable") return "Saved key could not be verified";
     return item.configured
       ? "Connection saved"
       : item.brokered
@@ -98,6 +102,11 @@ export function CloudBrowserSwitcher({
             Refresh connection status
           </button>
         </div>
+        <p className="text-xs text-muted-foreground">
+          Browser Use and Browserbase automatically reuse a single API key saved in Credentials with
+          their exact HTTPS website or provider:browser_use / provider:browserbase tag. Validation
+          reads account details only. Multiple matching keys require selection in Connections.
+        </p>
         {availability.isError ? (
           <p role="alert" className="text-sm">
             Connection status could not be checked. Your existing session references are preserved.

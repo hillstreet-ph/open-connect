@@ -37,3 +37,11 @@ Use the provider tabs at the top of Cloud Browser. Selection is stored in the pa
 Browser Use and Browserbase keep distinct account-and-provider-scoped tab references. An existing reference from the earlier combined panel migrates only to its matching provider and is removed from the old location, so clearing it does not restore an old completed run on reload. Profiles and sign-ins stay with their original provider; no cookie or credential transfer is performed.
 
 Connection status is presence metadata, not a live provider health test. Native SDK controls require the native key binding or an owner-scoped deployment key. Broker accounts are labelled separately and are not substituted as SDK credentials. BrowserAct and MultiOn remain setup/verification options until their actual execution route is verified. Connected tools exposes the existing MCP workspace; its own discovery and permission checks still apply. No duplicated connector is created by switching.
+
+## Automatic reuse of saved API keys
+
+Opening Cloud Browser or refreshing its connection status sends an authenticated POST that prepares Browser Use and Browserbase connections. Existing connected native credentials take priority. Otherwise, the server checks only the signed-in owner's API-key metadata for an exact supported HTTPS website origin or an explicit `provider:browser_use` / `provider:browserbase` tag. Names alone never select a credential. Conflicting provider tags and multiple matches require manual setup in Connections.
+
+A single match is resolved inside the server and validated with the provider's fixed read-only account endpoint. Only successful validation creates a native connection referencing the existing Vault item; the secret is neither copied nor returned. A stable provider/account key prevents duplicate bindings on repeated or concurrent preparation. The saved binding is read back before success is returned. Deleted secrets, unavailable providers and failed validation remain setup failures. Existing connections are saved metadata, not continuous live verification.
+
+Preparation does not start a browser or approve spending. Starting a metered session still requires the existing cost acknowledgement. Website passwords and TOTP are excluded from this flow; use the supported secure browser sign-in handoff. Cookie/profile persistence remains provider-specific.
