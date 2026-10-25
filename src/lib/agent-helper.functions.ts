@@ -522,12 +522,10 @@ export const askAgentHelper = createServerFn({ method: "POST" })
     if (!selectedRoute) throw new Error("No model route selected.");
     const route = selectedRoute;
     const result = await runAgentHelper({
-      first: first as Parameters<typeof runAgentHelper>[0]["first"],
+      first,
       messages: [{ role: "system", content: SYSTEM_PROMPT }, ...data.messages],
       requestNext: (messages, includeTools) =>
-        requestFreeModel(route.upstream, route.model, messages, includeTools) as ReturnType<
-          Parameters<typeof runAgentHelper>[0]["requestNext"]
-        >,
+        requestFreeModel(route.upstream, route.model, messages, includeTools),
       execute: (name, args) => executeInternalTool(name, args, context),
     });
     return {
