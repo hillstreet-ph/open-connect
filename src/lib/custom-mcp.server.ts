@@ -204,11 +204,18 @@ async function assertProjectConnectionAccess(
 
 export async function assertToolConnectionAccess(
   userId: string,
-  connection: { id: string; user_id: string; provider: string; status: string },
+  connection: {
+    id: string;
+    user_id: string;
+    provider: string;
+    status: string;
+    credential_reference?: string | null;
+  },
   projectId?: string,
   checkProject = assertProjectConnectionAccess,
 ) {
   if (
+    !connection.credential_reference?.startsWith("composio://connected-account/") &&
     !isExecutableMcpProvider(connection.provider) &&
     !["twilio", "telegram"].includes(connection.provider)
   ) {
@@ -232,6 +239,7 @@ async function getToolConnection(userId: string, connectionId: string, projectId
   if (error || !data) throw new Error("Connection not found.");
   await assertToolConnectionAccess(userId, data, projectId);
   if (
+    !data.credential_reference?.startsWith("composio://connected-account/") &&
     ["twilio", "telegram"].includes(data.provider) &&
     !new RegExp(`^credential://${data.provider}/[0-9a-f-]{36}$`, "i").test(
       data.credential_reference ?? "",
@@ -316,6 +324,10 @@ export async function getCustomMcpConnection(
 }
 
 async function listToolsForConnection(saved: ToolConnection) {
+  if (saved.credential_reference?.startsWith("composio://connected-account/")) {
+    const { listManagedMcpTools } = await import("./managed-mcp.server.ts");
+    return listManagedMcpTools(saved.user_id, saved.provider, saved.credential_reference);
+  }
   if (saved.provider === "custom_api") {
     const { openApiOperations } = await import("./openapi-connector.ts");
     return openApiOperations((saved.metadata as Record<string, unknown>)["openapi"]).tools;
@@ -406,7 +418,16 @@ export async function callCustomMcpTool(
 
   let result;
   try {
-    if (connection.provider === "custom_api") {
+    if (connection.credential_reference?.startsWith("composio://connected-account/")) {
+      const { callManagedMcpTool } = await import("./managed-mcp.server.ts");
+      result = await callManagedMcpTool(
+        connection.user_id,
+        connection.provider,
+        connection.credential_reference,
+        toolName,
+        args,
+      );
+    } else if (connection.provider === "custom_api") {
       const { callOpenApiTool } = await import("./openapi-connector.server");
       result = await callOpenApiTool(
         connection,

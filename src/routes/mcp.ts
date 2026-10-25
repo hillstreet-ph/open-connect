@@ -633,7 +633,8 @@ const PLATFORM_TOOLS: McpTool[] = [
   },
   {
     name: "list_connection_tools",
-    description: "Discover tools from one accessible Twilio or verified Custom MCP connection.",
+    description:
+      "Discover schemas from one accessible direct MCP, native provider, or active owned Composio connection.",
     inputSchema: {
       type: "object",
       properties: { connection_id: { type: "string" } },
@@ -648,7 +649,7 @@ const PLATFORM_TOOLS: McpTool[] = [
   {
     name: "call_connection_tool",
     description:
-      "Call a tool on one accessible Twilio or verified Custom MCP connection. Twilio writes require admin access. Custom MCP writes require connections:invoke and either a project-scoped key or a personal administrator key with control:write; destructive tools also require confirm=true.",
+      "Call a tool on one accessible direct MCP, native provider, or active owned Composio connection. Twilio writes require admin access. Custom MCP writes require connections:invoke and either a project-scoped key or a personal administrator key with control:write; destructive tools also require confirm=true.",
     inputSchema: {
       type: "object",
       properties: {
