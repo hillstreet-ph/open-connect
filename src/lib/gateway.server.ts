@@ -1,3 +1,4 @@
+import { COMPATIBLE_GATEWAY_PROVIDERS } from "./ai-gateway-providers.ts";
 /**
  * Open-Connect gateway server helpers.
  * Server-only: never import from client code.
@@ -19,17 +20,7 @@ import { fetchFreeModelCatalog, isAutoFreeModel } from "./model-catalog";
 
 export const KEY_PREFIX = "oc_live_";
 
-export type UpstreamName =
-  | "openrouter"
-  | "litellm"
-  | "nvidia"
-  | "ollama_cloud"
-  | "groq"
-  | "cerebras"
-  | "openai"
-  | "xai"
-  | "mistral"
-  | "deepseek";
+export type UpstreamName = import("./model-connection.server").SavedModelUpstream["name"];
 
 export type Upstream = {
   name: UpstreamName;
@@ -260,21 +251,12 @@ export async function resolveUserUpstreams(
     .from("app_connections")
     .select("provider,status,credential_reference,metadata")
     .eq("user_id", userId)
-    .in("provider", [
-      "openrouter",
-      "litellm",
-      "nvidia",
-      "ollama_cloud",
-      "groq",
-      "cerebras",
-      "openai",
-      "xai",
-      "mistral",
-      "deepseek",
-    ])
+    .in(
+      "provider",
+      COMPATIBLE_GATEWAY_PROVIDERS.map((provider) => provider.id),
+    )
     .eq("status", "connected")
-    .order("created_at", { ascending: false })
-    .limit(10);
+    .order("created_at", { ascending: false });
   if (connectionError) throw new Error("Unable to read model connection.");
   const saved = await savedModelUpstreams(userId, {
     find: async () => connections ?? [],

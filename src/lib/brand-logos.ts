@@ -43,6 +43,7 @@ export type BrandKey =
   | "multion";
 
 const ICON_SLUG: Record<string, string> = {
+  huggingface: "huggingface",
   github: "github",
   gitlab: "gitlab",
   linear: "linear",

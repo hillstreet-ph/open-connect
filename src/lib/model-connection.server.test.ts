@@ -155,3 +155,40 @@ test("resolves NVIDIA, Ollama Cloud, Groq, and Cerebras through fixed provider e
     ],
   );
 });
+
+test("stale vault entries do not block other saved accounts or new compatible providers", async () => {
+  const providers = ["openai", "groq", "huggingface", "kilo", "commandcode", "google"];
+  const configured = await savedModelUpstreams("user-a", {
+    find: async () =>
+      providers.map((provider) => ({
+        provider,
+        status: "connected",
+        credential_reference: `credential://${provider}/11111111-1111-1111-1111-111111111111`,
+      })),
+    resolve: async (_user, id) => {
+      assert.ok(id);
+      return JSON.stringify({ credential: "test-secret" });
+    },
+  });
+  assert.deepEqual(
+    configured.map((item) => item.name),
+    providers,
+  );
+  let calls = 0;
+  const recovered = await savedModelUpstreams("user-a", {
+    find: async () =>
+      ["openai", "openrouter"].map((provider) => ({
+        provider,
+        status: "connected",
+        credential_reference: `credential://${provider}/11111111-1111-1111-1111-111111111111`,
+      })),
+    resolve: async () => {
+      if (++calls === 1) throw Error("deleted vault entry");
+      return "working-secret";
+    },
+  });
+  assert.deepEqual(
+    recovered.map((item) => item.name),
+    ["openrouter"],
+  );
+});

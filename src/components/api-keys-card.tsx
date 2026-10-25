@@ -28,7 +28,7 @@ const PROFILE_LABELS: Record<AccessProfile, string> = {
   read_only: "Read only",
   builder: "Builder",
   developer: "Developer",
-  administrator: "Administrator",
+  administrator: "Administrator · full control",
   custom: "Custom",
 };
 
@@ -79,6 +79,10 @@ export function ApiKeysCard({ modelOnly = false }: { modelOnly?: boolean }) {
       toast.error(error instanceof Error ? error.message : "Could not create key"),
   });
 
+  const visibleKeys = (keys.data ?? []).filter(
+    (key) => key.key_prefix.startsWith("sk-oc-") === modelOnly,
+  );
+
   const revokeMutation = useMutation({
     mutationFn: (id: string) => revoke({ data: { id } }),
     onSuccess: () => {
@@ -96,12 +100,12 @@ export function ApiKeysCard({ modelOnly = false }: { modelOnly?: boolean }) {
             <KeyRound className="size-4" />
           </span>
           <CardTitle className="mt-3 text-base">
-            {modelOnly ? "AI Gateway keys" : "API Keys"}
+            {modelOnly ? "AI Gateway keys" : "Integration tokens"}
           </CardTitle>
           <CardDescription>
             {modelOnly
               ? "Create a model-scoped sk-oc- key for https://open-connect.site/v1. Connect your model providers below first."
-              : "Scoped oc_live_ keys authenticate integrations. Existing keys continue to work."}
+              : "Create oc_live_ tokens for MCP tools, resources and agent actions. Administrators can select Administrator · full control. Model keys are managed in AI Gateway."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -191,8 +195,8 @@ export function ApiKeysCard({ modelOnly = false }: { modelOnly?: boolean }) {
             <p role="alert">Could not load keys. Refresh and try again.</p>
           ) : null}
           <ul className="space-y-2 text-sm">
-            {keys.data?.length ? (
-              keys.data.map((key) => (
+            {visibleKeys.length ? (
+              visibleKeys.map((key) => (
                 <li
                   key={key.id}
                   className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border px-3 py-2"
@@ -203,8 +207,10 @@ export function ApiKeysCard({ modelOnly = false }: { modelOnly?: boolean }) {
                       {key.key_prefix}…
                     </span>
                     <Badge variant="secondary" className="ml-2 text-[10px]">
-                      {PROFILE_LABELS[(key.access_profile as AccessProfile) ?? "custom"] ??
-                        "Legacy"}
+                      {key.key_prefix.startsWith("sk-oc-")
+                        ? "Models only"
+                        : (PROFILE_LABELS[(key.access_profile as AccessProfile) ?? "custom"] ??
+                          "Legacy")}
                     </Badge>
                     {key.project_id ? (
                       <Badge variant="outline" className="ml-2 text-[10px]">
