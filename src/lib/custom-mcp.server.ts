@@ -342,6 +342,17 @@ async function listToolsForConnection(saved: ToolConnection) {
         })();
 }
 
+/** Owner discovery keeps disabled descriptors so the permission editor can re-enable them. */
+export async function discoverOwnedConnectionTools(
+  userId: string,
+  connectionId: string,
+  load = getToolConnection,
+) {
+  const saved = await load(userId, connectionId);
+  await assertToolConnectionAccess(userId, saved);
+  return await listToolsForConnection(saved);
+}
+
 export async function listCustomMcpTools(userId: string, connectionId: string, projectId?: string) {
   const saved = await getToolConnection(userId, connectionId, projectId);
   return {
