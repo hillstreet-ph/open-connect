@@ -88,7 +88,7 @@ public viewer link; do not publish it, log it, or pass `base_url` to Playwright.
 completing the authorized sign-in. Cancel unfinished sessions rather than leaving them running.
 No cookie values or passwords are returned by the profile inspection UI.
 
-Provider requirement: a personal TinyFish API key connected in Connections → TinyFish Cloud Browser.
+Provider requirement: a personal TinyFish API key connected in Connections → TinyFish Cloud Browser, or an ACTIVE, owned TinyFish account managed through Composio for the agent API. The broker injects authentication server-side for tasks, profiles and wallet operations; browser sessions on the separate browser API still require a direct credential. Project, workspace and organization keys cannot use the personal broker fallback.
 An imported connection marked connected does not prove it has a usable vault credential. A missing
 credential must be reconnected securely; a workflow key cannot access personal profile state.
 

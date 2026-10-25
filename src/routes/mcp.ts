@@ -1097,6 +1097,31 @@ const PLATFORM_TOOLS: McpTool[] = [
     },
   },
   {
+    name: "sync_composio_accounts",
+    description:
+      "Import only explicitly selected, currently owned ACTIVE Composio accounts from preview_composio_sync into the personal connector library. Metadata only: does not expand provider scopes or assign project access. Requires a personal administrator key with control:write, connections:invoke, and confirm=true.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        account_ids: {
+          type: "array",
+          minItems: 1,
+          maxItems: 100,
+          items: { type: "string", minLength: 1, maxLength: 256 },
+        },
+        confirm: { type: "boolean" },
+      },
+      required: ["account_ids", "confirm"],
+      additionalProperties: false,
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true,
+    },
+  },
+  {
     name: "configure_connection",
     description:
       "Use this when binding a provider through an opaque credential:// reference; raw secret values are rejected.",
@@ -1230,13 +1255,18 @@ async function requireProviderWrite(key: AuthedKey) {
 }
 
 /** Cloud browser tools run with the caller's own TinyFish key from the vault. */
-async function handleCloudBrowserTool(userId: string, name: string, args: Record<string, unknown>) {
+async function handleCloudBrowserTool(
+  userId: string,
+  name: string,
+  args: Record<string, unknown>,
+  allowBroker = true,
+) {
   const { cloudBrowserClient, cloudBrowserViewUrl, CloudBrowserNotConnectedError } =
     await import("@/lib/tinyfish.server");
   const tf = await import("@/lib/tinyfish");
   let client: import("@/lib/tinyfish").TinyFishClient;
   try {
-    ({ client } = await cloudBrowserClient(userId));
+    ({ client } = await cloudBrowserClient(userId, { allowBroker }));
   } catch (error) {
     if (error instanceof CloudBrowserNotConnectedError) {
       const payload = {
@@ -1401,6 +1431,8 @@ function chatGptTools() {
         type: "oauth2",
         scopes: [
           TOOL_SCOPES[tool.name] ?? "tools:invoke",
+          ...(tool.name === "run_agent_team" ? ["agents:invoke"] : []),
+          ...(tool.name === "sync_composio_accounts" ? ["connections:invoke"] : []),
           ...([
             "create_resource",
             "update_resource",
@@ -1571,10 +1603,13 @@ const TOOL_SCOPES: Record<string, string> = {
   run_agent_team: "models:invoke",
   save_context_checkpoint: "control:write",
   configure_connection: "control:write",
+  sync_composio_accounts: "control:write",
   install_capability: "control:write",
 };
 
 function canUseTool(key: AuthedKey, toolName: string) {
+  if (toolName === "sync_composio_accounts")
+    return hasScope(key, "control:write") && hasScope(key, "connections:invoke");
   if (toolName === "run_agent_team")
     return hasScope(key, "models:invoke") && hasScope(key, "agents:invoke");
   const required = TOOL_SCOPES[toolName] ?? "tools:invoke";
@@ -2191,15 +2226,31 @@ export const Route = createFileRoute("/mcp")({
           } else if (name === "inspect_connections") {
             const provider = normalizeConnectionProvider(args["provider"]);
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-            let ownedQuery = supabaseAdmin
-              .from("app_connections")
-              .select("id,provider,display_name,status,scopes,credential_reference,last_used_at")
-              .eq("user_id", key.userId);
-            if (provider) ownedQuery = ownedQuery.eq("provider", provider);
-            const { data: owned, error: ownedError } = key.projectId
-              ? { data: [], error: null }
-              : await ownedQuery.order("created_at", { ascending: false }).limit(100);
-            if (ownedError) throw new Error(ownedError.message);
+            const owned: Array<{
+              id: string;
+              provider: string;
+              display_name: string | null;
+              status: string;
+              scopes: string[];
+              credential_reference: string | null;
+              last_used_at: string | null;
+            }> = [];
+            if (!key.projectId) {
+              for (let offset = 0; ; offset += 200) {
+                let query = supabaseAdmin
+                  .from("app_connections")
+                  .select(
+                    "id,provider,display_name,status,scopes,credential_reference,last_used_at",
+                  )
+                  .eq("user_id", key.userId)
+                  .order("id", { ascending: true });
+                if (provider) query = query.eq("provider", provider);
+                const { data: page, error } = await query.range(offset, offset + 199);
+                if (error) throw new Error("Could not inspect owned connections.");
+                owned.push(...(page ?? []));
+                if ((page?.length ?? 0) < 200) break;
+              }
+            }
             const visible = new Map<string, Record<string, unknown>>();
             for (const connection of owned ?? []) {
               visible.set(connection.id, {
@@ -2323,7 +2374,12 @@ export const Route = createFileRoute("/mcp")({
               (key.projectId || key.workspaceId || key.organizationId)
             )
               throw new Error("Saved browser profile management requires a personal API key.");
-            result = await handleCloudBrowserTool(key.userId, name, args);
+            result = await handleCloudBrowserTool(
+              key.userId,
+              name,
+              args,
+              !key.projectId && !key.workspaceId && !key.organizationId,
+            );
           } else if (name === "e2b_health") {
             const { e2bConfig, e2bHealth } = await import("@/lib/e2b.server");
             if (!e2bConfig().configured) throw new Error("E2B is not configured");
@@ -2786,6 +2842,61 @@ export const Route = createFileRoute("/mcp")({
               apply_url: "https://open-connect.site/connections",
               next_action:
                 "Run Sync Composio accounts as the authenticated administrator after approval, then assign selected connectors to projects.",
+            });
+          } else if (name === "sync_composio_accounts") {
+            if (key.projectId || key.workspaceId || key.organizationId)
+              throw new Error(
+                "Use a personal administrator key to sync personal Composio accounts.",
+              );
+            await requireControlWrite(key);
+            if (args["confirm"] !== true)
+              throw new Error("Confirm the exact previewed account IDs before importing.");
+            const { listOwnedManagedConnections, listComposioToolkits } =
+              await import("@/lib/managed-connectors.server");
+            const { composioImportRecords } = await import("@/lib/composio-sync");
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const [accounts, catalog] = await Promise.all([
+              listOwnedManagedConnections(key.userId),
+              listComposioToolkits(),
+            ]);
+            const saved: Array<{
+              provider: string;
+              provider_account_id: string | null;
+              credential_reference: string | null;
+            }> = [];
+            for (let offset = 0; ; offset += 200) {
+              const { data: page, error } = await supabaseAdmin
+                .from("app_connections")
+                .select("provider,provider_account_id,credential_reference")
+                .eq("user_id", key.userId)
+                .order("id")
+                .range(offset, offset + 199);
+              if (error) throw new Error("Could not read existing connector mappings.");
+              saved.push(...(page ?? []));
+              if ((page?.length ?? 0) < 200) break;
+            }
+            const plan = composioImportRecords(
+              key.userId,
+              accounts,
+              saved,
+              catalog,
+              args["account_ids"],
+            );
+            if (plan.records.length) {
+              const { error } = await supabaseAdmin.from("app_connections").insert(plan.records);
+              if (error)
+                throw new Error(
+                  "Connector import did not complete. Refresh the preview before retrying.",
+                );
+            }
+            result = textResult({
+              imported: plan.records.length,
+              selected: plan.selected,
+              matched: plan.matched,
+              existing: plan.existing,
+              provider_scopes_changed: false,
+              project_access_assigned: false,
+              secrets_exposed: false,
             });
           } else if (name === "configure_connection") {
             if (key.projectId || key.workspaceId || key.organizationId) {

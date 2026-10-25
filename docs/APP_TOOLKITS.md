@@ -8,15 +8,15 @@ Notion approval → GitHub issue/branch → isolated implementation → CI/secur
 
 ## Toolkit coverage
 
-| App | Current evidence state | SDK/CLI | MCP/connector | Primary role |
-|---|---|---|---|---|
-| GitHub | Connected read/write | REST, GraphQL, Octokit | GitHub MCP | Source, CI, reviews, releases |
-| Notion | Connected read/write | API, SDK, ntn | Notion MCP | Projects, tasks, agents, approvals |
-| Supabase | Connected control plane | supabase-js, CLI, PostgREST | Supabase MCP | Database, auth, storage, functions |
-| Cloudflare | Connected control plane | API, Wrangler | Cloudflare MCP | Pages, Workers, DNS, WAF, edge |
-| Sentry | Needs authenticated connector | SDK, API, sentry-cli | Required | Errors, performance, releases |
-| Docker Hub | Needs authenticated connector | Docker, Hub API, Buildx | Required | Images, tags, digests |
-| Hetzner | Needs authenticated connector | API, hcloud, Terraform | Required | Servers, network, firewall |
+| App        | Current evidence state        | SDK/CLI                     | MCP/connector  | Primary role                       |
+| ---------- | ----------------------------- | --------------------------- | -------------- | ---------------------------------- |
+| GitHub     | Connected read/write          | REST, GraphQL, Octokit      | GitHub MCP     | Source, CI, reviews, releases      |
+| Notion     | Connected read/write          | API, SDK, ntn               | Notion MCP     | Projects, tasks, agents, approvals |
+| Supabase   | Connected control plane       | supabase-js, CLI, PostgREST | Supabase MCP   | Database, auth, storage, functions |
+| Cloudflare | Connected control plane       | API, Wrangler               | Cloudflare MCP | Pages, Workers, DNS, WAF, edge     |
+| Sentry     | Needs authenticated connector | SDK, API, sentry-cli        | Required       | Errors, performance, releases      |
+| Docker Hub | Needs authenticated connector | Docker, Hub API, Buildx     | Required       | Images, tags, digests              |
+| Hetzner    | Needs authenticated connector | API, hcloud, Terraform      | Required       | Servers, network, firewall         |
 
 “Zetzner” is normalized to Hetzner.
 
@@ -42,3 +42,7 @@ Opaque secret references: credential://github/app-installation, credential://not
 ## Completion criteria
 
 An app is VERIFIED only when authentication, safe read, scoped staging write, audit event, failure behavior, and rollback/recovery are tested. Missing connectors remain NEEDS_CONNECTION; they must never be presented as production-ready.
+
+## Owned broker account imports
+
+`inspect_connections` paginates the complete owned connection inventory and returns credential metadata only. `preview_composio_sync` compares exact broker account references. A personal administrator can call `sync_composio_accounts` with explicit ACTIVE account IDs and `confirm: true`; both `control:write` and `connections:invoke` are required. Imports are retry-safe metadata records, do not grant provider scopes or project access, and do not imply a successful live API check. Reauthorize failed accounts with the provider rather than creating duplicate connections.

@@ -3,7 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { normalizeConnectionSetup, type ConnectionSetupInput } from "@/lib/connection-setup";
 import { AI_GATEWAY_PROVIDERS } from "@/lib/ai-gateway-providers";
 import { hasRole, type AppRole } from "@/lib/rbac";
-import { planComposioSync } from "@/lib/composio-sync";
+import { composioImportRecords, planComposioSync } from "@/lib/composio-sync";
 import {
   connectionIdentity,
   connectionAuthType,
@@ -468,25 +468,15 @@ export const syncComposioConnections = createServerFn({ method: "POST" })
       saved ?? [],
       [...syncCatalog].map(([slug, app]) => ({ slug, name: app.display_name })),
     );
-    const records = plan.candidates.map((account) => ({
-      user_id: context.userId,
-      provider: account.provider,
-      provider_account_id: account.account_id,
-      display_name: account.display_name,
-      status: "connected",
-      scopes: [] as string[],
-      credential_reference: `composio://connected-account/${account.account_id}`,
-      metadata: {
-        source: "composio-sync",
-        mode: "managed_oauth",
-        broker: "composio",
-        validation: {
-          verified: true,
-          checked_at: new Date().toISOString(),
-        },
-        full_scopes: false,
-      },
-    }));
+    const { records } = plan.candidates.length
+      ? composioImportRecords(
+          context.userId,
+          accounts,
+          saved ?? [],
+          [...syncCatalog].map(([slug, app]) => ({ slug, name: app.display_name })),
+          plan.candidates.map((account) => account.account_id),
+        )
+      : { records: [] };
     if (records.length) {
       const { error } = await context.supabase.from("app_connections").insert(records);
       if (error?.code === "23505") {

@@ -73,3 +73,49 @@ export function planComposioAccountMapping(
     connections,
   };
 }
+
+/** Explicit, owned metadata imports. Provider permissions and project grants are not changed. */
+export function composioImportRecords(
+  userId: string,
+  accounts: ManagedAccount[],
+  saved: SavedConnection[],
+  catalog: Array<{ slug: string; name: string }>,
+  requested: unknown,
+) {
+  if (
+    !Array.isArray(requested) ||
+    !requested.length ||
+    requested.length > 100 ||
+    requested.some((id) => typeof id !== "string" || !id.trim() || id.length > 256)
+  )
+    throw new Error("Select 1–100 exact account IDs from the current preview.");
+  const selected = new Set(requested as string[]);
+  const owned = new Set(accounts.map((a) => a.id));
+  if ([...selected].some((id) => !owned.has(id)))
+    throw new Error("A selected account is not an owned ACTIVE Composio account.");
+  const plan = planComposioSync(accounts, saved, catalog);
+  const records = plan.candidates
+    .filter((a) => selected.has(a.account_id))
+    .map((account) => ({
+      user_id: userId,
+      provider: account.provider,
+      provider_account_id: account.account_id,
+      display_name: account.display_name,
+      status: "connected",
+      scopes: [] as string[],
+      credential_reference: `composio://connected-account/${account.account_id}`,
+      metadata: {
+        source: "composio-sync",
+        mode: "managed_oauth",
+        broker: "composio",
+        validation: {
+          verified: true,
+          verification_type: "broker_account_active",
+          execution_verified: false,
+          checked_at: new Date().toISOString(),
+        },
+        full_scopes: false,
+      },
+    }));
+  return { records, matched: plan.matched, existing: plan.existing, selected: selected.size };
+}

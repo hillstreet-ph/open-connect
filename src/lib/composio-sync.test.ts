@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { planComposioAccountMapping, planComposioSync } from "./composio-sync.ts";
+import {
+  composioImportRecords,
+  planComposioAccountMapping,
+  planComposioSync,
+} from "./composio-sync.ts";
 
 test("provider alias changes do not reimport the same broker account", () => {
   const plan = planComposioSync(
@@ -80,4 +84,35 @@ test("account mapping emits only allowlisted connection fields", () => {
     ],
   });
   assert.doesNotMatch(JSON.stringify(mapping), /ca_apify|credential_reference|provider_account_id/);
+});
+
+test("explicit imports reject foreign accounts and never add provider scopes", () => {
+  const accounts = [
+    { id: "ca_one", provider: "gmail" },
+    { id: "ca_two", provider: "gmail" },
+  ];
+  assert.throws(
+    () => composioImportRecords("owner", accounts, [], [], ["foreign"]),
+    /owned ACTIVE/,
+  );
+  assert.throws(() => composioImportRecords("owner", accounts, [], [], []), /Select/);
+  const plan = composioImportRecords("owner", accounts, [], [], ["ca_one", "ca_one"]);
+  assert.equal(plan.records.length, 1);
+  assert.equal(plan.records[0]?.user_id, "owner");
+  assert.deepEqual(plan.records[0]?.scopes, []);
+  assert.equal(plan.records[0]?.metadata.validation.execution_verified, false);
+  const existing = composioImportRecords(
+    "owner",
+    accounts,
+    [
+      {
+        provider: "gmail",
+        provider_account_id: "ca_one",
+        credential_reference: "composio://connected-account/ca_one",
+      },
+    ],
+    [],
+    ["ca_one"],
+  );
+  assert.equal(existing.records.length, 0);
 });
