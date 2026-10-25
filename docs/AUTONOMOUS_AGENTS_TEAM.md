@@ -43,6 +43,16 @@ The v6 card separates Access permissions from the Goal input with a block label,
 
 ### Expanded ChatGPT capability discovery
 
+The existing private ChatGPT App plugin also bundles the canonical
+`skills/auto/SKILL.md` workflow. Package its source manifests and that skill with
+`python3 scripts/package-chatgpt-plugin.py --output /tmp/open-connect-plugin.zip`.
+The manifests under `plugins/chatgpt-open-connect` retain the original App ID and
+presentation; do not install that source directory alone or wrap it as a second
+plugin. Use Plugin Creator's guarded update on the existing plugin and verify
+source readback. The skill routes tools already exposed in the host; it does not
+copy authentication between Open-Connect, Composio, and Shelf. Refresh the plugin
+in a new host session when the current session retains an older skill catalog.
+
 `auto_discover` accepts an optional `type`: all (default), tool, toolkit, action,
 function, extension, app, skill, agent, mcp, or plugin. App and extension filters
 include MCP/plugin packages; actions refer to scoped platform functions. Results
