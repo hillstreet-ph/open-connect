@@ -1,7 +1,10 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import { MessageCircle, Send, Sparkles, X } from "lucide-react";
+import { ArrowRight, MessageCircle, Send, Sparkles, X } from "lucide-react";
 import { askAgentHelper } from "@/lib/agent-helper.functions";
+
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { workspaceCapabilities } from "@/lib/nav";
 
 type Message = { role: "user" | "assistant"; content: string };
 
@@ -12,6 +15,7 @@ const STARTERS = [
 ];
 
 export function AgentHelper() {
+  const [panel, setPanel] = useState("chat");
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
@@ -30,11 +34,11 @@ export function AgentHelper() {
   useEffect(() => {
     const transcript = transcriptRef.current;
     if (transcript) transcript.scrollTop = transcript.scrollHeight;
-  }, [messages, busy, open]);
+  }, [messages, busy, open, panel]);
 
   useEffect(() => {
-    if (open) composerRef.current?.focus();
-  }, [open]);
+    if (open && panel === "chat") composerRef.current?.focus();
+  }, [open, panel]);
 
   async function sendMessage(value: string) {
     const content = value.trim().slice(0, 2000);
@@ -123,83 +127,119 @@ export function AgentHelper() {
             </button>
           </header>
 
-          <div
-            ref={transcriptRef}
-            className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-3 py-4"
-            aria-live="polite"
-            aria-busy={busy}
-          >
-            {messages.map((message, index) => (
-              <div
-                key={index}
-                className={message.role === "user" ? "flex justify-end" : "flex justify-start"}
-              >
-                <p
-                  className={
-                    message.role === "user"
-                      ? "max-w-[88%] whitespace-pre-wrap break-words rounded-2xl rounded-br-md bg-primary px-3 py-2 text-sm text-primary-foreground"
-                      : "max-w-[92%] whitespace-pre-wrap break-words rounded-2xl rounded-bl-md bg-muted px-3 py-2 text-sm text-foreground"
-                  }
-                >
-                  {message.content}
-                </p>
-              </div>
-            ))}
-            {messages.length === 1 && !busy ? (
-              <div className="space-y-2 pt-1">
-                {STARTERS.map((starter) => (
-                  <button
-                    type="button"
-                    key={starter}
-                    onClick={() => void sendMessage(starter)}
-                    className="block w-full rounded-xl border border-border px-3 py-2 text-left text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                  >
-                    {starter}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-            {busy ? (
-              <p className="w-fit rounded-2xl rounded-bl-md bg-muted px-3 py-2 text-sm text-muted-foreground">
-                Agent-Helper is thinking…
-              </p>
-            ) : null}
-          </div>
-
-          <p className="px-4 pb-2 text-[10px] leading-4 text-muted-foreground">
-            Replies use your connected free AI models. Actions use your account access. Enabled
-            schedules are checked every five minutes and run linked AI response automations when
-            due.
-          </p>
-          <Link
-            to="/models"
-            onClick={() => setOpen(false)}
-            className="mx-4 mb-2 inline-block text-xs text-primary hover:underline"
-          >
-            Set up AI Gateway
-          </Link>
-          <form onSubmit={submit} className="flex items-end gap-2 border-t border-border p-3">
-            <textarea
-              ref={composerRef}
-              value={draft}
-              onChange={(event) => setDraft(event.target.value)}
-              onKeyDown={onInputKeyDown}
-              maxLength={2000}
-              rows={1}
-              disabled={busy}
-              aria-label="Message Agent-Helper"
-              placeholder="Ask Agent-Helper to set up Open-Connect…"
-              className="max-h-24 min-h-10 flex-1 resize-y rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
-            />
-            <button
-              type="submit"
-              disabled={busy || !draft.trim()}
-              className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-              aria-label="Send message"
+          <Tabs value={panel} onValueChange={setPanel} className="flex min-h-0 flex-1 flex-col">
+            <TabsList
+              aria-label="Agent-Helper sections"
+              className="mx-3 my-2 grid shrink-0 grid-cols-2"
             >
-              <Send className="size-4" />
-            </button>
-          </form>
+              <TabsTrigger value="chat">Chat</TabsTrigger>
+              <TabsTrigger value="capabilities">Capabilities</TabsTrigger>
+            </TabsList>
+            <TabsContent
+              value="chat"
+              className="m-0 min-h-0 flex-1 flex-col data-[state=active]:flex"
+            >
+              <div
+                ref={transcriptRef}
+                className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-3 py-4"
+                aria-live="polite"
+                aria-busy={busy}
+              >
+                {messages.map((message, index) => (
+                  <div
+                    key={index}
+                    className={message.role === "user" ? "flex justify-end" : "flex justify-start"}
+                  >
+                    <p
+                      className={
+                        message.role === "user"
+                          ? "max-w-[88%] whitespace-pre-wrap break-words rounded-2xl rounded-br-md bg-primary px-3 py-2 text-sm text-primary-foreground"
+                          : "max-w-[92%] whitespace-pre-wrap break-words rounded-2xl rounded-bl-md bg-muted px-3 py-2 text-sm text-foreground"
+                      }
+                    >
+                      {message.content}
+                    </p>
+                  </div>
+                ))}
+                {messages.length === 1 && !busy ? (
+                  <div className="space-y-2 pt-1">
+                    {STARTERS.map((starter) => (
+                      <button
+                        type="button"
+                        key={starter}
+                        onClick={() => void sendMessage(starter)}
+                        className="block w-full rounded-xl border border-border px-3 py-2 text-left text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                      >
+                        {starter}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+                {busy ? (
+                  <p className="w-fit rounded-2xl rounded-bl-md bg-muted px-3 py-2 text-sm text-muted-foreground">
+                    Agent-Helper is thinking…
+                  </p>
+                ) : null}
+              </div>
+
+              <p className="px-4 pb-2 text-[10px] leading-4 text-muted-foreground">
+                Replies use your connected free AI models. Actions use your account access. Enabled
+                schedules are checked every five minutes and run linked AI response automations when
+                due.
+              </p>
+              <form onSubmit={submit} className="flex items-end gap-2 border-t border-border p-3">
+                <textarea
+                  ref={composerRef}
+                  value={draft}
+                  onChange={(event) => setDraft(event.target.value)}
+                  onKeyDown={onInputKeyDown}
+                  maxLength={2000}
+                  rows={1}
+                  disabled={busy}
+                  aria-label="Message Agent-Helper"
+                  placeholder="Ask Agent-Helper to set up Open-Connect…"
+                  className="max-h-24 min-h-10 flex-1 resize-y rounded-xl border border-input bg-background px-3 py-2.5 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+                />
+                <button
+                  type="submit"
+                  disabled={busy || !draft.trim()}
+                  className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                  aria-label="Send message"
+                >
+                  <Send className="size-4" />
+                </button>
+              </form>
+            </TabsContent>
+            <TabsContent value="capabilities" className="m-0 min-h-0 flex-1 overflow-y-auto p-3">
+              <p className="mb-3 text-xs leading-5 text-muted-foreground">
+                Open a workspace section to manage what is available to your account.
+              </p>
+              <nav aria-label="Workspace capabilities" className="grid gap-2">
+                {workspaceCapabilities.map((item) => (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    onClick={() => setOpen(false)}
+                    className="group flex min-w-0 items-center gap-3 rounded-xl border border-border p-3 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-semibold">{item.label}</span>
+                      <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                        {item.description}
+                      </span>
+                    </span>
+                    <ArrowRight
+                      className="size-4 shrink-0 text-muted-foreground group-hover:text-foreground"
+                      aria-hidden="true"
+                    />
+                  </Link>
+                ))}
+              </nav>
+              <p className="mt-4 text-xs leading-5 text-muted-foreground">
+                Available capabilities depend on your account permissions and connected services.
+              </p>
+            </TabsContent>
+          </Tabs>
         </section>
       ) : null}
 
