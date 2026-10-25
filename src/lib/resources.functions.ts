@@ -20,6 +20,9 @@ function skillManifest(resource: {
 }) {
   if (resource.slug === "auto" && resource.verified && resource.source === "open-connect")
     return AUTO_SKILL_MARKDOWN;
+  const inline = resource.installation_config as { draft_markdown?: unknown } | null;
+  if (resource.source === "data-controls" && typeof inline?.draft_markdown === "string")
+    return inline.draft_markdown;
   const config =
     resource.installation_config && typeof resource.installation_config === "object"
       ? JSON.stringify(resource.installation_config, null, 2)
