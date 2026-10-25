@@ -102,7 +102,8 @@ type McpTool = {
   _meta?: Record<string, unknown>;
 };
 
-const COMMAND_CENTER_URI = "ui://open-connect/command-center-v4.html";
+const COMMAND_CENTER_URI = "ui://open-connect/command-center-v5.html";
+const V4_COMMAND_CENTER_URI = "ui://open-connect/command-center-v4.html";
 const V3_COMMAND_CENTER_URI = "ui://open-connect/command-center-v3.html";
 const V2_COMMAND_CENTER_URI = "ui://open-connect/command-center-v2.html";
 const LEGACY_COMMAND_CENTER_URI = "ui://open-connect/command-center-v1.html";
@@ -1724,6 +1725,7 @@ export const Route = createFileRoute("/mcp")({
           const uri = (body.params as { uri?: string } | undefined)?.uri;
           result =
             uri === COMMAND_CENTER_URI ||
+            uri === V4_COMMAND_CENTER_URI ||
             uri === V3_COMMAND_CENTER_URI ||
             uri === V2_COMMAND_CENTER_URI ||
             uri === LEGACY_COMMAND_CENTER_URI
@@ -1945,6 +1947,39 @@ export const Route = createFileRoute("/mcp")({
               // Status must remain available even when the optional connection counter is not.
             }
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const personal = !key.projectId && !key.workspaceId && !key.organizationId;
+            const canReadCredentials = personal && hasScope(key, "secrets:read");
+            const canReadModels =
+              personal && (hasScope(key, "models:read") || hasScope(key, "models:invoke"));
+            const [credentials, models] = await Promise.all([
+              (async () => {
+                if (!canReadCredentials) return null;
+                try {
+                  const response = await supabaseAdmin
+                    .from("credential_secrets")
+                    .select("id", { count: "exact", head: true })
+                    .eq("user_id", key.userId);
+                  return !response.error && typeof response.count === "number"
+                    ? response.count
+                    : null;
+                } catch {
+                  return null;
+                }
+              })(),
+              (async () => {
+                if (!canReadModels) return null;
+                try {
+                  const { resolveUserUpstreams, fetchMergedModelCatalog } =
+                    await import("@/lib/gateway.server");
+                  const catalog = await fetchMergedModelCatalog(
+                    await resolveUserUpstreams(key.userId, false),
+                  );
+                  return catalog.ids.length;
+                } catch {
+                  return null;
+                }
+              })(),
+            ]);
             const auto = await readAutoMode(supabaseAdmin as SupabaseClient, key);
             const status = {
               auto,
@@ -1956,14 +1991,13 @@ export const Route = createFileRoute("/mcp")({
                   available: connections !== null,
                 },
                 credentials: {
-                  available:
-                    hasScope(key, "secrets:read") &&
-                    !key.projectId &&
-                    !key.workspaceId &&
-                    !key.organizationId,
+                  available: canReadCredentials,
+                  count: credentials,
                   mode: "metadata_only",
                 },
                 models: {
+                  count: models,
+                  available: canReadModels,
                   endpoint: "https://open-connect.site/v1",
                   aliases: MODEL_ALIASES.map((a) => a.id),
                 },

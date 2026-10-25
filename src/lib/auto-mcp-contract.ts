@@ -128,14 +128,14 @@ export const AUTO_STATUS_OUTPUT_SCHEMA = {
         },
         credentials: {
           type: "object",
-          properties: { available: boolean, mode: string },
-          required: ["available", "mode"],
+          properties: { available: boolean, mode: string, count },
+          required: ["available", "mode", "count"],
           additionalProperties: false,
         },
         models: {
           type: "object",
-          properties: { endpoint: string, aliases: strings },
-          required: ["endpoint", "aliases"],
+          properties: { endpoint: string, aliases: strings, count, available: boolean },
+          required: ["endpoint", "aliases", "count", "available"],
           additionalProperties: false,
         },
       },
