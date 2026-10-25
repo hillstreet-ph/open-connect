@@ -21,7 +21,7 @@ import {
   saveRepeatedKnowledge,
   type ReuseDraft,
 } from "@/lib/data-controls.functions";
-import { repeatedPromptDraft, type DataControls } from "@/lib/data-controls";
+import { type DataControls } from "@/lib/data-controls";
 
 export function DataControlsPanel({ studio = false }: { studio?: boolean }) {
   const { user } = useRouteContext({ from: "/_authenticated" });
@@ -292,12 +292,8 @@ function AccountDataControls({ studio, userId }: { studio: boolean; userId: stri
                     Save unverified Knowledge note
                   </Button>
                   {group.kind === "prompt" && group.count >= 3 && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setEditor(repeatedPromptDraft(group))}
-                    >
-                      Review prompt draft
+                    <Button size="sm" variant="outline" asChild>
+                      <a href="#reuse-drafts">Review suggestions below</a>
                     </Button>
                   )}
                 </div>
@@ -348,7 +344,7 @@ function AccountDataControls({ studio, userId }: { studio: boolean; userId: stri
           </CardContent>
         </Card>
       )}
-      <Card>
+      <Card id="reuse-drafts">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Sparkles className="size-4" />
