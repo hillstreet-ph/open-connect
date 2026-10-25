@@ -5,7 +5,7 @@ Controls are private to the signed-in account. Other accounts opt in independent
 
 - **Activity capture** indexes identifiers for saved Memory, Knowledge, owned resources, Toolkits and verified capability runs. Enabling it also syncs existing records within the retention period.
 - **Helper memory** automatically saves a redacted interaction summary after an Agent-Helper reply. Assistant responses remain explicitly unverified.
-- **Draft suggestions** create one private workflow draft after three distinct verified runs of the same capability. Duplicate events for the same run do not increase its count.
+- **Draft suggestions** create one private workflow draft after three distinct verified runs of the same capability. Duplicate events for the same run do not increase its count. MCP `record_run_outcome` callers must supply `evidence.verified=true` after independently checking the result; unverified learned events are excluded.
 - **Retention** is 30, 90 or 365 days. The existing authenticated background scheduler removes expired activity and automatically captured context. Manually saved context and Studio drafts remain until deleted.
 - **Export** downloads owned context, activity, drafts, resource metadata and Toolkit metadata as JSON. It paginates through all records and fails instead of delivering a partial result. Common secrets are redacted; credentials and binary attachments are excluded.
 

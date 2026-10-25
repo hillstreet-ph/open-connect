@@ -10,9 +10,11 @@ begin
  for i in 1..3 loop
   r:=gen_random_uuid();
   insert into public.autonomous_runs(id,user_id,goal,environment,state,plan,correlation_id) values(r,u,'Data Controls regression test','development','succeeded','{}',r);
-  insert into public.autonomous_run_events(user_id,run_id,event_type,summary,capability_slugs) values(u,r,'verified','Synthetic verified result',array['data-controls-test-capability']);
-  insert into public.autonomous_run_events(user_id,run_id,event_type,summary,capability_slugs) values(u,r,'verified','Duplicate event for same run',array['data-controls-test-capability']);
+  insert into public.autonomous_run_events(user_id,run_id,event_type,summary,capability_slugs,evidence) values(u,r,'learned','Synthetic verified result',array['data-controls-test-capability'],'{"verified":true}');
+  insert into public.autonomous_run_events(user_id,run_id,event_type,summary,capability_slugs,evidence) values(u,r,'learned','Duplicate event for same run',array['data-controls-test-capability'],'{"verified":true}');
  end loop;
+ insert into public.autonomous_run_events(user_id,run_id,event_type,summary,capability_slugs,evidence) values(u,r,'learned','Unverified result',array['data-controls-unverified-capability'],'{}');
+ if exists(select 1 from public.data_control_activity where user_id=u and source_key='data-controls-unverified-capability') then raise exception 'Unverified outcome must not be counted'; end if;
  if (select count(*) from public.data_control_activity where user_id=u and source_key='data-controls-test-capability')<>3 then raise exception 'Distinct run counting failed'; end if;
  if (select count(*) from public.data_reuse_drafts where user_id=u and source_key='capability:data-controls-test-capability')<>1 then raise exception 'Draft deduplication failed'; end if;
  if (select count(*) from public.knowledge_items where user_id=u and metadata->>'capability'='data-controls-test-capability')<>3 then raise exception 'Knowledge capture failed'; end if;

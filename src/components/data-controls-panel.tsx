@@ -91,7 +91,7 @@ function AccountDataControls({ studio, userId }: { studio: boolean; userId: stri
     mutationFn: (id: string) => buildDraftFn({ data: { id } }),
     onSuccess: () => {
       void refresh();
-      void client.invalidateQueries({ queryKey: ["resources-for-review"] });
+      void client.invalidateQueries({ queryKey: ["resources-review-queue"] });
       toast.success(
         "Private resource created. Review its source, license and content in Studio before publishing.",
       );
