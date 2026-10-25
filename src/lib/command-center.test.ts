@@ -5,6 +5,7 @@ import { COMMAND_CENTER_HTML } from "./command-center.ts";
 
 type ElementStub = {
   textContent: string;
+  value: string;
   className: string;
   style: object;
   hidden: boolean;
@@ -22,6 +23,7 @@ function widget(openai: object = {}) {
   function element(): ElementStub {
     return {
       textContent: "",
+      value: "",
       className: "",
       style: {},
       hidden: false,
@@ -43,7 +45,18 @@ function widget(openai: object = {}) {
       },
     };
   }
-  for (const id of ["grid", "auto", "status", "retry"]) elements.set(id, element());
+  for (const id of [
+    "grid",
+    "auto",
+    "status",
+    "retry",
+    "goal",
+    "discover",
+    "team",
+    "results",
+    "scopes",
+  ])
+    elements.set(id, element());
   const listeners = new Map<string, (e: object) => void>();
   const requests: { id: string; method: string; params: { name?: string; arguments?: object } }[] =
     [];
@@ -73,6 +86,10 @@ function widget(openai: object = {}) {
     status: elements.get("status")!,
     retry: elements.get("retry")!,
     requests,
+    goal: elements.get("goal")!,
+    discover: elements.get("discover")!,
+    team: elements.get("team")!,
+    results: elements.get("results")!,
     reply: (id: string, result: unknown) =>
       listeners.get("message")!({ source: parent, data: { jsonrpc: "2.0", id, result } }),
     send: (params: unknown, trusted = true) =>
@@ -112,10 +129,15 @@ test("initializes the bridge, preserves zero counts, and renders values as text"
   assert.equal(w.toggle.textContent, "Auto On");
   assert.equal(w.toggle.attrs["aria-checked"], "true");
   assert.equal(w.toggle.disabled, false);
-  assert.equal(w.grid.children[0]!.children[1]!.textContent, "<img onerror=alert(1)>");
-  assert.equal(w.grid.children[2]!.children[1]!.textContent, "0");
+  assert.equal(w.grid.children[0]!.children[0]!.textContent, "Resources");
+  assert.equal(w.grid.children[1]!.children[1]!.textContent, "0");
+  assert.deepEqual(
+    w.grid.children.map((c) => c.children[0]!.textContent),
+    ["Resources", "Connections", "Credentials", "AI Gateway"],
+  );
+  assert.equal(w.grid.children[2]!.children[1]!.textContent, "Not granted");
   w.send({ content: [{ type: "text", text: "bad JSON" }] });
-  assert.equal(w.grid.children.length, 3);
+  assert.equal(w.grid.children.length, 4);
 });
 test("ignores foreign frames and handles legacy globals and metadata envelopes", () => {
   const w = widget();
@@ -177,4 +199,50 @@ test("legacy callTool also times out so pending host calls cannot leave a perman
   await flush();
   assert.equal(w.retry.hidden, false);
   assert.match(w.status.textContent, /host did not respond/);
+});
+
+test("goal actions respect grants and render matching and worker results as text", async () => {
+  const w = widget();
+  await connect(w);
+  w.goal.value = "Review the UI";
+  const before = w.requests.length;
+  await w.discover.events["click"]!();
+  assert.equal(w.requests.length, before);
+  w.send({
+    structuredContent: {
+      ...status,
+      scopes: ["tools:invoke", "resources:read", "models:invoke", "agents:invoke"],
+      auto: { enabled: true, scope: "personal" },
+    },
+  });
+  let task = w.discover.events["click"]!();
+  let call = w.requests.at(-1)!;
+  assert.equal(call.params.name, "auto_discover");
+  w.reply(call.id, {
+    structuredContent: {
+      matches: [{ name: "<script>alert(1)</script>", description: "Safe text" }],
+    },
+  });
+  await task;
+  assert.ok(w.results.textContent.includes("<script>"));
+  task = w.team.events["click"]!();
+  call = w.requests.at(-1)!;
+  assert.equal(call.params.name, "run_agent_team");
+  w.reply(call.id, {
+    content: [
+      {
+        type: "text",
+        text: JSON.stringify({
+          workers: [
+            { role: "Planner", status: "completed", model: "test:free", content: "First" },
+            { role: "Reviewer", status: "completed", model: "test:free", content: "Second" },
+          ],
+        }),
+      },
+    ],
+  });
+  await task;
+  assert.ok(w.results.textContent.includes("First\n\nReviewer"));
+  w.send({ structuredContent: { ...status, auto: { enabled: false, scope: "personal" } } });
+  assert.equal(w.team.disabled, true);
 });

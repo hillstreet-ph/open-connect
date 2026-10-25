@@ -1301,6 +1301,14 @@ test("resource validation failures are actionable JSON tool errors", async () =>
   expect(JSON.parse(payload.content[0].text).error.message).toContain("lowercase slug");
 });
 
+test("free worker delegation and context saving enforce independent key grants", async () => {
+  scopes = ["mcp:connect", "models:invoke"];
+  expect((await call("run_agent_team", { goal: "Review" })).status).toBe(403);
+  expect(
+    (await call("save_context_checkpoint", { session_id: "fixture", summary: "Summary" })).status,
+  ).toBe(403);
+});
+
 test("saved browser profile mutations reject project and organization contexts before provider access", async () => {
   scopes = ["tools:invoke"];
   for (const boundary of [
@@ -1321,4 +1329,27 @@ test("saved browser profile mutations reject project and organization contexts b
     }
   }
   expect(tables).not.toContain("app_connections");
+});
+
+test("Auto matches registered functions only when their key grants are present", async () => {
+  scopes = ["mcp:connect", "resources:read"];
+  let payload = (
+    await (
+      await call("auto_discover", { goal: "Planner Builder Reviewer worker team", limit: 10 })
+    ).json()
+  ).result.structuredContent;
+  expect(payload.matches.some((m: { slug: string }) => m.slug === "run_agent_team")).toBe(false);
+  scopes.push("models:invoke", "agents:invoke");
+  payload = (
+    await (
+      await call("auto_discover", { goal: "Planner Builder Reviewer worker team", limit: 10 })
+    ).json()
+  ).result.structuredContent;
+  expect(
+    payload.matches.some(
+      (m: { slug: string; resourceType: string }) =>
+        m.slug === "run_agent_team" && m.resourceType === "function",
+    ),
+  ).toBe(true);
+  expect(payload.execution_performed).toBe(false);
 });

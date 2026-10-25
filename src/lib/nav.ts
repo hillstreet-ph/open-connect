@@ -32,25 +32,6 @@ export const publicCategories: NavCategory[] = [
   },
 ];
 
-export const workspaceCapabilities = [
-  {
-    to: "/library",
-    label: "Resources",
-    description: "Browse your saved skills, tools, and agent packages.",
-  },
-  {
-    to: "/connections",
-    label: "Connections",
-    description: "Manage connected accounts, tools, and permissions.",
-  },
-  { to: "/models", label: "Models", description: "Choose AI providers, models, and model keys." },
-  {
-    to: "/secrets",
-    label: "Credentials",
-    description: "Manage saved credentials and secure references.",
-  },
-] as const;
-
 export const appCategories: NavCategory[] = [
   {
     id: "workspace",
@@ -73,7 +54,10 @@ export const appCategories: NavCategory[] = [
   {
     id: "discover",
     label: "Discover",
-    items: [{ to: "/resources", label: "Marketplace" }],
+    items: [
+      { to: "/resources", label: "Marketplace" },
+      { to: "/library", label: "Resources" },
+    ],
   },
   {
     id: "cloud",
@@ -86,9 +70,13 @@ export const appCategories: NavCategory[] = [
     ],
   },
   {
-    id: "capabilities",
-    label: "Capabilities",
-    items: workspaceCapabilities.map((item) => ({ ...item })),
+    id: "connections",
+    label: "Connections",
+    items: [
+      { to: "/connections", label: "Connectors" },
+      { to: "/secrets", label: "Credentials" },
+      { to: "/models", label: "AI Gateway" },
+    ],
   },
 ];
 
