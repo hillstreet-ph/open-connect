@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { MessageCircle, Send, Sparkles, X } from "lucide-react";
 import { askAgentHelper } from "@/lib/agent-helper.functions";
@@ -167,8 +168,16 @@ export function AgentHelper() {
 
           <p className="px-4 pb-2 text-[10px] leading-4 text-muted-foreground">
             Replies use your connected free AI models. Actions use your account access. Enabled
-            schedules run linked AI response automations every five minutes.
+            schedules are checked every five minutes and run linked AI response automations when
+            due.
           </p>
+          <Link
+            to="/models"
+            onClick={() => setOpen(false)}
+            className="mx-4 mb-2 inline-block text-xs text-primary hover:underline"
+          >
+            Set up AI Gateway
+          </Link>
           <form onSubmit={submit} className="flex items-end gap-2 border-t border-border p-3">
             <textarea
               ref={composerRef}
