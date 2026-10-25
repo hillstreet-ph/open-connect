@@ -1412,3 +1412,26 @@ test("status counts owned credential metadata and model catalog only with person
   expect(credentialReads).toEqual([]);
   expect(modelCatalogReads).toBe(0);
 });
+
+test("exact connection repairs require explicit scopes, personal context and admin role", async () => {
+  const args = { connection_id: "00000000-0000-4000-8000-000000000001", action: "inspect" };
+  for (const missing of ["control:write", "connections:invoke", "secrets:read"]) {
+    scopes = ["mcp:connect", "control:write", "connections:invoke", "secrets:read"].filter(
+      (scope) => scope !== missing,
+    );
+    expect((await call("repair_connection", args)).status).toBe(403);
+  }
+  scopes = ["mcp:connect", "control:write", "connections:invoke", "secrets:read"];
+  for (const boundary of [
+    { projectId: "project" },
+    { workspaceId: "workspace" },
+    { organizationId: "org" },
+  ]) {
+    keyBoundary = boundary;
+    await expect(call("repair_connection", args)).rejects.toThrow("personal administrator key");
+  }
+  keyBoundary = {};
+  roles = ["user"];
+  await expect(call("repair_connection", args)).rejects.toThrow("Admin role");
+  expect(connectionUpdates).toEqual([]);
+});
