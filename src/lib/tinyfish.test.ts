@@ -159,6 +159,28 @@ describe("TinyFish client", () => {
     expect(calls.length).toBe(3);
   });
 
+  test("allows sixty seconds for browser startup while keeping reads bounded", async () => {
+    const originalTimeout = AbortSignal.timeout;
+    const timeouts: number[] = [];
+    AbortSignal.timeout = (ms: number) => {
+      timeouts.push(ms);
+      return originalTimeout(ms);
+    };
+    try {
+      const { send } = mockFetch({
+        [`${TINYFISH_BROWSER_API}/`]: () => ({ session_id: "br-1" }),
+        "https://agent.tinyfish.ai/v1/profiles": () => ({ profiles: [] }),
+      });
+      const client = createTinyFishClient(KEY, send);
+      await client.createBrowserSession({ url: "https://example.com", timeout_seconds: 60 });
+      await client.listProfiles();
+      await client.startProfileSetup("prof_work", "https://example.com");
+      expect(timeouts).toEqual([60000, 25000, 60000]);
+    } finally {
+      AbortSignal.timeout = originalTimeout;
+    }
+  });
+
   test("browser sessions use the Browser API host", async () => {
     const { send, calls } = mockFetch({
       [`${TINYFISH_BROWSER_API}/`]: () => ({ session_id: "br-1", cdp_url: "wss://x" }),
