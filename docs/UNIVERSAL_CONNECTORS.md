@@ -15,3 +15,10 @@ Uploads/imports receive a SHA-256 and bounded static archive/manifest inspection
 Identical owned content/type is deduplicated by a database index. Changed content creates a private update candidate referencing the prior version; it never silently overwrites published resources or removes older archives. Reviewers can edit title, description, version and license, then verify/publish through the existing review controls. Colored labels supplement readable status text.
 
 Validation: mocked SDK OAuth discovery/registration/PKCE exchange and SSE initialization/tool discovery; OpenAPI schemas; static archive adversarial fixtures; existing control/navigation/registry suites; type checking, lint, production build and SSR smoke. Database transaction checks verify token rotation, stale CAS, owner binding, restricted execution and exact-byte duplicate rejection. Vendor consent and real tool execution must be verified for each connected provider.
+
+Website imports parse HTML with pinned parse5 8.0.1 and emit escaped text, omitting script,
+style, template and embedded-content nodes. Converted pages are inspected as Markdown guides
+regardless of whether the source URL ends in `.html`, `.php` or no file extension. Text/JSON
+manifests retain their original bytes. Regression coverage includes malformed nested tags,
+encoded markup, omitted executable content and supported inspection filenames. This parsing
+step does not replace source, license, runtime or publication review.

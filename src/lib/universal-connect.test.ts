@@ -219,5 +219,5 @@ test("website extraction never emits HTML, including malformed nested tag input"
   assert.ok(doc.includes("Hello"));
   assert.ok(!doc.includes("alert(1)"));
   assert.ok(!/[<>]/.test(doc));
-  assert.ok(doc.includes("&amp;lt;script&amp;gt;"));
+  assert.ok(doc.includes("&lt;script&gt;"));
 });

@@ -1,7 +1,7 @@
-import { websiteText } from "./website-text";
 import { createServerFn } from "@tanstack/react-start";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { prepareImportedDocument } from "./website-text";
 import { publicText } from "./public-fetch.server";
 import { scanResourceBytes } from "./resource-safety.server";
 import { detectResourceMeta } from "./resource-detect";
@@ -110,13 +110,10 @@ export const importResourceUrl = createServerFn({ method: "POST" })
         continue;
       }
       try {
-        let text = await publicText(source.url);
-        if (/<!doctype html|<html[\s>]/i.test(text)) {
-          text = websiteText(text);
-          source.filename = "website.md";
-        }
+        const document = prepareImportedDocument(source.filename, await publicText(source.url));
+        const text = document.text;
         const bytes = new TextEncoder().encode(text);
-        const scan = scanResourceBytes(source.filename, bytes);
+        const scan = scanResourceBytes(document.filename, bytes);
         if (scan.state === "blocked") {
           results.push({
             name: source.filename,
@@ -125,7 +122,7 @@ export const importResourceUrl = createServerFn({ method: "POST" })
           });
           continue;
         }
-        const detected = detectResourceMeta({ filename: source.filename, contentText: text });
+        const detected = detectResourceMeta({ filename: document.filename, contentText: text });
         let name = text.match(/^#\s+(.+)$/m)?.[1]?.trim() || detected.name;
         let description = detected.description;
         let version = source.version || "0.1.0";
