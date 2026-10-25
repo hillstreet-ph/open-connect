@@ -1,4 +1,3 @@
-import { AdditionalBrowserProviders } from "./additional-browser-providers";
 import { Link } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -60,7 +59,6 @@ const integrations = [
 export function BrowserIntegrations() {
   return (
     <>
-      <AdditionalBrowserProviders />
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Connect more browser tools</CardTitle>
