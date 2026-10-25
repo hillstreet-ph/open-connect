@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 type Approval = {
@@ -14,12 +15,18 @@ type Approval = {
 };
 
 export const Route = createFileRoute("/_authenticated/approvals")({
-  head: () => ({ meta: [{ title: "Approvals — Open-Connect" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({
+    meta: [
+      { title: "Approvals — Open-Connect" },
+      { name: "robots", content: "noindex" },
+    ],
+  }),
   component: ApprovalsPage,
 });
 
 function ApprovalsPage() {
   const { user } = useAuth();
+  const [now, setNow] = useState(() => Date.now());
   const approvals = useQuery({
     queryKey: ["control-approvals", user?.id],
     enabled: Boolean(user?.id),
@@ -37,10 +44,11 @@ function ApprovalsPage() {
       return data ?? [];
     },
   });
-  const now = Date.now();
   const rows = approvals.data ?? [];
   const pending = rows.filter((a) => a.state === "pending" && Date.parse(a.expires_at) > now);
-  const history = rows.filter((a) => a.state !== "pending" || Date.parse(a.expires_at) <= now);
+  const history = rows.filter(
+    (a) => a.state !== "pending" || Date.parse(a.expires_at) <= now,
+  );
   const renderRow = (a: Approval) => {
     const expired = a.state === "pending" && Date.parse(a.expires_at) <= now;
     return (
@@ -56,8 +64,8 @@ function ApprovalsPage() {
         <p className="text-xs text-muted-foreground">Request: {a.id}</p>
         {a.state === "pending" && !expired ? (
           <p className="text-xs text-muted-foreground">
-            Decision controls require the authenticated, policy-checked approval endpoint.
-            This page does not automatically authorize or execute protected operations.
+            Decision controls require the authenticated, policy-checked approval endpoint. This page
+            does not automatically authorize or execute protected operations.
           </p>
         ) : null}
       </article>
@@ -71,22 +79,41 @@ function ApprovalsPage() {
           Your production and development control requests. Pending requests are shown separately
           from expired and decided requests. This view never executes protected operations.
         </p>
-        <button type="button" className="rounded-md border px-3 py-2 text-sm"
-          onClick={() => void approvals.refetch()}>Refresh approvals</button>
+        <button
+          type="button"
+          className="rounded-md border px-3 py-2 text-sm"
+          onClick={() => {
+            setNow(Date.now());
+            void approvals.refetch();
+          }}
+        >
+          Refresh approvals
+        </button>
       </header>
       {approvals.isLoading ? <p role="status">Loading approvals…</p> : null}
-      {approvals.error ? <p role="alert" className="text-destructive">
-        Could not load approvals: {approvals.error instanceof Error ? approvals.error.message : "Unknown error"}
-      </p> : null}
+      {approvals.error ? (
+        <p role="alert" className="text-destructive">
+          Could not load approvals:{" "}
+          {approvals.error instanceof Error ? approvals.error.message : "Unknown error"}
+        </p>
+      ) : null}
       {!approvals.isLoading && !approvals.error ? (
         <>
           <section className="space-y-3">
             <h2 className="text-lg font-medium">Pending ({pending.length})</h2>
-            {pending.length ? pending.map(renderRow) : <p className="text-sm text-muted-foreground">No active pending approvals.</p>}
+            {pending.length ? (
+              pending.map(renderRow)
+            ) : (
+              <p className="text-sm text-muted-foreground">No active pending approvals.</p>
+            )}
           </section>
           <section className="space-y-3">
             <h2 className="text-lg font-medium">History ({history.length})</h2>
-            {history.length ? history.map(renderRow) : <p className="text-sm text-muted-foreground">No previous requests.</p>}
+            {history.length ? (
+              history.map(renderRow)
+            ) : (
+              <p className="text-sm text-muted-foreground">No previous requests.</p>
+            )}
           </section>
         </>
       ) : null}
