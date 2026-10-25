@@ -461,3 +461,56 @@ test("settings deep links select their exact tab and unknown hashes have a safe 
   for (const hash of ["", "missing", "#approvals/other", "__proto__"])
     assert.equal(settingsTab(hash), "profile");
 });
+
+test("every authenticated route owns workspace chrome, including callback and project access pages", async () => {
+  const { usesWorkspaceChrome } = await import("./shell.ts");
+  const files = readdirSync(path.resolve("src/routes/_authenticated")).filter(
+    (file) => /\.tsx?$/.test(file) && file !== "route.tsx",
+  );
+  for (const file of files) {
+    const route =
+      "/" +
+      file
+        .replace(/\.tsx?$/, "")
+        .replaceAll(".", "/")
+        .replace(/\$[^/]+/g, "fixture");
+    assert.ok(isAppPath(route), route + " must not render public and workspace headers together");
+    assert.equal(usesWorkspaceChrome(route, false, true), true);
+  }
+  assert.equal(usesWorkspaceChrome("/", true, false), false);
+  assert.equal(usesWorkspaceChrome("/resources", false, false), false);
+});
+test("back navigation uses parents, clears section routes and stays absent on main destinations", async () => {
+  const { workspaceBackTarget, publicBackTarget } = await import("./back-navigation.ts");
+  for (const route of flatAppNav())
+    assert.equal(workspaceBackTarget(route.to), null, route.to + " has sidebar navigation");
+  assert.equal(publicBackTarget("/"), null);
+  assert.equal(publicBackTarget("/dashboard/"), null);
+  assert.deepEqual(workspaceBackTarget("/integrations/"), {
+    to: "/settings",
+    hash: "integrations",
+    label: "Back to settings",
+  });
+  assert.equal(workspaceBackTarget("/settings", "data")?.to, "/settings");
+  assert.equal(workspaceBackTarget("/settings")?.to, "/dashboard");
+  assert.equal(workspaceBackTarget("/projects/fixture")?.to, "/projects");
+  const project = "11111111-1111-4111-8111-111111111111";
+  assert.deepEqual(workspaceBackTarget("/project-access/" + project), {
+    to: "/projects/$projectId",
+    params: { projectId: project },
+    label: "Back to project",
+  });
+  assert.equal(workspaceBackTarget("/project-access/not-a-project")?.to, "/projects");
+  assert.equal(workspaceBackTarget("/custom-oauth-callback"), null);
+});
+test("public homepage removes Marketplace header navigation while preserving workspace access", () => {
+  assert.deepEqual(flatPublicNav("/"), []);
+  assert.deepEqual(flatPublicNav("///"), []);
+  assert.ok(flatPublicNav("/resources").some((item) => item.to === "/resources"));
+  assert.ok(flatAppNav().some((item) => item.to === "/resources"));
+  const project = readFileSync(
+    path.resolve("src/routes/_authenticated/projects.$projectId.tsx"),
+    "utf8",
+  );
+  assert.ok(!project.includes("Back to projects"));
+});

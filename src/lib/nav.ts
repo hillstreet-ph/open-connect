@@ -81,7 +81,8 @@ export const appCategories: NavCategory[] = [
   },
 ];
 
-export function flatPublicNav(): NavLink[] {
+export function flatPublicNav(pathname?: string): NavLink[] {
+  if (pathname !== undefined && (pathname.replace(/\/+$/, "") || "/") === "/") return [];
   return [{ to: "/resources", label: "Marketplace" }];
 }
 

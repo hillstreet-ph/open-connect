@@ -12,6 +12,8 @@ export const APP_ROUTE_PREFIXES = [
   "/orgs",
   "/roles",
   "/projects",
+  "/project-access",
+  "/custom-oauth-callback",
   "/tasks",
   "/schedule",
   "/automations",
@@ -45,4 +47,13 @@ export function isAppPath(pathname: string): boolean {
 /** Marketing / public site paths (anyone can view). */
 export function isPublicMarketingPath(pathname: string): boolean {
   return !isAppPath(pathname);
+}
+
+/** A matched authenticated layout owns its chrome, including while auth state hydrates. */
+export function usesWorkspaceChrome(
+  pathname: string,
+  signedIn: boolean,
+  matchedPrivateRoute: boolean,
+) {
+  return matchedPrivateRoute || (signedIn && isAppPath(pathname));
 }

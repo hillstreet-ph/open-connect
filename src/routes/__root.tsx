@@ -17,7 +17,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { Toaster } from "@/components/ui/sonner";
 import { useAuth } from "@/hooks/use-auth";
-import { isAppPath } from "@/lib/shell";
+import { usesWorkspaceChrome } from "@/lib/shell";
 
 function NotFoundComponent() {
   return (
@@ -149,7 +149,10 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const { user } = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const inApp = Boolean(user) && isAppPath(pathname);
+  const privateRoute = useRouterState({
+    select: (state) => state.matches.some((match) => match.routeId === "/_authenticated"),
+  });
+  const inApp = usesWorkspaceChrome(pathname, Boolean(user), privateRoute);
 
   return (
     <DataProvider>
