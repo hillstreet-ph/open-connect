@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { connectionIdentity, connectionAuthType } from "./connection-presentation.ts";
+import {
+  connectionIdentity,
+  connectionAuthType,
+  connectionEndpoint,
+} from "./connection-presentation.ts";
 
 test("projects only safe identity fields from credential metadata", () => {
   const identity = connectionIdentity({
@@ -35,4 +39,18 @@ test("restores MCP API-key and unauthenticated modes without inheriting another 
   assert.equal(connectionAuthType({ auth_type: "personal_access_token" }), "bearer");
   assert.equal(connectionAuthType({ auth_type: "invalid" }), "bearer");
   assert.equal(connectionAuthType(null), "bearer");
+});
+
+test("restores service addresses without leaking credentials or URL secrets", () => {
+  assert.equal(connectionEndpoint("https://project.supabase.co"), "https://project.supabase.co/");
+  assert.equal(
+    connectionEndpoint("https://workspace.databricks.com/api"),
+    "https://workspace.databricks.com/api",
+  );
+  assert.equal(
+    connectionEndpoint("https://user:secret@example.com/mcp?key=hidden#secret"),
+    "https://example.com/mcp",
+  );
+  assert.equal(connectionEndpoint("javascript:secret"), "");
+  assert.equal(connectionEndpoint(null), "");
 });
