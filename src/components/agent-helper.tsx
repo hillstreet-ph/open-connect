@@ -37,8 +37,8 @@ export function AgentHelper() {
   }, [messages, busy, open, panel]);
 
   useEffect(() => {
-    if (open && panel === "chat") composerRef.current?.focus();
-  }, [open, panel]);
+    if (open) composerRef.current?.focus();
+  }, [open]);
 
   async function sendMessage(value: string) {
     const content = value.trim().slice(0, 2000);
