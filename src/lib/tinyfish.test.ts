@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   createTinyFishClient,
   normalizeStartRun,
+  normalizeProfileInput,
   startRunBody,
   startRunWithLiveView,
   summarizeRun,
@@ -108,6 +109,54 @@ describe("TinyFish client", () => {
     expect(
       calls.every((call) => call.url.startsWith("https://") && call.url.includes("tinyfish.ai")),
     ).toBe(true);
+  });
+
+  test("creates and updates named profiles without exposing cookie values", async () => {
+    const { send, calls } = mockFetch({
+      "https://agent.tinyfish.ai/v1/profiles": () => ({ id: "prof_work", name: "Work" }),
+    });
+    const client = createTinyFishClient(KEY, send);
+    await client.createProfile({ name: " Work ", set_as_default: true });
+    await client.updateProfile("prof_work", { name: "Work updated" });
+    expect(calls[0]!.init.method).toBe("POST");
+    expect(JSON.parse(String(calls[0]!.init.body))).toEqual({ name: "Work", set_as_default: true });
+    expect(calls[1]!.url).toBe("https://agent.tinyfish.ai/v1/profiles/prof_work");
+    expect(calls[1]!.init.method).toBe("PATCH");
+    expect(() => client.updateProfile("../other", { name: "Work" })).toThrow();
+    expect(calls.length).toBe(2);
+  });
+
+  test("rejects empty and oversized profile names before sending requests", () => {
+    expect(() => normalizeProfileInput({ name: "   " })).toThrow();
+    expect(() => normalizeProfileInput({ name: "x".repeat(101) })).toThrow();
+  });
+
+  test("profile setup validates URLs and saves or cancels the exact session", async () => {
+    const { send, calls } = mockFetch({
+      "https://agent.tinyfish.ai/v1/profiles/": () => ({
+        session_id: "sess_1",
+        domains_updated: ["example.com"],
+      }),
+    });
+    const client = createTinyFishClient(KEY, send);
+    await client.startProfileSetup("prof_work", "https://example.com/login");
+    await client.finishProfileSetup("prof_work", "sess_1", "save");
+    await client.finishProfileSetup("prof_work", "sess_1", "cancel");
+    expect(calls.map((call) => new URL(call.url).pathname)).toEqual([
+      "/v1/profiles/prof_work/setup-session",
+      "/v1/profiles/prof_work/save",
+      "/v1/profiles/prof_work/setup-session/cancel",
+    ]);
+    expect(JSON.parse(String(calls[0]!.init.body))).toEqual({
+      url: "https://example.com/login",
+      timeout_seconds: 900,
+    });
+    expect(JSON.parse(String(calls[1]!.init.body))).toEqual({ session_id: "sess_1" });
+    expect(() =>
+      client.startProfileSetup("prof_work", "https://user:secret@example.com"),
+    ).toThrow();
+    expect(() => client.finishProfileSetup("prof_work", "../other", "save")).toThrow();
+    expect(calls.length).toBe(3);
   });
 
   test("browser sessions use the Browser API host", async () => {

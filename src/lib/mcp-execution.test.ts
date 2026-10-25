@@ -1300,3 +1300,25 @@ test("resource validation failures are actionable JSON tool errors", async () =>
   expect(payload.isError).toBe(true);
   expect(JSON.parse(payload.content[0].text).error.message).toContain("lowercase slug");
 });
+
+test("saved browser profile mutations reject project and organization contexts before provider access", async () => {
+  scopes = ["tools:invoke"];
+  for (const boundary of [
+    { projectId: "project" },
+    { workspaceId: "workspace" },
+    { organizationId: "org" },
+  ]) {
+    keyBoundary = boundary;
+    for (const tool of ["cloud_browser_save_profile", "cloud_browser_profile_setup"]) {
+      await expect(
+        call(tool, {
+          name: "Work",
+          action: "start",
+          profile_id: "prof_work",
+          url: "https://example.com",
+        }),
+      ).rejects.toThrow("personal API key");
+    }
+  }
+  expect(tables).not.toContain("app_connections");
+});

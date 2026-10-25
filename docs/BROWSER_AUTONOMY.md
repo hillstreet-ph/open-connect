@@ -61,3 +61,24 @@ Grok / xAI client
 
 - `multion_api_key`
 - `CDP_SECRET` (Cloudflare Browser Rendering worker)
+
+## Native TinyFish cloud browser
+
+`/cloud-browser` is the goal-based browser console: choose a saved profile (or a fresh browser),
+enter a URL and task, set a duration, watch the live view, stop a task, and search recent runs.
+Profile controls create or rename a profile, set its default status, and inspect saved domain counts.
+The profile manager link opens TinyFish's hosted sign-in setup. Sign in there, explicitly save,
+then return and refresh. Saved state can expire; a cookie count does not prove a valid sign-in.
+
+Agents connected to `/mcp` can use `cloud_browser_save_profile` to create/update a profile and
+`cloud_browser_profile_setup` with `start`, `save`, or `cancel` for the documented CDP setup lifecycle.
+A setup session expires after 15 minutes. Its `cdp_url` is a private connection capability, not a
+public viewer link; do not publish it, log it, or pass `base_url` to Playwright. Save only after
+completing the authorized sign-in. Cancel unfinished sessions rather than leaving them running.
+No cookie values or passwords are returned by the profile inspection UI.
+
+Provider requirement: a personal TinyFish API key connected in Connections → TinyFish Cloud Browser.
+An imported connection marked connected does not prove it has a usable vault credential. A missing
+credential must be reconnected securely; a workflow key cannot access personal profile state.
+
+Reference: https://docs.tinyfish.ai/agent-api/browser-context-profiles

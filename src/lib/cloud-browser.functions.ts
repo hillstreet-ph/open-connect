@@ -68,6 +68,7 @@ export const startCloudBrowserRun = createServerFn({ method: "POST" })
       profile_id: z.string().max(128).optional(),
       use_profile: z.boolean().default(true),
       stealth: z.boolean().default(false),
+      max_duration_seconds: z.number().int().min(30).max(3600).default(600),
     }),
   )
   .handler(async ({ data, context }) => {
@@ -95,4 +96,37 @@ export const cancelCloudBrowserRun = createServerFn({ method: "POST" })
     const { client } = await cloudBrowserClient(context.userId);
     await client.cancelRun(data.runId);
     return { cancelled: true };
+  });
+
+/** Profile operations always use the signed-in user's own provider credential. */
+export const getCloudBrowserProfile = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator(z.object({ profileId: z.string().regex(/^[A-Za-z0-9_-]{1,128}$/) }))
+  .handler(async ({ data, context }) => {
+    const { cloudBrowserClient } = await import("@/lib/tinyfish.server");
+    const { client } = await cloudBrowserClient(context.userId);
+    const profile = await client.getProfile(data.profileId);
+    return { id: profile.id, name: profile.name, domains: profileDomains(profile) };
+  });
+
+export const saveCloudBrowserProfile = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator(
+    z.object({
+      profileId: z
+        .string()
+        .regex(/^[A-Za-z0-9_-]{1,128}$/)
+        .optional(),
+      name: z.string().trim().min(1).max(100),
+      set_as_default: z.boolean().default(false),
+    }),
+  )
+  .handler(async ({ data, context }) => {
+    const { cloudBrowserClient } = await import("@/lib/tinyfish.server");
+    const { client } = await cloudBrowserClient(context.userId);
+    const input = { name: data.name, set_as_default: data.set_as_default };
+    const profile = data.profileId
+      ? await client.updateProfile(data.profileId, input)
+      : await client.createProfile(input);
+    return { id: profile.id, name: profile.name };
   });

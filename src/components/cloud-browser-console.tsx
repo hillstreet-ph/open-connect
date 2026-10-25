@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ExternalLink, Globe, Loader2, Maximize2, Square } from "lucide-react";
+import { Globe, Loader2, Maximize2, Square } from "lucide-react";
 import {
   cancelCloudBrowserRun,
   getCloudBrowserOverview,
@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CloudBrowserProfiles } from "@/components/cloud-browser-profiles";
 import { Textarea } from "@/components/ui/textarea";
 
 type RunView = {
@@ -75,6 +76,8 @@ export function CloudBrowserConsole({
   const [goal, setGoal] = useState("");
   const [profileId, setProfileId] = useState("default");
   const [stealth, setStealth] = useState(false);
+  const [duration, setDuration] = useState(600);
+  const [historySearch, setHistorySearch] = useState("");
 
   const overview = useQuery({
     queryKey: ["cloud-browser-overview"],
@@ -97,6 +100,7 @@ export function CloudBrowserConsole({
           goal,
           use_profile: profileId !== "none",
           stealth,
+          max_duration_seconds: duration,
           ...(profileId === "default" && overview.data?.connected && overview.data.defaultProfile
             ? { profile_id: overview.data.defaultProfile.id }
             : profileId !== "none" && profileId !== "default"
@@ -265,6 +269,17 @@ export function CloudBrowserConsole({
             <CardTitle className="text-base">New cloud browser task</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              {[
+                "Summarize this page",
+                "Compare products and report the differences",
+                "Check this website and report any problems",
+              ].map((task) => (
+                <Button key={task} size="sm" variant="outline" onClick={() => setGoal(task)}>
+                  {task}
+                </Button>
+              ))}
+            </div>
             <Label htmlFor="cb-url">Start at</Label>
             <Input
               id="cb-url"
@@ -313,9 +328,31 @@ export function CloudBrowserConsole({
               />
               Stealth mode for bot-protected sites
             </label>
+            {profileId !== "none" && !selectedProfile ? (
+              <p role="status" className="text-sm text-muted-foreground">
+                Create a saved profile below, or choose Fresh browser to start without sign-ins.
+              </p>
+            ) : null}
+            <Label htmlFor="cb-duration">Maximum task duration</Label>
+            <select
+              id="cb-duration"
+              className="w-full rounded-md border bg-background p-2"
+              value={duration}
+              onChange={(event) => setDuration(Number(event.target.value))}
+            >
+              <option value={120}>2 minutes</option>
+              <option value={600}>10 minutes</option>
+              <option value={1800}>30 minutes</option>
+              <option value={3600}>60 minutes</option>
+            </select>
             <Button
               className="w-full"
-              disabled={start.isPending || !url.trim() || !goal.trim()}
+              disabled={
+                start.isPending ||
+                !url.trim() ||
+                !goal.trim() ||
+                (profileId !== "none" && (!data.profilesAvailable || !selectedProfile))
+              }
               onClick={() => start.mutate()}
             >
               {start.isPending ? (
@@ -330,37 +367,10 @@ export function CloudBrowserConsole({
         </Card>
       )}
 
-      {selectedProfile && profileId !== "none" ? (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Saved profile · {selectedProfile.name}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            {profileId === "default" && data.defaultProfile?.domains.length ? (
-              <ul className="divide-y rounded-md border">
-                {data.defaultProfile!.domains.map((domain) => (
-                  <li key={domain.domain} className="flex items-center justify-between px-3 py-2">
-                    <span>{domain.domain}</span>
-                    <span className="text-muted-foreground">{domain.cookies} cookies</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-muted-foreground">
-                Open the profile manager to inspect saved sites and sign-ins.
-              </p>
-            )}
-            <a
-              className="inline-flex items-center gap-1 underline"
-              href={`https://agent.tinyfish.ai/profiles/${encodeURIComponent(selectedProfile.id)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Add sign-ins or import cookies <ExternalLink className="size-3" />
-            </a>
-          </CardContent>
-        </Card>
-      ) : null}
+      <CloudBrowserProfiles
+        profileId={profileId === "none" ? undefined : selectedProfile?.id}
+        onSelect={setProfileId}
+      />
 
       <p className="text-xs text-muted-foreground">
         Browser tasks support navigation, clicks and forms through your goal. The live view shows
@@ -372,23 +382,34 @@ export function CloudBrowserConsole({
           <CardTitle className="text-base">Recent sessions</CardTitle>
         </CardHeader>
         <CardContent>
-          {data.runs.length ? (
+          <Label htmlFor="cb-history">Find a previous task</Label>
+          <Input
+            id="cb-history"
+            className="mb-3 mt-2"
+            placeholder="Search recent tasks"
+            value={historySearch}
+            onChange={(event) => setHistorySearch(event.target.value)}
+          />
+          {data.runs.filter((item) => item.goal.toLowerCase().includes(historySearch.toLowerCase()))
+            .length ? (
             <ul className="divide-y rounded-md border">
-              {data.runs.map((item) => (
-                <li key={item.run_id}>
-                  <button
-                    type="button"
-                    className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-muted"
-                    onClick={() => onSelectRun(item.run_id)}
-                  >
-                    <StatusBadge status={item.status} />
-                    <span className="min-w-0 flex-1 truncate">{item.goal}</span>
-                    <span className="shrink-0 text-xs text-muted-foreground">
-                      {new Date(item.created_at).toLocaleString()}
-                    </span>
-                  </button>
-                </li>
-              ))}
+              {data.runs
+                .filter((item) => item.goal.toLowerCase().includes(historySearch.toLowerCase()))
+                .map((item) => (
+                  <li key={item.run_id}>
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-muted"
+                      onClick={() => onSelectRun(item.run_id)}
+                    >
+                      <StatusBadge status={item.status} />
+                      <span className="min-w-0 flex-1 truncate">{item.goal}</span>
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        {new Date(item.created_at).toLocaleString()}
+                      </span>
+                    </button>
+                  </li>
+                ))}
             </ul>
           ) : (
             <p className="text-sm text-muted-foreground">
