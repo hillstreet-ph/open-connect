@@ -42,10 +42,15 @@ export const stopAdditionalBrowser = createServerFn({ method: "POST" })
     ),
   );
 
-/** Presence only: saved connections are not represented as live provider verification. */
-export const getBrowserProviderAvailability = createServerFn({ method: "GET" })
+/** Reuse exact owned Vault matches with a read-only check; never starts a browser. */
+export const getBrowserProviderAvailability = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    const { prepareBrowserVaultConnection } = await import("./browser-vault.server");
+    const [browserUseVault, browserbaseVault] = await Promise.all([
+      prepareBrowserVaultConnection(context.userId, "browser_use"),
+      prepareBrowserVaultConnection(context.userId, "browserbase"),
+    ]);
     const { data, error } = await context.supabase
       .from("app_connections")
       .select("provider,status,credential_reference")
@@ -64,6 +69,7 @@ export const getBrowserProviderAvailability = createServerFn({ method: "GET" })
     const { providerConnectionStatus } = await import("./browser-provider-selection");
     const owner = process.env["BROWSER_PROVIDER_OWNER_ID"] === context.userId;
     return {
+      vault: { browser_use: browserUseVault, browserbase: browserbaseVault },
       browseract: {
         saved: (data ?? []).some(
           (row) => row.provider === "browseract" && row.status === "connected",

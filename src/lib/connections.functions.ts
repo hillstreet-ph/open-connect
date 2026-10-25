@@ -1,3 +1,4 @@
+import { connectionOwnedSecretId } from "./connection-credential-lifecycle";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
@@ -816,9 +817,10 @@ export const disconnectApp = createServerFn({ method: "POST" })
       .eq("user_id", context.userId)
       .eq("id", data.id);
     if (error) throw new Error(error.message);
-    const secretId = connection?.credential_reference?.match(
-      /^credential:\/\/[^/]+\/([0-9a-f-]{36})$/i,
-    )?.[1];
+    const secretId = connectionOwnedSecretId(
+      connection?.credential_reference,
+      connection?.metadata,
+    );
     if (secretId)
       await context.supabase.rpc("delete_credential_secret", {
         p_id: secretId,
@@ -968,7 +970,7 @@ export const configureAppConnection = createServerFn({ method: "POST" })
       throw new Error(error.message);
     }
     const oldReference = existing?.credential_reference;
-    const oldSecretId = oldReference?.match(/^credential:\/\/[^/]+\/([0-9a-f-]{36})$/i)?.[1];
+    const oldSecretId = connectionOwnedSecretId(oldReference, existing?.metadata);
     if (oldSecretId && oldSecretId !== secretId) {
       const { data: references, error: referenceError } = await context.supabase
         .from("app_connections")
