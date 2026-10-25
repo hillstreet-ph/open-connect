@@ -339,6 +339,7 @@ function widgetScript(): string {
         if (script !== undefined) return script;
       }
     }
+    return undefined;
   }
   const script = visit(parse(CLOUD_BROWSER_WIDGET_HTML));
   if (!script) throw new Error("Widget script missing");
