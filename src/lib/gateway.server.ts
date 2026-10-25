@@ -1,3 +1,4 @@
+import { collectAutoFreeRoutes } from "./auto-free-routing.ts";
 import { COMPATIBLE_GATEWAY_PROVIDERS } from "./ai-gateway-providers.ts";
 /**
  * Open-Connect gateway server helpers.
@@ -284,8 +285,7 @@ const autoFreeCatalogCache = new Map<string, { expiresAt: number; ids: string[] 
 
 /** Build free-only fallback routes from the current user's connected model gateways. */
 export async function resolveAutoFreeRoutes(upstreams: Upstream[]): Promise<AutoFreeRoute[]> {
-  const routes: AutoFreeRoute[] = [];
-  for (const upstream of upstreams) {
+  return collectAutoFreeRoutes(upstreams, async (upstream) => {
     const cacheKey = createHash("sha256")
       .update(`${upstream.name}\n${upstream.baseUrl}\n${upstream.headers["Authorization"] ?? ""}`)
       .digest("hex");
@@ -298,10 +298,8 @@ export async function resolveAutoFreeRoutes(upstreams: Upstream[]): Promise<Auto
       };
       autoFreeCatalogCache.set(cacheKey, catalog);
     }
-    if (upstream.name === "openrouter") routes.push({ upstream, model: "openrouter/free" });
-    for (const id of catalog.ids) routes.push({ upstream, model: id });
-  }
-  return routes;
+    return catalog.ids;
+  });
 }
 
 export { isAutoFreeModel };

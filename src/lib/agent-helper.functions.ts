@@ -432,7 +432,7 @@ async function requestFreeModel(
     response = await fetch(`${upstream.baseUrl}/chat/completions`, {
       method: "POST",
       redirect: "manual",
-      signal: AbortSignal.timeout(45_000),
+      signal: AbortSignal.timeout(15_000),
       headers: upstream.headers ?? {},
       body: JSON.stringify({
         model,
@@ -501,7 +501,9 @@ export const askAgentHelper = createServerFn({ method: "POST" })
     }
     let first: Awaited<ReturnType<typeof requestFreeModel>> | null = null;
     let selectedRoute: (typeof routes)[number] | null = null;
+    const deadline = Date.now() + 30_000;
     for (const route of routes) {
+      if (Date.now() >= deadline) break;
       try {
         first = await requestFreeModel(
           route.upstream,

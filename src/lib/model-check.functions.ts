@@ -9,14 +9,16 @@ export const testFreeModel = createServerFn({ method: "POST" })
     if (!routes.length)
       throw new Error("Connect OpenRouter or a free LiteLLM model before testing.");
     let lastStatus = 0;
+    const deadline = Date.now() + 30_000;
     for (const route of routes) {
+      if (Date.now() >= deadline) break;
       const { upstream, model } = route;
       let response: Response;
       try {
         response = await fetch(upstream.baseUrl + "/chat/completions", {
           method: "POST",
           redirect: "manual",
-          signal: AbortSignal.timeout(60_000),
+          signal: AbortSignal.timeout(Math.max(1, Math.min(12_000, deadline - Date.now()))),
           headers: upstream.headers,
           body: JSON.stringify({
             model,
