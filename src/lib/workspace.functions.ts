@@ -1,5 +1,7 @@
 import {
   EXECUTABLE_MCP_PROVIDERS,
+  directCloudConnectionSupported,
+  isHostedMcpProvider,
   cloudKindsForProvider,
   isExecutableMcpProvider,
   type CloudWorkspaceKind,
@@ -160,7 +162,7 @@ export const listProjectCloudConnections = createServerFn({ method: "GET" })
         : Promise.resolve({ data: [], error: null }),
       context.supabase
         .from("app_connections")
-        .select("id, provider, display_name, status, scopes")
+        .select("id, provider, display_name, status, scopes, credential_reference")
         .eq("user_id", context.userId)
         .in("provider", [...EXECUTABLE_MCP_PROVIDERS])
         .eq("status", "connected"),
@@ -180,8 +182,10 @@ export const listProjectCloudConnections = createServerFn({ method: "GET" })
       }
     >();
     for (const connection of ownResult.data ?? []) {
+      const { credential_reference, ...safeConnection } = connection;
+      if (!directCloudConnectionSupported(connection.provider, credential_reference)) continue;
       available.set(connection.id, {
-        ...connection,
+        ...safeConnection,
         access: "Personal",
         kinds: cloudKindsForProvider(connection.provider),
       });
@@ -197,12 +201,33 @@ export const listProjectCloudConnections = createServerFn({ method: "GET" })
           } | null;
         }>)
       : [];
+    // IDs originate only from the membership-checked sharing RPC; references stay server-side.
+    const hostedIds = sharedRows.flatMap((row) =>
+      row.app_connections?.id &&
+      row.app_connections.provider &&
+      isHostedMcpProvider(row.app_connections.provider)
+        ? [row.app_connections.id]
+        : [],
+    );
+    const supportedHostedIds = new Set<string>();
+    if (hostedIds.length) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: hosted, error: hostedError } = await supabaseAdmin
+        .from("app_connections")
+        .select("id,provider,credential_reference")
+        .in("id", hostedIds);
+      if (hostedError) throw new Error("Could not check shared browser connection compatibility.");
+      for (const item of hosted ?? [])
+        if (directCloudConnectionSupported(item.provider, item.credential_reference))
+          supportedHostedIds.add(item.id);
+    }
     for (const row of sharedRows) {
       const connection = row.app_connections;
       if (
         !connection?.id ||
         !connection.provider ||
         !isExecutableMcpProvider(connection.provider) ||
+        (isHostedMcpProvider(connection.provider) && !supportedHostedIds.has(connection.id)) ||
         connection.status !== "connected"
       )
         continue;

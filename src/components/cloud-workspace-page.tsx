@@ -1,5 +1,6 @@
+import { browserFamilyTool, type BrowserToolFamily } from "@/lib/browser-provider-selection";
 import { SandboxManager } from "./sandbox-manager";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -67,7 +68,16 @@ const descriptions = {
   phone: "Use cloud phone tools through a personal or project-shared connection.",
 };
 
-export function CloudWorkspacePage({ kind }: { kind: keyof typeof descriptions }) {
+export function CloudWorkspacePage({
+  kind,
+  embedded = false,
+  browserFamily,
+}: {
+  kind: keyof typeof descriptions;
+  embedded?: boolean;
+  browserFamily?: BrowserToolFamily;
+}) {
+  const controlId = useId();
   const title = `Cloud ${kind.charAt(0).toUpperCase()}${kind.slice(1)}`;
   const [projectId, setProjectId] = useState("");
   const [connectionId, setConnectionId] = useState("");
@@ -94,14 +104,15 @@ export function CloudWorkspacePage({ kind }: { kind: keyof typeof descriptions }
     enabled: Boolean(connectionId),
     retry: false,
   });
-  const selectedTool = catalog.data?.tools.find((tool) => tool.name === toolName);
-  const sessionTools = (catalog.data?.tools ?? []).filter((tool) =>
+  const visibleTools = (catalog.data?.tools ?? []).filter(
+    (tool) => !browserFamily || browserFamilyTool(browserFamily, tool.name),
+  );
+  const selectedTool = visibleTools.find((tool) => tool.name === toolName);
+  const sessionTools = visibleTools.filter((tool) =>
     /session|profile|browser.context|cookie/i.test(`${tool.name} ${tool.description}`),
   );
   const destructive = selectedTool?.destructive === true;
-  const quickStart = (catalog.data?.tools ?? []).filter((tool) =>
-    QUICK_START_TOOLS[kind].includes(tool.name),
-  );
+  const quickStart = visibleTools.filter((tool) => QUICK_START_TOOLS[kind].includes(tool.name));
   const execution = useMutation({
     mutationFn: async () => {
       let args: unknown;
@@ -145,14 +156,22 @@ export function CloudWorkspacePage({ kind }: { kind: keyof typeof descriptions }
   };
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 px-4 py-8 sm:px-6">
-      <header>
-        <Link to="/cloud" className="text-sm underline">
-          Cloud workspace
-        </Link>
-        <h1 className="text-2xl font-semibold">{title}</h1>
-        <p className="mt-2 text-sm text-muted-foreground">{descriptions[kind]}</p>
-      </header>
+    <div className={embedded ? "space-y-4" : "mx-auto max-w-5xl space-y-6 px-4 py-8 sm:px-6"}>
+      {!embedded ? (
+        <header>
+          <Link to="/cloud" className="text-sm underline">
+            Cloud workspace
+          </Link>
+          <h1 className="text-2xl font-semibold">{title}</h1>
+          <p className="mt-2 text-sm text-muted-foreground">{descriptions[kind]}</p>
+        </header>
+      ) : null}
+      {browserFamily && catalog.isSuccess && visibleTools.length === 0 ? (
+        <p role="status" className="rounded border p-3 text-sm">
+          This connection exposes no matching tools for this browser option. Choose a compatible
+          worker; no task has been started.
+        </p>
+      ) : null}
       {kind === "sandbox" ? <SandboxManager /> : null}
       <Card>
         <CardHeader>
@@ -171,9 +190,9 @@ export function CloudWorkspacePage({ kind }: { kind: keyof typeof descriptions }
               assigned.
             </p>
           ) : null}
-          <Label htmlFor={`project-${kind}`}>Workspace</Label>
+          <Label htmlFor={`${controlId}-project`}>Workspace</Label>
           <select
-            id={`project-${kind}`}
+            id={`${controlId}-project`}
             className="w-full rounded-md border bg-background p-2"
             value={projectId}
             disabled={execution.isPending}
@@ -204,9 +223,9 @@ export function CloudWorkspacePage({ kind }: { kind: keyof typeof descriptions }
                     : "No available cloud connection. Connect your provider or ask an Admin to share a project connection in the project settings."}
                 </p>
               ) : null}
-              <Label htmlFor={`provider-${kind}`}>Available connection</Label>
+              <Label htmlFor={`${controlId}-provider`}>Available connection</Label>
               <select
-                id={`provider-${kind}`}
+                id={`${controlId}-provider`}
                 className="w-full rounded-md border bg-background p-2"
                 value={connectionId}
                 disabled={execution.isPending}
@@ -319,9 +338,9 @@ export function CloudWorkspacePage({ kind }: { kind: keyof typeof descriptions }
             <CardTitle className="text-base">Provider tools</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Label htmlFor={`tool-${kind}`}>Tool</Label>
+            <Label htmlFor={`${controlId}-tool`}>Tool</Label>
             <select
-              id={`tool-${kind}`}
+              id={`${controlId}-tool`}
               className="w-full rounded-md border bg-background p-2"
               value={toolName}
               disabled={execution.isPending}
@@ -330,8 +349,8 @@ export function CloudWorkspacePage({ kind }: { kind: keyof typeof descriptions }
                 selectTool(event.target.value);
               }}
             >
-              <option value="">Select a tool ({catalog.data.tools.length} available)</option>
-              {catalog.data.tools.map((tool) => (
+              <option value="">Select a tool ({visibleTools.length} available)</option>
+              {visibleTools.map((tool) => (
                 <option key={tool.name} value={tool.name}>
                   {tool.name}
                 </option>
@@ -346,9 +365,9 @@ export function CloudWorkspacePage({ kind }: { kind: keyof typeof descriptions }
                     {selectedTool.inputSchema}
                   </pre>
                 </details>
-                <Label htmlFor={`arguments-${kind}`}>Arguments (JSON)</Label>
+                <Label htmlFor={`${controlId}-arguments`}>Arguments (JSON)</Label>
                 <Textarea
-                  id={`arguments-${kind}`}
+                  id={`${controlId}-arguments`}
                   className="min-h-36 font-mono"
                   value={argumentsText}
                   disabled={execution.isPending}

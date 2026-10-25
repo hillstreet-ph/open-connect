@@ -35,6 +35,8 @@ describe("extractLiveViewUrls", () => {
 describe("hosted MCP presets", () => {
   test("TinyFish is executable, browser-only and pinned to the vendor endpoint", () => {
     expect(isExecutableMcpProvider("custom_tinyfish_mcp")).toBe(true);
+    expect(isExecutableMcpProvider("tinyfish")).toBe(true);
+    expect(cloudKindsForProvider("tinyfish")).toEqual(["browser"]);
     expect(isRemoteMcpProvider("custom_tinyfish_mcp")).toBe(false);
     expect(cloudKindsForProvider("custom_tinyfish_mcp")).toEqual(["browser"]);
     expect(HOSTED_MCP_PRESETS.custom_tinyfish_mcp.endpoint).toBe("https://agent.tinyfish.ai/mcp");
@@ -64,4 +66,20 @@ test("native browser previews reject arbitrary or insecure iframe origins", asyn
     "https://user:secret@stream.tinyfish.io",
   ])
     expect(browserPreviewUrl(value)).toBeNull();
+});
+
+test("direct hosted MCP discovery excludes broker accounts without disabling their native browser route", async () => {
+  const { directCloudConnectionSupported, HOSTED_MCP_PRESETS } = await import("./remote-mcp");
+  expect(directCloudConnectionSupported("tinyfish", "composio://connected-account/account")).toBe(
+    false,
+  );
+  expect(directCloudConnectionSupported("custom_tinyfish_mcp", null)).toBe(false);
+  expect(
+    directCloudConnectionSupported(
+      "tinyfish",
+      "credential://tinyfish/00000000-0000-4000-8000-000000000001",
+    ),
+  ).toBe(true);
+  expect(directCloudConnectionSupported("custom_mcp", null)).toBe(true);
+  expect(HOSTED_MCP_PRESETS.tinyfish.authType).toBe("bearer");
 });
