@@ -29,3 +29,11 @@ Browserbase CLI 0.11.3 is installed separately from the operating system's `/usr
 MultiOn's TypeScript and Python SDK documentation remains reference-only until a current official API, supported SDK and working account are verified. Do not deploy old forked code as proof of current compatibility.
 
 Sources: https://docs.browser-use.com/llms.txt, https://docs.browser-use.com/cloud/quickstart.md, https://docs.browser-use.com/cloud/api-v4/runs/create-run.md, https://browserbase.com/SKILL.md, https://github.com/browser-act/skills/tree/main/browser-act.
+
+## Switching providers
+
+Use the provider tabs at the top of Cloud Browser. Selection is stored in the page URL (`provider=tinyfish`, `browser_use`, `browserbase`, `external`, `browseract`, or `multion`) and browser Back/Forward restores it. Switching never submits or retries a task. Panels remain mounted so switching away does not lose an active session. Stop unused sessions explicitly; their provider time continues while they run.
+
+Browser Use and Browserbase keep distinct account-and-provider-scoped tab references. An existing reference from the earlier combined panel migrates only to its matching provider and is removed from the old location, so clearing it does not restore an old completed run on reload. Profiles and sign-ins stay with their original provider; no cookie or credential transfer is performed.
+
+Connection status is presence metadata, not a live provider health test. Native SDK controls require the native key binding or an owner-scoped deployment key. Broker accounts are labelled separately and are not substituted as SDK credentials. BrowserAct and MultiOn remain setup/verification options until their actual execution route is verified. Connected tools exposes the existing MCP workspace; its own discovery and permission checks still apply. No duplicated connector is created by switching.

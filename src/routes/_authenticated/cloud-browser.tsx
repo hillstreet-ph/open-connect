@@ -1,12 +1,17 @@
+import { CloudBrowserSwitcher } from "@/components/cloud-browser-switcher";
+import { browserProvider, type BrowserProviderId } from "@/lib/browser-provider-selection";
 import { createFileRoute } from "@tanstack/react-router";
 import { BrowserIntegrations } from "@/components/browser-integrations";
 import { CloudBrowserConsole } from "@/components/cloud-browser-console";
 import { CloudWorkspacePage } from "@/components/cloud-workspace-page";
 
 export const Route = createFileRoute("/_authenticated/cloud-browser")({
-  validateSearch: (search: Record<string, unknown>): { run?: string; mode?: "direct" } => {
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { run?: string; mode?: "direct"; provider?: BrowserProviderId } => {
     const run = typeof search["run"] === "string" ? search["run"].trim() : "";
     return {
+      provider: browserProvider(search["provider"]),
       ...(/^[A-Za-z0-9_-]{1,128}$/.test(run) ? { run } : {}),
       ...(search["mode"] === "direct" ? { mode: "direct" as const } : {}),
     };
@@ -18,7 +23,8 @@ export const Route = createFileRoute("/_authenticated/cloud-browser")({
 });
 
 function CloudBrowserRoute() {
-  const { run, mode } = Route.useSearch();
+  const { run, mode, provider: selection } = Route.useSearch();
+  const provider = selection ?? "tinyfish";
   const navigate = Route.useNavigate();
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:px-6">
@@ -29,19 +35,36 @@ function CloudBrowserRoute() {
           connected to open-connect.site/mcp drive it.
         </p>
       </header>
-      <CloudBrowserConsole
-        initialMode={mode}
-        {...(run ? { runId: run } : {})}
-        onSelectRun={(runId) =>
-          void navigate({ search: runId ? { run: runId } : {}, replace: false })
+      <CloudBrowserSwitcher
+        selected={provider}
+        onSelect={(next) =>
+          void navigate({
+            search: { provider: next, ...(run ? { run } : {}), ...(mode ? { mode } : {}) },
+          })
         }
+        tinyfish={
+          <CloudBrowserConsole
+            initialMode={mode}
+            {...(run ? { runId: run } : {})}
+            onSelectRun={(runId) =>
+              void navigate({
+                search: (previous) => ({
+                  provider: browserProvider(previous.provider),
+                  ...(runId ? { run: runId } : {}),
+                  ...(previous.mode ? { mode: previous.mode } : {}),
+                }),
+                replace: false,
+              })
+            }
+          />
+        }
+        external={<CloudWorkspacePage kind="browser" />}
       />
-      <BrowserIntegrations />
-      <details id="browser-mcp-tools" className="rounded-md border">
+      <details className="rounded-md border">
         <summary className="cursor-pointer px-4 py-3 text-sm font-medium">
-          Advanced: run tools from any browser MCP connection
+          Provider setup guides
         </summary>
-        <CloudWorkspacePage kind="browser" />
+        <BrowserIntegrations />
       </details>
     </div>
   );
