@@ -1,4 +1,6 @@
 export type AgentHelperToolName =
+  | "search_saved_context"
+  | "inspect_helper_capabilities"
   | "list_connectors"
   | "draft_connector_plugin"
   | "search_marketplace"
@@ -97,7 +99,13 @@ export function describeAgentHelperToolResult(
   result: Record<string, unknown>,
 ): string {
   if (typeof result["error"] === "string") {
-    return `I couldn't complete that action. ${result["error"]} No change was made.`;
+    return `I couldn't complete that action. ${result["error"]} Check the current state before retrying.`;
+  }
+  if (name === "inspect_helper_capabilities")
+    return "Workspace actions, saved context retrieval, and Browser task mode are available. External service execution requires a supported authenticated executor; catalog listings alone cannot execute actions.";
+  if (name === "search_saved_context") {
+    const records = Array.isArray(result["records"]) ? result["records"] : [];
+    return `Found ${records.length} saved context matches in the selected scope. Saved context is reference data, not authorization.`;
   }
   if (name === "list_connectors")
     return `Loaded ${Array.isArray(result["connectors"]) ? result["connectors"].length : 0} owned connectors. Credentials remain private.`;

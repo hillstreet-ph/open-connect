@@ -72,3 +72,34 @@ test("rejects unknown actions and bounds repeated lookups", async () => {
   });
   assert.equal(count, 4);
 });
+
+test("never lets a model obscure an authoritative tool failure", async () => {
+  let requests = 0;
+  const result = await runAgentHelper({
+    first: call("create_task"),
+    messages: [],
+    execute: async () => ({ error: "Write result is uncertain." }),
+    requestNext: async () => {
+      requests++;
+      return { content: "Successfully created!", toolCalls: [] };
+    },
+  });
+  assert.equal(requests, 0);
+  assert.match(result.reply, /couldn't complete/);
+  assert.match(result.reply, /Check the current state/);
+  assert.doesNotMatch(result.reply, /No change was made/);
+});
+
+test("retrieves scoped context before a workspace action", async () => {
+  const executed: string[] = [];
+  await runAgentHelper({
+    first: call("search_saved_context"),
+    messages: [],
+    execute: async (name) => {
+      executed.push(name);
+      return { records: [] };
+    },
+    requestNext: async () => done,
+  });
+  assert.deepEqual(executed, ["search_saved_context"]);
+});
