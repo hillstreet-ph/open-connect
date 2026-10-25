@@ -146,21 +146,26 @@ export function ResourceLibraryCard({
     });
     if (upErr) throw new Error(upErr.message);
 
-    await registerFn({
-      data: {
-        name: meta.name,
-        slug: `${meta.slug}-${Date.now().toString(36).slice(-4)}`,
-        description: meta.description,
-        resource_type: meta.resource_type as (typeof TYPES)[number],
-        license: override ? override.license : "proprietary",
-        package_path: path,
-        package_filename: fileObj.name,
-        package_size: fileObj.size,
-        package_mime: fileObj.type || "application/octet-stream",
-        published: false,
-        version: "1.0.0",
-      },
-    });
+    try {
+      await registerFn({
+        data: {
+          name: meta.name,
+          slug: `${meta.slug}-${Date.now().toString(36).slice(-4)}`,
+          description: meta.description,
+          resource_type: meta.resource_type as (typeof TYPES)[number],
+          license: override ? override.license : "proprietary",
+          package_path: path,
+          package_filename: fileObj.name,
+          package_size: fileObj.size,
+          package_mime: fileObj.type || "application/octet-stream",
+          published: false,
+          version: "1.0.0",
+        },
+      });
+    } catch (error) {
+      await supabase.storage.from(BUCKET).remove([path]);
+      throw error;
+    }
   }
 
   async function uploadAndRegister() {

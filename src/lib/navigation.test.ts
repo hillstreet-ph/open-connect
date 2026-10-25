@@ -96,7 +96,7 @@ test("connection surfaces remain internal and separate from Marketplace", () => 
   assert.ok(integrations.includes("Connect ChatGPT with OAuth"));
   assert.ok(integrations.includes("setTelegramOpen(true)"));
   assert.ok(integrations.includes("inbound-integrations.functions"));
-  assert.ok(integrations.includes("connections.functions"));
+  assert.ok(integrations.includes("universal-connector-dialog"));
   assert.ok(integrations.includes("Remote MCP servers"));
   for (const section of ['id="api-key"', 'id="apps"', 'id="ai-agents"', 'id="custom-mcp"']) {
     assert.ok(integrations.includes(section), "Missing integration section " + section);
@@ -109,7 +109,7 @@ test("connection surfaces remain internal and separate from Marketplace", () => 
   assert.ok(inboundMigration.includes("CREATE TABLE IF NOT EXISTS public.inbound_integrations"));
   assert.ok(inboundMigration.includes("Users manage own inbound integrations"));
   assert.ok(!inboundMigration.includes("REFERENCES public.app_connections"));
-  for (const route of ["/resources", "/connections", "/mcp-servers", "/api-keys"]) {
+  for (const route of ["/resources", "/mcp-servers", "/api-keys"]) {
     assert.ok(!integrations.includes('to="' + route + '"'), "Unexpected redirect to " + route);
   }
 });

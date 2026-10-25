@@ -1,4 +1,6 @@
 export type AgentHelperToolName =
+  | "list_connectors"
+  | "draft_connector_plugin"
   | "search_marketplace"
   | "list_projects"
   | "list_tasks"
@@ -97,6 +99,10 @@ export function describeAgentHelperToolResult(
   if (typeof result["error"] === "string") {
     return `I couldn't complete that action. ${result["error"]} No change was made.`;
   }
+  if (name === "list_connectors")
+    return `Loaded ${Array.isArray(result["connectors"]) ? result["connectors"].length : 0} owned connectors. Credentials remain private.`;
+  if (name === "draft_connector_plugin")
+    return "Created or opened your private connector plugin draft in Studio. Source, license, permissions and security review are required before publication.";
   if (name === "search_marketplace") {
     const results = Array.isArray(result["results"]) ? result["results"] : [];
     return results.length

@@ -11,6 +11,8 @@ import {
 import { ResourceLibraryCard } from "@/components/resource-library-card";
 import { ResourceReviewPanel } from "@/components/resource-review-panel";
 import { DataControlsPanel } from "@/components/data-controls-panel";
+import { ResourceUrlImport } from "@/components/resource-url-import";
+import { UniversalConnectorLauncher } from "@/components/universal-connector-launcher";
 import { ToolkitCreator } from "@/components/toolkit-creator";
 import { MemoryKnowledgePage } from "./memory";
 import { useRoles } from "@/hooks/use-roles";
@@ -130,6 +132,8 @@ function StudioPage() {
         <DataControlsPanel studio />
       </section>
 
+      <UniversalConnectorLauncher />
+      <ResourceUrlImport />
       <section id="packages" className="scroll-mt-6 space-y-5">
         <SectionHeading
           icon={PackageOpen}

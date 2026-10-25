@@ -2,7 +2,6 @@ import { canDownloadResource } from "@/lib/resource-approval";
 import AUTO_SKILL_MARKDOWN from "../../skills/auto/SKILL.md?raw";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { hasRole, type AppRole } from "@/lib/rbac";
 import { normalizeResourceLicense } from "@/lib/resource-license";
 
 const BUCKET = "resource-packages";
@@ -21,7 +20,10 @@ function skillManifest(resource: {
   if (resource.slug === "auto" && resource.verified && resource.source === "open-connect")
     return AUTO_SKILL_MARKDOWN;
   const inline = resource.installation_config as { draft_markdown?: unknown } | null;
-  if (resource.source === "data-controls" && typeof inline?.draft_markdown === "string")
+  if (
+    ["data-controls", "connector-draft", "url-import"].includes(resource.source ?? "") &&
+    typeof inline?.draft_markdown === "string"
+  )
     return inline.draft_markdown;
   const config =
     resource.installation_config && typeof resource.installation_config === "object"
@@ -106,16 +108,39 @@ export const registerResourcePackage = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     if (!data.slug) throw new Error("Invalid slug");
     if (!data.package_path) throw new Error("package_path required");
-    if (data.published) {
-      const { data: roleRows, error: rolesError } = await context.supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", context.userId);
-      if (rolesError) throw new Error(rolesError.message);
-      const roles = (roleRows ?? []).map((row: { role: AppRole }) => row.role);
-      if (!hasRole(roles, "developer")) {
-        throw new Error("Only Developers and Admins can publish marketplace resources");
-      }
+    if (
+      !data.package_path.startsWith(`${context.userId}/`) ||
+      data.package_path.split("/").includes("..")
+    )
+      throw new Error("Package must be in your private upload folder");
+    if (data.published)
+      throw new Error("Upload a private draft, then complete review before publication");
+    const { data: packageBlob, error: packageError } = await context.supabase.storage
+      .from(BUCKET)
+      .download(data.package_path);
+    if (packageError || !packageBlob)
+      throw new Error("Uploaded package is missing or not accessible");
+    if (packageBlob.size > 50 * 1024 * 1024) throw new Error("Package exceeds 50 MB");
+    const { scanResourceBytes } = await import("./resource-safety.server");
+    const scan = scanResourceBytes(
+      data.package_filename || "package",
+      new Uint8Array(await packageBlob.arrayBuffer()),
+    );
+    if (scan.state === "blocked") throw new Error(`Package blocked: ${scan.findings.join("; ")}`);
+    const duplicate = await context.supabase
+      .from("resources")
+      .select(
+        "id,slug,name,description,resource_type,version,published,package_path,package_filename,package_size",
+      )
+      .eq("owner_id", context.userId)
+      .eq("resource_type", data.resource_type as "skill")
+      .eq("installation_config->>content_sha256", scan.sha256)
+      .maybeSingle();
+    if (duplicate.error) throw new Error("Could not check package duplicates");
+    if (duplicate.data) {
+      if (duplicate.data.package_path !== data.package_path)
+        await context.supabase.storage.from(BUCKET).remove([data.package_path]);
+      return duplicate.data;
     }
 
     const row = {
@@ -144,6 +169,10 @@ export const registerResourcePackage = createServerFn({ method: "POST" })
       version: data.version,
       installation_type: "package",
       installation_config: {
+        content_sha256: scan.sha256,
+        scan_report: scan,
+        review_state: "pending_security_review",
+        labels: [data.resource_type, "uploaded", "review-required"],
         storage_bucket: BUCKET,
         path: data.package_path,
         filename: data.package_filename,

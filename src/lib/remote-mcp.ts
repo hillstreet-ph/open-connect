@@ -52,11 +52,14 @@ export const EXECUTABLE_MCP_PROVIDERS = [
 ] as const;
 
 export function isExecutableMcpProvider(provider: string) {
-  return isRemoteMcpProvider(provider) || isHostedMcpProvider(provider);
+  return (
+    provider === "custom_api" || isRemoteMcpProvider(provider) || isHostedMcpProvider(provider)
+  );
 }
 
 /** Cloud workspace pages a connection belongs on. Generic MCP servers fit all. */
 export function cloudKindsForProvider(provider: string): readonly CloudWorkspaceKind[] {
+  if (provider === "custom_api") return [];
   if (isHostedMcpProvider(provider)) return HOSTED_MCP_PRESETS[provider].kinds;
   return ["browser", "computer", "terminal", "phone"];
 }

@@ -128,3 +128,144 @@ export const bulkUpdateResourceReview = createServerFn({ method: "POST" })
       missing,
     };
   });
+
+export const inspectResourceBatch = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { ids: string[] }) => {
+    if (!input.ids?.length || input.ids.length > 20)
+      throw new Error("Inspect 1–20 resources at a time");
+    return input;
+  })
+  .handler(async ({ data, context }) => {
+    await requireResourceReviewer(context.supabase, context.userId);
+    const { scanResourceBytes } = await import("./resource-safety.server");
+    const results: Array<{ id: string; state: string; detail: string }> = [];
+    for (const id of [...new Set(data.ids)]) {
+      const { data: row, error } = await supabaseAdmin
+        .from("resources")
+        .select(
+          "id,name,slug,source,package_path,package_filename,installation_config,verified,published,updated_at",
+        )
+        .eq("id", id)
+        .single();
+      if (error || !row) {
+        results.push({ id, state: "failed", detail: "Resource not found" });
+        continue;
+      }
+      try {
+        let bytes: Uint8Array;
+        let filename = row.package_filename || `${row.slug}.md`;
+        const config = (row.installation_config || {}) as Record<string, unknown>;
+        if (row.package_path) {
+          const payload = await supabaseAdmin.storage
+            .from("resource-packages")
+            .download(row.package_path);
+          if (payload.error || !payload.data)
+            throw new Error("Package file is missing or inaccessible");
+          if (payload.data.size > 50 * 1024 * 1024)
+            throw new Error("Package exceeds inspection limit");
+          bytes = new Uint8Array(await payload.data.arrayBuffer());
+        } else {
+          filename = `${row.slug}.md`;
+          bytes = new TextEncoder().encode(
+            String(
+              config["draft_markdown"] ||
+                config["prompt"] ||
+                `# ${row.name}\nMetadata-only resource; package runtime has not been validated.`,
+            ),
+          );
+        }
+        const scan = scanResourceBytes(filename, bytes);
+        const changed = Boolean(
+          config["content_sha256"] && config["content_sha256"] !== scan.sha256,
+        );
+        const reset = scan.state === "blocked" || changed;
+        const saved = await supabaseAdmin
+          .from("resources")
+          .update({
+            ...(reset ? { verified: false, published: false } : {}),
+            installation_config: {
+              ...config,
+              scan_report: scan,
+              content_sha256: scan.sha256,
+              ...(reset
+                ? { review_state: scan.state === "blocked" ? "blocked" : "pending_security_review" }
+                : {}),
+            },
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", id)
+          .eq("updated_at", row.updated_at)
+          .select("id")
+          .maybeSingle();
+        if (saved.error || !saved.data)
+          throw new Error("Resource changed during inspection; retry");
+        results.push({
+          id,
+          state: scan.state,
+          detail:
+            scan.findings.join("; ") ||
+            "Static checks complete; antivirus and execution testing still require review",
+        });
+      } catch (error) {
+        results.push({
+          id,
+          state: "failed",
+          detail: error instanceof Error ? error.message : "Inspection failed",
+        });
+      }
+    }
+    return { results };
+  });
+
+export const editReviewMetadata = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator(
+    (input: {
+      id: string;
+      name: string;
+      description: string;
+      version: string;
+      license: string;
+    }) => {
+      if (
+        !input.name.trim() ||
+        input.name.length > 200 ||
+        input.description.length > 2000 ||
+        !input.version.trim()
+      )
+        throw new Error("Provide a title and version within the limits");
+      return input;
+    },
+  )
+  .handler(async ({ data, context }) => {
+    await requireResourceReviewer(context.supabase, context.userId);
+    const { normalizeResourceLicense } = await import("./resource-license");
+    const { data: row, error } = await supabaseAdmin
+      .from("resources")
+      .select("installation_config,updated_at")
+      .eq("id", data.id)
+      .single();
+    if (error || !row) throw new Error("Resource not found");
+    const saved = await supabaseAdmin
+      .from("resources")
+      .update({
+        name: data.name.trim(),
+        description: data.description.trim(),
+        version: data.version.trim().slice(0, 80),
+        license: normalizeResourceLicense(data.license),
+        verified: false,
+        published: false,
+        installation_config: {
+          ...(row.installation_config as object),
+          review_state: "pending_security_review",
+        },
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", data.id)
+      .eq("updated_at", row.updated_at)
+      .select("id")
+      .single();
+    if (saved.error) throw new Error("Resource changed; reload before editing");
+    return { ok: true };
+  });

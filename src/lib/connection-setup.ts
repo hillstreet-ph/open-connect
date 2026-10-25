@@ -11,6 +11,9 @@ export type ConnectionSetupInput = {
   api_key: string;
   auth_header?: string;
   description?: string;
+  transport?: "http" | "sse" | "openapi";
+  openapi?: unknown;
+  icon_data?: string;
   auth_type?: "none" | "bearer" | "api_key" | "personal_access_token";
 };
 
@@ -43,6 +46,19 @@ export function normalizeConnectionSetup(input: ConnectionSetupInput, app: Conne
 
   if (!["none", "bearer", "api_key", "personal_access_token"].includes(authType))
     throw new Error("Unsupported authentication type");
+  const transport = input.transport ?? (provider === "custom_api" ? "openapi" : "http");
+  if (!["http", "sse", "openapi"].includes(transport))
+    throw new Error("Choose HTTP, SSE or OpenAPI");
+  if (provider === "custom_api" && transport !== "openapi")
+    throw new Error("API connectors use an OpenAPI definition");
+  if (provider === "custom_mcp" && transport === "openapi")
+    throw new Error("Choose the API connector type for OpenAPI definitions");
+  const iconData = input.icon_data || "";
+  if (
+    iconData &&
+    (!/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(iconData) || iconData.length > 14000)
+  )
+    throw new Error("Use a PNG icon up to 10 KB");
   const authHeader = normalizeAuthHeader(input.auth_header);
   const description = String(input.description ?? "")
     .trim()
@@ -67,6 +83,9 @@ export function normalizeConnectionSetup(input: ConnectionSetupInput, app: Conne
     authHeader,
     description,
     endpointUrl,
+    transport,
+    openapi: input.openapi,
+    iconData,
   };
 }
 

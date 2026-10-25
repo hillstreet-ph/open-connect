@@ -64,6 +64,14 @@ export function planBulkReview<
   const apply: string[] = [];
   const skipped: { id: string; reason: string }[] = [];
   for (const resource of resources) {
+    if (
+      ["verify", "publish", "verify_publish"].includes(action) &&
+      (resource.installation_config as { scan_report?: { state?: string } } | null)?.scan_report
+        ?.state === "blocked"
+    ) {
+      skipped.push({ id: resource.id, reason: "scan_blocked" });
+      continue;
+    }
     if (action === "publish" && !isResourceApproved(resource)) {
       skipped.push({ id: resource.id, reason: "not_verified" });
       continue;

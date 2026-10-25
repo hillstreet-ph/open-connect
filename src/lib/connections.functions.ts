@@ -432,6 +432,15 @@ export const listAppConnections = createServerFn({ method: "GET" })
                   typeof metadata["endpoint_url"] === "string"
                     ? metadata["endpoint_url"]
                     : connectionEndpoint(metadata["endpoint_url"]),
+                transport: String(metadata["transport"] || "http"),
+                icon_data: String(metadata["icon_data"] || ""),
+                capabilities: metadata["capabilities"] || null,
+                openapi: metadata["openapi"] || null,
+                oauth_client_id: String(metadata["oauth_client_id"] || ""),
+                oauth_issuer: String(metadata["oauth_issuer"] || ""),
+                disabled_tools: Array.isArray(metadata["disabled_tools"])
+                  ? (metadata["disabled_tools"] as string[])
+                  : [],
                 auth_type: connectionAuthType(metadata),
                 auth_header:
                   typeof metadata["auth_header"] === "string"
@@ -900,6 +909,9 @@ export const configureAppConnection = createServerFn({ method: "POST" })
         auth_type: setup.authType,
         account_label: setup.accountLabel,
         description: setup.description,
+        transport: setup.transport,
+        openapi: setup.openapi ? JSON.parse(JSON.stringify(setup.openapi)) : null,
+        icon_data: setup.iconData,
         auth_header: setup.authHeader,
         endpoint_url: setup.endpointUrl || null,
         validation: {
