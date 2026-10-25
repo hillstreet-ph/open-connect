@@ -69,3 +69,15 @@ export function managedToolDescriptor(provider: string, tool: Record<string, unk
     _meta: { execution_route: "composio", version: String(tool["version"] ?? "latest") },
   };
 }
+
+/** Emit fixed categories, never upstream error bodies containing authenticated URLs. */
+export function managedFailureCode(value: unknown) {
+  const text = JSON.stringify(value);
+  if (/\b401\b|unauthorized|token.{0,30}(?:invalid|revoked)|invalid.{0,30}token/i.test(text))
+    return "provider_authorization_required";
+  if (/\b403\b|forbidden|access.denied/i.test(text)) return "provider_access_denied";
+  if (/\b429\b|rate.limit/i.test(text)) return "provider_rate_limited";
+  if (/invalid.argument|validation.error|schema|missing.required/i.test(text))
+    return "provider_arguments_rejected";
+  return "provider_action_failed";
+}

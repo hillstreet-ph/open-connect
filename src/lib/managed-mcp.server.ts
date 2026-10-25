@@ -2,6 +2,7 @@ import {
   managedAccountId,
   assertManagedAccount,
   managedToolDescriptor,
+  managedFailureCode,
 } from "./managed-mcp-policy.ts";
 import {
   composioRequest,
@@ -83,6 +84,22 @@ export async function callManagedMcpTool(
         }),
       },
     );
+    if (result.successful !== true || result.error)
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify({
+              error: {
+                code: managedFailureCode(result),
+                message:
+                  "The provider action did not complete. Check authorization and current state before retrying.",
+              },
+            }),
+          },
+        ],
+        isError: true,
+      };
     return {
       content: [
         { type: "text" as const, text: JSON.stringify(redactDataExport(result.data ?? {})) },

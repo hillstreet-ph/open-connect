@@ -4,6 +4,7 @@ import {
   managedAccountId,
   assertManagedAccount,
   managedToolDescriptor,
+  managedFailureCode,
 } from "./managed-mcp-policy.ts";
 const account = { id: "ca_one", user_id: "owner", status: "ACTIVE", toolkit: { slug: "tinyfish" } };
 test("managed references and exact provider/owner/status checks reject mismatches", () => {
@@ -51,4 +52,18 @@ test("full JSON schema and property-map schema are normalized without changing r
   );
   assert.throws(() => managedToolDescriptor("telegram", { ...base, input_parameters: schema }));
   assert.throws(() => managedToolDescriptor("tinyfish", base));
+});
+
+test("provider failure categories expose no raw upstream diagnostics", () => {
+  assert.equal(
+    managedFailureCode({ data: { status_code: 401, message: "Unauthorized" } }),
+    "provider_authorization_required",
+  );
+  assert.equal(managedFailureCode({ error: "403 Forbidden" }), "provider_access_denied");
+  assert.equal(managedFailureCode({ error: "429 rate limit" }), "provider_rate_limited");
+  assert.equal(
+    managedFailureCode({ error: "schema validation error" }),
+    "provider_arguments_rejected",
+  );
+  assert.equal(managedFailureCode({ error: "private diagnostic" }), "provider_action_failed");
 });
