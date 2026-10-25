@@ -1,7 +1,6 @@
 import { CloudBrowserSwitcher } from "@/components/cloud-browser-switcher";
 import { browserProvider, type BrowserProviderId } from "@/lib/browser-provider-selection";
 import { createFileRoute } from "@tanstack/react-router";
-import { BrowserIntegrations } from "@/components/browser-integrations";
 import { CloudBrowserConsole } from "@/components/cloud-browser-console";
 import { CloudWorkspacePage } from "@/components/cloud-workspace-page";
 
@@ -58,14 +57,8 @@ function CloudBrowserRoute() {
             }
           />
         }
-        external={<CloudWorkspacePage kind="browser" />}
+        external={<CloudWorkspacePage kind="browser" embedded />}
       />
-      <details className="rounded-md border">
-        <summary className="cursor-pointer px-4 py-3 text-sm font-medium">
-          Provider setup guides
-        </summary>
-        <BrowserIntegrations />
-      </details>
     </div>
   );
 }

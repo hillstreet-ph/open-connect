@@ -7,6 +7,23 @@ export const BROWSER_PROVIDERS = [
   { id: "browser_use", name: "Browser Use", description: "V4 prompt agent with a $1 run cap." },
   { id: "browserbase", name: "Browserbase", description: "Manual cloud browser sessions." },
   {
+    id: "playwright",
+    name: "Playwright MCP",
+    description: "Snapshots, forms, clicks, screenshots and tabs through a connected worker.",
+  },
+  {
+    id: "stagehand",
+    name: "Stagehand",
+    description:
+      "Natural-language actions, observations and extraction through a connected worker.",
+  },
+  {
+    id: "chrome_devtools",
+    name: "Chrome DevTools",
+    description:
+      "Browser diagnostics, network inspection and performance tools through a connected worker.",
+  },
+  {
     id: "external",
     name: "Connected tools",
     description: "Playwright, Stagehand and other connected browser tools.",
@@ -122,3 +139,65 @@ export const BROWSER_ADAPTER_CAPABILITIES = {
       "This adapter opens a manual browser. Prompt execution, saved contexts, proxies and CAPTCHA solving are not enabled here.",
   },
 } as const;
+
+export const BROWSER_WORKERS = {
+  playwright: {
+    source: "https://github.com/microsoft/playwright-mcp",
+    setup:
+      "Connect your authenticated HTTPS Playwright MCP worker in Connections. Local stdio tools need a remote HTTP bridge for this cloud app.",
+  },
+  stagehand: {
+    source: "https://github.com/browserbase/stagehand",
+    setup:
+      "Connect an authenticated worker exposing your Stagehand SDK tools. The SDK and its model connection run in that worker.",
+  },
+  chrome_devtools: {
+    source: "https://github.com/ChromeDevTools/chrome-devtools-mcp",
+    setup:
+      "Connect an authenticated Chrome DevTools MCP worker. Registering a local Codex stdio server does not create a hosted cloud connection.",
+  },
+} as const;
+export type BrowserToolFamily = keyof typeof BROWSER_WORKERS | "tinyfish";
+export function browserFamilyTool(family: BrowserToolFamily, name: string) {
+  const value = name.toLowerCase();
+  if (family === "playwright") return /(?:^|_)browser_/.test(value);
+  if (family === "stagehand")
+    return /(?:^|_)(?:act|observe|extract|agent|navigate)(?:_|$)/.test(value);
+  if (family === "tinyfish") return /research|search|fetch|monitor/.test(value);
+  return CHROME_DEVTOOLS_TOOLS.some((tool) => value === tool || value.endsWith(`_${tool}`));
+}
+
+export const CHROME_DEVTOOLS_TOOLS = [
+  "click",
+  "close_page",
+  "drag",
+  "emulate",
+  "evaluate_script",
+  "fill",
+  "fill_form",
+  "get_console_message",
+  "get_css_styles",
+  "get_network_request",
+  "handle_dialog",
+  "hover",
+  "lighthouse_audit",
+  "list_console_messages",
+  "list_network_requests",
+  "list_pages",
+  "navigate_page",
+  "new_page",
+  "performance_analyze_insight",
+  "performance_start_trace",
+  "performance_stop_trace",
+  "press_key",
+  "resize_page",
+  "screencast_start",
+  "screencast_stop",
+  "select_page",
+  "take_heapsnapshot",
+  "take_screenshot",
+  "take_snapshot",
+  "type_text",
+  "upload_file",
+  "wait_for",
+] as const;

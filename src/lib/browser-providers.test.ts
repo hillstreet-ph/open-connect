@@ -243,3 +243,20 @@ test("legacy session recovery moves only its provider and cannot resurrect after
     restoreProviderReference<{ provider: string; id: string }>(storage, "owner", "browser_use"),
   ).toBeNull();
 });
+
+test("browser tool families retain distinct choices and filter unrelated tools", async () => {
+  const { browserProvider, browserFamilyTool, CHROME_DEVTOOLS_TOOLS } =
+    await import("./browser-provider-selection");
+  for (const provider of ["playwright", "stagehand", "chrome_devtools"] as const)
+    expect(browserProvider(provider)).toBe(provider);
+  expect(browserFamilyTool("playwright", "browser_snapshot")).toBe(true);
+  expect(browserFamilyTool("playwright", "delete_database")).toBe(false);
+  expect(browserFamilyTool("stagehand", "stagehand_extract")).toBe(true);
+  expect(browserFamilyTool("chrome_devtools", "performance_start_trace")).toBe(true);
+  expect(browserFamilyTool("chrome_devtools", "list_network_requests")).toBe(true);
+  expect(browserFamilyTool("chrome_devtools", "create_payment")).toBe(false);
+  for (const tool of CHROME_DEVTOOLS_TOOLS)
+    expect(browserFamilyTool("chrome_devtools", tool)).toBe(true);
+  for (const name of ["search", "fetch", "run_research", "list_monitors"])
+    expect(browserFamilyTool("tinyfish", name)).toBe(true);
+});
