@@ -58,7 +58,7 @@ export const Route = createFileRoute("/v1/chat/completions")({
 
         const deadline = Date.now() + 35_000;
         for (const route of routes) {
-          if (autoFree && Date.now() >= deadline) break;
+          if (autoFree && !streaming && Date.now() >= deadline) break;
           const { upstream, model } = route;
           try {
             const response = await fetch(`${upstream.baseUrl}/chat/completions`, {
@@ -99,7 +99,7 @@ export const Route = createFileRoute("/v1/chat/completions")({
               });
             }
 
-            const result = (await response.json().catch(() => ({}))) as {
+            const result = (await response.json()) as {
               usage?: { total_tokens?: number };
               error?: unknown;
             };

@@ -6,7 +6,9 @@ export async function collectAutoFreeRoutes<T extends { name: string }>(
   const catalogs = await Promise.all(upstreams.map(load));
   const routes = upstreams.flatMap((upstream, index) => [
     ...(upstream.name === "openrouter" ? [{ upstream, model: "openrouter/free" }] : []),
-    ...catalogs[index]!.filter((model) => model !== "openrouter/free").map((model) => ({
+    ...catalogs[index]!.filter(
+      (model) => upstream.name !== "openrouter" || model !== "openrouter/free",
+    ).map((model) => ({
       upstream,
       model,
     })),

@@ -28,3 +28,9 @@ test("catalog discovery runs concurrently and the free router precedes slow prov
     ["model-a", "model-b"],
   );
 });
+
+test("LiteLLM zero-cost free router remains available without an OpenRouter account", async () => {
+  const upstream = { name: "litellm" };
+  const routes = await collectAutoFreeRoutes([upstream], async () => ["openrouter/free"]);
+  assert.deepEqual(routes, [{ upstream, model: "openrouter/free" }]);
+});
