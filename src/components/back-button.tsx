@@ -16,7 +16,6 @@ export function BackButton({ fallback = "/dashboard" }: { fallback?: "/dashboard
     <Button
       variant="ghost"
       size="sm"
-      className="shrink-0 gap-2"
       aria-label="Go back"
       title="Go back"
       className="shrink-0 gap-2 px-2 sm:px-3"
