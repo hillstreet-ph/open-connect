@@ -144,6 +144,55 @@ export function rankCapabilities(
     .slice(0, Math.min(10, Math.max(1, limit)));
 }
 
+export const PLUGIN_CAPABILITY_TYPES = [
+  "all",
+  "tool",
+  "toolkit",
+  "action",
+  "function",
+  "extension",
+  "app",
+  "skill",
+  "agent",
+  "mcp",
+  "plugin",
+] as const;
+
+/** Host functions and Marketplace packages have different discovery and execution paths. */
+export function discoverPluginCapabilities(
+  goal: string,
+  candidates: CapabilityCandidate[],
+  platformNames: ReadonlySet<string>,
+  type = "all",
+  limit = 5,
+) {
+  if (!(PLUGIN_CAPABILITY_TYPES as readonly string[]).includes(type)) {
+    throw new Error("Unsupported capability type");
+  }
+  const filtered = candidates.filter((candidate) => {
+    if (type === "all") return true;
+    const resource = candidate.resourceType.toLowerCase();
+    const installation = candidate.installationType?.toLowerCase() ?? "";
+    if (type === "action" || type === "function") return resource === "function";
+    if (type === "app" || type === "extension") {
+      return (
+        ["app", "extension", "plugin", "mcp"].includes(resource) || installation.includes(type)
+      );
+    }
+    return resource === type;
+  });
+  return rankCapabilities(goal, filtered, limit).map((candidate) => {
+    const platform = platformNames.has(candidate.slug);
+    return {
+      ...candidate,
+      source: platform ? "platform" : "marketplace",
+      discovery_tool: platform ? candidate.slug : "fetch",
+      discovery_arguments: platform ? {} : { id: candidate.slug },
+      execution_status: platform ? "scope_authorized_function" : "catalog_only",
+    };
+  });
+}
+
 export function buildAdaptivePlan(
   goal: string,
   environment: string,

@@ -39,3 +39,22 @@ Credential totals require `secrets:read`; model totals require `models:read` or 
 ## Access section layout
 
 The v6 card separates Access permissions from the Goal input with a block label, spacing and divider. The primary access summary uses readable AI-worker and workspace-control permission labels; exact scope names remain under Technical scope names. The Manage keys and access link opens the existing API-key integration section. These labels describe existing key grants and do not change permissions or establish administrator role access.
+
+
+### Expanded ChatGPT capability discovery
+
+`auto_discover` accepts an optional `type`: all (default), tool, toolkit, action,
+function, extension, app, skill, agent, mcp, or plugin. App and extension filters
+include MCP/plugin packages; actions refer to scoped platform functions. Results
+retain original resource and installation types, identify `platform` versus
+`marketplace`, and provide a discovery tool and arguments. For platform matches,
+inspect the named tool's actual input schema and supply the task's required
+arguments; the empty discovery arguments are not an invocation request.
+Marketplace matches use `fetch` with the exact resource slug and remain catalog
+metadata, not proof of installation, host compatibility, or execution access.
+
+To expand into a connected provider, use `list_connections`, choose an authorized
+account, and call `list_connection_tools` for its actual schemas before
+`call_connection_tool`. This avoids publishing duplicate tools for every catalog
+row or claiming that a host can run every third-party extension. Existing scopes,
+provider consent, and host approvals continue to apply.

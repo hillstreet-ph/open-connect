@@ -41,6 +41,8 @@ import {
   buildAdaptivePlan,
   isOpaqueCredentialReference,
   rankCapabilities,
+  discoverPluginCapabilities,
+  PLUGIN_CAPABILITY_TYPES,
   redactEvidence,
 } from "@/lib/autonomous-control";
 import { streamableMcpResponse } from "@/lib/mcp-transport.server";
@@ -419,11 +421,12 @@ const PLATFORM_TOOLS: McpTool[] = [
     _meta: { ui: { visibility: ["model", "app"] }, "openai/widgetAccessible": true },
     outputSchema: AUTO_DISCOVERY_OUTPUT_SCHEMA,
     description:
-      "When Auto is enabled and an authorized task needs a capability, match verified Marketplace tools and skills to the goal. Returns metadata and next steps, never executes or reveals credentials.",
+      "When Auto is enabled and an authorized task needs a capability, discover tools, toolkits, actions, functions, extensions, apps, skills, agents and MCP packages. Distinguishes scope-authorized platform functions from verified Marketplace metadata and returns discovery routes. Use list_connections then list_connection_tools for connected provider schemas. Never executes or reveals credentials.",
     inputSchema: {
       type: "object",
       properties: {
         goal: { type: "string", minLength: 1, maxLength: 2000 },
+        type: { type: "string", enum: [...PLUGIN_CAPABILITY_TYPES], default: "all" },
         limit: { type: "integer", minimum: 1, maximum: 10 },
       },
       required: ["goal"],
@@ -2032,7 +2035,7 @@ export const Route = createFileRoute("/mcp")({
                 : 5;
               const catalog = auto.enabled === true ? await getCatalog() : null;
               const matches = catalog
-                ? rankCapabilities(
+                ? discoverPluginCapabilities(
                     goal,
                     [
                       ...[...catalog.bySlug.values()].filter(isExecutable).map((item) => ({
@@ -2052,6 +2055,12 @@ export const Route = createFileRoute("/mcp")({
                         installationType: "mcp-tool",
                       })),
                     ],
+                    new Set(
+                      PLATFORM_TOOLS.filter((tool) => canUseTool(key, tool.name)).map(
+                        (tool) => tool.name,
+                      ),
+                    ),
+                    String(args["type"] ?? "all"),
                     limit,
                   )
                 : [];
