@@ -1,3 +1,4 @@
+import { websiteText } from "./website-text";
 import { createServerFn } from "@tanstack/react-start";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -111,14 +112,8 @@ export const importResourceUrl = createServerFn({ method: "POST" })
       try {
         let text = await publicText(source.url);
         if (/<!doctype html|<html[\s>]/i.test(text)) {
-          const title = text.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || "Imported website";
-          text =
-            `# ${title}\n\n` +
-            text
-              .replace(/<(script|style|nav|header|footer)[\s\S]*?<\/\1>/gi, "")
-              .replace(/<[^>]+>/g, " ")
-              .replace(/[ \t]+/g, " ")
-              .trim();
+          text = websiteText(text);
+          source.filename = "website.md";
         }
         const bytes = new TextEncoder().encode(text);
         const scan = scanResourceBytes(source.filename, bytes);

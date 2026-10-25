@@ -1,3 +1,4 @@
+import { websiteText } from "./website-text.ts";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { auth } from "@modelcontextprotocol/sdk/client/auth.js";
@@ -208,4 +209,15 @@ test("OpenAPI rejects missing path parameters and supports path-level parameters
     },
   });
   assert.deepEqual(result.tools[0]?.inputSchema["required"], ["id"]);
+});
+
+test("website extraction never emits HTML, including malformed nested tag input", () => {
+  const doc = websiteText(
+    "<html><title>Example</title><body><script>alert(1)</script><p>Hello &lt;script&gt;</p><scr<script>ipt>bad</body></html>",
+  );
+  assert.ok(doc.startsWith("# Example"));
+  assert.ok(doc.includes("Hello"));
+  assert.ok(!doc.includes("alert(1)"));
+  assert.ok(!/[<>]/.test(doc));
+  assert.ok(doc.includes("&amp;lt;script&amp;gt;"));
 });
