@@ -55,6 +55,7 @@ function widget(openai: object = {}) {
     "team",
     "results",
     "scopes",
+    "access",
   ])
     elements.set(id, element());
   const listeners = new Map<string, (e: object) => void>();
@@ -93,6 +94,8 @@ function widget(openai: object = {}) {
     discover: elements.get("discover")!,
     team: elements.get("team")!,
     results: elements.get("results")!,
+    access: elements.get("access")!,
+    scopeText: elements.get("scopes")!,
     reject: (id: string | number, message: string) =>
       listeners.get("message")!({
         source: parent,
@@ -379,4 +382,24 @@ test("credential and model cards show numeric totals, preserve zero, and disting
   });
   assert.equal(w.grid.children[2]!.children[1]!.textContent, "Unavailable");
   assert.equal(w.grid.children[3]!.children[1]!.textContent, "Not granted");
+});
+
+test("access summary uses readable labels while exact scopes remain available separately", () => {
+  const w = widget();
+  w.send({
+    structuredContent: {
+      ...status,
+      scopes: ["agents:invoke", "control:write"],
+      auto: { enabled: true, scope: "personal" },
+    },
+  });
+  assert.match(w.access.textContent, /AI worker permission: granted/);
+  assert.match(w.access.textContent, /Workspace control permission: granted/);
+  assert.doesNotMatch(w.access.textContent, /agents:invoke|control:write/);
+  assert.equal(w.scopeText.textContent, "agents:invoke, control:write");
+  w.send({
+    structuredContent: { ...status, scopes: [], auto: { enabled: true, scope: "personal" } },
+  });
+  assert.match(w.access.textContent, /AI worker permission: not granted/);
+  assert.match(w.access.textContent, /Workspace control permission: not granted/);
 });

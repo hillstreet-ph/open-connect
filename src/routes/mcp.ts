@@ -102,7 +102,8 @@ type McpTool = {
   _meta?: Record<string, unknown>;
 };
 
-const COMMAND_CENTER_URI = "ui://open-connect/command-center-v5.html";
+const COMMAND_CENTER_URI = "ui://open-connect/command-center-v6.html";
+const V5_COMMAND_CENTER_URI = "ui://open-connect/command-center-v5.html";
 const V4_COMMAND_CENTER_URI = "ui://open-connect/command-center-v4.html";
 const V3_COMMAND_CENTER_URI = "ui://open-connect/command-center-v3.html";
 const V2_COMMAND_CENTER_URI = "ui://open-connect/command-center-v2.html";
@@ -1725,6 +1726,7 @@ export const Route = createFileRoute("/mcp")({
           const uri = (body.params as { uri?: string } | undefined)?.uri;
           result =
             uri === COMMAND_CENTER_URI ||
+            uri === V5_COMMAND_CENTER_URI ||
             uri === V4_COMMAND_CENTER_URI ||
             uri === V3_COMMAND_CENTER_URI ||
             uri === V2_COMMAND_CENTER_URI ||
