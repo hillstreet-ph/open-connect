@@ -32,3 +32,9 @@ Custom MCP registration in Composio is dashboard-only; no API or meta tool exist
 
 ## Known issues
 See docs/KNOWN_ISSUES.md — hub-internal open-tgate-mcp connection returns 500 (server-side defect in open-connect.site); the direct custom_open_tgate registration is unaffected.
+
+
+## Resolution update 2026-10-25
+- Zeabur MCP is now fully working end to end through the hub. A self-hosted MCP bridge (Cloudflare Worker zeabur-mcp-bridge, https://zeabur-mcp-bridge.tanauancharles1.workers.dev/mcp) exposes three tools (zeabur_graphql, zeabur_me, zeabur_projects) backed by the Zeabur public GraphQL API. The hub connections Zeabur MCP (custom_zeabur_mcp), zeabur (custom_zeabur) and Zeabur Bridge (custom_zeabur_bridge) were re-pointed at this endpoint with vault-backed bearer credentials; live tool calls verified (zeabur_me returned the authenticated account, and a redeploy of the open-connect service was triggered through the bridge).
+- open-teleset is now fully working end to end through the hub. The canonical remote MCP endpoint is https://app.open-teleset.site/mcp (Bearer, ott_ API key). The hub connection open-teleset (custom_open_teleset) uses it; live tool call verified (authenticated_identity returned the administrator identity).
+- The remaining Composio custom-toolkit sync failures are dashboard-only edits: update each custom toolkit entry URL to the bridge endpoint above (including /mcp) with the matching bearer token, then retry tool sync. Custom MCP registration has no public API.
