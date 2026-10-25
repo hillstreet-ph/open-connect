@@ -38,11 +38,11 @@ export const refreshConnectorCapabilities = createServerFn({ method: "POST" })
         connection.transport,
       );
     } else {
-      const { listCustomMcpTools } = await import("./custom-mcp.server");
-      const catalog = await listCustomMcpTools(context.userId, row.id);
+      const { discoverOwnedConnectionTools } = await import("./custom-mcp.server");
+      const tools = await discoverOwnedConnectionTools(context.userId, row.id);
       snapshot = {
         server: { name: row.display_name },
-        tools: catalog.tools,
+        tools,
         prompts: [],
         resources: [],
         checked_at: new Date().toISOString(),

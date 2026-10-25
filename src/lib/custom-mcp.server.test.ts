@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  discoverOwnedConnectionTools,
   assertToolConnectionAccess,
   authorizeToolForConnectionSnapshot,
   connectionAuthHeaders,
@@ -150,5 +151,24 @@ test("Apify MCP enforces project grants before execution", async () => {
         throw new Error("Connection is not shared with this project.");
       }),
     /not shared/,
+  );
+});
+
+test("owner discovery retains disabled native tools and rejects foreign catalogs", async () => {
+  const row = {
+    id: "native",
+    user_id: "owner",
+    provider: "twilio",
+    display_name: "Twilio",
+    status: "connected",
+    credential_reference: "credential://twilio/11111111-1111-4111-8111-111111111111",
+    metadata: { disabled_tools: ["twilio_account"] },
+    scopes: ["account:read"],
+  };
+  const tools = await discoverOwnedConnectionTools("owner", "native", async () => row);
+  assert.ok(tools.some((tool) => tool["name"] === "twilio_account"));
+  await assert.rejects(
+    () => discoverOwnedConnectionTools("foreign", "native", async () => row),
+    /Connection not found/,
   );
 });

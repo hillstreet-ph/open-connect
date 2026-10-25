@@ -36,6 +36,9 @@ function download(name: string, bytes: BlobPart, type: string) {
 }
 export function AppSetupWorkbench() {
   const { user } = useAuth();
+  return <AppSetupForm key={user?.id || "signed-out"} userId={user?.id} />;
+}
+function AppSetupForm({ userId }: { userId: string | undefined }) {
   const client = useQueryClient();
   const [open, setOpen] = useState(false),
     [selected, setSelected] = useState(""),
@@ -45,9 +48,9 @@ export function AppSetupWorkbench() {
     detailFn = useServerFn(getConnectionDetails),
     draftFn = useServerFn(connectorStudioDraft);
   const apps = useQuery({
-    queryKey: ["app-setup-connections", user?.id],
+    queryKey: ["app-setup-connections", userId],
     queryFn: () => listFn(),
-    enabled: Boolean(user),
+    enabled: Boolean(userId),
   });
   const app = apps.data?.find((item) => item.id === selected);
   const refreshFn = useServerFn(refreshConnectorCapabilities);
