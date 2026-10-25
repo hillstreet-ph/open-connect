@@ -1,3 +1,4 @@
+import { normalizeRemoteMcpEndpoint } from "./remote-mcp.ts";
 import { CfWorkerJsonSchemaValidator } from "@modelcontextprotocol/sdk/validation/cfworker";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
@@ -25,18 +26,27 @@ export async function withMcpClient<T>(
   operation: (client: Client) => Promise<T>,
   send: typeof fetch = fetch,
 ): Promise<T> {
-  const url = new URL(endpoint);
+  const url = new URL(normalizeRemoteMcpEndpoint("custom_mcp", endpoint));
+  let responseStatus = 0;
+  let responseType = "";
   if (url.protocol !== "https:" || url.username || url.password)
     throw new Error("MCP requires an HTTPS endpoint without embedded credentials.");
   const deadline = AbortSignal.timeout(60000);
   const transport = new StreamableHTTPClientTransport(url, {
     requestInit: { headers, redirect: "manual", cache: "no-store" },
     fetch: async (input, init) => {
+      const target = new URL(typeof input === "string" ? input : input.href);
+      if (target.origin !== url.origin)
+        throw new Error("MCP cross-origin requests are not allowed");
       const response = await send(input, {
         ...init,
         redirect: "manual",
         signal: AbortSignal.any([deadline, ...(init?.signal ? [init.signal] : [])]),
       });
+      if (init?.method !== "GET" && init?.method !== "DELETE") {
+        responseStatus = response.status;
+        responseType = response.headers.get("content-type") ?? "";
+      }
       if (response.status >= 300 && response.status < 400) {
         await response.body?.cancel();
         throw new Error("MCP redirects are not allowed.");
@@ -60,9 +70,21 @@ export async function withMcpClient<T>(
   } catch (error) {
     if (error instanceof McpCatalogError) throw error;
     // A remote error may echo authorization headers; never forward it to the browser.
-    // eslint-disable-next-line preserve-caught-error -- Do not serialize remote credential-bearing errors as a cause.
+    const hint =
+      responseStatus === 401 || responseStatus === 403
+        ? url.hostname === "connect.composio.dev"
+          ? "Composio Connect requires OAuth or a consumer key in x-consumer-api-key. A project API key or personal access token is different."
+          : "Authentication was rejected. Check the credential, auth mode and header name. OAuth-only servers require provider authorization."
+        : responseStatus === 404 || responseStatus === 405
+          ? "Use the exact MCP HTTP endpoint, not a service base URL or dashboard. This client supports Streamable HTTP; legacy SSE-only endpoints require an adapter."
+          : responseType.includes("text/html")
+            ? "The URL returned a web page. Enter the MCP server endpoint instead of a dashboard URL."
+            : deadline.aborted
+              ? "The server timed out during MCP initialization or tool discovery. Retry or check provider availability."
+              : "Check the endpoint, credential, protocol support, and provider availability.";
+    // eslint-disable-next-line preserve-caught-error -- Never forward remote errors that may contain credentials.
     throw new Error(
-      "MCP request failed. Check the endpoint, credential, protocol support, and provider availability.",
+      `MCP request failed${responseStatus ? ` (HTTP ${responseStatus})` : ""}. ${hint}`,
     );
   } finally {
     await transport.terminateSession().catch(() => undefined);
