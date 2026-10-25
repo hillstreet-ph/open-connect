@@ -4,16 +4,16 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Json } from "@/integrations/supabase/types";
 import { nextCronOccurrence } from "@/lib/schedule-cron";
 import {
-  describeAgentHelperToolResult,
   helperPriority,
   helperProjectId,
   helperScheduleTiming,
   helperText,
   optionalHelperText,
-  parseAgentHelperArguments,
   type AgentHelperToolCall,
   type AgentHelperToolName,
 } from "@/lib/agent-helper-policy";
+
+import { runAgentHelper } from "@/lib/agent-helper-runner";
 
 type HelperMessage = { role: "user" | "assistant"; content: string };
 type HelperContext = { supabase: SupabaseClient; userId: string };
@@ -519,86 +519,21 @@ export const askAgentHelper = createServerFn({ method: "POST" })
       throw new Error(
         "No connected free model is available right now. Check AI Gateway connections.",
       );
-    if (!first.message) throw new Error("Agent-Helper received an empty reply. Please try again.");
-    if (first.toolCalls.length === 0) {
-      if (!first.content)
-        throw new Error("Agent-Helper received an empty reply. Please try again.");
-      return { reply: first.content.slice(0, 5000), action: null };
-    }
-    if (first.toolCalls.length !== 1) {
-      return {
-        reply:
-          "I can safely carry out one internal change per message. Please ask for one action at a time.",
-        action: null,
-      };
-    }
-
-    const call = first.toolCalls[0]!;
-    const name = call.function.name as AgentHelperToolName;
-    const allowedNames: AgentHelperToolName[] = [
-      "search_marketplace",
-      "list_projects",
-      "list_tasks",
-      "update_task_status",
-      "list_schedules",
-      "list_automations",
-      "install_resource_to_library",
-      "create_task",
-      "create_schedule",
-      "create_manual_ai_automation",
-    ];
-    if (!allowedNames.includes(name)) {
-      return {
-        reply: "I couldn't match that to an approved internal action, so nothing was changed.",
-        action: null,
-      };
-    }
-
-    let actionResult: Record<string, unknown>;
-    try {
-      const args = parseAgentHelperArguments(call.function.arguments);
-      actionResult = await executeInternalTool(name, args, context);
-    } catch (error) {
-      actionResult = {
-        error:
-          error instanceof Error &&
-          /required|too long|valid|cron|timezone|project|priority|Marketplace|schedule/i.test(
-            error.message,
-          )
-            ? error.message
-            : "This action did not complete because of an access or system validation error. No change was made.",
-      };
-    }
-
-    try {
-      if (!selectedRoute) throw new Error("No model route selected.");
-      const followUp = await requestFreeModel(
-        selectedRoute.upstream,
-        selectedRoute.model,
-        [
-          { role: "system", content: SYSTEM_PROMPT },
-          ...data.messages,
-          first.message as Record<string, unknown>,
-          {
-            role: "tool",
-            tool_call_id: call.id,
-            content: JSON.stringify(actionResult),
-          },
-        ],
-        false,
-      );
-      if (followUp.content) {
-        return {
-          reply: followUp.content.slice(0, 5000),
-          action: { name, result: actionResult as Json },
-        };
-      }
-    } catch {
-      // A write may have completed already. Report its verified result locally instead of
-      // encouraging the user to resend and accidentally repeat the action.
-    }
+    if (!selectedRoute) throw new Error("No model route selected.");
+    const route = selectedRoute;
+    const result = await runAgentHelper({
+      first: first as Parameters<typeof runAgentHelper>[0]["first"],
+      messages: [{ role: "system", content: SYSTEM_PROMPT }, ...data.messages],
+      requestNext: (messages, includeTools) =>
+        requestFreeModel(route.upstream, route.model, messages, includeTools) as ReturnType<
+          Parameters<typeof runAgentHelper>[0]["requestNext"]
+        >,
+      execute: (name, args) => executeInternalTool(name, args, context),
+    });
     return {
-      reply: describeAgentHelperToolResult(name, actionResult),
-      action: { name, result: actionResult as Json },
+      reply: result.reply,
+      action: result.action
+        ? { name: result.action.name, result: result.action.result as Json }
+        : null,
     };
   });
