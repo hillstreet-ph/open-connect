@@ -102,7 +102,7 @@ export async function providerCredential(
   userId: string,
   provider: z.infer<typeof providerSchema>,
   connectionId?: string | null,
-) {
+): Promise<{ apiKey: string; connectionId: string | null }> {
   const variable = provider === "browser_use" ? "BROWSER_USE_API_KEY" : "BROWSERBASE_API_KEY";
   if (connectionId === null) {
     if (process.env["BROWSER_PROVIDER_OWNER_ID"] !== userId || !process.env[variable])
@@ -135,6 +135,11 @@ export async function providerCredential(
   // A shared deployment key is usable only by its explicitly configured owner.
   if (!connectionId && process.env["BROWSER_PROVIDER_OWNER_ID"] === userId && process.env[variable])
     return { apiKey: process.env[variable]!, connectionId: null };
+  if (connectionId === undefined) {
+    const { prepareBrowserVaultConnection } = await import("./browser-vault.server");
+    if ((await prepareBrowserVaultConnection(userId, provider)) === "connected")
+      return providerCredential(userId, provider);
+  }
   throw new Error(
     `Connect ${provider === "browser_use" ? "Browser Use" : "Browserbase"} with your own API key in Connections.`,
   );
