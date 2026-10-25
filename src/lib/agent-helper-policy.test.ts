@@ -2,6 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   describeAgentHelperToolResult,
+  helperActionQueryKeys,
+  AGENT_HELPER_WRITE_TOOLS,
   helperPriority,
   helperProjectId,
   helperScheduleTiming,
@@ -76,4 +78,10 @@ test("Agent-Helper gives a verified fallback after a completed write", () => {
     describeAgentHelperToolResult("create_task", { error: "Project unavailable." }),
     /Check the current state before retrying/,
   );
+});
+
+test("every workspace write refreshes its affected data and reads do not", () => {
+  for (const name of AGENT_HELPER_WRITE_TOOLS) assert.ok(helperActionQueryKeys(name).length);
+  assert.deepEqual(helperActionQueryKeys("create_task"), ["tasks"]);
+  assert.deepEqual(helperActionQueryKeys("search_saved_context"), []);
 });
