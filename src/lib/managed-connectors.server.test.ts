@@ -8,6 +8,7 @@ import {
   managedIdentityIds,
   createManagedConnectionLink,
   listComposioToolkits,
+  getManagedAccountIdentity,
 } from "./managed-connectors.server.ts";
 
 test("identity aliases are scoped to one explicitly configured application user", () => {
@@ -352,6 +353,50 @@ test("Composio toolkit discovery follows cursors and exposes supported auth meth
     assert.deepEqual(toolkits[0]!.authMethods, ["OAUTH2", "API_KEY"]);
     assert.equal(toolkits[0]!.category, "Productivity");
     assert.equal(calls, 2);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalKey === undefined) delete process.env["COMPOSIO_API_KEY"];
+    else process.env["COMPOSIO_API_KEY"] = originalKey;
+  }
+});
+
+test("profile discovery uses a fixed read-only endpoint and returns no credential fields", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalKey = process.env["COMPOSIO_API_KEY"];
+  process.env["COMPOSIO_API_KEY"] = "test-key";
+  let calls = 0;
+  globalThis.fetch = async (input, init) => {
+    calls++;
+    assert.equal(String(input), "https://backend.composio.dev/api/v3.1/tools/execute/proxy");
+    const body = JSON.parse(String(init?.body));
+    assert.deepEqual(body, {
+      connected_account_id: "ca_selected",
+      user_id: "owner",
+      endpoint: "https://api.github.com/user",
+      method: "GET",
+    });
+    return new Response(
+      JSON.stringify({
+        status: 200,
+        data: {
+          login: "operator",
+          name: "Owner",
+          email: "owner@example.com",
+          access_token: "never-return",
+        },
+        headers: { authorization: "hidden" },
+      }),
+    );
+  };
+  try {
+    assert.deepEqual(await getManagedAccountIdentity("github", "ca_selected", "owner"), {
+      label: "",
+      login: "operator",
+      name: "Owner",
+      email: "owner@example.com",
+    });
+    assert.equal(await getManagedAccountIdentity("unknown", "ca_selected", "owner"), null);
+    assert.equal(calls, 1);
   } finally {
     globalThis.fetch = originalFetch;
     if (originalKey === undefined) delete process.env["COMPOSIO_API_KEY"];
