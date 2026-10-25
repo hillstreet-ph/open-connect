@@ -1,0 +1,23 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "dev-6ac2916bd63881919b6201907c16ffc0",
+  "version": "1.1.0",
+  "description": "open-connect",
+  "author": {
+    "name": "App developer"
+  },
+  "extensions": {
+    "com.openai": {
+      "apps": "./.app.json",
+      "interface": {
+        "capabilities": [],
+        "category": "Other",
+        "defaultPrompt": null,
+        "developerName": "App developer",
+        "displayName": "open-connect",
+        "longDescription": "open-connect",
+        "shortDescription": "open-connect"
+      }
+    }
+  }
+}
