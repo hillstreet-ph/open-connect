@@ -29,3 +29,9 @@ Auto continues authorized tasks using existing grants. It does not click ChatGPT
 The connection proxy allows the free-model team up to the existing 60-second MCP operation deadline, rather than cutting it off at 30 seconds while model fallbacks are still running. Other remote tools retain the 30-second call timeout. A timeout does not prove that upstream work never started; the card does not automatically resubmit an uncertain action.
 
 Every worker tries the available free router first. Fallback then crosses connected providers before spending the remaining bounded attempts on sibling models; a large first-provider catalog cannot exclude another provider from all three attempts. Free routing remains best-effort: unavailable workers are reported explicitly, and paid routes are never substituted.
+
+## Chat card inventory counts
+
+The v5 card shows Resources, Connections, Credentials and Models as numeric totals. Credentials counts owned `credential_secrets` metadata with an exact HEAD query; no secret values are retrieved for this count. Models counts distinct IDs in the same AI Gateway catalog used by `list_models`, including managed IDs and models returned by connected providers. Catalog membership does not guarantee inference access, and provider catalog failures retain the gateway's managed fallback list.
+
+Credential totals require `secrets:read`; model totals require `models:read` or `models:invoke`. Both require personal context. Missing grants show Not granted, failed reads show Unavailable, and a real zero remains 0. Status calls allow 30 seconds for provider catalog loading. Legacy card resource URIs remain readable.
