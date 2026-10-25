@@ -1,0 +1,19 @@
+{
+  "apps": "./.app.json",
+  "author": {
+    "name": "App developer"
+  },
+  "description": "open-connect",
+  "interface": {
+    "capabilities": [],
+    "category": "Other",
+    "defaultPrompt": null,
+    "developerName": "App developer",
+    "displayName": "open-connect",
+    "longDescription": "open-connect",
+    "shortDescription": "open-connect"
+  },
+  "name": "dev-6ac2916bd63881919b6201907c16ffc0",
+  "version": "1.1.0",
+  "skills": "./skills"
+}
