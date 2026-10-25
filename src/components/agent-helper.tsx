@@ -21,12 +21,14 @@ export function AgentHelper() {
         "Hi, I’m Agent-Helper. I can search Marketplace, add resources to your Library, and create tasks, schedule definitions, or manual AI automations. I can also guide you through settings and connections.",
     },
   ]);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const transcriptRef = useRef<HTMLDivElement>(null);
+  const sendingRef = useRef(false);
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const launcherRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    const transcript = transcriptRef.current;
+    if (transcript) transcript.scrollTop = transcript.scrollHeight;
   }, [messages, busy, open]);
 
   useEffect(() => {
@@ -35,7 +37,8 @@ export function AgentHelper() {
 
   async function sendMessage(value: string) {
     const content = value.trim().slice(0, 2000);
-    if (!content || busy) return;
+    if (!content || sendingRef.current) return;
+    sendingRef.current = true;
     const next = [...messages, { role: "user" as const, content }];
     setMessages(next);
     setDraft("");
@@ -58,6 +61,7 @@ export function AgentHelper() {
           : "I couldn’t get a reply just now. Please try again.";
       setMessages((current) => [...current, { role: "assistant", content: message }]);
     } finally {
+      sendingRef.current = false;
       setBusy(false);
     }
   }
@@ -80,9 +84,20 @@ export function AgentHelper() {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 sm:bottom-5 sm:right-5">
+    <div
+      className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-30 sm:right-5"
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && open) {
+          event.stopPropagation();
+          setOpen(false);
+          launcherRef.current?.focus();
+        }
+      }}
+    >
       {open ? (
         <section
+          id="agent-helper-chat"
+          role="dialog"
           aria-label="Agent-Helper chat"
           className="mb-3 flex h-[min(34rem,calc(100dvh-7rem))] w-[min(23rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl"
         >
@@ -107,7 +122,12 @@ export function AgentHelper() {
             </button>
           </header>
 
-          <div className="flex-1 space-y-3 overflow-y-auto px-3 py-4" aria-live="polite">
+          <div
+            ref={transcriptRef}
+            className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-3 py-4"
+            aria-live="polite"
+            aria-busy={busy}
+          >
             {messages.map((message, index) => (
               <div
                 key={index}
@@ -143,12 +163,11 @@ export function AgentHelper() {
                 Agent-Helper is thinking…
               </p>
             ) : null}
-            <div ref={bottomRef} />
           </div>
 
           <p className="px-4 pb-2 text-[10px] leading-4 text-muted-foreground">
-            Prompts go to your saved OpenRouter key. Internal writes use your account access.
-            Schedule definitions are saved, but do not run jobs yet.
+            Replies use your connected free AI models. Actions use your account access. Enabled
+            schedules run linked AI response automations every five minutes.
           </p>
           <form onSubmit={submit} className="flex items-end gap-2 border-t border-border p-3">
             <textarea
@@ -182,6 +201,7 @@ export function AgentHelper() {
         className="flex h-12 items-center gap-2 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-lg transition-transform hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         aria-label={open ? "Close Agent-Helper chat" : "Open Agent-Helper chat"}
         aria-expanded={open}
+        aria-controls="agent-helper-chat"
       >
         {open ? <X className="size-4" /> : <MessageCircle className="size-5" />}
         <span>Agent-Helper</span>

@@ -1,6 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Boxes, ListTodo, Plug, Layers, LayoutDashboard } from "lucide-react";
+import {
+  Boxes,
+  ListTodo,
+  Plug,
+  Layers,
+  LayoutDashboard,
+  CalendarClock,
+  Workflow,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ProfileAvatarBadge } from "@/components/user-menu";
 import { useRoles } from "@/hooks/use-roles";
@@ -24,6 +32,20 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 });
 
 const hubBlocks = [
+  {
+    to: "/schedule" as const,
+    icon: CalendarClock,
+    title: "Schedule",
+    body: "Schedule linked AI response automations and check upcoming runs.",
+    badge: "Plan",
+  },
+  {
+    to: "/automations" as const,
+    icon: Workflow,
+    title: "Automations",
+    body: "Manage automation actions and review their execution status.",
+    badge: "Automate",
+  },
   {
     to: "/studio" as const,
     icon: LayoutDashboard,

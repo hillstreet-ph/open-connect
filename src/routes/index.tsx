@@ -27,7 +27,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Calm AI workspace. Connect Open WebUI, ChatGPT, Claude, Grok. Studio, orgs, marketplace — GitHub + Cloudflare + Supabase.",
+          "Discover agent resources, connect your apps, and manage tasks and scheduled AI automations in one workspace.",
       },
       { property: "og:title", content: "Open-Connect — Your team AI workspace" },
     ],
@@ -105,7 +105,12 @@ const megaFeatures = [
         body: "Member · Developer · Admin",
         to: "/dashboard" as const,
       },
-      { icon: Wrench, title: "API keys", body: "Full autonomous scopes", to: "/api-keys" as const },
+      {
+        icon: Wrench,
+        title: "API keys",
+        body: "Scoped access for your agents",
+        to: "/api-keys" as const,
+      },
     ],
   },
 ];
@@ -275,10 +280,11 @@ function Home() {
             open-connect.site
           </Badge>
           <h1 className="mt-6 font-display text-[2rem] leading-[1.15] tracking-tight sm:text-5xl md:text-[3.25rem]">
-            Your team just needs an <span className="text-gradient">Open-Connect workspace</span>
+            Your apps, agents, and tasks.{" "}
+            <span className="text-gradient">One connected workspace.</span>
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-[15px] leading-relaxed text-muted-foreground sm:text-base">
-            Studio, organizations, and marketplace in one calm hub. Connect{" "}
+            Discover resources, connect accounts, and organize your work. Connect{" "}
             <strong className="font-medium text-foreground">Open WebUI</strong>, ChatGPT, Claude,
             and Grok through a single MCP URL and model gateway.
           </p>
