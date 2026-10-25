@@ -4,6 +4,7 @@ import {
   chatSaveSchema,
   attachmentContext,
   browserTaskGoal,
+  browserTaskProfile,
   helperModelMessages,
 } from "./agent-chat.ts";
 import { extractAgentAttachment } from "./agent-attachment.server.ts";
@@ -122,4 +123,12 @@ test("existing chat writes enforce owner and revision and reject a lost update",
   ]);
   returnRow = false;
   await assert.rejects(saveChatRow(db, "verified-owner", input), /changed in another window/);
+});
+
+test("browser task reuses default saved sign-ins and isolates explicit fresh mode", () => {
+  assert.deepEqual(browserTaskProfile(), { use_profile: true });
+  assert.deepEqual(browserTaskProfile("default"), { use_profile: true });
+  assert.deepEqual(browserTaskProfile("none"), { use_profile: false });
+  assert.deepEqual(browserTaskProfile("prof_work"), { use_profile: true, profile_id: "prof_work" });
+  assert.throws(() => browserTaskProfile("../other"), /valid browser profile/);
 });
