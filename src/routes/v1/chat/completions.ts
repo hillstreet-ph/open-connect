@@ -56,14 +56,21 @@ export const Route = createFileRoute("/v1/chat/completions")({
 
         let lastError: { status: number; body: unknown } | null = null;
 
+        const deadline = Date.now() + 35_000;
         for (const route of routes) {
+          if (autoFree && !streaming && Date.now() >= deadline) break;
           const { upstream, model } = route;
           try {
             const response = await fetch(`${upstream.baseUrl}/chat/completions`, {
               method: "POST",
               headers: upstream.headers,
+              redirect: "manual",
               body: JSON.stringify({ ...body, model }),
-              signal: AbortSignal.timeout(120_000),
+              signal: AbortSignal.timeout(
+                autoFree && !streaming
+                  ? Math.max(1, Math.min(12_000, deadline - Date.now()))
+                  : 120_000,
+              ),
             });
 
             if (streaming) {
@@ -92,7 +99,7 @@ export const Route = createFileRoute("/v1/chat/completions")({
               });
             }
 
-            const result = (await response.json().catch(() => ({}))) as {
+            const result = (await response.json()) as {
               usage?: { total_tokens?: number };
               error?: unknown;
             };
