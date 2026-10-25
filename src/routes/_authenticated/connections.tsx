@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { KeyRound, Loader2, Lock, Search, Plus, X, Unplug } from "lucide-react";
+import { KeyRound, Loader2, Lock, Search, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -28,6 +28,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { ConnectionAccountCard } from "@/components/connection-account-card";
 
 type CatalogApp = {
   provider: string;
@@ -79,6 +80,7 @@ function ConnectionsPage() {
   const [managedApp, setManagedApp] = useState<CatalogApp | null>(null);
   const [selectedApp, setSelectedApp] = useState<CatalogApp | null>(null);
   const [accountLabel, setAccountLabel] = useState("");
+  const [reconnectId, setReconnectId] = useState<string | undefined>();
   const [endpointUrl, setEndpointUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [authType, setAuthType] = useState<"none" | "bearer" | "api_key">("bearer");
@@ -133,6 +135,7 @@ function ConnectionsPage() {
     mutationFn: () =>
       configureFn({
         data: {
+          ...(reconnectId ? { connection_id: reconnectId } : {}),
           provider: selectedApp?.provider ?? "",
           display_name: selectedApp?.display_name ?? "",
           account_label: accountLabel,
@@ -149,6 +152,7 @@ function ConnectionsPage() {
       );
       setSelectedApp(null);
       setAccountLabel("");
+      setReconnectId(undefined);
       setEndpointUrl("");
       setApiKey("");
       void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
@@ -386,7 +390,7 @@ function ConnectionsPage() {
       </Card>
 
       <Dialog open={Boolean(managedApp)} onOpenChange={(open) => !open && setManagedApp(null)}>
-        <DialogContent className="sm:max-w-xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[85dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{managedApp?.display_name} accounts</DialogTitle>
             <DialogDescription>
@@ -396,31 +400,33 @@ function ConnectionsPage() {
           <div className="space-y-3">
             {(mine.data ?? [])
               .filter((c) => c.provider === managedApp?.provider)
-              .map((c, index) => (
-                <div key={c.id} className="rounded-lg border border-border p-4 space-y-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="font-medium">Account {index + 1}</p>
-                    <Badge variant="outline">{connectionStatusLabel(c.status)}</Badge>
-                  </div>
-                  <details className="text-xs text-muted-foreground">
-                    <summary className="cursor-pointer">Account details</summary>
-                    <p className="mt-2 break-all">Reference: {c.provider_account_id || c.id}</p>
-                  </details>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-amber-300 bg-amber-100 text-amber-950 hover:bg-amber-200 hover:text-amber-950 focus-visible:ring-2 focus-visible:ring-amber-400"
-                    disabled={disconnectMutation.isPending}
-                    onClick={() => disconnectMutation.mutate(c.id)}
-                  >
-                    {c.status === "pending" ? (
-                      <X aria-hidden="true" className="size-4" />
-                    ) : (
-                      <Unplug aria-hidden="true" className="size-4" />
-                    )}
-                    {c.status === "pending" ? "Cancel verification" : "Disconnect"}
-                  </Button>
-                </div>
+              .map((c) => (
+                <ConnectionAccountCard
+                  key={c.id}
+                  account={c}
+                  statusLabel={connectionStatusLabel(c.status)}
+                  busy={disconnectMutation.isPending || connectMutation.isPending}
+                  reconnectReady={Boolean(
+                    managedApp && (!managedApp.oauth || managedApp.oauth_ready),
+                  )}
+                  onDisconnect={() => disconnectMutation.mutate(c.id)}
+                  onReconnect={() => {
+                    if (!managedApp) return;
+                    if (managedApp.oauth) {
+                      toast.info(
+                        "Authorize the same provider account to reconnect. The existing connection is kept until you choose to disconnect it.",
+                      );
+                      connectMutation.mutate(managedApp.provider);
+                    } else {
+                      setReconnectId(c.id);
+                      setAccountLabel(c.identity.label || "Default account");
+                      setEndpointUrl(c.metadata.endpoint_url || "");
+                      setApiKey("");
+                      setSelectedApp(managedApp);
+                      setManagedApp(null);
+                    }
+                  }}
+                />
               ))}
           </div>
           <Button
@@ -434,6 +440,10 @@ function ConnectionsPage() {
               if (!managedApp) return;
               if (managedApp.oauth) connectMutation.mutate(managedApp.provider);
               else {
+                setReconnectId(undefined);
+                setAccountLabel("");
+                setEndpointUrl("");
+                setApiKey("");
                 setSelectedApp(managedApp);
                 setManagedApp(null);
               }
@@ -442,13 +452,24 @@ function ConnectionsPage() {
             <Plus aria-hidden="true" className="size-4" />
             {managedApp?.oauth && !managedApp.oauth_ready
               ? "Provider setup required"
-              : "Connect another account"}
+              : "Add new account"}
           </Button>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={Boolean(selectedApp)} onOpenChange={(open) => !open && setSelectedApp(null)}>
-        <DialogContent className="sm:max-w-lg">
+      <Dialog
+        open={Boolean(selectedApp)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedApp(null);
+            setReconnectId(undefined);
+            setAccountLabel("");
+            setEndpointUrl("");
+            setApiKey("");
+          }
+        }}
+      >
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg max-h-[85dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <KeyRound className="size-5 text-primary" />
