@@ -1957,13 +1957,24 @@ export const Route = createFileRoute("/mcp")({
               const matches = catalog
                 ? rankCapabilities(
                     goal,
-                    [...catalog.bySlug.values()].filter(isExecutable).map((item) => ({
-                      slug: item.slug,
-                      name: item.name,
-                      description: item.description,
-                      resourceType: item.resource_type,
-                      installationType: item.installation_type,
-                    })),
+                    [
+                      ...[...catalog.bySlug.values()].filter(isExecutable).map((item) => ({
+                        slug: item.slug,
+                        name: item.name,
+                        description: item.description,
+                        resourceType: item.resource_type,
+                        installationType: item.installation_type,
+                      })),
+                      ...PLATFORM_TOOLS.filter(
+                        (tool) => tool.name !== "auto_discover" && canUseTool(key, tool.name),
+                      ).map((tool) => ({
+                        slug: tool.name,
+                        name: toolTitle(tool.name),
+                        description: tool.description,
+                        resourceType: "function",
+                        installationType: "mcp-tool",
+                      })),
+                    ],
                     limit,
                   )
                 : [];

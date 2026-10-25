@@ -6,7 +6,7 @@ Auto defaults on for a new account context and preserves a saved Off preference.
 
 ## Tools and scope
 
-- `auto_discover`: matches approved metadata; requires `resources:read`. It does not execute a catalog match.
+- `auto_discover`: matches approved resource metadata and registered MCP functions allowed by the key; requires `resources:read`. It does not execute a catalog match.
 - `run_agent_team`: requires both `models:invoke` and `agents:invoke` on a personal key. Planner, Builder, and Reviewer run concurrently. Each tries up to three rotated routes discovered from the account's connected free-model catalogs. There is no paid fallback. Workers return proposals and have no execution tools; the coordinating client verifies and executes using separately authorized tools.
 - `save_context_checkpoint`: requires administrator role and `control:write`. Saves only the supplied redacted summary to owned Memory, with a deterministic ID for each user, project, and session. Project keys require verified project access. Organization/workspace keys without a project cannot write personal checkpoints.
 - `list_my_memory` with `checkpoint_session`: restores a saved checkpoint under the caller's existing memory-read and project boundaries.

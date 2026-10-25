@@ -1330,3 +1330,26 @@ test("saved browser profile mutations reject project and organization contexts b
   }
   expect(tables).not.toContain("app_connections");
 });
+
+test("Auto matches registered functions only when their key grants are present", async () => {
+  scopes = ["mcp:connect", "resources:read"];
+  let payload = (
+    await (
+      await call("auto_discover", { goal: "Planner Builder Reviewer worker team", limit: 10 })
+    ).json()
+  ).result.structuredContent;
+  expect(payload.matches.some((m: { slug: string }) => m.slug === "run_agent_team")).toBe(false);
+  scopes.push("models:invoke", "agents:invoke");
+  payload = (
+    await (
+      await call("auto_discover", { goal: "Planner Builder Reviewer worker team", limit: 10 })
+    ).json()
+  ).result.structuredContent;
+  expect(
+    payload.matches.some(
+      (m: { slug: string; resourceType: string }) =>
+        m.slug === "run_agent_team" && m.resourceType === "function",
+    ),
+  ).toBe(true);
+  expect(payload.execution_performed).toBe(false);
+});
