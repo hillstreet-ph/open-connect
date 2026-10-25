@@ -15,6 +15,7 @@ export const APP_ROUTE_PREFIXES = [
   "/tasks",
   "/schedule",
   "/automations",
+  "/approvals",
   "/library",
   "/resources",
   "/plugins",
