@@ -9,15 +9,16 @@ export function BackButton({ fallback = "/dashboard" }: { fallback?: "/dashboard
     select: (state) => (state.location.state.__TSR_index ?? 0) > 0,
   });
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  // Nothing to go back to: a direct visit to the fallback page itself.
-  if (!canGoBack && pathname === fallback) return null;
+  // Home surfaces never need a back control, even after internal navigation.
+  const path = pathname.replace(/\/+$/, "") || "/";
+  if (path === "/" || path === "/dashboard") return null;
   return (
     <Button
       variant="ghost"
       size="sm"
       aria-label="Go back"
       title="Go back"
-      className="shrink-0 px-2 sm:px-3"
+      className="shrink-0 gap-2 px-2 sm:px-3"
       onClick={() => {
         if (canGoBack) router.history.back();
         else void router.navigate({ to: fallback });
