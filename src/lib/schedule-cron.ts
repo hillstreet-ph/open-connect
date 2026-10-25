@@ -90,9 +90,11 @@ export function cronMatches(expression: string, date: Date, timezone = "UTC"): b
     const [min, max] = FIELD_RANGES[index]!;
     return fieldMatches(field, value, min, max);
   });
-  // Standard cron uses OR when both day-of-month and day-of-week are restricted.
+  // Standard cron uses AND if either day field starts with a wildcard, including steps.
   const dayMatches =
-    fields[2] !== "*" && fields[4] !== "*" ? matches[2] || matches[4] : matches[2] && matches[4];
+    !fields[2]!.startsWith("*") && !fields[4]!.startsWith("*")
+      ? matches[2] || matches[4]
+      : matches[2] && matches[4];
   return Boolean(matches[0] && matches[1] && matches[3] && dayMatches);
 }
 

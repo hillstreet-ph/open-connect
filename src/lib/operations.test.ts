@@ -8,7 +8,7 @@ import {
   validTimezone,
   RECURRENCES,
 } from "./operations.ts";
-import { cronMatches, parseCron } from "./schedule-cron.ts";
+import { cronMatches, nextCronOccurrence, parseCron } from "./schedule-cron.ts";
 
 test("task input rejects invalid status-adjacent fields, dates, and foreign IDs", () => {
   assert.equal(taskInput.parse({ title: "  Review  " }).title, "Review");
@@ -42,4 +42,16 @@ test("schedule presets are unique and cron uses standard calendar-day OR semanti
   assert.equal(cronMatches("0 9 1 * 1", new Date("2026-10-02T09:00:00Z")), false);
   assert.throws(() => parseCron("1- * * * *"));
   assert.throws(() => parseCron("1//2 * * * *"));
+});
+
+test("wildcard day steps preserve weekday restrictions without extra runs", () => {
+  const wednesday = new Date("2026-10-07T09:00:00Z");
+  assert.equal(cronMatches("0 9 */1 * 1", wednesday), false);
+  assert.equal(cronMatches("0 9 */2 * 1", wednesday), false);
+  assert.equal(cronMatches("0 9 1 * */1", wednesday), false);
+  assert.equal(cronMatches("0 9 */1 * 1", new Date("2026-10-05T09:00:00Z")), true);
+  assert.equal(
+    nextCronOccurrence("0 9 */1 * 1", new Date("2026-10-07T08:00:00Z")).toISOString(),
+    "2026-10-12T09:00:00.000Z",
+  );
 });
