@@ -7,6 +7,7 @@ import {
   classifyRisk,
   isOpaqueCredentialReference,
   rankCapabilities,
+  discoverPluginCapabilities,
   redactEvidence,
 } from "./autonomous-control.ts";
 
@@ -121,5 +122,37 @@ describe("capability discovery relevance", () => {
       rankCapabilities("browser for previously unknown workflow", candidates)[0]?.slug,
       "browser",
     );
+  });
+});
+
+describe("plugin capability discovery", () => {
+  const candidates = [
+    { slug: "browser_tool", name: "Browser action", resourceType: "function" },
+    { slug: "browser-kit", name: "Browser toolkit", resourceType: "toolkit" },
+    {
+      slug: "browser-app",
+      name: "Browser extension",
+      resourceType: "plugin",
+      installationType: "claude-plugin",
+    },
+    { slug: "browser-skill", name: "Browser skill", resourceType: "skill" },
+  ];
+  const platform = new Set(["browser_tool"]);
+  it("keeps executable functions distinct from package metadata", () => {
+    const results = discoverPluginCapabilities("browser", candidates, platform);
+    const action = results.find((item) => item.slug === "browser_tool")!;
+    assert.equal(action.source, "platform");
+    assert.equal(action.execution_status, "scope_authorized_function");
+    const skill = results.find((item) => item.slug === "browser-skill")!;
+    assert.equal(skill.execution_status, "catalog_only");
+    assert.equal(skill.discovery_tool, "fetch");
+    assert.deepEqual(skill.discovery_arguments, { id: "browser-skill" });
+  });
+  it("supports action, app, extension, toolkit and skill filters", () => {
+    for (const type of ["action", "function", "app", "extension", "toolkit", "skill"]) {
+      assert.equal(discoverPluginCapabilities("browser", candidates, platform, type).length, 1);
+    }
+    assert.throws(() => discoverPluginCapabilities("browser", candidates, platform, "unknown"));
+    assert.deepEqual(discoverPluginCapabilities("unmatched", candidates, platform), []);
   });
 });
