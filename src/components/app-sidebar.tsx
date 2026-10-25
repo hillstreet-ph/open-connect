@@ -1,3 +1,4 @@
+import { workspaceCapabilities } from "@/lib/nav";
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   Monitor,
@@ -68,16 +69,19 @@ const CLOUD: Item[] = [
   { to: "/cloud-computer", label: "Cloud Computer", icon: Monitor },
 ];
 
-const DISCOVER: Item[] = [
-  { to: "/resources", label: "Marketplace", icon: Boxes },
-  { to: "/library", label: "Resources", icon: Boxes },
-];
+const DISCOVER: Item[] = [{ to: "/resources", label: "Marketplace", icon: Boxes }];
 
-const CONNECTIONS: Item[] = [
-  { to: "/connections", label: "Connectors", icon: Plug },
-  { to: "/secrets", label: "Credentials", icon: LockKeyhole },
-  { to: "/models", label: "AI Gateway", icon: Sparkles },
-];
+const CAPABILITY_ICONS = {
+  "/library": Boxes,
+  "/connections": Plug,
+  "/models": Sparkles,
+  "/secrets": LockKeyhole,
+};
+const CAPABILITIES: Item[] = workspaceCapabilities.map(({ to, label }) => ({
+  to,
+  label,
+  icon: CAPABILITY_ICONS[to],
+}));
 
 function NavGroup({ label, items, pathname }: { label: string; items: Item[]; pathname: string }) {
   if (!items.length) return null;
@@ -132,7 +136,7 @@ export function AppSidebar() {
           pathname={pathname}
         />
         <NavGroup label="Cloud" items={CLOUD} pathname={pathname} />
-        <NavGroup label="Connections" items={CONNECTIONS} pathname={pathname} />
+        <NavGroup label="Capabilities" items={CAPABILITIES} pathname={pathname} />
       </SidebarContent>
 
       <SidebarSeparator />

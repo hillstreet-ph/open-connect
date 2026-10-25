@@ -268,7 +268,14 @@ function MarketplaceContent() {
         </div>
         {!user ? (
           <Button asChild variant="outline" className="w-full shrink-0 sm:w-auto">
-            <Link to="/auth">
+            <Link
+              to="/auth"
+              search={{
+                returnTo: linkedResource
+                  ? `/resources?resource=${encodeURIComponent(linkedResource)}`
+                  : "/resources",
+              }}
+            >
               <Lock className="mr-2 size-4" />
               Sign in to download
             </Link>
@@ -543,7 +550,12 @@ function MarketplaceContent() {
                           </div>
                         ) : (
                           <Button asChild size="sm" variant="outline">
-                            <Link to="/auth">
+                            <Link
+                              to="/auth"
+                              search={{
+                                returnTo: `/resources?resource=${encodeURIComponent(item.slug)}`,
+                              }}
+                            >
                               <Lock className="mr-1 size-3.5" />
                               Sign in
                             </Link>

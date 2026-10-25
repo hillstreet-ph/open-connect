@@ -9,6 +9,7 @@ import {
   flatPublicNav,
   publicCategories,
   resourceCategories,
+  workspaceCapabilities,
 } from "./nav.ts";
 import {
   groupProjectResources,
@@ -75,7 +76,7 @@ test("connection surfaces remain internal and separate from Marketplace", () => 
   for (const route of ["/connections", "/secrets", "/models"]) {
     assert.ok(sidebar.includes(route), "Missing connection route " + route);
   }
-  assert.ok(sidebar.includes('to: "/connections", label: "Connectors"'));
+  assert.ok(sidebar.includes("workspaceCapabilities"));
   assert.ok(!userMenu.includes('to="/integrations"'));
 
   const connectors = readFileSync(
@@ -300,6 +301,8 @@ test("every sidebar destination uses workspace chrome and matches page search la
     to: match[1]!,
     label: match[2]!,
   }));
+  assert.match(sidebar, /workspaceCapabilities\.map/);
+  items.push(...workspaceCapabilities.map(({ to, label }) => ({ to, label })));
   assert.ok(items.length > 10);
   assert.deepEqual(
     items.map((item) => item.to).sort(),
@@ -315,10 +318,10 @@ test("every sidebar destination uses workspace chrome and matches page search la
   assert.equal(isAppPath("/tools-unrelated"), false);
 });
 
-test("Discover keeps Marketplace and Resources while resource types stay in the library", () => {
+test("Discover keeps Marketplace while saved resources live in Capabilities", () => {
   assert.deepEqual(
     appCategories.find((group) => group.id === "discover")?.items.map((item) => item.label),
-    ["Marketplace", "Resources"],
+    ["Marketplace"],
   );
   assert.equal(
     flatAppNav().some((item) => item.to === "/others"),
@@ -326,10 +329,10 @@ test("Discover keeps Marketplace and Resources while resource types stay in the 
   );
 });
 
-test("Connections keeps Connectors, Credentials, and AI Gateway", () => {
+test("Capabilities uses Resources, Connections, Models, and Credentials", () => {
   assert.deepEqual(
-    appCategories.find((group) => group.id === "connections")?.items.map((item) => item.label),
-    ["Connectors", "Credentials", "AI Gateway"],
+    appCategories.find((group) => group.id === "capabilities")?.items.map((item) => item.label),
+    ["Resources", "Connections", "Models", "Credentials"],
   );
 });
 
