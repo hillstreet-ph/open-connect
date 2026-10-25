@@ -136,6 +136,7 @@ function ConnectionsPage() {
       configureFn({
         data: {
           ...(reconnectId ? { connection_id: reconnectId } : {}),
+          new_account: !reconnectId,
           provider: selectedApp?.provider ?? "",
           display_name: selectedApp?.display_name ?? "",
           account_label: accountLabel,
@@ -422,7 +423,7 @@ function ConnectionsPage() {
                       setAccountLabel(c.identity.label || "Default account");
                       setEndpointUrl(c.metadata.endpoint_url || "");
                       setApiKey("");
-                      setSelectedApp(managedApp);
+                      setSelectedApp({ ...managedApp, display_name: c.display_name });
                       setManagedApp(null);
                     }
                   }}
