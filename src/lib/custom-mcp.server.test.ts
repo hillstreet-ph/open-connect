@@ -172,3 +172,22 @@ test("owner discovery retains disabled native tools and rejects foreign catalogs
     /Connection not found/,
   );
 });
+
+test("managed provider records retain owner checks while using their broker executor", async () => {
+  const connection = {
+    id: "managed",
+    user_id: "owner",
+    provider: "gmail",
+    status: "connected",
+    credential_reference: "composio://connected-account/ca_one",
+  };
+  await assertToolConnectionAccess("owner", connection);
+  await assert.rejects(assertToolConnectionAccess("other", connection), /Connection not found/);
+  await assert.rejects(
+    assertToolConnectionAccess("owner", {
+      ...connection,
+      credential_reference: "credential://gmail/key",
+    }),
+    /No executable adapter/,
+  );
+});

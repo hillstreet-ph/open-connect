@@ -192,7 +192,11 @@ async function authConfigForToolkit(toolkitSlug: string, apiKey: string): Promis
   return created.auth_config.id;
 }
 
-async function composioRequest<T>(path: string, apiKey: string, init?: RequestInit): Promise<T> {
+export async function composioRequest<T>(
+  path: string,
+  apiKey: string,
+  init?: RequestInit,
+): Promise<T> {
   const response = await fetch(`https://backend.composio.dev/api/v3.1${path}`, {
     ...init,
     headers: {
