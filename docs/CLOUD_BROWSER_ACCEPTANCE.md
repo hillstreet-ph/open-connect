@@ -14,23 +14,23 @@ Checked 2026-10-25 (Asia/Manila). This records observed results, not a guarantee
 
 ## Acceptance matrix for the supplied implementation brief
 
-| Check                               | Status and evidence                                                                                                |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| Public website task and outcome     | Passed; linked native run completed, read Example Domain, followed its link, and reported IANA's final URL/heading |
-| Read-only live preview              | URL delivery verified; iframe playback unverified; never label it manual takeover                                  |
-| Profile setup and saved state       | API and mock regression coverage exist; no account sign-in or saved state was modified in this test                |
-| Saved login reuse                   | Unverified; stored cookie counts do not establish valid authentication                                             |
-| Separate-account isolation          | Personal key boundary regression tests exist; live multi-account isolation unverified                              |
-| Expired-login repair                | Unverified; native per-run Vault selection is not implemented                                                      |
-| Unsupported MFA handoff             | Not tested; no MFA or CAPTCHA automation attempted                                                                 |
-| Disconnect and duplicate submission | Poll recovery regression tests exist; durable submission reconciliation still required                             |
-| Async cancellation                  | Exposed by native adapter; live cancellation not tested here                                                       |
-| Webhook retries and deduplication   | No native webhook ingestion/verification/deduplication acceptance completed                                        |
-| Evidence retrieval                  | Final text result verified; screenshot/HTML/recording retrieval unverified                                         |
-| Proxy schema validation             | Country-code normalization tested; live proxy behavior unverified                                                  |
-| Provider/account errors             | Existing error handling and mock coverage; insufficient funds/rate-limit scenarios unverified live                 |
-| Profile/domain deletion             | Not implemented in the native profile UI; no saved state was deleted                                               |
-| Completion claims                   | Report only the above observed outcomes; a provider COMPLETED status alone does not establish business success     |
+| Check                               | Status and evidence                                                                                                              |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Public website task and outcome     | Passed; linked native run completed, read Example Domain, followed its link, and reported IANA's final URL/heading               |
+| Read-only live preview              | URL delivery verified; iframe playback unverified; never label it manual takeover                                                |
+| Profile setup and saved state       | API and mock regression coverage exist; no account sign-in or saved state was modified in this test                              |
+| Saved login reuse                   | Live GitHub check reached /login with authenticated=false; profile attachment worked but its GitHub login state requires renewal |
+| Separate-account isolation          | Personal key boundary regression tests exist; live multi-account isolation unverified                                            |
+| Expired-login repair                | Unverified; native per-run Vault selection is not implemented                                                                    |
+| Unsupported MFA handoff             | Not tested; no MFA or CAPTCHA automation attempted                                                                               |
+| Disconnect and duplicate submission | Poll recovery regression tests exist; durable submission reconciliation still required                                           |
+| Async cancellation                  | Exposed by native adapter; live cancellation not tested here                                                                     |
+| Webhook retries and deduplication   | No native webhook ingestion/verification/deduplication acceptance completed                                                      |
+| Evidence retrieval                  | Final text result verified; screenshot/HTML/recording retrieval unverified                                                       |
+| Proxy schema validation             | Country-code normalization tested; live proxy behavior unverified                                                                |
+| Provider/account errors             | Existing error handling and mock coverage; insufficient funds/rate-limit scenarios unverified live                               |
+| Profile/domain deletion             | Not implemented in the native profile UI; no saved state was deleted                                                             |
+| Completion claims                   | Report only the above observed outcomes; a provider COMPLETED status alone does not establish business success                   |
 
 ## Startup timeout correction
 
@@ -48,3 +48,11 @@ structured output, step/capture budgets; direct CDP UI/control; durable job/run 
 completion callbacks; account mapping; browser-job schedules; retention/export/deletion; and distinct
 Search/Fetch/Research/Monitor integration. These must remain unverified until implemented and tested.
 No upstream SDK was installed, no credentials were exported, and no visibility was widened.
+
+## Saved-login check
+
+[GitHub profile run](https://open-connect.site/cloud-browser?run=3efa4d25-ed76-4c7c-9a2f-8d87301aba08)
+attached the selected saved profile, completed in three steps, and returned `authenticated: false`,
+`https://github.com/login`, and `Sign in to GitHub`. This is a completed diagnostic with a failed
+login-reuse outcome, not proof of a valid saved login. Renew GitHub sign-in in profile setup and save
+before rechecking. No credential injection, login attempt or account settings change was made.
