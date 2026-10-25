@@ -69,6 +69,20 @@ const MCP_ENDPOINT = "https://open-connect.site/mcp";
 
 const aiClients = [
   {
+    provider: "kilo",
+    name: "Kilo Code",
+    description:
+      "Use Open-Connect as a custom OpenAI-compatible model provider, or connect supported MCP tools.",
+    action: "View MCP setup",
+  },
+  {
+    provider: "commandcode",
+    name: "Command Code",
+    description:
+      "Use the Open-Connect /v1 base URL and a model key in BYOK Providers. Use a separate integration token for MCP tools.",
+    action: "View MCP setup",
+  },
+  {
     provider: "chatgpt",
     name: "ChatGPT",
     description:
@@ -239,9 +253,6 @@ function IntegrationsPage() {
           <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
             {sectionTitles[section]}
           </h1>
-          <Button asChild size="sm" variant="outline">
-            <Link to="/settings">Back to Settings</Link>
-          </Button>
         </div>
         <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground sm:text-base">
           Connect external AI clients, MCP clients, and Telegram into Open-Connect. Each integration
@@ -509,7 +520,6 @@ function IntegrationsPage() {
       {user ? (
         <section id="api-key" hidden={section !== "api-key"} className="scroll-mt-6">
           <div className="mb-4">
-            <h2 className="text-lg font-semibold">API Key</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Create and revoke scoped keys for clients that use bearer authentication. ChatGPT uses
               OAuth and does not need an API key.

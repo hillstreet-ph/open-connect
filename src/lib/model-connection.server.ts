@@ -1,3 +1,4 @@
+import { COMPATIBLE_GATEWAY_PROVIDERS } from "./ai-gateway-providers.ts";
 /** Build an OpenRouter upstream only from the authenticated user's connection. */
 export type SavedModelConnection = {
   provider: string;
@@ -7,17 +8,7 @@ export type SavedModelConnection = {
 };
 
 export type SavedModelUpstream = {
-  name:
-    | "openrouter"
-    | "litellm"
-    | "nvidia"
-    | "ollama_cloud"
-    | "groq"
-    | "cerebras"
-    | "openai"
-    | "xai"
-    | "mistral"
-    | "deepseek";
+  name: (typeof COMPATIBLE_GATEWAY_PROVIDERS)[number]["id"];
   baseUrl: string;
   headers: Record<string, string>;
 };
@@ -68,17 +59,12 @@ function endpointForLiteLlm(metadata: unknown): string {
   return url.toString().replace(/\/+$/, "");
 }
 
-const COMPATIBLE_MODEL_ENDPOINTS: Record<Exclude<SavedModelUpstream["name"], "litellm">, string> = {
-  openrouter: "https://openrouter.ai/api/v1",
-  nvidia: "https://integrate.api.nvidia.com/v1",
-  ollama_cloud: "https://ollama.com/v1",
-  groq: "https://api.groq.com/openai/v1",
-  cerebras: "https://api.cerebras.ai/v1",
-  openai: "https://api.openai.com/v1",
-  xai: "https://api.x.ai/v1",
-  mistral: "https://api.mistral.ai/v1",
-  deepseek: "https://api.deepseek.com/v1",
-};
+const COMPATIBLE_MODEL_ENDPOINTS: Record<string, string> = Object.fromEntries(
+  COMPATIBLE_GATEWAY_PROVIDERS.filter((provider) => provider.id !== "litellm").map((provider) => [
+    provider.id,
+    provider.baseUrl,
+  ]),
+);
 
 /** Resolve connected OpenAI-compatible model providers for this user only. */
 export async function savedModelUpstreams(
@@ -104,7 +90,13 @@ export async function savedModelUpstreams(
     // Old/imported connections can show as connected without a gateway vault reference.
     // Skip those rows so one stale connection cannot block another valid provider.
     if (!reference) continue;
-    const credential = credentialValue(await dependencies.resolve(userId, reference[1]!));
+    let credential: string;
+    try {
+      credential = credentialValue(await dependencies.resolve(userId, reference[1]!));
+    } catch {
+      // A removed/stale account must not prevent the user's other accounts from working.
+      continue;
+    }
     configured.push({
       name: connection.provider as SavedModelUpstream["name"],
       baseUrl:
@@ -112,7 +104,7 @@ export async function savedModelUpstreams(
           ? endpointForLiteLlm(connection.metadata)
           : COMPATIBLE_MODEL_ENDPOINTS[
               connection.provider as Exclude<SavedModelUpstream["name"], "litellm">
-            ],
+            ]!,
       headers: {
         Authorization: `Bearer ${credential}`,
         "Content-Type": "application/json",

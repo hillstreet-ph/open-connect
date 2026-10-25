@@ -1,14 +1,19 @@
+import { modelProviderState } from "@/lib/model-provider-state";
 import { ApiKeysCard } from "@/components/api-keys-card";
 import { testFreeModel } from "@/lib/model-check.functions";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowRight, CheckCircle2, KeyRound, List, Loader2 } from "lucide-react";
+import { CheckCircle2, KeyRound, List, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { BrandLogo } from "@/components/brand-logo";
 import { useAuth } from "@/hooks/use-auth";
-import { configureAppConnection, listAppConnections } from "@/lib/connections.functions";
+import {
+  configureAppConnection,
+  disconnectApp,
+  listAppConnections,
+} from "@/lib/connections.functions";
 import { listFreeModels } from "@/lib/model-catalog.functions";
 import { AI_GATEWAY_PROVIDERS, AI_GATEWAY_PROVIDER_IDS } from "@/lib/ai-gateway-providers";
 import { Button } from "@/components/ui/button";
@@ -57,6 +62,9 @@ function ModelsPage() {
   const freeModelsFn = useServerFn(listFreeModels);
   const configureFn = useServerFn(configureAppConnection);
   const [activeProvider, setActiveProvider] = useState<string | null>(null);
+  const disconnectFn = useServerFn(disconnectApp);
+  const [connectionId, setConnectionId] = useState<string | null>(null);
+  const [accountLabel, setAccountLabel] = useState("AI Gateway");
   const [providerKey, setProviderKey] = useState("");
   const [providerUrl, setProviderUrl] = useState("");
   const connections = useQuery({
@@ -69,32 +77,41 @@ function ModelsPage() {
     queryFn: () => freeModelsFn({}),
     enabled: Boolean(user),
   });
-  const connectedProviders = new Set(
-    (connections.data ?? [])
-      .filter(
-        (item) =>
-          item.status === "connected" &&
-          (!gatewayProviders.has(item.provider) || item.gateway_ready),
-      )
-      .map((item) => item.provider),
-  );
   const reconnectProviders = new Set(
-    (connections.data ?? [])
-      .filter(
-        (item) =>
-          item.status === "connected" && gatewayProviders.has(item.provider) && !item.gateway_ready,
-      )
-      .map((item) => item.provider),
+    AI_GATEWAY_PROVIDERS.filter(
+      (provider) => modelProviderState(connections.data ?? [], provider.id).needsReconnect,
+    ).map((provider) => provider.id),
   );
+  function openProvider(provider: (typeof AI_GATEWAY_PROVIDERS)[number], id: string | null = null) {
+    const account = (connections.data ?? []).find((item) => item.id === id);
+    setActiveProvider(provider.id);
+    setConnectionId(id);
+    setAccountLabel(account?.identity.label || "AI Gateway");
+    setProviderUrl(account?.metadata.endpoint_url || provider.baseUrl);
+    setProviderKey("");
+  }
+  const removeConnection = useMutation({
+    mutationFn: (id: string) => disconnectFn({ data: { id } }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
+      void queryClient.invalidateQueries({ queryKey: ["free-model-catalog"] });
+      modelTest.reset();
+      toast.success("Provider account disconnected");
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Could not disconnect"),
+  });
   const configureMutation = useMutation({
     mutationFn: () => {
       const provider = AI_GATEWAY_PROVIDERS.find((item) => item.id === activeProvider);
       if (!provider) throw new Error("Choose an AI provider");
       return configureFn({
         data: {
+          ...(connectionId ? { connection_id: connectionId } : {}),
+          new_account: !connectionId,
           provider: provider.id,
           display_name: provider.name,
-          account_label: "AI Gateway",
+          account_label: accountLabel.trim() || "AI Gateway",
           endpoint_url: providerUrl || provider.baseUrl,
           api_key: providerKey,
           auth_type: "api_key",
@@ -103,6 +120,8 @@ function ModelsPage() {
     },
     onSuccess: () => {
       toast.success("AI provider connected");
+      modelTest.reset();
+      setConnectionId(null);
       setActiveProvider(null);
       setProviderKey("");
       setProviderUrl("");
@@ -142,7 +161,7 @@ function ModelsPage() {
           <div className="rounded-lg border border-border/70 bg-background/60 px-4 py-3">
             <span className="text-muted-foreground">API key </span>
             <span className="text-accent">sk-oc-…</span>
-            <span className="ml-2 text-muted-foreground">(create below)</span>
+            <span className="ml-2 text-muted-foreground">(create above)</span>
           </div>
         </CardContent>
       </Card>
@@ -318,44 +337,87 @@ function ModelsPage() {
         only provider models explicitly marked free or configured at zero cost; named paid models
         remain available through the gateway and follow the provider's billing.
       </p>
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-5 grid gap-4 xl:grid-cols-2">
         {AI_GATEWAY_PROVIDERS.map((provider) => (
           <Card key={provider.id} className="p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-2">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex min-w-0 flex-1 items-center gap-2">
                 <BrandLogo provider={provider.id} name={provider.name} size="sm" />
-                <span className="truncate text-sm font-medium">{provider.name}</span>
+                <span className="break-words font-medium">{provider.name}</span>
               </div>
-              {reconnectProviders.has(provider.id) ? (
-                <Badge variant="destructive">Reconnect</Badge>
-              ) : connectedProviders.has(provider.id) ? (
-                <Badge variant="secondary" className="gap-1">
-                  <CheckCircle2 className="size-3" /> Connected
-                </Badge>
-              ) : null}
               <Button
                 size="sm"
                 variant="outline"
-                disabled={!user}
-                onClick={() => {
-                  setActiveProvider(provider.id);
-                  setProviderUrl(provider.baseUrl);
-                  setProviderKey("");
-                }}
+                disabled={!user || configureMutation.isPending}
+                onClick={() => openProvider(provider)}
               >
-                {reconnectProviders.has(provider.id)
-                  ? "Connect again"
-                  : connectedProviders.has(provider.id)
-                    ? "Manage connection"
-                    : "Connect"}
+                Add account
               </Button>
+            </div>
+            {provider.id === "anthropic" ? (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Native Anthropic credential validation. Use an OpenAI-compatible router for Claude
+                chat through /v1.
+              </p>
+            ) : null}
+            <div className="mt-3 space-y-2">
+              {modelProviderState(connections.data ?? [], provider.id).accounts.map((account) => (
+                <div key={account.id} className="space-y-2 rounded-lg border border-border/70 p-3">
+                  <p className="break-words text-sm">
+                    {account.identity.label ||
+                      account.identity.email ||
+                      account.identity.login ||
+                      account.display_name}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant={account.gateway_ready ? "secondary" : "outline"}>
+                      {account.gateway_ready ? (
+                        <>
+                          <CheckCircle2 className="mr-1 size-3" />{" "}
+                          {provider.id === "anthropic" ? "Credential verified" : "Ready"}
+                        </>
+                      ) : account.status === "disconnected" ? (
+                        "Disconnected"
+                      ) : (
+                        "Reconnect required"
+                      )}
+                    </Badge>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={configureMutation.isPending}
+                      onClick={() => openProvider(provider, account.id)}
+                    >
+                      Reconnect
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={removeConnection.isPending || configureMutation.isPending}
+                      onClick={() => removeConnection.mutate(account.id)}
+                    >
+                      Disconnect
+                    </Button>
+                  </div>
+                </div>
+              ))}
             </div>
             {activeProvider === provider.id ? (
               <div className="mt-4 space-y-3 border-t border-border/70 pt-4">
                 <div className="space-y-1.5">
+                  <Label htmlFor={`account-label-${provider.id}`}>Account label</Label>
+                  <Input
+                    id={`account-label-${provider.id}`}
+                    value={accountLabel}
+                    onChange={(event) => setAccountLabel(event.target.value)}
+                    placeholder="Personal or work account"
+                  />
+                </div>
+                <div className="space-y-1.5">
                   <Label htmlFor={`provider-url-${provider.id}`}>API base URL</Label>
                   <Input
                     id={`provider-url-${provider.id}`}
+                    readOnly={provider.id !== "litellm"}
                     type="url"
                     value={providerUrl}
                     onChange={(event) => setProviderUrl(event.target.value)}
@@ -387,9 +449,17 @@ function ModelsPage() {
                     ) : (
                       <KeyRound className="mr-1 size-3.5" />
                     )}
-                    {connectedProviders.has(provider.id) ? "Update provider" : "Save provider"}
+                    {connectionId ? "Verify and reconnect" : "Verify and connect"}
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => setActiveProvider(null)}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setActiveProvider(null);
+                      setConnectionId(null);
+                      setProviderKey("");
+                    }}
+                  >
                     Cancel
                   </Button>
                 </div>
@@ -402,25 +472,6 @@ function ModelsPage() {
         Provider keys are never returned to the browser after saving. Clients continue using only
         their scoped Open‑Connect key and the shared `/v1` base URL.
       </p>
-
-      <div className="mt-12 flex flex-wrap gap-2">
-        <Button asChild>
-          <Link to="/api-keys">
-            Get a model key <ArrowRight className="ml-1 size-4" />
-          </Link>
-        </Button>
-        <Button asChild variant="outline">
-          <Link to="/api-keys">
-            <KeyRound className="mr-1 size-4" />
-            API keys
-          </Link>
-        </Button>
-        <Button asChild variant="outline">
-          <Link to="/integrations" search={{ section: "ai-agents" }}>
-            Integrations
-          </Link>
-        </Button>
-      </div>
     </div>
   );
 }

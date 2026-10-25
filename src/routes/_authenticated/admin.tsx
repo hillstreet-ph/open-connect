@@ -200,12 +200,6 @@ function AdminPage() {
           )}
         </CardContent>
       </Card>
-
-      <p className="mt-6 text-center text-sm text-muted-foreground">
-        <Link to="/dashboard" className="text-primary hover:underline">
-          ← Back to dashboard
-        </Link>
-      </p>
     </div>
   );
 }

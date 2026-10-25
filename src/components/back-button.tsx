@@ -3,7 +3,11 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 /** Router-owned history avoids sending a direct-entry visitor back to another site. */
-export function BackButton({ fallback = "/dashboard" }: { fallback?: "/dashboard" | "/" }) {
+export function BackButton({
+  fallback = "/dashboard",
+}: {
+  fallback?: "/dashboard" | "/" | "/settings" | "/projects" | "/admin";
+}) {
   const router = useRouter();
   const canGoBack = useRouterState({
     select: (state) => (state.location.state.__TSR_index ?? 0) > 0,

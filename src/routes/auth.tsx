@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -298,11 +298,6 @@ function AuthPage() {
                 </button>
               </p>
             )}
-            <p className="text-xs">
-              <Link to="/" className="hover:text-foreground">
-                Back to home
-              </Link>
-            </p>
           </div>
         </CardContent>
       </Card>

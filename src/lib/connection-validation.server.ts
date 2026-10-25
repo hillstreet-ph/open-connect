@@ -1,3 +1,4 @@
+import { AI_GATEWAY_PROVIDERS } from "./ai-gateway-providers.ts";
 import type { normalizeConnectionSetup } from "./connection-setup";
 import { isRemoteMcpProvider } from "./remote-mcp.ts";
 
@@ -22,7 +23,13 @@ const DEFAULT_BASES: Record<string, string> = {
 };
 
 function base(setup: Setup) {
-  return (setup.endpointUrl || DEFAULT_BASES[setup.provider] || "").replace(/\/$/, "");
+  const official = AI_GATEWAY_PROVIDERS.find(
+    (provider) => provider.id === setup.provider && provider.id !== "litellm",
+  );
+  return (official?.baseUrl || setup.endpointUrl || DEFAULT_BASES[setup.provider] || "").replace(
+    /\/$/,
+    "",
+  );
 }
 
 async function checkedFetch(url: string, init: RequestInit, send: typeof fetch): Promise<Response> {
@@ -151,7 +158,7 @@ export async function validateConnectionCredential(
 
   if (setup.provider === "google") {
     await checkedFetch(
-      `${base(setup)}/models`,
+      `${DEFAULT_BASES["google"]}/models`,
       { headers: { "x-goog-api-key": setup.apiKey } },
       send,
     );
@@ -170,11 +177,17 @@ export async function validateConnectionCredential(
       "ollama_cloud",
       "groq",
       "cerebras",
+      "kilo",
+      "commandcode",
+      "huggingface",
     ].includes(setup.provider)
   ) {
     const providerBase = base(setup);
     if (!providerBase) throw new Error("Provider base URL is required for validation.");
-    await checkedFetch(`${providerBase}/models`, { headers: bearer }, send);
+    const response = await checkedFetch(`${providerBase}/models`, { headers: bearer }, send);
+    const payload = (await response.json().catch(() => null)) as { data?: unknown } | null;
+    if (!Array.isArray(payload?.data))
+      throw new Error("Provider did not return a valid model catalog. Check its API endpoint.");
     return { verified: true, detail: "Provider models verified" };
   }
 

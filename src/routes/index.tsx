@@ -164,8 +164,8 @@ const plans = [
     popular: false,
     features: [
       "Base URL → /v1",
-      "API key → oc_live_…",
-      "MCP → /mcp",
+      "Model key → sk-oc-…",
+      "Integration token → oc_live_… · /mcp",
       "Model aliases open-connect/*",
       "Edge on Cloudflare Pages",
     ],
