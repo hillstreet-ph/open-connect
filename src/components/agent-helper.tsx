@@ -25,6 +25,7 @@ import {
 } from "@/lib/agent-chat.functions";
 import { type ChatAttachment, type ChatMessage } from "@/lib/agent-chat";
 import { useAuth } from "@/hooks/use-auth";
+import { redactDataText } from "@/lib/data-controls";
 
 type Cursor = { at: string; id: string } | null;
 export function AgentHelper() {
@@ -510,6 +511,16 @@ function AgentHelperPanel({ user }: { user: { id: string } }) {
             ) : null}
           </div>
           <form onSubmit={(event) => void send(event)} className="space-y-2 border-t p-3">
+            {redactDataText(draft) !== draft && (
+              <p role="status" className="rounded-lg border p-3 text-sm">
+                Possible credential detected. Use the secure{" "}
+                <a className="underline" href="/secrets">
+                  Credentials form
+                </a>{" "}
+                for storage and reuse. Chat capture redacts common secrets; it does not import them
+                into the vault or verify that they work. Remove secret values before sending.
+              </p>
+            )}
             <AgentAttachments
               files={files}
               onChange={setFiles}

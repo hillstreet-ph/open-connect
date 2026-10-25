@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { normalizeCredentialValue, sameCredentialIdentity } from "./credential-save-policy";
 
 export type SecretType =
   "api_key" | "oauth_token" | "mcp_url" | "bot_token" | "password" | "totp" | "other";
@@ -89,7 +90,10 @@ export const createSecret = createServerFn({ method: "POST" })
     }) => ({
       name: (input?.name ?? "").trim().slice(0, 120),
       secret_type: (input?.secret_type ?? "api_key") as SecretType,
-      secret_value: (input?.secret_value ?? "").trim(),
+      secret_value: normalizeCredentialValue(
+        input?.secret_value ?? "",
+        input?.secret_type ?? "api_key",
+      ),
       email_address: (input?.email_address ?? "").trim().slice(0, 320),
       username: (input?.username ?? "").trim().slice(0, 320),
       website: (input?.website ?? "").trim().slice(0, 2048),
@@ -118,6 +122,18 @@ export const createSecret = createServerFn({ method: "POST" })
       throw new Error("API keys and tokens cannot contain spaces or sentences");
     }
 
+    const { data: owned, error: inventoryError } =
+      await context.supabase.rpc("list_credential_secrets");
+    if (inventoryError)
+      throw new Error("Existing credentials could not be checked. No credential was created.");
+    if (!Array.isArray(owned))
+      throw new Error("Credential inventory is unavailable. No credential was created.");
+    const existing = owned.map(credentialMetadata);
+    if (existing.some((item) => sameCredentialIdentity(data, item))) {
+      throw new Error(
+        "A credential with this name, type, account and website already exists. Reuse or explicitly edit that entry. Use a distinct name only for a separate credential purpose; no values were changed.",
+      );
+    }
     const { data: row, error } = await context.supabase.rpc("create_credential_item", {
       p_name: data.name,
       p_secret_type: data.secret_type,
