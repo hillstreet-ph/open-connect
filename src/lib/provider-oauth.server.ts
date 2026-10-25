@@ -6,7 +6,7 @@ export function selectOAuthConnectionTarget<T extends { id: string }, U extends 
   matching: U | null,
   reconnectId: string | null,
 ): T | U {
-  if (reconnectId && matching?.id !== reconnectId) {
+  if (reconnectId && reconnectId !== pending.id && matching?.id !== reconnectId) {
     throw new Error("Sign in with the same provider account selected for reconnect.");
   }
   return matching ?? pending;
