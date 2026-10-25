@@ -1,6 +1,4 @@
-import { useServerFn } from "@tanstack/react-start";
-import { exportContextData } from "@/lib/memory.functions";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useLocation } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import {
@@ -30,6 +28,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DataControlsPanel } from "@/components/data-controls-panel";
 import { profileDraftValue } from "@/lib/react-compat";
 import { useRoles } from "@/hooks/use-roles";
 
@@ -50,22 +49,7 @@ const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 function SettingsPage() {
   const queryClient = useQueryClient();
-  const exportFn = useServerFn(exportContextData);
-  const exportData = useMutation({
-    mutationFn: () => exportFn({}),
-    onSuccess: (data) => {
-      const url = URL.createObjectURL(
-        new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }),
-      );
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "open-connect-context.json";
-      link.click();
-      URL.revokeObjectURL(url);
-      toast.success("Memory and Knowledge export downloaded");
-    },
-    onError: (error) => toast.error(error instanceof Error ? error.message : "Export failed"),
-  });
+  const location = useLocation();
   const { isAdmin } = useRoles();
   const fileRef = useRef<HTMLInputElement>(null);
   const [nameDraft, setNameDraft] = useState<{ userId: string; value: string } | null>(null);
@@ -205,7 +189,7 @@ function SettingsPage() {
         Manage your profile, workspace access, connected apps, data, and security.
       </p>
 
-      <Tabs defaultValue="profile" className="mt-8">
+      <Tabs defaultValue={location.hash === "data" ? "data" : "profile"} className="mt-8">
         <TabsList
           aria-label="Settings categories"
           className="h-auto w-full flex-wrap justify-start gap-2"
@@ -214,7 +198,7 @@ function SettingsPage() {
           <TabsTrigger value="security">Security & login</TabsTrigger>
           <TabsTrigger value="workspace">Workspace</TabsTrigger>
           <TabsTrigger value="apps">Apps & system</TabsTrigger>
-          <TabsTrigger value="data">Data & privacy</TabsTrigger>
+          <TabsTrigger value="data">Data Controls</TabsTrigger>
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
         </TabsList>
         <TabsContent value="profile">
@@ -408,27 +392,8 @@ function SettingsPage() {
             />
           </div>
         </TabsContent>
-        <TabsContent value="data">
-          <Card className="mb-4">
-            <CardHeader>
-              <CardTitle>Data Controls</CardTitle>
-              <CardDescription>
-                Manage the context you choose to save in Open-Connect.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Clients can save redacted context checkpoints and verified run summaries to Memory.
-                Three distinct successful runs of the same procedure can create reusable Knowledge
-                and a private Studio draft when the key permits resource writes. Drafts require
-                verification before publication. Open-Connect cannot capture unseen host
-                conversations or compact another app’s history.
-              </p>
-              <Button onClick={() => exportData.mutate()} disabled={exportData.isPending}>
-                {exportData.isPending ? "Preparing export…" : "Export Memory and Knowledge"}
-              </Button>
-            </CardContent>
-          </Card>
+        <TabsContent value="data" className="space-y-5">
+          <DataControlsPanel />
           <div className="grid gap-4 md:grid-cols-2">
             <SettingsLinkCard
               to="/memory"

@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { ResourceLibraryCard } from "@/components/resource-library-card";
 import { ResourceReviewPanel } from "@/components/resource-review-panel";
+import { DataControlsPanel } from "@/components/data-controls-panel";
 import { ToolkitCreator } from "@/components/toolkit-creator";
 import { MemoryKnowledgePage } from "./memory";
 import { useRoles } from "@/hooks/use-roles";
@@ -124,6 +125,10 @@ function StudioPage() {
           </Button>
         </div>
       </header>
+
+      <section id="reuse-drafts" className="scroll-mt-6">
+        <DataControlsPanel studio />
+      </section>
 
       <section id="packages" className="scroll-mt-6 space-y-5">
         <SectionHeading

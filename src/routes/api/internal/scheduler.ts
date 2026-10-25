@@ -14,6 +14,8 @@ async function processDueSchedules() {
   // Generated database types lag the schedules and control-plane migrations.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabaseAdmin as any;
+  const { error: retentionError } = await db.rpc("prune_data_control_history");
+  if (retentionError) throw new Error("Could not apply Data Controls retention.");
   const now = new Date();
   const nowIso = now.toISOString();
   const leaseOwner = crypto.randomUUID();
