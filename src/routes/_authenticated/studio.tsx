@@ -12,7 +12,7 @@ import { ResourceLibraryCard } from "@/components/resource-library-card";
 import { ResourceReviewPanel } from "@/components/resource-review-panel";
 import { DataControlsPanel } from "@/components/data-controls-panel";
 import { ResourceUrlImport } from "@/components/resource-url-import";
-import { UniversalConnectorLauncher } from "@/components/universal-connector-launcher";
+import { AppSetupWorkbench } from "@/components/app-setup-workbench";
 import { ToolkitCreator } from "@/components/toolkit-creator";
 import { MemoryKnowledgePage } from "./memory";
 import { useRoles } from "@/hooks/use-roles";
@@ -94,6 +94,9 @@ function StudioPage() {
         </p>
         <div className="mt-5 flex flex-wrap gap-2">
           <Button asChild size="sm" variant="outline">
+            <a href="#app-setup">Build & install</a>
+          </Button>
+          <Button asChild size="sm" variant="outline">
             <a href="#packages">
               <PackageOpen className="size-3.5" />
               Packages
@@ -132,7 +135,7 @@ function StudioPage() {
         <DataControlsPanel studio />
       </section>
 
-      <UniversalConnectorLauncher />
+      <AppSetupWorkbench />
       <ResourceUrlImport />
       <section id="packages" className="scroll-mt-6 space-y-5">
         <SectionHeading

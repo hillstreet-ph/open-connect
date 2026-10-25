@@ -38,7 +38,16 @@ export const refreshConnectorCapabilities = createServerFn({ method: "POST" })
         connection.transport,
       );
     } else {
-      throw new Error("Use the provider's account capabilities panel for this connector");
+      const { listCustomMcpTools } = await import("./custom-mcp.server");
+      const catalog = await listCustomMcpTools(context.userId, row.id);
+      snapshot = {
+        server: { name: row.display_name },
+        tools: catalog.tools,
+        prompts: [],
+        resources: [],
+        checked_at: new Date().toISOString(),
+        catalog_scope: "tools_only",
+      };
     }
     if (row.metadata.auth_type === "oauth") {
       const { activateOAuthConnection } = await import("./oauth-activation.server");
