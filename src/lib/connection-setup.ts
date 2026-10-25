@@ -1,6 +1,7 @@
 import { isRemoteMcpProvider, normalizeRemoteMcpEndpoint } from "./remote-mcp.ts";
 
 export type ConnectionSetupInput = {
+  connection_id?: string;
   provider: string;
   display_name?: string;
   account_label?: string;
