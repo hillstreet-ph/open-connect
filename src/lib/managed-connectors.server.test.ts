@@ -403,3 +403,44 @@ test("profile discovery uses a fixed read-only endpoint and returns no credentia
     else process.env["COMPOSIO_API_KEY"] = originalKey;
   }
 });
+
+test("TinyFish broker validates ownership and uses the verified external identity for proxy authentication", async () => {
+  const oldKey = process.env["COMPOSIO_API_KEY"],
+    oldMap = process.env["COMPOSIO_USER_MAPPINGS"],
+    send = globalThis.fetch;
+  const requests: Array<{ url: string; body: Record<string, unknown> | null }> = [];
+  try {
+    process.env["COMPOSIO_API_KEY"] = "test-broker-key";
+    process.env["COMPOSIO_USER_MAPPINGS"] = JSON.stringify({ owner: ["verified-broker-owner"] });
+    globalThis.fetch = (async (input, init) => {
+      const url = String(input);
+      requests.push({ url, body: typeof init?.body === "string" ? JSON.parse(init.body) : null });
+      return Response.json(
+        url.includes("/connected_accounts/")
+          ? {
+              id: "ca_tinyfish",
+              user_id: "verified-broker-owner",
+              status: "ACTIVE",
+              toolkit: { slug: "tinyfish" },
+            }
+          : { status: 200, data: { profiles: [] } },
+      );
+    }) as typeof fetch;
+    const { managedTinyFishClient } = await import("./managed-connectors.server.ts");
+    const client = await managedTinyFishClient("owner", "ca_tinyfish");
+    await client.listProfiles();
+    assert.equal(requests.length, 2);
+    assert.equal(requests[1]?.body?.["user_id"], "verified-broker-owner");
+    assert.equal(requests[1]?.body?.["connected_account_id"], "ca_tinyfish");
+    assert.ok(!JSON.stringify(requests).includes("X-API-Key"));
+    requests.length = 0;
+    await assert.rejects(managedTinyFishClient("other", "ca_tinyfish"), /owned by this user/);
+    assert.equal(requests.length, 1);
+  } finally {
+    globalThis.fetch = send;
+    if (oldKey === undefined) delete process.env["COMPOSIO_API_KEY"];
+    else process.env["COMPOSIO_API_KEY"] = oldKey;
+    if (oldMap === undefined) delete process.env["COMPOSIO_USER_MAPPINGS"];
+    else process.env["COMPOSIO_USER_MAPPINGS"] = oldMap;
+  }
+});

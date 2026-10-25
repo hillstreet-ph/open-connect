@@ -300,7 +300,10 @@ mock.module("@/integrations/supabase/client.server", () => ({
           order() {
             return this;
           },
-          range: async () => ({ data: savedConnectionRows, error: null }),
+          range: async (start: number, end: number) => ({
+            data: savedConnectionRows.slice(start, end + 1),
+            error: null,
+          }),
           maybeSingle: async () => ({
             data: connectionExists
               ? {
@@ -1352,4 +1355,26 @@ test("Auto matches registered functions only when their key grants are present",
     ),
   ).toBe(true);
   expect(payload.execution_performed).toBe(false);
+});
+
+test("inspection includes all owned pages while masking credential bindings", async () => {
+  scopes = ["mcp:connect", "connections:read"];
+  savedConnectionRows = Array.from({ length: 225 }, (_, i) => ({
+    id: `connection-${i}`,
+    provider: "github",
+    display_name: "GitHub",
+    status: "connected",
+    scopes: [],
+    credential_reference: "credential://github/private",
+    last_used_at: null,
+  }));
+  const payload = JSON.parse(
+    (await (await call("inspect_connections", {})).json()).result.content[0].text,
+  );
+  expect(payload.connections.length).toBe(225);
+  expect(payload.connections[224].credential_reference).toBe("configured");
+  scopes = ["mcp:connect", "control:write"];
+  expect(
+    (await call("sync_composio_accounts", { account_ids: ["account"], confirm: true })).status,
+  ).toBe(403);
 });

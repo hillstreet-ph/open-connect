@@ -3,7 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { normalizeConnectionSetup, type ConnectionSetupInput } from "@/lib/connection-setup";
 import { AI_GATEWAY_PROVIDERS } from "@/lib/ai-gateway-providers";
 import { hasRole, type AppRole } from "@/lib/rbac";
-import { planComposioSync } from "@/lib/composio-sync";
+import { composioImportBatches } from "@/lib/composio-sync";
 import {
   connectionIdentity,
   connectionAuthType,
@@ -458,47 +458,38 @@ export const syncComposioConnections = createServerFn({ method: "POST" })
       if (!syncCatalog.has(toolkit.slug))
         syncCatalog.set(toolkit.slug, { display_name: toolkit.name });
     }
-    const { data: saved, error: readError } = await context.supabase
-      .from("app_connections")
-      .select("provider,provider_account_id,credential_reference")
-      .eq("user_id", context.userId);
-    if (readError) throw new Error(readError.message);
-    const plan = planComposioSync(
+    const saved: Array<{
+      provider: string;
+      provider_account_id: string | null;
+      credential_reference: string | null;
+    }> = [];
+    for (let offset = 0; ; offset += 200) {
+      const { data, error } = await context.supabase
+        .from("app_connections")
+        .select("provider,provider_account_id,credential_reference")
+        .eq("user_id", context.userId)
+        .order("id")
+        .range(offset, offset + 199);
+      if (error) throw new Error(error.message);
+      saved.push(...(data ?? []));
+      if ((data?.length ?? 0) < 200) break;
+    }
+    const plan = composioImportBatches(
+      context.userId,
       accounts,
-      saved ?? [],
+      saved,
       [...syncCatalog].map(([slug, app]) => ({ slug, name: app.display_name })),
     );
-    const records = plan.candidates.map((account) => ({
-      user_id: context.userId,
-      provider: account.provider,
-      provider_account_id: account.account_id,
-      display_name: account.display_name,
-      status: "connected",
-      scopes: [] as string[],
-      credential_reference: `composio://connected-account/${account.account_id}`,
-      metadata: {
-        source: "composio-sync",
-        mode: "managed_oauth",
-        broker: "composio",
-        validation: {
-          verified: true,
-          checked_at: new Date().toISOString(),
-        },
-        full_scopes: false,
-      },
-    }));
-    if (records.length) {
+    let imported = 0;
+    for (const records of plan.batches) {
       const { error } = await context.supabase.from("app_connections").insert(records);
       if (error?.code === "23505") {
         throw new Error("Another sync updated these accounts. Run sync again to refresh.");
       }
       if (error) throw new Error(error.message);
+      imported += records.length;
     }
-    return {
-      imported: records.length,
-      existing: plan.existing,
-      matched: plan.matched,
-    };
+    return { imported, existing: plan.existing, matched: plan.matched };
   });
 
 export const connectApp = createServerFn({ method: "POST" })

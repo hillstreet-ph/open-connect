@@ -202,7 +202,7 @@ async function composioRequest<T>(path: string, apiKey: string, init?: RequestIn
       ...init?.headers,
     },
     cache: "no-store",
-    signal: AbortSignal.timeout(12_000),
+    signal: init?.signal ?? AbortSignal.timeout(12_000),
   });
   const payload = (await response.json().catch(() => ({}))) as {
     error?: { message?: string };
@@ -250,6 +250,8 @@ export async function getManagedConnection(_provider: string, connectedAccountId
     toolkit?: { slug?: string };
     data?: Record<string, unknown>;
     user_id?: string;
+    is_disabled?: boolean;
+    auth_config?: { is_disabled?: boolean };
   }>(`/connected_accounts/${encodeURIComponent(connectedAccountId)}`, apiKey);
 }
 
@@ -422,4 +424,33 @@ async function listManagedIdentityConnections(userId: string) {
     if (cursors.size > 100) throw new Error("Composio account pagination limit reached.");
   } while (cursor);
   return [...accounts.values()];
+}
+
+/** Fixed TinyFish agent API transport, authenticated by the caller's verified owned broker account. */
+export async function managedTinyFishClient(userId: string, accountId: string) {
+  const { createBrokeredTinyFishClient, tinyFishBrokerOwner } =
+    await import("./tinyfish-broker.ts");
+  const account = await getManagedConnection("tinyfish", accountId);
+  const owner = tinyFishBrokerOwner(account, managedIdentityIds(userId));
+  const apiKey = composioApiKey();
+  if (!apiKey) throw new Error("Composio is not configured.");
+  return createBrokeredTinyFishClient(async (request, signal) => {
+    try {
+      const response = await composioRequest<{ status: number; data: unknown }>(
+        "/tools/execute/proxy",
+        apiKey,
+        {
+          method: "POST",
+          redirect: "manual",
+          ...(signal ? { signal } : {}),
+          body: JSON.stringify({ connected_account_id: accountId, user_id: owner, ...request }),
+        },
+      );
+      return { status: response.status, data: response.data };
+    } catch {
+      throw new Error(
+        "TinyFish broker request failed. Check the connected account and provider access.",
+      );
+    }
+  });
 }
