@@ -4,6 +4,11 @@ import { normalizeConnectionSetup, type ConnectionSetupInput } from "@/lib/conne
 import { AI_GATEWAY_PROVIDERS } from "@/lib/ai-gateway-providers";
 import { hasRole, type AppRole } from "@/lib/rbac";
 import { planComposioSync } from "@/lib/composio-sync";
+import {
+  connectionIdentity,
+  connectionAuthType,
+  connectionEndpoint,
+} from "@/lib/connection-presentation";
 
 /**
  * Connection catalog — professional app plane.
@@ -402,14 +407,19 @@ export const listAppConnections = createServerFn({ method: "GET" })
       );
       return {
         ...connection,
+        identity: connectionIdentity(metadata),
         metadata:
-          connection.provider === "custom_mcp" &&
+          ["custom_mcp", "supabase", "databricks", "litellm"].includes(connection.provider) &&
           metadata &&
           typeof metadata === "object" &&
           !Array.isArray(metadata)
             ? {
                 endpoint_url:
-                  typeof metadata["endpoint_url"] === "string" ? metadata["endpoint_url"] : "",
+                  connection.provider === "custom_mcp" &&
+                  typeof metadata["endpoint_url"] === "string"
+                    ? metadata["endpoint_url"]
+                    : connectionEndpoint(metadata["endpoint_url"]),
+                auth_type: connectionAuthType(metadata),
               }
             : {},
         ...(isModelGateway
@@ -493,8 +503,9 @@ export const syncComposioConnections = createServerFn({ method: "POST" })
 
 export const connectApp = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input: { provider: string }) => ({
+  .validator((input: { provider: string; connection_id?: string }) => ({
     provider: (input?.provider ?? "").trim().toLowerCase(),
+    connection_id: input?.connection_id,
   }))
   .handler(async ({ data, context }) => {
     const { managedConnectorReady, connectionMethod, listComposioToolkits } =
@@ -563,6 +574,16 @@ export const connectApp = createServerFn({ method: "POST" })
     const { buildGitHubAuthorizationUrl, oauthConfig, sha256 } =
       await import("@/lib/provider-oauth.server");
     const config = oauthConfig(app.provider);
+    if (data.connection_id) {
+      const { data: target, error } = await context.supabase
+        .from("app_connections")
+        .select("id")
+        .eq("id", data.connection_id)
+        .eq("user_id", context.userId)
+        .eq("provider", app.provider)
+        .single();
+      if (error || !target) throw new Error("Reconnect account not found.");
+    }
     const state = `${crypto.randomUUID()}${crypto.randomUUID()}`;
     const stateHash = await sha256(state);
     const expiresAt = new Date(Date.now() + 10 * 60_000).toISOString();
@@ -590,6 +611,7 @@ export const connectApp = createServerFn({ method: "POST" })
         requested_scopes: [...app.scopes],
         oauth_state_hash: stateHash,
         oauth_state_expires_at: expiresAt,
+        reconnect_connection_id: data.connection_id ?? null,
         full_scopes: false,
       },
     };
@@ -622,7 +644,8 @@ export const completeOAuthConnection = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     if (!data.code || !data.state) throw new Error("The provider callback is incomplete.");
 
-    const { exchangeGitHubCode, oauthConfig, sha256 } = await import("@/lib/provider-oauth.server");
+    const { exchangeGitHubCode, oauthConfig, sha256, selectOAuthConnectionTarget } =
+      await import("@/lib/provider-oauth.server");
     const config = oauthConfig(data.provider);
     const { data: pending, error: pendingError } = await context.supabase
       .from("app_connections")
@@ -656,6 +679,19 @@ export const completeOAuthConnection = createServerFn({ method: "POST" })
       clientSecret: config.clientSecret,
       appUrl: config.appUrl,
     });
+    const reconnectId =
+      typeof metadata["reconnect_connection_id"] === "string"
+        ? metadata["reconnect_connection_id"]
+        : null;
+    const { data: matching, error: matchError } = await context.supabase
+      .from("app_connections")
+      .select("id,provider_account_id,credential_reference")
+      .eq("user_id", context.userId)
+      .eq("provider", data.provider)
+      .eq("provider_account_id", verified.accountId)
+      .maybeSingle();
+    if (matchError) throw new Error("Could not verify the existing provider account.");
+    const target = selectOAuthConnectionTarget(pending, matching, reconnectId);
     const { data: secret, error: secretError } = await context.supabase.rpc(
       "create_credential_secret",
       {
@@ -688,7 +724,8 @@ export const completeOAuthConnection = createServerFn({ method: "POST" })
           full_scopes: false,
         },
       })
-      .eq("id", pending.id)
+      .eq("id", target.id)
+      .eq("user_id", context.userId)
       .select("id,provider,display_name,status,scopes,provider_account_id,created_at")
       .single();
     if (updateError) {
@@ -698,7 +735,15 @@ export const completeOAuthConnection = createServerFn({ method: "POST" })
       throw new Error(updateError.message);
     }
 
-    const oldSecretId = pending.credential_reference?.match(
+    if (target.id !== pending.id) {
+      await context.supabase
+        .from("app_connections")
+        .delete()
+        .eq("id", pending.id)
+        .eq("user_id", context.userId)
+        .eq("status", "pending");
+    }
+    const oldSecretId = target.credential_reference?.match(
       /^credential:\/\/[^/]+\/([0-9a-f-]{36})$/i,
     )?.[1];
     if (oldSecretId && oldSecretId !== secretId) {
@@ -749,6 +794,12 @@ export const configureAppConnection = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: ConnectionSetupInput) => input)
   .handler(async ({ data, context }) => {
+    if (
+      data.connection_id &&
+      !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(data.connection_id)
+    ) {
+      throw new Error("Invalid connection reference.");
+    }
     const providerId = data.provider.trim().toLowerCase();
     const gatewayProvider = AI_GATEWAY_PROVIDERS.find((item) => item.id === providerId);
     const app =
@@ -792,13 +843,14 @@ export const configureAppConnection = createServerFn({ method: "POST" })
       secretId = String((secret as { id?: string } | null)?.id ?? "");
       if (!secretId) throw new Error("Credential vault did not return a reference");
     }
-    const { data: existingConnections, error: existingError } = await context.supabase
+    let existingQuery = context.supabase
       .from("app_connections")
       .select("id,provider_account_id,credential_reference,metadata")
       .eq("user_id", context.userId)
       .eq("provider", setup.provider)
-      .order("created_at", { ascending: false })
-      .limit(25);
+      .order("created_at", { ascending: false });
+    if (data.connection_id) existingQuery = existingQuery.eq("id", data.connection_id);
+    const { data: existingConnections, error: existingError } = await existingQuery;
     if (existingError) {
       if (secretId)
         await context.supabase.rpc("delete_credential_secret", {
@@ -807,12 +859,18 @@ export const configureAppConnection = createServerFn({ method: "POST" })
       throw new Error("Could not check your existing provider connection.");
     }
     const existing = (existingConnections ?? []).find((item) => {
+      if (data.connection_id) return item.id === data.connection_id;
+      if (data.new_account === true) return false;
       const metadata = item.metadata as Record<string, unknown> | null;
       return (
         metadata?.["source"] === "open-connect" &&
         metadata?.["account_label"] === setup.accountLabel
       );
     });
+    if (data.connection_id && !existing) {
+      if (secretId) await context.supabase.rpc("delete_credential_secret", { p_id: secretId });
+      throw new Error("Connection not found for this account and provider.");
+    }
     const accountId = existing?.provider_account_id ?? `credential-${crypto.randomUUID()}`;
     const record = {
       user_id: context.userId,

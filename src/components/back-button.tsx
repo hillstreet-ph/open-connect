@@ -16,15 +16,16 @@ export function BackButton({ fallback = "/dashboard" }: { fallback?: "/dashboard
     <Button
       variant="ghost"
       size="sm"
-      className="shrink-0 gap-2"
       aria-label="Go back"
+      title="Go back"
+      className="shrink-0 gap-2 px-2 sm:px-3"
       onClick={() => {
         if (canGoBack) router.history.back();
         else void router.navigate({ to: fallback });
       }}
     >
       <ArrowLeft className="size-4" aria-hidden="true" />
-      <span>Back</span>
+      <span className="hidden sm:inline">Back</span>
     </Button>
   );
 }

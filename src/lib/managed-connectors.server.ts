@@ -1,3 +1,5 @@
+import { connectionIdentity } from "./connection-presentation.ts";
+
 type AuthConfigMap = Record<string, string>;
 
 function authConfigs(): AuthConfigMap {
@@ -246,7 +248,73 @@ export async function getManagedConnection(_provider: string, connectedAccountId
     id?: string;
     status?: string;
     toolkit?: { slug?: string };
+    data?: Record<string, unknown>;
+    user_id?: string;
   }>(`/connected_accounts/${encodeURIComponent(connectedAccountId)}`, apiKey);
+}
+
+/** Fixed read-only profile endpoints; credentials remain inside the broker. */
+export async function getManagedAccountIdentity(
+  provider: string,
+  accountId: string,
+  userId: string,
+) {
+  const endpoints: Record<string, string> = {
+    github: "https://api.github.com/user",
+    gmail: "https://gmail.googleapis.com/gmail/v1/users/me/profile",
+    googledrive: "https://www.googleapis.com/drive/v3/about?fields=user",
+    google_drive: "https://www.googleapis.com/drive/v3/about?fields=user",
+  };
+  const endpoint = endpoints[provider];
+  if (!endpoint) return null;
+  const apiKey = composioApiKey();
+  if (!apiKey) throw new Error("Connector identity lookup is not configured.");
+  const response = await composioRequest<{ status?: number; data?: Record<string, unknown> }>(
+    "/tools/execute/proxy",
+    apiKey,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        connected_account_id: accountId,
+        user_id: userId,
+        endpoint,
+        method: "GET",
+      }),
+    },
+  );
+  if (response.status !== 200) throw new Error("Provider identity lookup failed.");
+  const data = response.data ?? {};
+  const profile =
+    data["user"] && typeof data["user"] === "object"
+      ? (data["user"] as Record<string, unknown>)
+      : data;
+  return connectionIdentity({
+    login: profile["login"],
+    name: profile["name"] ?? profile["displayName"],
+    email: profile["email"] ?? profile["emailAddress"],
+  });
+}
+
+/** Catalog discovery only. Listing tools does not grant or execute them. */
+export async function listManagedTools(provider: string) {
+  const apiKey = composioApiKey();
+  if (!apiKey) throw new Error("Connector tool discovery is not configured.");
+  const query = new URLSearchParams({
+    toolkit_slug: provider,
+    limit: "100",
+    include_deprecated: "false",
+  });
+  const page = await composioRequest<{
+    items?: Array<{ slug: string; name?: string; description?: string }>;
+    next_cursor?: string | null;
+  }>(`/tools?${query}`, apiKey);
+  return {
+    tools: (page.items ?? []).map((tool) => ({
+      name: tool.slug,
+      description: tool.description ?? tool.name ?? "",
+    })),
+    hasMore: Boolean(page.next_cursor),
+  };
 }
 
 export async function deleteManagedConnection(_provider: string, connectedAccountId: string) {

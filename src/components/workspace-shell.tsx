@@ -17,10 +17,10 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
 
   return (
     <SidebarProvider defaultOpen>
-      <div className="flex min-h-dvh w-full" data-shell="app-ops">
+      <div className="flex h-dvh w-full overflow-hidden" data-shell="app-ops">
         <AppSidebar />
-        <SidebarInset className="min-w-0">
-          <header className="sticky top-0 z-20 flex h-12 items-center gap-3 border-b border-border/80 bg-background/95 px-3 backdrop-blur sm:h-14 sm:px-4">
+        <SidebarInset className="min-h-0 min-w-0 overflow-hidden">
+          <header className="relative z-20 flex min-h-14 shrink-0 items-center gap-2 border-b border-border/80 bg-background px-3 sm:gap-3 sm:px-4">
             <SidebarTrigger className="-ml-1" />
             <BackButton />
             <div className="min-w-0 flex-1">
@@ -35,7 +35,9 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
             </div>
             <WorkspaceSearch />
           </header>
-          <div className="flex-1 overflow-auto">{children}</div>
+          <div className="min-h-0 min-w-0 flex-1 overflow-auto overscroll-contain pb-[env(safe-area-inset-bottom)]">
+            {children}
+          </div>
         </SidebarInset>
       </div>
       <AgentHelper />

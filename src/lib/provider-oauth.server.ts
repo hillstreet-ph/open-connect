@@ -1,5 +1,17 @@
 export const GITHUB_OAUTH_SCOPES = ["repo", "read:user", "workflow"] as const;
 
+/** Match only rows already restricted to this user and provider by the caller. */
+export function selectOAuthConnectionTarget<T extends { id: string }, U extends { id: string }>(
+  pending: T,
+  matching: U | null,
+  reconnectId: string | null,
+): T | U {
+  if (reconnectId && reconnectId !== pending.id && matching?.id !== reconnectId) {
+    throw new Error("Sign in with the same provider account selected for reconnect.");
+  }
+  return matching ?? pending;
+}
+
 export function githubCallbackUrl(appUrl: string): string {
   return `${appUrl.replace(/\/$/, "")}/connections/oauth/callback`;
 }

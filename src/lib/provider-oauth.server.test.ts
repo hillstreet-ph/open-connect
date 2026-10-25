@@ -5,7 +5,29 @@ import {
   exchangeGitHubCode,
   githubCallbackUrl,
   sha256,
+  selectOAuthConnectionTarget,
 } from "./provider-oauth.server.ts";
+
+test("native OAuth reconnect replaces the existing account instead of duplicating it", () => {
+  assert.equal(selectOAuthConnectionTarget({ id: "pending" }, null, "pending").id, "pending");
+  assert.equal(
+    selectOAuthConnectionTarget({ id: "pending" }, { id: "existing" }, "existing").id,
+    "existing",
+  );
+  assert.equal(
+    selectOAuthConnectionTarget({ id: "pending" }, { id: "existing" }, null).id,
+    "existing",
+  );
+  assert.equal(selectOAuthConnectionTarget({ id: "pending" }, null, null).id, "pending");
+  assert.throws(
+    () => selectOAuthConnectionTarget({ id: "pending" }, { id: "other" }, "existing"),
+    /same provider account/,
+  );
+  assert.throws(
+    () => selectOAuthConnectionTarget({ id: "pending" }, null, "existing"),
+    /same provider account/,
+  );
+});
 
 test("builds the official GitHub authorization URL with state and callback", () => {
   const value = buildGitHubAuthorizationUrl({
