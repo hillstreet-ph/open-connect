@@ -18,6 +18,7 @@ import {
   clearDataActivity,
   saveReuseDraft,
   buildReuseDraft,
+  saveRepeatedKnowledge,
   type ReuseDraft,
 } from "@/lib/data-controls.functions";
 import { type DataControls } from "@/lib/data-controls";
@@ -33,8 +34,13 @@ function AccountDataControls({ studio, userId }: { studio: boolean; userId: stri
   const clearActivity = useServerFn(clearDataActivity);
   const saveDraftFn = useServerFn(saveReuseDraft);
   const buildDraftFn = useServerFn(buildReuseDraft);
+  const saveKnowledgeFn = useServerFn(saveRepeatedKnowledge);
   const client = useQueryClient();
-  const query = useQuery({ queryKey: ["data-controls", userId], queryFn: () => getControls() });
+  const query = useQuery({
+    queryKey: ["data-controls", userId],
+    queryFn: () => getControls(),
+    refetchInterval: 30000,
+  });
   const [draft, setDraft] = useState<DataControls | null>(null);
   const [editor, setEditor] = useState<{
     id?: string;
@@ -85,6 +91,14 @@ function AccountDataControls({ studio, userId }: { studio: boolean; userId: stri
       setEditor(null);
       void refresh();
       toast.success("Private draft saved");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  const knowledge = useMutation({
+    mutationFn: (key: string) => saveKnowledgeFn({ data: { key } }),
+    onSuccess: () => {
+      void refresh();
+      toast.success("Unverified note saved in Knowledge");
     },
     onError: (e) => toast.error(e.message),
   });
@@ -239,6 +253,69 @@ function AccountDataControls({ studio, userId }: { studio: boolean; userId: stri
       {!studio && (
         <Card>
           <CardHeader>
+            <CardTitle className="text-base">Repeated prompts and responses</CardTitle>
+            <CardDescription>
+              Exact matches after case and whitespace normalization, across the latest 200
+              automatically saved helper or explicitly shared host exchanges within retention. New
+              captures only; not semantic detection or access to external chat history.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap gap-2 text-sm">
+              <span className="rounded-lg border px-3 py-2">
+                Memory capture: {settings.save_helper_memory ? "On" : "Off"}
+              </span>
+              <span className="rounded-lg border px-3 py-2">
+                Draft suggestions: {settings.suggest_drafts ? "On" : "Off"}
+              </span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Three distinct saved exchanges with the same prompt can create one private prompt
+              draft when both controls are on. Repeated responses stay unverified. Review source
+              excerpts and remove private details before building a resource.
+            </p>
+            {(query.data?.repeated ?? []).map((group) => (
+              <div key={group.key} className="space-y-3 rounded-lg border p-4">
+                <p className="text-sm font-medium">
+                  Repeated {group.kind} · {group.count} distinct saved exchanges
+                </p>
+                <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">
+                  {group.summary}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={knowledge.isPending}
+                    onClick={() => knowledge.mutate(group.key)}
+                  >
+                    Save unverified Knowledge note
+                  </Button>
+                  {group.kind === "prompt" && group.count >= 3 && (
+                    <Button size="sm" variant="outline" asChild>
+                      <a href="#reuse-drafts">Review suggestions below</a>
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+            {!query.data?.repeated?.length && (
+              <p className="text-sm text-muted-foreground">
+                No repeated patterns detected in this sample. Enable automatic helper memory above
+                to capture future sent prompts and received replies.
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Identical exchanges are deduplicated. Drafts can recommend tools, skills, apps and
+              toolkits, but do not install or execute them. Knowledge notes saved here are manual
+              records, kept until you delete them.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+      {!studio && (
+        <Card>
+          <CardHeader>
             <CardTitle className="text-base">Recent saved activity</CardTitle>
             <CardDescription>
               Counts from the latest 200 indexed records within your retention period. Capability
@@ -267,7 +344,7 @@ function AccountDataControls({ studio, userId }: { studio: boolean; userId: stri
           </CardContent>
         </Card>
       )}
-      <Card>
+      <Card id="reuse-drafts">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Sparkles className="size-4" />

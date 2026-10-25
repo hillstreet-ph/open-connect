@@ -1,3 +1,4 @@
+import { captureHelperExchange, readRepeatedContext } from "./data-controls.server";
 import { createServerFn } from "@tanstack/react-start";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -40,7 +41,7 @@ export const getDataControls = createServerFn({ method: "GET" })
     const db = context.supabase as SupabaseClient;
     const settings = await controls(db, context.userId);
     const since = new Date(Date.now() - settings.retention_days * 86400000).toISOString();
-    const [activity, drafts] = await Promise.all([
+    const [activity, drafts, repeated] = await Promise.all([
       db
         .from("data_control_activity")
         .select("id,source_kind,source_key,source_id,created_at")
@@ -54,11 +55,13 @@ export const getDataControls = createServerFn({ method: "GET" })
         .eq("user_id", context.userId)
         .order("created_at", { ascending: false })
         .limit(100),
+      readRepeatedContext(db, context.userId, since),
     ]);
     if (activity.error || drafts.error)
       throw new Error(activity.error?.message ?? drafts.error?.message);
     return {
       settings,
+      repeated,
       activity: (activity.data ?? []) as DataActivity[],
       drafts: (drafts.data ?? []) as ReuseDraft[],
     };
@@ -221,6 +224,50 @@ export const clearDataActivity = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const saveRepeatedKnowledge = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { key: string }) => {
+    if (!/^(prompt|response):[a-f0-9]{64}$/.test(input.key))
+      throw new Error("Choose a detected pattern");
+    return input;
+  })
+  .handler(async ({ data, context }) => {
+    const db = context.supabase as SupabaseClient;
+    const settings = await controls(db, context.userId);
+    const groups = await readRepeatedContext(
+      db,
+      context.userId,
+      new Date(Date.now() - settings.retention_days * 86400000).toISOString(),
+    );
+    const group = groups.find((item) => item.key === data.key);
+    if (!group) throw new Error("This pattern is no longer available");
+    const hash = await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(`${context.userId}:knowledge:${group.key}`),
+    );
+    const h = Array.from(new Uint8Array(hash), (b) => b.toString(16).padStart(2, "0")).join("");
+    const id = `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-a${h.slice(17, 20)}-${h.slice(20, 32)}`;
+    const { error } = await db.from("knowledge_items").upsert(
+      {
+        id,
+        user_id: context.userId,
+        title: "Repeated context note (unverified)",
+        content: `Unverified note saved after user review. Repetition is not evidence of correctness.\n\n${group.summary}`,
+        source_type: "note",
+        status: "ready",
+        tags: ["repeated-context", "unverified"],
+        metadata: {
+          verification_status: "unverified",
+          context_key: group.key,
+          memory_ids: group.memory_ids,
+        },
+      },
+      { onConflict: "id", ignoreDuplicates: true },
+    );
+    if (error) throw new Error("Knowledge note could not be saved");
+    return { id };
+  });
+
 export async function captureHelperMemory(
   db: SupabaseClient,
   userId: string,
@@ -228,32 +275,5 @@ export async function captureHelperMemory(
   reply: string,
 ) {
   const settings = await controls(db, userId);
-  if (!settings.save_helper_memory) return;
-  // This is an interaction summary, not a claim that the model response is verified knowledge.
-  const content = redactDataText(
-    `User request: ${prompt}\n\nAssistant response (unverified): ${reply}`,
-  ).slice(0, 8000);
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(content));
-  const fingerprint = Array.from(new Uint8Array(digest), (b) =>
-    b.toString(16).padStart(2, "0"),
-  ).join("");
-  const { data: existing, error: readError } = await db
-    .from("memory_records")
-    .select("id")
-    .eq("user_id", userId)
-    .contains("metadata", { auto_capture_hash: fingerprint })
-    .limit(1);
-  if (readError) throw new Error(readError.message);
-  if (existing?.length) return;
-  const { error } = await db.from("memory_records").insert({
-    user_id: userId,
-    title: "Agent-Helper interaction",
-    content,
-    memory_type: "summary",
-    importance: 2,
-    tags: ["auto-saved", "agent-helper"],
-    metadata: { auto_capture: true, auto_capture_hash: fingerprint },
-    expires_at: new Date(Date.now() + settings.retention_days * 86400000).toISOString(),
-  });
-  if (error) throw new Error(error.message);
+  await captureHelperExchange(db, userId, prompt, reply, settings);
 }

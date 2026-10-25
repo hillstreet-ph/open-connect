@@ -452,6 +452,26 @@ const PLATFORM_TOOLS: McpTool[] = [
     _meta: { ui: { visibility: ["model", "app"] }, "openai/widgetAccessible": true },
   },
   {
+    name: "capture_context_exchange",
+    description:
+      "Save one explicitly shared, user-authorized prompt and reply through personal Data Controls. Honors automatic memory and draft preferences, redacts common secrets, and detects repeated saved exchanges. Never reads host history or publishes. Requires personal administrator control:write; automatic drafts also require resources:write.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        prompt: { type: "string", minLength: 1, maxLength: 8000 },
+        response: { type: "string", minLength: 1, maxLength: 8000 },
+      },
+      required: ["prompt", "response"],
+      additionalProperties: false,
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+  },
+  {
     name: "save_context_checkpoint",
     description:
       "Save a redacted, resumable conversation summary to owned Memory. Does not compact the host's conversation. Recall with list_my_memory checkpoint_session. Requires administrator control:write; saves only the supplied summary, never passive full history.",
@@ -1659,6 +1679,7 @@ const TOOL_SCOPES: Record<string, string> = {
   record_run_outcome: "control:write",
   run_agent_team: "models:invoke",
   save_context_checkpoint: "control:write",
+  capture_context_exchange: "control:write",
   configure_connection: "control:write",
   sync_composio_accounts: "control:write",
   install_capability: "control:write",
@@ -2741,6 +2762,40 @@ export const Route = createFileRoute("/mcp")({
               await resolveUserUpstreams(key.userId, false),
             );
             result = textResult(await runFreeAgentTeam(routes, input, requestTeamWorker));
+          } else if (name === "capture_context_exchange") {
+            await requireControlWrite(key);
+            if (key.projectId || key.workspaceId || key.organizationId)
+              throw new Error("Shared host capture requires a personal administrator key");
+            const { validateSharedExchange, defaultDataControls, validateDataControls } =
+              await import("@/lib/data-controls");
+            const input = validateSharedExchange(args);
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const { data: preferences, error } = await (supabaseAdmin as SupabaseClient)
+              .from("data_control_settings")
+              .select("capture_activity,save_helper_memory,suggest_drafts,retention_days")
+              .eq("user_id", key.userId)
+              .maybeSingle();
+            if (error) throw new Error("Data Controls preferences could not be read");
+            const settings = validateDataControls(preferences ?? defaultDataControls);
+            const { captureHelperExchange } = await import("@/lib/data-controls.server");
+            const saved = await captureHelperExchange(
+              supabaseAdmin as SupabaseClient,
+              key.userId,
+              input.prompt,
+              input.response,
+              {
+                ...settings,
+                suggest_drafts: settings.suggest_drafts && canUseTool(key, "create_resource"),
+              },
+              "host-shared",
+            );
+            result = textResult({
+              memory_saved: !!saved,
+              memory_id: saved?.memory_id ?? null,
+              status: saved ? "saved_or_already_present" : "disabled_by_data_controls",
+              host_history_read: false,
+              published: false,
+            });
           } else if (name === "save_context_checkpoint") {
             await requireControlWrite(key);
             if ((key.workspaceId || key.organizationId) && !key.projectId)

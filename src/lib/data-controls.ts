@@ -52,3 +52,64 @@ export function validateDataControls(input: DataControls): DataControls {
     retention_days: input.retention_days,
   };
 }
+
+export type RepeatedContext = {
+  key: string;
+  kind: "prompt" | "response";
+  summary: string;
+  count: number;
+  memory_ids: string[];
+};
+
+export function validateSharedExchange(input: { prompt?: unknown; response?: unknown }) {
+  const prompt = typeof input.prompt === "string" ? input.prompt.trim() : "";
+  const response = typeof input.response === "string" ? input.response.trim() : "";
+  if (!prompt || !response || prompt.length > 8000 || response.length > 8000)
+    throw new Error("Supply an explicitly shared prompt and response, each 1–8000 characters");
+  return { prompt, response };
+}
+
+/** Exact normalized text only; repetition never establishes factual correctness. */
+export function normalizeRepeatedText(text: string) {
+  return redactDataText(text).trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+export function repeatedContext(rows: Array<{ id: string; metadata: unknown }>): RepeatedContext[] {
+  const groups = new Map<string, RepeatedContext>();
+  for (const row of rows) {
+    const m = row.metadata as Record<string, unknown> | null;
+    if (!m || m["auto_capture"] !== true) continue;
+    for (const kind of ["prompt", "response"] as const) {
+      const hash = m[`${kind}_hash`];
+      const summary = m[`${kind}_summary`];
+      if (typeof hash !== "string" || !/^[a-f0-9]{64}$/.test(hash) || typeof summary !== "string")
+        continue;
+      const key = `${kind}:${hash}`;
+      const group = groups.get(key) ?? {
+        key,
+        kind,
+        summary: redactDataText(summary).slice(0, 500),
+        count: 0,
+        memory_ids: [],
+      };
+      if (!group.memory_ids.includes(row.id)) {
+        group.memory_ids.push(row.id);
+        group.count++;
+      }
+      groups.set(key, group);
+    }
+  }
+  return [...groups.values()]
+    .filter((group) => group.count >= 2)
+    .sort((a, b) => b.count - a.count || a.key.localeCompare(b.key));
+}
+
+export function repeatedPromptDraft(group: RepeatedContext) {
+  if (group.kind !== "prompt" || group.count < 3)
+    throw new Error("Three distinct saved prompt exchanges are required");
+  return {
+    title: "Repeated prompt: review and generalize",
+    content: `# Reusable prompt draft\n\nObserved in ${group.count} distinct saved exchanges. This is an unverified suggestion, not a verified procedure.\n\n## Private source excerpt\n${redactDataText(group.summary)}\n\n## Generalize before sharing\nReplace names, accounts, identifiers and private facts with placeholders.\n\n## Goal and inputs\nDescribe the reusable goal and required inputs.\n\n## Capabilities\nDiscover matching tools, skills, apps or toolkits; verify their actual schemas and account access.\n\n## Acceptance checks\nDefine how to verify the result. Review source, license, permissions and security in Studio before publication.`,
+    resource_type: "prompt" as const,
+  };
+}

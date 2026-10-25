@@ -71,3 +71,11 @@ test("dispatches agent automations into governed autonomous runs", () => {
   assert.match(operations, /from\(["']autonomous_runs["']\)/);
   assert.match(operations, /correlation_id/);
 });
+
+test("shared host exchange capture is personal, scoped and preference-controlled", () => {
+  assert.match(mcpRoute, /name: "capture_context_exchange"/);
+  assert.match(mcpRoute, /capture_context_exchange: "control:write"/);
+  assert.match(mcpRoute, /Shared host capture requires a personal administrator key/);
+  assert.match(mcpRoute, /settings.suggest_drafts && canUseTool\(key, "create_resource"\)/);
+  assert.match(mcpRoute, /disabled_by_data_controls/);
+});
