@@ -17,6 +17,13 @@ import {
  */
 const CATALOG = [
   {
+    provider: "custom_api",
+    display_name: "Custom API profile",
+    category: "Custom",
+    scopes: [],
+    oauth: false,
+  },
+  {
     provider: "cloudflare_api_key",
     display_name: "Cloudflare API",
     category: "Infrastructure",
@@ -409,7 +416,9 @@ export const listAppConnections = createServerFn({ method: "GET" })
         ...connection,
         identity: connectionIdentity(metadata),
         metadata:
-          ["custom_mcp", "supabase", "databricks", "litellm"].includes(connection.provider) &&
+          ["custom_mcp", "custom_api", "supabase", "databricks", "litellm"].includes(
+            connection.provider,
+          ) &&
           metadata &&
           typeof metadata === "object" &&
           !Array.isArray(metadata)
@@ -420,6 +429,14 @@ export const listAppConnections = createServerFn({ method: "GET" })
                     ? metadata["endpoint_url"]
                     : connectionEndpoint(metadata["endpoint_url"]),
                 auth_type: connectionAuthType(metadata),
+                auth_header:
+                  typeof metadata["auth_header"] === "string"
+                    ? metadata["auth_header"]
+                    : "X-API-Key",
+                description:
+                  typeof metadata["description"] === "string"
+                    ? metadata["description"].slice(0, 1000)
+                    : "",
               }
             : {},
         ...(isModelGateway
@@ -820,6 +837,7 @@ export const configureAppConnection = createServerFn({ method: "POST" })
         version: 1,
         auth_type: setup.authType,
         credential: setup.apiKey,
+        auth_header: setup.authHeader,
       });
       const { data: secret, error: secretError } = await context.supabase.rpc(
         "create_credential_secret",
@@ -876,6 +894,8 @@ export const configureAppConnection = createServerFn({ method: "POST" })
         mode: setup.provider === "custom_mcp" ? "custom_mcp" : "brokered_secret",
         auth_type: setup.authType,
         account_label: setup.accountLabel,
+        description: setup.description,
+        auth_header: setup.authHeader,
         endpoint_url: setup.endpointUrl || null,
         validation: {
           verified: validation.verified,

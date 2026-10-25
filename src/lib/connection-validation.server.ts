@@ -1,3 +1,4 @@
+import { normalizeAuthHeader } from "./connection-auth-header.ts";
 import { AI_GATEWAY_PROVIDERS } from "./ai-gateway-providers.ts";
 import type { normalizeConnectionSetup } from "./connection-setup";
 import { isRemoteMcpProvider } from "./remote-mcp.ts";
@@ -48,13 +49,19 @@ export async function validateConnectionCredential(
   send: typeof fetch = fetch,
 ): Promise<Validation> {
   const bearer = { Authorization: `Bearer ${setup.apiKey}` };
+  if (setup.provider === "custom_api")
+    return {
+      verified: false,
+      detail:
+        "API profile saved. Tool execution requires a reviewed provider adapter or MCP server; no API request was executed.",
+    };
   if (isRemoteMcpProvider(setup.provider)) {
     const { withMcpClient } = await import("./mcp-client.server.ts");
     const headers =
       setup.authType === "none"
         ? {}
         : setup.authType === "api_key"
-          ? { "X-API-Key": setup.apiKey }
+          ? { [normalizeAuthHeader(setup.authHeader)]: setup.apiKey }
           : bearer;
     const accountId = await withMcpClient(
       setup.endpointUrl,

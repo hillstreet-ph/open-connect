@@ -1,3 +1,4 @@
+import { normalizeAuthHeader } from "./connection-auth-header.ts";
 import { fetchMcpTools, McpCatalogError, withMcpClient } from "./mcp-client.server.ts";
 import { callTwilioTool, twilioFailureResult, twilioTools } from "./twilio.server.ts";
 import { callTelegramTool, telegramFailureResult, telegramTools } from "./telegram.server.ts";
@@ -57,9 +58,9 @@ export function remoteMcpFailureResult(error: unknown) {
   };
 }
 
-export function connectionAuthHeaders(authType: string, credential: string) {
+export function connectionAuthHeaders(authType: string, credential: string, authHeader?: unknown) {
   if (!credential || authType === "none") return {};
-  if (authType === "api_key") return { "X-API-Key": credential };
+  if (authType === "api_key") return { [normalizeAuthHeader(authHeader)]: credential };
   return { Authorization: `Bearer ${credential}` };
 }
 
@@ -292,7 +293,11 @@ async function materializeCustomMcpConnection(data: ToolConnection) {
     id: data.id,
     name: data.display_name,
     endpoint,
-    headers: connectionAuthHeaders(authType, credential),
+    headers: connectionAuthHeaders(
+      authType,
+      credential,
+      preset ? undefined : metadata["auth_header"],
+    ),
   };
 }
 

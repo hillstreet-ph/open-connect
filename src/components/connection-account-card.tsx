@@ -16,6 +16,12 @@ type Account = {
   status: string;
   provider_account_id: string | null;
   scopes: string[] | null;
+  metadata?: {
+    endpoint_url?: string;
+    description?: string;
+    auth_type?: string;
+    auth_header?: string;
+  };
   identity: { label: string; login: string; name: string; email: string };
 };
 
@@ -52,6 +58,9 @@ export function ConnectionAccountCard({
     <article className="min-w-0 space-y-4 rounded-xl border bg-card p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
+          {account.display_name !== title && (
+            <p className="mb-1 break-words text-sm font-semibold">{account.display_name}</p>
+          )}
           <p className="flex items-center gap-2 font-medium">
             <UserRound className="size-4 shrink-0" aria-hidden="true" />
             <span className="break-words">{title || "Account identity unavailable"}</span>
@@ -65,6 +74,24 @@ export function ConnectionAccountCard({
           {identity.label && identity.label !== title ? (
             <p className="text-sm text-muted-foreground">{identity.label}</p>
           ) : null}
+          {account.metadata?.description && (
+            <p className="mt-2 break-words text-sm text-muted-foreground">
+              {account.metadata.description}
+            </p>
+          )}
+          {account.metadata?.endpoint_url && (
+            <p className="mt-1 break-all text-xs text-muted-foreground">
+              {account.metadata.endpoint_url}
+            </p>
+          )}
+          {account.metadata?.auth_type && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Authentication: {account.metadata.auth_type}
+              {account.metadata.auth_type === "api_key"
+                ? ` · ${account.metadata.auth_header || "X-API-Key"}`
+                : ""}
+            </p>
+          )}
           <p className="mt-1 break-all text-xs text-muted-foreground">
             Account reference: {account.provider_account_id || account.id}
           </p>

@@ -75,7 +75,10 @@ export function normalizeRemoteMcpEndpoint(provider: string, value: unknown) {
       hostname,
     ) ||
     hostname === "::1" ||
-    /^(?:fc|fd|fe8|fe9|fea|feb)/.test(hostname) ||
+    (hostname.includes(":") && /^(?:fc|fd|fe8|fe9|fea|feb|::ffff:)/.test(hostname)) ||
+    hostname === "::" ||
+    hostname === "localhost" ||
+    hostname.endsWith(".localhost") ||
     hostname.endsWith(".local")
   ) {
     throw new Error("MCP endpoint cannot target a private network address");

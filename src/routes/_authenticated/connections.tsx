@@ -79,12 +79,21 @@ function ConnectionsPage() {
   const syncFn = useServerFn(syncComposioConnections);
   const [managedApp, setManagedApp] = useState<CatalogApp | null>(null);
   const [selectedApp, setSelectedApp] = useState<CatalogApp | null>(null);
+  const [connectionName, setConnectionName] = useState("");
+  const [description, setDescription] = useState("");
+  const [authHeader, setAuthHeader] = useState("X-API-Key");
   const [accountLabel, setAccountLabel] = useState("");
   const [reconnectId, setReconnectId] = useState<string | undefined>();
   const [endpointUrl, setEndpointUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [authType, setAuthType] = useState<"none" | "bearer" | "api_key">("bearer");
-  const endpointProviders = new Set(["supabase", "databricks", "litellm", "custom_mcp"]);
+  const endpointProviders = new Set([
+    "supabase",
+    "databricks",
+    "litellm",
+    "custom_mcp",
+    "custom_api",
+  ]);
 
   const catalog = useQuery({
     queryKey: ["connection-catalog"],
@@ -139,11 +148,17 @@ function ConnectionsPage() {
           ...(reconnectId ? { connection_id: reconnectId } : {}),
           new_account: !reconnectId,
           provider: selectedApp?.provider ?? "",
-          display_name: selectedApp?.display_name ?? "",
+          display_name: ["custom_mcp", "custom_api"].includes(selectedApp?.provider ?? "")
+            ? connectionName || selectedApp?.display_name || ""
+            : selectedApp?.display_name || "",
+          description,
+          auth_header: authHeader,
           account_label: accountLabel,
           endpoint_url: endpointUrl,
           api_key: apiKey,
-          auth_type: selectedApp?.provider === "custom_mcp" ? authType : "bearer",
+          auth_type: ["custom_mcp", "custom_api"].includes(selectedApp?.provider ?? "")
+            ? authType
+            : "bearer",
         },
       }),
     onSuccess: (result) => {
@@ -215,6 +230,41 @@ function ConnectionsPage() {
       </p>
 
       <div className="mt-6 flex flex-wrap gap-2">
+        {user &&
+          ["custom_mcp", "custom_api"].map((provider) => (
+            <Button
+              key={provider}
+              variant={provider === "custom_mcp" ? "default" : "outline"}
+              onClick={() => {
+                setConnectionName("");
+                setDescription("");
+                setAuthHeader("X-API-Key");
+                setAccountLabel("");
+                setEndpointUrl("");
+                setConnectionName("");
+                setDescription("");
+                setAuthHeader("X-API-Key");
+                setApiKey("");
+                setConnectionName("");
+                setDescription("");
+                setAuthHeader("X-API-Key");
+                setReconnectId(undefined);
+                setAuthType("none");
+                setSelectedApp({
+                  provider,
+                  display_name:
+                    provider === "custom_mcp" ? "Custom MCP server" : "Custom API profile",
+                  category: "Custom",
+                  scopes: [],
+                  oauth: false,
+                  oauth_ready: false,
+                });
+              }}
+            >
+              <Plus className="size-4" />
+              {provider === "custom_mcp" ? "Add custom MCP" : "Add API profile"}
+            </Button>
+          ))}
         {user && (
           <>
             <Button asChild variant="outline">
@@ -352,7 +402,11 @@ function ConnectionsPage() {
                               : app.oauth
                                 ? connectMutation.mutate(app.provider)
                                 : (() => {
-                                    setAuthType(app.provider === "custom_mcp" ? "none" : "bearer");
+                                    setAuthType(
+                                      ["custom_mcp", "custom_api"].includes(app.provider)
+                                        ? "none"
+                                        : "bearer",
+                                    );
                                     setSelectedApp(app as CatalogApp);
                                   })()
                           }
@@ -423,6 +477,9 @@ function ConnectionsPage() {
                         connection_id: c.id,
                       });
                     } else {
+                      setConnectionName(c.display_name);
+                      setDescription(c.metadata.description || "");
+                      setAuthHeader(c.metadata.auth_header || "X-API-Key");
                       setReconnectId(c.id);
                       setAccountLabel(c.identity.label || "Default account");
                       setEndpointUrl(c.metadata.endpoint_url || "");
@@ -452,9 +509,15 @@ function ConnectionsPage() {
               if (!managedApp) return;
               if (managedApp.oauth) connectMutation.mutate(managedApp.provider);
               else {
+                setConnectionName("");
+                setDescription("");
+                setAuthHeader("X-API-Key");
                 setReconnectId(undefined);
                 setAccountLabel("");
                 setEndpointUrl("");
+                setConnectionName("");
+                setDescription("");
+                setAuthHeader("X-API-Key");
                 setApiKey("");
                 setSelectedApp(managedApp);
                 setManagedApp(null);
@@ -477,6 +540,9 @@ function ConnectionsPage() {
             setReconnectId(undefined);
             setAccountLabel("");
             setEndpointUrl("");
+            setConnectionName("");
+            setDescription("");
+            setAuthHeader("X-API-Key");
             setApiKey("");
           }
         }}
@@ -493,6 +559,44 @@ function ConnectionsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {selectedApp?.provider === "custom_mcp" && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setConnectionName("Composio");
+                  setEndpointUrl("https://connect.composio.dev/mcp");
+                  setAuthType("api_key");
+                  setAuthHeader("x-consumer-api-key");
+                  setApiKey("");
+                }}
+              >
+                Use Composio MCP preset
+              </Button>
+            )}
+            {["custom_mcp", "custom_api"].includes(selectedApp?.provider ?? "") && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="connection-name">App / connector name</Label>
+                  <Input
+                    id="connection-name"
+                    value={connectionName}
+                    onChange={(e) => setConnectionName(e.target.value)}
+                    placeholder="My team connector"
+                    maxLength={120}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="connection-description">Description</Label>
+                  <Input
+                    id="connection-description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="What this connection is used for"
+                    maxLength={1000}
+                  />
+                </div>
+              </>
+            )}
             <div className="space-y-2">
               <Label htmlFor="connection-account">Account label</Label>
               <Input
@@ -520,7 +624,7 @@ function ConnectionsPage() {
                 />
               </div>
             ) : null}
-            {selectedApp?.provider === "custom_mcp" ? (
+            {["custom_mcp", "custom_api"].includes(selectedApp?.provider ?? "") ? (
               <div className="space-y-2">
                 <Label htmlFor="connection-auth-type">MCP authentication</Label>
                 <select
@@ -537,7 +641,34 @@ function ConnectionsPage() {
                 </select>
               </div>
             ) : null}
-            {selectedApp?.provider !== "custom_mcp" || authType !== "none" ? (
+            {authType === "api_key" &&
+              ["custom_mcp", "custom_api"].includes(selectedApp?.provider ?? "") && (
+                <div className="space-y-2">
+                  <Label htmlFor="connection-auth-header">Credential header name</Label>
+                  <Input
+                    id="connection-auth-header"
+                    value={authHeader}
+                    onChange={(e) => setAuthHeader(e.target.value)}
+                    placeholder="X-API-Key or x-consumer-api-key"
+                  />
+                </div>
+              )}
+            {selectedApp?.provider === "custom_api" && (
+              <p className="rounded-lg border p-3 text-sm text-muted-foreground">
+                Saves a private API URL and credential profile. This does not discover tools or
+                execute API requests. A reviewed adapter or MCP server is required for agent tool
+                access.
+              </p>
+            )}
+            {selectedApp?.provider === "custom_mcp" && (
+              <p className="text-xs text-muted-foreground">
+                Use the complete Streamable HTTP MCP endpoint. For Composio Connect, choose API key
+                header and enter x-consumer-api-key with your consumer key, or use its OAuth-enabled
+                client.
+              </p>
+            )}
+            {!["custom_mcp", "custom_api"].includes(selectedApp?.provider ?? "") ||
+            authType !== "none" ? (
               <div className="space-y-2">
                 <Label htmlFor="connection-key">API key or access token</Label>
                 <Input
@@ -555,7 +686,7 @@ function ConnectionsPage() {
               className="w-full"
               disabled={
                 configureMutation.isPending ||
-                (selectedApp?.provider === "custom_mcp"
+                (["custom_mcp", "custom_api"].includes(selectedApp?.provider ?? "")
                   ? !endpointUrl.trim() || (authType !== "none" && apiKey.trim().length < 8)
                   : apiKey.trim().length < 8)
               }

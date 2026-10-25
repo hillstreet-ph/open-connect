@@ -111,3 +111,18 @@ test("preserves deterministic catalog failures for retry classification", async 
     );
   }
 });
+
+test("authentication diagnostics never echo a remote credential-bearing response", async () => {
+  await assert.rejects(
+    withMcpClient(
+      "https://connect.composio.dev/mcp",
+      { Authorization: "Bearer private-value" },
+      async () => null,
+      async () => new Response("private-value", { status: 401 }),
+    ),
+    (e) =>
+      e instanceof Error &&
+      e.message.includes("x-consumer-api-key") &&
+      !e.message.includes("private-value"),
+  );
+});
