@@ -25,3 +25,15 @@ export function connectionAuthType(value: unknown): "none" | "bearer" | "api_key
       ? "api_key"
       : "bearer";
 }
+
+/** Return a service address without embedded credentials, query secrets or fragments. */
+export function connectionEndpoint(value: unknown): string {
+  if (typeof value !== "string" || !value) return "";
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:") return "";
+    return `${url.origin}${url.pathname}`;
+  } catch {
+    return "";
+  }
+}
