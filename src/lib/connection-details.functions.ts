@@ -56,7 +56,7 @@ export const getConnectionDetails = createServerFn({ method: "GET" })
           const catalog = await listManagedTools(connection.provider);
           tools = catalog.tools;
           toolsNotice = catalog.hasMore
-            ? "Showing the first 100 provider catalog tools. Account permissions still apply."
+            ? "Provider catalog is partially loaded (discovery limit reached). Account permissions still apply."
             : "Provider catalog tools. Account permissions still apply.";
         } else if (
           isExecutableMcpProvider(connection.provider) ||
@@ -74,14 +74,15 @@ export const getConnectionDetails = createServerFn({ method: "GET" })
       }
     }
     const { readWorkspaceLibrary } = await import("@/lib/workspace-library.server");
-    const resources = await readWorkspaceLibrary(context, "skill");
+    const resources = await readWorkspaceLibrary(context);
     const providerWords = connection.provider.replace(/^custom_/, "").replaceAll("_", " ");
-    const skills = resources.flatMap((row) => {
+    const related = resources.flatMap((row) => {
       const resource = row.resources;
       if (!resource || !`${resource.name} ${resource.slug}`.toLowerCase().includes(providerWords))
         return [];
       return [
         {
+          type: resource.resource_type,
           id: resource.id,
           name: resource.name,
           description: resource.description,
@@ -89,5 +90,7 @@ export const getConnectionDetails = createServerFn({ method: "GET" })
         },
       ];
     });
-    return { identity, identityNotice, tools, toolsNotice, skills };
+    const skills = related.filter((resource) => resource.type === "skill");
+    const toolkits = related.filter((resource) => resource.type === "toolkit");
+    return { identity, identityNotice, tools, toolsNotice, skills, toolkits };
   });
