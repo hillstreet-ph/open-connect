@@ -9,6 +9,7 @@ import {
   createManagedConnectionLink,
   listComposioToolkits,
   getManagedAccountIdentity,
+  listManagedTools,
 } from "./managed-connectors.server.ts";
 
 test("identity aliases are scoped to one explicitly configured application user", () => {
@@ -442,5 +443,57 @@ test("TinyFish broker validates ownership and uses the verified external identit
     else process.env["COMPOSIO_API_KEY"] = oldKey;
     if (oldMap === undefined) delete process.env["COMPOSIO_USER_MAPPINGS"];
     else process.env["COMPOSIO_USER_MAPPINGS"] = oldMap;
+  }
+});
+
+test("tool discovery follows cursors, deduplicates tools, and shares concurrent catalog loads", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalKey = process.env["COMPOSIO_API_KEY"];
+  process.env["COMPOSIO_API_KEY"] = "test-key";
+  const seen: string[] = [];
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    const url = new URL(String(input));
+    seen.push(url.searchParams.get("cursor") ?? "first");
+    return Response.json(
+      url.searchParams.has("cursor")
+        ? { items: [{ slug: "A", description: "updated" }, { slug: "B" }], next_cursor: null }
+        : { items: [{ slug: "A" }], next_cursor: "opaque+/=" },
+    );
+  }) as typeof fetch;
+  try {
+    const [first, second] = await Promise.all([
+      listManagedTools("pagination-test"),
+      listManagedTools("pagination-test"),
+    ]);
+    assert.deepEqual(seen, ["first", "opaque+/="]);
+    assert.equal(first.hasMore, false);
+    assert.deepEqual(
+      first.tools.map((tool) => tool.name),
+      ["A", "B"],
+    );
+    assert.equal(first.tools[0]?.description, "updated");
+    assert.deepEqual(second, first);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalKey === undefined) delete process.env["COMPOSIO_API_KEY"];
+    else process.env["COMPOSIO_API_KEY"] = originalKey;
+  }
+});
+
+test("repeated tool cursors fail clearly and failed discovery can be retried", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalKey = process.env["COMPOSIO_API_KEY"];
+  process.env["COMPOSIO_API_KEY"] = "test-key";
+  globalThis.fetch = (async () =>
+    Response.json({ items: [], next_cursor: "repeat" })) as typeof fetch;
+  try {
+    await assert.rejects(listManagedTools("cursor-loop-test"), /did not advance/);
+    globalThis.fetch = (async () =>
+      Response.json({ items: [{ slug: "RECOVERED" }] })) as typeof fetch;
+    assert.equal((await listManagedTools("cursor-loop-test")).tools[0]?.name, "RECOVERED");
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalKey === undefined) delete process.env["COMPOSIO_API_KEY"];
+    else process.env["COMPOSIO_API_KEY"] = originalKey;
   }
 });

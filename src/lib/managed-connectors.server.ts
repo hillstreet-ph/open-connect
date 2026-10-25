@@ -297,26 +297,56 @@ export async function getManagedAccountIdentity(
   });
 }
 
-/** Catalog discovery only. Listing tools does not grant or execute them. */
-export async function listManagedTools(provider: string) {
+type ToolCatalog = { tools: Array<{ name: string; description: string }>; hasMore: boolean };
+const toolCatalogs = new Map<string, { expiresAt: number; value: Promise<ToolCatalog> }>();
+
+/** Provider catalog only: never account permissions or execution verification. */
+export async function listManagedTools(provider: string): Promise<ToolCatalog> {
   const apiKey = composioApiKey();
   if (!apiKey) throw new Error("Connector tool discovery is not configured.");
-  const query = new URLSearchParams({
-    toolkit_slug: provider,
-    limit: "100",
-    include_deprecated: "false",
-  });
-  const page = await composioRequest<{
-    items?: Array<{ slug: string; name?: string; description?: string }>;
-    next_cursor?: string | null;
-  }>(`/tools?${query}`, apiKey);
-  return {
-    tools: (page.items ?? []).map((tool) => ({
-      name: tool.slug,
-      description: tool.description ?? tool.name ?? "",
-    })),
-    hasMore: Boolean(page.next_cursor),
-  };
+  const cached = toolCatalogs.get(provider);
+  if (cached && cached.expiresAt > Date.now()) return cached.value;
+  for (const [key, entry] of toolCatalogs) {
+    if (entry.expiresAt <= Date.now()) toolCatalogs.delete(key);
+  }
+  if (toolCatalogs.size >= 50) toolCatalogs.delete(toolCatalogs.keys().next().value!);
+  const value = (async () => {
+    const tools = new Map<string, { name: string; description: string }>();
+    const seen = new Set<string>();
+    let cursor: string | undefined;
+    for (let pageIndex = 0; pageIndex < 50; pageIndex++) {
+      const query = new URLSearchParams({
+        toolkit_slug: provider,
+        limit: "1000",
+        include_deprecated: "false",
+      });
+      if (cursor) query.set("cursor", cursor);
+      const page = await composioRequest<{
+        items?: Array<{ slug: string; name?: string; description?: string }>;
+        next_cursor?: string | null;
+      }>(`/tools?${query}`, apiKey);
+      for (const tool of page.items ?? []) {
+        if (tool.slug)
+          tools.set(tool.slug, {
+            name: tool.slug,
+            description: tool.description ?? tool.name ?? "",
+          });
+      }
+      if (!page.next_cursor) return { tools: [...tools.values()], hasMore: false };
+      if (seen.has(page.next_cursor))
+        throw new Error("Provider tool pagination did not advance. Refresh to retry.");
+      seen.add(page.next_cursor);
+      cursor = page.next_cursor;
+    }
+    return { tools: [...tools.values()], hasMore: true };
+  })();
+  toolCatalogs.set(provider, { expiresAt: Date.now() + 60_000, value });
+  try {
+    return await value;
+  } catch (error) {
+    toolCatalogs.delete(provider);
+    throw error;
+  }
 }
 
 export async function deleteManagedConnection(_provider: string, connectedAccountId: string) {
