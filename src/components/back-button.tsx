@@ -2,16 +2,15 @@ import { useRouter, useRouterState } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-/** Router-owned history avoids sending a direct-entry visitor back to another site. */
+/** Return to the parent surface, independent of tab/hash and external history. */
 export function BackButton({
   fallback = "/dashboard",
+  fallbackHash,
 }: {
+  fallbackHash?: string | undefined;
   fallback?: "/dashboard" | "/" | "/settings" | "/projects" | "/admin";
 }) {
   const router = useRouter();
-  const canGoBack = useRouterState({
-    select: (state) => (state.location.state.__TSR_index ?? 0) > 0,
-  });
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   // Home surfaces never need a back control, even after internal navigation.
   const path = pathname.replace(/\/+$/, "") || "/";
@@ -24,8 +23,7 @@ export function BackButton({
       title="Go back"
       className="shrink-0 gap-2 px-2 sm:px-3"
       onClick={() => {
-        if (canGoBack) router.history.back();
-        else void router.navigate({ to: fallback });
+        void router.navigate({ to: fallback, hash: fallbackHash ?? "" });
       }}
     >
       <ArrowLeft className="size-4" aria-hidden="true" />

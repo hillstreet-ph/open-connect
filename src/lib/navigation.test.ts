@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import { settingsTab } from "./settings-navigation.ts";
 import { isAppPath } from "./shell.ts";
 import {
   appCategories,
@@ -442,4 +443,21 @@ test("Marketplace installs stay in the personal library and agent context reads 
   assert.match(mcp, /resolveUserUpstreams/);
   assert.match(scopes, /"memory:read"/);
   assert.match(scopes, /"knowledge:read"/);
+});
+
+test("settings deep links select their exact tab and unknown hashes have a safe default", () => {
+  for (const tab of [
+    "profile",
+    "security",
+    "workspace",
+    "apps",
+    "data",
+    "integrations",
+    "approvals",
+  ]) {
+    assert.equal(settingsTab(tab), tab);
+    assert.equal(settingsTab("#" + tab), tab);
+  }
+  for (const hash of ["", "missing", "#approvals/other", "__proto__"])
+    assert.equal(settingsTab(hash), "profile");
 });
