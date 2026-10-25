@@ -135,3 +135,46 @@ export async function prepareBrowserVaultConnection(
     },
   });
 }
+
+/** Explicit opaque-reference setup, verified before the MCP route writes a binding. */
+export async function validateOwnedBrowserReference(
+  userId: string,
+  provider: VaultBrowserProvider,
+  reference: string,
+) {
+  if (!new RegExp(`^credential://${provider}/[0-9a-f-]{36}$`, "i").test(reference))
+    throw new Error("An owned provider credential reference is required.");
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: credential, error } = await supabaseAdmin
+      .from("credential_secrets")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("id", reference.split("/").pop()!)
+      .eq("secret_type", "api_key")
+      .maybeSingle();
+    if (error || !credential) throw new Error("Owned API key required");
+    const api_key = await (
+      await import("./custom-mcp.server")
+    ).resolveCredential(userId, reference);
+    const validation = await validateConnectionCredential(
+      normalizeConnectionSetup(
+        { provider, api_key, auth_type: "api_key" },
+        { provider, display_name: provider, scopes: [], oauth: false },
+      ),
+    );
+    if (!validation.verified) throw new Error("Not verified");
+    return {
+      credential_reuse: true,
+      validation: {
+        verified: true,
+        checked_at: new Date().toISOString(),
+        detail: validation.detail,
+      },
+    };
+  } catch {
+    throw new Error(
+      "Saved browser credential could not be verified. Check the key and provider account.",
+    );
+  }
+}

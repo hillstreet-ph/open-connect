@@ -45,3 +45,9 @@ Opening Cloud Browser or refreshing its connection status sends an authenticated
 A single match is resolved inside the server and validated with the provider's fixed read-only account endpoint. Only successful validation creates a native connection referencing the existing Vault item; the secret is neither copied nor returned. A stable provider/account key prevents duplicate bindings on repeated or concurrent preparation. The saved binding is read back before success is returned. Deleted secrets, unavailable providers and failed validation remain setup failures. Existing connections are saved metadata, not continuous live verification.
 
 Preparation does not start a browser or approve spending. Starting a metered session still requires the existing cost acknowledgement. Website passwords and TOTP are excluded from this flow; use the supported secure browser sign-in handoff. Cookie/profile persistence remains provider-specific.
+
+## Cloud workspace and Sandbox
+
+Cloud overview (`/cloud`) links to Browser, Phone, Terminal, Computer and Sandbox. Sandbox (`/cloud-sandbox`) uses the same owner/project-authorized provider tool discovery and execution as the other Cloud workspaces. It does not provision infrastructure by opening the page. Only tools returned by the selected provider can be invoked; generic MCP connection availability is not evidence that the provider implements sandbox isolation, a phone or a desktop. Provider charges and session lifetime remain provider-specific.
+
+The browser switcher now lists the implemented capabilities and setup limits for each native adapter. Native opaque-reference browser setup through MCP validates the owned key with a fixed read-only provider request before creating or updating a binding, and marks the Vault item as reused so disconnect/replacement preserves it. Broker accounts remain separate from native SDK keys.

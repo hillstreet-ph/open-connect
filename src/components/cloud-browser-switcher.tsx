@@ -3,7 +3,11 @@ import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Link } from "@tanstack/react-router";
-import { BROWSER_PROVIDERS, type BrowserProviderId } from "@/lib/browser-provider-selection";
+import {
+  BROWSER_ADAPTER_CAPABILITIES,
+  BROWSER_PROVIDERS,
+  type BrowserProviderId,
+} from "@/lib/browser-provider-selection";
 import { getBrowserProviderAvailability } from "@/lib/browser-providers.functions";
 import { AdditionalBrowserProviders } from "./additional-browser-providers";
 
@@ -46,6 +50,10 @@ export function CloudBrowserSwitcher({
         ? "Broker account saved · native key needed"
         : "Connect API key";
   };
+  const capabilities =
+    selected === "tinyfish" || selected === "browser_use" || selected === "browserbase"
+      ? BROWSER_ADAPTER_CAPABILITIES[selected]
+      : null;
   return (
     <div className="space-y-5">
       <section className="space-y-3 rounded-lg border p-4" aria-label="Cloud browser providers">
@@ -94,6 +102,19 @@ export function CloudBrowserSwitcher({
           sign-in state. Existing sessions keep running; stop unused browsers. Tasks, cookies and
           passwords are not transferred, and switching never starts a paid run.
         </p>
+        {capabilities ? (
+          <div className="space-y-2 rounded-md border p-3">
+            <h3 className="text-sm font-medium">Available controls</h3>
+            <div className="flex flex-wrap gap-2">
+              {capabilities.available.map((label) => (
+                <span key={label} className="rounded bg-muted px-2 py-1 text-xs">
+                  {label}
+                </span>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">{capabilities.setup}</p>
+          </div>
+        ) : null}
         <div className="flex gap-3 text-sm">
           <Link to="/connections" className="underline">
             Manage connections

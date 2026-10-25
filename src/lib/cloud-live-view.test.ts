@@ -47,7 +47,8 @@ describe("hosted MCP presets", () => {
     expect(isExecutableMcpProvider("custom_zeabur_bridge")).toBe(true);
     expect(isExecutableMcpProvider("custom_open_teleset")).toBe(true);
     expect(isExecutableMcpProvider("custom_unknown_thing")).toBe(false);
-    expect(cloudKindsForProvider("custom_mcp")).toHaveLength(4);
+    expect(cloudKindsForProvider("custom_mcp")).toContain("sandbox");
+    expect(cloudKindsForProvider("custom_mcp")).toHaveLength(5);
   });
 });
 

@@ -31,6 +31,16 @@ const QUICK_START_TOOLS: Record<keyof typeof descriptions, string[]> = {
   computer: ["create_sandbox", "computer_use", "screenshot"],
   terminal: ["run_command", "execute_command", "create_sandbox"],
   phone: ["create_device", "list_devices"],
+  sandbox: [
+    "create_sandbox",
+    "list_sandboxes",
+    "get_sandbox",
+    "stop_sandbox",
+    "delete_sandbox",
+    "run_code",
+    "execute_code",
+    "run_command",
+  ],
 };
 
 const ARGUMENT_TEMPLATES: Record<string, Record<string, unknown>> = {
@@ -51,6 +61,8 @@ const descriptions = {
   browser:
     "Drive a real cloud browser — natural-language tasks, saved sign-in profiles, live view and raw CDP sessions — through a personal or project-shared connection.",
   terminal: "Run terminal tools through a personal or project-shared connection.",
+  sandbox:
+    "Manage provider-hosted isolated environments for code and files. Discover a connected provider’s tools before creating or stopping an environment.",
   phone: "Use cloud phone tools through a personal or project-shared connection.",
 };
 
@@ -112,6 +124,9 @@ export function CloudWorkspacePage({ kind }: { kind: keyof typeof descriptions }
   });
   const selectTool = (name: string) => {
     setToolName(name);
+    setConfirm(false);
+    execution.reset();
+    setArgumentsText("{}");
     const template = ARGUMENT_TEMPLATES[name];
     if (template) {
       const args = { ...template };
@@ -131,6 +146,9 @@ export function CloudWorkspacePage({ kind }: { kind: keyof typeof descriptions }
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-4 py-8 sm:px-6">
       <header>
+        <Link to="/cloud" className="text-sm underline">
+          Cloud workspace
+        </Link>
         <h1 className="text-2xl font-semibold">{title}</h1>
         <p className="mt-2 text-sm text-muted-foreground">{descriptions[kind]}</p>
       </header>

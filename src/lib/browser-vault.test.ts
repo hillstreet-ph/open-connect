@@ -85,3 +85,15 @@ describe("automatic browser Vault reuse", () => {
     expect(calls).not.toContain("bind");
   });
 });
+
+test("explicit browser setup rejects raw keys and mismatched provider references before resolution", async () => {
+  const { validateOwnedBrowserReference } = await import("./browser-vault.server");
+  for (const reference of [
+    "raw-secret",
+    "credential://browserbase/00000000-0000-4000-8000-000000000001",
+    "https://evil.test/key",
+  ])
+    await expect(validateOwnedBrowserReference("owner", "browser_use", reference)).rejects.toThrow(
+      "credential reference",
+    );
+});

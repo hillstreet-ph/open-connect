@@ -15,7 +15,7 @@ export function isRemoteMcpProvider(provider: string): provider is RemoteMcpProv
   return REMOTE_MCP_PROVIDERS.includes(provider as RemoteMcpProvider);
 }
 
-export type CloudWorkspaceKind = "browser" | "computer" | "terminal" | "phone";
+export type CloudWorkspaceKind = "browser" | "computer" | "terminal" | "phone" | "sandbox";
 
 /**
  * Brokered provider connections whose vendor publishes an official hosted MCP
@@ -61,7 +61,7 @@ export function isExecutableMcpProvider(provider: string) {
 export function cloudKindsForProvider(provider: string): readonly CloudWorkspaceKind[] {
   if (provider === "custom_api") return [];
   if (isHostedMcpProvider(provider)) return HOSTED_MCP_PRESETS[provider].kinds;
-  return ["browser", "computer", "terminal", "phone"];
+  return ["browser", "computer", "terminal", "phone", "sandbox"];
 }
 
 export function normalizeRemoteMcpEndpoint(provider: string, value: unknown) {
