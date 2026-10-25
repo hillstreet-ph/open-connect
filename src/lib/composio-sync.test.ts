@@ -37,7 +37,7 @@ test("separate accounts survive while repeated pages produce one candidate per a
   assert.equal(plan.candidates.length, 2);
 });
 
-test("native credentials do not shadow a broker account and preview exposes no references", () => {
+test("native credentials linked to an exact broker account are preserved without exposing references", () => {
   const plan = planComposioSync(
     [{ id: "ca_native", provider: "custom_app" }],
     [
@@ -49,8 +49,8 @@ test("native credentials do not shadow a broker account and preview exposes no r
     ],
     [],
   );
-  assert.equal(plan.candidates[0]?.display_name, "custom_app");
-  assert.equal(plan.existing, 0);
+  assert.deepEqual(plan.candidates, []);
+  assert.equal(plan.existing, 1);
   assert.doesNotMatch(JSON.stringify(plan), /credential:\/\/|composio:\/\//);
 });
 
@@ -148,4 +148,33 @@ test("website sync-all imports every candidate in bounded batches and retries ex
       ),
     /1–100/,
   );
+});
+
+test("native account matches require both provider and exact account ID; no-op import preserves bindings", () => {
+  const accounts = [{ id: "ca_native", provider: "custom_app" }];
+  const saved = [
+    {
+      id: "native",
+      provider: "custom_app",
+      provider_account_id: "ca_native",
+      credential_reference: "credential://custom_app/opaque",
+    },
+  ];
+  assert.equal(
+    composioImportRecords("owner", accounts, saved, [], ["ca_native"]).records.length,
+    0,
+  );
+  const mapping = planComposioAccountMapping("external", accounts, saved, []);
+  assert.equal(mapping.connections[0]?.connection_id, "native");
+  assert.equal(mapping.candidate_count, 0);
+  assert.equal(
+    planComposioSync(accounts, [{ ...saved[0]!, provider: "other" }], []).candidates.length,
+    1,
+  );
+  assert.equal(
+    planComposioSync(accounts, [{ ...saved[0]!, provider_account_id: "ca_other" }], []).candidates
+      .length,
+    1,
+  );
+  assert.equal(saved[0]?.credential_reference, "credential://custom_app/opaque");
 });

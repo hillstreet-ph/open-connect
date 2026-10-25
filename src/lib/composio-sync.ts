@@ -11,21 +11,27 @@ function brokerAccountId(connection: SavedConnection) {
   return connection.credential_reference?.match(/^composio:\/\/connected-account\/([^/]+)$/)?.[1];
 }
 
+/** Preserve exact account bindings, including native vault connections linked to a broker account. */
+function savedAccount(account: ManagedAccount, saved: SavedConnection[]) {
+  return (
+    saved.find((connection) => brokerAccountId(connection) === account.id) ??
+    saved.find(
+      (connection) =>
+        connection.provider === account.provider && connection.provider_account_id === account.id,
+    )
+  );
+}
+
 /** Plan metadata imports only. Account ownership and ACTIVE status are checked by the broker. */
 export function planComposioSync(
   accounts: ManagedAccount[],
   saved: SavedConnection[],
   catalog: Array<{ slug: string; name: string }>,
 ) {
-  const existing = new Set<string>();
-  for (const connection of saved) {
-    const accountId = brokerAccountId(connection);
-    if (accountId) existing.add(accountId);
-  }
   const labels = new Map(catalog.map((item) => [item.slug, item.name]));
   const unique = new Map(accounts.map((account) => [account.id, account]));
   const candidates = [...unique.values()]
-    .filter((account) => !existing.has(account.id))
+    .filter((account) => !savedAccount(account, saved))
     .map((account) => ({
       account_id: account.id,
       provider: account.provider,
@@ -46,14 +52,9 @@ export function planComposioAccountMapping(
   catalog: Array<{ slug: string; name: string }>,
 ) {
   const labels = new Map(catalog.map((item) => [item.slug, item.name]));
-  const existing = new Map<string, SavedConnection>();
-  for (const connection of saved) {
-    const accountId = brokerAccountId(connection);
-    if (accountId && !existing.has(accountId)) existing.set(accountId, connection);
-  }
   const unique = new Map(accounts.map((account) => [account.id, account]));
   const connections = [...unique.values()].map((account) => {
-    const connection = existing.get(account.id);
+    const connection = savedAccount(account, saved);
     return {
       provider: account.provider,
       display_name:
