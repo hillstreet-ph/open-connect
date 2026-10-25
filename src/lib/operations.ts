@@ -105,3 +105,9 @@ export function validateOneTime(value: string, now = new Date()) {
     throw new Error("Choose a future run date and time.");
   return date.toISOString();
 }
+
+export const taskStatusInput = z.object({
+  id: z.uuid(),
+  status: z.enum(TASK_STATUSES),
+  expectedUpdatedAt: z.iso.datetime({ offset: true }).optional(),
+});

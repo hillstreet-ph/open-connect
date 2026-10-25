@@ -1,19 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { CheckCircle2, Circle, Loader2, ListTodo, Plus } from "lucide-react";
+import { Loader2, ListTodo, Plus, Columns3, List } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { listProjects } from "@/lib/orgs.functions";
-import { createTask, listTasks, updateTaskStatus, type TaskStatus } from "@/lib/ops.functions";
+import { createTask, listTasks, updateTaskStatus } from "@/lib/ops.functions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WorkTemplatePicker } from "@/components/work-template-picker";
-import { statusClass, statusLabel, TASK_STATUSES } from "@/lib/operations";
+import { statusLabel, TASK_STATUSES } from "@/lib/operations";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import { Input } from "@/components/ui/input";
+import { TaskKanban } from "@/components/task-kanban";
+import { TaskCard, type TaskChange } from "@/components/task-card";
 import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/_authenticated/tasks")({
@@ -37,6 +39,7 @@ function TasksPage() {
   const update = useServerFn(updateTaskStatus);
   const listProj = useServerFn(listProjects);
 
+  const [view, setView] = useState<"list" | "board">("board");
   const [description, setDescription] = useState("");
   const [dueAt, setDueAt] = useState("");
   const [filter, setFilter] = useState("all");
@@ -47,8 +50,8 @@ function TasksPage() {
   const tasks = useQuery({
     queryKey: ["tasks", user?.id, filter],
     queryFn: () => list({ data: filter === "all" ? {} : { status: filter } }),
-    enabled: !!user,
-    refetchInterval: 30000,
+    enabled: !!user && view === "list",
+    refetchInterval: view === "list" ? 30000 : false,
   });
   const projects = useQuery({
     queryKey: ["projects", user?.id],
@@ -78,9 +81,15 @@ function TasksPage() {
   });
 
   const statusMutation = useMutation({
-    mutationFn: (input: { id: string; status: TaskStatus }) => update({ data: input }),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ["tasks"] }),
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Update failed"),
+    mutationFn: (input: TaskChange) => update({ data: input }),
+    onSuccess: () => {
+      toast.success("Task status updated");
+      void qc.invalidateQueries({ queryKey: ["tasks"] });
+    },
+    onError: (e) => {
+      toast.error(e instanceof Error ? e.message : "Update failed");
+      void qc.invalidateQueries({ queryKey: ["tasks"] });
+    },
   });
 
   return (
@@ -185,95 +194,84 @@ function TasksPage() {
       </Card>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-base font-semibold">
-          Your tasks <span className="text-muted-foreground">· {tasks.data?.length ?? 0}</span>
-        </h2>
-        <select
-          aria-label="Filter tasks by status"
-          className="h-9 rounded-md border bg-background px-3 text-sm"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-        >
-          <option value="all">All statuses</option>
-          {STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {statusLabel(s)}
-            </option>
-          ))}
-        </select>
-      </div>
-      <p className="text-xs text-muted-foreground">
-        Showing up to 100 recently updated tasks for the selected status.
-      </p>
-      <div className="space-y-2" aria-live="polite">
-        {tasks.isLoading ? <p role="status">Loading tasks…</p> : null}
-        {tasks.isError ? (
-          <p role="alert">
-            Could not load tasks.{" "}
-            <Button variant="link" onClick={() => void tasks.refetch()}>
-              Retry
+        <h2 className="text-base font-semibold">Your tasks</h2>
+        <div className="flex flex-wrap items-center gap-2">
+          <div role="group" aria-label="Task view" className="flex gap-1 rounded-lg border p-1">
+            <Button
+              size="sm"
+              variant={view === "board" ? "secondary" : "ghost"}
+              aria-pressed={view === "board"}
+              onClick={() => setView("board")}
+            >
+              <Columns3 className="size-4" /> Board
             </Button>
-          </p>
-        ) : null}
-        {!tasks.isLoading && !tasks.isError && (tasks.data ?? []).length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            {filter === "all" ? "No tasks yet." : "No tasks with this status."}
-          </p>
-        ) : (
-          tasks.data?.map((t) => (
-            <Card key={t.id} className="p-4 shadow-panel">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    {t.status === "done" ? (
-                      <CheckCircle2 className="size-4 text-primary" />
-                    ) : (
-                      <Circle className="size-4 text-muted-foreground" />
-                    )}
-                    <p className="min-w-0 [overflow-wrap:anywhere] font-medium">{t.title}</p>
-                  </div>
-                  {t.description ? (
-                    <p className="mt-2 whitespace-pre-wrap break-words text-sm text-muted-foreground">
-                      {t.description}
-                    </p>
-                  ) : null}
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <Badge variant="outline" className={statusClass(t.status)}>
-                      {statusLabel(t.status)}
-                    </Badge>
-                    <Badge variant="outline" className={statusClass(t.priority)}>
-                      {statusLabel(t.priority)}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">
-                      {projects.data?.find((p) => p.id === t.project_id)?.name ??
-                        (t.project_id ? "Project unavailable" : "No project")}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Updated {new Date(t.updated_at).toLocaleString()}
-                    {t.due_at ? ` · Due ${new Date(t.due_at).toLocaleString()}` : ""}
-                  </p>
-                </div>
-                <select
-                  className="h-9 rounded-md border border-input bg-background px-2 text-xs"
-                  aria-label={`Status for ${t.title}`}
-                  disabled={statusMutation.isPending}
-                  value={t.status}
-                  onChange={(e) =>
-                    statusMutation.mutate({ id: t.id, status: e.target.value as TaskStatus })
-                  }
-                >
-                  {STATUSES.map((s) => (
-                    <option key={s} value={s}>
-                      {statusLabel(s)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </Card>
-          ))
-        )}
+            <Button
+              size="sm"
+              variant={view === "list" ? "secondary" : "ghost"}
+              aria-pressed={view === "list"}
+              onClick={() => setView("list")}
+            >
+              <List className="size-4" /> List
+            </Button>
+          </div>
+          {view === "list" ? (
+            <select
+              aria-label="Filter tasks by status"
+              className="h-9 rounded-md border bg-background px-3 text-sm"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+            >
+              <option value="all">All statuses</option>
+              {STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {statusLabel(s)}
+                </option>
+              ))}
+            </select>
+          ) : null}
+        </div>
       </div>
+      {view === "board" ? (
+        <TaskKanban
+          key={user?.id ?? "signed-out"}
+          userId={user?.id}
+          projects={projects.data ?? []}
+          pending={statusMutation.isPending}
+          onChange={(input) => statusMutation.mutate(input)}
+        />
+      ) : (
+        <>
+          <p className="text-xs text-muted-foreground">
+            Showing up to 100 recently updated tasks for the selected status.
+          </p>
+          <div className="space-y-2" aria-live="polite">
+            {tasks.isLoading ? <p role="status">Loading tasks…</p> : null}
+            {tasks.isError ? (
+              <p role="alert">
+                Could not load tasks.{" "}
+                <Button variant="link" onClick={() => void tasks.refetch()}>
+                  Retry
+                </Button>
+              </p>
+            ) : null}
+            {!tasks.isLoading && !tasks.isError && (tasks.data ?? []).length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                {filter === "all" ? "No tasks yet." : "No tasks with this status."}
+              </p>
+            ) : (
+              tasks.data?.map((t) => (
+                <TaskCard
+                  key={t.id}
+                  task={t}
+                  projectName={projects.data?.find((p) => p.id === t.project_id)?.name}
+                  pending={statusMutation.isPending}
+                  onChange={(input) => statusMutation.mutate(input)}
+                />
+              ))
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { taskInput, TASK_STATUSES, validTimezone, validateOneTime } from "@/lib/operations";
+import { taskInput, taskStatusInput, validTimezone, validateOneTime } from "@/lib/operations";
 import type { Json } from "@/integrations/supabase/types";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -58,19 +58,10 @@ export const createTask = createServerFn({ method: "POST" })
 
 export const updateTaskStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input: unknown) =>
-    z.object({ id: z.uuid(), status: z.enum(TASK_STATUSES) }).parse(input),
-  )
+  .validator((input: unknown) => taskStatusInput.parse(input))
   .handler(async ({ data, context }) => {
-    const { data: row, error } = await context.supabase
-      .from("tasks")
-      .update({ status: data.status, updated_at: new Date().toISOString() })
-      .eq("id", data.id)
-      .eq("user_id", context.userId)
-      .select("id, status")
-      .single();
-    if (error) throw new Error(error.message);
-    return row;
+    const { updateOwnedTaskStatus } = await import("@/lib/ops-data.server");
+    return updateOwnedTaskStatus(context.supabase, context.userId, data);
   });
 
 /* ─── Schedules ─────────────────────────────────────────── */
