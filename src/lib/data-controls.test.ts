@@ -88,3 +88,12 @@ test("host exchange ingestion requires bounded explicit message text", async () 
   assert.throws(() => validateSharedExchange({ prompt: "x".repeat(8001), response: "reply" }));
   assert.throws(() => validateSharedExchange({ prompt: { history: [] }, response: "reply" }));
 });
+
+test("Telegram credentials in raw and URL-encoded provider URLs are redacted", () => {
+  const token = "123456789:" + "x".repeat(35);
+  for (const value of [token, token.replaceAll(":", "%3A")]) {
+    const clean = redactDataText(`https://api.telegram.org/bot${value}/getMe`);
+    assert.ok(!clean.includes("x".repeat(35)));
+    assert.match(clean, /REDACTED BOT TOKEN/);
+  }
+});

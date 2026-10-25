@@ -10,7 +10,7 @@ const tool = {
 async function fixture(
   run: (
     calls: Array<{ url: string; body: Record<string, unknown> }>,
-    state: { owner: string; repeat: boolean; malformed: boolean },
+    state: { owner: string; repeat: boolean; malformed: boolean; rejected: boolean },
   ) => Promise<void>,
 ) {
   const fetchBefore = globalThis.fetch,
@@ -19,7 +19,7 @@ async function fixture(
   process.env["COMPOSIO_API_KEY"] = "fixture-key";
   delete process.env["COMPOSIO_USER_MAPPINGS"];
   const calls: Array<{ url: string; body: Record<string, unknown> }> = [];
-  const state = { owner: "owner", repeat: false, malformed: false };
+  const state = { owner: "owner", repeat: false, malformed: false, rejected: false };
   globalThis.fetch = async (input, init) => {
     const url = String(input),
       body = init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : {};
@@ -30,6 +30,14 @@ async function fixture(
         user_id: state.owner,
         status: "ACTIVE",
         toolkit: { slug: "tinyfish" },
+      });
+    if (url.includes("/tools/execute/") && state.rejected)
+      return Response.json({
+        successful: false,
+        data: {
+          status_code: 401,
+          http_error: "https://api.telegram.org/bot123456789:" + "x".repeat(35) + "/getMe",
+        },
       });
     if (url.includes("/tools/execute/"))
       return Response.json(
@@ -123,4 +131,19 @@ test("revoked ownership and malformed executor results never report success", as
       ).isError,
       true,
     );
+  }));
+
+test("provider failure returns a safe code instead of credential-bearing diagnostic data", async () =>
+  fixture(async (_calls, state) => {
+    state.rejected = true;
+    const result = await callManagedMcpTool(
+      "owner",
+      "tinyfish",
+      "composio://connected-account/ca_one",
+      tool.slug,
+      {},
+    );
+    assert.equal(result.isError, true);
+    assert.match(JSON.stringify(result), /provider_authorization_required/);
+    assert.doesNotMatch(JSON.stringify(result), /api\.telegram\.org|xxxxxxxx/);
   }));
