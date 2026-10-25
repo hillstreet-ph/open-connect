@@ -50,6 +50,7 @@ export const appCategories: NavCategory[] = [
       { to: "/schedule", label: "Schedules" },
       { to: "/automations", label: "Automations" },
       { to: "/approvals", label: "Approvals" },
+      { to: "/approvals", label: "Approvals" },
     ],
   },
   {
