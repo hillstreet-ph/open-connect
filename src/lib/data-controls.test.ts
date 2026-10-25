@@ -36,3 +36,10 @@ test("common credentials are removed from auto memory and nested export fields",
     { title: "Keep workflow", metadata: { refresh_token: "[REDACTED]" }, content: clean },
   );
 });
+
+test("JSON credentials and private keys in text are redacted before saving", () => {
+  const json = '{"password":"json-password", "token":"json-token", "cookie":"private-cookie"}';
+  const redacted = redactDataText(json);
+  for (const secret of ["json-password", "json-token", "private-cookie"])
+    assert.ok(!redacted.includes(secret));
+});
