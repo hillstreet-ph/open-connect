@@ -1,3 +1,4 @@
+import { openApiOperations } from "./openapi-connector.ts";
 import { normalizeAuthHeader } from "./connection-auth-header.ts";
 import { AI_GATEWAY_PROVIDERS } from "./ai-gateway-providers.ts";
 import type { normalizeConnectionSetup } from "./connection-setup";
@@ -49,6 +50,15 @@ export async function validateConnectionCredential(
   send: typeof fetch = fetch,
 ): Promise<Validation> {
   const bearer = { Authorization: `Bearer ${setup.apiKey}` };
+  if (setup.provider === "custom_api" && setup.openapi) {
+    const api = openApiOperations(setup.openapi);
+    if (new URL(api.endpoint).origin !== new URL(setup.endpointUrl).origin)
+      throw new Error("OpenAPI server origin must match the connection URL");
+    return {
+      verified: true,
+      detail: `OpenAPI definition validated: ${api.tools.length} operations. No upstream operation has been executed.`,
+    };
+  }
   if (setup.provider === "custom_api")
     return {
       verified: false,
@@ -72,6 +82,7 @@ export async function validateConnectionCredential(
         return name;
       },
       send,
+      setup.transport === "sse" ? "sse" : "http",
     );
     return { verified: true, accountId, detail: "MCP initialized" };
   }

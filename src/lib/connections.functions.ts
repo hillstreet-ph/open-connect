@@ -432,6 +432,15 @@ export const listAppConnections = createServerFn({ method: "GET" })
                   typeof metadata["endpoint_url"] === "string"
                     ? metadata["endpoint_url"]
                     : connectionEndpoint(metadata["endpoint_url"]),
+                transport: String(metadata["transport"] || "http"),
+                icon_data: String(metadata["icon_data"] || ""),
+                capabilities: metadata["capabilities"] || null,
+                openapi: metadata["openapi"] || null,
+                oauth_client_id: String(metadata["oauth_client_id"] || ""),
+                oauth_issuer: String(metadata["oauth_issuer"] || ""),
+                disabled_tools: Array.isArray(metadata["disabled_tools"])
+                  ? (metadata["disabled_tools"] as string[])
+                  : [],
                 auth_type: connectionAuthType(metadata),
                 auth_header:
                   typeof metadata["auth_header"] === "string"
@@ -835,7 +844,7 @@ export const configureAppConnection = createServerFn({ method: "POST" })
     const setup = normalizeConnectionSetup(data, app);
     let existingQuery = context.supabase
       .from("app_connections")
-      .select("id,provider_account_id,credential_reference,metadata")
+      .select("id,provider_account_id,credential_reference,metadata,updated_at")
       .eq("user_id", context.userId)
       .eq("provider", setup.provider)
       .order("created_at", { ascending: false });
@@ -895,11 +904,21 @@ export const configureAppConnection = createServerFn({ method: "POST" })
       scopes: [...setup.app.scopes],
       credential_reference: secretId ? `credential://${setup.provider}/${secretId}` : null,
       metadata: {
+        disabled_tools: Array.isArray(
+          (existing?.metadata as Record<string, unknown> | null)?.["disabled_tools"],
+        )
+          ? (existing!.metadata as { disabled_tools: unknown[] }).disabled_tools.filter(
+              (tool): tool is string => typeof tool === "string",
+            )
+          : [],
         source: "open-connect",
         mode: setup.provider === "custom_mcp" ? "custom_mcp" : "brokered_secret",
         auth_type: setup.authType,
         account_label: setup.accountLabel,
         description: setup.description,
+        transport: setup.transport,
+        openapi: setup.openapi ? JSON.parse(JSON.stringify(setup.openapi)) : null,
+        icon_data: setup.iconData,
         auth_header: setup.authHeader,
         endpoint_url: setup.endpointUrl || null,
         validation: {
@@ -918,6 +937,7 @@ export const configureAppConnection = createServerFn({ method: "POST" })
           .update(record)
           .eq("id", existing.id)
           .eq("user_id", context.userId)
+          .eq("updated_at", existing.updated_at)
           .select("id, provider, display_name, status, scopes, provider_account_id, created_at")
           .single()
       : await query

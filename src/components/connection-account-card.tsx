@@ -1,7 +1,13 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { RefreshCw, Unplug, Wrench, UserRound } from "lucide-react";
+import {
+  refreshConnectorCapabilities,
+  setConnectorToolPermission,
+  connectorStudioDraft,
+} from "@/lib/connector-capabilities.functions";
+import { toast } from "sonner";
 import { getConnectionDetails } from "@/lib/connection-details.functions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +27,9 @@ type Account = {
     description?: string;
     auth_type?: string;
     auth_header?: string;
+    icon_data?: string;
+    capabilities?: unknown;
+    disabled_tools?: string[];
   };
   identity: { label: string; login: string; name: string; email: string };
 };
@@ -40,6 +49,43 @@ export function ConnectionAccountCard({
   onReconnect: () => void;
   onDisconnect: () => void;
 }) {
+  const client = useQueryClient();
+  const refreshFn = useServerFn(refreshConnectorCapabilities),
+    permissionFn = useServerFn(setConnectorToolPermission),
+    draftFn = useServerFn(connectorStudioDraft);
+  const refresh = useMutation({
+    mutationFn: () => refreshFn({ data: { id: account.id } }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ["app-connections"] });
+      void client.invalidateQueries({ queryKey: ["connection-details", account.id] });
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  const permission = useMutation({
+    mutationFn: (input: { tool: string; enabled: boolean }) =>
+      permissionFn({ data: { id: account.id, ...input } }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ["app-connections"] });
+      void client.invalidateQueries({ queryKey: ["connection-details", account.id] });
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  const draft = useMutation({
+    mutationFn: () => draftFn({ data: { id: account.id } }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ["resources-review-queue"] });
+      toast.success("Private connector plugin draft is ready in Studio review");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  const snapshot = account.metadata?.capabilities as
+    | {
+        tools?: Array<{ name: string; description?: string }>;
+        prompts?: unknown[];
+        resources?: unknown[];
+        catalog_scope?: string;
+      }
+    | undefined;
   const [expanded, setExpanded] = useState(false);
   const [search, setSearch] = useState("");
   const detailsFn = useServerFn(getConnectionDetails);
@@ -51,15 +97,20 @@ export function ConnectionAccountCard({
   });
   const identity = details.data?.identity ?? account.identity;
   const title = identity.name || identity.login || identity.email || identity.label;
-  const tools = (details.data?.tools ?? []).filter((tool) =>
-    `${tool.name} ${tool.description}`.toLowerCase().includes(search.toLowerCase()),
-  );
+  const tools = (snapshot?.tools ?? details.data?.tools ?? [])
+    .map((t) => ({ name: t.name, description: t.description || "" }))
+    .filter((tool) =>
+      `${tool.name} ${tool.description}`.toLowerCase().includes(search.toLowerCase()),
+    );
   return (
     <article className="min-w-0 space-y-4 rounded-xl border bg-card p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           {account.display_name !== title && (
             <p className="mb-1 break-words text-sm font-semibold">{account.display_name}</p>
+          )}
+          {account.metadata?.icon_data && (
+            <img src={account.metadata.icon_data} alt="" className="mb-2 size-10 rounded-lg" />
           )}
           <p className="flex items-center gap-2 font-medium">
             <UserRound className="size-4 shrink-0" aria-hidden="true" />
@@ -123,6 +174,33 @@ export function ConnectionAccountCard({
           {expanded ? "Hide details" : "Tools, skills & capabilities"}
         </Button>
       </div>
+      {["custom_mcp", "custom_api"].includes(account.provider) && (
+        <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={refresh.isPending || !["connected", "degraded"].includes(account.status)}
+            onClick={() => refresh.mutate()}
+          >
+            {refresh.isPending ? "Discovering…" : "Refresh capabilities"}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={draft.isPending}
+            onClick={() => draft.mutate()}
+          >
+            Create plugin in Studio
+          </Button>
+          {snapshot && (
+            <p className="w-full text-xs text-muted-foreground">
+              {snapshot.tools?.length || 0} tools · {snapshot.prompts?.length || 0} prompts ·{" "}
+              {snapshot.resources?.length || 0} resource descriptors ·{" "}
+              {snapshot.catalog_scope || "snapshot"}
+            </p>
+          )}
+        </div>
+      )}
       {expanded ? (
         <div id={`capabilities-${account.id}`} className="min-w-0 space-y-3 border-t pt-4">
           <div className="flex items-center justify-between gap-2">
@@ -172,6 +250,19 @@ export function ConnectionAccountCard({
                 {tools.map((tool) => (
                   <div key={tool.name} className="rounded-lg border p-3">
                     <p className="break-all text-sm font-medium">{tool.name}</p>
+                    {snapshot?.tools && (
+                      <label className="mt-2 flex items-center gap-2 text-xs">
+                        <input
+                          type="checkbox"
+                          checked={!account.metadata?.disabled_tools?.includes(tool.name)}
+                          disabled={permission.isPending}
+                          onChange={(e) =>
+                            permission.mutate({ tool: tool.name, enabled: e.target.checked })
+                          }
+                        />
+                        Allow this tool for this connection
+                      </label>
+                    )}
                     <p className="mt-1 whitespace-pre-wrap break-words text-xs text-muted-foreground">
                       {tool.description}
                     </p>

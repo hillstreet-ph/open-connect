@@ -263,7 +263,7 @@ export function authorizeToolForConnectionSnapshot(
   return tool;
 }
 
-async function materializeCustomMcpConnection(data: ToolConnection) {
+export async function materializeCustomMcpConnection(data: ToolConnection) {
   if (!isExecutableMcpProvider(data.provider))
     throw new Error("Only remote MCP connections use this tool.");
 
@@ -285,7 +285,12 @@ async function materializeCustomMcpConnection(data: ToolConnection) {
     if (authType !== "none" && !data.credential_reference) {
       throw new CredentialResolutionError("credential_missing");
     }
-    credential = await resolveCredential(data.user_id, data.credential_reference);
+    credential =
+      authType === "oauth"
+        ? await (
+            await import("./custom-oauth.server")
+          ).oauthAccessToken(data.user_id, data.id, data.credential_reference!)
+        : await resolveCredential(data.user_id, data.credential_reference);
   } catch (error) {
     throw new RemoteMcpDiscoveryError(remoteMcpCredentialFailureCode(error));
   }
@@ -293,6 +298,7 @@ async function materializeCustomMcpConnection(data: ToolConnection) {
     id: data.id,
     name: data.display_name,
     endpoint,
+    transport: (metadata["transport"] === "sse" ? "sse" : "http") as "http" | "sse",
     headers: connectionAuthHeaders(
       authType,
       credential,
@@ -310,6 +316,10 @@ export async function getCustomMcpConnection(
 }
 
 async function listToolsForConnection(saved: ToolConnection) {
+  if (saved.provider === "custom_api") {
+    const { openApiOperations } = await import("./openapi-connector.ts");
+    return openApiOperations((saved.metadata as Record<string, unknown>)["openapi"]).tools;
+  }
   return saved.provider === "twilio"
     ? twilioTools(saved.scopes ?? [])
     : saved.provider === "telegram"
@@ -317,7 +327,12 @@ async function listToolsForConnection(saved: ToolConnection) {
       : await (async () => {
           const connection = await materializeCustomMcpConnection(saved);
           try {
-            return await fetchMcpTools(connection.endpoint, connection.headers);
+            return await fetchMcpTools(
+              connection.endpoint,
+              connection.headers,
+              fetch,
+              connection.transport,
+            );
           } catch (error) {
             if (error instanceof McpCatalogError) {
               throw new RemoteMcpDiscoveryError("remote_mcp_catalog_invalid");
@@ -331,7 +346,12 @@ export async function listCustomMcpTools(userId: string, connectionId: string, p
   const saved = await getToolConnection(userId, connectionId, projectId);
   return {
     connection: { id: saved.id, name: saved.display_name, provider: saved.provider },
-    tools: await listToolsForConnection(saved),
+    tools: (await listToolsForConnection(saved)).filter(
+      (tool) =>
+        !(
+          (saved.metadata as Record<string, unknown>)["disabled_tools"] as string[] | undefined
+        )?.includes(String(tool["name"])),
+    ),
   };
 }
 
@@ -344,6 +364,13 @@ export async function callCustomMcpTool(
   authorizeTool?: ToolAuthorizer,
 ) {
   const connection = await getToolConnection(userId, connectionId, projectId);
+  if (
+    Array.isArray((connection.metadata as Record<string, unknown>)["disabled_tools"]) &&
+    ((connection.metadata as Record<string, unknown>)["disabled_tools"] as string[]).includes(
+      toolName,
+    )
+  )
+    throw new Error("This tool is disabled by the connection owner");
   if (authorizeTool) {
     const tools = await listToolsForConnection(connection);
     authorizeToolForConnectionSnapshot(connection, tools, toolName, authorizeTool);
@@ -368,7 +395,19 @@ export async function callCustomMcpTool(
 
   let result;
   try {
-    if (connection.provider === "twilio") {
+    if (connection.provider === "custom_api") {
+      const { callOpenApiTool } = await import("./openapi-connector.server");
+      result = await callOpenApiTool(
+        connection,
+        toolName,
+        args,
+        (connection.metadata as Record<string, unknown>)["auth_type"] === "oauth"
+          ? await (
+              await import("./custom-oauth.server")
+            ).oauthAccessToken(connection.user_id, connection.id, connection.credential_reference!)
+          : await resolveCredential(connection.user_id, connection.credential_reference),
+      );
+    } else if (connection.provider === "twilio") {
       result = await callTwilioTool(toolName, args, {
         scopes: connection.scopes ?? [],
         resolveCredential: () =>
@@ -383,10 +422,15 @@ export async function callCustomMcpTool(
       });
     } else {
       const custom = await materializeCustomMcpConnection(connection);
-      result = await withMcpClient(custom.endpoint, custom.headers, (client) =>
-        client.callTool({ name: toolName, arguments: args }, undefined, {
-          timeout: toolName === "run_agent_team" ? 60000 : 30000,
-        }),
+      result = await withMcpClient(
+        custom.endpoint,
+        custom.headers,
+        (client) =>
+          client.callTool({ name: toolName, arguments: args }, undefined, {
+            timeout: toolName === "run_agent_team" ? 60000 : 30000,
+          }),
+        fetch,
+        custom.transport,
       );
     }
   } catch (error) {

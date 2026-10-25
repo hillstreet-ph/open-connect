@@ -6,6 +6,7 @@ import {
 } from "./agent-helper-policy.ts";
 
 const READS = new Set([
+  "list_connectors",
   "search_marketplace",
   "list_projects",
   "list_tasks",
@@ -13,6 +14,7 @@ const READS = new Set([
   "list_automations",
 ]);
 const WRITES = new Set([
+  "draft_connector_plugin",
   "update_task_status",
   "install_resource_to_library",
   "create_task",

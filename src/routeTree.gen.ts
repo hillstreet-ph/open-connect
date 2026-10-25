@@ -28,6 +28,7 @@ import { Route as AuthenticatedCloudComputerRouteImport } from './routes/_authen
 import { Route as AuthenticatedCloudPhoneRouteImport } from './routes/_authenticated/cloud-phone'
 import { Route as AuthenticatedCloudTerminalRouteImport } from './routes/_authenticated/cloud-terminal'
 import { Route as AuthenticatedConnectionsRouteImport } from './routes/_authenticated/connections'
+import { Route as AuthenticatedCustomOauthCallbackRouteImport } from './routes/_authenticated/custom-oauth-callback'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedGuidesRouteImport } from './routes/_authenticated/guides'
 import { Route as AuthenticatedIntegrationsRouteImport } from './routes/_authenticated/integrations'
@@ -165,6 +166,12 @@ const AuthenticatedConnectionsRoute =
   AuthenticatedConnectionsRouteImport.update({
     id: '/connections',
     path: '/connections',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedCustomOauthCallbackRoute =
+  AuthenticatedCustomOauthCallbackRouteImport.update({
+    id: '/custom-oauth-callback',
+    path: '/custom-oauth-callback',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
@@ -381,6 +388,7 @@ export interface FileRoutesByFullPath {
   '/cloud-phone': typeof AuthenticatedCloudPhoneRoute
   '/cloud-terminal': typeof AuthenticatedCloudTerminalRoute
   '/connections': typeof AuthenticatedConnectionsRouteWithChildren
+  '/custom-oauth-callback': typeof AuthenticatedCustomOauthCallbackRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/guides': typeof AuthenticatedGuidesRoute
   '/integrations': typeof AuthenticatedIntegrationsRoute
@@ -439,6 +447,7 @@ export interface FileRoutesByTo {
   '/cloud-phone': typeof AuthenticatedCloudPhoneRoute
   '/cloud-terminal': typeof AuthenticatedCloudTerminalRoute
   '/connections': typeof AuthenticatedConnectionsRouteWithChildren
+  '/custom-oauth-callback': typeof AuthenticatedCustomOauthCallbackRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/guides': typeof AuthenticatedGuidesRoute
   '/integrations': typeof AuthenticatedIntegrationsRoute
@@ -499,6 +508,7 @@ export interface FileRoutesById {
   '/_authenticated/cloud-phone': typeof AuthenticatedCloudPhoneRoute
   '/_authenticated/cloud-terminal': typeof AuthenticatedCloudTerminalRoute
   '/_authenticated/connections': typeof AuthenticatedConnectionsRouteWithChildren
+  '/_authenticated/custom-oauth-callback': typeof AuthenticatedCustomOauthCallbackRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/guides': typeof AuthenticatedGuidesRoute
   '/_authenticated/integrations': typeof AuthenticatedIntegrationsRoute
@@ -559,6 +569,7 @@ export interface FileRouteTypes {
     | '/cloud-phone'
     | '/cloud-terminal'
     | '/connections'
+    | '/custom-oauth-callback'
     | '/dashboard'
     | '/guides'
     | '/integrations'
@@ -617,6 +628,7 @@ export interface FileRouteTypes {
     | '/cloud-phone'
     | '/cloud-terminal'
     | '/connections'
+    | '/custom-oauth-callback'
     | '/dashboard'
     | '/guides'
     | '/integrations'
@@ -676,6 +688,7 @@ export interface FileRouteTypes {
     | '/_authenticated/cloud-phone'
     | '/_authenticated/cloud-terminal'
     | '/_authenticated/connections'
+    | '/_authenticated/custom-oauth-callback'
     | '/_authenticated/dashboard'
     | '/_authenticated/guides'
     | '/_authenticated/integrations'
@@ -873,6 +886,13 @@ declare module '@tanstack/react-router' {
       path: '/connections'
       fullPath: '/connections'
       preLoaderRoute: typeof AuthenticatedConnectionsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/custom-oauth-callback': {
+      id: '/_authenticated/custom-oauth-callback'
+      path: '/custom-oauth-callback'
+      fullPath: '/custom-oauth-callback'
+      preLoaderRoute: typeof AuthenticatedCustomOauthCallbackRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/dashboard': {
@@ -1184,6 +1204,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCloudPhoneRoute: typeof AuthenticatedCloudPhoneRoute
   AuthenticatedCloudTerminalRoute: typeof AuthenticatedCloudTerminalRoute
   AuthenticatedConnectionsRoute: typeof AuthenticatedConnectionsRouteWithChildren
+  AuthenticatedCustomOauthCallbackRoute: typeof AuthenticatedCustomOauthCallbackRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedGuidesRoute: typeof AuthenticatedGuidesRoute
   AuthenticatedIntegrationsRoute: typeof AuthenticatedIntegrationsRoute
@@ -1221,6 +1242,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCloudPhoneRoute: AuthenticatedCloudPhoneRoute,
   AuthenticatedCloudTerminalRoute: AuthenticatedCloudTerminalRoute,
   AuthenticatedConnectionsRoute: AuthenticatedConnectionsRouteWithChildren,
+  AuthenticatedCustomOauthCallbackRoute: AuthenticatedCustomOauthCallbackRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedGuidesRoute: AuthenticatedGuidesRoute,
   AuthenticatedIntegrationsRoute: AuthenticatedIntegrationsRoute,

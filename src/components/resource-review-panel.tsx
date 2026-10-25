@@ -5,6 +5,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { BadgeCheck, Loader2, Search, Send, ShieldCheck, ShieldOff, X } from "lucide-react";
 import { toast } from "sonner";
 import {
+  inspectResourceBatch,
+  editReviewMetadata,
   bulkUpdateResourceReview,
   listResourcesForReview,
   updateResourceReview,
@@ -24,6 +26,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 
 const BULK_ACTIONS: { action: ReviewAction; icon: typeof ShieldCheck }[] = [
@@ -48,6 +58,36 @@ export function ResourceReviewPanel() {
   const listFn = useServerFn(listResourcesForReview);
   const updateFn = useServerFn(updateResourceReview);
   const bulkFn = useServerFn(bulkUpdateResourceReview);
+  const inspectFn = useServerFn(inspectResourceBatch),
+    editFn = useServerFn(editReviewMetadata);
+  const [edit, setEdit] = useState<{
+    id: string;
+    name: string;
+    description: string;
+    version: string;
+    license: string;
+  } | null>(null);
+  const inspection = useMutation({
+    mutationFn: (ids: string[]) => inspectFn({ data: { ids } }),
+    onSuccess: (r) => {
+      void queryClient.invalidateQueries({ queryKey: ["resources-review-queue"] });
+      toast.info(
+        `${r.results.length} inspection results available below. Blocked or changed packages require fresh review.`,
+      );
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  const editor = useMutation({
+    mutationFn: async () => {
+      if (edit) await editFn({ data: edit });
+    },
+    onSuccess: () => {
+      setEdit(null);
+      void queryClient.invalidateQueries({ queryKey: ["resources-review-queue"] });
+      toast.success("Metadata updated; verification and publication reset for review");
+    },
+    onError: (e) => toast.error(e.message),
+  });
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const [filter, setFilter] = useState("");
   const [pending, setPending] = useState<ReviewAction | null>(null);
@@ -170,6 +210,19 @@ export function ResourceReviewPanel() {
 
   return (
     <div className="grid gap-3">
+      {inspection.data && (
+        <details className="rounded-lg border p-3 text-sm" open>
+          <summary>Inspection results</summary>
+          <ul className="mt-2 space-y-2">
+            {inspection.data.results.map((result) => (
+              <li key={result.id}>
+                <Badge variant="outline">{result.state}</Badge>{" "}
+                <span className="break-all">{result.id}</span>: {result.detail}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
       <Card className="sticky top-0 z-10 shadow-panel">
         <CardContent className="grid gap-3 p-3">
           <div className="relative">
@@ -208,6 +261,14 @@ export function ResourceReviewPanel() {
             ) : null}
           </div>
           <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!selectedIds.length || selectedIds.length > 20 || inspection.isPending}
+              onClick={() => inspection.mutate(selectedIds)}
+            >
+              {inspection.isPending ? "Inspecting…" : "Inspect selected (max 20)"}
+            </Button>
             {BULK_ACTIONS.map(({ action, icon: Icon }) => (
               <Button
                 key={action}
@@ -229,6 +290,39 @@ export function ResourceReviewPanel() {
         </CardContent>
       </Card>
 
+      <Dialog
+        open={!!edit}
+        onOpenChange={(open) => {
+          if (!open) setEdit(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Resource metadata</DialogTitle>
+            <DialogDescription>
+              Saving changes unpublishes this entry and resets verification. Package bytes and prior
+              archives are retained.
+            </DialogDescription>
+          </DialogHeader>
+          {edit && (
+            <div className="space-y-3">
+              {(["name", "description", "version", "license"] as const).map((field) => (
+                <div key={field} className="space-y-1">
+                  <Label htmlFor={`resource-edit-${field}`}>{field}</Label>
+                  <Input
+                    id={`resource-edit-${field}`}
+                    value={edit[field]}
+                    onChange={(e) => setEdit({ ...edit, [field]: e.target.value })}
+                  />
+                </div>
+              ))}
+              <Button disabled={editor.isPending} onClick={() => editor.mutate()}>
+                Save for review
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
       <AlertDialog open={pending !== null} onOpenChange={(open) => !open && setPending(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -274,6 +368,47 @@ export function ResourceReviewPanel() {
               <div className="min-w-0 space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="font-medium">{resource.name}</h3>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      setEdit({
+                        id: resource.id,
+                        name: resource.name,
+                        description: resource.description || "",
+                        version: resource.version || "1.0.0",
+                        license: resource.license || "proprietary",
+                      })
+                    }
+                  >
+                    Edit metadata
+                  </Button>
+                  {(resource.installation_config as { scan_report?: { state?: string } } | null)
+                    ?.scan_report?.state && (
+                    <Badge variant="outline">
+                      {
+                        (resource.installation_config as { scan_report: { state: string } })
+                          .scan_report.state
+                      }
+                    </Badge>
+                  )}
+                  {(resource.installation_config as { scan_report?: unknown } | null)
+                    ?.scan_report != null && (
+                    <details className="w-full text-xs text-muted-foreground">
+                      <summary className="cursor-pointer">Static inspection details</summary>
+                      <pre className="max-h-52 overflow-auto whitespace-pre-wrap rounded bg-muted p-3">
+                        {JSON.stringify(
+                          (resource.installation_config as { scan_report: unknown }).scan_report,
+                          null,
+                          2,
+                        )}
+                      </pre>
+                      <p>
+                        Static checks only. Antivirus has not run. Review the source, license and
+                        runtime behavior before publishing.
+                      </p>
+                    </details>
+                  )}
                   <Badge variant="secondary" className="uppercase">
                     {resource.resource_type}
                   </Badge>

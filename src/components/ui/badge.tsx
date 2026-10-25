@@ -25,8 +25,38 @@ const badgeVariants = cva(
 export interface BadgeProps
   extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof badgeVariants> {}
 
+function labelTone(label: unknown) {
+  if (typeof label !== "string") return "";
+  if (/blocked|failed|malware|quarantin|broken/i.test(label))
+    return "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300";
+  if (
+    /verified|connected|approved|ready|complete/i.test(label) &&
+    !/unverified|disconnected/.test(label)
+  )
+    return "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
+  if (/pending|review|unverified|update|warning/i.test(label))
+    return "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300";
+  const colors = [
+    "border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-300",
+    "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300",
+    "border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-700 dark:text-fuchsia-300",
+    "border-teal-500/30 bg-teal-500/10 text-teal-700 dark:text-teal-300",
+  ];
+  return colors[
+    [...label.toLowerCase()].reduce((sum, c) => sum + c.charCodeAt(0), 0) % colors.length
+  ];
+}
 function Badge({ className, variant, ...props }: BadgeProps) {
-  return <div className={cn(badgeVariants({ variant }), className)} {...props} />;
+  return (
+    <div
+      className={cn(
+        badgeVariants({ variant }),
+        variant === "destructive" ? "" : labelTone(props.children),
+        className,
+      )}
+      {...props}
+    />
+  );
 }
 
 export { Badge, badgeVariants };

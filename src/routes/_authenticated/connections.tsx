@@ -1,8 +1,13 @@
+import {
+  UniversalConnectorDialog,
+  type ConnectorInitial,
+} from "@/components/universal-connector-dialog";
+import { refreshConnectorCapabilities } from "@/lib/connector-capabilities.functions";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { KeyRound, Loader2, Lock, Search, Plus } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   connectApp,
@@ -68,6 +73,10 @@ export const Route = createFileRoute("/_authenticated/connections")({
 function ConnectionsPage() {
   const { user } = useAuth();
   const { isAdmin } = useRoles();
+  const [customInitial, setCustomInitial] = useState<ConnectorInitial | undefined>();
+  const [customOpen, setCustomOpen] = useState(false);
+  const discoveredLogin = useRef<string | null>(null);
+  const refreshCapabilities = useServerFn(refreshConnectorCapabilities);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string>("All");
   const queryClient = useQueryClient();
@@ -100,7 +109,7 @@ function ConnectionsPage() {
     queryFn: () => catalogFn({}),
   });
   const mine = useQuery({
-    queryKey: ["app-connections"],
+    queryKey: ["app-connections", user?.id],
     queryFn: () => listFn({}),
     enabled: Boolean(user),
   });
@@ -119,6 +128,29 @@ function ConnectionsPage() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Composio sync failed"),
   });
 
+  useEffect(() => {
+    if (!user || !mine.data || discoveredLogin.current === user.id) return;
+    discoveredLogin.current = user.id;
+    const stale = mine.data.filter(
+      (c) =>
+        c.status === "connected" &&
+        ["custom_mcp", "custom_api"].includes(c.provider) &&
+        (!c.metadata.capabilities ||
+          Date.now() -
+            Date.parse(
+              String((c.metadata.capabilities as { checked_at?: string }).checked_at || ""),
+            ) >
+            3600000),
+    );
+    void (async () => {
+      for (let i = 0; i < stale.length; i += 2) {
+        await Promise.allSettled(
+          stale.slice(i, i + 2).map((c) => refreshCapabilities({ data: { id: c.id } })),
+        );
+      }
+      if (stale.length) void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
+    })();
+  }, [user, mine.data, refreshCapabilities, queryClient]);
   const connectMutation = useMutation({
     mutationFn: (input: string | { provider: string; connection_id: string }) =>
       connectFn({ data: typeof input === "string" ? { provider: input } : input }),
@@ -234,41 +266,17 @@ function ConnectionsPage() {
       </p>
 
       <div className="mt-6 flex flex-wrap gap-2">
-        {user &&
-          ["custom_mcp", "custom_api"].map((provider) => (
-            <Button
-              key={provider}
-              variant={provider === "custom_mcp" ? "default" : "outline"}
-              onClick={() => {
-                setConnectionName("");
-                setDescription("");
-                setAuthHeader("X-API-Key");
-                setAccountLabel("");
-                setEndpointUrl("");
-                setConnectionName("");
-                setDescription("");
-                setAuthHeader("X-API-Key");
-                setApiKey("");
-                setConnectionName("");
-                setDescription("");
-                setAuthHeader("X-API-Key");
-                setReconnectId(undefined);
-                setAuthType("none");
-                setSelectedApp({
-                  provider,
-                  display_name:
-                    provider === "custom_mcp" ? "Custom MCP server" : "Custom API profile",
-                  category: "Custom",
-                  scopes: [],
-                  oauth: false,
-                  oauth_ready: false,
-                });
-              }}
-            >
-              <Plus className="size-4" />
-              {provider === "custom_mcp" ? "Add custom MCP" : "Add API profile"}
-            </Button>
-          ))}
+        {user && (
+          <Button
+            onClick={() => {
+              setCustomInitial(undefined);
+              setCustomOpen(true);
+            }}
+          >
+            <Plus className="size-4" />
+            Add custom MCP
+          </Button>
+        )}
         {user && (
           <>
             <Button asChild variant="outline">
@@ -406,6 +414,11 @@ function ConnectionsPage() {
                               : app.oauth
                                 ? connectMutation.mutate(app.provider)
                                 : (() => {
+                                    if (["custom_mcp", "custom_api"].includes(app.provider)) {
+                                      setCustomInitial(undefined);
+                                      setCustomOpen(true);
+                                      return;
+                                    }
                                     setAuthType(
                                       ["custom_mcp", "custom_api"].includes(app.provider)
                                         ? "none"
@@ -449,6 +462,11 @@ function ConnectionsPage() {
         </CardHeader>
       </Card>
 
+      <UniversalConnectorDialog
+        initial={customInitial}
+        open={customOpen}
+        onOpenChange={setCustomOpen}
+      />
       <Dialog open={Boolean(managedApp)} onOpenChange={(open) => !open && setManagedApp(null)}>
         <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[85dvh] overflow-y-auto">
           <DialogHeader>
@@ -472,6 +490,12 @@ function ConnectionsPage() {
                   onDisconnect={() => disconnectMutation.mutate(c.id)}
                   onReconnect={() => {
                     if (!managedApp) return;
+                    if (["custom_mcp", "custom_api"].includes(c.provider)) {
+                      setCustomInitial(c as ConnectorInitial);
+                      setCustomOpen(true);
+                      setManagedApp(null);
+                      return;
+                    }
                     if (managedApp.oauth) {
                       toast.info(
                         "Authorize the same provider account to reconnect. The existing connection is kept until you choose to disconnect it.",
@@ -511,6 +535,12 @@ function ConnectionsPage() {
             }
             onClick={() => {
               if (!managedApp) return;
+              if (["custom_mcp", "custom_api"].includes(managedApp.provider)) {
+                setCustomInitial(undefined);
+                setCustomOpen(true);
+                setManagedApp(null);
+                return;
+              }
               if (managedApp.oauth) connectMutation.mutate(managedApp.provider);
               else {
                 setConnectionName("");

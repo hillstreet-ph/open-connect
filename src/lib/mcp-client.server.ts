@@ -1,5 +1,6 @@
 import { normalizeRemoteMcpEndpoint } from "./remote-mcp.ts";
 import { CfWorkerJsonSchemaValidator } from "@modelcontextprotocol/sdk/validation/cfworker";
+import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 
@@ -25,6 +26,7 @@ export async function withMcpClient<T>(
   headers: Record<string, string>,
   operation: (client: Client) => Promise<T>,
   send: typeof fetch = fetch,
+  transportKind: "http" | "sse" = "http",
 ): Promise<T> {
   const url = new URL(normalizeRemoteMcpEndpoint("custom_mcp", endpoint));
   let responseStatus = 0;
@@ -32,34 +34,43 @@ export async function withMcpClient<T>(
   if (url.protocol !== "https:" || url.username || url.password)
     throw new Error("MCP requires an HTTPS endpoint without embedded credentials.");
   const deadline = AbortSignal.timeout(60000);
-  const transport = new StreamableHTTPClientTransport(url, {
-    requestInit: { headers, redirect: "manual", cache: "no-store" },
-    fetch: async (input, init) => {
-      const target = new URL(typeof input === "string" ? input : input.href);
-      if (target.origin !== url.origin)
-        throw new Error("MCP cross-origin requests are not allowed");
-      const response = await send(input, {
-        ...init,
-        redirect: "manual",
-        signal: AbortSignal.any([deadline, ...(init?.signal ? [init.signal] : [])]),
-      });
-      if (init?.method !== "GET" && init?.method !== "DELETE") {
-        responseStatus = response.status;
-        responseType = response.headers.get("content-type") ?? "";
-      }
-      if (response.status >= 300 && response.status < 400) {
-        await response.body?.cancel();
-        throw new Error("MCP redirects are not allowed.");
-      }
-      return response;
-    },
-    reconnectionOptions: {
-      maxRetries: 0,
-      initialReconnectionDelay: 1000,
-      maxReconnectionDelay: 1000,
-      reconnectionDelayGrowFactor: 1,
-    },
-  });
+  const guardedFetch: typeof fetch = async (input, init) => {
+    const target = new URL(
+      typeof input === "string" ? input : input instanceof URL ? input.href : input.url,
+    );
+    if (target.origin !== url.origin) throw new Error("MCP cross-origin requests are not allowed");
+    const response = await send(input, {
+      ...init,
+      redirect: "manual",
+      signal: AbortSignal.any([deadline, ...(init?.signal ? [init.signal] : [])]),
+    });
+    if (transportKind === "sse" || (init?.method !== "GET" && init?.method !== "DELETE")) {
+      responseStatus = response.status;
+      responseType = response.headers.get("content-type") ?? "";
+    }
+    if (response.status >= 300 && response.status < 400) {
+      await response.body?.cancel();
+      throw new Error("MCP redirects are not allowed.");
+    }
+    return response;
+  };
+  const transport =
+    transportKind === "sse"
+      ? new SSEClientTransport(url, {
+          requestInit: { headers, redirect: "manual" },
+          eventSourceInit: { fetch: guardedFetch },
+          fetch: guardedFetch,
+        })
+      : new StreamableHTTPClientTransport(url, {
+          requestInit: { headers, redirect: "manual", cache: "no-store" },
+          fetch: guardedFetch,
+          reconnectionOptions: {
+            maxRetries: 0,
+            initialReconnectionDelay: 1000,
+            maxReconnectionDelay: 1000,
+            reconnectionDelayGrowFactor: 1,
+          },
+        });
   const client = new Client(
     { name: "open-connect-broker", version: "1.0.0" },
     { capabilities: {}, jsonSchemaValidator: new CfWorkerJsonSchemaValidator() },
@@ -76,7 +87,7 @@ export async function withMcpClient<T>(
           ? "Composio Connect requires OAuth or a consumer key in x-consumer-api-key. A project API key or personal access token is different."
           : "Authentication was rejected. Check the credential, auth mode and header name. OAuth-only servers require provider authorization."
         : responseStatus === 404 || responseStatus === 405
-          ? "Use the exact MCP HTTP endpoint, not a service base URL or dashboard. This client supports Streamable HTTP; legacy SSE-only endpoints require an adapter."
+          ? "Use the exact MCP HTTP endpoint, not a service base URL or dashboard. This client supports Streamable HTTP; select SSE for legacy SSE endpoints."
           : responseType.includes("text/html")
             ? "The URL returned a web page. Enter the MCP server endpoint instead of a dashboard URL."
             : deadline.aborted
@@ -87,7 +98,7 @@ export async function withMcpClient<T>(
       `MCP request failed${responseStatus ? ` (HTTP ${responseStatus})` : ""}. ${hint}`,
     );
   } finally {
-    await transport.terminateSession().catch(() => undefined);
+    if ("terminateSession" in transport) await transport.terminateSession().catch(() => undefined);
     await client.close().catch(() => undefined);
   }
 }
@@ -96,6 +107,7 @@ export async function fetchMcpTools(
   endpoint: string,
   headers: Record<string, string>,
   send: typeof fetch = fetch,
+  transportKind: "http" | "sse" = "http",
 ) {
   return withMcpClient(
     endpoint,
@@ -115,5 +127,71 @@ export async function fetchMcpTools(
       throw new McpCatalogError("page_limit_exceeded");
     },
     send,
+    transportKind,
+  );
+}
+
+export async function fetchMcpSnapshot(
+  endpoint: string,
+  headers: Record<string, string>,
+  transport: "http" | "sse" = "http",
+) {
+  return withMcpClient(
+    endpoint,
+    headers,
+    async (client) => {
+      const capabilities = client.getServerCapabilities();
+      async function catalog<T>(
+        read: (cursor?: string) => Promise<{ entries: T[]; nextCursor?: string | undefined }>,
+      ) {
+        const entries: T[] = [];
+        let cursor: string | undefined;
+        const seen = new Set<string>();
+        for (let page = 0; page < 50; page++) {
+          const result = await read(cursor);
+          entries.push(...result.entries);
+          if (entries.length > 2000) throw new McpCatalogError("page_limit_exceeded");
+          cursor = result.nextCursor;
+          if (!cursor) return entries;
+          if (seen.has(cursor)) throw new McpCatalogError("pagination_repeated");
+          seen.add(cursor);
+        }
+        throw new McpCatalogError("page_limit_exceeded");
+      }
+      const tools = capabilities?.tools
+        ? await catalog(async (cursor) => {
+            const page = await client.listTools(cursor ? { cursor } : undefined, {
+              timeout: 15000,
+            });
+            return { entries: page.tools, nextCursor: page.nextCursor };
+          })
+        : [];
+      const prompts = capabilities?.prompts
+        ? await catalog(async (cursor) => {
+            const page = await client.listPrompts(cursor ? { cursor } : undefined, {
+              timeout: 15000,
+            });
+            return { entries: page.prompts, nextCursor: page.nextCursor };
+          })
+        : [];
+      const resources = capabilities?.resources
+        ? await catalog(async (cursor) => {
+            const page = await client.listResources(cursor ? { cursor } : undefined, {
+              timeout: 15000,
+            });
+            return { entries: page.resources, nextCursor: page.nextCursor };
+          })
+        : [];
+      return {
+        server: client.getServerVersion(),
+        tools,
+        prompts,
+        resources,
+        checked_at: new Date().toISOString(),
+        catalog_scope: "complete",
+      };
+    },
+    fetch,
+    transport,
   );
 }

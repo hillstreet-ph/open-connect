@@ -17,6 +17,12 @@ export async function writeResourceReview(
   action: ReviewAction,
   updatedAt: string,
 ) {
+  const scan = (resource.installation_config as { scan_report?: { state?: string } } | null)
+    ?.scan_report;
+  if (["verify", "publish", "verify_publish"].includes(action) && scan?.state === "blocked")
+    throw new Error(
+      "Resolve the blocked package findings and rescan before verification or publication",
+    );
   const { data, error } = await client
     .from("resources")
     .update({
