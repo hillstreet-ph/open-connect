@@ -131,3 +131,45 @@ test("public error boundary never returns upstream secret-bearing bodies", async
     expect(String(error)).toContain("not confirmed");
   }
 });
+
+test("Browserbase SDK infers project and maps the five-minute timeout without paid extras", async () => {
+  const { browserbaseClient } = await import("./browser-providers.server");
+  const original = globalThis.fetch;
+  let body: Record<string, unknown> = {};
+  globalThis.fetch = (async (request: RequestInfo | URL, init?: RequestInit) => {
+    expect(String(request)).toContain("/v1/sessions");
+    body = JSON.parse(String(init?.body));
+    return Response.json({ id, status: "RUNNING" });
+  }) as typeof fetch;
+  try {
+    await browserbaseClient("fixture-browserbase-key").sessions.create({
+      api_timeout: 300,
+      proxies: false,
+      keepAlive: false,
+      browserSettings: { solveCaptchas: false, verified: false },
+    });
+    expect(body.timeout).toBe(300);
+    expect("projectId" in body).toBe(false);
+    expect(body.proxies).toBe(false);
+    expect(body.keepAlive).toBe(false);
+    expect(body.browserSettings).toEqual({ solveCaptchas: false, verified: false });
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test("an accepted stop response is not cleanup confirmation until the browser reports stopped", async () => {
+  const client = {
+    runs: {
+      status: async () => ({ status: "completed" }),
+      get: async () => ({ result: "", output: null }),
+    },
+    browsers: {
+      list: async () => ({ items: [{ id, agentSessionId: sessionId }], totalItems: 1 }),
+      stop: async () => ({ status: "active" }),
+    },
+  } as unknown as Pick<BrowserUse, "runs" | "browsers">;
+  const result = await readBrowserUse(client, id, sessionId);
+  expect(result.success).toBe(false);
+  expect(result.cleanupConfirmed).toBe(false);
+});
