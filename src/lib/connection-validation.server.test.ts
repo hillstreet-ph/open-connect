@@ -109,3 +109,33 @@ test("custom API profiles remain unverified and never probe arbitrary REST URLs"
   });
   assert.equal(result.verified, false);
 });
+
+test("browser provider verification is read-only and uses official keyed hosts", async () => {
+  for (const provider of ["browser_use", "browserbase"]) {
+    const setup = normalizeConnectionSetup(
+      { provider, api_key: "mock-browser-key", endpoint_url: "https://untrusted.example" },
+      app(provider),
+    );
+    let calls = 0;
+    const result = await validateConnectionCredential(setup, async (url, init) => {
+      calls++;
+      assert.equal(init?.method ?? "GET", "GET");
+      const expected =
+        provider === "browser_use"
+          ? "https://api.browser-use.com/api/v2/billing/account"
+          : "https://api.browserbase.com/v1/projects";
+      assert.equal(String(url), expected);
+      assert.equal(
+        new Headers(init?.headers).get(
+          provider === "browser_use" ? "X-Browser-Use-API-Key" : "X-BB-API-Key",
+        ),
+        "mock-browser-key",
+      );
+      return Response.json(
+        provider === "browser_use" ? { projectId: "fixture" } : [{ id: "fixture" }],
+      );
+    });
+    assert.equal(result.verified, true);
+    assert.equal(calls, 1);
+  }
+});

@@ -647,6 +647,53 @@ const PLATFORM_TOOLS: McpTool[] = [
     },
   },
   {
+    name: "browser_provider_start",
+    description:
+      "Start Browser Use V4 (a prompt agent capped at $1) or Browserbase (a five-minute manual browser). Requires the caller's native provider connection, a personal admin key and explicit approval for this metered run. Do not retry an ambiguous create. Keep the returned signed reference for read/stop.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        provider: { type: "string", enum: ["browser_use", "browserbase"] },
+        task: { type: "string", minLength: 1, maxLength: 8000 },
+        model: { type: "string" },
+        modelParams: { type: "object", additionalProperties: true },
+        spendApproved: { const: true },
+      },
+      required: ["provider", "task", "spendApproved"],
+      additionalProperties: false,
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
+  },
+  ...(["browser_provider_read", "browser_provider_stop"] as const).map((name) => ({
+    name,
+    description: name.endsWith("stop")
+      ? "Cancel this owned run and check cleanup. A cancellation request alone is not a confirmed stop."
+      : "Read this owned run and clean up its browser after terminal status. Review results before claiming the task succeeded.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        provider: { type: "string", enum: ["browser_use", "browserbase"] },
+        connectionId: { type: ["string", "null"] },
+        id: { type: "string", format: "uuid" },
+        sessionId: { type: "string", format: "uuid" },
+        signature: { type: "string" },
+      },
+      required: ["provider", "connectionId", "id", "sessionId", "signature"],
+      additionalProperties: false,
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true,
+    },
+  })),
+  {
     name: "cloud_browser_run",
     description:
       "Use this when a task needs a real web browser: open a site, log in with saved sign-ins, click, fill forms, or read pages behind a login. Starts the user's Open-Connect cloud browser (TinyFish Chrome) with their saved Browser Context Profile (cookies and sessions) by default and returns immediately with run_id, a live streaming_url, and view_url on open-connect.site. Poll cloud_browser_get_run every 15-30s until terminal. Never put passwords in the goal.",
@@ -1583,6 +1630,9 @@ const TOOL_SCOPES: Record<string, string> = {
   inspect_connections: "connections:read",
   list_connection_tools: "connections:read",
   call_connection_tool: "connections:invoke",
+  browser_provider_start: "tools:invoke",
+  browser_provider_read: "tools:invoke",
+  browser_provider_stop: "tools:invoke",
   cloud_browser_run: "tools:invoke",
   cloud_browser_get_run: "connections:read",
   cloud_browser_list_runs: "connections:read",
@@ -2416,6 +2466,21 @@ export const Route = createFileRoute("/mcp")({
               ...textResult(connectionResult),
               ...(connectionResult.isError ? { isError: true } : {}),
             };
+          } else if (
+            ["browser_provider_start", "browser_provider_read", "browser_provider_stop"].includes(
+              name,
+            )
+          ) {
+            if (key.projectId || key.workspaceId || key.organizationId)
+              throw new Error("Additional browser providers require a personal API key.");
+            await requireProviderWrite(key);
+            const sdk = await import("@/lib/browser-providers.server");
+            const payload = await sdk.publicProviderCall(async () => {
+              if (name === "browser_provider_start")
+                return await sdk.startProvider(key.userId, args);
+              return await sdk.readProvider(key.userId, args, name === "browser_provider_stop");
+            });
+            result = { ...textResult(payload), structuredContent: payload };
           } else if (name.startsWith("cloud_browser_")) {
             if (
               (name === "cloud_browser_save_profile" || name === "cloud_browser_profile_setup") &&

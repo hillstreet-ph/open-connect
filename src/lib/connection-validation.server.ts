@@ -102,6 +102,33 @@ export async function validateConnectionCredential(
     return { verified: true, accountId: setup.accountLabel, detail: "Docker Hub login verified" };
   }
 
+  if (setup.provider === "browser_use" || setup.provider === "browserbase") {
+    const use = setup.provider === "browser_use";
+    const response = await checkedFetch(
+      use
+        ? "https://api.browser-use.com/api/v2/billing/account"
+        : "https://api.browserbase.com/v1/projects",
+      {
+        headers: {
+          [use ? "X-Browser-Use-API-Key" : "X-BB-API-Key"]: setup.apiKey,
+          Accept: "application/json",
+        },
+      },
+      send,
+    );
+    const payload: unknown = await response.json();
+    if (
+      use
+        ? !payload || typeof payload !== "object" || !("projectId" in payload)
+        : !Array.isArray(payload)
+    )
+      throw new Error("Browser provider did not return a valid account response.");
+    return {
+      verified: true,
+      detail: "Browser provider key verified with a read-only account request. No browser started.",
+    };
+  }
+
   if (setup.provider === "tinyfish") {
     const payload = (await (
       await checkedFetch(

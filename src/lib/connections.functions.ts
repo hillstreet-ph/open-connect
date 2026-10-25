@@ -230,6 +230,20 @@ const CATALOG = [
     oauth: false,
   },
   {
+    provider: "browser_use",
+    display_name: "Browser Use V4",
+    category: "Infrastructure",
+    scopes: ["browser:run", "browser:sessions"],
+    oauth: false,
+  },
+  {
+    provider: "browserbase",
+    display_name: "Browserbase",
+    category: "Infrastructure",
+    scopes: ["browser:sessions"],
+    oauth: false,
+  },
+  {
     provider: "tinyfish",
     display_name: "TinyFish Cloud Browser",
     category: "Infrastructure",
@@ -337,8 +351,9 @@ export const listConnectionCatalog = createServerFn({ method: "GET" }).handler(a
     const ready = managedConnectorReady(item.provider) || dynamicallyConnectable;
     // The cloud browser calls TinyFish's REST API with a vault-held key, so it
     // must not be routed to a brokered OAuth account it cannot use.
-    const method =
-      item.provider === "tinyfish" ? "api_key" : connectionMethod(item.provider, item.oauth, ready);
+    const method = ["tinyfish", "browser_use", "browserbase"].includes(item.provider)
+      ? "api_key"
+      : connectionMethod(item.provider, item.oauth, ready);
     return {
       provider: item.provider,
       display_name: item.display_name,
