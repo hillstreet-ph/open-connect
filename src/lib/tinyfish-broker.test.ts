@@ -44,3 +44,14 @@ test("upstream errors are sanitized and invalid broker envelopes fail closed", a
   const invalid = createBrokeredTinyFishClient(async () => ({ status: 0, data: {} }));
   await assert.rejects(invalid.listProfiles(), /invalid upstream status/);
 });
+
+test("broker transport preserves the provider operation abort signal", async () => {
+  const signals: Array<AbortSignal | null | undefined> = [];
+  const client = createBrokeredTinyFishClient(async (_request, signal) => {
+    signals.push(signal);
+    return { status: 200, data: { session_id: "setup" } };
+  });
+  await client.startProfileSetup("prof_one", "https://example.com");
+  assert.ok(signals[0] instanceof AbortSignal);
+  assert.equal(signals[0].aborted, false);
+});

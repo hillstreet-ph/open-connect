@@ -25,7 +25,10 @@ export type TinyFishProxyRequest = {
 };
 /** Broker injects authentication; provider keys and broker response headers never reach callers. */
 export function createBrokeredTinyFishClient(
-  proxy: (request: TinyFishProxyRequest) => Promise<{ status: number; data: unknown }>,
+  proxy: (
+    request: TinyFishProxyRequest,
+    signal?: AbortSignal | null,
+  ) => Promise<{ status: number; data: unknown }>,
 ) {
   const send: typeof fetch = async (input, init) => {
     const url = new URL(String(input));
@@ -45,7 +48,10 @@ export function createBrokeredTinyFishClient(
       typeof init?.body === "string"
         ? (JSON.parse(init.body) as Record<string, unknown>)
         : undefined;
-    const result = await proxy({ endpoint: url.toString(), method, ...(body ? { body } : {}) });
+    const result = await proxy(
+      { endpoint: url.toString(), method, ...(body ? { body } : {}) },
+      init?.signal,
+    );
     if (!Number.isInteger(result.status) || result.status < 200 || result.status > 599)
       throw new Error("TinyFish broker returned an invalid upstream status.");
     if (result.status >= 400)

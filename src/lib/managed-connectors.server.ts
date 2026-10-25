@@ -202,7 +202,7 @@ async function composioRequest<T>(path: string, apiKey: string, init?: RequestIn
       ...init?.headers,
     },
     cache: "no-store",
-    signal: AbortSignal.timeout(12_000),
+    signal: init?.signal ?? AbortSignal.timeout(12_000),
   });
   const payload = (await response.json().catch(() => ({}))) as {
     error?: { message?: string };
@@ -434,7 +434,7 @@ export async function managedTinyFishClient(userId: string, accountId: string) {
   const owner = tinyFishBrokerOwner(account, managedIdentityIds(userId));
   const apiKey = composioApiKey();
   if (!apiKey) throw new Error("Composio is not configured.");
-  return createBrokeredTinyFishClient(async (request) => {
+  return createBrokeredTinyFishClient(async (request, signal) => {
     try {
       const response = await composioRequest<{ status: number; data: unknown }>(
         "/tools/execute/proxy",
@@ -442,6 +442,7 @@ export async function managedTinyFishClient(userId: string, accountId: string) {
         {
           method: "POST",
           redirect: "manual",
+          ...(signal ? { signal } : {}),
           body: JSON.stringify({ connected_account_id: accountId, user_id: owner, ...request }),
         },
       );
