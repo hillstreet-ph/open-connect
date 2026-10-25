@@ -52,7 +52,7 @@ export function SiteHeader() {
         </div>
       ) : null}
 
-      <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-3 px-4 sm:h-[3.75rem] sm:px-6">
+      <div className="mx-auto flex min-h-14 max-w-5xl flex-wrap items-center justify-between gap-2 px-3 py-2 sm:min-h-[3.75rem] sm:gap-3 sm:px-6">
         {pathname !== "/" ? <BackButton fallback="/" /> : null}
         <BrandLogo />
 
