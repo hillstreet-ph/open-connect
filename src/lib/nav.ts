@@ -78,6 +78,7 @@ export const appCategories: NavCategory[] = [
       { to: "/connections", label: "Connectors" },
       { to: "/secrets", label: "Credentials" },
       { to: "/models", label: "AI Gateway" },
+      { to: "/ai-agency", label: "AI Agency" },
     ],
   },
 ];
