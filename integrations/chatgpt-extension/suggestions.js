@@ -8,14 +8,11 @@ const commands = [
 ];
 
 function suggest(input) {
-  const q = String(input || "").trim().toLowerCase();
+  const q = String(input || "")
+    .trim()
+    .toLowerCase();
   return commands
-    .filter(
-      (item) =>
-        !q ||
-        item.command.includes(q) ||
-        item.description.toLowerCase().includes(q),
-    )
+    .filter((item) => !q || item.command.includes(q) || item.description.toLowerCase().includes(q))
     .slice(0, 5);
 }
 

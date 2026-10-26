@@ -12,9 +12,7 @@ export class TaskRunner {
   }
 
   async run(id, operation) {
-    const handler = Object.hasOwn(this.handlers, operation)
-      ? this.handlers[operation]
-      : null;
+    const handler = Object.hasOwn(this.handlers, operation) ? this.handlers[operation] : null;
     if (typeof handler !== "function") throw new Error("Operation not allowlisted");
     const original = await this.store.load(id);
     if (!original) throw new Error("Task not found");

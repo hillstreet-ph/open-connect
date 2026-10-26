@@ -6,8 +6,22 @@ const sample = {
   id: "conversation-1",
   title: "Project notes",
   mapping: {
-    a: { message: { id: "a", author: { role: "user" }, content: { parts: ["Question"] }, create_time: 1 } },
-    b: { message: { id: "b", author: { role: "assistant" }, content: { parts: ["Answer"] }, create_time: 2 } },
+    a: {
+      message: {
+        id: "a",
+        author: { role: "user" },
+        content: { parts: ["Question"] },
+        create_time: 1,
+      },
+    },
+    b: {
+      message: {
+        id: "b",
+        author: { role: "assistant" },
+        content: { parts: ["Answer"] },
+        create_time: 2,
+      },
+    },
   },
 };
 

@@ -27,23 +27,25 @@ test("queues validated batch without executing", async () => {
 test("rejects duplicates and oversize batches", async () => {
   const s = store();
   await assert.rejects(
-    () => submitBatch({
-      store: s,
-      requests: [
-        { id: "a", goal: "One" },
-        { id: "a", goal: "Two" },
-      ],
-    }),
+    () =>
+      submitBatch({
+        store: s,
+        requests: [
+          { id: "a", goal: "One" },
+          { id: "a", goal: "Two" },
+        ],
+      }),
     /Duplicate/,
   );
   await assert.rejects(
-    () => submitBatch({
-      store: s,
-      requests: Array.from({ length: 26 }, (_, i) => ({
-        id: `job_${i}`,
-        goal: "Task",
-      })),
-    }),
+    () =>
+      submitBatch({
+        store: s,
+        requests: Array.from({ length: 26 }, (_, i) => ({
+          id: `job_${i}`,
+          goal: "Task",
+        })),
+      }),
     /batch size/,
   );
 });

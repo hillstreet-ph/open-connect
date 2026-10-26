@@ -1,11 +1,13 @@
 // Pure, offline converter for user-provided ChatGPT export data.
 // No network access, session scraping, or automatic uploads.
 function safeName(value) {
-  return String(value || "conversation")
-    .normalize("NFKC")
-    .replace(/[^\p{L}\p{N}._-]+/gu, "-")
-    .replace(/^[-.]+|[-.]+$/g, "")
-    .slice(0, 80) || "conversation";
+  return (
+    String(value || "conversation")
+      .normalize("NFKC")
+      .replace(/[^\p{L}\p{N}._-]+/gu, "-")
+      .replace(/^[-.]+|[-.]+$/g, "")
+      .slice(0, 80) || "conversation"
+  );
 }
 
 function extractText(message) {
