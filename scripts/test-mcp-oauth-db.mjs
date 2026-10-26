@@ -23,11 +23,14 @@ try {
     "POSTGRES_HOST_AUTH_METHOD=trust",
     "postgres:17-alpine@sha256:266d3c257594e195b309ae9d1805e54c788f1d7b375f56bf6c367aac6c917e7b",
   ]);
+  // The image starts a temporary Unix-socket server during init, then restarts.
+  // TCP readiness waits for the final server so tests cannot race that restart.
   let ready = false;
   for (let attempt = 0; attempt < 100; attempt++) {
     if (
-      spawnSync("docker", ["exec", container, "pg_isready", "-U", "postgres"], { stdio: "ignore" })
-        .status === 0
+      spawnSync("docker", ["exec", container, "pg_isready", "-h", "127.0.0.1", "-U", "postgres"], {
+        stdio: "ignore",
+      }).status === 0
     ) {
       ready = true;
       break;
@@ -46,7 +49,10 @@ try {
     ]
       .map((path) => readFileSync(path, "utf8"))
       .join("\n");
-  docker(["exec", "-i", container, "psql", "-U", "postgres", "-v", "ON_ERROR_STOP=1"], input);
+  docker(
+    ["exec", "-i", container, "psql", "-h", "127.0.0.1", "-U", "postgres", "-v", "ON_ERROR_STOP=1"],
+    input,
+  );
   console.log(
     "Disposable PostgreSQL: administrator consent, PKCE, single-use codes and resource binding passed.",
   );
