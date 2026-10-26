@@ -11,6 +11,7 @@ declare
   fixture_name text := '__operations_test_' || task_id;
   next_status text;
   affected integer;
+  previous_version timestamptz;
 begin
   if owner_id is null then raise exception 'An authenticated fixture owner is required'; end if;
   insert into public.tasks(id,user_id,title,status,priority,description)
@@ -21,6 +22,14 @@ begin
       raise exception 'Task transition failed: %',next_status;
     end if;
   end loop;
+  select updated_at into previous_version from public.tasks where id=task_id;
+  update public.tasks set status='in_progress',updated_at=previous_version+interval '1 second'
+    where id=task_id and updated_at=previous_version;
+  get diagnostics affected = row_count;
+  if affected <> 1 then raise exception 'Versioned task move failed'; end if;
+  update public.tasks set status='done' where id=task_id and updated_at=previous_version;
+  get diagnostics affected = row_count;
+  if affected <> 0 then raise exception 'A stale task move overwrote a newer version'; end if;
   insert into public.work_templates(id,user_id,name,kind,title)
     values(template_id,owner_id,fixture_name,'task','Reusable task');
   begin
@@ -55,9 +64,10 @@ begin
   exception when insufficient_privilege then null; end;
 
   perform set_config('request.jwt.claim.sub',owner_id::text,true);
-  delete from public.schedules where id=schedule_id;
-  delete from public.automations where id=automation_id;
-  delete from public.work_templates where id=template_id;
-  delete from public.tasks where id=task_id;
-  if exists(select 1 from public.tasks where id=task_id) then raise exception 'Fixture cleanup failed'; end if;
+  if not exists(select 1 from public.tasks where id=task_id)
+    or not exists(select 1 from public.work_templates where id=template_id)
+    or not exists(select 1 from public.automations where id=automation_id)
+    or not exists(select 1 from public.schedules where id=schedule_id) then
+    raise exception 'Owner could not read their own operation fixtures';
+  end if;
 end $$;

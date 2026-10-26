@@ -48,7 +48,7 @@ Preparation does not start a browser or approve spending. Starting a metered ses
 
 ## Cloud workspace and Sandbox
 
-Cloud overview (`/cloud`) links to Browser, Phone, Terminal, Computer and Sandbox. Sandbox (`/cloud-sandbox`) uses the same owner/project-authorized provider tool discovery and execution as the other Cloud workspaces. It does not provision infrastructure by opening the page. Only tools returned by the selected provider can be invoked; generic MCP connection availability is not evidence that the provider implements sandbox isolation, a phone or a desktop. Provider charges and session lifetime remain provider-specific.
+The Cloud sidebar links directly to Sandbox, Phone, Browser, Terminal and Computer. The former overview URL (`/cloud`) redirects to Sandbox (`/cloud-sandbox`). Sandbox (`/cloud-sandbox`) uses the same owner/project-authorized provider tool discovery and execution as the other Cloud workspaces. It does not provision infrastructure by opening the page. Only tools returned by the selected provider can be invoked; generic MCP connection availability is not evidence that the provider implements sandbox isolation, a phone or a desktop. Provider charges and session lifetime remain provider-specific.
 
 The browser switcher now lists the implemented capabilities and setup limits for each native adapter. Native opaque-reference browser setup through MCP validates the owned key with a fixed read-only provider request before creating or updating a binding, and marks the Vault item as reused so disconnect/replacement preserves it. Broker accounts remain separate from native SDK keys.
 
