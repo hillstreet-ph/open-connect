@@ -49,7 +49,7 @@
     "@data-client/rest": "0.18.1",
     "@hookform/resolvers": "^5.9.1",
     "@lovable.dev/cloud-auth-js": "^1.2.1",
-    "@modelcontextprotocol/sdk": "1.32.1",
+    "@modelcontextprotocol/sdk": "1.32.2",
     "@radix-ui/react-accordion": "^1.3.1",
     "@radix-ui/react-alert-dialog": "^1.2.1",
     "@radix-ui/react-aspect-ratio": "^1.1.8",
