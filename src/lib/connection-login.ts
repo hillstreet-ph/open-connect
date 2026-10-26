@@ -84,3 +84,14 @@ export function connectionUsesBrowserLogin(account: {
     metadata["auth_type"] === "oauth",
   );
 }
+
+export function connectionReconnectReady(
+  account: Parameters<typeof connectionUsesBrowserLogin>[0] & { provider: string },
+  catalogOAuthReady: boolean,
+) {
+  return (
+    ["custom_mcp", "custom_api"].includes(account.provider) ||
+    !connectionUsesBrowserLogin(account) ||
+    catalogOAuthReady
+  );
+}

@@ -5,6 +5,7 @@ import {
   connectionLogin,
   defaultConnectorAuth,
   connectionUsesBrowserLogin,
+  connectionReconnectReady,
 } from "./connection-login.ts";
 
 test("OAuth is prioritized only when supported, ready and actually an OAuth flow", () => {
@@ -69,4 +70,20 @@ test("new MCP connections prefer OAuth while saved auth choices and API protocol
   assert.equal(authForProtocol("openapi", "oauth"), "bearer");
   assert.equal(authForProtocol("openapi", "api_key"), "api_key");
   assert.equal(authForProtocol("http", "oauth"), "oauth");
+});
+
+test("custom MCP OAuth reconnect uses its own discovery instead of catalog OAuth configuration", () => {
+  assert.equal(
+    connectionReconnectReady({ provider: "custom_mcp", browser_login: true }, false),
+    true,
+  );
+  assert.equal(
+    connectionReconnectReady({ provider: "custom_api", browser_login: false }, false),
+    true,
+  );
+  assert.equal(connectionReconnectReady({ provider: "github", browser_login: true }, false), false);
+  assert.equal(
+    connectionReconnectReady({ provider: "cloudflare", browser_login: false }, false),
+    true,
+  );
 });

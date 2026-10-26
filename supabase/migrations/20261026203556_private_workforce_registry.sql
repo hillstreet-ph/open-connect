@@ -1,28 +1,28 @@
 -- Private specialist identities; legacy teams and resources remain authoritative references.
 create table public.workforce_agents (
- id uuid primary key default gen_random_uuid(), owner_id uuid not null references auth.users(id),
- project_id uuid references public.projects(id), slug text not null check(slug ~ '^[a-z0-9][a-z0-9-]{0,99}$'),
+ id uuid primary key default gen_random_uuid(), owner_id uuid not null references auth.users(id) on delete cascade,
+ project_id uuid references public.projects(id) on delete cascade, slug text not null check(slug ~ '^[a-z0-9][a-z0-9-]{0,99}$'),
  department text not null, lead boolean not null default false,
- source_resource_id uuid references public.resources(id),
- legacy_team_id uuid references public.ai_agency_teams(id), enabled boolean not null default true,
+ source_resource_id uuid, -- historical origin; availability is revalidated before use
+ legacy_team_id uuid references public.ai_agency_teams(id) on delete set null, enabled boolean not null default true,
  active_version_id uuid, created_at timestamptz not null default now(), updated_at timestamptz not null default now()
 );
 create unique index workforce_agent_scope_slug on public.workforce_agents(coalesce(project_id::text,'personal:'||owner_id::text),slug);
 create unique index workforce_source_identity on public.workforce_agents(coalesce(project_id::text,'personal:'||owner_id::text),source_resource_id) where source_resource_id is not null;
 create table public.workforce_agent_versions (
- id uuid primary key default gen_random_uuid(), agent_id uuid not null references public.workforce_agents(id),
+ id uuid primary key default gen_random_uuid(), agent_id uuid not null references public.workforce_agents(id) on delete cascade,
  number integer not null check(number>0), config jsonb not null check(jsonb_typeof(config)='object' and octet_length(config::text)<=50000),
- created_by uuid not null references auth.users(id), created_at timestamptz not null default now(), unique(agent_id,number), unique(agent_id,id)
+ created_by uuid references auth.users(id) on delete set null, created_at timestamptz not null default now(), unique(agent_id,number), unique(agent_id,id)
 );
 alter table public.workforce_agents add constraint workforce_active_revision foreign key(id,active_version_id) references public.workforce_agent_versions(agent_id,id);
-alter table public.agent_chats add column workforce_agent_id uuid references public.workforce_agents(id),
- add column workforce_version_id uuid references public.workforce_agent_versions(id);
+alter table public.agent_chats add column workforce_agent_id uuid references public.workforce_agents(id) on delete cascade,
+ add column workforce_version_id uuid references public.workforce_agent_versions(id) on delete cascade;
 alter table public.agent_chats add constraint workforce_chat_binding check((workforce_agent_id is null)=(workforce_version_id is null));
-alter table public.agent_chats add constraint workforce_chat_revision foreign key(workforce_agent_id,workforce_version_id) references public.workforce_agent_versions(agent_id,id);
+alter table public.agent_chats add constraint workforce_chat_revision foreign key(workforce_agent_id,workforce_version_id) references public.workforce_agent_versions(agent_id,id) on delete cascade;
 create index workforce_chat_agent on public.agent_chats(workforce_agent_id,created_at desc);
 create table public.workforce_events (
- id uuid primary key default gen_random_uuid(), user_id uuid not null references auth.users(id),
- agent_id uuid not null references public.workforce_agents(id), version_id uuid not null references public.workforce_agent_versions(id),
+ id uuid primary key default gen_random_uuid(), user_id uuid not null references auth.users(id) on delete cascade,
+ agent_id uuid not null references public.workforce_agents(id) on delete cascade, version_id uuid not null references public.workforce_agent_versions(id) on delete cascade,
  chat_id uuid references public.agent_chats(id) on delete set null, state text not null check(state in ('completed','failed')),
  model text, latency_ms integer check(latency_ms>=0), created_at timestamptz not null default now()
 );
@@ -57,7 +57,7 @@ create policy workforce_event_read on public.workforce_events for select to auth
 
 create function public.workforce_identity_guard() returns trigger language plpgsql set search_path='' as $$
 begin
- if new.owner_id is distinct from old.owner_id or new.project_id is distinct from old.project_id or new.slug is distinct from old.slug or new.source_resource_id is distinct from old.source_resource_id or new.lead is distinct from old.lead or new.legacy_team_id is distinct from old.legacy_team_id then
+ if new.owner_id is distinct from old.owner_id or new.project_id is distinct from old.project_id or new.slug is distinct from old.slug or new.source_resource_id is distinct from old.source_resource_id or new.lead is distinct from old.lead then
    raise exception 'Workforce identity and scope are immutable';
  end if;
  new.updated_at=now(); return new;

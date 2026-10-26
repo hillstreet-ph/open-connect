@@ -1,14 +1,16 @@
 begin;
 do $$
 declare personal uuid; shared uuid; v1 uuid; v2 uuid; c1 uuid; c2 uuid; result jsonb;
- config jsonb := '{"name":"Fixture specialist","department":"engineering","role":"Developer","instructions":"Use only granted capabilities."}';
+ config jsonb := '{"name":"Fixture specialist","department":"engineering","role":"Developer","instructions":"Use only granted capabilities.","sourceResourceId":"20000000-0000-4000-8000-000000000001"}';
 begin
  execute 'set local role anon';
  begin perform count(*) from public.workforce_agents; raise exception 'TEST FAILED anonymous read'; exception when insufficient_privilege then null; end;
  execute 'set local role authenticated';
  perform set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001',true);
- result=public.save_workforce_agent(null,null,'fixture-private',true,null,config,null);
- personal=(result->>'agent_id')::uuid; v1=(result->>'version_id')::uuid;
+ result=public.save_workforce_agent(null,null,'fixture-private',true,'30000000-0000-4000-8000-000000000001',config,null);
+ personal=(result->>'agent_id')::uuid;
+ begin perform public.save_workforce_agent(null,null,'duplicate-source',false,null,config,null); raise exception 'TEST FAILED duplicate source'; exception when unique_violation then null; end;
+ v1=(result->>'version_id')::uuid;
  perform public.activate_workforce_agent(personal,v1,null);
  c1=public.launch_workforce_chat(personal);
  result=public.save_workforce_agent(personal,null,'fixture-private',true,null,config||'{"instructions":"Second immutable version."}',1);
@@ -37,5 +39,16 @@ begin
  begin perform public.launch_workforce_chat(shared); raise exception 'TEST FAILED disabled launch'; exception when others then if sqlerrm not like 'Choose an active specialist%' then raise; end if; end;
  perform set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000003',true);
  if (select count(*) from public.workforce_agents)<>0 then raise exception 'Unrelated account leaked'; end if;
+ execute 'reset role';
+ -- Referenced legacy/source deletion preserves version origin and does not break parent cleanup.
+ delete from public.ai_agency_teams where id='30000000-0000-4000-8000-000000000001';
+ if (select legacy_team_id from public.workforce_agents where id=personal) is not null then raise exception 'Legacy cleanup failed'; end if;
+ delete from public.resources where id='20000000-0000-4000-8000-000000000001';
+ if (select source_resource_id from public.workforce_agents where id=personal) is null then raise exception 'Historical source origin lost'; end if;
+ -- Registry dependencies must not block account/project cleanup.
+ delete from public.projects where id='10000000-0000-4000-8000-000000000001';
+ if exists(select 1 from public.workforce_agents where id=shared) then raise exception 'Project cleanup failed'; end if;
+ delete from auth.users where id='00000000-0000-4000-8000-000000000001';
+ if exists(select 1 from public.workforce_agents where id=personal) then raise exception 'Account cleanup failed'; end if;
 end $$;
 rollback;

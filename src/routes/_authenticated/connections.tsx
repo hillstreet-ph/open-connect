@@ -1,4 +1,8 @@
-import { connectionLogin, connectionUsesBrowserLogin } from "@/lib/connection-login";
+import {
+  connectionLogin,
+  connectionUsesBrowserLogin,
+  connectionReconnectReady,
+} from "@/lib/connection-login";
 import {
   UniversalConnectorDialog,
   type ConnectorInitial,
@@ -476,7 +480,7 @@ function ConnectionsPage() {
                   }
                   busy={disconnectMutation.isPending || connectMutation.isPending}
                   reconnectReady={Boolean(
-                    managedApp && (!connectionUsesBrowserLogin(c) || managedApp.oauth_ready),
+                    managedApp && connectionReconnectReady(c, managedApp.oauth_ready),
                   )}
                   onDisconnect={() => disconnectMutation.mutate(c.id)}
                   onReconnect={() => {

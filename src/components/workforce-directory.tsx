@@ -510,8 +510,8 @@ function SpecialistProfile({
             </p>
           ))}
           <p className="text-xs text-muted-foreground">
-            No background jobs are launched. Billing costs are not recorded; model routes must be
-            catalog-verified free.
+            Chats are request-bound. Existing schedule tools retain their normal controls. Billing
+            costs are not recorded; model routes must be catalog-verified free.
           </p>
         </section>
         <Button asChild variant="link">
@@ -664,6 +664,7 @@ function SpecialistBuilder({
           <label className="block space-y-1">
             <span className="text-sm font-medium">Specialist instructions</span>
             <Textarea
+              aria-label="Specialist instructions"
               value={draft.instructions}
               rows={7}
               minLength={10}

@@ -55,6 +55,8 @@ jobs:
           VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_placeholder
           VITE_APP_URL: https://open-connect.site
         run: bun run test:ssr
+      - name: Workforce browser interaction fixture
+        run: bun run test:workforce:browser
       - name: Upload Cloudflare Pages artifact
         if: success()
         uses: actions/upload-artifact@v7

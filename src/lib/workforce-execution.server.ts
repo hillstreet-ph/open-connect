@@ -14,6 +14,25 @@ export async function executeWorkforceTool(
     name,
     args,
   );
+  if (name === "inspect_helper_capabilities")
+    return {
+      scope: specialist.agent.project_id ?? "personal",
+      tools: specialist.version.config.tools.filter(
+        (tool) =>
+          !(
+            specialist.agent.project_id &&
+            [
+              "list_connectors",
+              "list_projects",
+              "draft_connector_plugin",
+              "install_resource_to_library",
+            ].includes(tool)
+          ),
+      ),
+      execution: "request_bound_internal_tools",
+      external_provider_execution: false,
+      credential_values_exposed: false,
+    };
   if (name === "search_saved_context")
     return {
       scope: specialist.agent.project_id ?? "personal",
@@ -33,13 +52,16 @@ export async function executeWorkforceTool(
     if (rows.error) throw Error("Specialist scope data is unavailable.");
     return { [table]: rows.data ?? [] };
   }
-  if (name === "update_task_status") {
-    let q = db.from("tasks").select("id").eq("id", String(scoped["taskId"]));
+  if (name === "update_task_status" || name === "create_schedule") {
+    let q = db
+      .from(name === "create_schedule" ? "automations" : "tasks")
+      .select("id")
+      .eq("id", String(scoped[name === "create_schedule" ? "automationId" : "taskId"]));
     q = specialist.agent.project_id
       ? q.eq("project_id", specialist.agent.project_id)
       : q.is("project_id", null);
     const task = await q.maybeSingle();
-    if (task.error || !task.data) throw Error("Task is outside the specialist scope.");
+    if (task.error || !task.data) throw Error("Target is outside the specialist scope.");
   }
   return fallback(name, scoped);
 }
