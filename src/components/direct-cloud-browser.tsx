@@ -447,7 +447,17 @@ export function DirectCloudBrowser({
               </p>
             )}
             <div className="flex flex-wrap gap-2" aria-label="Remote keyboard controls">
-              {["Tab", "Enter", "Backspace", "Escape"].map((key) => (
+              {[
+                "Tab",
+                "Enter",
+                "Backspace",
+                "Escape",
+                "ArrowUp",
+                "ArrowDown",
+                "ArrowLeft",
+                "ArrowRight",
+                "Delete",
+              ].map((key) => (
                 <Button
                   key={key}
                   variant="outline"
@@ -522,19 +532,7 @@ export function DirectCloudBrowser({
                 </Button>
               </div>
             </form>
-            <div className="flex flex-wrap gap-2">
-              {["Tab", "Enter", "Backspace", "ArrowUp", "ArrowDown"].map((key) => (
-                <Button
-                  key={key}
-                  size="sm"
-                  variant="outline"
-                  disabled={!ready || busy}
-                  onClick={() => void controller.current?.key(key, key).catch(report)}
-                >
-                  {key}
-                </Button>
-              ))}
-            </div>
+
             <p className="text-xs text-muted-foreground">
               Use the website's normal login flow. Complete verification yourself when requested.
               Typed text and private connection details are not added to run history or local

@@ -19,6 +19,7 @@ import { Route as McpRouteImport } from './routes/mcp'
 import { Route as ResourcesRouteImport } from './routes/resources'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedAgentsRouteImport } from './routes/_authenticated/agents'
+import { Route as AuthenticatedAiAgencyRouteImport } from './routes/_authenticated/ai-agency'
 import { Route as AuthenticatedApiKeysRouteImport } from './routes/_authenticated/api-keys'
 import { Route as AuthenticatedApprovalsRouteImport } from './routes/_authenticated/approvals'
 import { Route as AuthenticatedAutomationsRouteImport } from './routes/_authenticated/automations'
@@ -117,6 +118,11 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
 const AuthenticatedAgentsRoute = AuthenticatedAgentsRouteImport.update({
   id: '/agents',
   path: '/agents',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAiAgencyRoute = AuthenticatedAiAgencyRouteImport.update({
+  id: '/ai-agency',
+  path: '/ai-agency',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedApiKeysRoute = AuthenticatedApiKeysRouteImport.update({
@@ -392,6 +398,7 @@ export interface FileRoutesByFullPath {
   '/resources': typeof ResourcesRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/agents': typeof AuthenticatedAgentsRoute
+  '/ai-agency': typeof AuthenticatedAiAgencyRoute
   '/api-keys': typeof AuthenticatedApiKeysRoute
   '/approvals': typeof AuthenticatedApprovalsRoute
   '/automations': typeof AuthenticatedAutomationsRoute
@@ -453,6 +460,7 @@ export interface FileRoutesByTo {
   '/resources': typeof ResourcesRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/agents': typeof AuthenticatedAgentsRoute
+  '/ai-agency': typeof AuthenticatedAiAgencyRoute
   '/api-keys': typeof AuthenticatedApiKeysRoute
   '/approvals': typeof AuthenticatedApprovalsRoute
   '/automations': typeof AuthenticatedAutomationsRoute
@@ -516,6 +524,7 @@ export interface FileRoutesById {
   '/resources': typeof ResourcesRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/agents': typeof AuthenticatedAgentsRoute
+  '/_authenticated/ai-agency': typeof AuthenticatedAiAgencyRoute
   '/_authenticated/api-keys': typeof AuthenticatedApiKeysRoute
   '/_authenticated/approvals': typeof AuthenticatedApprovalsRoute
   '/_authenticated/automations': typeof AuthenticatedAutomationsRoute
@@ -579,6 +588,7 @@ export interface FileRouteTypes {
     | '/resources'
     | '/admin'
     | '/agents'
+    | '/ai-agency'
     | '/api-keys'
     | '/approvals'
     | '/automations'
@@ -640,6 +650,7 @@ export interface FileRouteTypes {
     | '/resources'
     | '/admin'
     | '/agents'
+    | '/ai-agency'
     | '/api-keys'
     | '/approvals'
     | '/automations'
@@ -702,6 +713,7 @@ export interface FileRouteTypes {
     | '/resources'
     | '/_authenticated/admin'
     | '/_authenticated/agents'
+    | '/_authenticated/ai-agency'
     | '/_authenticated/api-keys'
     | '/_authenticated/approvals'
     | '/_authenticated/automations'
@@ -848,6 +860,13 @@ declare module '@tanstack/react-router' {
       path: '/agents'
       fullPath: '/agents'
       preLoaderRoute: typeof AuthenticatedAgentsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/ai-agency': {
+      id: '/_authenticated/ai-agency'
+      path: '/ai-agency'
+      fullPath: '/ai-agency'
+      preLoaderRoute: typeof AuthenticatedAiAgencyRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/api-keys': {
@@ -1234,6 +1253,7 @@ const AuthenticatedProjectsRouteWithChildren =
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedAgentsRoute: typeof AuthenticatedAgentsRoute
+  AuthenticatedAiAgencyRoute: typeof AuthenticatedAiAgencyRoute
   AuthenticatedApiKeysRoute: typeof AuthenticatedApiKeysRoute
   AuthenticatedApprovalsRoute: typeof AuthenticatedApprovalsRoute
   AuthenticatedAutomationsRoute: typeof AuthenticatedAutomationsRoute
@@ -1274,6 +1294,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedAgentsRoute: AuthenticatedAgentsRoute,
+  AuthenticatedAiAgencyRoute: AuthenticatedAiAgencyRoute,
   AuthenticatedApiKeysRoute: AuthenticatedApiKeysRoute,
   AuthenticatedApprovalsRoute: AuthenticatedApprovalsRoute,
   AuthenticatedAutomationsRoute: AuthenticatedAutomationsRoute,

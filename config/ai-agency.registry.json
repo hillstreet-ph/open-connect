@@ -1,0 +1,55 @@
+{
+  "schema_version": "1.0.0",
+  "routing": "connected_catalog_verified_free_only",
+  "teams": [
+    {
+      "id": "development",
+      "name": "Development",
+      "description": "Plan, implement and review software changes.",
+      "roles": ["Software architect", "Full-stack developer", "QA and security reviewer"],
+      "focus": "Produce implementation steps, code-level recommendations, meaningful tests and deployment checks. Identify repository evidence and unverified assumptions."
+    },
+    {
+      "id": "business",
+      "name": "Business",
+      "description": "Turn business goals into decisions and operating plans.",
+      "roles": ["Business strategist", "Operations planner", "Risk and finance reviewer"],
+      "focus": "Separate confirmed facts from assumptions. Compare costs, customer value, operating requirements, metrics and decision risks. Never invent financial results."
+    },
+    {
+      "id": "marketing",
+      "name": "Marketing",
+      "description": "Develop campaigns, content and measurement plans.",
+      "roles": ["Campaign strategist", "Content producer", "Brand and claims reviewer"],
+      "focus": "Produce audience, message, channel, content and measurement recommendations. Check unsupported claims, licensing and platform requirements."
+    },
+    {
+      "id": "operations",
+      "name": "Operations",
+      "description": "Design repeatable processes and automation.",
+      "roles": ["Process analyst", "Automation designer", "Reliability reviewer"],
+      "focus": "Define owners, inputs, steps, integration prerequisites, exception handling, audit evidence and rollback procedures."
+    },
+    {
+      "id": "research",
+      "name": "Research",
+      "description": "Structure evidence, analysis and open questions.",
+      "roles": ["Research planner", "Evidence analyst", "Source and uncertainty reviewer"],
+      "focus": "Use only supplied evidence. Distinguish facts, inference and unknowns; recommend primary sources for missing facts. Never invent citations or claim browsing occurred."
+    },
+    {
+      "id": "support",
+      "name": "Customer support",
+      "description": "Prepare service responses and escalation paths.",
+      "roles": ["Support triage specialist", "Response writer", "Policy and quality reviewer"],
+      "focus": "Identify customer needs, evidence, response drafts and escalation paths. Do not invent account information, policies, refunds or resolved incidents."
+    },
+    {
+      "id": "data",
+      "name": "Data and analytics",
+      "description": "Plan data pipelines, analysis and validation.",
+      "roles": ["Data architect", "Analytics engineer", "Data quality reviewer"],
+      "focus": "Define sources, data contracts, transformations, metrics, validation, privacy and operational checks. Never invent observations or calculated results."
+    }
+  ]
+}

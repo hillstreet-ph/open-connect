@@ -8,6 +8,9 @@ import { Link } from "@tanstack/react-router";
 import {
   BROWSER_ADAPTER_CAPABILITIES,
   BROWSER_PROVIDERS,
+  BROWSER_PRIMARY_PROVIDERS,
+  browserProviderSurface,
+  browserToolFamily,
   type BrowserProviderId,
 } from "@/lib/browser-provider-selection";
 import { getBrowserProviderAvailability } from "@/lib/browser-providers.functions";
@@ -25,6 +28,10 @@ export function CloudBrowserSwitcher({
   external: ReactNode;
 }) {
   const { user } = useAuth();
+  const surface = browserProviderSurface(selected);
+  const family = browserToolFamily(selected);
+  const worker =
+    selected in BROWSER_WORKERS ? BROWSER_WORKERS[selected as keyof typeof BROWSER_WORKERS] : null;
   const read = useServerFn(getBrowserProviderAvailability);
   const availability = useQuery({
     queryKey: ["browser-provider-availability", user?.id],
@@ -34,7 +41,8 @@ export function CloudBrowserSwitcher({
     staleTime: 15000,
   });
   const status = (id: BrowserProviderId) => {
-    if (id === "external") return "Discover tools";
+    if (id === "external" || id === "tinyfish_tools" || id === "verification")
+      return "Discover tools";
     if (id === "playwright" || id === "stagehand" || id === "chrome_devtools")
       return "Worker tools · discovery required";
     if (id === "browseract" || id === "multion")
@@ -62,35 +70,40 @@ export function CloudBrowserSwitcher({
     <div className="space-y-5">
       <section className="space-y-3 rounded-lg border p-4" aria-label="Cloud browser providers">
         <h2 className="font-semibold">Choose a browser provider</h2>
-        <div role="tablist" aria-label="Browser provider" className="grid gap-2 sm:grid-cols-3">
-          {BROWSER_PROVIDERS.map((item) => (
+        <div
+          role="tablist"
+          aria-label="Browser provider"
+          className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4"
+        >
+          {BROWSER_PRIMARY_PROVIDERS.map((item) => (
             <button
               key={item.id}
               type="button"
               role="tab"
-              tabIndex={selected === item.id ? 0 : -1}
+              tabIndex={surface === item.id ? 0 : -1}
               onKeyDown={(event) => {
-                const index = BROWSER_PROVIDERS.findIndex((entry) => entry.id === item.id);
+                const index = BROWSER_PRIMARY_PROVIDERS.findIndex((entry) => entry.id === item.id);
                 const next =
                   event.key === "Home"
                     ? 0
                     : event.key === "End"
-                      ? BROWSER_PROVIDERS.length - 1
+                      ? BROWSER_PRIMARY_PROVIDERS.length - 1
                       : ["ArrowRight", "ArrowDown"].includes(event.key)
-                        ? (index + 1) % BROWSER_PROVIDERS.length
+                        ? (index + 1) % BROWSER_PRIMARY_PROVIDERS.length
                         : ["ArrowLeft", "ArrowUp"].includes(event.key)
-                          ? (index + BROWSER_PROVIDERS.length - 1) % BROWSER_PROVIDERS.length
+                          ? (index + BROWSER_PRIMARY_PROVIDERS.length - 1) %
+                            BROWSER_PRIMARY_PROVIDERS.length
                           : -1;
                 if (next < 0) return;
                 event.preventDefault();
-                const target = BROWSER_PROVIDERS[next]!;
+                const target = BROWSER_PRIMARY_PROVIDERS[next]!;
                 onSelect(target.id);
                 document.getElementById(`browser-tab-${target.id}`)?.focus();
               }}
               id={`browser-tab-${item.id}`}
-              aria-selected={selected === item.id}
+              aria-selected={surface === item.id}
               aria-controls={`browser-panel-${item.id}`}
-              className={`rounded-lg border p-3 text-left ${selected === item.id ? "border-primary bg-primary/10" : "hover:bg-muted"}`}
+              className={`rounded-lg border p-3 text-left ${surface === item.id ? "border-primary bg-primary/10" : "hover:bg-muted"}`}
               onClick={() => onSelect(item.id)}
             >
               <span className="block text-sm font-medium">{item.name}</span>
@@ -138,16 +151,6 @@ export function CloudBrowserSwitcher({
           </p>
         ) : null}
       </section>
-      <details className="rounded-lg border p-4">
-        <summary className="cursor-pointer text-sm font-medium">Verification assistance</summary>
-        <p className="my-3 text-sm text-muted-foreground">
-          Browserbase offers supported provider CAPTCHA solving when requested at session creation.
-          Other providers use their own capabilities or a compatible solver worker. Complete
-          unresolved verification in the same session’s interactive view; a separate direct browser
-          does not resume an agent run. Solver services may charge per request.
-        </p>
-        <CloudWorkspacePage kind="browser" embedded browserFamily="captcha" />
-      </details>
       <div
         role="tabpanel"
         id="browser-panel-tinyfish"
@@ -155,17 +158,6 @@ export function CloudBrowserSwitcher({
         hidden={selected !== "tinyfish"}
       >
         {tinyfish}
-        <details className="mt-4 rounded-lg border p-4">
-          <summary className="cursor-pointer text-sm font-medium">
-            TinyFish Search, Fetch, Research and Monitor
-          </summary>
-          <p className="my-3 text-sm text-muted-foreground">
-            Agent and Browser controls are above. Select your TinyFish MCP connection below to
-            discover its additional API tools. Provider allowances and wallet charges apply;
-            discovery does not start a run.
-          </p>
-          <CloudWorkspacePage kind="browser" embedded browserFamily="tinyfish" />
-        </details>
       </div>
       <div
         role="tabpanel"
@@ -193,66 +185,106 @@ export function CloudBrowserSwitcher({
         role="tabpanel"
         id="browser-panel-external"
         aria-labelledby="browser-tab-external"
-        hidden={selected !== "external"}
+        hidden={surface !== "external"}
+        className="space-y-4"
       >
-        {external}
-      </div>
-      {(Object.keys(BROWSER_WORKERS) as Array<keyof typeof BROWSER_WORKERS>).map((id) => (
-        <div
-          key={id}
-          role="tabpanel"
-          id={`browser-panel-${id}`}
-          aria-labelledby={`browser-tab-${id}`}
-          hidden={selected !== id}
-          className="space-y-4"
-        >
-          <p className="text-sm text-muted-foreground">{BROWSER_WORKERS[id].setup}</p>
-          <a
-            href={BROWSER_WORKERS[id].source}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm underline"
-          >
-            Official source
-          </a>
-          <CloudWorkspacePage kind="browser" embedded browserFamily={id} />
-        </div>
-      ))}
-      {(["browseract", "multion"] as const).map((id) => (
-        <div
-          key={id}
-          role="tabpanel"
-          id={`browser-panel-${id}`}
-          aria-labelledby={`browser-tab-${id}`}
-          hidden={selected !== id}
-          className="space-y-3 rounded-lg border p-4 text-sm"
-        >
-          <h2 className="font-semibold">
-            {id === "browseract" ? "BrowserAct setup" : "MultiOn setup"}
-          </h2>
-          <p>
-            {id === "browseract"
-              ? "BrowserAct requires a compatible browser worker. A saved account alone does not verify execution. Connect your authenticated worker under Connected tools, then discover its available controls."
-              : "MultiOn SDK references are available, but a current working API and account have not been verified. Connect a verified provider MCP endpoint under Connected tools before enabling execution."}
-          </p>
-          <button type="button" className="underline" onClick={() => onSelect("external")}>
-            Open connected browser tools
-          </button>
-          <a
-            href={
-              id === "browseract"
-                ? "https://github.com/browser-act/skills/tree/main/browser-act"
-                : "https://docs.multion.ai/sdks"
+        <div className="space-y-2 rounded-lg border p-4">
+          <label htmlFor="browser-tool-adapter" className="text-sm font-medium">
+            Connected tool adapter
+          </label>
+          <select
+            id="browser-tool-adapter"
+            value={
+              selected === "tinyfish" || selected === "browser_use" || selected === "browserbase"
+                ? "external"
+                : selected
             }
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline"
+            onChange={(event) => onSelect(event.target.value as BrowserProviderId)}
+            className="block w-full rounded-md border bg-background p-2 text-sm"
           >
-            Official source
-          </a>
-          <p>No task has been started by selecting this provider.</p>
+            {BROWSER_PROVIDERS.filter((item) => browserProviderSurface(item.id) === "external").map(
+              (item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ),
+            )}
+          </select>
+          {worker ? (
+            <>
+              <p className="text-sm text-muted-foreground">{worker.setup}</p>
+              <a
+                href={worker.source}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm underline"
+              >
+                Official source
+              </a>
+            </>
+          ) : null}
+          {selected === "browseract" || selected === "multion" ? (
+            <p className="text-sm text-muted-foreground">
+              {status(selected)}. Discover an authenticated worker's tools before running a task. A
+              saved account does not verify browser execution.
+            </p>
+          ) : null}
         </div>
-      ))}
+        {selected === "verification" ? (
+          <section
+            className="space-y-3 rounded-lg border p-4 text-sm"
+            aria-label="Verification assistance"
+          >
+            <p>
+              Browserbase supports provider verification assistance when requested at session
+              creation. Complete unresolved challenges in the same session’s interactive view. A
+              separate browser does not resume an agent run.
+            </p>
+            <ul className="list-disc space-y-2 pl-5">
+              <li>
+                <a
+                  className="underline"
+                  href="https://github.com/Dhravya/agent-captcha"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Agent Captcha
+                </a>{" "}
+                is an agent-verification demo, not a general human-CAPTCHA solver.
+              </li>
+              <li>
+                <a
+                  className="underline"
+                  href="https://github.com/Captcha-Sonic/CaptchaSonic-Extension"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  CaptchaSonic
+                </a>{" "}
+                is a browser extension. Hosted-browser compatibility and account authorization
+                require verification.
+              </li>
+              <li>
+                <a
+                  className="underline"
+                  href="https://github.com/2captcha/mcp-captcha-solver"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  2Captcha MCP demo
+                </a>{" "}
+                runs locally with Selenium. Cloud use requires a hosted authenticated worker and a
+                provider account.
+              </li>
+            </ul>
+            <p className="text-muted-foreground">
+              These source links do not install code or verify a working connection. Use your
+              provider’s supported flow; keep credentials out of task prompts.
+            </p>
+          </section>
+        ) : null}
+        {family ? <CloudWorkspacePage kind="browser" embedded browserFamily={family} /> : external}
+      </div>
     </div>
   );
 }
