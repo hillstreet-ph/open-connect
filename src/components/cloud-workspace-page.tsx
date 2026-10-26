@@ -159,9 +159,6 @@ export function CloudWorkspacePage({
     <div className={embedded ? "space-y-4" : "mx-auto max-w-5xl space-y-6 px-4 py-8 sm:px-6"}>
       {!embedded ? (
         <header>
-          <Link to="/cloud" className="text-sm underline">
-            Cloud workspace
-          </Link>
           <h1 className="text-2xl font-semibold">{title}</h1>
           <p className="mt-2 text-sm text-muted-foreground">{descriptions[kind]}</p>
         </header>

@@ -64,7 +64,6 @@ const WORK: Item[] = [
 ];
 
 const CLOUD: Item[] = [
-  { to: "/cloud", label: "Cloud overview", icon: Boxes },
   { to: "/cloud-sandbox", label: "Sandbox", icon: Boxes },
   { to: "/cloud-phone", label: "Cloud Phone", icon: Smartphone },
   { to: "/cloud-browser", label: "Cloud Browser", icon: Globe },
