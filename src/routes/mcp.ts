@@ -684,6 +684,83 @@ const PLATFORM_TOOLS: McpTool[] = [
     },
   },
   {
+    name: "browser_automation_status",
+    description:
+      "Read the shared browser verification policy, supported controls and owned solver credential readiness for all browsers and AI clients. Does not start paid work.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  },
+  {
+    name: "browser_automation_configure",
+    description:
+      "Save the current owner's global browser policy. External assistance permits metered solver use; every submitted task still requires spendApproved=true. No credentials are accepted.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        native_assistance: { type: "boolean" },
+        external_assistance: { type: "boolean" },
+      },
+      required: ["native_assistance", "external_assistance"],
+      additionalProperties: false,
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+  },
+  {
+    name: "browser_verification_start",
+    description:
+      "Submit a supported widget to the shared owned 2Captcha resolver from any browser or AI client. Reuse requestId when checking an ambiguous submission; never duplicate a charge. Requires external policy, an owned key and spending approval. Use only a non-secret session ID as browserRef, never a CDP URL.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        requestId: { type: "string", format: "uuid" },
+        browser: { type: "string", pattern: "^[a-z0-9_-]{1,80}$" },
+        browserRef: { type: "string", pattern: "^[A-Za-z0-9:._-]{1,180}$" },
+        pageUrl: { type: "string", format: "uri", maxLength: 2048 },
+        type: { type: "string", enum: ["recaptcha_v2", "turnstile"] },
+        siteKey: { type: "string", minLength: 1, maxLength: 512 },
+        spendApproved: { const: true },
+      },
+      required: [
+        "requestId",
+        "browser",
+        "browserRef",
+        "pageUrl",
+        "type",
+        "siteKey",
+        "spendApproved",
+      ],
+      additionalProperties: false,
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true,
+    },
+  },
+  {
+    name: "browser_verification_result",
+    description:
+      "Read one owned solver attempt and its short-lived proof. Apply a ready proof only to the returned browser reference and origin through that browser's supported API. Never echo or persist the proof. Website acceptance remains unverified until checked in the same session.",
+    inputSchema: {
+      type: "object",
+      properties: { id: { type: "string", format: "uuid" } },
+      required: ["id"],
+      additionalProperties: false,
+    },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true,
+    },
+  },
+  {
     name: "browser_provider_start",
     description:
       "Start Browser Use V4 (a prompt agent capped at $1) or Browserbase (a five-minute manual browser). Requires the caller's native provider connection, a personal admin key and explicit approval for this metered run. Do not retry an ambiguous create. Keep the returned signed reference for read/stop.",
@@ -698,7 +775,7 @@ const PLATFORM_TOOLS: McpTool[] = [
         solveCaptchas: {
           type: "boolean",
           description:
-            "Browserbase only: opt in to supported provider CAPTCHA solving. Requires an eligible account plan; does not enable proxies or Verified.",
+            "Optional Browserbase override; omitted inherits the global browser policy. Requires an eligible account plan; does not enable proxies or Verified.",
         },
       },
       required: ["provider", "task", "spendApproved"],
@@ -1707,6 +1784,10 @@ const TOOL_SCOPES: Record<string, string> = {
   inspect_connections: "connections:read",
   list_connection_tools: "connections:read",
   call_connection_tool: "connections:invoke",
+  browser_automation_status: "connections:read",
+  browser_automation_configure: "control:write",
+  browser_verification_start: "tools:invoke",
+  browser_verification_result: "tools:invoke",
   browser_provider_start: "tools:invoke",
   browser_provider_read: "tools:invoke",
   browser_provider_stop: "tools:invoke",
@@ -2554,6 +2635,32 @@ export const Route = createFileRoute("/mcp")({
               ...textResult(connectionResult),
               ...(connectionResult.isError ? { isError: true } : {}),
             };
+          } else if (
+            [
+              "browser_automation_status",
+              "browser_automation_configure",
+              "browser_verification_start",
+              "browser_verification_result",
+            ].includes(name)
+          ) {
+            if (key.projectId || key.workspaceId || key.organizationId)
+              throw new Error(
+                "Global browser automation requires a personal key; bounded keys cannot use personal solver credentials.",
+              );
+            const service = await import("@/lib/browser-verification.server");
+            if (name === "browser_automation_status")
+              result = textResult(await service.globalBrowserStatus(key.userId));
+            else if (name === "browser_automation_configure") {
+              await requireControlWrite(key);
+              result = textResult(await service.saveBrowserPreferences(key.userId, args));
+            } else {
+              await requireProviderWrite(key);
+              result = textResult(
+                name === "browser_verification_start"
+                  ? await service.beginVerification(key.userId, args)
+                  : await service.readVerification(key.userId, String(args["id"] ?? "")),
+              );
+            }
           } else if (
             ["browser_provider_start", "browser_provider_read", "browser_provider_stop"].includes(
               name,

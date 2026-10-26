@@ -1,3 +1,4 @@
+import { DirectBrowserVerification } from "./direct-browser-verification";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { createDirectCloudBrowser, finishDirectCloudBrowser } from "@/lib/cloud-browser.functions";
@@ -446,6 +447,11 @@ export function DirectCloudBrowser({
                 {ready ? "Waiting for browser image…" : "Connecting to remote browser…"}
               </p>
             )}
+            <DirectBrowserVerification
+              controller={controller}
+              sessionId={session?.sessionId}
+              ready={ready}
+            />
             <div className="flex flex-wrap gap-2" aria-label="Remote keyboard controls">
               {[
                 "Tab",

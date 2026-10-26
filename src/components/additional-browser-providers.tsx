@@ -42,7 +42,6 @@ function ProviderPanel({
   const storageKey = providerStorageKey(userId, provider);
   const [task, setTask] = useState("");
   const [approved, setApproved] = useState(false);
-  const [solveCaptchas, setSolveCaptchas] = useState(false);
   const [reference, setReference] = useState<ProviderHandle>();
   const [restored, setRestored] = useState(false);
   const [error, setError] = useState("");
@@ -91,7 +90,6 @@ function ProviderPanel({
           provider,
           task: task || "Manual browser session",
           spendApproved: true,
-          ...(provider === "browserbase" ? { solveCaptchas } : {}),
         },
       }),
     onSuccess: (data) => {
@@ -179,18 +177,10 @@ function ProviderPanel({
             className="min-h-24 w-full rounded border bg-background p-3 text-sm"
           />
         ) : null}
-        {provider === "browserbase" ? (
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={solveCaptchas}
-              disabled={Boolean(reference) || start.isPending}
-              onChange={(event) => setSolveCaptchas(event.target.checked)}
-            />
-            Request automatic CAPTCHA solving for this session (eligible Browserbase plan required;
-            provider charges may apply).
-          </label>
-        ) : null}
+        <p className="text-xs text-muted-foreground">
+          Verification uses your global browser policy. Native capabilities depend on the provider
+          and account plan.
+        </p>
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"

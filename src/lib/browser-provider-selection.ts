@@ -62,6 +62,7 @@ export function browserProviderSurface(provider: BrowserProviderId) {
 }
 
 export function browserProvider(value: unknown): BrowserProviderId {
+  if (value === "verification") return "tinyfish"; // Migrated to the shared global service.
   return BROWSER_PROVIDERS.some((item) => item.id === value)
     ? (value as BrowserProviderId)
     : "tinyfish";

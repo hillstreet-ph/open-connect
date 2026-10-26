@@ -160,7 +160,7 @@ export const startProviderSchema = z
     model: z.string().trim().min(1).max(100).optional(),
     modelParams: z.record(z.string(), z.unknown()).optional(),
     spendApproved: z.literal(true),
-    solveCaptchas: z.boolean().default(false),
+    solveCaptchas: z.boolean().optional(),
   })
   .superRefine((data, context) => {
     if (data.provider !== "browserbase" && data.solveCaptchas)
@@ -189,7 +189,11 @@ export async function startProvider(userId: string, input: unknown) {
     });
   }
   const session = await browserbaseClient(apiKey).sessions.create(
-    browserbaseSessionOptions(data.solveCaptchas),
+    browserbaseSessionOptions(
+      data.solveCaptchas ??
+        (await (await import("./browser-verification.server")).readBrowserPreferences(userId))
+          .native_assistance,
+    ),
   );
   return signHandle(apiKey, userId, {
     provider: data.provider,

@@ -1,3 +1,4 @@
+import { GlobalBrowserAutomation } from "@/components/global-browser-automation";
 import { CloudBrowserSwitcher } from "@/components/cloud-browser-switcher";
 import { browserProvider, type BrowserProviderId } from "@/lib/browser-provider-selection";
 import { createFileRoute } from "@tanstack/react-router";
@@ -34,6 +35,7 @@ function CloudBrowserRoute() {
           connected to open-connect.site/mcp drive it.
         </p>
       </header>
+      <GlobalBrowserAutomation />
       <CloudBrowserSwitcher
         selected={provider}
         onSelect={(next) =>

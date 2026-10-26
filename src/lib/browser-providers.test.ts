@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { browserProvider } from "./browser-provider-selection";
 import { BrowserUse } from "browser-use-sdk/v4";
 import {
   runBody,
@@ -265,13 +266,21 @@ test("browser tool families retain distinct choices and filter unrelated tools",
     expect(browserFamilyTool("tinyfish", name)).toBe(true);
 });
 
-test("CAPTCHA settings are explicit, provider-specific and preserve run cost acknowledgement", async () => {
+test("CAPTCHA settings inherit global policy, preserve overrides and retain run cost acknowledgement", async () => {
   const { startProviderSchema } = await import("./browser-providers.server");
   expect(
     startProviderSchema.parse({
       provider: "browserbase",
       task: "Manual session",
       spendApproved: true,
+    }).solveCaptchas,
+  ).toBeUndefined();
+  expect(
+    startProviderSchema.parse({
+      provider: "browserbase",
+      task: "Manual session",
+      spendApproved: true,
+      solveCaptchas: false,
     }).solveCaptchas,
   ).toBe(false);
   expect(
@@ -297,4 +306,8 @@ test("CAPTCHA settings are explicit, provider-specific and preserve run cost ack
   const { browserFamilyTool } = await import("./browser-provider-selection");
   expect(browserFamilyTool("captcha", "captcha_solve_recaptcha_v2")).toBe(true);
   expect(browserFamilyTool("captcha", "delete_database")).toBe(false);
+});
+
+test("legacy verification selection migrates to the global browser surface", () => {
+  expect(browserProvider("verification")).toBe("tinyfish");
 });

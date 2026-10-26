@@ -1,3 +1,8 @@
+import {
+  verificationProbeScript,
+  verificationProofScript,
+  type BrowserVerificationWidget,
+} from "./browser-verification-dom";
 /** Ephemeral, user-operated CDP connection. Never stores URLs, frames or typed text. */
 export type BrowserMouseButton = "left" | "right" | "middle";
 export type BrowserTab = { targetId: string; title: string; url: string };
@@ -363,6 +368,30 @@ export class BrowserController {
         ...(modifiers & 6 && key.toLowerCase() === "a" ? { commands: ["selectAll"] } : {}),
       });
       await this.command("Input.dispatchKeyEvent", { type: "keyUp", key, code, modifiers });
+    });
+  }
+  async verificationWidget(): Promise<BrowserVerificationWidget | null> {
+    const reply = await this.command("Runtime.evaluate", {
+      expression: verificationProbeScript,
+      returnByValue: true,
+    });
+    if (reply["exceptionDetails"]) return null;
+    return (
+      (reply["result"] as { value?: BrowserVerificationWidget | null } | undefined)?.value ?? null
+    );
+  }
+  async applyVerificationProof(widget: BrowserVerificationWidget, proof: string, revision: number) {
+    if (revision !== this.inputRevision)
+      throw new Error("Browser page changed. Keep the proof on its original session.");
+    await this.enqueueInput(async () => {
+      const reply = await this.command("Runtime.evaluate", {
+        expression: verificationProofScript(widget, proof),
+        returnByValue: true,
+      });
+      if (reply["exceptionDetails"] || !(reply["result"] as { value?: boolean } | undefined)?.value)
+        throw new Error(
+          "The original verification widget is no longer available. Use this session's normal handoff.",
+        );
     });
   }
   disconnect() {

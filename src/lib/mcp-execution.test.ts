@@ -1466,3 +1466,34 @@ async function expectAccessDenied(response: Response) {
   expect(body.result.isError).toBe(true);
   expect(body.result._meta["mcp/www_authenticate"][0]).toContain('error="insufficient_scope"');
 }
+
+test("global browser tools reject bounded keys before personal credential access", async () => {
+  scopes = ["mcp:connect", "connections:read", "control:write", "tools:invoke"];
+  for (const boundary of [
+    { projectId: "project" },
+    { workspaceId: "workspace" },
+    { organizationId: "organization" },
+  ]) {
+    keyBoundary = boundary;
+    for (const tool of [
+      "browser_automation_status",
+      "browser_automation_configure",
+      "browser_verification_start",
+      "browser_verification_result",
+    ]) {
+      await expect(call(tool, {})).rejects.toThrow("personal key");
+    }
+  }
+  expect(credentialReads).toEqual([]);
+});
+test("global browser tools advertise and enforce distinct read, policy and invocation scopes", async () => {
+  scopes = ["mcp:connect"];
+  for (const tool of [
+    "browser_automation_status",
+    "browser_automation_configure",
+    "browser_verification_start",
+    "browser_verification_result",
+  ])
+    await expectAccessDenied(await call(tool, {}));
+  expect(credentialReads).toEqual([]);
+});
