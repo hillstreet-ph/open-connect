@@ -20,7 +20,9 @@ export async function createDesktop(directory) {
     processes.push(child);
     return child;
   };
-  const close = async () => {
+  let closing;
+  const close = () => (closing ??= closeProcesses());
+  const closeProcesses = async () => {
     for (const child of processes.reverse()) child.kill("SIGTERM");
     await Promise.all(
       processes.map(

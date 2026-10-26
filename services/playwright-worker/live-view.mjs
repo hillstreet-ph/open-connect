@@ -24,7 +24,7 @@ export async function serveViewer(req, res) {
       "Referrer-Policy": "no-referrer",
       "X-Content-Type-Options": "nosniff",
       "Content-Security-Policy":
-        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors https://open-connect.site https://www.open-connect.site",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors https://open-connect.site https://www.open-connect.site https://*.open-connect-app.pages.dev",
     });
     res.end(data);
   } catch {

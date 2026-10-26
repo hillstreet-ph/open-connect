@@ -34,6 +34,7 @@ try {
   );
   await page.waitForFunction(
     () => document.getElementById("status").textContent.includes("connected"),
+    undefined,
     { timeout: 30000 },
   );
   await page.locator("#focus").click();
