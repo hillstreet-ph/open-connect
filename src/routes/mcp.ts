@@ -679,6 +679,11 @@ const PLATFORM_TOOLS: McpTool[] = [
         model: { type: "string" },
         modelParams: { type: "object", additionalProperties: true },
         spendApproved: { const: true },
+        solveCaptchas: {
+          type: "boolean",
+          description:
+            "Browserbase only: opt in to supported provider CAPTCHA solving. Requires an eligible account plan; does not enable proxies or Verified.",
+        },
       },
       required: ["provider", "task", "spendApproved"],
       additionalProperties: false,

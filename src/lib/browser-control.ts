@@ -1,4 +1,5 @@
 /** Ephemeral, user-operated CDP connection. Never stores URLs, frames or typed text. */
+export type BrowserMouseButton = "left" | "right" | "middle";
 export type BrowserTab = { targetId: string; title: string; url: string };
 export type BrowserFrame = { data: string; width: number; height: number };
 type Reply = { result?: Record<string, unknown>; error?: { message?: string } };
@@ -39,6 +40,14 @@ export class BrowserController {
   private socket: WebSocket | null = null;
   private serial = 0;
   private targetSession = "";
+  private pointerTail: Promise<void> = Promise.resolve();
+  private inputGeneration = 0;
+  private pressedPointer: {
+    x: number;
+    y: number;
+    button: BrowserMouseButton;
+    count: number;
+  } | null = null;
   activeTabId = "";
   private requests = new Map<
     number,
@@ -109,6 +118,10 @@ export class BrowserController {
     );
   }
   async selectTab(targetId: string) {
+    this.inputGeneration++;
+    await this.pointerTail;
+    const pressed = this.pressedPointer;
+    if (pressed) await this.release(pressed.x, pressed.y, pressed.button, pressed.count);
     const pages = await this.tabs();
     if (!pages.some((page) => page.targetId === targetId))
       throw new Error("This tab has closed. Refresh the tab list.");
@@ -200,10 +213,68 @@ export class BrowserController {
       clickCount: 1,
     });
   }
+  private pointer(
+    type: "mouseMoved" | "mousePressed" | "mouseReleased",
+    x: number,
+    y: number,
+    buttons: number,
+    button: BrowserMouseButton | "none",
+    clickCount = 0,
+  ) {
+    if (![x, y].every((value) => Number.isFinite(value) && value >= 0))
+      return Promise.reject(new Error("Invalid pointer position."));
+    const generation = this.inputGeneration;
+    const target = this.targetSession;
+    const pending = this.pointerTail.then(async () => {
+      if (!target || generation !== this.inputGeneration || target !== this.targetSession)
+        throw new Error("Browser target changed. Focus the current tab again.");
+      await this.command("Input.dispatchMouseEvent", {
+        type,
+        x,
+        y,
+        buttons,
+        button,
+        ...(clickCount ? { clickCount } : {}),
+      });
+      if (type === "mousePressed" && button !== "none")
+        this.pressedPointer = { x, y, button, count: clickCount };
+      else if (type === "mouseReleased") this.pressedPointer = null;
+      else if (this.pressedPointer) {
+        this.pressedPointer.x = x;
+        this.pressedPointer.y = y;
+      }
+    });
+    this.pointerTail = pending.catch(() => {});
+    return pending;
+  }
+  move(x: number, y: number, buttons = 0) {
+    return this.pointer(
+      "mouseMoved",
+      x,
+      y,
+      buttons,
+      buttons === 1 ? "left" : buttons === 2 ? "right" : buttons === 4 ? "middle" : "none",
+    );
+  }
+  press(x: number, y: number, button: BrowserMouseButton = "left", clickCount = 1) {
+    return this.pointer(
+      "mousePressed",
+      x,
+      y,
+      button === "left" ? 1 : button === "right" ? 2 : 4,
+      button,
+      clickCount,
+    );
+  }
+  release(x: number, y: number, button: BrowserMouseButton = "left", clickCount = 1) {
+    return this.pointer("mouseReleased", x, y, 0, button, clickCount);
+  }
   async scroll(x: number, y: number, deltaY: number) {
     await this.command("Input.dispatchMouseEvent", { type: "mouseWheel", x, y, deltaX: 0, deltaY });
   }
   async text(text: string) {
+    if (text.length > 50000)
+      throw new Error("Text is too large. Paste at most 50,000 characters at a time.");
     if (text) await this.command("Input.insertText", { text });
   }
   async key(key: string, code: string, modifiers = 0) {
@@ -228,10 +299,14 @@ export class BrowserController {
       code,
       modifiers,
       windowsVirtualKeyCode: virtualKeys[key] ?? key.toUpperCase().charCodeAt(0),
+      ...(modifiers & 6 && key.toLowerCase() === "a" ? { commands: ["selectAll"] } : {}),
     });
     await this.command("Input.dispatchKeyEvent", { type: "keyUp", key, code, modifiers });
   }
   disconnect() {
+    this.inputGeneration++;
+    this.pointerTail = Promise.resolve();
+    this.pressedPointer = null;
     const socket = this.socket;
     this.socket = null;
     this.targetSession = "";

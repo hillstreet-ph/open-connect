@@ -6,6 +6,7 @@ import {
   browserPoint,
   type BrowserTab,
   type BrowserFrame,
+  type BrowserMouseButton,
 } from "@/lib/browser-control";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,8 +41,46 @@ export function DirectCloudBrowser({
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const textInput = useRef<HTMLInputElement>(null);
+  const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
+  const pointer = useRef<{
+    button: BrowserMouseButton;
+    count: number;
+    x: number;
+    y: number;
+    time: number;
+  } | null>(null);
+  const lastPress = useRef<{
+    button: BrowserMouseButton;
+    x: number;
+    y: number;
+    time: number;
+    count: number;
+  } | null>(null);
+  const moveFrame = useRef<number | null>(null);
+  const pendingMove = useRef<{ x: number; y: number } | null>(null);
+  const flushMove = () => {
+    if (moveFrame.current !== null) cancelAnimationFrame(moveFrame.current);
+    moveFrame.current = null;
+    const point = pendingMove.current;
+    pendingMove.current = null;
+    if (point)
+      void controller.current
+        ?.move(
+          point.x,
+          point.y,
+          pointer.current
+            ? pointer.current.button === "left"
+              ? 1
+              : pointer.current.button === "right"
+                ? 2
+                : 4
+            : 0,
+        )
+        .catch(report);
+  };
   useEffect(
     () => () => {
+      if (moveFrame.current !== null) cancelAnimationFrame(moveFrame.current);
       controller.current?.disconnect();
       const current = sessionRef.current;
       if (current)
@@ -55,9 +94,20 @@ export function DirectCloudBrowser({
   );
   const report = (failure: unknown) =>
     setError(failure instanceof Error ? failure.message : "Browser action failed.");
+  const releasePointer = () => {
+    const pressed = pointer.current;
+    if (!pressed) return;
+    flushMove();
+    pointer.current = null;
+    void controller.current
+      ?.release(pressed.x, pressed.y, pressed.button, pressed.count)
+      .catch(report);
+  };
   const connect = async (current: Session) => {
     controller.current?.disconnect();
     setFrame(null);
+    setCursor(null);
+    pointer.current = null;
     setReady(false);
     const client = new BrowserController(setFrame, () => {
       setReady(false);
@@ -213,6 +263,9 @@ export function DirectCloudBrowser({
                   const id = event.target.value;
                   setBusy(true);
                   setError("");
+                  flushMove();
+                  pointer.current = null;
+                  setCursor(null);
                   setFrame(null);
                   void controller.current
                     ?.selectTab(id)
@@ -242,64 +295,202 @@ export function DirectCloudBrowser({
               </span>
             </div>
             {frame ? (
-              <img
-                tabIndex={0}
-                role="application"
-                aria-label="Interactive remote browser. Click to focus, type to enter text, Tab to move between remote fields. Escape exits the remote view."
-                alt="Live remote browser page"
-                src={`data:image/jpeg;base64,${frame.data}`}
-                draggable={false}
-                className="w-full rounded border bg-black focus:ring-2 focus:ring-primary"
-                onClick={(event) => {
-                  event.currentTarget.focus();
-                  const point = browserPoint(
-                    event.clientX,
-                    event.clientY,
-                    event.currentTarget.getBoundingClientRect(),
-                    frame,
-                  );
-                  void controller.current?.click(point.x, point.y).catch(report);
-                }}
-                onWheel={(event) => {
-                  const point = browserPoint(
-                    event.clientX,
-                    event.clientY,
-                    event.currentTarget.getBoundingClientRect(),
-                    frame,
-                  );
-                  void controller.current?.scroll(point.x, point.y, event.deltaY).catch(report);
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === "Escape") {
-                    event.currentTarget.blur();
-                    return;
-                  }
-                  // Let the local paste event deliver clipboard text to onPaste.
-                  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "v") return;
-                  event.preventDefault();
-                  if (["Shift", "Control", "Alt", "Meta"].includes(event.key)) return;
-                  const client = controller.current;
-                  const modifiers =
-                    (event.altKey ? 1 : 0) |
-                    (event.ctrlKey ? 2 : 0) |
-                    (event.metaKey ? 4 : 0) |
-                    (event.shiftKey ? 8 : 0);
-                  void (
-                    event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey
-                      ? client?.text(event.key)
-                      : client?.key(event.key, event.code, modifiers)
-                  )?.catch(report);
-                }}
-                onPaste={(event) => {
-                  event.preventDefault();
-                  void controller.current?.text(event.clipboardData.getData("text")).catch(report);
-                }}
-              />
+              <div className="relative">
+                <img
+                  tabIndex={0}
+                  role="application"
+                  aria-label="Interactive remote browser. Move, click or drag the pointer. Type or paste into the focused field. Escape closes a remote menu and exits keyboard capture."
+                  alt="Live remote browser page"
+                  src={`data:image/jpeg;base64,${frame.data}`}
+                  draggable={false}
+                  className="w-full touch-none rounded border bg-black focus:ring-2 focus:ring-primary"
+                  onContextMenu={(event) => event.preventDefault()}
+                  onBlur={releasePointer}
+                  onLostPointerCapture={releasePointer}
+                  onPointerMove={(event) => {
+                    const point = browserPoint(
+                      event.clientX,
+                      event.clientY,
+                      event.currentTarget.getBoundingClientRect(),
+                      frame,
+                    );
+                    if (
+                      pointer.current &&
+                      lastPress.current &&
+                      Math.hypot(point.x - lastPress.current.x, point.y - lastPress.current.y) > 5
+                    )
+                      lastPress.current = null;
+                    if (pointer.current) {
+                      pointer.current.x = point.x;
+                      pointer.current.y = point.y;
+                    }
+                    setCursor({
+                      x: (point.x / frame.width) * 100,
+                      y: (point.y / frame.height) * 100,
+                    });
+                    pendingMove.current = point;
+                    if (moveFrame.current === null)
+                      moveFrame.current = requestAnimationFrame(flushMove);
+                  }}
+                  onPointerLeave={() => {
+                    if (!pointer.current) setCursor(null);
+                  }}
+                  onPointerDown={(event) => {
+                    event.preventDefault();
+                    if (!event.isPrimary || event.button > 2 || pointer.current) return;
+                    event.currentTarget.focus();
+                    flushMove();
+                    const point = browserPoint(
+                      event.clientX,
+                      event.clientY,
+                      event.currentTarget.getBoundingClientRect(),
+                      frame,
+                    );
+                    const button: BrowserMouseButton =
+                      event.button === 2 ? "right" : event.button === 1 ? "middle" : "left";
+                    const previous = lastPress.current;
+                    const count =
+                      previous &&
+                      previous.button === button &&
+                      event.timeStamp - previous.time < 500 &&
+                      Math.hypot(point.x - previous.x, point.y - previous.y) < 5 &&
+                      previous.count === 1
+                        ? 2
+                        : 1;
+                    const press = { ...point, button, count, time: event.timeStamp };
+                    pointer.current = press;
+                    lastPress.current = { ...press };
+                    event.currentTarget.setPointerCapture(event.pointerId);
+                    void controller.current?.press(point.x, point.y, button, count).catch(report);
+                  }}
+                  onPointerUp={(event) => {
+                    const press = pointer.current;
+                    if (!press) return;
+                    flushMove();
+                    pointer.current = null;
+                    const point = browserPoint(
+                      event.clientX,
+                      event.clientY,
+                      event.currentTarget.getBoundingClientRect(),
+                      frame,
+                    );
+                    void controller.current
+                      ?.release(point.x, point.y, press.button, press.count)
+                      .catch(report);
+                    if (event.currentTarget.hasPointerCapture(event.pointerId))
+                      event.currentTarget.releasePointerCapture(event.pointerId);
+                  }}
+                  onPointerCancel={() => {
+                    lastPress.current = null;
+                    const press = pointer.current;
+                    flushMove();
+                    pointer.current = null;
+                    if (press)
+                      void controller.current
+                        ?.release(press.x, press.y, press.button, press.count)
+                        .catch(report);
+                    setCursor(null);
+                  }}
+                  onWheel={(event) => {
+                    const point = browserPoint(
+                      event.clientX,
+                      event.clientY,
+                      event.currentTarget.getBoundingClientRect(),
+                      frame,
+                    );
+                    void controller.current?.scroll(point.x, point.y, event.deltaY).catch(report);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape") {
+                      event.preventDefault();
+                      void controller.current?.key("Escape", "Escape").catch(report);
+                      event.currentTarget.blur();
+                      return;
+                    }
+                    // Let the local paste event deliver clipboard text to onPaste.
+                    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "v") return;
+                    event.preventDefault();
+                    if (["Shift", "Control", "Alt", "Meta"].includes(event.key)) return;
+                    const client = controller.current;
+                    const modifiers =
+                      (event.altKey ? 1 : 0) |
+                      (event.ctrlKey ? 2 : 0) |
+                      (event.metaKey ? 4 : 0) |
+                      (event.shiftKey ? 8 : 0);
+                    void (
+                      Array.from(event.key).length === 1 &&
+                      !event.ctrlKey &&
+                      !event.metaKey &&
+                      !event.altKey
+                        ? client?.text(event.key)
+                        : client?.key(event.key, event.code, modifiers)
+                    )?.catch(report);
+                  }}
+                  onPaste={(event) => {
+                    event.preventDefault();
+                    void controller.current
+                      ?.text(event.clipboardData.getData("text"))
+                      .catch(report);
+                  }}
+                />
+                {cursor ? (
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-primary shadow"
+                    style={{ left: `${cursor.x}%`, top: `${cursor.y}%` }}
+                  />
+                ) : null}
+              </div>
             ) : (
               <p className="rounded border bg-muted p-8 text-center text-sm" role="status">
                 {ready ? "Waiting for browser image…" : "Connecting to remote browser…"}
               </p>
             )}
+            <div className="flex flex-wrap gap-2" aria-label="Remote keyboard controls">
+              {["Tab", "Enter", "Backspace", "Escape"].map((key) => (
+                <Button
+                  key={key}
+                  variant="outline"
+                  disabled={!ready || busy}
+                  onClick={() => void controller.current?.key(key, key).catch(report)}
+                >
+                  {key}
+                </Button>
+              ))}
+              <Button
+                variant="outline"
+                disabled={!ready || busy}
+                onClick={() => void controller.current?.key("a", "KeyA", 2).catch(report)}
+              >
+                Select all
+              </Button>
+              <Button
+                variant="outline"
+                disabled={!ready || busy}
+                onClick={async () => {
+                  try {
+                    const client = controller.current;
+                    const target = client?.activeTabId;
+                    const sessionId = sessionRef.current?.sessionId;
+                    const text = await navigator.clipboard.readText();
+                    if (
+                      !client ||
+                      client !== controller.current ||
+                      target !== client.activeTabId ||
+                      sessionId !== sessionRef.current?.sessionId
+                    )
+                      throw new Error("Browser target changed.");
+                    await client.text(text);
+                  } catch {
+                    setError(
+                      "Clipboard paste was unavailable. Use keyboard paste or the masked text field below.",
+                    );
+                  }
+                }}
+              >
+                Paste clipboard
+              </Button>
+            </div>
             <form
               className="space-y-2"
               onSubmit={(event) => {
