@@ -9,16 +9,12 @@ assert.equal(manifest.side_panel.default_path,"panel.html");
 assert.deepEqual(manifest.permissions.sort(),["sidePanel","storage"].sort());
 assert.equal(manifest.host_permissions, undefined);
 assert.equal(manifest.content_scripts, undefined);
-for(const file of ["background.js","content.js","panel.js","suggestions.js"]){new vm.Script(read(file),{filename:file});}
+for(const file of ["background.js","panel.js","suggestions.js"]){new vm.Script(read(file),{filename:file});}
 const html=read("panel.html");
 assert.match(html,/command-query/);
 assert.match(html,/command-results/);
 assert.match(html,/suggestions\.js/);
 assert.match(html,/panel\.js/);
-const content=read("content.js");
-assert.doesNotMatch(content,/fetch\s*\(/);
-assert.doesNotMatch(content,/querySelector(All)?\s*\(/);
-assert.doesNotMatch(content,/\.click\s*\(/);
 const suggestions=read("suggestions.js");
 assert.match(suggestions,/navigator\.clipboard\.writeText/);
 assert.doesNotMatch(suggestions,/fetch\s*\(/);
