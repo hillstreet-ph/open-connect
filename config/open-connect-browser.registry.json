@@ -1,6 +1,6 @@
 {
   "id": "open-connect-browser",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "purpose": "Tenant-isolated browser, cloud-computer, and remote-terminal sessions for authorized AI agents.",
   "control_plane": {
     "create_session": "POST /api/v1/sessions",
@@ -9,8 +9,8 @@
   },
   "providers": [
     {
-      "id": "agent-browser",
-      "mode": "isolated-worker-broker",
+      "id": "playwright",
+      "mode": "owner-isolated-worker",
       "capabilities": [
         "navigate",
         "snapshot",
@@ -18,17 +18,10 @@
         "fill",
         "select",
         "press",
-        "scroll",
         "screenshot",
-        "profile_load",
-        "profile_save",
-        "login_handoff"
+        "tabs",
+        "close"
       ]
-    },
-    {
-      "id": "openbrowser",
-      "mode": "remote-api",
-      "capabilities": ["browser", "cdp", "session_resume"]
     },
     {
       "id": "guacamole",
@@ -55,7 +48,7 @@
     "profile_load_save_require_approval": true,
     "human_handoff_required": [
       "mfa",
-      "captcha",
+      "unresolved_captcha",
       "passkey",
       "account_recovery",
       "payment",
@@ -65,9 +58,10 @@
     "forbidden": [
       "plaintext_credentials_in_agent_context",
       "shared_cross-tenant_browser_profiles",
-      "mfa_or_captcha_bypass",
+      "mfa_or_access_control_bypass",
       "unapproved_production_changes"
-    ]
+    ],
+    "supported_verification_assistance": "config/global-browser.toolkit.registry.json"
   },
   "audit": {
     "fields": [

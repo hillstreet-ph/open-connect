@@ -1330,7 +1330,7 @@ test("free worker delegation and context saving enforce independent key grants",
   );
 });
 
-test("saved browser profile mutations reject project and organization contexts before provider access", async () => {
+test("Playwright actions reject bounded contexts before worker access", async () => {
   scopes = ["tools:invoke"];
   for (const boundary of [
     { projectId: "project" },
@@ -1338,7 +1338,7 @@ test("saved browser profile mutations reject project and organization contexts b
     { organizationId: "org" },
   ]) {
     keyBoundary = boundary;
-    for (const tool of ["cloud_browser_save_profile", "cloud_browser_profile_setup"]) {
+    for (const tool of ["cloud_browser_call"]) {
       await expect(
         call(tool, {
           name: "Work",
@@ -1346,7 +1346,7 @@ test("saved browser profile mutations reject project and organization contexts b
           profile_id: "prof_work",
           url: "https://example.com",
         }),
-      ).rejects.toThrow("personal API key");
+      ).rejects.toThrow("personal key");
     }
   }
   expect(tables).not.toContain("app_connections");
@@ -1466,3 +1466,24 @@ async function expectAccessDenied(response: Response) {
   expect(body.result.isError).toBe(true);
   expect(body.result._meta["mcp/www_authenticate"][0]).toContain('error="insufficient_scope"');
 }
+
+test("global browser tools reject bounded keys before personal credential access", async () => {
+  scopes = ["mcp:connect", "connections:read", "control:write", "tools:invoke"];
+  for (const boundary of [
+    { projectId: "project" },
+    { workspaceId: "workspace" },
+    { organizationId: "organization" },
+  ]) {
+    keyBoundary = boundary;
+    for (const tool of ["cloud_browser_tools", "cloud_browser_call", "cloud_browser_cancel_task"]) {
+      await expect(call(tool, {})).rejects.toThrow("personal key");
+    }
+  }
+  expect(credentialReads).toEqual([]);
+});
+test("global browser tools advertise and enforce distinct read, policy and invocation scopes", async () => {
+  scopes = ["mcp:connect"];
+  for (const tool of ["cloud_browser_tools", "cloud_browser_call", "cloud_browser_cancel_task"])
+    await expectAccessDenied(await call(tool, {}));
+  expect(credentialReads).toEqual([]);
+});

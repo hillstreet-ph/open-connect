@@ -44,6 +44,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CredentialImportPreview } from "@/components/credential-import-preview";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -474,6 +475,7 @@ function SecretsPage() {
         </div>
       </div>
 
+      <CredentialImportPreview existing={list.data ?? []} />
       <Card className="mt-8 overflow-hidden border-border/80 shadow-panel">
         <CardHeader>
           <CardTitle className="text-base">Add login or credential</CardTitle>
