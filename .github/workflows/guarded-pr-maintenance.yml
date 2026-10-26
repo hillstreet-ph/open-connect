@@ -3,7 +3,7 @@ on:
   pull_request:
     types: [opened, reopened, synchronize, ready_for_review]
   schedule:
-    - cron: '23 3 * * *'
+    - cron: "23 3 * * *"
   workflow_dispatch:
 permissions:
   contents: read
@@ -42,4 +42,4 @@ jobs:
             const files = await github.paginate(github.rest.pulls.listFiles, {...context.repo, pull_number:pr.number, per_page:100});
             if (!files.length || files.length > 10 || files.some(f=> !/(^|\/)(package\.json|package-lock\.json|bun\.lock|pnpm-lock\.yaml|yarn\.lock)$/.test(f.filename))) return;
             const id = pr.node_id;
-            await github.graphql(`mutation($id:ID!){enablePullRequestAutoMerge(input:{pullRequestId:$id,mergeMethod:SQUASH}){clientMutationId}}`, {id});
+            await github.graphql(`mutation($id:ID!){enablePullRequestAutoMerge(input:{pullRequestId:$id,mergeMethod:MERGE}){clientMutationId}}`, {id});
