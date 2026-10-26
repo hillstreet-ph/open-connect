@@ -18,8 +18,10 @@ export function selectBrowserDebugger(input: {
   if (input.chromeWorkerAuthenticated && input.sessionCdpCompatible) {
     return { debugger: "chrome", reason: "authenticated_compatible_worker" };
   }
-  if ((input.allowFallback ?? CLOUD_BROWSER_DEFAULTS.allow_provider_fallback) &&
-      input.providerNativeInspectionAvailable) {
+  if (
+    (input.allowFallback ?? CLOUD_BROWSER_DEFAULTS.allow_provider_fallback) &&
+    input.providerNativeInspectionAvailable
+  ) {
     return { debugger: "provider", reason: "chrome_unavailable_provider_fallback" };
   }
   return { debugger: null, reason: "no_compatible_debugger" };
