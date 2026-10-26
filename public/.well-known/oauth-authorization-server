@@ -32,5 +32,6 @@
     "control:write"
   ],
   "service_documentation": "https://open-connect.site/integrations",
-  "logo_uri": "https://open-connect.site/open-connect-mark.png"
+  "logo_uri": "https://open-connect.site/open-connect-mark.png",
+  "authorization_response_iss_parameter_supported": true
 }

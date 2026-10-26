@@ -1,3 +1,4 @@
+import { oauthResource } from "@/lib/mcp-oauth-contract";
 import { createFileRoute } from "@tanstack/react-router";
 import { oauthDatabase } from "@/lib/oauth-client.server";
 import { gateMtls } from "@/lib/mtls.server";
@@ -38,7 +39,14 @@ export const Route = createFileRoute("/oauth/token")({
             )
           )
             return json({ error: "invalid_request" }, 400);
-          const { data, error } = await oauthDatabase().rpc("oc_exchange_oauth_code", {
+          let resource: string;
+          try {
+            resource = oauthResource(p["resource"]);
+          } catch {
+            return json({ error: "invalid_target" }, 400);
+          }
+          const { data, error } = await oauthDatabase().rpc("oc_exchange_oauth_code_resource", {
+            p_resource: resource,
             p_code: p["code"],
             p_verifier: p["code_verifier"],
             p_client_id: p["client_id"],

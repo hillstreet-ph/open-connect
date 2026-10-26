@@ -1,3 +1,4 @@
+import { oauthCallback } from "@/lib/mcp-oauth-contract";
 import { scopesForProfile } from "@/lib/access-profiles";
 import { useRoles } from "@/hooks/use-roles";
 import { createFileRoute } from "@tanstack/react-router";
@@ -13,10 +14,15 @@ export const Route = createFileRoute("/oauth/authorize")({
     </p>
   ),
   validateSearch: (s: Record<string, unknown>) =>
-    Object.fromEntries(Object.entries(s).filter(([, v]) => typeof v === "string")) as Record<
-      string,
-      string
-    >,
+    Object.fromEntries(
+      Object.entries(s)
+        .filter(([, v]) => typeof v === "string")
+        .concat(
+          s["resource"] !== undefined && typeof s["resource"] !== "string"
+            ? [["resource", "invalid_resource"]]
+            : [],
+        ),
+    ) as Record<string, string>,
   component: AuthorizePage,
 });
 function AuthorizePage() {
@@ -42,8 +48,9 @@ function AuthorizePage() {
     setError("");
     try {
       const { data, error: failure } = await supabase.rpc(
-        "oc_authorize_oauth_client" as never,
+        "oc_authorize_oauth_client_resource" as never,
         {
+          p_resource: request.resource,
           p_client_id: request.client_id,
           p_redirect_uri: request.redirect_uri,
           p_challenge: request.code_challenge,
@@ -52,14 +59,30 @@ function AuthorizePage() {
       );
       if (failure) throw new Error(failure.message);
       if (typeof data !== "string") throw new Error("Authorization failed.");
-      const callback = new URL(request.redirect_uri);
-      callback.searchParams.set("code", data);
-      if (request.state) callback.searchParams.set("state", request.state);
-      window.location.assign(callback.href);
+      window.location.assign(oauthCallback(request.redirect_uri, request.state, { code: data }));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Authorization failed.");
       setBusy(false);
     }
+  }
+  async function cancel() {
+    if (!request) return;
+    setBusy(true);
+    const { data, error: failure } = await supabase.rpc(
+      "oc_oauth_client_registered" as never,
+      {
+        p_client_id: request.client_id,
+        p_redirect_uri: request.redirect_uri,
+      } as never,
+    );
+    if (failure || data !== true) {
+      setError("Unregistered client or callback. Restart from your client.");
+      setBusy(false);
+      return;
+    }
+    window.location.assign(
+      oauthCallback(request.redirect_uri, request.state, { error: "access_denied" }),
+    );
   }
   return (
     <main className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center px-4 py-12">
@@ -156,9 +179,13 @@ function AuthorizePage() {
               Sign in to continue
             </a>
           )}
-          <a className="mt-4 text-center text-sm underline" href="/dashboard">
+          <button
+            disabled={busy}
+            className="mt-4 text-center text-sm underline"
+            onClick={() => void cancel()}
+          >
             Cancel
-          </a>
+          </button>
         </>
       ) : null}
     </main>

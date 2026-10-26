@@ -1,3 +1,8 @@
+import {
+  authenticatedProfile,
+  PROFILE_SCHEMA,
+  oauthScopeChallenge,
+} from "@/lib/mcp-oauth-contract";
 import { AGENCY_CATEGORIES, agencyTemplate } from "@/lib/ai-agency";
 import { resourceReviewState, isResourceApproved } from "@/lib/resource-approval";
 import {
@@ -132,6 +137,15 @@ let catalogCache: {
 } | null = null;
 
 const PLATFORM_TOOLS: McpTool[] = [
+  {
+    name: "get_profile",
+    description:
+      "Return the immutable profile represented by the validated request credentials. Stable across refresh and reconnection.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    outputSchema: PROFILE_SCHEMA,
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    _meta: { "openai/profile": true },
+  },
   {
     name: "get_admin_access",
     description:
@@ -1484,6 +1498,29 @@ function unauthorized(message: string) {
   );
 }
 
+function scopeDenied(id: unknown, message: string, scope: string) {
+  const challenge = oauthScopeChallenge(scope);
+  return new Response(
+    JSON.stringify({
+      jsonrpc: "2.0",
+      id,
+      result: {
+        ...textResult({ error: { message, code: "insufficient_scope" } }),
+        isError: true,
+        _meta: { "mcp/www_authenticate": [challenge] },
+      },
+    }),
+    {
+      status: 200,
+      headers: {
+        "content-type": "application/json",
+        "cache-control": "no-store",
+        "access-control-allow-origin": "*",
+      },
+    },
+  );
+}
+
 /** Compact JSON (no pretty-print) — smaller responses, faster serialize. */
 function textResult(payload: unknown) {
   return {
@@ -1535,19 +1572,7 @@ function chatGptTools() {
     const securitySchemes = [
       {
         type: "oauth2",
-        scopes: [
-          TOOL_SCOPES[tool.name] ?? "tools:invoke",
-          ...(tool.name === "run_agent_team" ? ["agents:invoke"] : []),
-          ...(tool.name === "sync_composio_accounts" ? ["connections:invoke"] : []),
-          ...([
-            "create_resource",
-            "update_resource",
-            "upload_resource_content",
-            "set_resource_publication",
-          ].includes(tool.name)
-            ? ["control:write"]
-            : []),
-        ],
+        scopes: requiredToolScopes(tool.name),
       },
     ];
     return {
@@ -1718,20 +1743,20 @@ const TOOL_SCOPES: Record<string, string> = {
   install_capability: "control:write",
 };
 
+function requiredToolScopes(name: string): string[] {
+  if (name === "get_profile") return [];
+  return [
+    ...new Set([
+      TOOL_SCOPES[name] ?? "tools:invoke",
+      ...(name === "run_agent_team" ? ["agents:invoke"] : []),
+      ...(name === "sync_composio_accounts" ? ["connections:invoke"] : []),
+      ...(name === "repair_connection" ? ["connections:invoke", "secrets:read"] : []),
+      ...(RESOURCE_WRITE_TOOLS.includes(name) ? ["control:write"] : []),
+    ]),
+  ];
+}
 function canUseTool(key: AuthedKey, toolName: string) {
-  if (toolName === "repair_connection")
-    return (
-      hasScope(key, "control:write") &&
-      hasScope(key, "connections:invoke") &&
-      hasScope(key, "secrets:read")
-    );
-  if (toolName === "sync_composio_accounts")
-    return hasScope(key, "control:write") && hasScope(key, "connections:invoke");
-  if (toolName === "run_agent_team")
-    return hasScope(key, "models:invoke") && hasScope(key, "agents:invoke");
-  const required = TOOL_SCOPES[toolName] ?? "tools:invoke";
-  // Control consent must not imply unrelated private-read or provider grants.
-  return hasScope(key, required);
+  return requiredToolScopes(toolName).every((scope) => hasScope(key, scope));
 }
 
 export const Route = createFileRoute("/mcp")({
@@ -1905,22 +1930,25 @@ export const Route = createFileRoute("/mcp")({
             (TOOL_SCOPES[name] === "control:write" || RESOURCE_WRITE_TOOLS.includes(name)) &&
             !hasScope(key, "control:write")
           ) {
-            return gatewayError(
+            return scopeDenied(
+              body.id,
               `Key requires control:write to invoke ${name}.`,
-              403,
-              "insufficient_scope",
+              requiredToolScopes(name).join(" "),
             );
           }
 
           if (!name || !canUseTool(key, name)) {
-            return gatewayError(
+            return scopeDenied(
+              body.id,
               `Key cannot invoke ${name || "this tool"} in its selected scope.`,
-              403,
-              "insufficient_scope",
+              requiredToolScopes(name ?? "").join(" "),
             );
           }
 
-          if (name === "get_admin_access") {
+          if (name === "get_profile") {
+            const profile = authenticatedProfile(key.userId);
+            result = { ...textResult(profile), structuredContent: profile };
+          } else if (name === "get_admin_access") {
             result = textResult(adminAccess(key, hasRole(await loadRoles(key.userId), "admin")));
           } else if (name === "get_credential_management") {
             if (key.projectId || key.workspaceId || key.organizationId)

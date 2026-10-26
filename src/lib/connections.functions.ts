@@ -188,6 +188,13 @@ const CATALOG = [
     oauth: false,
   },
   {
+    provider: "proton_drive",
+    display_name: "Proton Drive",
+    category: "Productivity",
+    scopes: ["files:read", "folders:write"],
+    oauth: false,
+  },
+  {
     provider: "google_drive",
     display_name: "Google Drive",
     category: "Productivity",

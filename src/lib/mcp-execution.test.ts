@@ -518,7 +518,7 @@ test("control decisions reject non-admins and bounded keys before approval write
   expect(tables).not.toContain("control_approvals");
   roles = ["admin"];
   scopes = ["mcp:connect", "tools:invoke"];
-  expect((await call("decide_control_approval", args)).status).toBe(403);
+  await expectAccessDenied(await call("decide_control_approval", args));
   expect(tables).not.toContain("control_approvals");
   scopes = ["mcp:connect", "control:write"];
   for (const boundary of [
@@ -704,7 +704,7 @@ test("installation requires admin plus write scope", async () => {
   );
   roles = ["admin"];
   scopes = ["mcp:connect"];
-  expect((await call("install_capability", { resource_id: resource.slug })).status).toBe(403);
+  await expectAccessDenied(await call("install_capability", { resource_id: resource.slug }));
   expect(tables).not.toContain("capability_installations");
 });
 
@@ -722,14 +722,15 @@ test("control mutations return explicit scope denials before private reads or wr
       tool,
       tool === "hubstaff_admin_request" ? { method: "POST", path: "/test" } : {},
     );
-    expect(response.status).toBe(403);
-    expect(await response.json()).toEqual({
-      error: {
-        message: `Key requires control:write to invoke ${tool}.`,
-        type: "open_connect_error",
-        code: "insufficient_scope",
-      },
+    await expectAccessDenied(response);
+    const denied = await response.json();
+    expect(JSON.parse(denied.result.content[0].text).error).toEqual({
+      message: `Key requires control:write to invoke ${tool}.`,
+      code: "insufficient_scope",
     });
+    expect(denied.result.isError).toBe(true);
+    expect(denied.result._meta["mcp/www_authenticate"][0]).toContain('error="insufficient_scope"');
+    expect(denied.result._meta["mcp/www_authenticate"][0]).toContain("control:write");
   }
   expect(tables).toEqual([]);
   expect(connectionUpdates).toEqual([]);
@@ -757,8 +758,10 @@ test("control-only OAuth consent cannot read private data or invoke unrelated pr
       tool,
       tool === "hubstaff_admin_request" ? { method: "POST", path: "/test" } : {},
     );
-    expect(response.status).toBe(403);
-    expect((await response.json()).error.code).toBe("insufficient_scope");
+    await expectAccessDenied(response);
+    expect(JSON.parse((await response.json()).result.content[0].text).error.code).toBe(
+      "insufficient_scope",
+    );
   }
   expect(tables).toEqual([]);
   expect(credentialReads).toEqual([]);
@@ -792,7 +795,7 @@ test("read tokens discover write scope requirements without gaining execution ri
   expect(tool.securitySchemes).toEqual([{ type: "oauth2", scopes: ["connections:invoke"] }]);
   expect(tool._meta.securitySchemes).toEqual(tool.securitySchemes);
   const denied = await call("call_connection_tool", {});
-  expect(denied.status).toBe(403);
+  await expectAccessDenied(denied);
   expect(tables).not.toContain("app_connections");
 });
 
@@ -821,7 +824,7 @@ test("private read grants cannot invoke Hubstaff admin requests", async () => {
       method: "GET",
       path: "/v2/organizations",
     });
-    expect(response.status).toBe(403);
+    await expectAccessDenied(response);
   }
   expect(hubstaffRequests).toBe(0);
 });
@@ -842,7 +845,7 @@ test("Hubstaff writes require the advertised tools invoke scope", async () => {
     method: "PATCH",
     path: "/v2/organizations/1",
   });
-  expect(denied.status).toBe(403);
+  await expectAccessDenied(denied);
   expect(hubstaffRequests).toBe(0);
   scopes = ["mcp:connect", "tools:invoke"];
   const response = await call("hubstaff_admin_request", {
@@ -862,7 +865,7 @@ test("native Twilio writes require admin role and an invoke scope before provide
   expect(connectionCalls).toEqual([]);
   roles = ["admin"];
   scopes = ["mcp:connect", "connections:read"];
-  expect((await call("call_connection_tool", args)).status).toBe(403);
+  await expectAccessDenied(await call("call_connection_tool", args));
   expect(connectionCalls).toEqual([]);
   roles = ["owner"];
   scopes = ["mcp:connect", "connections:invoke"];
@@ -894,7 +897,7 @@ test("native Telegram sends require admin and provider invoke grants before exec
   expect(connectionCalls).toEqual([]);
   roles = ["admin"];
   scopes = ["mcp:connect", "connections:read"];
-  expect((await call("call_connection_tool", args)).status).toBe(403);
+  await expectAccessDenied(await call("call_connection_tool", args));
   expect(connectionCalls).toEqual([]);
   scopes = ["mcp:connect", "connections:invoke"];
   expect((await call("call_connection_tool", args)).status).toBe(200);
@@ -931,7 +934,7 @@ test("Telegram destination configuration rejects missing control access and inva
   await expect(call("configure_connection", args)).rejects.toThrow("Admin role");
   roles = ["admin"];
   scopes = ["mcp:connect", "connections:invoke"];
-  expect((await call("configure_connection", args)).status).toBe(403);
+  await expectAccessDenied(await call("configure_connection", args));
   scopes = ["mcp:connect", "control:write"];
   await expect(call("configure_connection", { ...args, provider: "twilio" })).rejects.toThrow(
     "Telegram provider",
@@ -1151,7 +1154,7 @@ test("connection failures propagate as MCP tool errors instead of successful wra
 
 test("Auto toggle enforces write scope and saves only the authenticated key context", async () => {
   scopes = ["mcp:connect", "resources:read"];
-  expect((await call("set_auto_mode", { enabled: false })).status).toBe(403);
+  await expectAccessDenied(await call("set_auto_mode", { enabled: false }));
   expect(autoPreferences.size).toBe(0);
   scopes.push("tools:invoke");
   keyBoundary = { projectId: "fixture-project" };
@@ -1229,15 +1232,15 @@ test("catalog links open the Marketplace's resource filter instead of a missing 
 
 test("browser matching requires secrets scope and rejects bounded keys before personal reads", async () => {
   scopes = ["mcp:connect"];
-  expect(
-    (await call("match_browser_credentials", { origin: "https://fixture.invalid" })).status,
-  ).toBe(403);
+  await expectAccessDenied(
+    await call("match_browser_credentials", { origin: "https://fixture.invalid" }),
+  );
   expect(credentialReads).toEqual([]);
   scopes.push("secrets:read");
   keyBoundary = { projectId: "fixture-project" };
-  expect(
-    (await call("match_browser_credentials", { origin: "https://fixture.invalid" })).status,
-  ).toBe(403);
+  await expectAccessDenied(
+    await call("match_browser_credentials", { origin: "https://fixture.invalid" }),
+  );
   expect(credentialReads).toEqual([]);
 });
 
@@ -1274,9 +1277,9 @@ test("resource management advertises both write scopes and enforces role and per
     const tool = discovered.find((item: { name: string }) => item.name === name);
     expect(tool.securitySchemes[0].scopes).toEqual(["resources:write", "control:write"]);
     scopes = ["mcp:connect", "control:write"];
-    expect((await call(name)).status).toBe(403);
+    await expectAccessDenied(await call(name));
     scopes = ["mcp:connect", "resources:write"];
-    expect((await call(name)).status).toBe(403);
+    await expectAccessDenied(await call(name));
     scopes = ["mcp:connect", "control:write", "resources:write"];
     roles = ["member"];
     expect((await (await call(name)).json()).result.isError).toBe(true);
@@ -1302,8 +1305,8 @@ test("admin access reports effective capability and credential handoff does not 
   expect(handoff.operation_performed).toBe(false);
   expect(credentialReads).toHaveLength(0);
   keyBoundary = { organizationId: "fixture-org" };
-  expect((await call("get_credential_management")).status).toBe(403);
-  await expect(call("get_owned_resource")).resolves.toHaveProperty("status", 403);
+  await expectAccessDenied(await call("get_credential_management"));
+  await expectAccessDenied(await call("get_owned_resource"));
 });
 
 test("resource validation failures are actionable JSON tool errors", async () => {
@@ -1321,10 +1324,10 @@ test("resource validation failures are actionable JSON tool errors", async () =>
 
 test("free worker delegation and context saving enforce independent key grants", async () => {
   scopes = ["mcp:connect", "models:invoke"];
-  expect((await call("run_agent_team", { goal: "Review" })).status).toBe(403);
-  expect(
-    (await call("save_context_checkpoint", { session_id: "fixture", summary: "Summary" })).status,
-  ).toBe(403);
+  await expectAccessDenied(await call("run_agent_team", { goal: "Review" }));
+  await expectAccessDenied(
+    await call("save_context_checkpoint", { session_id: "fixture", summary: "Summary" }),
+  );
 });
 
 test("saved browser profile mutations reject project and organization contexts before provider access", async () => {
@@ -1389,9 +1392,9 @@ test("inspection includes all owned pages while masking credential bindings", as
   expect(payload.connections.length).toBe(225);
   expect(payload.connections[224].credential_reference).toBe("configured");
   scopes = ["mcp:connect", "control:write"];
-  expect(
-    (await call("sync_composio_accounts", { account_ids: ["account"], confirm: true })).status,
-  ).toBe(403);
+  await expectAccessDenied(
+    await call("sync_composio_accounts", { account_ids: ["account"], confirm: true }),
+  );
 });
 
 test("status counts owned credential metadata and model catalog only with personal grants", async () => {
@@ -1419,7 +1422,7 @@ test("exact connection repairs require explicit scopes, personal context and adm
     scopes = ["mcp:connect", "control:write", "connections:invoke", "secrets:read"].filter(
       (scope) => scope !== missing,
     );
-    expect((await call("repair_connection", args)).status).toBe(403);
+    await expectAccessDenied(await call("repair_connection", args));
   }
   scopes = ["mcp:connect", "control:write", "connections:invoke", "secrets:read"];
   for (const boundary of [
@@ -1435,3 +1438,31 @@ test("exact connection repairs require explicit scopes, personal context and adm
   await expect(call("repair_connection", args)).rejects.toThrow("Admin role");
   expect(connectionUpdates).toEqual([]);
 });
+
+test("profile tool returns a stable authenticated identity with OpenAI discovery metadata", async () => {
+  scopes = ["mcp:connect"];
+  const response = await listTools();
+  const listed = (await response.json()).result.tools;
+  const profileTool = listed.find((tool: { name: string }) => tool.name === "get_profile");
+  expect(profileTool._meta["openai/profile"]).toBe(true);
+  expect(profileTool.securitySchemes).toEqual([{ type: "oauth2", scopes: [] }]);
+  for (let i = 0; i < 2; i++) {
+    const profile = (await (await call("get_profile")).json()).result;
+    expect(profile.structuredContent).toEqual({ id: "fixture-user" });
+    expect(JSON.parse(profile.content[0].text)).toEqual(profile.structuredContent);
+  }
+  expect(privateReads).toEqual([]);
+});
+
+async function expectAccessDenied(response: Response) {
+  const body = await response.clone().json();
+  if (response.status === 403) {
+    expect(body.error).toBeDefined();
+    return;
+  }
+  expect(response.status).toBe(200);
+  expect(body.jsonrpc).toBe("2.0");
+  expect(body.error).toBeUndefined();
+  expect(body.result.isError).toBe(true);
+  expect(body.result._meta["mcp/www_authenticate"][0]).toContain('error="insufficient_scope"');
+}

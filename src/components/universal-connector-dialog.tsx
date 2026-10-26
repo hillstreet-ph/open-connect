@@ -1,3 +1,4 @@
+import { PROVIDER_API_PRESETS } from "@/lib/provider-api-presets";
 import { loadPluginSchema } from "@/lib/connector-manifest.functions";
 import { useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -173,6 +174,40 @@ function ConnectorForm({
         </DialogDescription>
       </DialogHeader>
       <div className="space-y-4">
+        {!initial && (
+          <div className="space-y-2">
+            <Label htmlFor="provider-preset">Organization API preset (optional)</Label>
+            <select
+              id="provider-preset"
+              defaultValue=""
+              className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+              onChange={(event) => {
+                const preset = PROVIDER_API_PRESETS.find((item) => item.id === event.target.value);
+                if (!preset) return;
+                setName(preset.name);
+                setDescription(preset.description);
+                setEndpoint(preset.endpoint);
+                setProtocol("openapi");
+                setAuth(preset.auth);
+                setHeader(preset.header);
+                setSchema(preset.schema);
+                setSecret("");
+              }}
+            >
+              <option value="">Choose a reviewed setup template</option>
+              {PROVIDER_API_PRESETS.map((preset) => (
+                <option key={preset.id} value={preset.id}>
+                  {preset.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-muted-foreground">
+              Use an existing account connection when available. Provider Admin keys are separate
+              from ChatGPT or Claude app login. No operation runs during setup.
+            </p>
+          </div>
+        )}
+
         <div className="flex flex-wrap items-center gap-3">
           {icon && <img src={icon} alt="Connector icon" className="size-12 rounded-lg" />}
           <input

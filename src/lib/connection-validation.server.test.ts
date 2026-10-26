@@ -58,8 +58,8 @@ test("validates the Apify remote MCP provider with initialize", async () => {
 
 test("does not mark unsupported provider validation as verified", async () => {
   const setup = normalizeConnectionSetup(
-    { provider: "proton_pass", api_key: "test-secret" },
-    app("proton_pass"),
+    { provider: "unsupported_fixture", api_key: "test-secret" },
+    app("unsupported_fixture"),
   );
   const result = await validateConnectionCredential(setup);
   assert.equal(result.verified, false);
