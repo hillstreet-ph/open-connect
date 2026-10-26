@@ -26,6 +26,7 @@ export function retiredBrowserTool(name: string) {
   return (
     /^(?:cloud_browser_|browser_provider_|browser_verification_)/.test(name) &&
     name !== "cloud_browser_tools" &&
-    name !== "cloud_browser_call"
+    name !== "cloud_browser_call" &&
+    name !== "cloud_browser_cancel_task"
   );
 }

@@ -691,6 +691,18 @@ const PLATFORM_TOOLS: McpTool[] = [
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   },
   {
+    name: "cloud_browser_cancel_task",
+    description:
+      "Stop the caller's active Playwright task, close its browser session, and reject further actions from the cancelled task. Earlier completed actions are not undone.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+  },
+  {
     name: "cloud_browser_call",
     description:
       "Execute a discovered Playwright browser action in your isolated session. Discover cloud_browser_tools first. Use browser_close when finished. Requires a personal administrator key with tools:invoke and connections:invoke. Never put passwords in arguments.",
@@ -1428,6 +1440,7 @@ const TOOL_SCOPES: Record<string, string> = {
   call_connection_tool: "connections:invoke",
   cloud_browser_tools: "connections:read",
   cloud_browser_call: "tools:invoke",
+  cloud_browser_cancel_task: "tools:invoke",
   e2b_health: "connections:read",
   e2b_list_sandboxes: "connections:read",
   e2b_create_sandbox: "tools:invoke",
@@ -2263,6 +2276,12 @@ export const Route = createFileRoute("/mcp")({
               ...textResult(connectionResult),
               ...(connectionResult.isError ? { isError: true } : {}),
             };
+          } else if (name === "cloud_browser_cancel_task") {
+            if (key.projectId || key.workspaceId || key.organizationId)
+              throw new Error("Cloud Browser currently requires a personal key.");
+            await requireProviderWrite(key);
+            const { playwrightTaskControl } = await import("@/lib/playwright-worker.server");
+            result = textResult(await playwrightTaskControl(key.userId, "cancel"));
           } else if (name === "cloud_browser_tools" || name === "cloud_browser_call") {
             if (key.projectId || key.workspaceId || key.organizationId)
               throw new Error("Cloud Browser currently requires a personal key.");

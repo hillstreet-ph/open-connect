@@ -37,3 +37,41 @@ export const callPlaywrightTool = createServerFn({ method: "POST" })
     const { playwrightWorker } = await import("@/lib/playwright-worker.server");
     return playwrightWorker(context.userId, data.name, data.arguments);
   });
+
+export const cancelPlaywrightTask = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { playwrightTaskControl } = await import("@/lib/playwright-worker.server");
+    return playwrightTaskControl(context.userId, "cancel");
+  });
+
+export const startPlaywrightSignIn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator(
+    z.object({
+      url: z
+        .string()
+        .url()
+        .max(2048)
+        .refine((value) => {
+          const url = new URL(value);
+          return url.protocol === "https:" && !url.username && !url.password;
+        }, "Use an HTTPS website address without a password."),
+    }),
+  )
+  .handler(async ({ context, data }) => {
+    const { playwrightViewControl } = await import("@/lib/playwright-worker.server");
+    const viewer = await playwrightViewControl(context.userId, "start", data.url);
+    const origin = new URL(process.env["PLAYWRIGHT_WORKER_URL"]!).origin;
+    return {
+      url: `${origin}/viewer`,
+      token: String(viewer.token),
+      expiresAt: String(viewer.expiresAt),
+    };
+  });
+export const endPlaywrightSignIn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { playwrightViewControl } = await import("@/lib/playwright-worker.server");
+    return playwrightViewControl(context.userId, "end");
+  });
