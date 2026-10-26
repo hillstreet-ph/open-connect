@@ -256,7 +256,12 @@ test("fixed DOM proof application checks origin and widget and never submits a f
     },
   };
   assert.equal(vm.runInNewContext(verificationProbeScript, context).type, "turnstile");
-  const expected = { origin: context.location.origin, type: "turnstile", siteKey: "public-key" };
+  const expected = {
+    origin: context.location.origin,
+    pageUrl: context.location.href,
+    type: "turnstile",
+    siteKey: "public-key",
+  };
   assert.equal(
     vm.runInNewContext(
       verificationProofScript({ ...expected, origin: "https://other.com" }, "proof"),
@@ -267,6 +272,16 @@ test("fixed DOM proof application checks origin and widget and never submits a f
   assert.equal(
     vm.runInNewContext(
       verificationProofScript({ ...expected, siteKey: "changed" }, "proof"),
+      context,
+    ),
+    false,
+  );
+  assert.equal(
+    vm.runInNewContext(
+      verificationProofScript(
+        { ...expected, pageUrl: "https://example.com/different-path" },
+        "proof",
+      ),
       context,
     ),
     false,

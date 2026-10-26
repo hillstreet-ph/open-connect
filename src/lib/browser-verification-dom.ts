@@ -15,12 +15,12 @@ if (fields.some(el => el.value)) return null;
 `;
 export const verificationProbeScript = `(() => { ${widgetProbe} return { type, siteKey, origin: location.origin, pageUrl: location.href }; })()`;
 export function verificationProofScript(
-  expected: { origin: string; siteKey: string; type: string },
+  expected: { origin: string; pageUrl: string; siteKey: string; type: string },
   proof: string,
 ) {
   return `(() => {
     const expected = ${JSON.stringify(expected)};
-    if (location.origin !== expected.origin) return false;
+    if (location.origin !== expected.origin || location.href !== expected.pageUrl) return false;
     ${widgetProbe}
     if (siteKey !== expected.siteKey || type !== expected.type || !fields.length) return false;
     for (const field of fields) { field.value = ${JSON.stringify(proof)}; field.dispatchEvent(new Event('input', {bubbles:true})); field.dispatchEvent(new Event('change', {bubbles:true})); }
