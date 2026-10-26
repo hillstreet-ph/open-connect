@@ -202,13 +202,14 @@ export function CloudBrowserSwitcher({
             onChange={(event) => onSelect(event.target.value as BrowserProviderId)}
             className="block w-full rounded-md border bg-background p-2 text-sm"
           >
-            {BROWSER_PROVIDERS.filter((item) => browserProviderSurface(item.id) === "external").map(
-              (item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ),
-            )}
+            {BROWSER_PROVIDERS.filter(
+              (item) =>
+                browserProviderSurface(item.id) === "external" && item.id !== "verification",
+            ).map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
           </select>
           {worker ? (
             <>
@@ -230,59 +231,6 @@ export function CloudBrowserSwitcher({
             </p>
           ) : null}
         </div>
-        {selected === "verification" ? (
-          <section
-            className="space-y-3 rounded-lg border p-4 text-sm"
-            aria-label="Verification assistance"
-          >
-            <p>
-              Browserbase supports provider verification assistance when requested at session
-              creation. Complete unresolved challenges in the same session’s interactive view. A
-              separate browser does not resume an agent run.
-            </p>
-            <ul className="list-disc space-y-2 pl-5">
-              <li>
-                <a
-                  className="underline"
-                  href="https://github.com/Dhravya/agent-captcha"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Agent Captcha
-                </a>{" "}
-                is an agent-verification demo, not a general human-CAPTCHA solver.
-              </li>
-              <li>
-                <a
-                  className="underline"
-                  href="https://github.com/Captcha-Sonic/CaptchaSonic-Extension"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  CaptchaSonic
-                </a>{" "}
-                is a browser extension. Hosted-browser compatibility and account authorization
-                require verification.
-              </li>
-              <li>
-                <a
-                  className="underline"
-                  href="https://github.com/2captcha/mcp-captcha-solver"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  2Captcha MCP demo
-                </a>{" "}
-                runs locally with Selenium. Cloud use requires a hosted authenticated worker and a
-                provider account.
-              </li>
-            </ul>
-            <p className="text-muted-foreground">
-              These source links do not install code or verify a working connection. Use your
-              provider’s supported flow; keep credentials out of task prompts.
-            </p>
-          </section>
-        ) : null}
         {family ? <CloudWorkspacePage kind="browser" embedded browserFamily={family} /> : external}
       </div>
     </div>

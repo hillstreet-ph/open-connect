@@ -23,7 +23,7 @@ PR #453 reconciles the earlier Agency work with browser consolidation in one rou
 
 Cloud Browser has four top-level surfaces: TinyFish, Browser Use, Browserbase,
 and Connected tools. Worker adapters (Playwright, Stagehand, Chrome DevTools,
-BrowserAct and MultiOn), research tools and verification tools are selected within
+BrowserAct and MultiOn) and research tools are selected within
 one connected-tools explorer. Legacy provider query values still work. Native
 provider panels remain mounted when hidden, so switching surfaces does not close
 an active native session. The tools explorer stays mounted to retain result and
@@ -41,20 +41,14 @@ agent; Browserbase remains its supported manual view. Features are not assumed
 interchangeable between providers. No connections, keys, sessions or provider
 accounts were deleted during UI consolidation.
 
-## Verification resources reviewed
+## Global verification
 
-| Source                                 | Finding                                                        | Integration state                                                                                       |
-| -------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `Dhravya/agent-captcha`                | Cryptographic proof designed for agents signing a guestbook    | Reference only; not a generic human CAPTCHA solver                                                      |
-| `Captcha-Sonic/CaptchaSonic-Extension` | Browser extension with provider-specific solving functionality | Not installed into hosted browsers; compatibility, credential handling and runtime security need review |
-| `2captcha/mcp-captcha-solver`          | Local Selenium/stdio MCP demonstration focused on reCAPTCHA v2 | Requires a provider account, Chrome/driver and a hosted authenticated worker for cloud use              |
-
-The supplied `2captcha/mcp-captcha-solverl` URL returned 404. The corrected source
-above was verified through GitHub. These repositories are linked from Verification
-tools; no upstream code is automatically installed, no solver account is created
-and no universal CAPTCHA bypass is claimed. Browserbase's existing supported
-verification option remains available at session creation. Unresolved challenges
-require the same session's supported interactive flow or human handoff.
+Verification is a shared browser service rather than a Connected Tools resource
+selection. The global panel applies to owned browsers and authorized AI clients.
+Native provider assistance stays within the provider session; the common external
+resolver supports reCAPTCHA v2 and Turnstile with an owned 2Captcha key and explicit
+metered-use policy. See [Global browser automation](GLOBAL_BROWSER_AUTOMATION.md)
+for tools, supported paths, limitations and credential setup.
 
 ## Validation and deployment
 
