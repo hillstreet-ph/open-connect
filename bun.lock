@@ -8,7 +8,7 @@
         "@browserbasehq/sdk": "2.22.0",
         "@cfworker/json-schema": "^4.1.1",
         "@data-client/react": "0.18.1",
-        "@data-client/rest": "0.18.1",
+        "@data-client/rest": "0.18.2",
         "@hookform/resolvers": "^5.9.1",
         "@lovable.dev/cloud-auth-js": "^1.2.1",
         "@modelcontextprotocol/sdk": "1.32.1",
@@ -143,13 +143,13 @@
 
     "@data-client/core": ["@data-client/core@0.18.1", "", { "dependencies": { "@babel/runtime": "^7.20.0", "@data-client/normalizr": "^0.18.1", "flux-standard-action": "^2.1.1" } }, "sha512-PKDPMTQkxTg669ZXAKdIIlJuPazqk+vVo5Ljya3qDivbw9DDVv+C5kwqsxzs52mMFGsJDQ6Un8siar4IeweMXw=="],
 
-    "@data-client/endpoint": ["@data-client/endpoint@0.18.0", "", { "dependencies": { "@babel/runtime": "^7.20.0" } }, "sha512-D3pEgUWn7M3mYpjFfCiXitl2rMNoobEm/0F0ugsTnBNghNAru0xwHk09mxkeWObh2NrIo52KrjMKgBzTss7y+g=="],
+    "@data-client/endpoint": ["@data-client/endpoint@0.18.2", "", { "dependencies": { "@babel/runtime": "^7.20.0" } }, "sha512-51//i8IiU7+5y+o3xc3/Ve4UCdr6a10k6ITDgGg/nHgLxYdy687NKao57e4eFxWZ3DHqwmMOOFDj+CWxR3PfQA=="],
 
     "@data-client/normalizr": ["@data-client/normalizr@0.18.1", "", { "dependencies": { "@babel/runtime": "^7.20.0" } }, "sha512-2tt9iQgMBXOPZdwy5h2E77xNQMdVuKyIgK//8edN/3Ys24Um/0WFxjDt8ShdQf8gYJbGNkEEG4vmGDFFyTL4sg=="],
 
     "@data-client/react": ["@data-client/react@0.18.1", "", { "dependencies": { "@babel/runtime": "^7.20.0", "@data-client/core": "^0.18.1", "@data-client/use-enhanced-reducer": "^0.1.14" }, "peerDependencies": { "@react-navigation/native": "^6.0.0 || ^7.0.0", "@types/react": "^16.14.0 || ^17.0.0 || ^18.0.0 || ^19.0.0-0 || ^19.0.0", "react": "^16.14.0 || ^17.0.0 || ^18.0.0 || ^19.0.0-0 || ^19.0.0" }, "optionalPeers": ["@react-navigation/native", "@types/react"] }, "sha512-dpF/Pd1mROpf+K0GqXgHXOHvB7WWBbf+QzIzg0jj8o8l1xpzu/zwXK3ocBcV4Ima6cCGr8OixfMQ0HUbCXNtKA=="],
 
-    "@data-client/rest": ["@data-client/rest@0.18.1", "", { "dependencies": { "@babel/runtime": "^7.20.0", "@data-client/endpoint": "^0.18.0", "path-to-regexp": "^8.1.0" } }, "sha512-gpzRPBZ5iPE8u36y87DcsJWegOQFD6wfqw9y5CrmJDOjQaNlh0MK8J52iF35zJ8klth+M/x1MECE4ee7K5BVEQ=="],
+    "@data-client/rest": ["@data-client/rest@0.18.2", "", { "dependencies": { "@babel/runtime": "^7.20.0", "@data-client/endpoint": "^0.18.2", "path-to-regexp": "^8.1.0" } }, "sha512-OQVZYkB/4WmnQgx+WV0n3yBCBdr1uR9d9i80Uie7aM1eks4VRUGz/ksV6alDAlCmD/uK+qPnRrbp1UZ+AThETQ=="],
 
     "@data-client/test": ["@data-client/test@0.18.0", "", { "dependencies": { "@babel/runtime": "^7.20.0", "@testing-library/dom": "^10.1.0", "@testing-library/react": "^16.0.0" }, "peerDependencies": { "@data-client/react": "^0.12.15 || ^0.13.0 || ^0.14.0 || ^0.15.0 || ^0.16.0 || ^0.17.0 || ^0.18.0", "@testing-library/react-hooks": "^8.0.0", "@testing-library/react-native": "^13.0.0", "@types/react": "^16.14.0 || ^17.0.0 || ^18.0.0 || ^19.0.0-0 || ^19.0.0", "@types/react-dom": "*", "jest": "*", "react": "^16.14.0 || ^17.0.0 || ^18.0.0 || ^19.0.0-0 || ^19.0.0", "react-dom": "*", "react-native": "*", "react-test-renderer": "*" }, "optionalPeers": ["@testing-library/react-hooks", "@testing-library/react-native", "@types/react", "@types/react-dom", "jest", "react-dom", "react-native", "react-test-renderer"] }, "sha512-qog61paoyQOkeJinOsd8azT29obN/2Zyn98EolRNOhCxDNH8b7jsTQ0yZ6V7sNMbPSV0Pbm2lV0PzHLEmUhxtw=="],
 
