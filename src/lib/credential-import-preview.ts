@@ -62,22 +62,17 @@ function parseCsv(input: string): string[][] {
 }
 
 export function previewCredentialCsv(input: string): CredentialPreview[] {
-  if (new TextEncoder().encode(input).length > MAX_BYTES)
-    throw new Error("CSV too large");
+  if (new TextEncoder().encode(input).length > MAX_BYTES) throw new Error("CSV too large");
   const [header, ...rows] = parseCsv(input.replace(/^\uFEFF/, ""));
   if (!header) return [];
   const names = header.map(normalize);
-  if (new Set(names).size !== names.length)
-    throw new Error("Duplicate header");
-  if (rows.some((row) => row.length !== header.length))
-    throw new Error("Invalid CSV column count");
-  const find = (...aliases: string[]) =>
-    names.findIndex((name) => aliases.includes(name));
+  if (new Set(names).size !== names.length) throw new Error("Duplicate header");
+  if (rows.some((row) => row.length !== header.length)) throw new Error("Invalid CSV column count");
+  const find = (...aliases: string[]) => names.findIndex((name) => aliases.includes(name));
   const originColumn = find("url", "website", "origin", "loginuri");
   const accountColumn = find("username", "email", "login", "account");
   const kindColumn = find("type", "kind");
-  if (originColumn < 0 || accountColumn < 0)
-    throw new Error("Unsupported CSV columns");
+  if (originColumn < 0 || accountColumn < 0) throw new Error("Unsupported CSV columns");
   const seen = new Set<string>();
   return rows
     .filter((row) => row.some((cell) => cell.trim()))
