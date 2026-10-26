@@ -7,28 +7,23 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
-  pull-requests: write
-  issues: write
+  pull-requests: read
 jobs:
   triage:
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
-      - name: Detect matching open pull requests (report only)
+      - name: Report exact duplicate heads
         uses: actions/github-script@v7
         with:
           script: |
-            const prs = await github.paginate(github.rest.pulls.list, { ...context.repo, state: 'open', per_page: 100 });
+            const prs = await github.paginate(github.rest.pulls.list, {...context.repo, state:'open', per_page:100});
             const groups = new Map();
             for (const pr of prs) {
-              if (pr.draft) continue;
-              const key = [pr.base.ref, pr.head.sha].join(':');
-              groups.set(key, [...(groups.get(key) || []), pr]);
+              const key = pr.base.ref + ':' + pr.head.sha;
+              groups.set(key, [...(groups.get(key) || []), pr.number]);
             }
-            const matches = [...groups.values()].filter(g => g.length > 1);
-            core.summary.addHeading('Potential duplicate pull requests');
-            if (!matches.length) core.summary.addRaw('No exact base/head SHA duplicates found.\n');
-            for (const group of matches) core.summary.addRaw(group.map(pr => '#' + pr.number).join(', ') + '\n');
+            core.summary.addHeading('Exact duplicate pull-request heads');
+            for (const ids of groups.values()) if (ids.length > 1) core.summary.addRaw(ids.map(n=>'#'+n).join(', ')+'\n');
             await core.summary.write();
   auto-merge:
     if: github.event_name == 'pull_request' && github.event.pull_request.user.login == 'dependabot[bot]' && github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository
@@ -37,17 +32,14 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      - name: Enable GitHub-native auto-merge for Dependabot patches only
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR_URL: ${{ github.event.pull_request.html_url }}
-        run: |
-          set -euo pipefail
-          gh pr view "$PR_URL" --json title --jq '.title' | grep -Eiq '^bump .+ from [0-9]+\.[0-9]+\.[0-9]+ to [0-9]+\.[0-9]+\.[0-9]+' || exit 0
-          gh pr view "$PR_URL" --json title --jq '.title' | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>{const m=s.match(/from (\\d+)\\.(\\d+)\\.(\\d+) to (\\d+)\\.(\\d+)\\.(\\d+)/);process.exit(m&&m[1]===m[4]&&m[2]===m[5]&&Number(m[6])>Number(m[3])?0:1)})' || exit 0
-          gh pr view "$PR_URL" --json files --jq '.files[].path' | grep -Eq '(^|/)(package-lock.json|bun.lock|pnpm-lock.yaml|yarn.lock)
-          gh pr view "$PR_URL" --json files --jq '.files[].path' | grep -Ev '(^|/)(package.json|package-lock.json|bun.lock|pnpm-lock.yaml|yarn.lock)$' && exit 0 || true
-          gh pr merge --auto --squash "$PR_URL"
- || exit 0
-          gh pr view "$PR_URL" --json files --jq '.files[].path' | grep -Ev '(^|/)(package.json|package-lock.json|bun.lock|pnpm-lock.yaml|yarn.lock)$' && exit 0 || true
-          gh pr merge --auto --squash "$PR_URL"
+      - name: Enable auto-merge for patch-only Dependabot updates
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const title = pr.title.match(/^Bump .+ from (\d+)\.(\d+)\.(\d+) to (\d+)\.(\d+)\.(\d+)$/i);
+            if (!title || title[1] !== title[4] || title[2] !== title[5] || Number(title[6]) <= Number(title[3])) return;
+            const files = await github.paginate(github.rest.pulls.listFiles, {...context.repo, pull_number:pr.number, per_page:100});
+            if (!files.length || files.length > 10 || files.some(f=> !/(^|\/)(package\.json|package-lock\.json|bun\.lock|pnpm-lock\.yaml|yarn\.lock)$/.test(f.filename))) return;
+            const id = pr.node_id;
+            await github.graphql(`mutation($id:ID!){enablePullRequestAutoMerge(input:{pullRequestId:$id,mergeMethod:SQUASH}){clientMutationId}}`, {id});
