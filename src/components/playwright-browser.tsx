@@ -28,11 +28,13 @@ export function PlaywrightBrowser() {
   const tools = (catalog.data?.tools ?? []) as Tool[];
   const selected = tools.find((tool) => tool.name === name);
   const execution = useMutation({
-    mutationFn: async () => {
-      const parsed: unknown = JSON.parse(args);
+    mutationFn: async (override?: { name: string; arguments: Record<string, unknown> }) => {
+      const parsed: unknown = override?.arguments ?? JSON.parse(args);
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
         throw new Error("Enter a JSON object.");
-      return call({ data: { name, arguments: parsed as Record<string, unknown> } });
+      return call({
+        data: { name: override?.name ?? name, arguments: parsed as Record<string, unknown> },
+      });
     },
   });
   return (
@@ -41,7 +43,7 @@ export function PlaywrightBrowser() {
         <h2 className="font-semibold">Playwright MCP</h2>
         <Button
           variant="outline"
-          disabled={catalog.isFetching || execution.isPending}
+          disabled={catalog.isFetching || execution.isPending || agent.isPending}
           onClick={() => void catalog.refetch()}
         >
           Refresh connection
@@ -51,6 +53,13 @@ export function PlaywrightBrowser() {
         One browser engine for every task. Your session stays separate from other users and closes
         after 15 minutes without activity. Close the browser when finished.
       </p>
+      {catalog.isSuccess ? (
+        <p className="text-xs text-muted-foreground">
+          {catalog.data.profileMode === "persistent"
+            ? "Saved sign-ins are enabled for your separate browser profile."
+            : "Temporary session: sign-ins are cleared after the worker session ends."}
+        </p>
+      ) : null}
       {catalog.isLoading ? <p role="status">Connecting to Playwright…</p> : null}
       {catalog.isError ? <p role="alert">{catalog.error.message}</p> : null}
       {catalog.isSuccess ? (
@@ -77,73 +86,128 @@ export function PlaywrightBrowser() {
           {agent.isSuccess ? (
             <div role="status">
               <p>{agent.data.reply}</p>
+              {(agent.data.artifacts ?? []).map(
+                (item: { data: string; mimeType: string }, index: number) => (
+                  <img
+                    key={index}
+                    alt="Browser task screenshot"
+                    className="w-full rounded-lg border"
+                    src={`data:${item.mimeType};base64,${item.data}`}
+                  />
+                ),
+              )}
               <p className="text-xs">
                 {agent.data.status} · {agent.data.actions.length} browser actions
               </p>
             </div>
           ) : null}
-          <Label htmlFor="playwright-tool">Browser action</Label>
-          <select
-            id="playwright-tool"
-            className="w-full rounded-md border bg-background p-2"
-            value={name}
-            disabled={execution.isPending || agent.isPending}
-            onChange={(event) => {
-              setName(event.target.value);
-              setArgs(
-                event.target.value === "browser_navigate" ? '{"url":"https://example.com"}' : "{}",
-              );
-              execution.reset();
-            }}
-          >
-            {tools.map((tool) => (
-              <option key={tool.name} value={tool.name}>
-                {tool.name.replaceAll("_", " ")}
-              </option>
+          <div className="flex flex-wrap gap-2">
+            {[
+              ["Snapshot", "browser_snapshot"],
+              ["Screenshot", "browser_take_screenshot"],
+              ["Back", "browser_navigate_back"],
+            ].map(([label, action]) => (
+              <Button
+                key={action}
+                variant="outline"
+                disabled={execution.isPending || agent.isPending}
+                onClick={() =>
+                  execution.mutate({
+                    name: action!,
+                    arguments: action === "browser_take_screenshot" ? { type: "png" } : {},
+                  })
+                }
+              >
+                {label}
+              </Button>
             ))}
-          </select>
-          <p className="text-sm">{selected?.description}</p>
-          <details>
-            <summary>Action arguments</summary>
-            <pre className="overflow-auto text-xs">
-              {JSON.stringify(selected?.inputSchema, null, 2)}
-            </pre>
+          </div>
+          <details className="space-y-3">
+            <summary className="cursor-pointer text-sm">Advanced browser actions</summary>
+            <Label htmlFor="playwright-tool">Browser action</Label>
+            <select
+              id="playwright-tool"
+              className="w-full rounded-md border bg-background p-2"
+              value={name}
+              disabled={execution.isPending || agent.isPending}
+              onChange={(event) => {
+                setName(event.target.value);
+                setArgs(
+                  event.target.value === "browser_navigate"
+                    ? '{"url":"https://example.com"}'
+                    : "{}",
+                );
+                execution.reset();
+              }}
+            >
+              {tools.map((tool) => (
+                <option key={tool.name} value={tool.name}>
+                  {tool.name.replaceAll("_", " ")}
+                </option>
+              ))}
+            </select>
+            <p className="text-sm">{selected?.description}</p>
+            <details>
+              <summary>Action arguments</summary>
+              <pre className="overflow-auto text-xs">
+                {JSON.stringify(selected?.inputSchema, null, 2)}
+              </pre>
+            </details>
+            <Label htmlFor="playwright-arguments">Arguments (JSON)</Label>
+            <Textarea
+              id="playwright-arguments"
+              value={args}
+              disabled={execution.isPending || agent.isPending}
+              onChange={(event) => setArgs(event.target.value)}
+              className="min-h-28 font-mono"
+            />
+            <Button
+              disabled={execution.isPending || agent.isPending || !selected}
+              onClick={() => execution.mutate(undefined)}
+            >
+              {execution.isPending ? "Running…" : "Run action"}
+            </Button>
           </details>
-          <Label htmlFor="playwright-arguments">Arguments (JSON)</Label>
-          <Textarea
-            id="playwright-arguments"
-            value={args}
-            disabled={execution.isPending || agent.isPending}
-            onChange={(event) => setArgs(event.target.value)}
-            className="min-h-28 font-mono"
-          />
-          <Button
-            disabled={execution.isPending || agent.isPending || !selected}
-            onClick={() => execution.mutate()}
-          >
-            {execution.isPending ? "Running…" : "Run action"}
-          </Button>
           <Button
             className="ml-2"
             variant="outline"
             disabled={execution.isPending || agent.isPending}
             onClick={() => {
-              setName("browser_close");
-              setArgs("{}");
-              execution.reset();
+              execution.mutate({ name: "browser_close", arguments: {} });
             }}
           >
-            Select close browser
+            Close browser
           </Button>
         </>
       ) : null}
       {execution.isError ? <p role="alert">{execution.error.message}</p> : null}
+      {execution.isSuccess
+        ? (execution.data.content ?? [])
+            .filter((item: { type: string }) => item.type === "image")
+            .map((item: { data: string; mimeType: string }, index: number) => (
+              <img
+                key={index}
+                alt="Current browser screenshot"
+                className="w-full rounded-lg border"
+                src={`data:${item.mimeType};base64,${item.data}`}
+              />
+            ))
+        : null}
       {execution.isSuccess ? (
         <pre
           role="status"
           className="max-h-96 overflow-auto whitespace-pre-wrap rounded-md bg-muted p-3 text-xs"
         >
-          {JSON.stringify(execution.data, null, 2)}
+          {JSON.stringify(
+            {
+              ...execution.data,
+              content: (execution.data.content ?? []).filter(
+                (item: { type: string }) => item.type !== "image",
+              ),
+            },
+            null,
+            2,
+          )}
         </pre>
       ) : null}
     </section>

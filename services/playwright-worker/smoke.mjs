@@ -31,17 +31,35 @@ for (let attempt = 0; attempt < 60; attempt++) {
   await new Promise((resolve) => setTimeout(resolve, 1000));
 }
 if (!ready) throw new Error("Worker did not become ready");
+const fixture = process.env.PLAYWRIGHT_SMOKE_FIXTURE;
 try {
   const catalog = await rpc("smoke-a");
   if (!catalog.tools.some((tool) => tool.name === "browser_snapshot"))
     throw new Error("Missing Playwright tools");
-  await rpc("smoke-a", "browser_navigate", { url: "https://example.com" });
-  const snapshot = await rpc("smoke-a", "browser_snapshot", {});
-  if (!JSON.stringify(snapshot).includes("Example Domain"))
-    throw new Error("Navigation was not verified");
-  const other = await rpc("smoke-b", "browser_snapshot", {});
-  if (JSON.stringify(other).includes("Example Domain")) throw new Error("Cross-owner page leak");
-  console.log("PASS: MCP catalog, navigation, snapshot, separate owner contexts");
+  if (!process.env.PLAYWRIGHT_SMOKE_RESUME) {
+    await rpc("smoke-a", "browser_navigate", { url: "https://example.com" });
+    if (!JSON.stringify(await rpc("smoke-a", "browser_snapshot", {})).includes("Example Domain"))
+      throw new Error("Navigation was not verified");
+    const screenshot = await rpc("smoke-a", "browser_take_screenshot", { type: "png" });
+    if (!screenshot.content?.some((item) => item.type === "image" && item.data))
+      throw new Error("Screenshot returned no image");
+    const other = await rpc("smoke-b", "browser_snapshot", {});
+    if (JSON.stringify(other).includes("Example Domain")) throw new Error("Cross-owner page leak");
+    if (fixture) await rpc("smoke-a", "browser_navigate", { url: fixture + "/signin" });
+  }
+  if (fixture) {
+    await rpc("smoke-a", "browser_close", {});
+    await rpc("smoke-a", "browser_navigate", { url: fixture });
+    if (!JSON.stringify(await rpc("smoke-a", "browser_snapshot", {})).includes("Signed in"))
+      throw new Error("Owned sign-in did not persist");
+    await rpc("smoke-b", "browser_navigate", { url: fixture });
+    if (!JSON.stringify(await rpc("smoke-b", "browser_snapshot", {})).includes("Signed out"))
+      throw new Error("Cross-owner cookie leak");
+  }
+  console.log(
+    "PASS: browser execution, screenshots, owner isolation" +
+      (fixture ? ", owned sign-in persistence" : ""),
+  );
 } finally {
   await rpc("smoke-a", "browser_close", {}).catch(() => {});
   await rpc("smoke-b", "browser_close", {}).catch(() => {});

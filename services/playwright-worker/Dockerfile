@@ -4,7 +4,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev && npx playwright install --with-deps chromium
 COPY . ./
-RUN useradd --create-home browser && chown -R browser:browser /app
+RUN useradd --create-home browser && mkdir -p /data/profiles && chown -R browser:browser /app /data
 USER browser
 ENV PORT=8080
 EXPOSE 8080

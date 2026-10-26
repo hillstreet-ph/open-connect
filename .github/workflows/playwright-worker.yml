@@ -26,5 +26,10 @@ jobs:
           export PLAYWRIGHT_WORKER_TOKEN="$(openssl rand -hex 32)"
           echo "::add-mask::$PLAYWRIGHT_WORKER_TOKEN"
           trap 'docker rm -f playwright-smoke >/dev/null 2>&1 || true' EXIT
-          docker run -d --name playwright-smoke --shm-size=1g -p 127.0.0.1:8080:8080 -e PLAYWRIGHT_WORKER_TOKEN open-connect-playwright
+          docker run -d --name playwright-smoke -e PLAYWRIGHT_PROFILE_ROOT=/data/profiles --shm-size=1g -p 127.0.0.1:8080:8080 -e PLAYWRIGHT_WORKER_TOKEN open-connect-playwright
+          docker exec -d playwright-smoke node fixture.mjs
+          export PLAYWRIGHT_SMOKE_FIXTURE=http://127.0.0.1:8081
           node services/playwright-worker/smoke.mjs
+          docker restart playwright-smoke
+          docker exec -d playwright-smoke node fixture.mjs
+          PLAYWRIGHT_SMOKE_RESUME=1 node services/playwright-worker/smoke.mjs

@@ -20,6 +20,7 @@ export async function runPlaywrightTask(userId: string, goal: string) {
     },
     { role: "user", content: goal },
   ];
+  const artifacts: Array<{ data: string; mimeType: string }> = [];
   const actions: Array<{ name: string; isError: boolean }> = [];
   const deadline = Date.now() + 110000;
   const route = routes[0]!;
@@ -49,6 +50,7 @@ export async function runPlaywrightTask(userId: string, goal: string) {
         status: "reported",
         reply: String(reply.content ?? "No final report was provided."),
         actions,
+        artifacts,
       };
     if (calls.length !== 1 || step === 8) break;
     const call = calls[0];
@@ -61,17 +63,30 @@ export async function runPlaywrightTask(userId: string, goal: string) {
       args as Record<string, unknown>,
     );
     actions.push({ name: call.function.name, isError: result.isError === true });
+    for (const item of result.content ?? []) {
+      if (
+        item.type === "image" &&
+        ["image/png", "image/jpeg"].includes(item.mimeType) &&
+        artifacts.length < 4
+      )
+        artifacts.push({ data: item.data, mimeType: item.mimeType });
+    }
     if (result.isError)
       return {
         status: "blocked",
         reply:
           "The browser action failed. Check the page before continuing; the action was not retried.",
         actions,
+        artifacts,
       };
     messages.push(reply, {
       role: "tool",
       tool_call_id: call.id,
-      content: JSON.stringify(result).slice(0, 24000),
+      content: JSON.stringify({
+        ...result,
+        content: (result.content ?? []).filter((item: { type: string }) => item.type !== "image"),
+        screenshots: artifacts.length,
+      }).slice(0, 24000),
     });
   }
   return {
@@ -79,5 +94,6 @@ export async function runPlaywrightTask(userId: string, goal: string) {
     reply:
       "The action or time limit was reached. The browser remains available for inspection and a follow-up task.",
     actions,
+    artifacts,
   };
 }

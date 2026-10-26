@@ -4,12 +4,14 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { BrowserPool } from "./pool.mjs";
+import { ownerProfile } from "./profiles.mjs";
 import { PLAYWRIGHT_TOOLS } from "./policy.mjs";
 
 const token = process.env.PLAYWRIGHT_WORKER_TOKEN;
 if (!token || token.length < 32)
   throw new Error("A worker token of at least 32 characters is required.");
-const pool = new BrowserPool(async () => {
+const pool = new BrowserPool(async (owner) => {
+  const profile = await ownerProfile(process.env.PLAYWRIGHT_PROFILE_ROOT, owner);
   const { Client } = await import("@modelcontextprotocol/sdk/client/index.js");
   const { StdioClientTransport } = await import("@modelcontextprotocol/sdk/client/stdio.js");
   const directory = await mkdtemp(join(tmpdir(), "oc-browser-"));
@@ -21,7 +23,7 @@ const pool = new BrowserPool(async () => {
       "--headless",
       "--browser",
       "chromium",
-      "--isolated",
+      ...(profile ? ["--user-data-dir", profile] : ["--isolated"]),
       "--no-sandbox",
       "--output-dir",
       directory,
@@ -93,7 +95,11 @@ const server = http.createServer(async (req, res) => {
       return send(400, { error: "invalid_artifact_filename" });
     const result = await pool.run(owner, async (backend) =>
       input.method === "tools/list"
-        ? { tools: (await backend.list()).tools.filter((tool) => PLAYWRIGHT_TOOLS.has(tool.name)) }
+        ? {
+            engine: "playwright",
+            profileMode: process.env.PLAYWRIGHT_PROFILE_ROOT ? "persistent" : "ephemeral",
+            tools: (await backend.list()).tools.filter((tool) => PLAYWRIGHT_TOOLS.has(tool.name)),
+          }
         : backend.call(input.params),
     );
     send(200, result);
