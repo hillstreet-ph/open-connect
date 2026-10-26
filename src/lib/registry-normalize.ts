@@ -8,6 +8,7 @@ export type RegistryCandidate = {
   updatedAt?: string | null;
   trust?: string;
   categories?: string[];
+  revision?: string;
 };
 
 export function isAllowedCatalogUrl(value: string, allowedHosts: string[]): boolean {
@@ -86,6 +87,7 @@ export function registryFingerprint(candidate: RegistryCandidate): string {
     candidate.updatedAt ?? "",
     candidate.trust ?? "",
     [...(candidate.categories ?? [])].sort().join(","),
+    ...(candidate.revision ? [candidate.revision] : []),
   ]
     .join("|")
     .toLowerCase();

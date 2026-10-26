@@ -2,6 +2,11 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import {
+  platformCandidates,
+  mergePlatformSnapshot,
+  deduplicatePlatformCandidates,
+} from "./agent-platform-discovery.mjs";
+import {
   deduplicateCandidates,
   canonicalizeUrl,
   hasSuspiciousMetadata,
@@ -23,6 +28,12 @@ const writeCatalog = process.argv.includes("--write-catalog");
 const fromCatalog = process.argv.includes("--from-catalog");
 const githubToken = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
 const firecrawlApiKey = process.env.FIRECRAWL_API_KEY;
+const platformOnly = process.argv.includes("--agent-platforms");
+const selectedSources = registry.sources.filter(
+  (source) => isSourceEnabled(source) && (!platformOnly || source.group === "agent-platforms"),
+);
+if (platformOnly && !selectedSources.length)
+  throw new Error("No agent platform sources configured");
 
 function headers() {
   return {
@@ -237,6 +248,25 @@ async function collectFirecrawlSource(source) {
 
 async function collectSource(source) {
   if (!isSourceEnabled(source)) return [];
+  if (source.adapter === "github_resource_tree") {
+    if (!/^[\w.-]+\/[\w.-]+$/.test(source.repository || "")) {
+      throw new Error(`${source.id}: invalid repository`);
+    }
+    const get = async (path) => {
+      const response = await fetch(`https://api.github.com/repos/${source.repository}${path}`, {
+        headers: headers(),
+        signal: AbortSignal.timeout(20_000),
+        redirect: "error",
+      });
+      if (!response.ok) throw new Error(`${source.id}: GitHub HTTP ${response.status}`);
+      return response.json();
+    };
+    const repository = await get("");
+    const tree = await get(
+      `/git/trees/${encodeURIComponent(repository.default_branch)}?recursive=1`,
+    );
+    return platformCandidates(source, repository, tree);
+  }
   if (source.adapter === "github_repository_search") return collectGitHubSource(source);
   if (source.adapter === "firecrawl_crawl") return collectFirecrawlSource(source);
   throw new Error(`unsupported adapter: ${source.adapter}`);
@@ -251,7 +281,7 @@ if (fromCatalog) {
   );
   results.push(...catalog.candidates);
 } else {
-  for (const source of registry.sources) {
+  for (const source of selectedSources) {
     if (!isSourceEnabled(source)) continue;
     if (source.adapter === "firecrawl_crawl" && stopFirecrawl) {
       failures.push({
@@ -272,10 +302,27 @@ if (fromCatalog) {
     }
   }
 }
-const candidates = deduplicateCandidates(results).map((candidate) => ({
-  ...candidate,
-  fingerprint: registryFingerprint(candidate),
-}));
+// A targeted hourly refresh retains unrelated reviewed source snapshots.
+const previous =
+  platformOnly && !fromCatalog
+    ? JSON.parse(
+        await readFile(resolve(root, "config/marketplace-candidates.generated.json"), "utf8"),
+      ).candidates
+    : [];
+const snapshot =
+  platformOnly && !fromCatalog
+    ? mergePlatformSnapshot(
+        previous,
+        results,
+        selectedSources.map((source) => source.id),
+      )
+    : results;
+const candidates = deduplicateCandidates(deduplicatePlatformCandidates(snapshot)).map(
+  (candidate) => ({
+    ...candidate,
+    fingerprint: registryFingerprint(candidate),
+  }),
+);
 
 const enabledSources = registry.sources.filter(isSourceEnabled).length;
 const minimumSources = registry.default_policy.minimum_successful_sources ?? enabledSources;
@@ -288,6 +335,11 @@ const successfulFirecrawlSources = fromCatalog
   ? firecrawlSources.length
   : firecrawlSources.filter((source) => successfulSourceIds.has(source.id)).length;
 const requireFirecrawl = process.argv.includes("--require-firecrawl");
+const missingRequired = fromCatalog
+  ? []
+  : selectedSources
+      .filter((source) => source.required && !successfulSourceIds.has(source.id))
+      .map((source) => source.id);
 
 await mkdir(outputDir, { recursive: true });
 await writeFile(
@@ -310,14 +362,15 @@ await writeFile(
 );
 
 if (
-  !allowPartial &&
-  (successfulSources < minimumSources ||
-    candidates.length < minimumCandidates ||
-    (requireFirecrawl &&
-      successfulFirecrawlSources < (registry.default_policy.minimum_firecrawl_sources ?? 0)))
+  missingRequired.length ||
+  (!allowPartial &&
+    ((!platformOnly && successfulSources < minimumSources) ||
+      candidates.length < minimumCandidates ||
+      (requireFirecrawl &&
+        successfulFirecrawlSources < (registry.default_policy.minimum_firecrawl_sources ?? 0))))
 ) {
   throw new Error(
-    `incomplete collection: ${successfulSources}/${enabledSources} sources, ${successfulFirecrawlSources}/${firecrawlSources.length} Firecrawl sources, ${candidates.length} candidates`,
+    `incomplete collection: ${successfulSources}/${enabledSources} sources, ${successfulFirecrawlSources}/${firecrawlSources.length} Firecrawl sources, ${candidates.length} candidates; missing required sources: ${missingRequired.join(", ")}`,
   );
 }
 if (writeCatalog) {

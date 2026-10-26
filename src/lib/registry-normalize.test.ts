@@ -72,6 +72,10 @@ test("fingerprint changes when review-relevant metadata changes", () => {
     registryFingerprint(base),
     registryFingerprint({ ...base, updatedAt: "2026-02-01" }),
   );
+  assert.notEqual(
+    registryFingerprint({ ...base, revision: "blob-one" }),
+    registryFingerprint({ ...base, revision: "blob-two" }),
+  );
 });
 
 test("agent team has one supervisor, open names, and no direct self delegation", () => {

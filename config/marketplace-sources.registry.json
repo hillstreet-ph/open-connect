@@ -948,6 +948,120 @@
       ],
       "trust": "verified_community",
       "enabled": true
+    },
+    {
+      "id": "openai-agent-skills",
+      "name": "openai/skills resource manifests",
+      "adapter": "github_resource_tree",
+      "repository": "openai/skills",
+      "url": "https://api.github.com/repos/openai/skills",
+      "catalog_url": "https://github.com/openai/skills",
+      "group": "agent-platforms",
+      "required": true,
+      "categories": [
+        "chatgpt",
+        "agents",
+        "skills",
+        "plugins"
+      ],
+      "trust": "official_upstream",
+      "enabled": true,
+      "max_items": 2000
+    },
+    {
+      "id": "claude-agent-skills",
+      "name": "anthropics/skills resource manifests",
+      "adapter": "github_resource_tree",
+      "repository": "anthropics/skills",
+      "url": "https://api.github.com/repos/anthropics/skills",
+      "catalog_url": "https://github.com/anthropics/skills",
+      "group": "agent-platforms",
+      "required": true,
+      "categories": [
+        "claude",
+        "agents",
+        "skills",
+        "plugins"
+      ],
+      "trust": "official_upstream",
+      "enabled": true,
+      "max_items": 2000
+    },
+    {
+      "id": "mistral-vibe-resources",
+      "name": "mistralai/mistral-vibe resource manifests",
+      "adapter": "github_resource_tree",
+      "repository": "mistralai/mistral-vibe",
+      "url": "https://api.github.com/repos/mistralai/mistral-vibe",
+      "catalog_url": "https://github.com/mistralai/mistral-vibe",
+      "group": "agent-platforms",
+      "required": true,
+      "categories": [
+        "mistral",
+        "agents",
+        "skills",
+        "plugins"
+      ],
+      "trust": "official_upstream",
+      "enabled": true,
+      "max_items": 2000
+    },
+    {
+      "id": "manus-owned-skills",
+      "name": "master-kanor/manus-skills resource manifests",
+      "adapter": "github_resource_tree",
+      "repository": "master-kanor/manus-skills",
+      "url": "https://api.github.com/repos/master-kanor/manus-skills",
+      "catalog_url": "https://github.com/master-kanor/manus-skills",
+      "group": "agent-platforms",
+      "required": true,
+      "categories": [
+        "manus",
+        "agents",
+        "skills",
+        "plugins"
+      ],
+      "trust": "owned_source",
+      "enabled": true,
+      "max_items": 2000
+    },
+    {
+      "id": "open-system-resources",
+      "name": "hillstreet-ph/open-system resource manifests",
+      "adapter": "github_resource_tree",
+      "repository": "hillstreet-ph/open-system",
+      "url": "https://api.github.com/repos/hillstreet-ph/open-system",
+      "catalog_url": "https://github.com/hillstreet-ph/open-system",
+      "group": "agent-platforms",
+      "required": true,
+      "categories": [
+        "hermes",
+        "agents",
+        "skills",
+        "plugins"
+      ],
+      "trust": "owned_source",
+      "enabled": true,
+      "max_items": 2000
+    },
+    {
+      "id": "hermes-upstream-resources",
+      "name": "NousResearch/hermes-agent resource manifests",
+      "adapter": "github_resource_tree",
+      "repository": "NousResearch/hermes-agent",
+      "url": "https://api.github.com/repos/NousResearch/hermes-agent",
+      "catalog_url": "https://github.com/NousResearch/hermes-agent",
+      "group": "agent-platforms",
+      "required": true,
+      "categories": [
+        "hermes",
+        "agents",
+        "skills",
+        "plugins"
+      ],
+      "trust": "official_upstream",
+      "enabled": true,
+      "max_items": 2000
     }
   ]
 }
