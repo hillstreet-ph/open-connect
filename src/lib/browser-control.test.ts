@@ -117,6 +117,23 @@ test("CDP attaches to a page, streams frames, sends input and closes cleanly", a
   const drag = sent.filter((m) => m.method === "Input.dispatchMouseEvent").slice(-3);
   expect(drag.map((m) => m.params.type)).toEqual(["mousePressed", "mouseMoved", "mouseReleased"]);
   expect(drag.map((m) => m.params["buttons"])).toEqual([1, 1, 0]);
+  const movesBefore = sent.filter((m) => m.method === "Input.dispatchMouseEvent").length;
+  await Promise.all(Array.from({ length: 100 }, (_, index) => browser.move(index, index)));
+  const coalesced = sent.filter((m) => m.method === "Input.dispatchMouseEvent").slice(movesBefore);
+  expect(coalesced).toHaveLength(1);
+  expect(coalesced[0]?.params).toMatchObject({ type: "mouseMoved", x: 99, y: 99, buttons: 0 });
+  await Promise.all([
+    browser.move(1, 1),
+    browser.press(2, 2),
+    browser.move(3, 3, 1),
+    browser.release(4, 4),
+  ]);
+  expect(
+    sent
+      .filter((m) => m.method === "Input.dispatchMouseEvent")
+      .slice(-4)
+      .map((m) => m.params.type),
+  ).toEqual(["mouseMoved", "mousePressed", "mouseMoved", "mouseReleased"]);
   await browser.press(60, 70, "right", 2);
   await browser.release(60, 70, "right", 2);
   expect(sent.filter((m) => m.method === "Input.dispatchMouseEvent").at(-2)?.params).toMatchObject({

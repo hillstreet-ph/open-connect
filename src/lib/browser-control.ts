@@ -42,6 +42,13 @@ export class BrowserController {
   private targetSession = "";
   private pointerTail: Promise<void> = Promise.resolve();
   private inputGeneration = 0;
+  private queuedMove: {
+    x: number;
+    y: number;
+    buttons: number;
+    generation: number;
+    promise: Promise<void>;
+  } | null = null;
   private pressedPointer: {
     x: number;
     y: number;
@@ -220,19 +227,22 @@ export class BrowserController {
     buttons: number,
     button: BrowserMouseButton | "none",
     clickCount = 0,
+    move?: { x: number; y: number; buttons: number },
   ) {
     if (![x, y].every((value) => Number.isFinite(value) && value >= 0))
       return Promise.reject(new Error("Invalid pointer position."));
     const generation = this.inputGeneration;
     const target = this.targetSession;
     const pending = this.pointerTail.then(async () => {
+      if (move && this.queuedMove === move) this.queuedMove = null;
+      const point = move ?? { x, y, buttons };
       if (!target || generation !== this.inputGeneration || target !== this.targetSession)
         throw new Error("Browser target changed. Focus the current tab again.");
       await this.command("Input.dispatchMouseEvent", {
         type,
-        x,
-        y,
-        buttons,
+        x: point.x,
+        y: point.y,
+        buttons: point.buttons,
         button,
         ...(clickCount ? { clickCount } : {}),
       });
@@ -240,23 +250,39 @@ export class BrowserController {
         this.pressedPointer = { x, y, button, count: clickCount };
       else if (type === "mouseReleased") this.pressedPointer = null;
       else if (this.pressedPointer) {
-        this.pressedPointer.x = x;
-        this.pressedPointer.y = y;
+        this.pressedPointer.x = point.x;
+        this.pressedPointer.y = point.y;
       }
     });
     this.pointerTail = pending.catch(() => {});
     return pending;
   }
   move(x: number, y: number, buttons = 0) {
-    return this.pointer(
+    if (![x, y].every((value) => Number.isFinite(value) && value >= 0))
+      return Promise.reject(new Error("Invalid pointer position."));
+    if (
+      this.queuedMove?.generation === this.inputGeneration &&
+      this.queuedMove.buttons === buttons
+    ) {
+      this.queuedMove.x = x;
+      this.queuedMove.y = y;
+      return this.queuedMove.promise;
+    }
+    const move = { x, y, buttons, generation: this.inputGeneration, promise: Promise.resolve() };
+    move.promise = this.pointer(
       "mouseMoved",
       x,
       y,
       buttons,
       buttons === 1 ? "left" : buttons === 2 ? "right" : buttons === 4 ? "middle" : "none",
+      0,
+      move,
     );
+    this.queuedMove = move;
+    return move.promise;
   }
   press(x: number, y: number, button: BrowserMouseButton = "left", clickCount = 1) {
+    this.queuedMove = null;
     return this.pointer(
       "mousePressed",
       x,
@@ -267,6 +293,7 @@ export class BrowserController {
     );
   }
   release(x: number, y: number, button: BrowserMouseButton = "left", clickCount = 1) {
+    this.queuedMove = null;
     return this.pointer("mouseReleased", x, y, 0, button, clickCount);
   }
   async scroll(x: number, y: number, deltaY: number) {
@@ -304,6 +331,7 @@ export class BrowserController {
     await this.command("Input.dispatchKeyEvent", { type: "keyUp", key, code, modifiers });
   }
   disconnect() {
+    this.queuedMove = null;
     this.inputGeneration++;
     this.pointerTail = Promise.resolve();
     this.pressedPointer = null;
