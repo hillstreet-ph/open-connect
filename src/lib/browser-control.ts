@@ -84,6 +84,14 @@ export class BrowserController {
           pending.reject(new Error(reply.error.message ?? "Browser command failed."));
         else pending.resolve(reply.result ?? {});
       }
+      if (
+        msg.method === "Page.frameNavigated" &&
+        msg.sessionId === this.targetSession &&
+        !msg.params?.frame?.parentId
+      ) {
+        this.inputGeneration++;
+        this.queuedMove = null;
+      }
       if (msg.method === "Page.screencastFrame" && msg.sessionId === this.targetSession) {
         const p = msg.params;
         this.onFrame({
@@ -124,11 +132,18 @@ export class BrowserController {
       (target) => target.type === "page",
     );
   }
-  async selectTab(targetId: string) {
+  get inputRevision() {
+    return this.inputGeneration;
+  }
+  private async cancelPendingInput() {
     this.inputGeneration++;
+    this.queuedMove = null;
     await this.pointerTail;
     const pressed = this.pressedPointer;
     if (pressed) await this.release(pressed.x, pressed.y, pressed.button, pressed.count);
+  }
+  async selectTab(targetId: string) {
+    await this.cancelPendingInput();
     const pages = await this.tabs();
     if (!pages.some((page) => page.targetId === targetId))
       throw new Error("This tab has closed. Refresh the tab list.");
@@ -179,7 +194,9 @@ export class BrowserController {
     });
   }
   async navigate(url: string) {
-    const result = await this.command("Page.navigate", { url: browserNavigationUrl(url) });
+    const destination = browserNavigationUrl(url);
+    await this.cancelPendingInput();
+    const result = await this.command("Page.navigate", { url: destination });
     if (result["errorText"]) throw new Error(String(result["errorText"]));
   }
   async history(direction: -1 | 1) {
@@ -189,35 +206,51 @@ export class BrowserController {
     }>;
     const entry = entries[Number(result["currentIndex"]) + direction];
     if (!entry) return false;
+    await this.cancelPendingInput();
     await this.command("Page.navigateToHistoryEntry", { entryId: entry.id });
     return true;
   }
   async reload() {
+    await this.cancelPendingInput();
     await this.command("Page.reload");
   }
+  private enqueueInput(action: () => Promise<unknown>) {
+    this.queuedMove = null;
+    const generation = this.inputGeneration;
+    const target = this.targetSession;
+    const pending = this.pointerTail.then(async () => {
+      if (!target || generation !== this.inputGeneration || target !== this.targetSession)
+        throw new Error("Browser target changed. Focus the current tab again.");
+      await action();
+    });
+    this.pointerTail = pending.catch(() => {});
+    return pending;
+  }
   async click(x: number, y: number) {
-    await this.command("Input.dispatchMouseEvent", {
-      type: "mouseMoved",
-      x,
-      y,
-      button: "none",
-      buttons: 0,
-    });
-    await this.command("Input.dispatchMouseEvent", {
-      type: "mousePressed",
-      buttons: 1,
-      x,
-      y,
-      button: "left",
-      clickCount: 1,
-    });
-    await this.command("Input.dispatchMouseEvent", {
-      type: "mouseReleased",
-      buttons: 0,
-      x,
-      y,
-      button: "left",
-      clickCount: 1,
+    return this.enqueueInput(async () => {
+      await this.command("Input.dispatchMouseEvent", {
+        type: "mouseMoved",
+        x,
+        y,
+        button: "none",
+        buttons: 0,
+      });
+      await this.command("Input.dispatchMouseEvent", {
+        type: "mousePressed",
+        buttons: 1,
+        x,
+        y,
+        button: "left",
+        clickCount: 1,
+      });
+      await this.command("Input.dispatchMouseEvent", {
+        type: "mouseReleased",
+        buttons: 0,
+        x,
+        y,
+        button: "left",
+        clickCount: 1,
+      });
     });
   }
   private pointer(
@@ -302,7 +335,7 @@ export class BrowserController {
   async text(text: string) {
     if (text.length > 50000)
       throw new Error("Text is too large. Paste at most 50,000 characters at a time.");
-    if (text) await this.command("Input.insertText", { text });
+    if (text) await this.enqueueInput(() => this.command("Input.insertText", { text }));
   }
   async key(key: string, code: string, modifiers = 0) {
     const virtualKeys: Record<string, number> = {
@@ -320,15 +353,17 @@ export class BrowserController {
       PageUp: 33,
       PageDown: 34,
     };
-    await this.command("Input.dispatchKeyEvent", {
-      type: "rawKeyDown",
-      key,
-      code,
-      modifiers,
-      windowsVirtualKeyCode: virtualKeys[key] ?? key.toUpperCase().charCodeAt(0),
-      ...(modifiers & 6 && key.toLowerCase() === "a" ? { commands: ["selectAll"] } : {}),
+    await this.enqueueInput(async () => {
+      await this.command("Input.dispatchKeyEvent", {
+        type: "rawKeyDown",
+        key,
+        code,
+        modifiers,
+        windowsVirtualKeyCode: virtualKeys[key] ?? key.toUpperCase().charCodeAt(0),
+        ...(modifiers & 6 && key.toLowerCase() === "a" ? { commands: ["selectAll"] } : {}),
+      });
+      await this.command("Input.dispatchKeyEvent", { type: "keyUp", key, code, modifiers });
     });
-    await this.command("Input.dispatchKeyEvent", { type: "keyUp", key, code, modifiers });
   }
   disconnect() {
     this.queuedMove = null;
