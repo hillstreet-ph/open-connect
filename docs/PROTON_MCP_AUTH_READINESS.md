@@ -38,3 +38,5 @@ Preserve existing credentials and connection IDs. Never restart or unsuspend unr
 ## Remaining activation gates
 
 A trusted persistent executor host with one isolated native OS secret store per Proton account, official installed CLI releases, owner-native login/MFA or scoped Pass PAT, and a real account acceptance test are still required. No host, native session or provider administrator grant is created by this code. App-side ChatGPT/Claude linking must be verified after deployment. These are operational requirements, not permission bypasses.
+
+Production migration record: `20261026072124_mcp_oauth_resource_binding` (2026-10-26). The repository file retains the exact applied SQL bytes. Read-only privilege checks confirm anonymous consent is denied, authenticated consent and public PKCE exchange remain available, and unregistered callbacks are rejected. This is database deployment evidence, not native Proton activation evidence.
