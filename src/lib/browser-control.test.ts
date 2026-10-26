@@ -34,7 +34,11 @@ test("pointer mapping follows responsive image size and clamps to the viewport",
 test("CDP attaches to a page, streams frames, sends input and closes cleanly", async () => {
   const sent: Array<{
     method: string;
-    params: { type?: string; sessionId?: number | string; targetId?: string };
+    params: Record<string, unknown> & {
+      type?: string;
+      sessionId?: number | string;
+      targetId?: string;
+    };
     sessionId?: string;
   }> = [];
   let instance: FakeSocket;
@@ -109,11 +113,37 @@ test("CDP attaches to a page, streams frames, sends input and closes cleanly", a
   expect(
     sent.filter((m) => m.method === "Input.dispatchMouseEvent").map((m) => m.params.type),
   ).toEqual(["mouseMoved", "mousePressed", "mouseReleased"]);
+  await Promise.all([browser.press(10, 20), browser.move(40, 50, 1), browser.release(40, 50)]);
+  const drag = sent.filter((m) => m.method === "Input.dispatchMouseEvent").slice(-3);
+  expect(drag.map((m) => m.params.type)).toEqual(["mousePressed", "mouseMoved", "mouseReleased"]);
+  expect(drag.map((m) => m.params["buttons"])).toEqual([1, 1, 0]);
+  await browser.press(60, 70, "right", 2);
+  await browser.release(60, 70, "right", 2);
+  expect(sent.filter((m) => m.method === "Input.dispatchMouseEvent").at(-2)?.params).toMatchObject({
+    button: "right",
+    buttons: 2,
+    clickCount: 2,
+  });
+  const beforeInvalid = sent.length;
+  await expect(browser.move(NaN, 1)).rejects.toThrow("Invalid pointer");
+  await expect(browser.text("x".repeat(50001))).rejects.toThrow("too large");
+  expect(sent.length).toBe(beforeInvalid);
+  await browser.key("a", "KeyA", 4);
+  expect(
+    sent.filter((m) => m.method === "Input.dispatchKeyEvent").at(-2)?.params["commands"],
+  ).toEqual(["selectAll"]);
   expect(sent.find((m) => m.method === "Input.insertText")?.sessionId).toBe("attached");
   expect((await browser.tabs()).map((tab) => tab.targetId)).toEqual(["page1", "popup"]);
   await expect(browser.selectTab("closed")).rejects.toThrow("closed");
   expect(browser.activeTabId).toBe("page1");
-  await browser.selectTab("popup");
+  await browser.press(80, 85);
+  const staleMove = browser.move(90, 90);
+  const switchTab = browser.selectTab("popup");
+  await expect(staleMove).rejects.toThrow("target changed");
+  await switchTab;
+  const heldRelease = sent.filter((m) => m.method === "Input.dispatchMouseEvent").at(-1);
+  expect(heldRelease?.params.type).toBe("mouseReleased");
+  expect(heldRelease?.sessionId).toBe("attached");
   expect(browser.activeTabId).toBe("popup");
   expect(sent.find((m) => m.method === "Target.detachFromTarget")?.params.sessionId).toBe(
     "attached",

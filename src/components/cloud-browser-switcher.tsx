@@ -138,6 +138,16 @@ export function CloudBrowserSwitcher({
           </p>
         ) : null}
       </section>
+      <details className="rounded-lg border p-4">
+        <summary className="cursor-pointer text-sm font-medium">Verification assistance</summary>
+        <p className="my-3 text-sm text-muted-foreground">
+          Browserbase offers supported provider CAPTCHA solving when requested at session creation.
+          Other providers use their own capabilities or a compatible solver worker. Complete
+          unresolved verification in the same session’s interactive view; a separate direct browser
+          does not resume an agent run. Solver services may charge per request.
+        </p>
+        <CloudWorkspacePage kind="browser" embedded browserFamily="captcha" />
+      </details>
       <div
         role="tabpanel"
         id="browser-panel-tinyfish"

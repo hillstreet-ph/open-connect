@@ -145,13 +145,31 @@ export async function providerCredential(
   );
 }
 
-export const startProviderSchema = z.object({
-  provider: providerSchema,
-  task: z.string().trim().min(1).max(8000),
-  model: z.string().trim().min(1).max(100).optional(),
-  modelParams: z.record(z.string(), z.unknown()).optional(),
-  spendApproved: z.literal(true),
-});
+export function browserbaseSessionOptions(solveCaptchas = false) {
+  return {
+    api_timeout: 300,
+    keepAlive: false,
+    proxies: false,
+    browserSettings: { solveCaptchas, verified: false },
+  };
+}
+export const startProviderSchema = z
+  .object({
+    provider: providerSchema,
+    task: z.string().trim().min(1).max(8000),
+    model: z.string().trim().min(1).max(100).optional(),
+    modelParams: z.record(z.string(), z.unknown()).optional(),
+    spendApproved: z.literal(true),
+    solveCaptchas: z.boolean().default(false),
+  })
+  .superRefine((data, context) => {
+    if (data.provider !== "browserbase" && data.solveCaptchas)
+      context.addIssue({
+        code: "custom",
+        path: ["solveCaptchas"],
+        message: "Provider CAPTCHA solving is available only for Browserbase sessions.",
+      });
+  });
 export async function startProvider(userId: string, input: unknown) {
   const data = startProviderSchema.parse(input);
   const { apiKey, connectionId } = await providerCredential(userId, data.provider);
@@ -170,12 +188,9 @@ export async function startProvider(userId: string, input: unknown) {
       sessionId: run.sessionId,
     });
   }
-  const session = await browserbaseClient(apiKey).sessions.create({
-    api_timeout: 300,
-    keepAlive: false,
-    proxies: false,
-    browserSettings: { solveCaptchas: false, verified: false },
-  });
+  const session = await browserbaseClient(apiKey).sessions.create(
+    browserbaseSessionOptions(data.solveCaptchas),
+  );
   return signHandle(apiKey, userId, {
     provider: data.provider,
     connectionId,

@@ -42,6 +42,7 @@ function ProviderPanel({
   const storageKey = providerStorageKey(userId, provider);
   const [task, setTask] = useState("");
   const [approved, setApproved] = useState(false);
+  const [solveCaptchas, setSolveCaptchas] = useState(false);
   const [reference, setReference] = useState<ProviderHandle>();
   const [restored, setRestored] = useState(false);
   const [error, setError] = useState("");
@@ -85,7 +86,14 @@ function ProviderPanel({
   const start = useMutation({
     retry: false,
     mutationFn: () =>
-      startFn({ data: { provider, task: task || "Manual browser session", spendApproved: true } }),
+      startFn({
+        data: {
+          provider,
+          task: task || "Manual browser session",
+          spendApproved: true,
+          ...(provider === "browserbase" ? { solveCaptchas } : {}),
+        },
+      }),
     onSuccess: (data) => {
       setReference(data);
       setApproved(false);
@@ -170,6 +178,18 @@ function ProviderPanel({
             placeholder="Describe the website task and expected result. Keep passwords out of the prompt."
             className="min-h-24 w-full rounded border bg-background p-3 text-sm"
           />
+        ) : null}
+        {provider === "browserbase" ? (
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={solveCaptchas}
+              disabled={Boolean(reference) || start.isPending}
+              onChange={(event) => setSolveCaptchas(event.target.checked)}
+            />
+            Request automatic CAPTCHA solving for this session (eligible Browserbase plan required;
+            provider charges may apply).
+          </label>
         ) : null}
         <label className="flex items-center gap-2 text-sm">
           <input
