@@ -7,24 +7,10 @@
     "storage",
     "sidePanel"
   ],
-  "host_permissions": [
-    "https://chatgpt.com/*",
-    "https://open-connect.site/*"
-  ],
   "background": {
     "service_worker": "background.js"
   },
   "side_panel": {
     "default_path": "panel.html"
-  },
-  "content_scripts": [
-    {
-      "matches": [
-        "https://chatgpt.com/*"
-      ],
-      "js": [
-        "content.js"
-      ]
-    }
-  ]
+  }
 }
