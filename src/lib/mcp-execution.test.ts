@@ -1330,7 +1330,7 @@ test("free worker delegation and context saving enforce independent key grants",
   );
 });
 
-test("saved browser profile mutations reject project and organization contexts before provider access", async () => {
+test("Playwright actions reject bounded contexts before worker access", async () => {
   scopes = ["tools:invoke"];
   for (const boundary of [
     { projectId: "project" },
@@ -1338,7 +1338,7 @@ test("saved browser profile mutations reject project and organization contexts b
     { organizationId: "org" },
   ]) {
     keyBoundary = boundary;
-    for (const tool of ["cloud_browser_save_profile", "cloud_browser_profile_setup"]) {
+    for (const tool of ["cloud_browser_call"]) {
       await expect(
         call(tool, {
           name: "Work",
@@ -1346,7 +1346,7 @@ test("saved browser profile mutations reject project and organization contexts b
           profile_id: "prof_work",
           url: "https://example.com",
         }),
-      ).rejects.toThrow("personal API key");
+      ).rejects.toThrow("personal key");
     }
   }
   expect(tables).not.toContain("app_connections");
@@ -1475,12 +1475,7 @@ test("global browser tools reject bounded keys before personal credential access
     { organizationId: "organization" },
   ]) {
     keyBoundary = boundary;
-    for (const tool of [
-      "browser_automation_status",
-      "browser_automation_configure",
-      "browser_verification_start",
-      "browser_verification_result",
-    ]) {
+    for (const tool of ["cloud_browser_tools", "cloud_browser_call"]) {
       await expect(call(tool, {})).rejects.toThrow("personal key");
     }
   }
@@ -1488,12 +1483,7 @@ test("global browser tools reject bounded keys before personal credential access
 });
 test("global browser tools advertise and enforce distinct read, policy and invocation scopes", async () => {
   scopes = ["mcp:connect"];
-  for (const tool of [
-    "browser_automation_status",
-    "browser_automation_configure",
-    "browser_verification_start",
-    "browser_verification_result",
-  ])
+  for (const tool of ["cloud_browser_tools", "cloud_browser_call"])
     await expectAccessDenied(await call(tool, {}));
   expect(credentialReads).toEqual([]);
 });

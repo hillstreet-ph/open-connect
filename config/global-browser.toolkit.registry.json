@@ -1,37 +1,21 @@
 {
   "id": "open-connect-global-browser",
-  "version": "1.0.0",
-  "scope": "owner-isolated-all-browser-clients",
-  "skill": "skills/open-connect-global-browser/SKILL.md",
-  "functions": [
-    "browser_automation_status",
-    "browser_automation_configure",
-    "browser_verification_start",
-    "browser_verification_result"
-  ],
-  "native_tools": [
-    "cloud_browser_run",
-    "cloud_browser_get_run",
-    "cloud_browser_cancel_run",
-    "cloud_browser_profiles",
-    "browser_provider_start",
-    "browser_provider_read",
-    "browser_provider_stop"
-  ],
-  "external_resolver": "two_captcha",
-  "supported_external_challenges": ["recaptcha_v2", "turnstile"],
+  "version": "2.0.0",
+  "scope": "authenticated-owner-isolated",
+  "engine": "playwright",
+  "package": "@playwright/mcp",
+  "tested_candidate_version": "0.0.83",
+  "local_command": "npx @playwright/mcp@latest",
+  "functions": ["cloud_browser_tools", "cloud_browser_call"],
+  "worker": "services/playwright-worker",
   "policy": {
-    "credential_transport": "owned-vault-only",
-    "same_browser_reference_required": true,
-    "same_origin_required": true,
-    "duplicate_paid_submissions_forbidden": true,
-    "website_acceptance_requires_verification": true
+    "alternate_engine_fallback": false,
+    "shared_cross_owner_context": false,
+    "idle_timeout_seconds": 900,
+    "max_sessions": 8,
+    "arbitrary_server_code": false,
+    "credential_values_in_chat": false,
+    "captcha": "human_handoff"
   },
-  "sources": [
-    "https://browser-use.com/captcha-solving",
-    "https://2captcha.com/api-docs/create-task",
-    "https://2captcha.com/api-docs/get-task-result",
-    "https://2captcha.com/api-docs/recaptcha-v2",
-    "https://2captcha.com/api-docs/cloudflare-turnstile"
-  ]
+  "sources": ["https://github.com/microsoft/playwright-mcp"]
 }

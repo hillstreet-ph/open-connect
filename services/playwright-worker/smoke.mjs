@@ -1,0 +1,48 @@
+// Run against the authenticated candidate container; prints checks, never credentials.
+const origin = process.env.PLAYWRIGHT_SMOKE_ORIGIN ?? "http://127.0.0.1:8080";
+const token = process.env.PLAYWRIGHT_WORKER_TOKEN;
+if (!token) throw new Error("Worker token required");
+async function rpc(owner, name, args) {
+  const response = await fetch(origin + "/rpc", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "X-Browser-Owner": owner,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(
+      name ? { method: "tools/call", params: { name, arguments: args } } : { method: "tools/list" },
+    ),
+    signal: AbortSignal.timeout(90000),
+  });
+  const value = await response.json();
+  if (!response.ok || value.isError)
+    throw new Error(`Browser smoke failed: ${name ?? "catalog"} HTTP ${response.status}`);
+  return value;
+}
+let ready = false;
+for (let attempt = 0; attempt < 60; attempt++) {
+  try {
+    if ((await fetch(origin + "/health")).ok) {
+      ready = true;
+      break;
+    }
+  } catch {}
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+}
+if (!ready) throw new Error("Worker did not become ready");
+try {
+  const catalog = await rpc("smoke-a");
+  if (!catalog.tools.some((tool) => tool.name === "browser_snapshot"))
+    throw new Error("Missing Playwright tools");
+  await rpc("smoke-a", "browser_navigate", { url: "https://example.com" });
+  const snapshot = await rpc("smoke-a", "browser_snapshot", {});
+  if (!JSON.stringify(snapshot).includes("Example Domain"))
+    throw new Error("Navigation was not verified");
+  const other = await rpc("smoke-b", "browser_snapshot", {});
+  if (JSON.stringify(other).includes("Example Domain")) throw new Error("Cross-owner page leak");
+  console.log("PASS: MCP catalog, navigation, snapshot, separate owner contexts");
+} finally {
+  await rpc("smoke-a", "browser_close", {}).catch(() => {});
+  await rpc("smoke-b", "browser_close", {}).catch(() => {});
+}

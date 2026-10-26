@@ -1,0 +1,30 @@
+name: Playwright worker
+on:
+  pull_request:
+    paths:
+      [
+        "services/playwright-worker/**",
+        "src/lib/playwright*",
+        ".github/workflows/playwright-worker.yml",
+      ]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser-smoke:
+    name: Playwright container smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build worker
+        run: docker build -t open-connect-playwright services/playwright-worker
+      - name: Verify browser execution and owner isolation
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PLAYWRIGHT_WORKER_TOKEN="$(openssl rand -hex 32)"
+          echo "::add-mask::$PLAYWRIGHT_WORKER_TOKEN"
+          trap 'docker rm -f playwright-smoke >/dev/null 2>&1 || true' EXIT
+          docker run -d --name playwright-smoke --shm-size=1g -p 127.0.0.1:8080:8080 -e PLAYWRIGHT_WORKER_TOKEN open-connect-playwright
+          node services/playwright-worker/smoke.mjs
