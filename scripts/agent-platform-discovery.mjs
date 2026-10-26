@@ -1,5 +1,23 @@
 import { createHash } from "node:crypto";
 
+// Keep credential-bearing discovery requests on reviewed, fixed GitHub API paths.
+const platformEndpoints = new Map([
+  ["openai-agent-skills", "https://api.github.com/repos/openai/skills"],
+  ["claude-agent-skills", "https://api.github.com/repos/anthropics/skills"],
+  ["mistral-vibe-resources", "https://api.github.com/repos/mistralai/mistral-vibe"],
+  ["manus-owned-skills", "https://api.github.com/repos/master-kanor/manus-skills"],
+  ["open-system-resources", "https://api.github.com/repos/hillstreet-ph/open-system"],
+  ["hermes-upstream-resources", "https://api.github.com/repos/NousResearch/hermes-agent"],
+]);
+
+export function platformEndpoint(source) {
+  const endpoint = platformEndpoints.get(source.id);
+  if (!endpoint || endpoint !== `https://api.github.com/repos/${source.repository}`) {
+    throw new Error(`${source.id}: repository is not an approved platform source`);
+  }
+  return endpoint;
+}
+
 // Discovery reads Git object metadata only. It never downloads or executes packages.
 export function platformCandidates(source, repository, tree) {
   if (tree.truncated) throw new Error(`${source.id}: incomplete GitHub tree`);
