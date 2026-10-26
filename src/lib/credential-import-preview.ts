@@ -13,20 +13,20 @@ const MAX_CELL = 16_384;
 const normalize = (value: string) => value.trim().toLowerCase().replace(/[\s_-]+/g, "");
 function parseCsv(input: string): string[][] {
   const rows: string[][] = [];
-  let row: string[] = [], cell = "", quoted = false;
+  let row: string[] = [], cell = "", quoted = false, closedQuote = false;
   for (let i = 0; i < input.length; i++) {
     const ch = input[i];
     if (ch === '"') {
       if (quoted && input[i + 1] === '"') { cell += '"'; i++; }
-      else if (quoted || cell.length === 0) quoted = !quoted;
+      else if (quoted || (cell.length === 0 && !closedQuote)) { quoted = !quoted; if (!quoted) closedQuote = true; }
       else throw new Error("Invalid CSV quote");
     } else if (ch === "," && !quoted) {
-      row.push(cell); cell = "";
+      row.push(cell); cell = ""; closedQuote = false;
     } else if ((ch === "\n" || ch === "\r") && !quoted) {
       if (ch === "\r" && input[i + 1] === "\n") i++;
-      row.push(cell); rows.push(row); row = []; cell = "";
+      row.push(cell); rows.push(row); row = []; cell = ""; closedQuote = false;
       if (rows.length > MAX_ROWS + 1) throw new Error("Too many rows");
-    } else { cell += ch; }
+    } else { if (closedQuote && !quoted) throw new Error("Invalid CSV trailing text"); cell += ch; }
     if (cell.length > MAX_CELL) throw new Error("Cell too long");
   }
   if (quoted) throw new Error("Unclosed CSV quote");
@@ -38,6 +38,8 @@ export function previewCredentialCsv(input: string): CredentialPreview[] {
   const [header, ...rows] = parseCsv(input.replace(/^\uFEFF/, ""));
   if (!header) return [];
   const names = header.map(normalize);
+  if (new Set(names).size !== names.length) throw new Error("Duplicate header");
+  if (rows.some(row => row.length !== header.length)) throw new Error("Invalid CSV column count");
   const find = (...aliases: string[]) => names.findIndex(name => aliases.includes(name));
   const originColumn = find("url", "website", "origin", "loginuri");
   const accountColumn = find("username", "email", "login", "account");
