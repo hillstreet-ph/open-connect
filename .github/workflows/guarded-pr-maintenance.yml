@@ -31,7 +31,7 @@ jobs:
             for (const group of matches) core.summary.addRaw(group.map(pr => '#' + pr.number).join(', ') + '\n');
             await core.summary.write();
   auto-merge:
-    if: github.event_name == 'pull_request' && github.event.pull_request.user.login == 'dependabot[bot]' && github.event.pull_request.draft == false
+    if: github.event_name == 'pull_request' && github.event.pull_request.user.login == 'dependabot[bot]' && github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -43,6 +43,11 @@ jobs:
           PR_URL: ${{ github.event.pull_request.html_url }}
         run: |
           set -euo pipefail
-          gh pr view "$PR_URL" --json files --jq '.files[].path' | grep -Eq '(^|/)(package-lock.json|bun.lock|pnpm-lock.yaml|yarn.lock)$' || exit 0
+          gh pr view "$PR_URL" --json title --jq '.title' | grep -Eiq '^bump .+ from [0-9]+\.[0-9]+\.[0-9]+ to [0-9]+\.[0-9]+\.[0-9]+' || exit 0
+          gh pr view "$PR_URL" --json title --jq '.title' | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>{const m=s.match(/from (\\d+)\\.(\\d+)\\.(\\d+) to (\\d+)\\.(\\d+)\\.(\\d+)/);process.exit(m&&m[1]===m[4]&&m[2]===m[5]&&Number(m[6])>Number(m[3])?0:1)})' || exit 0
+          gh pr view "$PR_URL" --json files --jq '.files[].path' | grep -Eq '(^|/)(package-lock.json|bun.lock|pnpm-lock.yaml|yarn.lock)
+          gh pr view "$PR_URL" --json files --jq '.files[].path' | grep -Ev '(^|/)(package.json|package-lock.json|bun.lock|pnpm-lock.yaml|yarn.lock)$' && exit 0 || true
+          gh pr merge --auto --squash "$PR_URL"
+ || exit 0
           gh pr view "$PR_URL" --json files --jq '.files[].path' | grep -Ev '(^|/)(package.json|package-lock.json|bun.lock|pnpm-lock.yaml|yarn.lock)$' && exit 0 || true
           gh pr merge --auto --squash "$PR_URL"
