@@ -176,6 +176,7 @@ export function newClientId(): string {
 export function oauthMetadata() {
   return {
     issuer: ISSUER,
+    authorization_response_iss_parameter_supported: true,
     authorization_endpoint: `${ISSUER}/oauth/authorize`,
     token_endpoint: `${ISSUER}/oauth/token`,
     registration_endpoint: `${ISSUER}/oauth/register`,

@@ -1,5 +1,7 @@
 export const REMOTE_MCP_PROVIDERS = [
   "custom_mcp",
+  "proton_pass",
+  "proton_drive",
   "apify_mcp",
   "custom_zeabur_mcp",
   "custom_zeabur",
@@ -65,7 +67,7 @@ export function isExecutableMcpProvider(provider: string) {
 
 /** Cloud workspace pages a connection belongs on. Generic MCP servers fit all. */
 export function cloudKindsForProvider(provider: string): readonly CloudWorkspaceKind[] {
-  if (provider === "custom_api") return [];
+  if (["custom_api", "proton_pass", "proton_drive"].includes(provider)) return [];
   if (isHostedMcpProvider(provider)) return HOSTED_MCP_PRESETS[provider].kinds;
   return ["browser", "computer", "terminal", "phone", "sandbox"];
 }

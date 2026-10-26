@@ -29,6 +29,8 @@ jobs:
         run: bun run lint
       - name: Unit and navigation tests
         run: bun run test
+      - name: OAuth database regression tests
+        run: bun run test:oauth:db
       - name: Consolidated resource integrity
         run: python3 scripts/consolidate_resources.py
       - name: Marketplace branch history regression tests

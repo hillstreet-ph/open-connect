@@ -1,3 +1,4 @@
+import { resourceAllowsRequest } from "./mcp-oauth-contract.ts";
 import { collectAutoFreeRoutes } from "./auto-free-routing.ts";
 import { COMPATIBLE_GATEWAY_PROVIDERS } from "./ai-gateway-providers.ts";
 /**
@@ -343,7 +344,7 @@ export async function authenticateKey(request: Request): Promise<AuthedKey | nul
   // Verify every request so deleted/revoked keys never survive in an instance cache.
   const { oauthDatabase } = await import("@/lib/oauth-client.server");
   const { data, error } = await oauthDatabase().rpc("oc_verify_gateway_key", { p_key: raw });
-  if (error || !data) return null;
+  if (error || !data || !resourceAllowsRequest(data.oauth_resource, request.url)) return null;
   const key: AuthedKey = {
     id: data.id,
     userId: data.user_id,

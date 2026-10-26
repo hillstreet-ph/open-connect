@@ -1,3 +1,4 @@
+import { providerApiHeaders } from "./provider-api-presets.ts";
 import { CfWorkerJsonSchemaValidator } from "@modelcontextprotocol/sdk/validation/cfworker";
 import { openApiOperations } from "./openapi-connector.ts";
 import { publicFetch } from "./public-fetch.server.ts";
@@ -7,6 +8,7 @@ export async function callOpenApiTool(
   name: string,
   args: Record<string, unknown>,
   credential: string,
+  outboundFetch: typeof publicFetch = publicFetch,
 ) {
   const metadata = connection.metadata as Record<string, unknown>;
   const api = openApiOperations(metadata["openapi"]);
@@ -33,8 +35,9 @@ export async function callOpenApiTool(
       headers[normalizeAuthHeader(metadata["auth_header"])] = credential;
     else headers["Authorization"] = `Bearer ${credential}`;
   }
+  Object.assign(headers, providerApiHeaders(api.endpoint));
   if (args["body"] !== undefined) headers["Content-Type"] = "application/json";
-  const response = await publicFetch(url, {
+  const response = await outboundFetch(url, {
     method: op.method,
     headers,
     ...(args["body"] !== undefined ? { body: JSON.stringify(args["body"]) } : {}),

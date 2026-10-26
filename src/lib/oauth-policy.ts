@@ -1,3 +1,4 @@
+import { oauthResource } from "./mcp-oauth-contract.ts";
 import {
   AVAILABLE_KEY_SCOPES,
   scopesForProfile,
@@ -52,6 +53,7 @@ export function validateOAuthRequest(input: Record<string, unknown>) {
   if (scopes.some((s) => !(OAUTH_SCOPES as readonly string[]).includes(s)))
     throw new Error("Unsupported OAuth permission.");
   return {
+    resource: oauthResource(input["resource"]),
     client_id: get("client_id"),
     redirect_uri: get("redirect_uri"),
     state: get("state"),

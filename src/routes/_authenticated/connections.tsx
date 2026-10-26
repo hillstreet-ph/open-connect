@@ -97,6 +97,8 @@ function ConnectionsPage() {
   const [apiKey, setApiKey] = useState("");
   const [authType, setAuthType] = useState<"none" | "bearer" | "api_key">("bearer");
   const endpointProviders = new Set([
+    "proton_pass",
+    "proton_drive",
     "supabase",
     "databricks",
     "litellm",
@@ -593,6 +595,14 @@ function ConnectionsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {["proton_pass", "proton_drive"].includes(selectedApp?.provider ?? "") && (
+              <p className="text-sm text-muted-foreground">
+                Connect an isolated Proton executor using its trusted HTTPS MCP endpoint and
+                separate bridge bearer token. Complete native Proton login on that host first. Do
+                not enter a Proton password or personal access token here. Provider rights still
+                apply.
+              </p>
+            )}
             {selectedApp?.provider === "custom_mcp" && (
               <Button
                 variant="outline"
@@ -704,7 +714,11 @@ function ConnectionsPage() {
             {!["custom_mcp", "custom_api"].includes(selectedApp?.provider ?? "") ||
             authType !== "none" ? (
               <div className="space-y-2">
-                <Label htmlFor="connection-key">API key or access token</Label>
+                <Label htmlFor="connection-key">
+                  {["proton_pass", "proton_drive"].includes(selectedApp?.provider ?? "")
+                    ? "Executor bearer token (not a Proton token)"
+                    : "API key or access token"}
+                </Label>
                 <Input
                   id="connection-key"
                   type="password"
