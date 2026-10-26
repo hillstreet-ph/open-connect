@@ -49,6 +49,7 @@ export async function runPlaywrightTask(userId: string, goal: string) {
         throw new Error(
           `Browser reasoning is unavailable. ${actions.length} actions completed; they were not replayed.`,
         );
+      await playwrightTaskControl(userId, "check", taskId);
       const reply = (await response.json()).choices?.[0]?.message;
       if (!reply) throw new Error("Browser model returned no response.");
       const calls = reply.tool_calls ?? [];
