@@ -4,52 +4,39 @@
   "teams": [
     {
       "id": "development",
-      "name": "Development",
+      "name": "Development team",
       "description": "Plan, implement and review software changes.",
-      "roles": ["Software architect", "Full-stack developer", "QA and security reviewer"],
-      "focus": "Produce implementation steps, code-level recommendations, meaningful tests and deployment checks. Identify repository evidence and unverified assumptions."
+      "roles": ["Software Architect", "Developer", "QA Reviewer"]
     },
     {
       "id": "business",
-      "name": "Business",
-      "description": "Turn business goals into decisions and operating plans.",
-      "roles": ["Business strategist", "Operations planner", "Risk and finance reviewer"],
-      "focus": "Separate confirmed facts from assumptions. Compare costs, customer value, operating requirements, metrics and decision risks. Never invent financial results."
+      "name": "Business team",
+      "description": "Explore business goals, processes and evidence.",
+      "roles": ["Business Strategist", "Operations Analyst", "Risk Reviewer"]
     },
     {
       "id": "marketing",
-      "name": "Marketing",
-      "description": "Develop campaigns, content and measurement plans.",
-      "roles": ["Campaign strategist", "Content producer", "Brand and claims reviewer"],
-      "focus": "Produce audience, message, channel, content and measurement recommendations. Check unsupported claims, licensing and platform requirements."
-    },
-    {
-      "id": "operations",
-      "name": "Operations",
-      "description": "Design repeatable processes and automation.",
-      "roles": ["Process analyst", "Automation designer", "Reliability reviewer"],
-      "focus": "Define owners, inputs, steps, integration prerequisites, exception handling, audit evidence and rollback procedures."
+      "name": "Marketing team",
+      "description": "Prepare campaign ideas, copy and review criteria.",
+      "roles": ["Campaign Strategist", "Content Writer", "Brand Reviewer"]
     },
     {
       "id": "research",
-      "name": "Research",
-      "description": "Structure evidence, analysis and open questions.",
-      "roles": ["Research planner", "Evidence analyst", "Source and uncertainty reviewer"],
-      "focus": "Use only supplied evidence. Distinguish facts, inference and unknowns; recommend primary sources for missing facts. Never invent citations or claim browsing occurred."
+      "name": "Research team",
+      "description": "Develop a research plan, analysis and verification checklist.",
+      "roles": ["Research Planner", "Research Analyst", "Evidence Reviewer"]
     },
     {
-      "id": "support",
-      "name": "Customer support",
-      "description": "Prepare service responses and escalation paths.",
-      "roles": ["Support triage specialist", "Response writer", "Policy and quality reviewer"],
-      "focus": "Identify customer needs, evidence, response drafts and escalation paths. Do not invent account information, policies, refunds or resolved incidents."
+      "id": "operations",
+      "name": "Operations team",
+      "description": "Improve a workflow and identify practical handoffs.",
+      "roles": ["Workflow Coordinator", "Process Designer", "Quality Reviewer"]
     },
     {
-      "id": "data",
-      "name": "Data and analytics",
-      "description": "Plan data pipelines, analysis and validation.",
-      "roles": ["Data architect", "Analytics engineer", "Data quality reviewer"],
-      "focus": "Define sources, data contracts, transformations, metrics, validation, privacy and operational checks. Never invent observations or calculated results."
+      "id": "custom",
+      "name": "Custom team",
+      "description": "Customize a team for your own workflow.",
+      "roles": ["Planner", "Builder", "Reviewer"]
     }
   ]
 }

@@ -2,29 +2,22 @@
 
 ## AI Agency
 
-Connections now contains Connectors, Credentials, AI Gateway and AI Agency.
-The authenticated `/ai-agency` route offers Development, Business, Marketing,
-Operations, Research, Customer Support, and Data teams. The canonical category
-registry is `config/ai-agency.registry.json`; each team has three specialist roles.
+Connections contains Connectors, Credentials, AI Gateway and AI Agency. The
+canonical private-team implementation from PR #450 is retained, including team
+creation/editing, 2–6 distinct roles, reversible archive/restore, optimistic edit
+checks, free-model readiness and owner-isolated run history. Its existing database
+migration is retained unchanged. See [AI Agency](AI_AGENCY.md).
 
-A run uses the same connected, catalog-verified free-model router as the existing
-MCP worker team. It accepts a 4,000-character goal and 24,000-character reference
-context. Common credential patterns are redacted before model calls and in outputs.
-Fallback is bounded; a failed worker is shown as unavailable. There is no fallback
-to a paid model. Workers return independent proposals; they cannot execute browser
-commands, approve operations or publish resources. Generated text is not evidence
-that an external action completed.
+The six templates (Development, Business, Marketing, Research, Operations and
+Custom) come from `config/ai-agency.registry.json`. Custom teams can represent
+support, data or other work using their own names and roles. MCP `run_agent_team`
+accepts an optional template `category`, with the same scopes and personal-context
+restriction. Existing clients omitting it retain Planner/Builder/Reviewer roles.
+Workers produce proposals; browser and external actions use connected tools.
 
-`run_agent_team` accepts an optional `category` using the same seven category IDs.
-Existing clients omitting it retain the generic Planner/Builder/Reviewer behavior.
-Its existing `models:invoke` and `agents:invoke` checks and personal-context
-restriction remain enforced. The web route uses authenticated server functions;
-model credentials remain server-side and belong to the current user.
-
-Run outputs can be copied or explicitly saved to the existing private chat
-history. Saving reuses `agent_chats`, its ownership controls and existing revision
-contract; it needs no second history table or migration. Saving does not publish
-the run. Browser execution is available through the canonical Cloud Browser page.
+History uses the existing `autonomous_runs` table. There is no second chat-history
+mirror or second credential store. Outputs can be copied from private run history.
+PR #453 reconciles the earlier Agency work with browser consolidation in one route.
 
 ## Browser consolidation
 

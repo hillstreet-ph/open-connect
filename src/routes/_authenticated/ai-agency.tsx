@@ -1,278 +1,534 @@
-import { useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowUpRight, Check, Copy, Loader2, UsersRound } from "lucide-react";
-import { AGENCY_TEAMS, agencyTranscript, type AgencyResult } from "@/lib/ai-agency";
-import { runAiAgency } from "@/lib/ai-agency.functions";
-import { saveAgentChat } from "@/lib/agent-chat.functions";
+import { useState } from "react";
+import { Archive, Loader2, Play, Plus, UsersRound } from "lucide-react";
+import { toast } from "sonner";
+import { useAuth } from "@/hooks/use-auth";
+import {
+  AGENCY_CATEGORIES,
+  AGENCY_TEMPLATES,
+  agencyRoles,
+  agencyCategoryLabel,
+  agencyRunTranscript,
+  type AgencyTeam,
+  type AgencyTeamDraft,
+} from "@/lib/ai-agency";
+import {
+  listAgencyTeams,
+  saveAgencyTeam,
+  archiveAgencyTeam,
+  agencyReadiness,
+  listAgencyRuns,
+  runAgencyTeam,
+} from "@/lib/ai-agency.functions";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/_authenticated/ai-agency")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    category: AGENCY_TEAMS.find((team) => team.id === search["category"])?.id ?? "development",
-  }),
   head: () => ({
     meta: [{ title: "AI Agency — Open-Connect" }, { name: "robots", content: "noindex" }],
   }),
-  component: AiAgencyPage,
+  component: AgencyPage,
 });
-
-function AiAgencyPage() {
-  const { category } = Route.useSearch();
-  const navigate = Route.useNavigate();
-  const selected = AGENCY_TEAMS.find((team) => team.id === category)!;
-  const [goal, setGoal] = useState("");
-  const [context, setContext] = useState("");
-  const [result, setResult] = useState<AgencyResult | null>(null);
-  const [notice, setNotice] = useState("");
-  const [saved, setSaved] = useState(false);
-  const runId = useRef("");
-  const queryClient = useQueryClient();
-  const run = useServerFn(runAiAgency);
-  const save = useServerFn(saveAgentChat);
-  const saveResult = useMutation({
-    retry: false,
-    mutationFn: async () => {
-      if (!result || !runId.current) throw new Error("Run a team first.");
-      return save({
+const emptyDraft: AgencyTeamDraft = {
+  name: "",
+  category: "development",
+  description: "",
+  roles: ["Software Architect", "Developer", "QA Reviewer"],
+};
+function AgencyPage() {
+  const { user } = useAuth();
+  return <AgencyWorkspace key={user?.id ?? "signed-out"} userId={user?.id} />;
+}
+function AgencyWorkspace({ userId }: { userId: string | undefined }) {
+  const qc = useQueryClient();
+  const list = useServerFn(listAgencyTeams),
+    save = useServerFn(saveAgencyTeam),
+    archive = useServerFn(archiveAgencyTeam),
+    readiness = useServerFn(agencyReadiness),
+    history = useServerFn(listAgencyRuns),
+    run = useServerFn(runAgencyTeam);
+  const [draft, setDraft] = useState<AgencyTeamDraft>(emptyDraft);
+  const [roleText, setRoleText] = useState(emptyDraft.roles.join("\n"));
+  const rolesValidation = agencyRoles.safeParse(
+    roleText
+      .split("\n")
+      .map((role) => role.trim())
+      .filter(Boolean),
+  );
+  const [editing, setEditing] = useState<AgencyTeam | null>(null);
+  const [category, setCategory] = useState("all");
+  const [showArchived, setShowArchived] = useState(false);
+  const [selectedId, setSelectedId] = useState("");
+  const [goal, setGoal] = useState(""),
+    [context, setContext] = useState("");
+  const teams = useQuery({
+    queryKey: ["agency-teams", userId, category, showArchived],
+    queryFn: () =>
+      list({ data: { archived: showArchived, ...(category === "all" ? {} : { category }) } }),
+    enabled: !!userId,
+  });
+  const models = useQuery({
+    queryKey: ["agency-readiness", userId],
+    queryFn: () => readiness({}),
+    enabled: !!userId,
+    staleTime: 60000,
+  });
+  const runs = useQuery({
+    queryKey: ["agency-runs", userId, selectedId],
+    queryFn: () => history({ data: { teamId: selectedId } }),
+    enabled: !!userId && !!selectedId,
+    refetchInterval: 15000,
+  });
+  const selected = teams.data?.find((team) => team.id === selectedId);
+  const refreshTeams = () => qc.invalidateQueries({ queryKey: ["agency-teams", userId] });
+  const saveMutation = useMutation({
+    mutationFn: () =>
+      save({
         data: {
-          id: runId.current,
-          revision: null,
-          title: `AI Agency · ${result.team_name} · ${result.goal}`.slice(0, 120),
-          mode: "workspace",
-          browser_run_id: null,
-          messages: [
-            { role: "user", content: result.goal },
-            ...result.workers.map((worker) => ({
-              role: "assistant" as const,
-              content: `${worker.role} · ${worker.status}\n${worker.content}\n\nProposal only; external actions have not been executed.`,
-            })),
-          ],
+          team: {
+            ...draft,
+            roles: roleText
+              .split("\n")
+              .map((role) => role.trim())
+              .filter(Boolean),
+          },
+          ...(editing ? { id: editing.id, expectedUpdatedAt: editing.updated_at } : {}),
         },
-      });
+      }),
+    onSuccess: (result) => {
+      setSelectedId(result.id);
+      setCategory("all");
+      setShowArchived(editing?.archived ?? false);
+      setEditing(null);
+      setDraft(emptyDraft);
+      setRoleText(emptyDraft.roles.join("\n"));
+      void refreshTeams();
+      toast.success("Private team saved");
     },
+    onError: (e) => {
+      toast.error(e instanceof Error ? e.message : "Could not save team");
+      void refreshTeams();
+    },
+  });
+  const archiveMutation = useMutation({
+    mutationFn: (team: AgencyTeam) =>
+      archive({
+        data: { id: team.id, archived: !team.archived, expectedUpdatedAt: team.updated_at },
+      }),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["agent-chat-history"] });
-      setSaved(true);
-      setNotice("Saved to your private chat history.");
+      void refreshTeams();
+      toast.success("Team updated");
+    },
+    onError: (e) => {
+      toast.error(e instanceof Error ? e.message : "Could not update team");
+      void refreshTeams();
     },
   });
-  const execute = useMutation({
-    retry: false,
-    mutationFn: () => run({ data: { category, goal, context } }),
-    onSuccess: (data) => {
-      setResult(data);
-      runId.current = crypto.randomUUID();
-      setSaved(false);
-      setNotice("");
-      saveResult.reset();
-    },
+  const runMutation = useMutation({
+    mutationFn: () => run({ data: { teamId: selectedId, goal, context } }),
+    onSuccess: (result) =>
+      toast[result.state === "succeeded" ? "success" : "warning"](
+        result.state === "succeeded"
+          ? "Team proposals are ready"
+          : "Some team roles were unavailable. Review the saved results.",
+      ),
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Team request failed"),
+    onSettled: () => void qc.invalidateQueries({ queryKey: ["agency-runs", userId, selectedId] }),
   });
-  const busy = execute.isPending || saveResult.isPending;
+  const loadDraft = (team: AgencyTeamDraft, current: AgencyTeam | null = null) => {
+    setDraft({
+      name: team.name,
+      category: team.category,
+      description: team.description,
+      roles: [...team.roles],
+    });
+    setRoleText(team.roles.join("\n"));
+    setEditing(current);
+  };
   return (
-    <main className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6">
-      <header className="flex flex-wrap items-start justify-between gap-4 border-b pb-6">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
-            Connections / AI Agency
-          </p>
-          <h1 className="mt-2 flex items-center gap-3 text-3xl font-semibold tracking-tight">
-            <UsersRound className="size-7" />
-            AI Agency
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            Specialist teams for your work. Give one brief to three agents and compare their
-            recommendations.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" asChild>
-            <Link to="/models">
-              AI Gateway <ArrowUpRight className="size-4" />
-            </Link>
+    <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
+      <header className="space-y-2">
+        <h1 className="flex items-center gap-2 text-2xl font-semibold">
+          <UsersRound className="size-6 text-primary" /> AI Agency
+        </h1>
+        <p className="max-w-3xl text-sm text-muted-foreground">
+          Build private AI teams for development, business, research and everyday operations. Each
+          role contributes a proposal through your connected free models.
+        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <Badge variant="outline">Mode: proposal generation</Badge>
+          <Button size="sm" variant="outline" asChild>
+            <Link to="/cloud-browser">Open Cloud Browser</Link>
           </Button>
-          <Button variant="outline" asChild>
+          <Button size="sm" variant="ghost" asChild>
             <Link to="/connections">Connectors</Link>
           </Button>
         </div>
+        <p className="text-xs text-muted-foreground">
+          External app actions use a separate approved execution workflow. Model availability and
+          free-provider rate limits apply.
+        </p>
       </header>
-      <div className="grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
-        <aside aria-label="Team categories" className="space-y-2">
-          <h2 className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Choose your team
-          </h2>
-          {AGENCY_TEAMS.map((team) => (
+      <section aria-labelledby="agency-templates" className="space-y-3">
+        <h2 id="agency-templates" className="font-semibold">
+          Start with a team template
+        </h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {AGENCY_TEMPLATES.map((team) => (
             <button
-              key={team.id}
               type="button"
-              aria-pressed={team.id === category}
-              disabled={busy}
-              onClick={() => void navigate({ search: { category: team.id } })}
-              className={`w-full rounded-lg border p-3 text-left transition-colors disabled:opacity-50 ${team.id === category ? "border-primary bg-primary/10" : "border-transparent hover:bg-muted"}`}
+              key={team.category}
+              className="space-y-2 rounded-xl border bg-card p-4 text-left transition hover:border-primary/60 focus-visible:outline focus-visible:outline-2"
+              disabled={runMutation.isPending}
+              onClick={() => loadDraft(team)}
             >
+              <Badge variant="outline">{agencyCategoryLabel(team.category)}</Badge>
               <span className="block text-sm font-semibold">{team.name}</span>
-              <span className="mt-1 block text-xs text-muted-foreground">{team.description}</span>
+              <span className="block text-xs text-muted-foreground">{team.description}</span>
+              <span className="block text-xs text-muted-foreground">{team.roles.join(" · ")}</span>
             </button>
           ))}
-        </aside>
-        <div className="space-y-6">
-          <section
-            className="rounded-xl border bg-card p-5 sm:p-6"
-            aria-labelledby="agency-brief-title"
+        </div>
+      </section>
+      <Card className="space-y-4 p-4 sm:p-6">
+        <h2 className="font-semibold">{editing ? "Edit team" : "Create a private team"}</h2>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="agency-name">Team name</Label>
+            <Input
+              id="agency-name"
+              maxLength={100}
+              value={draft.name}
+              onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+              placeholder="My development team"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="agency-category">Category</Label>
+            <select
+              id="agency-category"
+              className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+              value={draft.category}
+              onChange={(e) =>
+                setDraft({ ...draft, category: e.target.value as AgencyTeamDraft["category"] })
+              }
+            >
+              {AGENCY_CATEGORIES.map((value) => (
+                <option key={value} value={value}>
+                  {agencyCategoryLabel(value)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="agency-description">Team purpose</Label>
+            <Textarea
+              id="agency-description"
+              maxLength={2000}
+              value={draft.description}
+              onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="agency-roles">Agent roles, one per line</Label>
+            <Textarea
+              id="agency-roles"
+              maxLength={500}
+              value={roleText}
+              onChange={(e) => setRoleText(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              {rolesValidation.success
+                ? "Use 2–6 different role names, up to 80 characters each."
+                : rolesValidation.error.issues[0]?.message}
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            disabled={
+              !draft.name.trim() ||
+              !rolesValidation.success ||
+              saveMutation.isPending ||
+              runMutation.isPending
+            }
+            onClick={() => saveMutation.mutate()}
           >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 id="agency-brief-title" className="text-xl font-semibold">
-                  {selected.name} team
-                </h2>
-                <p className="mt-1 text-sm text-muted-foreground">{selected.roles.join(" · ")}</p>
-              </div>
-              <span className="shrink-0 rounded-full border px-2 py-1 text-xs">3 agents</span>
-            </div>
-            <form
-              className="mt-5 space-y-4"
-              onSubmit={(event) => {
-                event.preventDefault();
-                execute.mutate();
+            {saveMutation.isPending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Plus className="size-4" />
+            )}
+            {editing ? "Save changes" : "Create team"}
+          </Button>
+          {editing ? (
+            <Button variant="outline" onClick={() => loadDraft(emptyDraft)}>
+              Cancel edit
+            </Button>
+          ) : null}
+        </div>
+      </Card>
+      <section className="space-y-3" aria-labelledby="agency-saved">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 id="agency-saved" className="font-semibold">
+            Your teams
+          </h2>
+          <div className="flex flex-wrap items-center gap-3">
+            <select
+              aria-label="Filter team category"
+              disabled={runMutation.isPending}
+              className="h-9 rounded-md border bg-background px-2 text-sm"
+              value={category}
+              onChange={(e) => {
+                setCategory(e.target.value);
+                setSelectedId("");
               }}
             >
-              <div className="space-y-2">
-                <Label htmlFor="agency-goal">What should the team work on?</Label>
-                <Textarea
-                  id="agency-goal"
-                  value={goal}
-                  onChange={(event) => setGoal(event.target.value)}
-                  maxLength={4000}
-                  disabled={busy}
-                  rows={3}
-                  placeholder="Describe the outcome, constraints and what success looks like."
-                  required
-                />
+              <option value="all">All categories</option>
+              {AGENCY_CATEGORIES.map((value) => (
+                <option key={value} value={value}>
+                  {agencyCategoryLabel(value)}
+                </option>
+              ))}
+            </select>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={showArchived}
+                disabled={runMutation.isPending}
+                onChange={(e) => {
+                  setShowArchived(e.target.checked);
+                  setSelectedId("");
+                }}
+              />{" "}
+              Show archived
+            </label>
+          </div>
+        </div>
+        {teams.isPending ? <p role="status">Loading teams…</p> : null}
+        {teams.isError ? (
+          <p role="alert">
+            Could not load teams.{" "}
+            <Button variant="link" onClick={() => void teams.refetch()}>
+              Retry
+            </Button>
+          </p>
+        ) : null}
+        {!teams.isPending && !teams.isError && (teams.data ?? []).length === 0 ? (
+          <p className="rounded-xl border border-dashed p-5 text-sm text-muted-foreground">
+            No matching teams. Choose a template above to create one.
+          </p>
+        ) : null}
+        <div className="grid gap-3 sm:grid-cols-2">
+          {(teams.data ?? []).map((team) => (
+            <Card
+              key={team.id}
+              className={`min-w-0 space-y-3 p-4 ${selectedId === team.id ? "border-primary/60" : ""}`}
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="min-w-0 font-semibold [overflow-wrap:anywhere]">{team.name}</h3>
+                <Badge variant="outline">{agencyCategoryLabel(team.category)}</Badge>
+                {team.archived ? <Badge variant="secondary">Archived</Badge> : null}
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="agency-context">
-                  Reference context <span className="text-muted-foreground">(optional)</span>
-                </Label>
-                <Textarea
-                  id="agency-context"
-                  value={context}
-                  onChange={(event) => setContext(event.target.value)}
-                  maxLength={24000}
-                  disabled={busy}
-                  rows={4}
-                  placeholder="Add confirmed facts, relevant excerpts and open questions. Keep credentials out of the brief."
-                />
+              <p className="text-sm text-muted-foreground [overflow-wrap:anywhere]">
+                {team.description}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {team.roles.map((role) => (
+                  <Badge
+                    key={role}
+                    variant="secondary"
+                    className="max-w-full whitespace-normal [overflow-wrap:anywhere]"
+                  >
+                    {role}
+                  </Badge>
+                ))}
               </div>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="max-w-md text-xs text-muted-foreground">
-                  Uses connected, catalog-verified free models. Workers produce proposals; external
-                  actions require the appropriate connected tools.
-                </p>
-                <Button type="submit" disabled={busy || !goal.trim()}>
-                  {execute.isPending ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <UsersRound className="size-4" />
-                  )}
-                  {execute.isPending ? "Team is working…" : "Run team"}
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant={selectedId === team.id ? "secondary" : "outline"}
+                  disabled={runMutation.isPending}
+                  onClick={() => setSelectedId(team.id)}
+                >
+                  Select team
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={runMutation.isPending}
+                  onClick={() => loadDraft(team, team)}
+                >
+                  Edit
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={archiveMutation.isPending || runMutation.isPending}
+                  onClick={() => archiveMutation.mutate(team)}
+                >
+                  <Archive className="size-3.5" />
+                  {team.archived ? "Restore" : "Archive"}
                 </Button>
               </div>
-            </form>
-            {execute.isError ? (
-              <p role="alert" className="mt-4 text-sm text-destructive">
-                {execute.error.message}
+            </Card>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Up to 100 recently updated teams matching these filters are shown. Archived teams can be
+          restored.
+        </p>
+      </section>
+      <Card className="space-y-4 p-4 sm:p-6">
+        <h2 className="font-semibold [overflow-wrap:anywhere]">
+          {selected ? `Work with ${selected.name}` : "Select a saved team to begin"}
+        </h2>
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <Badge variant="outline">
+            {models.isPending
+              ? "Checking models…"
+              : models.isError
+                ? "Model status unavailable"
+                : `${models.data?.routes ?? 0} catalog-verified free routes`}
+          </Badge>
+          <Button variant="link" size="sm" asChild>
+            <Link to="/models">AI Gateway</Link>
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => void models.refetch()}>
+            Refresh models
+          </Button>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="agency-goal">Team goal</Label>
+          <Textarea
+            id="agency-goal"
+            maxLength={4000}
+            value={goal}
+            disabled={runMutation.isPending}
+            onChange={(e) => setGoal(e.target.value)}
+            placeholder="Describe the outcome and what a useful result should include."
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="agency-context">Context to share with the team</Label>
+          <Textarea
+            id="agency-context"
+            maxLength={24000}
+            value={context}
+            disabled={runMutation.isPending}
+            onChange={(e) => setContext(e.target.value)}
+            placeholder="Add the relevant brief, constraints and evidence. Omit credentials."
+          />
+          <p className="text-xs text-muted-foreground">
+            Your goal, entered context and team role names are sent to the selected model providers.
+            Common credential patterns are redacted.
+          </p>
+        </div>
+        <Button
+          disabled={
+            !selected ||
+            selected.archived ||
+            !goal.trim() ||
+            runMutation.isPending ||
+            !models.data?.routes
+          }
+          onClick={() => runMutation.mutate()}
+        >
+          {runMutation.isPending ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Play className="size-4" />
+          )}
+          {runMutation.isPending ? "Generating team proposals…" : "Generate team proposals"}
+        </Button>
+      </Card>
+      {selectedId ? (
+        <section className="space-y-3" aria-labelledby="agency-history">
+          <h2 id="agency-history" className="font-semibold">
+            Private team history
+          </h2>
+          {runs.isPending ? <p role="status">Loading history…</p> : null}
+          {runs.isError ? (
+            <p role="alert">
+              Could not load history.{" "}
+              <Button variant="link" onClick={() => void runs.refetch()}>
+                Retry
+              </Button>
+            </p>
+          ) : null}
+          {runs.data?.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No team runs yet.</p>
+          ) : null}
+          {runs.data?.map((item) => (
+            <details
+              key={item.id}
+              className="rounded-xl border p-4"
+              open={item.id === runMutation.data?.id}
+            >
+              <summary className="cursor-pointer text-sm font-medium">
+                {item.state === "succeeded"
+                  ? "Proposals ready"
+                  : item.state === "running"
+                    ? "In progress"
+                    : "Needs attention"}{" "}
+                · {new Date(item.created_at).toLocaleString()}
+              </summary>
+              <p className="mt-3 whitespace-pre-wrap text-sm [overflow-wrap:anywhere]">
+                {item.goal}
               </p>
-            ) : null}
-          </section>
-          {result ? (
-            <section aria-labelledby="agency-results-title" className="space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h2 id="agency-results-title" className="text-xl font-semibold">
-                    {result.team_name} outputs
-                  </h2>
-                  <p className="mt-1 max-w-xl break-words text-sm text-muted-foreground">
-                    {result.goal}
+              {item.evidence.workers?.length ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-3"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(agencyRunTranscript(item));
+                      toast.success("Team outputs copied");
+                    } catch {
+                      toast.error("Copy is unavailable. Select the outputs below to copy them.");
+                    }
+                  }}
+                >
+                  Copy outputs
+                </Button>
+              ) : null}
+              {item.evidence.workers?.map((worker) => (
+                <article key={worker.role} className="mt-3 space-y-2 rounded-lg border p-3">
+                  <h3 className="text-sm font-semibold [overflow-wrap:anywhere]">
+                    {worker.role} ·{" "}
+                    {worker.status === "completed" ? "Proposal generated" : "Unavailable"}
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    {worker.provider ?? "No available provider"}
+                    {worker.model ? ` · ${worker.model}` : ""}
                   </p>
-                  <p className="text-sm text-muted-foreground">
-                    {result.workers.filter((worker) => worker.status === "completed").length} of 3
-                    workers completed · No external actions executed
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="outline"
-                    disabled={busy}
-                    onClick={async () => {
-                      try {
-                        await navigator.clipboard.writeText(agencyTranscript(result));
-                        setNotice("Team outputs copied.");
-                      } catch {
-                        setNotice("Copy is unavailable. Select and copy the outputs below.");
-                      }
-                    }}
-                  >
-                    <Copy className="size-4" />
-                    Copy outputs
-                  </Button>
-                  <Button
-                    variant="outline"
-                    disabled={busy || saved}
-                    onClick={() => saveResult.mutate()}
-                  >
-                    {saved ? <Check className="size-4" /> : null}
-                    {saved ? "Saved" : "Save to history"}
-                  </Button>
-                </div>
-              </div>
-              {result.workers.map((worker, index) => (
-                <article key={worker.role} className="rounded-xl border bg-card p-5">
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <h3 className="font-semibold">
-                      <span className="mr-3 text-xs tabular-nums text-muted-foreground">
-                        0{index + 1}
-                      </span>
-                      {worker.role}
-                    </h3>
-                    <span className="text-xs text-muted-foreground">
-                      {worker.status === "completed"
-                        ? `${worker.provider} · ${worker.model}`
-                        : "Unavailable"}
-                    </span>
-                  </div>
-                  <p className="mt-4 whitespace-pre-wrap break-words text-sm leading-relaxed">
+                  <p className="whitespace-pre-wrap text-sm [overflow-wrap:anywhere]">
                     {worker.content}
                   </p>
                 </article>
               ))}
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed p-4">
-                <p className="text-sm text-muted-foreground">
-                  Review the outputs, then continue with your connected browser agent.
+              {item.evidence.error ? (
+                <p role="alert" className="mt-3 text-sm text-destructive">
+                  {item.evidence.error}
                 </p>
-                <Button variant="outline" asChild>
-                  <Link to="/cloud-browser">
-                    Open Cloud Browser <ArrowUpRight className="size-4" />
-                  </Link>
-                </Button>
-              </div>
-            </section>
-          ) : null}
-          {saveResult.isError ? (
-            <p role="alert" className="text-sm text-destructive">
-              Could not confirm the save: {saveResult.error.message} Check your chat history before
-              retrying.
-            </p>
-          ) : null}
-          {notice ? (
-            <p role="status" className="text-sm">
-              {notice}
-            </p>
-          ) : null}
-        </div>
-      </div>
-    </main>
+              ) : null}
+              {item.state === "running" ? (
+                <p className="mt-3 text-xs text-muted-foreground">
+                  Completion is not yet verified. If this remains after refreshing, the request may
+                  have been interrupted.
+                </p>
+              ) : null}
+            </details>
+          ))}
+        </section>
+      ) : null}
+    </div>
   );
 }

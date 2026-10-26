@@ -1,93 +1,168 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { createClient } from "@supabase/supabase-js";
+import { AGENCY_CATEGORIES, AGENCY_TEMPLATES, agencyTeamInput } from "./ai-agency.ts";
 import {
-  AGENCY_TEAMS,
-  agencyTeam,
-  agencyTranscript,
-  runAgencyTeam,
-  validateAgencyInput,
-} from "./ai-agency.ts";
-import {
-  BROWSER_PRIMARY_PROVIDERS,
-  BROWSER_PROVIDERS,
-  browserProviderSurface,
-  browserToolFamily,
-} from "./browser-provider-selection.ts";
+  listOwnedAgencyTeams,
+  saveOwnedAgencyTeam,
+  ownedActiveAgencyTeam,
+} from "./ai-agency.server.ts";
+import { runFreeAgentTeam, validateTeamInput } from "./agent-team.ts";
 
-const routes = ["one", "two", "three"].map((name) => ({
-  model: `${name}:free`,
-  upstream: {
-    name,
-    baseUrl: "https://example.invalid",
-    headers: { Authorization: "Bearer fixture-private-key" },
-  },
-}));
-
-test("category teams are distinct, have three specialists and reject unknown teams", () => {
-  assert.ok(AGENCY_TEAMS.some((team) => team.id === "development"));
-  assert.ok(AGENCY_TEAMS.some((team) => team.id === "business"));
-  assert.equal(new Set(AGENCY_TEAMS.map((team) => team.id)).size, AGENCY_TEAMS.length);
-  for (const team of AGENCY_TEAMS) assert.equal(new Set(team.roles).size, 3);
-  assert.throws(() => agencyTeam("untrusted-admin-team"), /Choose/);
-});
-
-test("category requests and saved transcripts redact credentials", async () => {
-  const input = validateAgencyInput({
-    category: "business",
-    goal: "Plan launch",
-    context: 'password="private-value"',
-  });
-  const roles: string[] = [];
-  const result = await runAgencyTeam(routes, input, async (_route, role, task) => {
-    roles.push(role);
-    assert.doesNotMatch(task.context, /private-value/);
-    assert.match(task.context, /costs/);
-    return 'Recommendation; token="worker-secret"';
-  });
-  assert.equal(result.category, "business");
+test("agency templates cover each category with bounded unique agent roles", () => {
   assert.deepEqual(
-    result.workers.map((worker) => worker.role),
-    agencyTeam("business").roles,
+    AGENCY_TEMPLATES.map((t) => t.category),
+    [...AGENCY_CATEGORIES],
   );
-  assert.ok(roles.some((role) => role.includes("Business strategist")));
-  assert.equal(result.execution_performed, false);
-  assert.doesNotMatch(agencyTranscript(result), /private-value|worker-secret|fixture-private-key/);
+  for (const template of AGENCY_TEMPLATES) agencyTeamInput.parse(template);
+  const base = AGENCY_TEMPLATES[0]!;
+  for (const roles of [
+    ["Developer"],
+    ["Reviewer", "reviewer"],
+    Array(7).fill("Agent"),
+    ["Planner", "Role\nInjected"],
+  ])
+    assert.equal(agencyTeamInput.safeParse({ ...base, roles }).success, false);
 });
-
-test("an offline category reports unavailable workers and no false execution success", async () => {
-  const result = await runAgencyTeam(
-    routes,
-    validateAgencyInput({ category: "development", goal: "Build" }),
-    async () => {
-      throw new Error("offline");
+test("category-specific teams run each selected role and preserve proposal-only behavior", async () => {
+  const roles = AGENCY_TEMPLATES[1]!.roles;
+  const called: string[] = [];
+  const routes = [
+    {
+      model: "model:free",
+      upstream: { name: "provider", baseUrl: "https://example.invalid", headers: {} },
     },
+  ];
+  const result = await runFreeAgentTeam(
+    routes,
+    validateTeamInput({ goal: "Plan launch", context: "token=private-value" }),
+    async (_route, role, input) => {
+      called.push(role);
+      assert.ok(!input.context.includes("private-value"));
+      return `${role}: proposal`;
+    },
+    roles,
   );
-  assert.ok(result.workers.every((worker) => worker.status === "unavailable"));
+  assert.deepEqual(called, roles);
   assert.equal(result.execution_performed, false);
+  assert.ok(result.workers.every((worker) => worker.status === "completed"));
+  const partial = await runFreeAgentTeam(
+    routes,
+    { goal: "Plan", context: "" },
+    async (_route, role) => {
+      if (role === roles[0]) throw Error("Offline");
+      return "Proposal";
+    },
+    roles,
+  );
+  assert.equal(partial.workers[0]?.status, "unavailable");
+  assert.equal(partial.workers[1]?.status, "completed");
+});
+test("agency REST writes bind owner and version and reject stale edits and duplicate names", async () => {
+  let url: URL | undefined;
+  let body: Record<string, unknown> = {};
+  let mode = "ok";
+  const db = createClient("https://example.supabase.co", "test-key", {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: {
+      fetch: async (input, init) => {
+        url = new URL(String(input));
+        body = JSON.parse(String(init?.body ?? "{}"));
+        return mode === "duplicate"
+          ? new Response(JSON.stringify({ code: "23505", message: "duplicate" }), {
+              status: 409,
+              headers: { "content-type": "application/json" },
+            })
+          : new Response(JSON.stringify(mode === "stale" ? [] : [{ id: "team-1" }]), {
+              headers: { "content-type": "application/json" },
+            });
+      },
+    },
+  });
+  const team = AGENCY_TEMPLATES[0]!;
+  await saveOwnedAgencyTeam(db, "owner-1", { team });
+  assert.equal(body["user_id"], "owner-1");
+  await saveOwnedAgencyTeam(db, "owner-1", {
+    team,
+    id: "team-1",
+    expectedUpdatedAt: "2026-10-26T00:00:00Z",
+  });
+  assert.equal(url?.searchParams.get("user_id"), "eq.owner-1");
+  assert.equal(url?.searchParams.get("updated_at"), "eq.2026-10-26T00:00:00Z");
+  assert.equal(body["user_id"], undefined);
+  mode = "stale";
   await assert.rejects(
-    runAgencyTeam(
-      [],
-      validateAgencyInput({ category: "research", goal: "Review" }),
-      async () => "unused",
-    ),
-    /No verified free/,
+    saveOwnedAgencyTeam(db, "owner-1", {
+      team,
+      id: "team-1",
+      expectedUpdatedAt: "2026-10-26T00:00:00Z",
+    }),
+    /Team changed/,
+  );
+  mode = "duplicate";
+  await assert.rejects(saveOwnedAgencyTeam(db, "owner-1", { team }), /already have a team/);
+});
+test("owned team queries exclude foreign and archived teams before running", async () => {
+  const requests: URL[] = [];
+  const db = createClient("https://example.supabase.co", "test-key", {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: {
+      fetch: async (input) => {
+        requests.push(new URL(String(input)));
+        return new Response("[]", { headers: { "content-type": "application/json" } });
+      },
+    },
+  });
+  await listOwnedAgencyTeams(db, "owner", { category: "business", archived: false });
+  assert.equal(requests[0]?.searchParams.get("user_id"), "eq.owner");
+  assert.equal(requests[0]?.searchParams.get("category"), "eq.business");
+  assert.equal(requests[0]?.searchParams.get("archived"), "eq.false");
+  await assert.rejects(ownedActiveAgencyTeam(db, "owner", "team-1"), /active team/);
+  assert.equal(requests[1]?.searchParams.get("archived"), "eq.false");
+  assert.equal(requests[1]?.searchParams.get("user_id"), "eq.owner");
+});
+
+test("MCP category selection uses the canonical templates and rejects unknown categories", async () => {
+  const { agencyTemplate, agencyRunTranscript } = await import("./ai-agency.ts");
+  assert.deepEqual(agencyTemplate("business").roles, AGENCY_TEMPLATES[1]!.roles);
+  assert.throws(() => agencyTemplate("untrusted-admin-team"));
+  assert.match(
+    agencyRunTranscript({
+      id: "run",
+      state: "failed",
+      goal: "Review",
+      created_at: "2026-10-26T00:00:00Z",
+      evidence: {
+        workers: [
+          {
+            role: "Reviewer",
+            status: "unavailable",
+            provider: null,
+            model: null,
+            content: "Unavailable",
+          },
+        ],
+      },
+    }),
+    /No external actions have been executed/,
   );
 });
 
-test("browser workers share one tools surface and native providers keep distinct sessions", () => {
+test("browser adapters share one tools surface and native sessions stay distinct", async () => {
+  const {
+    BROWSER_PRIMARY_PROVIDERS,
+    BROWSER_PROVIDERS,
+    browserProviderSurface,
+    browserToolFamily,
+  } = await import("./browser-provider-selection.ts");
   assert.deepEqual(
     BROWSER_PRIMARY_PROVIDERS.map((provider) => provider.id),
     ["tinyfish", "browser_use", "browserbase", "external"],
   );
+  for (const provider of BROWSER_PROVIDERS)
+    assert.ok(
+      BROWSER_PRIMARY_PROVIDERS.some((item) => item.id === browserProviderSurface(provider.id)),
+    );
   assert.equal(browserToolFamily("verification"), "captcha");
   assert.equal(browserToolFamily("tinyfish_tools"), "tinyfish");
-  assert.equal(browserToolFamily("browserbase"), undefined);
-  for (const provider of BROWSER_PROVIDERS) {
-    const surface = browserProviderSurface(provider.id);
-    assert.ok(BROWSER_PRIMARY_PROVIDERS.some((item) => item.id === surface));
-    assert.equal(
-      surface,
-      ["tinyfish", "browser_use", "browserbase"].includes(provider.id) ? provider.id : "external",
-    );
-  }
 });
