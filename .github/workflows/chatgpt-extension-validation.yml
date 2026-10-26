@@ -23,7 +23,7 @@ jobs:
       - name: Static validation
         run: |
           node test-static.mjs
-          node --test autonomy/task-engine.test.mjs
+          node --test autonomy/*.test.mjs
       - name: Verify no forbidden automatic approval behavior
         run: |
           if grep -Ein 'auto.?approve|bypass.?approval' background.js content.js panel.js suggestions.js; then
