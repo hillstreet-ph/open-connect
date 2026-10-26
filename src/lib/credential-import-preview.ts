@@ -58,12 +58,28 @@ function parseCsv(input: string): string[][] {
     row.push(cell);
     rows.push(row);
   }
+  if (rows.length > MAX_ROWS + 1) throw new Error("Too many rows");
   return rows;
 }
 
-export function previewCredentialCsv(input: string): CredentialPreview[] {
-  if (new TextEncoder().encode(input).length > MAX_BYTES) throw new Error("CSV too large");
-  const [header, ...rows] = parseCsv(input.replace(/^\uFEFF/, ""));
+export type ExistingCredentialIdentity = {
+  website: string | null;
+  username: string | null;
+  email_address: string | null;
+  secret_type: string;
+};
+
+function maskAccount(value: string) {
+  return value ? "••••" : "";
+}
+
+export function previewCredentialCsv(
+  input: string,
+  existing: ExistingCredentialIdentity[] = [],
+): CredentialPreview[] {
+  if (new TextEncoder().encode(input).length > MAX_BYTES) throw new Error("Import too large");
+  const [header, ...parsedRows] = parseCsv(input.replace(/^\uFEFF/, ""));
+  const rows = parsedRows.filter((row) => row.some((cell) => cell.trim()));
   if (!header) return [];
   const names = header.map(normalize);
   if (new Set(names).size !== names.length) throw new Error("Duplicate header");
@@ -83,12 +99,14 @@ export function previewCredentialCsv(input: string): CredentialPreview[] {
       try {
         const parsed = new URL(rawUrl);
         if (parsed.protocol !== "https:") throw new Error("HTTPS required");
+        if (parsed.username || parsed.password) issues.push("URL contains embedded credentials");
         origin = parsed.origin;
       } catch {
         issues.push("Invalid HTTPS origin");
       }
       const account = (row[accountColumn] || "").trim();
       if (!account) issues.push("Missing account");
+      if (/^[=+@-]/.test(account)) issues.push("Spreadsheet formula requires review");
       const rawKind = normalize(row[kindColumn] || "password");
       const kind =
         rawKind === "password" || rawKind === "apikey"
@@ -97,16 +115,68 @@ export function previewCredentialCsv(input: string): CredentialPreview[] {
             : "password"
           : "unknown";
       if (kind === "unknown") issues.push("Unknown credential type");
-      const key = JSON.stringify([origin, account.toLowerCase(), kind]);
+      // Usernames may be case-sensitive. Never silently merge accounts.
+      const key = JSON.stringify([origin, account, kind]);
       if (seen.has(key)) issues.push("Duplicate within import");
       seen.add(key);
+      if (
+        existing.some((item) => {
+          let itemOrigin: string;
+          try {
+            itemOrigin = new URL(item.website || "").origin;
+          } catch {
+            return false;
+          }
+          return (
+            origin === itemOrigin &&
+            kind === item.secret_type &&
+            (account === item.username || account === item.email_address)
+          );
+        })
+      )
+        issues.push("Existing credential requires review");
       return {
         row: index + 2,
         origin,
-        account: account.replace(/[\r\n\t]/g, " "),
+        account: maskAccount(account),
         kind,
         status: issues.length ? ("review" as const) : ("ready" as const),
         issues,
       };
     });
+}
+
+/** Flat JSON schema only. Unknown/nested exports fail closed without echoing source. */
+export function previewCredentialJson(
+  input: string,
+  existing: ExistingCredentialIdentity[] = [],
+): CredentialPreview[] {
+  if (new TextEncoder().encode(input).length > MAX_BYTES) throw new Error("Import too large");
+  let data: unknown;
+  try {
+    data = JSON.parse(input.replace(/^\uFEFF/, ""));
+  } catch {
+    throw new Error("Invalid JSON");
+  }
+  if (!Array.isArray(data)) throw new Error("JSON must be an array of flat records");
+  if (data.length > MAX_ROWS) throw new Error("Too many rows");
+  const headers = ["url", "username", "type"];
+  const quote = (value: string) => '"' + value.replaceAll('"', '""') + '"';
+  const rows = data.map((item: unknown) => {
+    if (!item || typeof item !== "object" || Array.isArray(item))
+      throw new Error("Invalid JSON record");
+    const record = item as Record<string, unknown>;
+    if (Object.values(record).some((v) => typeof v !== "string"))
+      throw new Error("Only flat string fields are supported");
+    if (!("url" in record) || !("username" in record))
+      throw new Error("JSON records require url and username");
+    if (Object.values(record).some((v) => (v as string).length > MAX_CELL))
+      throw new Error("Cell too long");
+    return headers
+      .map((key) =>
+        quote((record[key] as string | undefined) ?? (key === "type" ? "password" : "")),
+      )
+      .join(",");
+  });
+  return previewCredentialCsv([headers.join(","), ...rows].join("\n"), existing);
 }
