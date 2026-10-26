@@ -1,1 +1,27 @@
-const defaults={suggest:true,context:true,notes:'',routine:true,continuation:true};const keys=['suggest','context','routine','continuation'];chrome.storage.local.get(defaults,values=>{for(const k of keys)document.getElementById(k).checked=values[k];document.getElementById('notes').value=values.notes;});for(const k of keys)document.getElementById(k).addEventListener('change',e=>chrome.storage.local.set({[k]:e.target.checked}));document.getElementById('save').addEventListener('click',()=>{chrome.storage.local.set({notes:document.getElementById('notes').value},()=>setStatus('Local context saved'));});function setStatus(t){document.getElementById('status').textContent=t;}for(const button of document.querySelectorAll('[data-command]'))button.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(button.dataset.command);setStatus('Copied '+button.dataset.command);}catch{setStatus('Clipboard unavailable');}});
+const defaults = { suggest: true, context: true, notes: "", routine: true, continuation: true };
+const keys = ["suggest", "context", "routine", "continuation"];
+chrome.storage.local.get(defaults, (values) => {
+  for (const k of keys) document.getElementById(k).checked = values[k];
+  document.getElementById("notes").value = values.notes;
+});
+for (const k of keys)
+  document
+    .getElementById(k)
+    .addEventListener("change", (e) => chrome.storage.local.set({ [k]: e.target.checked }));
+document.getElementById("save").addEventListener("click", () => {
+  chrome.storage.local.set({ notes: document.getElementById("notes").value }, () =>
+    setStatus("Local context saved"),
+  );
+});
+function setStatus(t) {
+  document.getElementById("status").textContent = t;
+}
+for (const button of document.querySelectorAll("[data-command]"))
+  button.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(button.dataset.command);
+      setStatus("Copied " + button.dataset.command);
+    } catch {
+      setStatus("Clipboard unavailable");
+    }
+  });

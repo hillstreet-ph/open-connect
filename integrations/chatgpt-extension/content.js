@@ -1,3 +1,53 @@
 // Opt-in local helper; no conversation scraping or auto-sending.
 let helper;
-async function render(){const {suggest,context,notes}=await chrome.storage.local.get({suggest:true,context:true,notes:''});helper?.remove();helper=null;if(!suggest)return;helper=document.createElement('aside');helper.id='oc-helper';helper.setAttribute('aria-label','Open-Connect suggestions');helper.style.cssText='position:fixed;right:18px;bottom:100px;z-index:2147483000;background:#1e293b;color:white;border:1px solid #64748b;border-radius:12px;padding:10px;box-shadow:0 4px 18px #0005;font:13px system-ui;max-width:280px';const heading=document.createElement('div');heading.textContent='Open-Connect suggestions';heading.style.fontWeight='bold';helper.append(heading);if(context&&notes.trim()){const hint=document.createElement('p');hint.textContent='Project context saved locally';helper.append(hint);}for(const command of ['/openconnect','/agents','/knowledge','/workflows']){const b=document.createElement('button');b.textContent=command;b.style.cssText='margin:3px;padding:6px;border:1px solid #94a3b8;border-radius:5px;cursor:pointer';b.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(command);heading.textContent='Copied '+command;}catch{heading.textContent='Copy failed';}});helper.append(b);}const close=document.createElement('button');close.textContent='×';close.setAttribute('aria-label','Close suggestions');close.style.marginLeft='8px';close.addEventListener('click',()=>helper.remove());helper.append(close);document.body.append(helper);}render();chrome.storage.onChanged.addListener((changes,area)=>{if(area==='local'&&('suggest'in changes||'context'in changes||'notes'in changes))render();});
+async function render() {
+  const { suggest, context, notes } = await chrome.storage.local.get({
+    suggest: true,
+    context: true,
+    notes: "",
+  });
+  helper?.remove();
+  helper = null;
+  if (!suggest) return;
+  helper = document.createElement("aside");
+  helper.id = "oc-helper";
+  helper.setAttribute("aria-label", "Open-Connect suggestions");
+  helper.style.cssText =
+    "position:fixed;right:18px;bottom:100px;z-index:2147483000;background:#1e293b;color:white;border:1px solid #64748b;border-radius:12px;padding:10px;box-shadow:0 4px 18px #0005;font:13px system-ui;max-width:280px";
+  const heading = document.createElement("div");
+  heading.textContent = "Open-Connect suggestions";
+  heading.style.fontWeight = "bold";
+  helper.append(heading);
+  if (context && notes.trim()) {
+    const hint = document.createElement("p");
+    hint.textContent = "Project context saved locally";
+    helper.append(hint);
+  }
+  for (const command of ["/openconnect", "/agents", "/knowledge", "/workflows"]) {
+    const b = document.createElement("button");
+    b.textContent = command;
+    b.style.cssText =
+      "margin:3px;padding:6px;border:1px solid #94a3b8;border-radius:5px;cursor:pointer";
+    b.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(command);
+        heading.textContent = "Copied " + command;
+      } catch {
+        heading.textContent = "Copy failed";
+      }
+    });
+    helper.append(b);
+  }
+  const close = document.createElement("button");
+  close.textContent = "×";
+  close.setAttribute("aria-label", "Close suggestions");
+  close.style.marginLeft = "8px";
+  close.addEventListener("click", () => helper.remove());
+  helper.append(close);
+  document.body.append(helper);
+}
+render();
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "local" && ("suggest" in changes || "context" in changes || "notes" in changes))
+    render();
+});
