@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { BrowserAgentChat } from "@/components/browser-agent-chat";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { Button } from "@/components/ui/button";
 import { ResourceLibraryPage } from "@/components/resource-library-page";
 
 export const Route = createFileRoute("/_authenticated/agents")({
@@ -19,7 +19,6 @@ export const Route = createFileRoute("/_authenticated/agents")({
 
 function AgentsPage() {
   const { run } = Route.useSearch();
-  const navigate = Route.useNavigate();
   return (
     <div className="space-y-6">
       <section
@@ -27,12 +26,17 @@ function AgentsPage() {
         aria-labelledby="browser-agent-heading"
       >
         <h1 id="browser-agent-heading" className="text-xl font-semibold">
-          Execute a browser task
+          Browser tasks
         </h1>
-        <BrowserAgentChat
-          runId={run}
-          onSelectRun={(id) => void navigate({ search: id ? { run: id } : {}, replace: false })}
-        />
+        <p className="text-sm text-muted-foreground">
+          Use the shared Cloud Browser workspace for agent tasks, saved profiles, live sessions and
+          direct control.
+        </p>
+        <Button asChild>
+          <Link to="/cloud-browser" search={{ provider: "tinyfish", ...(run ? { run } : {}) }}>
+            {run ? "Continue browser session" : "Open Cloud Browser"}
+          </Link>
+        </Button>
       </section>
       <ResourceLibraryPage
         resourceType="agent"

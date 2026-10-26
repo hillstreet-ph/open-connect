@@ -29,6 +29,16 @@ export const BROWSER_PROVIDERS = [
     description: "Playwright, Stagehand and other connected browser tools.",
   },
   {
+    id: "tinyfish_tools",
+    name: "TinyFish research tools",
+    description: "Search, fetch, research and monitoring through a connected TinyFish worker.",
+  },
+  {
+    id: "verification",
+    name: "Verification tools",
+    description: "Discover supported verification tools and same-session handoff requirements.",
+  },
+  {
     id: "browseract",
     name: "BrowserAct",
     description: "Requires a verified browser worker; local CLI is not a cloud connection.",
@@ -40,6 +50,17 @@ export const BROWSER_PROVIDERS = [
   },
 ] as const;
 export type BrowserProviderId = (typeof BROWSER_PROVIDERS)[number]["id"];
+
+/** One surface per provider; worker adapters share one connected-tools explorer. */
+export const BROWSER_PRIMARY_PROVIDERS = BROWSER_PROVIDERS.filter((item) =>
+  ["tinyfish", "browser_use", "browserbase", "external"].includes(item.id),
+);
+export function browserProviderSurface(provider: BrowserProviderId) {
+  return provider === "tinyfish" || provider === "browser_use" || provider === "browserbase"
+    ? provider
+    : "external";
+}
+
 export function browserProvider(value: unknown): BrowserProviderId {
   return BROWSER_PROVIDERS.some((item) => item.id === value)
     ? (value as BrowserProviderId)
@@ -158,6 +179,14 @@ export const BROWSER_WORKERS = {
   },
 } as const;
 export type BrowserToolFamily = keyof typeof BROWSER_WORKERS | "tinyfish" | "captcha";
+export function browserToolFamily(provider: BrowserProviderId): BrowserToolFamily | undefined {
+  if (provider === "tinyfish_tools") return "tinyfish";
+  if (provider === "verification") return "captcha";
+  if (provider === "playwright" || provider === "stagehand" || provider === "chrome_devtools")
+    return provider;
+  return undefined;
+}
+
 export function browserFamilyTool(family: BrowserToolFamily, name: string) {
   const value = name.toLowerCase();
   if (family === "playwright") return /(?:^|_)browser_/.test(value);

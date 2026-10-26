@@ -14,6 +14,7 @@ import {
   Sparkles,
   Workflow,
   ShieldCheck,
+  UsersRound,
 } from "lucide-react";
 import {
   Sidebar,
@@ -80,6 +81,7 @@ const CONNECTIONS: Item[] = [
   { to: "/connections", label: "Connectors", icon: Plug },
   { to: "/secrets", label: "Credentials", icon: LockKeyhole },
   { to: "/models", label: "AI Gateway", icon: Sparkles },
+  { to: "/ai-agency", label: "AI Agency", icon: UsersRound },
 ];
 
 function NavGroup({ label, items, pathname }: { label: string; items: Item[]; pathname: string }) {

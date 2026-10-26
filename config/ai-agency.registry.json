@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0.0",
+  "routing": "connected_catalog_verified_free_only",
+  "teams": [
+    {
+      "id": "development",
+      "name": "Development team",
+      "description": "Plan, implement and review software changes.",
+      "roles": ["Software Architect", "Developer", "QA Reviewer"]
+    },
+    {
+      "id": "business",
+      "name": "Business team",
+      "description": "Explore business goals, processes and evidence.",
+      "roles": ["Business Strategist", "Operations Analyst", "Risk Reviewer"]
+    },
+    {
+      "id": "marketing",
+      "name": "Marketing team",
+      "description": "Prepare campaign ideas, copy and review criteria.",
+      "roles": ["Campaign Strategist", "Content Writer", "Brand Reviewer"]
+    },
+    {
+      "id": "research",
+      "name": "Research team",
+      "description": "Develop a research plan, analysis and verification checklist.",
+      "roles": ["Research Planner", "Research Analyst", "Evidence Reviewer"]
+    },
+    {
+      "id": "operations",
+      "name": "Operations team",
+      "description": "Improve a workflow and identify practical handoffs.",
+      "roles": ["Workflow Coordinator", "Process Designer", "Quality Reviewer"]
+    },
+    {
+      "id": "custom",
+      "name": "Custom team",
+      "description": "Customize a team for your own workflow.",
+      "roles": ["Planner", "Builder", "Reviewer"]
+    }
+  ]
+}

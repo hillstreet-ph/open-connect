@@ -1,3 +1,4 @@
+import { agencyRoles } from "./ai-agency.ts";
 export type TeamRoute = {
   model: string;
   upstream: { name: string; baseUrl: string; headers: Record<string, string> };
@@ -55,12 +56,13 @@ export async function runFreeAgentTeam(
     role: string,
     input: { goal: string; context: string },
   ) => Promise<string>,
+  requestedRoles: readonly string[] = ["Planner", "Builder", "Reviewer"],
 ) {
   if (!routes.length)
     throw new Error(
       "No verified free model route is available. Connect a provider with a free catalog in AI Gateway.",
     );
-  const roles = ["Planner", "Builder", "Reviewer"];
+  const roles = agencyRoles.parse([...requestedRoles]);
   const workers = await Promise.all(
     roles.map(async (role, index) => {
       for (const route of workerRoutes(routes, index)) {

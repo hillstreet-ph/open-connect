@@ -1,3 +1,4 @@
+import { AGENCY_CATEGORIES, agencyTemplate } from "@/lib/ai-agency";
 import { resourceReviewState, isResourceApproved } from "@/lib/resource-approval";
 import {
   adminAccess,
@@ -438,10 +439,11 @@ const PLATFORM_TOOLS: McpTool[] = [
   {
     name: "run_agent_team",
     description:
-      "Delegate a goal to Planner, Builder, and Reviewer workers on connected catalog-verified free models only, with rotation and bounded fallback. Returns proposals, never executes tools or changes data. Requires models:invoke and agents:invoke; personal model credentials are unavailable to bounded keys.",
+      "Delegate a goal to category specialist teams (development, business, marketing, research, operations, custom) or generic Planner, Builder, and Reviewer workers on connected catalog-verified free models only, with rotation and bounded fallback. Returns proposals, never executes tools or changes data. Requires models:invoke and agents:invoke; personal model credentials are unavailable to bounded keys.",
     inputSchema: {
       type: "object",
       properties: {
+        category: { type: "string", enum: [...AGENCY_CATEGORIES] },
         goal: { type: "string", minLength: 1, maxLength: 4000 },
         context: { type: "string", maxLength: 24000 },
       },
@@ -2795,10 +2797,12 @@ export const Route = createFileRoute("/mcp")({
             const { resolveAutoFreeRoutes, resolveUserUpstreams } =
               await import("@/lib/gateway.server");
             const input = validateTeamInput(args);
+            const roles =
+              args["category"] !== undefined ? agencyTemplate(args["category"]).roles : undefined;
             const routes = await resolveAutoFreeRoutes(
               await resolveUserUpstreams(key.userId, false),
             );
-            result = textResult(await runFreeAgentTeam(routes, input, requestTeamWorker));
+            result = textResult(await runFreeAgentTeam(routes, input, requestTeamWorker, roles));
           } else if (name === "capture_context_exchange") {
             await requireControlWrite(key);
             if (key.projectId || key.workspaceId || key.organizationId)

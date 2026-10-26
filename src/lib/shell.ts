@@ -4,6 +4,7 @@ export const APP_ROUTE_PREFIXES = [
   "/settings",
   "/api-keys",
   "/agents",
+  "/ai-agency",
   "/toolkits",
   "/admin",
   "/secrets",
