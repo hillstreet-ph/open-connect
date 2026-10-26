@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -12,12 +12,23 @@ import { Label } from "@/components/ui/label";
 
 type Tool = { name: string; description?: string; inputSchema?: unknown };
 
-export function PlaywrightBrowser() {
+export function PlaywrightBrowser({
+  initialGoal = "",
+  onActiveChange,
+  onTaskComplete,
+}: {
+  initialGoal?: string | undefined;
+  onActiveChange?: ((active: boolean) => void) | undefined;
+  onTaskComplete?: (() => void) | undefined;
+} = {}) {
   const list = useServerFn(listPlaywrightTools);
   const call = useServerFn(callPlaywrightTool);
   const task = useServerFn(runPlaywrightTask);
-  const [goal, setGoal] = useState("");
-  const agent = useMutation({ mutationFn: () => task({ data: { goal } }) });
+  const [goal, setGoal] = useState(initialGoal);
+  const agent = useMutation({
+    mutationFn: () => task({ data: { goal } }),
+    onSuccess: () => onTaskComplete?.(),
+  });
   const [name, setName] = useState("browser_navigate");
   const [args, setArgs] = useState('{"url":"https://example.com"}');
   const catalog = useQuery({
@@ -37,6 +48,11 @@ export function PlaywrightBrowser() {
       });
     },
   });
+  const active = agent.isPending || execution.isPending;
+  useEffect(() => {
+    onActiveChange?.(active);
+    return () => onActiveChange?.(false);
+  }, [active, onActiveChange]);
   return (
     <section className="space-y-4 rounded-xl border p-5">
       <div className="flex items-center justify-between gap-3">
@@ -98,6 +114,7 @@ export function PlaywrightBrowser() {
               )}
               <p className="text-xs">
                 {agent.data.status} · {agent.data.actions.length} browser actions
+                {agent.data.history_saved ? " · Saved to history" : " · History could not be saved"}
               </p>
             </div>
           ) : null}
