@@ -80,7 +80,7 @@ export async function runFreeAgentTeam(
           const content = (await request(route, role, input)).trim();
           if (
             content &&
-            !/^(?:(?:user|system|content)\s+)?safety\s*:\s*(?:safe|unsafe|allowed|blocked)\.?$/i.test(
+            !/^(?:(?:(?:user|system|content)\s+)?safety\s*:\s*)?(?:safe|unsafe|allowed|blocked)\.?(?:\s+S\d+(?:\s*[,;]\s*S\d+)*)?$/i.test(
               content,
             )
           )

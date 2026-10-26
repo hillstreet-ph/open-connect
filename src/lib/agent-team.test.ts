@@ -175,3 +175,26 @@ test("fallback keeps distinct connected credentials for the same provider eligib
   assert.ok(result.workers.every((worker) => worker.status === "completed"));
   assert.doesNotMatch(JSON.stringify(result), /fixture-working|fixture-offline/);
 });
+
+for (const classification of ["safe", "unsafe\nS1", "Safety: unsafe", "unsafe\nS1,S2"]) {
+  test(`classifier-only ${JSON.stringify(classification)} falls back to a generative route`, async () => {
+    const available = [
+      {
+        model: "openrouter/free",
+        upstream: { name: "router", baseUrl: "https://router.invalid", headers: {} },
+      },
+      {
+        model: "generative:free",
+        upstream: { name: "other", baseUrl: "https://other.invalid", headers: {} },
+      },
+    ];
+    const result = await runFreeAgentTeam(
+      available,
+      { goal: "Review", context: "" },
+      async (route) =>
+        route.model === "openrouter/free" ? classification : "Review the authorization checks.",
+    );
+    assert.ok(result.workers.every((worker) => worker.model === "generative:free"));
+    assert.ok(result.workers.every((worker) => worker.status === "completed"));
+  });
+}
