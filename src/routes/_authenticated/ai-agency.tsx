@@ -1,4 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { WorkforceDirectory } from "@/components/workforce-directory";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
@@ -30,6 +31,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/_authenticated/ai-agency")({
+  validateSearch: (
+    input: Record<string, unknown>,
+  ): { agent?: string; chat?: string; project?: string; view?: "teams" } => {
+    const result: { agent?: string; chat?: string; project?: string; view?: "teams" } = {};
+    for (const key of ["agent", "chat", "project"] as const)
+      if (typeof input[key] === "string" && /^[0-9a-f-]{36}$/i.test(input[key] as string))
+        result[key] = input[key] as string;
+    if (input["view"] === "teams") result.view = "teams";
+    return result;
+  },
   head: () => ({
     meta: [{ title: "AI Agency — Open-Connect" }, { name: "robots", content: "noindex" }],
   }),
@@ -43,7 +54,35 @@ const emptyDraft: AgencyTeamDraft = {
 };
 function AgencyPage() {
   const { user } = useAuth();
-  return <AgencyWorkspace key={user?.id ?? "signed-out"} userId={user?.id} />;
+  const search = Route.useSearch();
+  const navigate = useNavigate();
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-2">
+        <Button
+          variant={search.view === "teams" ? "outline" : "default"}
+          onClick={() => void navigate({ to: "/ai-agency", search: {} })}
+        >
+          Workforce Directory
+        </Button>
+        <Button
+          variant={search.view === "teams" ? "default" : "outline"}
+          onClick={() => void navigate({ to: "/ai-agency", search: { view: "teams" } })}
+        >
+          Existing teams & proposal runs
+        </Button>
+      </div>
+      {search.view === "teams" ? (
+        <AgencyWorkspace key={user?.id ?? "signed-out"} userId={user?.id} />
+      ) : (
+        <WorkforceDirectory
+          key={user?.id ?? "signed-out"}
+          location={search}
+          navigate={(value) => void navigate({ to: "/ai-agency", search: value })}
+        />
+      )}
+    </div>
+  );
 }
 function AgencyWorkspace({ userId }: { userId: string | undefined }) {
   const qc = useQueryClient();

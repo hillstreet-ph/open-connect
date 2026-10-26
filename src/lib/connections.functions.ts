@@ -1,3 +1,4 @@
+import { connectionUsesBrowserLogin } from "./connection-login.ts";
 import { connectionOwnedSecretId } from "./connection-credential-lifecycle";
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -372,6 +373,14 @@ export const listConnectionCatalog = createServerFn({ method: "GET" }).handler(a
         toolkit?.authMethods ??
         (item.provider === "custom_mcp" ? ["MCP"] : []),
       oauth: method !== "api_key",
+      oauth_supported:
+        method !== "api_key" &&
+        (method === "native_oauth" ||
+          (toolkit
+            ? toolkit.authMethods.some((scheme) =>
+                ["OAUTH2", "OAUTH1"].includes(scheme.toUpperCase()),
+              )
+            : item.oauth)),
       connection_method: method,
       oauth_ready:
         method === "native_oauth" ? githubReady : method === "managed_oauth" ? ready : false,
@@ -441,11 +450,18 @@ export const listAppConnections = createServerFn({ method: "GET" })
       );
       return {
         ...connection,
+        browser_login: connectionUsesBrowserLogin({ credential_reference, metadata }),
         identity: connectionIdentity(metadata),
         metadata:
-          ["custom_mcp", "custom_api", "supabase", "databricks", "litellm"].includes(
-            connection.provider,
-          ) &&
+          [
+            "custom_mcp",
+            "custom_api",
+            "proton_pass",
+            "proton_drive",
+            "supabase",
+            "databricks",
+            "litellm",
+          ].includes(connection.provider) &&
           metadata &&
           typeof metadata === "object" &&
           !Array.isArray(metadata)

@@ -1,3 +1,4 @@
+import { connectionLogin, connectionUsesBrowserLogin } from "@/lib/connection-login";
 import {
   UniversalConnectorDialog,
   type ConnectorInitial,
@@ -42,6 +43,7 @@ type CatalogApp = {
   scopes: string[];
   oauth: boolean;
   oauth_ready: boolean;
+  oauth_supported?: boolean;
   connection_method?: string;
   auth_methods?: string[];
 };
@@ -366,7 +368,7 @@ function ConnectionsPage() {
                       <div className="min-w-0">
                         <p className="font-semibold leading-snug">{app.display_name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {`${app.category} · ${app.provider === "custom_mcp" ? "MCP endpoint" : app.connection_method === "managed_oauth" ? "Composio" : app.connection_method === "native_oauth" ? "Official provider" : "API key"}`}
+                          {`${app.category} · ${connectionLogin(app).label}`}
                         </p>
                         {app.auth_methods?.length ? (
                           <p className="text-xs text-muted-foreground">
@@ -401,43 +403,16 @@ function ConnectionsPage() {
                           size="sm"
                           variant="outline"
                           className="shrink-0 border-blue-600 bg-blue-700 text-white hover:bg-blue-800 hover:text-white focus-visible:ring-2 focus-visible:ring-blue-400"
-                          disabled={
-                            !connection &&
-                            (connectMutation.isPending || (app.oauth && !app.oauth_ready))
-                          }
+                          disabled={connectMutation.isPending}
                           title={
                             app.oauth && !app.oauth_ready
                               ? "Official provider OAuth setup is not available yet"
                               : undefined
                           }
-                          onClick={() =>
-                            connection
-                              ? setManagedApp(app as CatalogApp)
-                              : app.oauth
-                                ? connectMutation.mutate(app.provider)
-                                : (() => {
-                                    if (["custom_mcp", "custom_api"].includes(app.provider)) {
-                                      setCustomInitial(undefined);
-                                      setCustomOpen(true);
-                                      return;
-                                    }
-                                    setAuthType(
-                                      ["custom_mcp", "custom_api"].includes(app.provider)
-                                        ? "none"
-                                        : "bearer",
-                                    );
-                                    setSelectedApp(app as CatalogApp);
-                                  })()
-                          }
+                          onClick={() => setManagedApp(app as CatalogApp)}
                         >
                           <Plus className="size-4" aria-hidden="true" />
-                          {connection
-                            ? "Manage accounts"
-                            : app.oauth
-                              ? app.oauth_ready
-                                ? "Connect"
-                                : "Setup required"
-                              : "Connect"}
+                          {connection ? "Manage accounts" : "Connect account"}
                         </Button>
                       </div>
                     )}
@@ -477,6 +452,16 @@ function ConnectionsPage() {
               Manage each account separately. Adding an account keeps your existing connections.
             </DialogDescription>
           </DialogHeader>
+          {managedApp && (
+            <div className="rounded-lg border p-4 space-y-2">
+              <p className="font-medium">{connectionLogin(managedApp).label}</p>
+              <p className="text-sm text-muted-foreground">{connectionLogin(managedApp).detail}</p>
+              <p className="text-xs text-muted-foreground">
+                OAuth permissions are approved on the provider page. API keys and tokens belong in
+                the secure form, never in chat.
+              </p>
+            </div>
+          )}
           <div className="space-y-3">
             {(mine.data ?? [])
               .filter((c) => c.provider === managedApp?.provider)
@@ -484,10 +469,14 @@ function ConnectionsPage() {
                 <ConnectionAccountCard
                   key={c.id}
                   account={c}
-                  statusLabel={connectionStatusLabel(c.status)}
+                  statusLabel={
+                    c.provider === "custom_api" && c.status === "connected"
+                      ? "API schema validated · verify provider access"
+                      : connectionStatusLabel(c.status)
+                  }
                   busy={disconnectMutation.isPending || connectMutation.isPending}
                   reconnectReady={Boolean(
-                    managedApp && (!managedApp.oauth || managedApp.oauth_ready),
+                    managedApp && (!connectionUsesBrowserLogin(c) || managedApp.oauth_ready),
                   )}
                   onDisconnect={() => disconnectMutation.mutate(c.id)}
                   onReconnect={() => {
@@ -498,7 +487,7 @@ function ConnectionsPage() {
                       setManagedApp(null);
                       return;
                     }
-                    if (managedApp.oauth) {
+                    if (connectionUsesBrowserLogin(c)) {
                       toast.info(
                         "Authorize the same provider account to reconnect. The existing connection is kept until you choose to disconnect it.",
                       );
@@ -551,9 +540,6 @@ function ConnectionsPage() {
                 setReconnectId(undefined);
                 setAccountLabel("");
                 setEndpointUrl("");
-                setConnectionName("");
-                setDescription("");
-                setAuthHeader("X-API-Key");
                 setApiKey("");
                 setSelectedApp(managedApp);
                 setManagedApp(null);
@@ -563,8 +549,24 @@ function ConnectionsPage() {
             <Plus aria-hidden="true" className="size-4" />
             {managedApp?.oauth && !managedApp.oauth_ready
               ? "Provider setup required"
-              : "Add new account"}
+              : managedApp
+                ? connectionLogin(managedApp).action
+                : "Connect account"}
           </Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setCustomInitial(undefined);
+              setCustomOpen(true);
+              setManagedApp(null);
+            }}
+          >
+            Connect a custom MCP or API endpoint
+          </Button>
+          <p className="text-xs text-muted-foreground">
+            Custom MCP supports discovered OAuth and API/token authentication. API connectors
+            require the provider's documented OpenAPI definition and credential.
+          </p>
         </DialogContent>
       </Dialog>
 
