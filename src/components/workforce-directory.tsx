@@ -111,8 +111,8 @@ export function WorkforceDirectory({
         </Badge>
         <h1 className="text-2xl font-semibold sm:text-3xl">Specialists for your next mission</h1>
         <p className="max-w-2xl text-sm text-muted-foreground">
-          Configure your department leads and specialists, connect their apps, and launch
-          version-bound chats. Autonomous background execution is a separate release.
+          Find your department leads and specialists, connect their apps, and launch private chats
+          with controlled tool access.
         </p>
         <div className="flex flex-wrap gap-2">
           <Button
@@ -191,7 +191,17 @@ export function WorkforceDirectory({
           {(rows.error || opts.error)?.message}
         </p>
       )}
-      {rows.data?.canManage && (
+      {rows.data?.canManage && agents.length > 0 && (
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={install.isPending}
+          onClick={() => install.mutate()}
+        >
+          {install.isPending ? "Setting up…" : "Add missing department templates"}
+        </Button>
+      )}
+      {rows.data?.canManage && agents.length === 0 && (
         <div className="flex flex-wrap items-center gap-3 rounded-lg border p-4">
           <Button disabled={install.isPending} onClick={() => install.mutate()}>
             {install.isPending ? "Setting up…" : "Set up department templates"}
