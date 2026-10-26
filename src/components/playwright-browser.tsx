@@ -5,6 +5,9 @@ import {
   listPlaywrightTools,
   callPlaywrightTool,
   runPlaywrightTask,
+  cancelPlaywrightTask,
+  startPlaywrightSignIn,
+  endPlaywrightSignIn,
 } from "@/lib/playwright.functions";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,9 +27,21 @@ export function PlaywrightBrowser({
   const list = useServerFn(listPlaywrightTools);
   const call = useServerFn(callPlaywrightTool);
   const task = useServerFn(runPlaywrightTask);
+  const startSignIn = useServerFn(startPlaywrightSignIn);
+  const endSignIn = useServerFn(endPlaywrightSignIn);
+  const [signInUrl, setSignInUrl] = useState("");
+  const viewer = useMutation({ mutationFn: () => startSignIn({ data: { url: signInUrl } }) });
+  const endViewer = useMutation({
+    mutationFn: () => endSignIn({}),
+    onSuccess: () => viewer.reset(),
+  });
+  const manual = viewer.isSuccess;
+  const cancelTask = useServerFn(cancelPlaywrightTask);
+  const cancellation = useMutation({ mutationFn: () => cancelTask({}) });
   const [goal, setGoal] = useState(initialGoal);
   const agent = useMutation({
     mutationFn: () => task({ data: { goal } }),
+    onMutate: () => cancellation.reset(),
     onSuccess: () => onTaskComplete?.(),
   });
   const [name, setName] = useState("browser_navigate");
@@ -48,7 +63,7 @@ export function PlaywrightBrowser({
       });
     },
   });
-  const active = agent.isPending || execution.isPending;
+  const active = manual || viewer.isPending || agent.isPending || execution.isPending;
   useEffect(() => {
     onActiveChange?.(active);
     return () => onActiveChange?.(false);
@@ -80,6 +95,64 @@ export function PlaywrightBrowser({
       {catalog.isError ? <p role="alert">{catalog.error.message}</p> : null}
       {catalog.isSuccess ? (
         <>
+          {catalog.data.liveViewEnabled ? (
+            <div className="space-y-3 rounded-lg border p-4">
+              <h3 className="font-medium">Private sign-in</h3>
+              <p className="text-sm text-muted-foreground">
+                Open the website and sign in directly with your mouse and keyboard. Agent control
+                pauses until you finish. Passwords stay out of task prompts.
+              </p>
+              {!manual ? (
+                <>
+                  <Label htmlFor="browser-signin-url">Website address</Label>
+                  <input
+                    id="browser-signin-url"
+                    type="url"
+                    className="w-full rounded border bg-background p-2"
+                    placeholder="https://example.com/login"
+                    value={signInUrl}
+                    disabled={agent.isPending || viewer.isPending}
+                    onChange={(event) => setSignInUrl(event.target.value)}
+                  />
+                  <Button
+                    disabled={
+                      agent.isPending ||
+                      execution.isPending ||
+                      viewer.isPending ||
+                      !signInUrl.trim()
+                    }
+                    onClick={() => viewer.mutate()}
+                  >
+                    {viewer.isPending ? "Opening…" : "Open private browser"}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <iframe
+                    title="Private browser sign-in"
+                    src={viewer.data.url}
+                    className="h-[38rem] w-full rounded border"
+                    sandbox="allow-scripts allow-same-origin"
+                    referrerPolicy="no-referrer"
+                    onLoad={(event) =>
+                      event.currentTarget.contentWindow?.postMessage(
+                        { viewToken: viewer.data.token },
+                        new URL(viewer.data.url).origin,
+                      )
+                    }
+                  />
+                  <p className="text-xs">
+                    This view expires after ten minutes. Finish sign-in to let the agent continue.
+                  </p>
+                  <Button disabled={endViewer.isPending} onClick={() => endViewer.mutate()}>
+                    {endViewer.isPending ? "Finishing…" : "Finish sign-in"}
+                  </Button>
+                </>
+              )}
+              {viewer.isError ? <p role="alert">{viewer.error.message}</p> : null}
+              {endViewer.isError ? <p role="alert">{endViewer.error.message}</p> : null}
+            </div>
+          ) : null}
           <Label htmlFor="playwright-goal">Browser task</Label>
           <Textarea
             id="playwright-goal"
@@ -89,11 +162,27 @@ export function PlaywrightBrowser({
             onChange={(event) => setGoal(event.target.value)}
           />
           <Button
-            disabled={agent.isPending || execution.isPending || !goal.trim()}
+            disabled={
+              manual || viewer.isPending || agent.isPending || execution.isPending || !goal.trim()
+            }
             onClick={() => agent.mutate()}
           >
             {agent.isPending ? "Working…" : "Run task"}
           </Button>
+          {agent.isPending ? (
+            <Button
+              variant="destructive"
+              disabled={cancellation.isPending || cancellation.isSuccess}
+              onClick={() => cancellation.mutate()}
+            >
+              {cancellation.isPending
+                ? "Stopping…"
+                : cancellation.isSuccess
+                  ? "Stopped"
+                  : "Stop task"}
+            </Button>
+          ) : null}
+          {cancellation.isError ? <p role="alert">{cancellation.error.message}</p> : null}
           <p className="text-xs text-muted-foreground">
             Uses your connected free model and up to eight Playwright actions. Never enter passwords
             here.
@@ -127,7 +216,7 @@ export function PlaywrightBrowser({
               <Button
                 key={action}
                 variant="outline"
-                disabled={execution.isPending || agent.isPending}
+                disabled={manual || viewer.isPending || execution.isPending || agent.isPending}
                 onClick={() =>
                   execution.mutate({
                     name: action!,
@@ -146,7 +235,7 @@ export function PlaywrightBrowser({
               id="playwright-tool"
               className="w-full rounded-md border bg-background p-2"
               value={name}
-              disabled={execution.isPending || agent.isPending}
+              disabled={manual || viewer.isPending || execution.isPending || agent.isPending}
               onChange={(event) => {
                 setName(event.target.value);
                 setArgs(
@@ -174,12 +263,14 @@ export function PlaywrightBrowser({
             <Textarea
               id="playwright-arguments"
               value={args}
-              disabled={execution.isPending || agent.isPending}
+              disabled={manual || viewer.isPending || execution.isPending || agent.isPending}
               onChange={(event) => setArgs(event.target.value)}
               className="min-h-28 font-mono"
             />
             <Button
-              disabled={execution.isPending || agent.isPending || !selected}
+              disabled={
+                manual || viewer.isPending || execution.isPending || agent.isPending || !selected
+              }
               onClick={() => execution.mutate(undefined)}
             >
               {execution.isPending ? "Running…" : "Run action"}
@@ -188,7 +279,7 @@ export function PlaywrightBrowser({
           <Button
             className="ml-2"
             variant="outline"
-            disabled={execution.isPending || agent.isPending}
+            disabled={manual || viewer.isPending || execution.isPending || agent.isPending}
             onClick={() => {
               execution.mutate({ name: "browser_close", arguments: {} });
             }}

@@ -1,4 +1,8 @@
-import { playwrightWorker } from "./playwright-worker.server";
+import {
+  playwrightWorker,
+  playwrightTaskControl,
+  PlaywrightTaskCancelledError,
+} from "./playwright-worker.server";
 import { resolveAutoFreeRoutes, resolveUserUpstreams } from "./gateway.server";
 
 /** Bounded browser agent; errors stop execution and completed actions are never replayed. */
@@ -24,76 +28,92 @@ export async function runPlaywrightTask(userId: string, goal: string) {
   const actions: Array<{ name: string; isError: boolean }> = [];
   const deadline = Date.now() + 110000;
   const route = routes[0]!;
-  for (let step = 0; step <= 8; step++) {
-    if (Date.now() >= deadline) break;
-    const response = await fetch(`${route.upstream.baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: route.upstream.headers,
-      redirect: "error",
-      signal: AbortSignal.timeout(Math.min(15000, deadline - Date.now())),
-      body: JSON.stringify({
-        model: route.model,
-        messages,
-        max_tokens: 1000,
-        ...(step < 8 ? { tools, tool_choice: "auto", parallel_tool_calls: false } : {}),
-      }),
-    });
-    if (!response.ok)
-      throw new Error(
-        `Browser reasoning is unavailable. ${actions.length} actions completed; they were not replayed.`,
+  const { taskId } = await playwrightTaskControl(userId, "start");
+  try {
+    for (let step = 0; step <= 8; step++) {
+      await playwrightTaskControl(userId, "check", taskId);
+      if (Date.now() >= deadline) break;
+      const response = await fetch(`${route.upstream.baseUrl}/chat/completions`, {
+        method: "POST",
+        headers: route.upstream.headers,
+        redirect: "error",
+        signal: AbortSignal.timeout(Math.min(15000, deadline - Date.now())),
+        body: JSON.stringify({
+          model: route.model,
+          messages,
+          max_tokens: 1000,
+          ...(step < 8 ? { tools, tool_choice: "auto", parallel_tool_calls: false } : {}),
+        }),
+      });
+      if (!response.ok)
+        throw new Error(
+          `Browser reasoning is unavailable. ${actions.length} actions completed; they were not replayed.`,
+        );
+      await playwrightTaskControl(userId, "check", taskId);
+      const reply = (await response.json()).choices?.[0]?.message;
+      if (!reply) throw new Error("Browser model returned no response.");
+      const calls = reply.tool_calls ?? [];
+      if (!calls.length)
+        return {
+          status: "reported",
+          reply: String(reply.content ?? "No final report was provided."),
+          actions,
+          artifacts,
+        };
+      if (calls.length !== 1 || step === 8) break;
+      const call = calls[0];
+      const args: unknown = JSON.parse(call.function.arguments);
+      if (!args || typeof args !== "object" || Array.isArray(args))
+        throw new Error("Browser model supplied invalid arguments.");
+      const result = await playwrightWorker(
+        userId,
+        call.function.name,
+        args as Record<string, unknown>,
+        taskId,
       );
-    const reply = (await response.json()).choices?.[0]?.message;
-    if (!reply) throw new Error("Browser model returned no response.");
-    const calls = reply.tool_calls ?? [];
-    if (!calls.length)
-      return {
-        status: "reported",
-        reply: String(reply.content ?? "No final report was provided."),
-        actions,
-        artifacts,
-      };
-    if (calls.length !== 1 || step === 8) break;
-    const call = calls[0];
-    const args: unknown = JSON.parse(call.function.arguments);
-    if (!args || typeof args !== "object" || Array.isArray(args))
-      throw new Error("Browser model supplied invalid arguments.");
-    const result = await playwrightWorker(
-      userId,
-      call.function.name,
-      args as Record<string, unknown>,
-    );
-    actions.push({ name: call.function.name, isError: result.isError === true });
-    for (const item of result.content ?? []) {
-      if (
-        item.type === "image" &&
-        ["image/png", "image/jpeg"].includes(item.mimeType) &&
-        artifacts.length < 4
-      )
-        artifacts.push({ data: item.data, mimeType: item.mimeType });
+      actions.push({ name: call.function.name, isError: result.isError === true });
+      for (const item of result.content ?? []) {
+        if (
+          item.type === "image" &&
+          ["image/png", "image/jpeg"].includes(item.mimeType) &&
+          artifacts.length < 4
+        )
+          artifacts.push({ data: item.data, mimeType: item.mimeType });
+      }
+      if (result.isError)
+        return {
+          status: "blocked",
+          reply:
+            "The browser action failed. Check the page before continuing; the action was not retried.",
+          actions,
+          artifacts,
+        };
+      messages.push(reply, {
+        role: "tool",
+        tool_call_id: call.id,
+        content: JSON.stringify({
+          ...result,
+          content: (result.content ?? []).filter((item: { type: string }) => item.type !== "image"),
+          screenshots: artifacts.length,
+        }).slice(0, 24000),
+      });
     }
-    if (result.isError)
-      return {
-        status: "blocked",
-        reply:
-          "The browser action failed. Check the page before continuing; the action was not retried.",
-        actions,
-        artifacts,
-      };
-    messages.push(reply, {
-      role: "tool",
-      tool_call_id: call.id,
-      content: JSON.stringify({
-        ...result,
-        content: (result.content ?? []).filter((item: { type: string }) => item.type !== "image"),
-        screenshots: artifacts.length,
-      }).slice(0, 24000),
-    });
+    return {
+      status: "paused",
+      reply:
+        "The action or time limit was reached. The browser remains available for inspection and a follow-up task.",
+      actions,
+      artifacts,
+    };
+  } catch (error) {
+    if (!(error instanceof PlaywrightTaskCancelledError)) throw error;
+    return {
+      status: "cancelled",
+      reply: "Task stopped. Earlier completed actions remain applied.",
+      actions,
+      artifacts,
+    };
+  } finally {
+    await playwrightTaskControl(userId, "finish", taskId).catch(() => {});
   }
-  return {
-    status: "paused",
-    reply:
-      "The action or time limit was reached. The browser remains available for inspection and a follow-up task.",
-    actions,
-    artifacts,
-  };
 }

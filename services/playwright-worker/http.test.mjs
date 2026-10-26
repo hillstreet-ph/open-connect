@@ -47,6 +47,31 @@ test("worker fails closed without credentials and rejects untrusted requests", a
       ).status,
       400,
     );
+    const control = (method, taskId, owner = "owner-a") =>
+      fetch(url + "/rpc", {
+        method: "POST",
+        headers: { ...headers, "X-Browser-Owner": owner },
+        body: JSON.stringify({ method, ...(taskId ? { taskId } : {}) }),
+      });
+    const taskId = (await (await control("task/start")).json()).taskId;
+    assert.equal(typeof taskId, "string");
+    assert.equal((await control("task/start")).status, 409);
+    assert.equal((await control("task/check", taskId, "owner-b")).status, 409);
+    await control("task/cancel", undefined, "owner-b");
+    assert.equal((await control("task/check", taskId)).status, 200);
+    await control("task/cancel");
+    assert.equal((await control("task/check", taskId)).status, 409);
+    const cancelledAction = await fetch(url + "/rpc", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        method: "tools/call",
+        taskId,
+        params: { name: "browser_navigate", arguments: { url: "https://example.com" } },
+      }),
+    });
+    assert.equal(cancelledAction.status, 409);
+    assert.equal((await cancelledAction.json()).error, "task_cancelled");
   } finally {
     child.kill("SIGTERM");
     await once(child, "exit");

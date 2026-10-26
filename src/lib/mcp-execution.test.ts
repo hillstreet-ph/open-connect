@@ -1475,7 +1475,7 @@ test("global browser tools reject bounded keys before personal credential access
     { organizationId: "organization" },
   ]) {
     keyBoundary = boundary;
-    for (const tool of ["cloud_browser_tools", "cloud_browser_call"]) {
+    for (const tool of ["cloud_browser_tools", "cloud_browser_call", "cloud_browser_cancel_task"]) {
       await expect(call(tool, {})).rejects.toThrow("personal key");
     }
   }
@@ -1483,7 +1483,7 @@ test("global browser tools reject bounded keys before personal credential access
 });
 test("global browser tools advertise and enforce distinct read, policy and invocation scopes", async () => {
   scopes = ["mcp:connect"];
-  for (const tool of ["cloud_browser_tools", "cloud_browser_call"])
+  for (const tool of ["cloud_browser_tools", "cloud_browser_call", "cloud_browser_cancel_task"])
     await expectAccessDenied(await call(tool, {}));
   expect(credentialReads).toEqual([]);
 });

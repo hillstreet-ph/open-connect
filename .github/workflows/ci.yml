@@ -22,7 +22,9 @@ jobs:
         with:
           bun-version: latest
       - name: Install
-        run: bun install --frozen-lockfile
+        run: |
+          bun install --frozen-lockfile
+          npm ci --prefix services/playwright-worker --ignore-scripts --no-audit --no-fund
       - name: Dependency security audit
         run: bun audit
       - name: Lint

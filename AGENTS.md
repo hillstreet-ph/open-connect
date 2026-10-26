@@ -15,6 +15,7 @@
 
 - Toolchain: Bun (lockfile `bun.lock`) + TanStack Start + Supabase. Run `bun install`, then
   `bun run lint`, `bun run test`, `bun run build`, `bun run test:ssr`.
+- Playwright worker checks also need `npm ci --prefix services/playwright-worker --ignore-scripts`. Its Docker service has a separate pinned npm lockfile.
 - The `test` script chains Node test suites (`node --experimental-strip-types --test`) and one Bun
   suite; add new suites to the matching `test:*` script in `package.json`.
 - Registries live in `config/*.registry.json`; generated catalogs end in `.generated.json` and are
