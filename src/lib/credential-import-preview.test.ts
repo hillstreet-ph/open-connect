@@ -6,8 +6,8 @@ test("previews valid CSV without including private field values", () => {
   const result = previewCredentialCsv(
     "url,username,password\nhttps://example.com/path,alice,synthetic_fixture_value",
   );
-  assert.equal(result[0].origin, "https://example.com");
-  assert.equal(result[0].status, "ready");
+  assert.equal(result[0]!.origin, "https://example.com");
+  assert.equal(result[0]!.status, "ready");
   assert.equal(JSON.stringify(result).includes("synthetic_fixture_value"), false);
 });
 
@@ -15,9 +15,9 @@ test("detects duplicates and invalid URLs", () => {
   const result = previewCredentialCsv(
     "url,username\nhttps://example.com,a\nhttps://example.com,a\nhttp://example.com,b",
   );
-  assert.equal(result[1].status, "review");
-  assert.ok(result[1].issues.includes("Duplicate within import"));
-  assert.ok(result[2].issues.includes("Invalid HTTPS origin"));
+  assert.equal(result[1]!.status, "review");
+  assert.ok(result[1]!.issues.includes("Duplicate within import"));
+  assert.ok(result[2]!.issues.includes("Invalid HTTPS origin"));
 });
 
 test("rejects unsupported headers and malformed quoting", () => {
