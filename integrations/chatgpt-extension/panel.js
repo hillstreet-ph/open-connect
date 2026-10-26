@@ -1,0 +1,1 @@
+const box=document.getElementById('suggest'); chrome.storage.local.get({suggestions:false},v=>box.checked=v.suggestions);box.addEventListener('change',()=>chrome.storage.local.set({suggestions:box.checked},()=>document.getElementById('status').textContent='Preference saved locally.'));
