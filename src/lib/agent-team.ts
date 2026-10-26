@@ -22,9 +22,11 @@ export function validateTeamInput(input: Record<string, unknown>) {
     throw new Error("Supply a goal up to 4000 characters and context up to 24000 characters.");
   return { goal, context };
 }
-/** Give every worker the free router, then diversify providers before trying sibling models. */
+/** Give every worker the free router, an explicit same-account fallback, then provider diversity. */
 function workerRoutes(routes: TeamRoute[], index: number) {
-  const rotated = [...routes.slice(index), ...routes.slice(0, index)];
+  const rotated = [...routes.slice(index), ...routes.slice(0, index)].filter(
+    (route) => !/guard|moderat|embed|rerank|reward|classif/i.test(route.model),
+  );
   const preferred = routes.find((route) => route.model === "openrouter/free");
   const selected: TeamRoute[] = preferred ? [preferred] : [];
   const providerKey = (route: TeamRoute) =>
@@ -33,6 +35,14 @@ function workerRoutes(routes: TeamRoute[], index: number) {
       route.upstream.baseUrl,
       Object.entries(route.upstream.headers).sort(([a], [b]) => a.localeCompare(b)),
     ]);
+  // A free router can choose a specialist or hit a provider quota. Retain one
+  // explicit generative model on that same owned account before crossing providers.
+  if (preferred) {
+    const sibling = rotated.find(
+      (route) => route !== preferred && providerKey(route) === providerKey(preferred),
+    );
+    if (sibling) selected.push(sibling);
+  }
   const providers = new Set(selected.map(providerKey));
   for (const route of rotated) {
     if (!providers.has(providerKey(route))) {
@@ -68,7 +78,12 @@ export async function runFreeAgentTeam(
       for (const route of workerRoutes(routes, index)) {
         try {
           const content = (await request(route, role, input)).trim();
-          if (content)
+          if (
+            content &&
+            !/^(?:(?:(?:user|system|content)\s+)?safety\s*:\s*)?(?:safe|unsafe|allowed|blocked)\.?(?:\s+S\d+(?:\s*[,;]\s*S\d+)*)?$/i.test(
+              content,
+            )
+          )
             return {
               role,
               status: "completed" as const,

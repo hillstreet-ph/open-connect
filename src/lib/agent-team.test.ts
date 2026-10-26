@@ -5,6 +5,37 @@ const routes = ["a", "b", "c"].map((name) => ({
   model: `${name}:free`,
   upstream: { name, baseUrl: "https://example.invalid", headers: {} },
 }));
+
+test("classification-only router output falls back to a generative model on the same account", async () => {
+  const upstream = { name: "openrouter", baseUrl: "https://example.invalid", headers: {} };
+  const attempted: string[] = [];
+  const result = await runFreeAgentTeam(
+    [
+      { upstream, model: "openrouter/free" },
+      { upstream, model: "vendor/llama-guard:free" },
+      { upstream, model: "vendor/assistant:free" },
+    ],
+    { goal: "Prepare an acceptance checklist", context: "" },
+    async (route) => {
+      attempted.push(route.model);
+      return route.model === "openrouter/free"
+        ? "User Safety: safe"
+        : "Check deployment status and verify each worker output against the brief.";
+    },
+  );
+  assert.ok(result.workers.every((worker) => worker.status === "completed"));
+  assert.ok(result.workers.every((worker) => worker.model === "vendor/assistant:free"));
+  assert.ok(!attempted.some((model) => model.includes("guard")));
+});
+
+test("a classification label alone never reports proposal completion", async () => {
+  const result = await runFreeAgentTeam(
+    routes,
+    { goal: "Prepare a plan", context: "" },
+    async () => "User Safety: safe",
+  );
+  assert.ok(result.workers.every((worker) => worker.status === "unavailable"));
+});
 test("rotates independent workers through supplied free routes without executing proposals", async () => {
   const used: string[] = [];
   const result = await runFreeAgentTeam(
@@ -144,3 +175,26 @@ test("fallback keeps distinct connected credentials for the same provider eligib
   assert.ok(result.workers.every((worker) => worker.status === "completed"));
   assert.doesNotMatch(JSON.stringify(result), /fixture-working|fixture-offline/);
 });
+
+for (const classification of ["safe", "unsafe\nS1", "Safety: unsafe", "unsafe\nS1,S2"]) {
+  test(`classifier-only ${JSON.stringify(classification)} falls back to a generative route`, async () => {
+    const available = [
+      {
+        model: "openrouter/free",
+        upstream: { name: "router", baseUrl: "https://router.invalid", headers: {} },
+      },
+      {
+        model: "generative:free",
+        upstream: { name: "other", baseUrl: "https://other.invalid", headers: {} },
+      },
+    ];
+    const result = await runFreeAgentTeam(
+      available,
+      { goal: "Review", context: "" },
+      async (route) =>
+        route.model === "openrouter/free" ? classification : "Review the authorization checks.",
+    );
+    assert.ok(result.workers.every((worker) => worker.model === "generative:free"));
+    assert.ok(result.workers.every((worker) => worker.status === "completed"));
+  });
+}
