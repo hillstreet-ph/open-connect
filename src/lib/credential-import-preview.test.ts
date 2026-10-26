@@ -22,18 +22,13 @@ test("detects duplicates and invalid URLs", () => {
 
 test("rejects unsupported headers and malformed quoting", () => {
   assert.throws(() => previewCredentialCsv("something,else\na,b"), /Unsupported/);
-  assert.throws(
-    () => previewCredentialCsv('url,username\n"https://example.com,a'),
-    /Unclosed/,
-  );
+  assert.throws(() => previewCredentialCsv('url,username\n"https://example.com,a'), /Unclosed/);
 });
 
 test("rejects records with extra columns", () => {
   assert.throws(
     () =>
-      previewCredentialCsv(
-        "url,username,password\nhttps://example.com,alice,fixture,unexpected",
-      ),
+      previewCredentialCsv("url,username,password\nhttps://example.com,alice,fixture,unexpected"),
     /column count/,
   );
 });
@@ -47,10 +42,7 @@ test("rejects trailing characters after a closed quoted cell", () => {
 
 test("rejects duplicate headers", () => {
   assert.throws(
-    () =>
-      previewCredentialCsv(
-        "url,URL,username\nhttps://example.com,https://other.example,alice",
-      ),
+    () => previewCredentialCsv("url,URL,username\nhttps://example.com,https://other.example,alice"),
     /Duplicate header/,
   );
 });
