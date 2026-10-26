@@ -11,13 +11,17 @@ async function rpc(owner, name, args, taskId) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify(
-      name ? { method: "tools/call", params: { name, arguments: args } } : { method: "tools/list" },
+      name
+        ? { method: "tools/call", params: { name, arguments: args }, ...(taskId ? { taskId } : {}) }
+        : { method: "tools/list" },
     ),
     signal: AbortSignal.timeout(90000),
   });
   const value = await response.json();
   if (!response.ok || value.isError)
-    throw new Error(`Browser smoke failed: ${name ?? "catalog"} HTTP ${response.status}`);
+    throw new Error(
+      `Browser smoke failed: ${name ?? "catalog"} HTTP ${response.status}: ${JSON.stringify(value).slice(0, 1500)}`,
+    );
   return value;
 }
 async function taskControl(owner, method, taskId) {
