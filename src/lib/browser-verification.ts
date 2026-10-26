@@ -110,6 +110,14 @@ export async function solverRequest(
   } catch {
     throw new SolverResponseError("Solver response could not be verified.");
   }
+  if (
+    !body ||
+    typeof body !== "object" ||
+    typeof body["errorId"] !== "number" ||
+    !Number.isSafeInteger(body["errorId"]) ||
+    body["errorId"] < 0
+  )
+    throw new SolverResponseError("Solver response could not be verified.");
   if (body["errorId"] !== 0)
     throw new SolverResponseError(
       "The solver rejected the request. Check account authorization and balance.",

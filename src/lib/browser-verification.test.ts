@@ -94,6 +94,12 @@ test("solver requests use fixed endpoints, suppress raw errors and reject redire
     (error) =>
       error instanceof SolverResponseError && error.definite && !error.message.includes("PRIVATE"),
   );
+  for (const malformed of [null, {}, { errorId: "0" }, { errorId: -1 }]) {
+    await assert.rejects(
+      solverRequest("PRIVATE", "createTask", {}, async () => json(malformed)),
+      (error) => error instanceof SolverResponseError && !error.definite,
+    );
+  }
   assert.equal(solverSolution("turnstile", { solution: { token: "proof" } }), "proof");
   assert.throws(() => solverSolution("recaptcha_v2", { solution: { token: "wrong-kind" } }));
 });
