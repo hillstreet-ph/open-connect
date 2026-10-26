@@ -59,19 +59,25 @@ const pool = new BrowserPool(async (owner) => {
     await rm(directory, { recursive: true, force: true });
     throw error;
   }
+  let closing;
+  const close = () => (closing ??= closeBrowser());
+  const closeBrowser = async () => {
+    views.end(owner);
+    try {
+      await client
+        .callTool({ name: "browser_close", arguments: {} }, undefined, { timeout: 5000 })
+        .catch(() => {});
+      await client.close();
+    } finally {
+      await desktop?.close();
+      await rm(directory, { recursive: true, force: true });
+    }
+  };
   return {
     list: () => client.listTools(),
     call: (params) => client.callTool(params, undefined, { timeout: 60000 }),
     desktop,
-    close: async () => {
-      views.end(owner);
-      try {
-        await client.close();
-      } finally {
-        await desktop?.close();
-        await rm(directory, { recursive: true, force: true });
-      }
-    },
+    close,
   };
 });
 const sweep = setInterval(() => {
