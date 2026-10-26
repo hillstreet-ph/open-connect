@@ -4,6 +4,7 @@ import {
   platformCandidates,
   mergePlatformSnapshot,
   deduplicatePlatformCandidates,
+  platformEndpoint,
 } from "./agent-platform-discovery.mjs";
 
 const source = { id: "example", trust: "owned_source", categories: ["agents"] };
@@ -23,6 +24,28 @@ const tree = {
     { type: "blob", path: "secrets.env", sha: "ignored" },
   ],
 };
+
+test("platform fetch endpoints reject registry-controlled host and path changes", () => {
+  assert.equal(
+    platformEndpoint({ id: "openai-agent-skills", repository: "openai/skills" }),
+    "https://api.github.com/repos/openai/skills",
+  );
+  for (const repository of [
+    "../user",
+    "evil/repo",
+    "openai/skills?x=1",
+    "openai/skills/../../user",
+  ]) {
+    assert.throws(
+      () => platformEndpoint({ id: "openai-agent-skills", repository }),
+      /not an approved/,
+    );
+  }
+  assert.throws(
+    () => platformEndpoint({ id: "new-unreviewed", repository: "openai/skills" }),
+    /not an approved/,
+  );
+});
 
 test("only resource manifests are discovered, never trusted or installed", () => {
   const rows = platformCandidates(source, repo, tree);

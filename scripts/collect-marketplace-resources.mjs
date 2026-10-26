@@ -5,6 +5,7 @@ import {
   platformCandidates,
   mergePlatformSnapshot,
   deduplicatePlatformCandidates,
+  platformEndpoint,
 } from "./agent-platform-discovery.mjs";
 import {
   deduplicateCandidates,
@@ -249,11 +250,9 @@ async function collectFirecrawlSource(source) {
 async function collectSource(source) {
   if (!isSourceEnabled(source)) return [];
   if (source.adapter === "github_resource_tree") {
-    if (!/^[\w.-]+\/[\w.-]+$/.test(source.repository || "")) {
-      throw new Error(`${source.id}: invalid repository`);
-    }
+    const endpoint = platformEndpoint(source);
     const get = async (path) => {
-      const response = await fetch(`https://api.github.com/repos/${source.repository}${path}`, {
+      const response = await fetch(`${endpoint}${path}`, {
         headers: headers(),
         signal: AbortSignal.timeout(20_000),
         redirect: "error",
