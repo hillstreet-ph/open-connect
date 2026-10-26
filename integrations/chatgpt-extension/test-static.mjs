@@ -7,7 +7,8 @@ const manifest=JSON.parse(read("manifest.json"));
 assert.equal(manifest.manifest_version,3);
 assert.equal(manifest.side_panel.default_path,"panel.html");
 assert.deepEqual(manifest.permissions.sort(),["sidePanel","storage"].sort());
-assert.deepEqual(manifest.host_permissions.sort(),["https://chatgpt.com/*","https://open-connect.site/*"].sort());
+assert.equal(manifest.host_permissions, undefined);
+assert.equal(manifest.content_scripts, undefined);
 for(const file of ["background.js","content.js","panel.js","suggestions.js"]){new vm.Script(read(file),{filename:file});}
 const html=read("panel.html");
 assert.match(html,/command-query/);
