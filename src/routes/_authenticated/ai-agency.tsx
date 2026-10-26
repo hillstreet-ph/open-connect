@@ -273,6 +273,7 @@ function AgencyWorkspace({ userId }: { userId: string | undefined }) {
           <div className="flex flex-wrap items-center gap-3">
             <select
               aria-label="Filter team category"
+              disabled={runMutation.isPending}
               className="h-9 rounded-md border bg-background px-2 text-sm"
               value={category}
               onChange={(e) => {
@@ -291,6 +292,7 @@ function AgencyWorkspace({ userId }: { userId: string | undefined }) {
               <input
                 type="checkbox"
                 checked={showArchived}
+                disabled={runMutation.isPending}
                 onChange={(e) => {
                   setShowArchived(e.target.checked);
                   setSelectedId("");
@@ -375,7 +377,7 @@ function AgencyWorkspace({ userId }: { userId: string | undefined }) {
         </p>
       </section>
       <Card className="space-y-4 p-4 sm:p-6">
-        <h2 className="font-semibold">
+        <h2 className="font-semibold [overflow-wrap:anywhere]">
           {selected ? `Work with ${selected.name}` : "Select a saved team to begin"}
         </h2>
         <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -473,7 +475,7 @@ function AgencyWorkspace({ userId }: { userId: string | undefined }) {
               </p>
               {item.evidence.workers?.map((worker) => (
                 <article key={worker.role} className="mt-3 space-y-2 rounded-lg border p-3">
-                  <h3 className="text-sm font-semibold">
+                  <h3 className="text-sm font-semibold [overflow-wrap:anywhere]">
                     {worker.role} ·{" "}
                     {worker.status === "completed" ? "Proposal generated" : "Unavailable"}
                   </h3>
