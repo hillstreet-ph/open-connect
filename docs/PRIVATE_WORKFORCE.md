@@ -34,3 +34,5 @@ Copy a private specialist handoff from its profile and use the existing ChatGPT/
 - Apply the additive registry migration before deploying the application. Do not edit applied migration SQL. Existing tables remain compatible; rollback the app and disable specialist launches if necessary, retaining immutable records.
 
 Live owner login/MFA, upstream provider consent and actual account-specific model availability are separate operational checks. Automated fixtures do not certify those external services.
+
+The reviewed additive migration is recorded in production as `20261026210052_private_workforce_registry`. Its repository SQL bytes are unchanged from the applied migration. No personal or project specialist records are seeded by the migration; setup runs under the authenticated user's real session.

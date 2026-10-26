@@ -41,7 +41,7 @@ try {
   const input = [
     "supabase/tests/workforce_fixture.sql",
     "supabase/migrations/20261025135609_agent_chat_history.sql",
-    "supabase/migrations/20261026203556_private_workforce_registry.sql",
+    "supabase/migrations/20261026210052_private_workforce_registry.sql",
     "supabase/tests/workforce_registry.sql",
   ]
     .map((path) => readFileSync(path, "utf8"))
