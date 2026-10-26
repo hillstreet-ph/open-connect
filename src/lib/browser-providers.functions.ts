@@ -21,11 +21,9 @@ export const startAdditionalBrowser = createServerFn({ method: "POST" })
       solveCaptchas: z.boolean().optional(),
     }),
   )
-  .handler(async ({ data, context }) =>
-    (await import("./browser-providers.server")).publicProviderCall(async () =>
-      (await import("./browser-providers.server")).startProvider(context.userId, data),
-    ),
-  );
+  .handler(async () => {
+    throw new Error("Cloud Browser now uses Playwright. Open /cloud-browser.");
+  });
 export const readAdditionalBrowser = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator(handle)
