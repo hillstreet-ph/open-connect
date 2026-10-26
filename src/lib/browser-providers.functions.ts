@@ -18,6 +18,7 @@ export const startAdditionalBrowser = createServerFn({ method: "POST" })
       model: z.string().max(100).optional(),
       modelParams: z.record(z.string(), z.unknown()).optional(),
       spendApproved: z.literal(true),
+      solveCaptchas: z.boolean().optional(),
     }),
   )
   .handler(async ({ data, context }) =>

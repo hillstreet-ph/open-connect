@@ -62,3 +62,21 @@ Playwright MCP, Stagehand and Chrome DevTools now have dedicated browser tabs. E
 TinyFish Agent and Browser controls remain in the main TinyFish panel. Its additional API tools (Search, Fetch, Research and Monitor) are available through discovery of the same saved TinyFish connection, pinned to the official hosted MCP endpoint. Only tools the endpoint actually returns are selectable. Free allowances do not imply unlimited free usage, and opening or discovering tools does not execute a paid request.
 
 Chrome DevTools can be registered in a Codex environment with `codex mcp add chrome-devtools -- npx -y chrome-devtools-mcp@latest --no-usage-statistics --no-performance-crux`. This is a local stdio registration, not an authenticated HTTP worker for the deployed Cloud Browser. A compatible Chrome runtime and secure worker bridge are separate requirements.
+
+## Pointer, keyboard and verification controls
+
+TinyFish Direct control now provides a visible local pointer marker, coalesced remote hover, pointer capture for drag, left/right/middle press/release, double-click counts and remote keyboard controls. Pointer commands are ordered; queued input is rejected after a tab change and a held button is released before detaching. Paste is available from keyboard events, the masked text field or an explicit clipboard button. Clipboard content is read only on that button click, is limited to 50,000 characters, and is not persisted. A tab/session change during clipboard permission handling cancels the insertion. This cursor represents the user's pointer, not an inferred AI-agent cursor.
+
+Browserbase session creation accepts an optional `solveCaptchas` flag. It defaults to false, requires the existing metered-run acknowledgement, and is rejected for Browser Use. When explicitly requested, the flag is passed to Browserbase's native solver without enabling proxies or Verified. Provider plan eligibility and supported challenge types still apply. No live paid solve was performed during setup.
+
+Verification assistance discovers CAPTCHA-related tools from an owned or project-authorized MCP worker. It never installs an extension, starts a solve, transfers cookies or attaches a solver to another provider's session automatically. Unresolved verification must be completed in the same session's supported interactive view. A separate Direct browser cannot resume a running agent session.
+
+### Supplied repository assessment (2026-10-26)
+
+| Source | Observed scope | Integration decision |
+| --- | --- | --- |
+| https://github.com/Dhravya/agent-captcha | Agent-only cryptographic guestbook challenge, rather than a general CAPTCHA-solving service | Not installed; it does not provide the requested cross-provider solver. |
+| https://github.com/Captcha-Sonic/CaptchaSonic-Extension | Extension release distribution. README claims MIT; the `Licence` file is a proprietary agreement restricting modification and distribution. Full advertised source/build tree is absent from the repository root. | Not bundled or injected. A compatible extension-capable browser, reviewed package/license and provider account are prerequisites. |
+| https://github.com/2captcha/mcp-captcha-solver | Corrected URL (the supplied trailing `l` returned 404). Local Python 3.11+/Selenium/Chrome demo with a reCAPTCHA v2 tool and `APIKEY_2CAPTCHA` requirement. | A separate authenticated worker and funded solver account are needed. It is not a drop-in attachment for every existing cloud browser. No matching solver credential was found in the metadata inventory during setup. |
+
+Browserbase sources: https://docs.browserbase.com/platform/identity/captcha-solving and https://docs.browserbase.com/account/billing/plans. A request to solve a challenge is not proof that a challenge was solved; verify the destination page before resuming the task.

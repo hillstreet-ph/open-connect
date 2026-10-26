@@ -136,7 +136,7 @@ export const BROWSER_ADAPTER_CAPABILITIES = {
       "Explicit release and cleanup",
     ],
     setup:
-      "This adapter opens a manual browser. Prompt execution, saved contexts, proxies and CAPTCHA solving are not enabled here.",
+      "This adapter opens a manual browser. Prompt execution, saved contexts and proxies require separate integration. Supported CAPTCHA solving can be requested when creating a session.",
   },
 } as const;
 
@@ -157,13 +157,14 @@ export const BROWSER_WORKERS = {
       "Connect an authenticated Chrome DevTools MCP worker. Registering a local Codex stdio server does not create a hosted cloud connection.",
   },
 } as const;
-export type BrowserToolFamily = keyof typeof BROWSER_WORKERS | "tinyfish";
+export type BrowserToolFamily = keyof typeof BROWSER_WORKERS | "tinyfish" | "captcha";
 export function browserFamilyTool(family: BrowserToolFamily, name: string) {
   const value = name.toLowerCase();
   if (family === "playwright") return /(?:^|_)browser_/.test(value);
   if (family === "stagehand")
     return /(?:^|_)(?:act|observe|extract|agent|navigate)(?:_|$)/.test(value);
   if (family === "tinyfish") return /research|search|fetch|monitor/.test(value);
+  if (family === "captcha") return /captcha|turnstile|challenge/.test(value);
   return CHROME_DEVTOOLS_TOOLS.some((tool) => value === tool || value.endsWith(`_${tool}`));
 }
 

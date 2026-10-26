@@ -133,24 +133,28 @@ test("public error boundary never returns upstream secret-bearing bodies", async
 });
 
 test("Browserbase SDK infers project and maps the five-minute timeout without paid extras", async () => {
-  const { browserbaseClient } = await import("./browser-providers.server");
+  const { browserbaseClient, browserbaseSessionOptions } =
+    await import("./browser-providers.server");
   let body: Record<string, unknown> = {};
   const send = (async (request: RequestInfo | URL, init?: RequestInit) => {
     expect(String(request)).toContain("/v1/sessions");
     body = JSON.parse(String(init?.body));
     return Response.json({ id, status: "RUNNING" });
   }) as typeof fetch;
-  await browserbaseClient("fixture-browserbase-key", send).sessions.create({
-    api_timeout: 300,
-    proxies: false,
-    keepAlive: false,
-    browserSettings: { solveCaptchas: false, verified: false },
-  });
+  await browserbaseClient("fixture-browserbase-key", send).sessions.create(
+    browserbaseSessionOptions(),
+  );
   expect(body["timeout"]).toBe(300);
   expect("projectId" in body).toBe(false);
   expect(body["proxies"]).toBe(false);
   expect(body["keepAlive"]).toBe(false);
   expect(body["browserSettings"]).toEqual({ solveCaptchas: false, verified: false });
+  await browserbaseClient("fixture-browserbase-key", send).sessions.create(
+    browserbaseSessionOptions(true),
+  );
+  expect(body["browserSettings"]).toEqual({ solveCaptchas: true, verified: false });
+  expect(body["proxies"]).toBe(false);
+  expect(body["timeout"]).toBe(300);
 });
 
 test("an accepted stop response is not cleanup confirmation until the browser reports stopped", async () => {
@@ -259,4 +263,38 @@ test("browser tool families retain distinct choices and filter unrelated tools",
     expect(browserFamilyTool("chrome_devtools", tool)).toBe(true);
   for (const name of ["search", "fetch", "run_research", "list_monitors"])
     expect(browserFamilyTool("tinyfish", name)).toBe(true);
+});
+
+test("CAPTCHA settings are explicit, provider-specific and preserve run cost acknowledgement", async () => {
+  const { startProviderSchema } = await import("./browser-providers.server");
+  expect(
+    startProviderSchema.parse({
+      provider: "browserbase",
+      task: "Manual session",
+      spendApproved: true,
+    }).solveCaptchas,
+  ).toBe(false);
+  expect(
+    startProviderSchema.parse({
+      provider: "browserbase",
+      task: "Manual session",
+      spendApproved: true,
+      solveCaptchas: true,
+    }).solveCaptchas,
+  ).toBe(true);
+  expect(
+    startProviderSchema.safeParse({
+      provider: "browser_use",
+      task: "Read",
+      spendApproved: true,
+      solveCaptchas: true,
+    }).success,
+  ).toBe(false);
+  expect(
+    startProviderSchema.safeParse({ provider: "browserbase", task: "Read", solveCaptchas: true })
+      .success,
+  ).toBe(false);
+  const { browserFamilyTool } = await import("./browser-provider-selection");
+  expect(browserFamilyTool("captcha", "captcha_solve_recaptcha_v2")).toBe(true);
+  expect(browserFamilyTool("captcha", "delete_database")).toBe(false);
 });
