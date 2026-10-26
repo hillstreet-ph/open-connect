@@ -67,8 +67,9 @@ function AgencyWorkspace({ userId }: { userId: string | undefined }) {
   const [goal, setGoal] = useState(""),
     [context, setContext] = useState("");
   const teams = useQuery({
-    queryKey: ["agency-teams", userId],
-    queryFn: () => list({}),
+    queryKey: ["agency-teams", userId, category, showArchived],
+    queryFn: () =>
+      list({ data: { archived: showArchived, ...(category === "all" ? {} : { category }) } }),
     enabled: !!userId,
   });
   const models = useQuery({
@@ -101,6 +102,8 @@ function AgencyWorkspace({ userId }: { userId: string | undefined }) {
       }),
     onSuccess: (result) => {
       setSelectedId(result.id);
+      setCategory("all");
+      setShowArchived(editing?.archived ?? false);
       setEditing(null);
       setDraft(emptyDraft);
       setRoleText(emptyDraft.roles.join("\n"));
@@ -272,7 +275,10 @@ function AgencyWorkspace({ userId }: { userId: string | undefined }) {
               aria-label="Filter team category"
               className="h-9 rounded-md border bg-background px-2 text-sm"
               value={category}
-              onChange={(e) => setCategory(e.target.value)}
+              onChange={(e) => {
+                setCategory(e.target.value);
+                setSelectedId("");
+              }}
             >
               <option value="all">All categories</option>
               {AGENCY_CATEGORIES.map((value) => (
@@ -285,7 +291,10 @@ function AgencyWorkspace({ userId }: { userId: string | undefined }) {
               <input
                 type="checkbox"
                 checked={showArchived}
-                onChange={(e) => setShowArchived(e.target.checked)}
+                onChange={(e) => {
+                  setShowArchived(e.target.checked);
+                  setSelectedId("");
+                }}
               />{" "}
               Show archived
             </label>
@@ -300,79 +309,69 @@ function AgencyWorkspace({ userId }: { userId: string | undefined }) {
             </Button>
           </p>
         ) : null}
-        {!teams.isPending &&
-        !teams.isError &&
-        !(teams.data ?? []).some(
-          (team) =>
-            team.archived === showArchived && (category === "all" || team.category === category),
-        ) ? (
+        {!teams.isPending && !teams.isError && (teams.data ?? []).length === 0 ? (
           <p className="rounded-xl border border-dashed p-5 text-sm text-muted-foreground">
             No matching teams. Choose a template above to create one.
           </p>
         ) : null}
         <div className="grid gap-3 sm:grid-cols-2">
-          {(teams.data ?? [])
-            .filter(
-              (team) =>
-                team.archived === showArchived &&
-                (category === "all" || team.category === category),
-            )
-            .map((team) => (
-              <Card
-                key={team.id}
-                className={`min-w-0 space-y-3 p-4 ${selectedId === team.id ? "border-primary/60" : ""}`}
-              >
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="min-w-0 font-semibold [overflow-wrap:anywhere]">{team.name}</h3>
-                  <Badge variant="outline">{agencyCategoryLabel(team.category)}</Badge>
-                  {team.archived ? <Badge variant="secondary">Archived</Badge> : null}
-                </div>
-                <p className="text-sm text-muted-foreground [overflow-wrap:anywhere]">
-                  {team.description}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {team.roles.map((role) => (
-                    <Badge
-                      key={role}
-                      variant="secondary"
-                      className="max-w-full whitespace-normal [overflow-wrap:anywhere]"
-                    >
-                      {role}
-                    </Badge>
-                  ))}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    size="sm"
-                    variant={selectedId === team.id ? "secondary" : "outline"}
-                    disabled={runMutation.isPending}
-                    onClick={() => setSelectedId(team.id)}
+          {(teams.data ?? []).map((team) => (
+            <Card
+              key={team.id}
+              className={`min-w-0 space-y-3 p-4 ${selectedId === team.id ? "border-primary/60" : ""}`}
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="min-w-0 font-semibold [overflow-wrap:anywhere]">{team.name}</h3>
+                <Badge variant="outline">{agencyCategoryLabel(team.category)}</Badge>
+                {team.archived ? <Badge variant="secondary">Archived</Badge> : null}
+              </div>
+              <p className="text-sm text-muted-foreground [overflow-wrap:anywhere]">
+                {team.description}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {team.roles.map((role) => (
+                  <Badge
+                    key={role}
+                    variant="secondary"
+                    className="max-w-full whitespace-normal [overflow-wrap:anywhere]"
                   >
-                    Select team
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={runMutation.isPending}
-                    onClick={() => loadDraft(team, team)}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    disabled={archiveMutation.isPending || runMutation.isPending}
-                    onClick={() => archiveMutation.mutate(team)}
-                  >
-                    <Archive className="size-3.5" />
-                    {team.archived ? "Restore" : "Archive"}
-                  </Button>
-                </div>
-              </Card>
-            ))}
+                    {role}
+                  </Badge>
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant={selectedId === team.id ? "secondary" : "outline"}
+                  disabled={runMutation.isPending}
+                  onClick={() => setSelectedId(team.id)}
+                >
+                  Select team
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={runMutation.isPending}
+                  onClick={() => loadDraft(team, team)}
+                >
+                  Edit
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={archiveMutation.isPending || runMutation.isPending}
+                  onClick={() => archiveMutation.mutate(team)}
+                >
+                  <Archive className="size-3.5" />
+                  {team.archived ? "Restore" : "Archive"}
+                </Button>
+              </div>
+            </Card>
+          ))}
         </div>
         <p className="text-xs text-muted-foreground">
-          Up to 100 recently updated teams are shown. Archived teams can be restored.
+          Up to 100 recently updated teams matching these filters are shown. Archived teams can be
+          restored.
         </p>
       </section>
       <Card className="space-y-4 p-4 sm:p-6">

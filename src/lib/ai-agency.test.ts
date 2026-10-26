@@ -113,8 +113,10 @@ test("owned team queries exclude foreign and archived teams before running", asy
       },
     },
   });
-  await listOwnedAgencyTeams(db, "owner");
+  await listOwnedAgencyTeams(db, "owner", { category: "business", archived: false });
   assert.equal(requests[0]?.searchParams.get("user_id"), "eq.owner");
+  assert.equal(requests[0]?.searchParams.get("category"), "eq.business");
+  assert.equal(requests[0]?.searchParams.get("archived"), "eq.false");
   await assert.rejects(ownedActiveAgencyTeam(db, "owner", "team-1"), /active team/);
   assert.equal(requests[1]?.searchParams.get("archived"), "eq.false");
   assert.equal(requests[1]?.searchParams.get("user_id"), "eq.owner");

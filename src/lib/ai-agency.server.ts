@@ -1,12 +1,19 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { agencyTeamInput, type AgencyTeam } from "./ai-agency.ts";
-export async function listOwnedAgencyTeams(db: SupabaseClient, userId: string) {
-  const { data, error } = await db
+export async function listOwnedAgencyTeams(
+  db: SupabaseClient,
+  userId: string,
+  filters: { category?: string | undefined; archived?: boolean | undefined } = {},
+) {
+  let query = db
     .from("ai_agency_teams")
     .select("id,name,category,description,roles,archived,updated_at")
     .eq("user_id", userId)
+    .eq("archived", filters.archived ?? false)
     .order("updated_at", { ascending: false })
     .limit(100);
+  if (filters.category) query = query.eq("category", filters.category);
+  const { data, error } = await query;
   if (error) throw new Error("Could not load your AI Agency teams.");
   return (data ?? []) as AgencyTeam[];
 }

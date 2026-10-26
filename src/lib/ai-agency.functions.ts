@@ -2,14 +2,22 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { agencyTeamInput, type AgencyRun } from "@/lib/ai-agency";
+import { AGENCY_CATEGORIES, agencyTeamInput, type AgencyRun } from "@/lib/ai-agency";
 import { validateTeamInput, runFreeAgentTeam, requestTeamWorker } from "@/lib/agent-team";
 
 export const listAgencyTeams = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .validator((input: unknown) =>
+    z
+      .object({
+        category: z.enum(AGENCY_CATEGORIES).optional(),
+        archived: z.boolean().default(false),
+      })
+      .parse(input ?? {}),
+  )
+  .handler(async ({ data, context }) => {
     const { listOwnedAgencyTeams } = await import("@/lib/ai-agency.server");
-    return listOwnedAgencyTeams(context.supabase as SupabaseClient, context.userId);
+    return listOwnedAgencyTeams(context.supabase as SupabaseClient, context.userId, data);
   });
 export const saveAgencyTeam = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
