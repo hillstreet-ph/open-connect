@@ -117,6 +117,37 @@ test("CDP attaches to a page, streams frames, sends input and closes cleanly", a
   const drag = sent.filter((m) => m.method === "Input.dispatchMouseEvent").slice(-3);
   expect(drag.map((m) => m.params.type)).toEqual(["mousePressed", "mouseMoved", "mouseReleased"]);
   expect(drag.map((m) => m.params["buttons"])).toEqual([1, 1, 0]);
+  const movesBefore = sent.filter((m) => m.method === "Input.dispatchMouseEvent").length;
+  await Promise.all(Array.from({ length: 100 }, (_, index) => browser.move(index, index)));
+  const coalesced = sent.filter((m) => m.method === "Input.dispatchMouseEvent").slice(movesBefore);
+  expect(coalesced).toHaveLength(1);
+  expect(coalesced[0]?.params).toMatchObject({ type: "mouseMoved", x: 99, y: 99, buttons: 0 });
+  await Promise.all([
+    browser.move(1, 1),
+    browser.press(2, 2),
+    browser.move(3, 3, 1),
+    browser.release(4, 4),
+  ]);
+  expect(
+    sent
+      .filter((m) => m.method === "Input.dispatchMouseEvent")
+      .slice(-4)
+      .map((m) => m.params.type),
+  ).toEqual(["mouseMoved", "mousePressed", "mouseMoved", "mouseReleased"]);
+  const inputStart = sent.length;
+  await Promise.all([
+    browser.press(5, 5),
+    browser.release(5, 5),
+    browser.text("after click"),
+    browser.key("Enter", "Enter"),
+  ]);
+  expect(sent.slice(inputStart).map((m) => m.method)).toEqual([
+    "Input.dispatchMouseEvent",
+    "Input.dispatchMouseEvent",
+    "Input.insertText",
+    "Input.dispatchKeyEvent",
+    "Input.dispatchKeyEvent",
+  ]);
   await browser.press(60, 70, "right", 2);
   await browser.release(60, 70, "right", 2);
   expect(sent.filter((m) => m.method === "Input.dispatchMouseEvent").at(-2)?.params).toMatchObject({
@@ -138,9 +169,12 @@ test("CDP attaches to a page, streams frames, sends input and closes cleanly", a
   expect(browser.activeTabId).toBe("page1");
   await browser.press(80, 85);
   const staleMove = browser.move(90, 90);
+  const staleText = browser.text("cancelled tab input");
   const switchTab = browser.selectTab("popup");
-  await expect(staleMove).rejects.toThrow("target changed");
-  await switchTab;
+  const switched = await Promise.allSettled([staleMove, staleText, switchTab]);
+  expect(switched[0]?.status).toBe("rejected");
+  expect(switched[1]?.status).toBe("rejected");
+  expect(switched[2]?.status).toBe("fulfilled");
   const heldRelease = sent.filter((m) => m.method === "Input.dispatchMouseEvent").at(-1);
   expect(heldRelease?.params.type).toBe("mouseReleased");
   expect(heldRelease?.sessionId).toBe("attached");
@@ -152,6 +186,19 @@ test("CDP attaches to a page, streams frames, sends input and closes cleanly", a
   expect(sent.filter((m) => m.method === "Input.insertText").at(-1)?.sessionId).toBe(
     "popup-attached",
   );
+  const beforeNavigation = sent.length;
+  const queuedText = browser.text("old page input");
+  const revision = browser.inputRevision;
+  instance!.onmessage?.({
+    data: JSON.stringify({
+      method: "Page.frameNavigated",
+      sessionId: "popup-attached",
+      params: { frame: { id: "main-frame", url: "https://example.com/new-page" } },
+    }),
+  });
+  await expect(queuedText).rejects.toThrow("target changed");
+  expect(browser.inputRevision).toBeGreaterThan(revision);
+  expect(sent.slice(beforeNavigation).some((m) => m.method === "Input.insertText")).toBe(false);
   browser.disconnect();
   expect(browser.activeTabId).toBe("");
   expect(instance!.closed).toBe(true);

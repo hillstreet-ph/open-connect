@@ -471,12 +471,14 @@ export function DirectCloudBrowser({
                   try {
                     const client = controller.current;
                     const target = client?.activeTabId;
+                    const revision = client?.inputRevision;
                     const sessionId = sessionRef.current?.sessionId;
                     const text = await navigator.clipboard.readText();
                     if (
                       !client ||
                       client !== controller.current ||
                       target !== client.activeTabId ||
+                      revision !== client.inputRevision ||
                       sessionId !== sessionRef.current?.sessionId
                     )
                       throw new Error("Browser target changed.");
