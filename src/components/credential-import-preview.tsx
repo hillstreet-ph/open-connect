@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import {
   previewCredentialCsv,
   previewCredentialJson,
+  CREDENTIAL_IMPORT_MAX_BYTES,
   type CredentialPreview,
   type ExistingCredentialIdentity,
 } from "@/lib/credential-import-preview";
@@ -21,8 +22,8 @@ export function CredentialImportPreview({ existing }: { existing: ExistingCreden
     setRows([]);
     setError("");
     if (!file) return;
-    if (file.size > 2_000_000) {
-      setError("Choose a CSV or JSON file under 2 MB.");
+    if (file.size > CREDENTIAL_IMPORT_MAX_BYTES) {
+      setError("Choose a CSV or JSON file up to 10 MB.");
       return;
     }
     const format = file.name.toLowerCase().split(".").pop();
@@ -56,17 +57,18 @@ export function CredentialImportPreview({ existing }: { existing: ExistingCreden
         <CardTitle className="text-base">Review an import file</CardTitle>
         <CardDescription>
           Preview only. Nothing is uploaded or saved to Vault. Accounts are masked and secret fields
-          are omitted. CSV requires url and username columns; JSON requires an array of flat records
-          with url and username. Optional type is password or api_key. ZIP, Google Sheets and batch
-          saving are not available yet.
+          are omitted. Proton Pass CSV exports are supported for review, including email and
+          username fields. CSV requires a website and an account column; JSON requires an array of
+          flat records with url and username. Optional type is password or api_key. ZIP, Google
+          Sheets and batch saving are not available yet.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Label htmlFor="credential-import-file">CSV or JSON file (UTF-8, under 2 MB)</Label>
+        <Label htmlFor="credential-import-file">CSV or JSON file (UTF-8, up to 10 MB)</Label>
         <Input
           id="credential-import-file"
           type="file"
-          accept=".csv,.json"
+          accept=".csv,.json,text/csv,text/plain,application/json,application/vnd.ms-excel,application/octet-stream"
           disabled={busy}
           onChange={(event) => {
             void preview(event.currentTarget.files?.[0]);
