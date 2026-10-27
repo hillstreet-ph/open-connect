@@ -452,15 +452,19 @@ export async function searchPhoneNumbers(
 }
 
 export async function listOwnedPhoneNumbers(bundle: string, request?: Fetch) {
-  const data = await twilioRequest(
-    bundle,
-    `${API}/IncomingPhoneNumbers.json?PageSize=50`,
-    {},
-    request,
-  );
-  const rows = Array.isArray(data["incoming_phone_numbers"])
-    ? (data["incoming_phone_numbers"] as Array<Record<string, unknown>>)
-    : [];
+  const rows: Array<Record<string, unknown>> = [];
+  let url = `${API}/IncomingPhoneNumbers.json?PageSize=1000`;
+  for (let page = 0; page < 20 && url; page++) {
+    const data = await twilioRequest(bundle, url, {}, request);
+    if (Array.isArray(data["incoming_phone_numbers"]))
+      rows.push(...(data["incoming_phone_numbers"] as Array<Record<string, unknown>>));
+    const next = data["next_page_uri"];
+    // Only follow Twilio's own relative paging links for this account.
+    url =
+      typeof next === "string" && /^\/2010-04-01\/Accounts\/AC[a-f0-9]{32}\//i.test(next)
+        ? `https://api.twilio.com${next}`
+        : "";
+  }
   return rows.map((n) => ({
     sid: String(n["sid"] ?? ""),
     phoneNumber: String(n["phone_number"] ?? ""),

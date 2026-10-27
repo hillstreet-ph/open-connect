@@ -6,6 +6,7 @@ import {
   createCloudComputer,
   desktopServiceSchema,
   listCloudComputers,
+  listOwnedPhoneNumbers,
   purchasePhoneNumber,
   searchPhoneNumbers,
 } from "./cloud-resources.server.ts";
@@ -225,4 +226,28 @@ test("a concurrent create over the limit removes only the newer desktop", async 
     calls.some((c) => JSON.stringify(c.body).includes("addDomain")),
     false,
   );
+});
+
+test("owned Twilio numbers follow every page", async () => {
+  const urls: string[] = [];
+  const fetch = (async (url: string) => {
+    urls.push(url);
+    const second = url.includes("PageToken");
+    return new Response(
+      JSON.stringify({
+        incoming_phone_numbers: [
+          { sid: second ? "PN2" : "PN1", phone_number: second ? "+2" : "+1" },
+        ],
+        next_page_uri: second
+          ? null
+          : `/2010-04-01/Accounts/AC${"a".repeat(32)}/IncomingPhoneNumbers.json?PageToken=x`,
+      }),
+    );
+  }) as unknown as typeof globalThis.fetch;
+  const numbers = await listOwnedPhoneNumbers(TWILIO, fetch);
+  assert.deepEqual(
+    numbers.map((n) => n.sid),
+    ["PN1", "PN2"],
+  );
+  assert.equal(new URL(urls[1]!).hostname, "api.twilio.com");
 });
