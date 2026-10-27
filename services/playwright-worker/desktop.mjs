@@ -68,6 +68,7 @@ export async function createDesktop(directory) {
       "-forever",
       "-shared",
       "-quiet",
+      "-add_keysyms",
     ]);
     for (let attempt = 0; ; attempt++) {
       const ready = await new Promise((resolve) => {

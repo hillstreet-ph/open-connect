@@ -26,8 +26,17 @@ window.addEventListener("message", function accept(event) {
   document.getElementById("focus").onclick = () => rfb.focus();
   document.getElementById("send-paste").onclick = () => {
     const input = document.getElementById("paste");
-    rfb.clipboardPasteFrom(input.value);
+    const text = input.value;
     input.value = "";
+    rfb.clipboardPasteFrom(text);
     rfb.focus();
+    // x11vnc does not reliably expose received cut text to Chromium, so insert the
+    // text as keystrokes. Keep the clipboard update for apps that read it directly.
+    for (const character of text) {
+      const code = character.codePointAt(0);
+      // Printable characters only: a pasted newline must not submit a form.
+      if (code < 0x20 || (code >= 0x7f && code < 0xa0)) continue;
+      rfb.sendKey(code <= 0xff ? code : 0x01000000 + code, null);
+    }
   };
 });

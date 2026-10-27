@@ -39,17 +39,29 @@ try {
   );
   await page.locator("#focus").click();
   await page.keyboard.press("Control+l");
-  await page.keyboard.type("https://example.com/?manual-browser-proof=1");
+  await page.waitForTimeout(300);
+  await page.keyboard.type("https://example.com/?manual-browser-proof=1", { delay: 40 });
   await page.keyboard.press("Enter");
   await page.waitForTimeout(2000);
+  await page.locator("#focus").click();
+  await page.keyboard.press("Control+l");
+  await page.waitForTimeout(300);
+  await page.keyboard.type("http://127.0.0.1:8081/paste", { delay: 40 });
+  await page.keyboard.press("Enter");
+  await page.waitForTimeout(2000);
+  await page.locator("#paste").fill("manual-paste-proof Mixed_CASE!@#42");
+  await page.locator("#send-paste").click();
+  await page.waitForTimeout(1500);
   await rpc({ method: "view/end" });
   const snapshot = await rpc({
     method: "tools/call",
     params: { name: "browser_snapshot", arguments: {} },
   });
-  if (!JSON.stringify(snapshot).includes("manual-browser-proof=1"))
-    throw new Error("Viewer keyboard input did not reach the browser");
-  console.log("PASS: live view, manual keyboard, paused agent control and resume");
+  if (!JSON.stringify(snapshot).includes("manual-paste-proof Mixed_CASE!@#42"))
+    throw new Error(
+      `Viewer paste input did not reach the browser: ${JSON.stringify(snapshot).slice(0, 2000)}`,
+    );
+  console.log("PASS: live view, manual keyboard, clipboard paste, paused agent control and resume");
 } finally {
   await rpc({ method: "task/cancel" }).catch(() => {});
   await browser.close();
