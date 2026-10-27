@@ -1,5 +1,4 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
 import { PlaywrightBrowser } from "@/components/playwright-browser";
 import { CloudWorkspacePage } from "@/components/cloud-workspace-page";
 
@@ -21,10 +20,6 @@ export const Route = createFileRoute("/_authenticated/cloud-browser")({
 function CloudBrowserPage() {
   const { mode } = Route.useSearch();
   const computer = mode === "computer";
-  const [computerVisited, setComputerVisited] = useState(computer);
-  useEffect(() => {
-    if (computer) setComputerVisited(true);
-  }, [computer]);
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:px-6">
       <header>
@@ -54,15 +49,13 @@ function CloudBrowserPage() {
       <div hidden={computer}>
         <PlaywrightBrowser />
       </div>
-      {computerVisited || computer ? (
-        <div hidden={!computer} className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Computer tools use the selected provider connection. Its desktop and files are separate
-            from your Playwright browser session.
-          </p>
-          <CloudWorkspacePage kind="computer" embedded />
-        </div>
-      ) : null}
+      <div hidden={!computer} className="space-y-4">
+        <p className="text-sm text-muted-foreground">
+          Computer tools use the selected provider connection. Its desktop and files are separate
+          from your Playwright browser session.
+        </p>
+        <CloudWorkspacePage kind="computer" embedded />
+      </div>
     </div>
   );
 }
