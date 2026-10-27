@@ -29,8 +29,11 @@ window.addEventListener("message", function accept(event) {
     rfb.clipboardPasteFrom(input.value);
     input.value = "";
     rfb.focus();
-    rfb.sendKey(0xffe3, "ControlLeft", true);
-    rfb.sendKey(0x76, "KeyV");
-    rfb.sendKey(0xffe3, "ControlLeft", false);
+    // Allow the VNC server to publish the clipboard selection before pasting.
+    setTimeout(() => {
+      rfb.sendKey(0xffe3, "ControlLeft", true);
+      rfb.sendKey(0x76, "KeyV");
+      rfb.sendKey(0xffe3, "ControlLeft", false);
+    }, 500);
   };
 });

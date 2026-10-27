@@ -46,6 +46,7 @@ try {
   await page.keyboard.press("Control+l");
   await page.locator("#paste").fill("https://example.com/?manual-paste-proof=1");
   await page.locator("#send-paste").click();
+  await page.waitForTimeout(1000);
   await page.keyboard.press("Enter");
   await page.waitForTimeout(2000);
   await rpc({ method: "view/end" });
