@@ -1,4 +1,5 @@
 import { browserFamilyTool, type BrowserToolFamily } from "@/lib/browser-provider-selection";
+import { CommandCodeSetup } from "./command-code-setup";
 import { SandboxManager } from "./sandbox-manager";
 import { useId, useState } from "react";
 import { Link } from "@tanstack/react-router";
@@ -188,6 +189,9 @@ export function CloudWorkspacePage({
         </p>
       ) : null}
       {kind === "sandbox" ? <SandboxManager /> : null}
+      {kind === "terminal" || kind === "computer" || kind === "sandbox" ? (
+        <CommandCodeSetup />
+      ) : null}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Workspace and connection</CardTitle>
