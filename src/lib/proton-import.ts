@@ -85,6 +85,7 @@ export function mapProtonLogin(row: ProtonCsvRow): ProtonLoginMapping {
   // Notes and structured URLs may contain sensitive fields and cannot currently be preserved safely.
   if ((row.note || "").trim()) issues.push("Notes need review");
   if ((row.autofillUrls || "").trim()) issues.push("Structured websites need review");
+  if ((row.vault || "").trim()) issues.push("Source vault needs review");
   if (issues.length) return { status: "review", issues: [...new Set(issues)] };
   return {
     status: "ready",
