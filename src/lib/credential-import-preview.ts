@@ -8,8 +8,8 @@ export type CredentialPreview = {
   issues: string[];
 };
 
-const MAX_BYTES = 2_000_000;
-const MAX_ROWS = 5_000;
+export const CREDENTIAL_IMPORT_MAX_BYTES = 10_000_000;
+const MAX_ROWS = 20_000;
 const MAX_CELL = 16_384;
 const normalize = (value: string) =>
   value
@@ -77,7 +77,8 @@ export function previewCredentialCsv(
   input: string,
   existing: ExistingCredentialIdentity[] = [],
 ): CredentialPreview[] {
-  if (new TextEncoder().encode(input).length > MAX_BYTES) throw new Error("Import too large");
+  if (new TextEncoder().encode(input).length > CREDENTIAL_IMPORT_MAX_BYTES)
+    throw new Error("Import too large");
   const [header, ...parsedRows] = parseCsv(input.replace(/^\uFEFF/, ""));
   const rows = parsedRows.filter((row) => row.some((cell) => cell.trim()));
   if (!header) return [];
@@ -86,9 +87,12 @@ export function previewCredentialCsv(
   if (rows.some((row) => row.length !== header.length)) throw new Error("Invalid CSV column count");
   const find = (...aliases: string[]) => names.findIndex((name) => aliases.includes(name));
   const originColumn = find("url", "website", "origin", "loginuri");
-  const accountColumn = find("username", "email", "login", "account");
+  const accountColumn = find("username", "login", "account", "loginusername");
+  const emailColumn = find("email", "emailaddress", "loginemail");
   const kindColumn = find("type", "kind");
-  if (originColumn < 0 || accountColumn < 0) throw new Error("Unsupported CSV columns");
+  if (originColumn < 0 || (accountColumn < 0 && emailColumn < 0))
+    throw new Error("Unsupported CSV columns");
+  const proton = names.includes("vault") && names.includes("type") && names.includes("password");
   const seen = new Set<string>();
   return rows
     .filter((row) => row.some((cell) => cell.trim()))
@@ -96,20 +100,22 @@ export function previewCredentialCsv(
       const issues: string[] = [];
       let origin: string | null = null;
       const rawUrl = row[originColumn]?.trim() || "";
+      const urls = proton ? rawUrl.split(/,\s*/).filter(Boolean) : [rawUrl];
+      if (urls.length > 1) issues.push("Multiple websites require review");
       try {
-        const parsed = new URL(rawUrl);
+        const parsed = new URL(urls[0] || "");
         if (parsed.protocol !== "https:") throw new Error("HTTPS required");
         if (parsed.username || parsed.password) issues.push("URL contains embedded credentials");
         origin = parsed.origin;
       } catch {
         issues.push("Invalid HTTPS origin");
       }
-      const account = (row[accountColumn] || "").trim();
+      const account = (row[accountColumn] || row[emailColumn] || "").trim();
       if (!account) issues.push("Missing account");
       if (/^[=+@-]/.test(account)) issues.push("Spreadsheet formula requires review");
       const rawKind = normalize(row[kindColumn] || "password");
       const kind =
-        rawKind === "password" || rawKind === "apikey"
+        rawKind === "password" || rawKind === "login" || rawKind === "apikey"
           ? rawKind === "apikey"
             ? "api_key"
             : "password"
@@ -151,7 +157,8 @@ export function previewCredentialJson(
   input: string,
   existing: ExistingCredentialIdentity[] = [],
 ): CredentialPreview[] {
-  if (new TextEncoder().encode(input).length > MAX_BYTES) throw new Error("Import too large");
+  if (new TextEncoder().encode(input).length > CREDENTIAL_IMPORT_MAX_BYTES)
+    throw new Error("Import too large");
   let data: unknown;
   try {
     data = JSON.parse(input.replace(/^\uFEFF/, ""));
