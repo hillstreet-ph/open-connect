@@ -118,7 +118,10 @@ test("bounds JSON cells, count, types, and CSV byte length", () => {
       ),
     /Cell too long/,
   );
-  assert.throws(() => previewCredentialJson(JSON.stringify(Array(20001).fill({}))), /Too many rows/);
+  assert.throws(
+    () => previewCredentialJson(JSON.stringify(Array(20001).fill({}))),
+    /Too many rows/,
+  );
   assert.throws(() => previewCredentialJson('[{"url":5,"username":"a"}]'), /string/);
   assert.throws(() => previewCredentialCsv("x".repeat(10000001)), /too large/);
 });
@@ -131,7 +134,10 @@ test("recognizes Proton Pass login exports with separate email and username", ()
     "alias,Alias,https://alias.example.com,alias@example.com,,,,,Personal",
   ].join("\n");
   const result = previewCredentialCsv(csv);
-  assert.deepEqual(result.map((row) => row.kind), ["password", "password", "unknown"]);
+  assert.deepEqual(
+    result.map((row) => row.kind),
+    ["password", "password", "unknown"],
+  );
   assert.equal(result[0]!.status, "ready");
   assert.equal(result[1]!.status, "ready");
   assert.equal(result[2]!.status, "review");
@@ -141,14 +147,25 @@ test("recognizes Proton Pass login exports with separate email and username", ()
 test("flags Proton multi-URL entries and detects the email account against existing records", () => {
   const result = previewCredentialCsv(
     'type,name,url,email,username,password,vault\nlogin,Example,"https://example.com, https://other.example",alice@example.com,,fixture,Personal',
-    [{ website: "https://example.com", username: null, email_address: "alice@example.com", secret_type: "password" }],
+    [
+      {
+        website: "https://example.com",
+        username: null,
+        email_address: "alice@example.com",
+        secret_type: "password",
+      },
+    ],
   );
   assert.ok(result[0]!.issues.includes("Multiple websites require review"));
   assert.ok(result[0]!.issues.includes("Existing credential requires review"));
 });
 
 test("accepts a realistic file larger than the former two megabyte limit", () => {
-  const csv = "url,username\n" + Array.from({ length: 6000 }, (_, i) => `https://example.com,user${i}${"x".repeat(320)}`).join("\n");
+  const csv =
+    "url,username\n" +
+    Array.from({ length: 6000 }, (_, i) => `https://example.com,user${i}${"x".repeat(320)}`).join(
+      "\n",
+    );
   assert.ok(new TextEncoder().encode(csv).length > 2_000_000);
   assert.equal(previewCredentialCsv(csv).length, 6000);
 });

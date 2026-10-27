@@ -57,10 +57,10 @@ export function CredentialImportPreview({ existing }: { existing: ExistingCreden
         <CardTitle className="text-base">Review an import file</CardTitle>
         <CardDescription>
           Preview only. Nothing is uploaded or saved to Vault. Accounts are masked and secret fields
-          are omitted. Proton Pass CSV exports are supported for review, including email and username
-          fields. CSV requires a website and an account column; JSON requires an array of flat records
-          with url and username. Optional type is password or api_key. ZIP, Google Sheets and batch
-          saving are not available yet.
+          are omitted. Proton Pass CSV exports are supported for review, including email and
+          username fields. CSV requires a website and an account column; JSON requires an array of
+          flat records with url and username. Optional type is password or api_key. ZIP, Google
+          Sheets and batch saving are not available yet.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
