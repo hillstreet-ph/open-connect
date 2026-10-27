@@ -110,7 +110,12 @@ export function previewCredentialCsv(
       } catch {
         issues.push("Invalid HTTPS origin");
       }
-      const account = (row[accountColumn] || row[emailColumn] || "").trim();
+      const accounts = [
+        ...new Set(
+          [row[accountColumn], row[emailColumn]].map((v) => (v || "").trim()).filter(Boolean),
+        ),
+      ];
+      const account = accounts[0] || "";
       if (!account) issues.push("Missing account");
       if (/^[=+@-]/.test(account)) issues.push("Spreadsheet formula requires review");
       const rawKind = normalize(row[kindColumn] || "password");
@@ -122,9 +127,9 @@ export function previewCredentialCsv(
           : "unknown";
       if (kind === "unknown") issues.push("Unknown credential type");
       // Usernames may be case-sensitive. Never silently merge accounts.
-      const key = JSON.stringify([origin, account, kind]);
-      if (seen.has(key)) issues.push("Duplicate within import");
-      seen.add(key);
+      const keys = accounts.map((value) => JSON.stringify([origin, value, kind]));
+      if (keys.some((key) => seen.has(key))) issues.push("Duplicate within import");
+      keys.forEach((key) => seen.add(key));
       if (
         existing.some((item) => {
           let itemOrigin: string;
@@ -136,7 +141,7 @@ export function previewCredentialCsv(
           return (
             origin === itemOrigin &&
             kind === item.secret_type &&
-            (account === item.username || account === item.email_address)
+            accounts.some((value) => value === item.username || value === item.email_address)
           );
         })
       )

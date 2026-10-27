@@ -160,6 +160,22 @@ test("flags Proton multi-URL entries and detects the email account against exist
   assert.ok(result[0]!.issues.includes("Existing credential requires review"));
 });
 
+test("reviews a Proton record when its email matches an existing item even if it has a username", () => {
+  const rows = previewCredentialCsv(
+    "type,name,url,email,username,password,vault\nlogin,Example,https://example.com,alice@example.com,alice,fixture,Personal",
+    [
+      {
+        website: "https://example.com",
+        username: null,
+        email_address: "alice@example.com",
+        secret_type: "password",
+      },
+    ],
+  );
+  assert.ok(rows[0]!.issues.includes("Existing credential requires review"));
+  assert.doesNotMatch(JSON.stringify(rows), /alice|fixture/);
+});
+
 test("accepts a realistic file larger than the former two megabyte limit", () => {
   const csv =
     "url,username\n" +
