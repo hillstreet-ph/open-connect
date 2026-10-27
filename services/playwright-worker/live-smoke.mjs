@@ -55,7 +55,9 @@ try {
     params: { name: "browser_snapshot", arguments: {} },
   });
   if (!JSON.stringify(snapshot).includes("manual-paste-proof=1"))
-    throw new Error("Viewer paste input did not reach the browser");
+    throw new Error(
+      `Viewer paste input did not reach the browser: ${JSON.stringify(snapshot).slice(0, 2000)}`,
+    );
   console.log("PASS: live view, manual keyboard, clipboard paste, paused agent control and resume");
 } finally {
   await rpc({ method: "task/cancel" }).catch(() => {});
