@@ -104,6 +104,7 @@ export const runAgencyTeam = createServerFn({ method: "POST" })
     if (!routes.length)
       throw new Error("Connect an available free model provider in AI Gateway first.");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { finishAgencyProposalRun } = await import("@/lib/ai-agency-run-store.server");
     const db = supabaseAdmin as SupabaseClient;
     const id = crypto.randomUUID();
     const evidence = {
@@ -135,35 +136,18 @@ export const runAgencyTeam = createServerFn({ method: "POST" })
         team.roles,
       );
     } catch {
-      await db
-        .from("autonomous_runs")
-        .update({
-          state: "failed",
-          updated_at: new Date().toISOString(),
-          evidence: {
-            ...evidence,
-            error: "The team request was interrupted. Completion is unverified.",
-          },
-        })
-        .eq("id", id)
-        .eq("user_id", context.userId);
+      await finishAgencyProposalRun(db, context.userId, id, "failed", {
+        ...evidence,
+        error: "The team request was interrupted. Completion is unverified.",
+      });
       throw new Error(`Team run ${id} did not complete. Check its history before retrying.`);
     }
     const state = result.workers.every((worker) => worker.status === "completed")
       ? "succeeded"
       : "failed";
-    const { error: finishError } = await db
-      .from("autonomous_runs")
-      .update({
-        state,
-        updated_at: new Date().toISOString(),
-        evidence: { ...evidence, workers: result.workers },
-      })
-      .eq("id", id)
-      .eq("user_id", context.userId);
-    if (finishError)
-      throw new Error(
-        `Run ${id} finished, but saving the result could not be verified. Check history before retrying.`,
-      );
+    await finishAgencyProposalRun(db, context.userId, id, state, {
+      ...evidence,
+      workers: result.workers,
+    });
     return { id, state };
   });

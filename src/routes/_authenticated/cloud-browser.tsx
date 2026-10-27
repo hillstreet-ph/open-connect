@@ -1,66 +1,61 @@
-import { GlobalBrowserAutomation } from "@/components/global-browser-automation";
-import { CloudBrowserSwitcher } from "@/components/cloud-browser-switcher";
-import { browserProvider, type BrowserProviderId } from "@/lib/browser-provider-selection";
-import { createFileRoute } from "@tanstack/react-router";
-import { CloudBrowserConsole } from "@/components/cloud-browser-console";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { PlaywrightBrowser } from "@/components/playwright-browser";
 import { CloudWorkspacePage } from "@/components/cloud-workspace-page";
 
 export const Route = createFileRoute("/_authenticated/cloud-browser")({
   validateSearch: (
     search: Record<string, unknown>,
-  ): { run?: string; mode?: "direct"; provider?: BrowserProviderId } => {
-    const run = typeof search["run"] === "string" ? search["run"].trim() : "";
-    return {
-      provider: browserProvider(search["provider"]),
-      ...(/^[A-Za-z0-9_-]{1,128}$/.test(run) ? { run } : {}),
-      ...(search["mode"] === "direct" ? { mode: "direct" as const } : {}),
-    };
-  },
+  ): { run?: string; mode?: "direct" | "computer"; provider?: string } => ({
+    ...(typeof search["run"] === "string" ? { run: search["run"] } : {}),
+    ...(search["mode"] === "computer" || search["mode"] === "direct"
+      ? { mode: search["mode"] }
+      : {}),
+  }),
   head: () => ({
     meta: [{ title: "Cloud Browser — Open-Connect" }, { name: "robots", content: "noindex" }],
   }),
-  component: CloudBrowserRoute,
+  component: CloudBrowserPage,
 });
 
-function CloudBrowserRoute() {
-  const { run, mode, provider: selection } = Route.useSearch();
-  const provider = selection ?? "tinyfish";
-  const navigate = Route.useNavigate();
+function CloudBrowserPage() {
+  const { mode } = Route.useSearch();
+  const computer = mode === "computer";
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:px-6">
       <header>
         <h1 className="text-2xl font-semibold">Cloud Browser</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          A real cloud Chrome with your saved sign-ins. Watch it live here, or let any AI agent
-          connected to open-connect.site/mcp drive it.
+          Run browser tasks and access connected computer tools from one workspace.
         </p>
       </header>
-      <GlobalBrowserAutomation />
-      <CloudBrowserSwitcher
-        selected={provider}
-        onSelect={(next) =>
-          void navigate({
-            search: { provider: next, ...(run ? { run } : {}), ...(mode ? { mode } : {}) },
-          })
-        }
-        tinyfish={
-          <CloudBrowserConsole
-            initialMode={mode}
-            {...(run ? { runId: run } : {})}
-            onSelectRun={(runId) =>
-              void navigate({
-                search: (previous) => ({
-                  provider: browserProvider(previous.provider),
-                  ...(runId ? { run: runId } : {}),
-                  ...(previous.mode ? { mode: previous.mode } : {}),
-                }),
-                replace: false,
-              })
-            }
-          />
-        }
-        external={<CloudWorkspacePage kind="browser" embedded />}
-      />
+      <nav aria-label="Cloud workspace" className="flex flex-wrap gap-2">
+        <Link
+          to="/cloud-browser"
+          search={{}}
+          aria-current={!computer ? "page" : undefined}
+          className={`rounded-md border px-4 py-2 text-sm ${!computer ? "border-primary bg-primary/10" : "hover:bg-muted"}`}
+        >
+          Browser
+        </Link>
+        <Link
+          to="/cloud-browser"
+          search={{ mode: "computer" }}
+          aria-current={computer ? "page" : undefined}
+          className={`rounded-md border px-4 py-2 text-sm ${computer ? "border-primary bg-primary/10" : "hover:bg-muted"}`}
+        >
+          Computer tools
+        </Link>
+      </nav>
+      <div hidden={computer}>
+        <PlaywrightBrowser />
+      </div>
+      <div hidden={!computer} className="space-y-4">
+        <p className="text-sm text-muted-foreground">
+          Computer tools use the selected provider connection. Its desktop and files are separate
+          from your Playwright browser session.
+        </p>
+        <CloudWorkspacePage kind="computer" embedded />
+      </div>
     </div>
   );
 }

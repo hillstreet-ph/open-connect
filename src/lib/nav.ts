@@ -68,7 +68,6 @@ export const appCategories: NavCategory[] = [
       { to: "/cloud-phone", label: "Cloud Phone" },
       { to: "/cloud-browser", label: "Cloud Browser" },
       { to: "/cloud-terminal", label: "Cloud Terminal" },
-      { to: "/cloud-computer", label: "Cloud Computer" },
     ],
   },
   {

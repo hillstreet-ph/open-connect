@@ -514,3 +514,14 @@ test("public homepage removes Marketplace header navigation while preserving wor
   );
   assert.ok(!project.includes("Back to projects"));
 });
+
+test("cloud computer is available from the single browser workspace", () => {
+  const cloud = appCategories.find((category) => category.id === "cloud");
+  assert.ok(cloud?.items.some((item) => item.to === "/cloud-browser"));
+  assert.ok(!cloud?.items.some((item) => item.to === "/cloud-computer"));
+  const oldRoute = readFileSync(
+    path.resolve(process.cwd(), "src/routes/_authenticated/cloud-computer.tsx"),
+    "utf8",
+  );
+  assert.match(oldRoute, /redirect\(\{ to: "\/cloud-browser", search: \{ mode: "computer" \}/);
+});

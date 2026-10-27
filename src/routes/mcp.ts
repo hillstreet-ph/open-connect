@@ -684,25 +684,17 @@ const PLATFORM_TOOLS: McpTool[] = [
     },
   },
   {
-    name: "browser_automation_status",
+    name: "cloud_browser_tools",
     description:
-      "Read the shared browser verification policy, supported controls and owned solver credential readiness for all browsers and AI clients. Does not start paid work.",
+      "List supported Playwright browser actions and their argument schemas. One engine, isolated session per authenticated user. No alternate browser fallback.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   },
   {
-    name: "browser_automation_configure",
+    name: "cloud_browser_cancel_task",
     description:
-      "Save the current owner's global browser policy. External assistance permits metered solver use; every submitted task still requires spendApproved=true. No credentials are accepted.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        native_assistance: { type: "boolean" },
-        external_assistance: { type: "boolean" },
-      },
-      required: ["native_assistance", "external_assistance"],
-      additionalProperties: false,
-    },
+      "Stop the caller's active Playwright task, close its browser session, and reject further actions from the cancelled task. Earlier completed actions are not undone.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
     annotations: {
       readOnlyHint: false,
       destructiveHint: false,
@@ -711,249 +703,19 @@ const PLATFORM_TOOLS: McpTool[] = [
     },
   },
   {
-    name: "browser_verification_start",
+    name: "cloud_browser_call",
     description:
-      "Submit a supported widget to the shared owned 2Captcha resolver from any browser or AI client. Reuse requestId when checking an ambiguous submission; never duplicate a charge. Requires external policy, an owned key and spending approval. Use only a non-secret session ID as browserRef, never a CDP URL.",
+      "Execute a discovered Playwright browser action in your isolated session. Discover cloud_browser_tools first. Use browser_close when finished. Requires a personal administrator key with tools:invoke and connections:invoke. Never put passwords in arguments.",
     inputSchema: {
       type: "object",
       properties: {
-        requestId: { type: "string", format: "uuid" },
-        browser: { type: "string", pattern: "^[a-z0-9_-]{1,80}$" },
-        browserRef: { type: "string", pattern: "^[A-Za-z0-9:._-]{1,180}$" },
-        pageUrl: { type: "string", format: "uri", maxLength: 2048 },
-        type: { type: "string", enum: ["recaptcha_v2", "turnstile"] },
-        siteKey: { type: "string", minLength: 1, maxLength: 512 },
-        spendApproved: { const: true },
+        name: { type: "string" },
+        arguments: { type: "object", additionalProperties: true },
       },
-      required: [
-        "requestId",
-        "browser",
-        "browserRef",
-        "pageUrl",
-        "type",
-        "siteKey",
-        "spendApproved",
-      ],
+      required: ["name", "arguments"],
       additionalProperties: false,
-    },
-    annotations: {
-      readOnlyHint: false,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: true,
-    },
-  },
-  {
-    name: "browser_verification_result",
-    description:
-      "Read one owned solver attempt and its short-lived proof. Apply a ready proof only to the returned browser reference and origin through that browser's supported API. Never echo or persist the proof. Website acceptance remains unverified until checked in the same session.",
-    inputSchema: {
-      type: "object",
-      properties: { id: { type: "string", format: "uuid" } },
-      required: ["id"],
-      additionalProperties: false,
-    },
-    annotations: {
-      readOnlyHint: true,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: true,
-    },
-  },
-  {
-    name: "browser_provider_start",
-    description:
-      "Start Browser Use V4 (a prompt agent capped at $1) or Browserbase (a five-minute manual browser). Requires the caller's native provider connection, a personal admin key and explicit approval for this metered run. Do not retry an ambiguous create. Keep the returned signed reference for read/stop.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        provider: { type: "string", enum: ["browser_use", "browserbase"] },
-        task: { type: "string", minLength: 1, maxLength: 8000 },
-        model: { type: "string" },
-        modelParams: { type: "object", additionalProperties: true },
-        spendApproved: { const: true },
-        solveCaptchas: {
-          type: "boolean",
-          description:
-            "Optional Browserbase override; omitted inherits the global browser policy. Requires an eligible account plan; does not enable proxies or Verified.",
-        },
-      },
-      required: ["provider", "task", "spendApproved"],
-      additionalProperties: false,
-    },
-    annotations: {
-      readOnlyHint: false,
-      destructiveHint: false,
-      idempotentHint: false,
-      openWorldHint: true,
-    },
-  },
-  ...(["browser_provider_read", "browser_provider_stop"] as const).map((name) => ({
-    name,
-    description: name.endsWith("stop")
-      ? "Cancel this owned run and check cleanup. A cancellation request alone is not a confirmed stop."
-      : "Read this owned run and clean up its browser after terminal status. Review results before claiming the task succeeded.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        provider: { type: "string", enum: ["browser_use", "browserbase"] },
-        connectionId: { type: ["string", "null"] },
-        id: { type: "string", format: "uuid" },
-        sessionId: { type: "string", format: "uuid" },
-        signature: { type: "string" },
-      },
-      required: ["provider", "connectionId", "id", "sessionId", "signature"],
-      additionalProperties: false,
-    },
-    annotations: {
-      readOnlyHint: false,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: true,
-    },
-  })),
-  {
-    name: "cloud_browser_run",
-    description:
-      "Use this when a task needs a real web browser: open a site, log in with saved sign-ins, click, fill forms, or read pages behind a login. Starts the user's Open-Connect cloud browser (TinyFish Chrome) with their saved Browser Context Profile (cookies and sessions) by default and returns immediately with run_id, a live streaming_url, and view_url on open-connect.site. Poll cloud_browser_get_run every 15-30s until terminal. Never put passwords in the goal.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        url: { type: "string", description: "Starting URL, e.g. https://web.telegram.org" },
-        goal: { type: "string", description: "Plain-language task for the browser agent." },
-        use_profile: {
-          type: "boolean",
-          description: "Use saved sign-ins (default true). false starts a fresh browser.",
-        },
-        profile_id: { type: "string", description: "Specific Browser Context Profile id." },
-        stealth: { type: "boolean", description: "Anti-detection browser for protected sites." },
-        proxy_country_code: { type: "string", description: "Two-letter proxy exit country." },
-        max_duration_seconds: { type: "integer", minimum: 30, maximum: 3600 },
-      },
-      required: ["url", "goal"],
-    },
-    annotations: {
-      readOnlyHint: false,
-      destructiveHint: false,
-      idempotentHint: false,
-      openWorldHint: true,
-    },
-    _meta: WIDGET_META,
-  },
-  {
-    name: "cloud_browser_get_run",
-    description:
-      "Use this to check a cloud browser run: status, live streaming_url while running, recent actions, and the final result.",
-    inputSchema: {
-      type: "object",
-      properties: { run_id: { type: "string" } },
-      required: ["run_id"],
-    },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
-    _meta: WIDGET_META,
-  },
-  {
-    name: "cloud_browser_list_runs",
-    description:
-      "List recent cloud browser runs (newest first), including runs started from open-connect.site or other agents.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        limit: { type: "integer", minimum: 1, maximum: 50 },
-        status: {
-          type: "string",
-          enum: ["PENDING", "RUNNING", "COMPLETED", "FAILED", "CANCELLED"],
-        },
-      },
-    },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
-  },
-  {
-    name: "cloud_browser_cancel_run",
-    description: "Stop a running cloud browser run when the user asks to stop it.",
-    inputSchema: {
-      type: "object",
-      properties: { run_id: { type: "string" } },
-      required: ["run_id"],
-    },
-    annotations: {
-      readOnlyHint: false,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: true,
-    },
-    _meta: { ui: { visibility: ["model", "app"] }, "openai/widgetAccessible": true },
-  },
-  {
-    name: "cloud_browser_profiles",
-    description:
-      "List the user's saved Browser Context Profiles and, for the default profile, which sites have saved sign-ins (cookie counts only; no cookie values).",
-    inputSchema: { type: "object", properties: {} },
-    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
-  },
-  {
-    name: "cloud_browser_save_profile",
-    description:
-      "Create a named Browser Context Profile or update its name/default setting. Omit profile_id to create; supply it to update. Does not sign in or save cookies. Use profile setup next.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        profile_id: { type: "string" },
-        name: { type: "string", minLength: 1, maxLength: 100 },
-        set_as_default: { type: "boolean" },
-      },
-      required: ["name"],
     },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
-  },
-  {
-    name: "cloud_browser_profile_setup",
-    description:
-      "Set up saved sign-ins: start returns a temporary CDP browser (15-minute timeout); connect your browser controller to cdp_url, complete authorized sign-in, then save with session_id. Cancel discards unsaved state. Never put passwords in goals or tool arguments. This is not an interactive viewer URL; use TinyFish profile manager for manual sign-in. Saving captures cookies and storage for future tasks.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        action: { type: "string", enum: ["start", "save", "cancel"] },
-        profile_id: { type: "string" },
-        url: { type: "string" },
-        session_id: { type: "string" },
-      },
-      required: ["action", "profile_id"],
-    },
-    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
-  },
-  {
-    name: "cloud_browser_create_session",
-    description:
-      "Create a raw remote Chrome session for Playwright/Puppeteer/CDP control. Returns session_id and cdp_url. Billed until closed: always call cloud_browser_close_session afterwards.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        url: { type: "string" },
-        timeout_seconds: { type: "integer", minimum: 5, maximum: 86400 },
-      },
-    },
-    annotations: {
-      readOnlyHint: false,
-      destructiveHint: false,
-      idempotentHint: false,
-      openWorldHint: true,
-    },
-  },
-  {
-    name: "cloud_browser_close_session",
-    description: "Close a raw remote browser session to stop billing.",
-    inputSchema: {
-      type: "object",
-      properties: { session_id: { type: "string" } },
-      required: ["session_id"],
-    },
-    annotations: {
-      readOnlyHint: false,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: true,
-    },
   },
   {
     name: "e2b_health",
@@ -1451,114 +1213,6 @@ async function requireProviderWrite(key: AuthedKey) {
   return roles;
 }
 
-/** Cloud browser tools run with the caller's own TinyFish key from the vault. */
-async function handleCloudBrowserTool(
-  userId: string,
-  name: string,
-  args: Record<string, unknown>,
-  allowBroker = true,
-) {
-  const { cloudBrowserClient, cloudBrowserViewUrl, CloudBrowserNotConnectedError } =
-    await import("@/lib/tinyfish.server");
-  const tf = await import("@/lib/tinyfish");
-  let client: import("@/lib/tinyfish").TinyFishClient;
-  try {
-    ({ client } = await cloudBrowserClient(userId, { allowBroker }));
-  } catch (error) {
-    if (error instanceof CloudBrowserNotConnectedError) {
-      const payload = {
-        status: "not_connected",
-        code: error.code,
-        message: error.message,
-        setup_url: "https://open-connect.site/connections",
-      };
-      return { ...textResult(payload), structuredContent: payload, isError: true };
-    }
-    throw error;
-  }
-  const withView = <T extends { run_id: string }>(run: T) => ({
-    ...run,
-    view_url: cloudBrowserViewUrl(run.run_id),
-  });
-  let payload: unknown;
-  if (name === "cloud_browser_run") {
-    payload = withView(await tf.startRunWithLiveView(client, tf.normalizeStartRun(args)));
-  } else if (name === "cloud_browser_get_run") {
-    payload = withView(tf.summarizeRun(await client.getRun(tf.assertRunId(args["run_id"]))));
-  } else if (name === "cloud_browser_list_runs") {
-    const status = String(args["status"] ?? "");
-    const listed = await client.listRuns({
-      limit: Math.min(Number(args["limit"] ?? 10) || 10, 50),
-      ...(["PENDING", "RUNNING", "COMPLETED", "FAILED", "CANCELLED"].includes(status)
-        ? { status: status as import("@/lib/tinyfish").TinyFishRunStatus }
-        : {}),
-    });
-    payload = {
-      runs: (listed.data ?? []).map((run) => withView(tf.summarizeRun(run))),
-      view_url: cloudBrowserViewUrl(),
-    };
-  } else if (name === "cloud_browser_cancel_run") {
-    const runId = tf.assertRunId(args["run_id"]);
-    await client.cancelRun(runId);
-    payload = withView(tf.summarizeRun(await client.getRun(runId)));
-  } else if (name === "cloud_browser_profiles") {
-    const { profiles } = await client.listProfiles();
-    const preferred = profiles.find((profile) => profile.is_default) ?? profiles[0];
-    const detail = preferred ? await client.getProfile(preferred.id).catch(() => null) : null;
-    payload = {
-      profiles: profiles.map((profile) => ({
-        id: profile.id,
-        name: profile.name,
-        is_default: profile.is_default === true,
-        saved_sites: profile.domain_count ?? 0,
-      })),
-      default_profile_sites: (detail?.domains ?? []).map((domain) => ({
-        domain: domain.domain,
-        cookies: domain.cookie_count ?? 0,
-      })),
-    };
-  } else if (name === "cloud_browser_save_profile") {
-    const input = {
-      name: String(args["name"] ?? ""),
-      set_as_default: args["set_as_default"] === true,
-    };
-    const profile = args["profile_id"]
-      ? await client.updateProfile(String(args["profile_id"]), input)
-      : await client.createProfile(input);
-    payload = {
-      id: profile.id,
-      name: profile.name,
-      setup_url: `https://agent.tinyfish.ai/profiles/${encodeURIComponent(profile.id)}`,
-    };
-  } else if (name === "cloud_browser_profile_setup") {
-    const profileId = tf.assertProfileId(args["profile_id"]);
-    const action = args["action"];
-    if (action === "start") {
-      if (typeof args["url"] !== "string" || !args["url"].trim())
-        throw new Error("A sign-in URL is required.");
-      payload = await client.startProfileSetup(profileId, args["url"]);
-    } else if (action === "save" || action === "cancel") {
-      payload = await client.finishProfileSetup(
-        profileId,
-        tf.assertSessionId(args["session_id"]),
-        action,
-      );
-    } else throw new Error("Choose start, save or cancel.");
-  } else if (name === "cloud_browser_create_session") {
-    const url = typeof args["url"] === "string" && args["url"] ? String(args["url"]) : undefined;
-    payload = await client.createBrowserSession({
-      ...(url ? { url } : {}),
-      timeout_seconds: Number(args["timeout_seconds"] ?? 600),
-    });
-  } else if (name === "cloud_browser_close_session") {
-    await client.closeBrowserSession(tf.assertSessionId(args["session_id"]));
-    payload = { closed: true, session_id: String(args["session_id"]) };
-  } else {
-    throw new Error("Unknown cloud browser tool.");
-  }
-  return { ...textResult(payload), structuredContent: payload };
-}
-
 function unauthorized(message: string) {
   return new Response(
     JSON.stringify({
@@ -1784,22 +1438,9 @@ const TOOL_SCOPES: Record<string, string> = {
   inspect_connections: "connections:read",
   list_connection_tools: "connections:read",
   call_connection_tool: "connections:invoke",
-  browser_automation_status: "connections:read",
-  browser_automation_configure: "control:write",
-  browser_verification_start: "tools:invoke",
-  browser_verification_result: "tools:invoke",
-  browser_provider_start: "tools:invoke",
-  browser_provider_read: "tools:invoke",
-  browser_provider_stop: "tools:invoke",
-  cloud_browser_run: "tools:invoke",
-  cloud_browser_get_run: "connections:read",
-  cloud_browser_list_runs: "connections:read",
-  cloud_browser_cancel_run: "tools:invoke",
-  cloud_browser_profiles: "connections:read",
-  cloud_browser_save_profile: "tools:invoke",
-  cloud_browser_profile_setup: "tools:invoke",
-  cloud_browser_create_session: "tools:invoke",
-  cloud_browser_close_session: "tools:invoke",
+  cloud_browser_tools: "connections:read",
+  cloud_browser_call: "tools:invoke",
+  cloud_browser_cancel_task: "tools:invoke",
   e2b_health: "connections:read",
   e2b_list_sandboxes: "connections:read",
   e2b_create_sandbox: "tools:invoke",
@@ -2635,59 +2276,27 @@ export const Route = createFileRoute("/mcp")({
               ...textResult(connectionResult),
               ...(connectionResult.isError ? { isError: true } : {}),
             };
-          } else if (
-            [
-              "browser_automation_status",
-              "browser_automation_configure",
-              "browser_verification_start",
-              "browser_verification_result",
-            ].includes(name)
-          ) {
+          } else if (name === "cloud_browser_cancel_task") {
             if (key.projectId || key.workspaceId || key.organizationId)
-              throw new Error(
-                "Global browser automation requires a personal key; bounded keys cannot use personal solver credentials.",
-              );
-            const service = await import("@/lib/browser-verification.server");
-            if (name === "browser_automation_status")
-              result = textResult(await service.globalBrowserStatus(key.userId));
-            else if (name === "browser_automation_configure") {
-              await requireControlWrite(key);
-              result = textResult(await service.saveBrowserPreferences(key.userId, args));
-            } else {
-              await requireProviderWrite(key);
-              result = textResult(
-                name === "browser_verification_start"
-                  ? await service.beginVerification(key.userId, args)
-                  : await service.readVerification(key.userId, String(args["id"] ?? "")),
-              );
-            }
-          } else if (
-            ["browser_provider_start", "browser_provider_read", "browser_provider_stop"].includes(
-              name,
-            )
-          ) {
-            if (key.projectId || key.workspaceId || key.organizationId)
-              throw new Error("Additional browser providers require a personal API key.");
+              throw new Error("Cloud Browser currently requires a personal key.");
             await requireProviderWrite(key);
-            const sdk = await import("@/lib/browser-providers.server");
-            const payload = await sdk.publicProviderCall(async () => {
-              if (name === "browser_provider_start")
-                return await sdk.startProvider(key.userId, args);
-              return await sdk.readProvider(key.userId, args, name === "browser_provider_stop");
-            });
-            result = { ...textResult(payload), structuredContent: payload };
-          } else if (name.startsWith("cloud_browser_")) {
-            if (
-              (name === "cloud_browser_save_profile" || name === "cloud_browser_profile_setup") &&
-              (key.projectId || key.workspaceId || key.organizationId)
-            )
-              throw new Error("Saved browser profile management requires a personal API key.");
-            result = await handleCloudBrowserTool(
+            const { playwrightTaskControl } = await import("@/lib/playwright-worker.server");
+            result = textResult(await playwrightTaskControl(key.userId, "cancel"));
+          } else if (name === "cloud_browser_tools" || name === "cloud_browser_call") {
+            if (key.projectId || key.workspaceId || key.organizationId)
+              throw new Error("Cloud Browser currently requires a personal key.");
+            if (name === "cloud_browser_call") await requireProviderWrite(key);
+            const { playwrightWorker } = await import("@/lib/playwright-worker.server");
+            const payload = await playwrightWorker(
               key.userId,
-              name,
-              args,
-              !key.projectId && !key.workspaceId && !key.organizationId,
+              name === "cloud_browser_call" ? String(args["name"] ?? "") : undefined,
+              (args["arguments"] ?? {}) as Record<string, unknown>,
             );
+            result = {
+              ...textResult(payload),
+              structuredContent: payload,
+              ...(payload.isError ? { isError: true } : {}),
+            };
           } else if (name === "e2b_health") {
             const { e2bConfig, e2bHealth } = await import("@/lib/e2b.server");
             if (!e2bConfig().configured) throw new Error("E2B is not configured");
