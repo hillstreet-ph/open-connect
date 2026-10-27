@@ -33,7 +33,8 @@ test("rejects unsupported OTP parameters and ambiguous secrets", () => {
     "otpauth://totp/x?secret=JBSWY3DPEHPK3PXP&period=60",
     "otpauth://totp/x?secret=JBSWY3DPEHPK3PXP&secret=JBSWY3DPEHPK3PXP",
     "JBSW!3DPEHPK3PXP",
-  ]) assert.equal(protonTotpSeed(value), null);
+  ])
+    assert.equal(protonTotpSeed(value), null);
 });
 
 test("unsupported data and malformed URLs cannot become importable or echo secrets", () => {
