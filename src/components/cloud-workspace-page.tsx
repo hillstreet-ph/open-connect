@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { extractLiveViewUrls } from "@/lib/cloud-live-view";
+import { terminalArgumentsWithText, terminalEditorField } from "@/lib/cloud-terminal-input";
 
 /** Common provider tools surfaced as one-tap starting points (TinyFish names first). */
 const QUICK_START_TOOLS: Record<keyof typeof descriptions, string[]> = {
@@ -31,7 +32,7 @@ const QUICK_START_TOOLS: Record<keyof typeof descriptions, string[]> = {
     "search",
   ],
   computer: ["create_sandbox", "computer_use", "screenshot"],
-  terminal: ["run_command", "execute_command", "create_sandbox"],
+  terminal: ["run_command", "execute_command", "run_code", "execute_code", "create_sandbox"],
   phone: ["create_device", "list_devices"],
   sandbox: [
     "create_sandbox",
@@ -108,6 +109,23 @@ export function CloudWorkspacePage({
     (tool) => !browserFamily || browserFamilyTool(browserFamily, tool.name),
   );
   const selectedTool = visibleTools.find((tool) => tool.name === toolName);
+  const terminalField =
+    kind === "terminal" && selectedTool
+      ? terminalEditorField(selectedTool.name, selectedTool.inputSchema)
+      : null;
+  let terminalText = "";
+  let terminalArgumentsValid = true;
+  if (terminalField) {
+    try {
+      const args: unknown = JSON.parse(argumentsText);
+      if (!args || typeof args !== "object" || Array.isArray(args)) throw new Error();
+      const value = (args as Record<string, unknown>)[terminalField];
+      if (value !== undefined && typeof value !== "string") throw new Error();
+      terminalText = value ?? "";
+    } catch {
+      terminalArgumentsValid = false;
+    }
+  }
   const sessionTools = visibleTools.filter((tool) =>
     /session|profile|browser.context|cookie/i.test(`${tool.name} ${tool.description}`),
   );
@@ -362,6 +380,37 @@ export function CloudWorkspacePage({
                     {selectedTool.inputSchema}
                   </pre>
                 </details>
+                {terminalField ? (
+                  <>
+                    <Label htmlFor={`${controlId}-terminal-text`}>
+                      {terminalField === "code" ? "Code" : "Command"}
+                    </Label>
+                    <Textarea
+                      id={`${controlId}-terminal-text`}
+                      className="min-h-32 font-mono"
+                      value={terminalText}
+                      disabled={execution.isPending || !terminalArgumentsValid}
+                      onChange={(event) =>
+                        setArgumentsText(
+                          terminalArgumentsWithText(
+                            argumentsText,
+                            terminalField,
+                            event.target.value,
+                          ),
+                        )
+                      }
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Enter any required sandbox ID, language, or other provider fields in Arguments
+                      below. Commands run only when you select Run tool.
+                    </p>
+                    {!terminalArgumentsValid ? (
+                      <p role="alert" className="text-sm">
+                        Correct the JSON arguments to edit the command or code.
+                      </p>
+                    ) : null}
+                  </>
+                ) : null}
                 <Label htmlFor={`${controlId}-arguments`}>Arguments (JSON)</Label>
                 <Textarea
                   id={`${controlId}-arguments`}
