@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PlaywrightBrowser } from "@/components/playwright-browser";
 import { CloudWorkspacePage } from "@/components/cloud-workspace-page";
+import { CloudComputerManager } from "@/components/cloud-computer-manager";
 
 export const Route = createFileRoute("/_authenticated/cloud-browser")({
   validateSearch: (
@@ -50,6 +51,11 @@ function CloudBrowserPage() {
         <PlaywrightBrowser />
       </div>
       <div hidden={!computer} className="space-y-4">
+        {computer && (
+          <div className="mx-auto max-w-2xl">
+            <CloudComputerManager />
+          </div>
+        )}
         <p className="text-sm text-muted-foreground">
           Computer tools use the selected provider connection. Its desktop and files are separate
           from your Playwright browser session.
