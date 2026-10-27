@@ -44,17 +44,18 @@ try {
   await page.waitForTimeout(2000);
   await page.locator("#focus").click();
   await page.keyboard.press("Control+l");
-  await page.locator("#paste").fill("https://example.com/?manual-paste-proof=1");
-  await page.locator("#send-paste").click();
-  await page.waitForTimeout(1000);
+  await page.keyboard.type("http://127.0.0.1:8081/paste");
   await page.keyboard.press("Enter");
   await page.waitForTimeout(2000);
+  await page.locator("#paste").fill("manual-paste-proof");
+  await page.locator("#send-paste").click();
+  await page.waitForTimeout(1500);
   await rpc({ method: "view/end" });
   const snapshot = await rpc({
     method: "tools/call",
     params: { name: "browser_snapshot", arguments: {} },
   });
-  if (!JSON.stringify(snapshot).includes("manual-paste-proof=1"))
+  if (!JSON.stringify(snapshot).includes("manual-paste-proof"))
     throw new Error(
       `Viewer paste input did not reach the browser: ${JSON.stringify(snapshot).slice(0, 2000)}`,
     );
