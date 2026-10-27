@@ -22,7 +22,9 @@ jobs:
         with:
           bun-version: latest
       - name: Install
-        run: bun install --frozen-lockfile
+        run: |
+          bun install --frozen-lockfile
+          npm ci --prefix services/playwright-worker --ignore-scripts --no-audit --no-fund
       - name: Dependency security audit
         run: bun audit
       - name: Lint
@@ -31,6 +33,8 @@ jobs:
         run: bun run test
       - name: OAuth database regression tests
         run: bun run test:oauth:db
+      - name: Workforce database regression tests
+        run: bun run test:workforce:db
       - name: Consolidated resource integrity
         run: python3 scripts/consolidate_resources.py
       - name: Marketplace branch history regression tests
@@ -51,6 +55,8 @@ jobs:
           VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_placeholder
           VITE_APP_URL: https://open-connect.site
         run: bun run test:ssr
+      - name: Workforce browser interaction fixture
+        run: bun run test:workforce:browser
       - name: Upload Cloudflare Pages artifact
         if: success()
         uses: actions/upload-artifact@v7

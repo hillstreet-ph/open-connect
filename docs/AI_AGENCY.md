@@ -1,5 +1,7 @@
 # AI Agency
 
+The private [Workforce Directory and Registry](PRIVATE_WORKFORCE.md) adds versioned specialist profiles and request-bound chats. The existing proposal-team workflow described below remains separate and unchanged.
+
 AI Agency is available under Connections after Connectors, Credentials and AI Gateway. It manages private multi-role AI teams without creating another credentials store or installing agents automatically.
 
 Starter categories are Development, Business, Marketing, Research, Operations and Custom. A starter fills the form; saving creates the owned team. Choose 2–6 distinct plain-text role names, a team name and a description. Team names are unique per owner, including archived teams, ignoring case and surrounding spaces. Edit a saved team, or archive and later restore it. A concurrent edit requires reloading the current version.

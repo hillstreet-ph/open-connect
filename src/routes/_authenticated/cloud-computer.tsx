@@ -1,9 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { CloudWorkspacePage } from "@/components/cloud-workspace-page";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/cloud-computer")({
-  head: () => ({
-    meta: [{ title: "Cloud Computer — Open-Connect" }, { name: "robots", content: "noindex" }],
-  }),
-  component: () => <CloudWorkspacePage kind="computer" />,
+  beforeLoad: () => {
+    throw redirect({ to: "/cloud-browser", search: { mode: "computer" } });
+  },
 });

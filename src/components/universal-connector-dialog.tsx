@@ -1,3 +1,4 @@
+import { defaultConnectorAuth, authForProtocol } from "@/lib/connection-login";
 import { PROVIDER_API_PRESETS } from "@/lib/provider-api-presets";
 import { loadPluginSchema } from "@/lib/connector-manifest.functions";
 import { useRef, useState } from "react";
@@ -62,7 +63,12 @@ function ConnectorForm({
       (initial?.metadata["transport"] ||
         (initial?.provider === "custom_api" ? "openapi" : "http")) as "http" | "sse" | "openapi",
     ),
-    [auth, setAuth] = useState(String(initial?.metadata["auth_type"] || "none")),
+    [auth, setAuth] = useState(
+      defaultConnectorAuth(
+        initial?.provider === "custom_api" ? "openapi" : "http",
+        initial?.metadata["auth_type"],
+      ),
+    ),
     [header, setHeader] = useState(String(initial?.metadata["auth_header"] || "X-API-Key")),
     [secret, setSecret] = useState(""),
     [icon, setIcon] = useState(String(initial?.metadata["icon_data"] || "")),
@@ -143,6 +149,8 @@ function ConnectorForm({
         const api = openApiOperations(doc);
         setSchema(doc);
         setProtocol("openapi");
+        setAuth((current) => authForProtocol("openapi", current));
+        setSecret("");
         setEndpoint(api.endpoint);
         setName(api.title);
         setDescription(api.description);
@@ -282,7 +290,11 @@ function ConnectorForm({
               id="universal-protocol"
               className="h-10 w-full rounded-md border bg-background px-3 text-sm"
               value={protocol}
-              onChange={(e) => setProtocol(e.target.value as typeof protocol)}
+              onChange={(e) => {
+                const next = e.target.value as typeof protocol;
+                setProtocol(next);
+                setAuth(authForProtocol(next, auth));
+              }}
             >
               <option value="http" disabled={initial?.provider === "custom_api"}>
                 MCP · HTTP (Streamable)
@@ -320,11 +332,13 @@ function ConnectorForm({
             value={auth}
             onChange={(e) => setAuth(e.target.value)}
           >
-            <option value="none">No authentication</option>
+            <option value="oauth" disabled={protocol === "openapi"}>
+              OAuth 2.1 · sign in (recommended for MCP)
+            </option>
             <option value="bearer">Authorization · Bearer token</option>
             <option value="api_key">API key · custom header</option>
             <option value="personal_access_token">Personal access token</option>
-            <option value="oauth">OAuth 2.1 · authorize account</option>
+            <option value="none">No authentication · public servers only</option>
           </select>
         </div>
         {auth === "api_key" && (

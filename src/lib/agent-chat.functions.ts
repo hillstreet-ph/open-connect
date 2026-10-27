@@ -21,6 +21,7 @@ export const listAgentChats = createServerFn({ method: "GET" })
       .from("agent_chats")
       .select("id,title,mode,browser_run_id,updated_at,revision")
       .eq("user_id", context.userId)
+      .is("workforce_agent_id", null)
       .order("updated_at", { ascending: false })
       .order("id")
       .limit(51);
