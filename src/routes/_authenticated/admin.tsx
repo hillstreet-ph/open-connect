@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useRoles } from "@/hooks/use-roles";
 import { assignRole, listRoleAssignments, revokeRole } from "@/lib/roles.functions";
-import { roleLabel, canRevokeRole, type AppRole } from "@/lib/rbac";
+import { roleLabel, canRevokeRole, hasRole, type AppRole } from "@/lib/rbac";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,7 +32,8 @@ export const Route = createFileRoute("/_authenticated/admin")({
       .select("role")
       .eq("user_id", data.user.id);
     const list = (roles ?? []).map((r) => r.role as AppRole);
-    const ok = list.includes("admin");
+    // Rank-based like the server functions: legacy Owner (labelled Admin) must not be bounced.
+    const ok = hasRole(list, "admin");
     if (!ok) throw redirect({ to: "/dashboard" });
   },
   component: AdminPage,
