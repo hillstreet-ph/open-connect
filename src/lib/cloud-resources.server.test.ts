@@ -131,7 +131,7 @@ test("control refuses services that belong to someone else", async () => {
 
 test("phone search maps Twilio numbers and monthly price; purchase validates E.164", async () => {
   const fetch = (async (url: string) => {
-    if (url.includes("pricing.twilio.com"))
+    if (new URL(url).hostname === "pricing.twilio.com")
       return new Response(
         JSON.stringify({
           price_unit: "USD",
