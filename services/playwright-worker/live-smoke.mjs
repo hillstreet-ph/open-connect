@@ -42,14 +42,20 @@ try {
   await page.keyboard.type("https://example.com/?manual-browser-proof=1");
   await page.keyboard.press("Enter");
   await page.waitForTimeout(2000);
+  await page.locator("#focus").click();
+  await page.keyboard.press("Control+l");
+  await page.locator("#paste").fill("https://example.com/?manual-paste-proof=1");
+  await page.locator("#send-paste").click();
+  await page.keyboard.press("Enter");
+  await page.waitForTimeout(2000);
   await rpc({ method: "view/end" });
   const snapshot = await rpc({
     method: "tools/call",
     params: { name: "browser_snapshot", arguments: {} },
   });
-  if (!JSON.stringify(snapshot).includes("manual-browser-proof=1"))
-    throw new Error("Viewer keyboard input did not reach the browser");
-  console.log("PASS: live view, manual keyboard, paused agent control and resume");
+  if (!JSON.stringify(snapshot).includes("manual-paste-proof=1"))
+    throw new Error("Viewer paste input did not reach the browser");
+  console.log("PASS: live view, manual keyboard, clipboard paste, paused agent control and resume");
 } finally {
   await rpc({ method: "task/cancel" }).catch(() => {});
   await browser.close();
