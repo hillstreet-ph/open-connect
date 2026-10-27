@@ -138,6 +138,7 @@
     "ip-address": "10.7.4",
     "js-yaml": "4.3.2",
     "launch-editor": "2.14.2",
+    "qs": "6.16.2",
     "shell-quote": "1.12.0",
     "source-map-js": "1.2.2"
   }
