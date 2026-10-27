@@ -7,10 +7,11 @@ import {
   CREDENTIAL_IMPORT_MAX_BYTES,
   dedupeImportItems,
   importSourceLabel,
-  parseCredentialFile,
+  parseCredentialExport,
   summarizeImportItem,
   type ExistingCredentialIdentity,
   type ImportItem,
+  type ImportItemSummary,
 } from "@/lib/credential-import";
 import { importCredentials, type CredentialImportResult } from "@/lib/secrets.functions";
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +21,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 
-const BATCH = 50;
+// Must stay within the server's per-request limit (see importCredentials).
+const BATCH = 15;
 const FILTERS = ["ready", "notes", "duplicate", "skipped", "failed"] as const;
 type Filter = (typeof FILTERS)[number];
 const FILTER_LABEL: Record<Filter, string> = {
@@ -41,9 +43,11 @@ export function CredentialImport({ existing }: { existing: ExistingCredentialIde
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<number | null>(null);
+  // Computed once at load so counts stay stable after secrets are cleared from memory.
+  const [summaries, setSummaries] = useState<ImportItemSummary[]>([]);
+  const [attachments, setAttachments] = useState(0);
   const generation = useRef(0);
 
-  const summaries = useMemo(() => items.map(summarizeImportItem), [items]);
   const counts = useMemo(() => {
     const failed = [...results.values()].filter((r) => r.status === "failed").length;
     return {
@@ -65,6 +69,8 @@ export function CredentialImport({ existing }: { existing: ExistingCredentialIde
   function reset() {
     generation.current++;
     setItems([]);
+    setSummaries([]);
+    setAttachments(0);
     setResults(new Map());
     setError("");
     setBusy(false);
@@ -83,9 +89,12 @@ export function CredentialImport({ existing }: { existing: ExistingCredentialIde
     try {
       // Parsed locally: nothing leaves the browser until you choose Import.
       const bytes = new Uint8Array(await file.arrayBuffer());
-      const parsed = await parseCredentialFile(file.name, bytes);
+      const parsed = await parseCredentialExport(file.name, bytes);
       if (current !== generation.current) return;
-      setItems(dedupeImportItems(parsed, existing));
+      const deduped = dedupeImportItems(parsed.items, existing);
+      setItems(deduped);
+      setSummaries(deduped.map(summarizeImportItem));
+      setAttachments(parsed.attachments);
       setFilter("ready");
     } catch (cause) {
       // Parser messages are fixed strings; never show raw file content.
@@ -103,7 +112,11 @@ export function CredentialImport({ existing }: { existing: ExistingCredentialIde
 
   async function runImport() {
     const current = generation.current;
-    const ready = items.filter((item) => item.status === "ready" && !results.has(item.row));
+    // Unsaved and previously failed items; the server skips anything already in the vault.
+    const ready = items.filter(
+      (item) =>
+        item.status === "ready" && results.get(item.row)?.status !== "created" && item.password,
+    );
     if (!ready.length) return;
     setBusy(true);
     setProgress(0);
@@ -132,8 +145,10 @@ export function CredentialImport({ existing }: { existing: ExistingCredentialIde
         setResults(new Map(next));
         setProgress(Math.round(((i + batch.length) / ready.length) * 100));
       }
-      const created = [...next.values()].filter((r) => r.status === "created").length;
-      const failed = [...next.values()].filter((r) => r.status === "failed").length;
+      const rows = new Set(ready.map((item) => item.row));
+      const thisRun = [...next.values()].filter((r) => rows.has(r.row));
+      const created = thisRun.filter((r) => r.status === "created").length;
+      const failed = thisRun.filter((r) => r.status === "failed").length;
       toast.success(`Imported ${created} credential${created === 1 ? "" : "s"}`);
       if (failed) {
         toast.error(`${failed} item${failed === 1 ? "" : "s"} could not be saved`);
@@ -156,7 +171,10 @@ export function CredentialImport({ existing }: { existing: ExistingCredentialIde
   }
 
   const source = items[0] ? importSourceLabel(items[0].source) : "";
-  const remaining = items.filter((i) => i.status === "ready" && !results.has(i.row)).length;
+  const remaining = items.filter(
+    (i) => i.status === "ready" && results.get(i.row)?.status !== "created" && i.password,
+  ).length;
+  const retrying = counts.failed > 0;
 
   return (
     <Card className="mt-8">
@@ -170,7 +188,8 @@ export function CredentialImport({ existing }: { existing: ExistingCredentialIde
           your browser; only the items you import are sent to your encrypted Vault. Logins keep
           their email, username, website, notes and 2FA (TOTP) keys. Passkeys cannot be moved
           between password managers: rows that had passkeys are marked so you can create new ones.
-          Delete the export file after importing.
+          Hidden custom fields are saved as an encrypted companion note. Delete the export file
+          after importing.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -201,6 +220,13 @@ export function CredentialImport({ existing }: { existing: ExistingCredentialIde
               {source} export: {items.length} items. <strong>{counts.ready} ready</strong> (
               {counts.totp} with 2FA), {counts.duplicate} duplicates, {counts.skipped} skipped.
             </p>
+            {attachments > 0 && (
+              <p className="text-sm text-muted-foreground">
+                {attachments} attached file{attachments === 1 ? " was" : "s were"} found in the ZIP.
+                Credentials store text only, so keep those files in Proton Pass or upload them to
+                your project storage.
+              </p>
+            )}
             <div className="flex flex-wrap gap-2">
               {FILTERS.map((key) => (
                 <Button
@@ -273,7 +299,7 @@ export function CredentialImport({ existing }: { existing: ExistingCredentialIde
                 ) : (
                   <KeyRound className="mr-2 h-4 w-4" />
                 )}
-                Import {remaining} credential{remaining === 1 ? "" : "s"}
+                {retrying ? "Retry" : "Import"} {remaining} credential{remaining === 1 ? "" : "s"}
               </Button>
               <Button variant="outline" disabled={busy} onClick={reset}>
                 Clear

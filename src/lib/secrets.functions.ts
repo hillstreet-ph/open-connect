@@ -164,7 +164,9 @@ export const createSecret = createServerFn({ method: "POST" })
     return row;
   });
 
-const IMPORT_BATCH_LIMIT = 100;
+// Each item costs two Supabase subrequests (create + organize). Cloudflare Workers allow
+// 50 subrequests per request on the free plan, so keep batches well under that.
+const IMPORT_BATCH_LIMIT = 15;
 const IMPORT_TYPES = new Set(["password", "totp", "other"]);
 
 export type CredentialImportResult = {

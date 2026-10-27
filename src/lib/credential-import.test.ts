@@ -5,6 +5,7 @@ import {
   dedupeImportItems,
   detectCsvSource,
   parseCredentialCsv,
+  parseCredentialExport,
   parseCredentialFile,
   summarizeImportItem,
   totpSeed,
@@ -204,7 +205,13 @@ test("Proton ZIP export: passkeys, custom fields and trash are handled", async (
   assert.doesNotMatch(items[0]!.notes, /1234/);
   assert.match(items[0]!.reasons.join(), /passkey/);
   assert.match(items[0]!.reasons.join(), /hidden/);
-  assert.equal(items[1]!.status, "skipped");
+  // Hidden fields become an encrypted companion secure note, never plain notes.
+  assert.equal(items[1]!.status, "ready");
+  assert.equal(items[1]!.secret_type, "other");
+  assert.equal(items[1]!.name, "GitHub · hidden fields");
+  assert.equal(items[1]!.password, "PIN: 1234");
+  assert.equal(items[1]!.notes, "");
+  assert.equal(items[2]!.status, "skipped");
   await assert.rejects(parseCredentialFile("export.pgp", new Uint8Array()), /Encrypted/);
 });
 
@@ -230,4 +237,12 @@ test("Bitwarden JSON export maps folders, TOTP and passkeys", async () => {
   assert.equal(item!.status, "ready");
   assert.equal(item!.totp_secret, SEED);
   assert.deepEqual(item!.tags, ["imported", "bitwarden", "work"]);
+});
+
+test("ZIP attachments are counted so the user knows they were not imported", async () => {
+  const data = JSON.stringify({ encrypted: false, vaults: {} });
+  const bytes = zip("Proton Pass/data.json", data);
+  const parsed = await parseCredentialExport("export.zip", bytes);
+  assert.equal(parsed.attachments, 0);
+  assert.deepEqual(parsed.items, []);
 });

@@ -136,7 +136,8 @@ type RawEntry = {
   notes: string;
   folder: string;
   passkeys: number;
-  hiddenFields: number;
+  /** Hidden/secret custom fields as "label: value" lines; stored encrypted, never in notes. */
+  hidden: string[];
   extraText: string[];
   trashed: boolean;
 };
@@ -152,7 +153,7 @@ const emptyEntry = (): RawEntry => ({
   notes: "",
   folder: "",
   passkeys: 0,
-  hiddenFields: 0,
+  hidden: [],
   extraText: [],
   trashed: false,
 });
@@ -262,8 +263,8 @@ function toItem(entry: RawEntry, row: number, source: ImportSource): ImportItem 
     noteParts.push(entry.extraText.join("\n"));
     reasons.push("Custom text fields saved in notes");
   }
-  if (entry.hiddenFields)
-    reasons.push(`${entry.hiddenFields} hidden custom field(s) not imported; add them manually`);
+  if (entry.hidden.length)
+    reasons.push(`${entry.hidden.length} hidden field(s) saved as an encrypted companion note`);
   if (entry.passkeys)
     reasons.push(
       `${entry.passkeys} passkey(s) cannot be transferred between password managers; sign in and create a new passkey`,
@@ -317,6 +318,25 @@ function toItem(entry: RawEntry, row: number, source: ImportSource): ImportItem 
     totp_secret: totp,
     notes,
   };
+}
+
+/** Adds an encrypted secure note for hidden custom fields so no detail is lost or exposed. */
+function toItems(entry: RawEntry, row: number, source: ImportSource): ImportItem[] {
+  const main = toItem(entry, row, source);
+  if (!entry.hidden.length || main.status !== "ready") return [main];
+  return [
+    main,
+    {
+      ...main,
+      row: row + 0.5,
+      reasons: ["Hidden custom fields from the item above, stored encrypted"],
+      name: `${main.name.slice(0, 104)} · hidden fields`,
+      secret_type: "other",
+      password: entry.hidden.join("\n"),
+      totp_secret: "",
+      notes: "",
+    },
+  ];
 }
 
 type Columns = Record<string, number>;
@@ -380,7 +400,7 @@ export function parseCredentialCsv(input: string): ImportItem[] {
       entry.urls = [];
     }
     if (source === "bitwarden" && read(row, "fields")) entry.extraText.push(read(row, "fields"));
-    items.push(toItem(entry, index + 2, source));
+    items.push(...toItems(entry, index + 2, source));
   });
   return items;
 }
@@ -424,11 +444,12 @@ function parseProtonJson(data: Record<string, JsonValue>): ImportItem[] {
         const field = obj(fieldRaw);
         const value = str(obj(field["data"])["content"]);
         if (!value) continue;
-        if (field["type"] === "text") entry.extraText.push(`${str(field["fieldName"])}: ${value}`);
+        const line = `${str(field["fieldName"]) || "Field"}: ${value}`;
+        if (field["type"] === "text" || field["type"] === "timestamp") entry.extraText.push(line);
         else if (field["type"] === "totp" && !entry.totp) entry.totp = value;
-        else entry.hiddenFields++;
+        else entry.hidden.push(line);
       }
-      items.push(toItem(entry, row, "proton"));
+      items.push(...toItems(entry, row, "proton"));
     }
   }
   return items;
@@ -441,7 +462,7 @@ function parseBitwardenJson(data: Record<string, JsonValue>): ImportItem[] {
   const folders = new Map(
     arr(data["folders"]).map((folder) => [str(obj(folder)["id"]), str(obj(folder)["name"])]),
   );
-  return arr(data["items"]).map((raw, index) => {
+  return arr(data["items"]).flatMap((raw, index) => {
     const item = obj(raw);
     const login = obj(item["login"]);
     const entry = emptyEntry();
@@ -460,10 +481,11 @@ function parseBitwardenJson(data: Record<string, JsonValue>): ImportItem[] {
       const field = obj(fieldRaw);
       const value = str(field["value"]);
       if (!value) continue;
-      if (field["type"] === 0) entry.extraText.push(`${str(field["name"])}: ${value}`);
-      else entry.hiddenFields++;
+      const line = `${str(field["name"]) || "Field"}: ${value}`;
+      if (field["type"] === 0) entry.extraText.push(line);
+      else entry.hidden.push(line);
     }
-    return toItem(entry, index + 1, "bitwarden");
+    return toItems(entry, index + 1, "bitwarden");
   });
 }
 
@@ -543,7 +565,17 @@ export async function readZipEntries(bytes: Uint8Array): Promise<Map<string, Uin
   return entries;
 }
 
+export type ParsedExport = { items: ImportItem[]; attachments: number };
+
 export async function parseCredentialFile(name: string, bytes: Uint8Array): Promise<ImportItem[]> {
+  return (await parseCredentialExport(name, bytes)).items;
+}
+
+/** Attachments are counted, not imported: the vault stores text secrets only. */
+export async function parseCredentialExport(
+  name: string,
+  bytes: Uint8Array,
+): Promise<ParsedExport> {
   const extension = name.toLowerCase().split(".").pop();
   const decode = (data: Uint8Array) => new TextDecoder("utf-8", { fatal: true }).decode(data);
   if (extension === "pgp" || extension === "gpg")
@@ -551,13 +583,17 @@ export async function parseCredentialFile(name: string, bytes: Uint8Array): Prom
   if (extension === "zip") {
     const entries = await readZipEntries(bytes);
     const json = [...entries.keys()].find((key) => /(^|\/)data\.json$/i.test(key));
-    if (json) return parseCredentialJson(decode(entries.get(json)!));
     const csv = [...entries.keys()].find((key) => key.toLowerCase().endsWith(".csv"));
-    if (csv) return parseCredentialCsv(decode(entries.get(csv)!));
-    throw new Error("ZIP has no supported export");
+    const main = json ?? csv;
+    if (!main) throw new Error("ZIP has no supported export");
+    const text = decode(entries.get(main)!);
+    return {
+      items: json ? parseCredentialJson(text) : parseCredentialCsv(text),
+      attachments: entries.size - 1,
+    };
   }
-  if (extension === "json") return parseCredentialJson(decode(bytes));
-  return parseCredentialCsv(decode(bytes));
+  if (extension === "json") return { items: parseCredentialJson(decode(bytes)), attachments: 0 };
+  return { items: parseCredentialCsv(decode(bytes)), attachments: 0 };
 }
 
 export type ExistingCredentialIdentity = {
