@@ -19,8 +19,16 @@ const TWILIO = JSON.stringify({
 type Call = { url: string; body: Record<string, unknown> | string | null };
 
 /** Fake Zeabur GraphQL: answers by operation keyword and records every request. */
-function zeaburFake(services: Array<{ _id: string; name: string }>) {
+function zeaburFake(
+  services: Array<{ _id: string; name: string; createdAt?: string }>,
+  options: {
+    secondPage?: Array<{ _id: string; name: string }>;
+    failAddDomain?: boolean;
+    afterCreate?: Array<{ _id: string; name: string; createdAt: string }>;
+  } = {},
+) {
   const calls: Call[] = [];
+  let created = false;
   const fetch = (async (url: string, init: RequestInit) => {
     const body = JSON.parse(String(init.body)) as {
       query: string;
@@ -36,33 +44,50 @@ function zeaburFake(services: Array<{ _id: string; name: string }>) {
             { node: { _id: "p1", name: "open-connect-computers-sin1", region: { id: "sin1" } } },
             { node: { _id: "p2", name: "unrelated", region: { id: "sin1" } } },
           ],
+          pageInfo: { hasNextPage: false },
         },
       });
     }
     if (q.includes("environments(")) return reply({ environments: [{ _id: "e1" }] });
     if (q.includes("services(")) {
+      const skip = Number(body.variables["skip"] ?? 0);
+      const base =
+        created && options.afterCreate ? [...services, ...options.afterCreate] : services;
+      const page = skip === 0 ? base : (options.secondPage ?? []);
       return reply({
         services: {
-          edges: services.map((s) => ({
+          edges: page.map((s) => ({
             node: {
-              ...s,
               createdAt: "2026-10-27T00:00:00Z",
+              ...s,
               status: "RUNNING",
               domains: [{ domain: `${s.name}.zeabur.app` }],
             },
           })),
+          pageInfo: { hasNextPage: skip === 0 && Boolean(options.secondPage) },
         },
       });
     }
-    if (q.includes("createPrebuiltService"))
+    if (q.includes("createPrebuiltService")) {
+      created = true;
       return reply({ createPrebuiltService: { _id: "new1" } });
-    if (q.includes("addDomain")) return reply({ addDomain: { domain: "x.zeabur.app" } });
+    }
+    if (q.includes("addDomain")) {
+      if (options.failAddDomain)
+        return new Response(JSON.stringify({ errors: [{ message: "domain taken" }] }), {
+          status: 200,
+        });
+      return reply({ addDomain: { domain: "x.zeabur.app" } });
+    }
     if (q.includes("deleteService")) return reply({ deleteService: true });
     if (q.includes("restartService")) return reply({ restartService: true });
     return new Response(JSON.stringify({ errors: [{ message: "unexpected" }] }), { status: 400 });
   }) as unknown as typeof globalThis.fetch;
   return { calls, fetch };
 }
+
+const deleted = (calls: Call[]) =>
+  calls.filter((c) => JSON.stringify(c.body).includes("deleteService"));
 
 test("per-user prefix is stable and does not reveal the user id", async () => {
   const a = await computerPrefix("user-1");
@@ -161,5 +186,43 @@ test("phone search maps Twilio numbers and monthly price; purchase validates E.1
   await assert.rejects(
     searchPhoneNumbers(TWILIO, { country: "usa", type: "Local" }, fetch),
     /Invalid country/,
+  );
+});
+
+test("services beyond the first page still belong to their owner", async () => {
+  const mine = await computerPrefix("user-1");
+  const { fetch } = zeaburFake([], { secondPage: [{ _id: "c".repeat(24), name: `${mine}-cccc` }] });
+  const list = await listCloudComputers("token", "user-1", fetch);
+  assert.deepEqual(
+    list.map((c) => c.id),
+    ["c".repeat(24)],
+  );
+  await controlCloudComputer("token", "user-1", "c".repeat(24), "restart", fetch);
+});
+
+test("a failed domain step deletes the new desktop instead of leaving it running", async () => {
+  const { fetch, calls } = zeaburFake([], { failAddDomain: true });
+  await assert.rejects(
+    createCloudComputer("token", "user-1", { region: "sin1", maxPerUser: 1 }, fetch),
+    /domain taken/,
+  );
+  assert.equal(deleted(calls).length, 1);
+  assert.equal((deleted(calls)[0]!.body as { variables: { id: string } }).variables.id, "new1");
+});
+
+test("a concurrent create over the limit removes only the newer desktop", async () => {
+  const mine = await computerPrefix("user-1");
+  // Another request created an older desktop between our pre-check and our create.
+  const { fetch, calls } = zeaburFake([], {
+    afterCreate: [{ _id: "a".repeat(24), name: `${mine}-aaaa`, createdAt: "2026-10-26T00:00:00Z" }],
+  });
+  await assert.rejects(
+    createCloudComputer("token", "user-1", { region: "sin1", maxPerUser: 1 }, fetch),
+    /at the same time/,
+  );
+  assert.equal(deleted(calls).length, 1);
+  assert.equal(
+    calls.some((c) => JSON.stringify(c.body).includes("addDomain")),
+    false,
   );
 });

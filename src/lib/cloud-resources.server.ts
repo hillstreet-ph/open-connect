@@ -142,17 +142,32 @@ export async function listZeaburRegions(token: string, request?: Fetch) {
     .map(({ id, name, description }) => ({ id, name, description }));
 }
 
+type ProjectNode = { _id: string; name: string; region: { id: string } };
+const PAGE = 100;
+const MAX_PAGES = 50;
+
+/** Reads every page so ownership checks never miss items past the first page. */
+async function listAllProjects(token: string, request?: Fetch): Promise<ProjectNode[]> {
+  const all: ProjectNode[] = [];
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const data = await zeaburRequest<{
+      projects: { edges: Array<{ node: ProjectNode }>; pageInfo?: { hasNextPage?: boolean } };
+    }>(
+      token,
+      "query ($skip: Int!, $limit: Int!) { projects(skip: $skip, limit: $limit) { edges { node { _id name region { id } } } pageInfo { hasNextPage } } }",
+      { skip: page * PAGE, limit: PAGE },
+      request,
+    );
+    all.push(...data.projects.edges.map((edge) => edge.node));
+    if (!data.projects.pageInfo?.hasNextPage) break;
+  }
+  return all;
+}
+
 async function ensureProject(token: string, region: string, request?: Fetch) {
-  const data = await zeaburRequest<{
-    projects: { edges: Array<{ node: { _id: string; name: string; region: { id: string } } }> };
-  }>(
-    token,
-    "query { projects(skip: 0, limit: 100) { edges { node { _id name region { id } } } } }",
-    {},
-    request,
-  );
+  const projects = await listAllProjects(token, request);
   const name = `${PROJECT_NAME}-${region.replace(/[^a-z0-9-]/gi, "").toLowerCase()}`.slice(0, 60);
-  const existing = data.projects.edges.find((edge) => edge.node.name === name)?.node;
+  const existing = projects.find((project) => project.name === name);
   if (existing) return existing._id;
   const created = await zeaburRequest<{ createProject: { _id: string } }>(
     token,
@@ -175,6 +190,42 @@ async function environmentOf(token: string, projectId: string, request?: Fetch) 
   return id;
 }
 
+type ServiceNode = {
+  _id: string;
+  name: string;
+  createdAt: string;
+  status: string;
+  domains: Array<{ domain: string }>;
+};
+
+async function listProjectServices(
+  token: string,
+  projectId: string,
+  environmentId: string,
+  request?: Fetch,
+): Promise<ServiceNode[]> {
+  const all: ServiceNode[] = [];
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const data = await zeaburRequest<{
+      services: { edges: Array<{ node: ServiceNode }>; pageInfo?: { hasNextPage?: boolean } };
+    }>(
+      token,
+      `query ($projectID: ObjectID!, $environmentID: ObjectID!, $skip: Int!, $limit: Int!) {
+        services(projectID: $projectID, skip: $skip, limit: $limit) {
+          edges { node { _id name createdAt status(environmentID: $environmentID)
+            domains(environmentID: $environmentID) { domain } } }
+          pageInfo { hasNextPage }
+        }
+      }`,
+      { projectID: projectId, environmentID: environmentId, skip: page * PAGE, limit: PAGE },
+      request,
+    );
+    all.push(...data.services.edges.map((edge) => edge.node));
+    if (!data.services.pageInfo?.hasNextPage) break;
+  }
+  return all;
+}
+
 export type CloudComputer = {
   id: string;
   name: string;
@@ -192,42 +243,12 @@ export async function listCloudComputers(
   request?: Fetch,
 ): Promise<CloudComputer[]> {
   const prefix = await computerPrefix(userId);
-  const projects = await zeaburRequest<{
-    projects: { edges: Array<{ node: { _id: string; name: string; region: { id: string } } }> };
-  }>(
-    token,
-    "query { projects(skip: 0, limit: 100) { edges { node { _id name region { id } } } } }",
-    {},
-    request,
-  );
+  const projects = await listAllProjects(token, request);
   const computers: CloudComputer[] = [];
-  for (const { node } of projects.projects.edges) {
+  for (const node of projects) {
     if (!node.name.startsWith(PROJECT_NAME)) continue;
     const environmentId = await environmentOf(token, node._id, request);
-    const services = await zeaburRequest<{
-      services: {
-        edges: Array<{
-          node: {
-            _id: string;
-            name: string;
-            createdAt: string;
-            status: string;
-            domains: Array<{ domain: string }>;
-          };
-        }>;
-      };
-    }>(
-      token,
-      `query ($projectID: ObjectID!, $environmentID: ObjectID!) {
-        services(projectID: $projectID, skip: 0, limit: 100) {
-          edges { node { _id name createdAt status(environmentID: $environmentID)
-            domains(environmentID: $environmentID) { domain } } }
-        }
-      }`,
-      { projectID: node._id, environmentID: environmentId },
-      request,
-    );
-    for (const { node: service } of services.services.edges) {
+    for (const service of await listProjectServices(token, node._id, environmentId, request)) {
       if (!service.name.startsWith(`${prefix}-`)) continue;
       const domain = service.domains[0]?.domain;
       computers.push({
@@ -267,20 +288,44 @@ export async function createCloudComputer(
     request,
   );
   const serviceId = created.createPrebuiltService._id;
-  const environmentId = await environmentOf(token, projectId, request);
-  const domain = await zeaburRequest<{ addDomain: { domain: string } }>(
-    token,
-    "mutation ($serviceID: ObjectID!, $environmentID: ObjectID!, $isGenerated: Boolean!, $domain: String!) { addDomain(serviceID: $serviceID, environmentID: $environmentID, isGenerated: $isGenerated, domain: $domain) { domain } }",
-    { serviceID: serviceId, environmentID: environmentId, isGenerated: true, domain: name },
-    request,
-  );
-  return {
-    id: serviceId,
-    name,
-    url: `https://${domain.addDomain.domain}`,
-    username: "opc",
-    password,
-  };
+  try {
+    // Concurrent requests can both pass the pre-check. Keep the oldest desktops up to the
+    // limit so exactly the extra ones remove themselves.
+    const after = await listCloudComputers(token, userId, request);
+    if (!after.some((item) => item.id === serviceId))
+      after.push({ id: serviceId, createdAt: new Date().toISOString() } as CloudComputer);
+    const kept = after
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id))
+      .slice(0, input.maxPerUser)
+      .map((item) => item.id);
+    if (!kept.includes(serviceId))
+      throw new CloudResourceError(
+        `Another Cloud Computer was created at the same time; the limit is ${input.maxPerUser}.`,
+      );
+    const environmentId = await environmentOf(token, projectId, request);
+    const domain = await zeaburRequest<{ addDomain: { domain: string } }>(
+      token,
+      "mutation ($serviceID: ObjectID!, $environmentID: ObjectID!, $isGenerated: Boolean!, $domain: String!) { addDomain(serviceID: $serviceID, environmentID: $environmentID, isGenerated: $isGenerated, domain: $domain) { domain } }",
+      { serviceID: serviceId, environmentID: environmentId, isGenerated: true, domain: name },
+      request,
+    );
+    return {
+      id: serviceId,
+      name,
+      url: `https://${domain.addDomain.domain}`,
+      username: "opc",
+      password,
+    };
+  } catch (error) {
+    // Never leave a running desktop whose password was not delivered or saved.
+    await zeaburRequest(
+      token,
+      "mutation ($id: ObjectID!) { deleteService(_id: $id) }",
+      { id: serviceId },
+      request,
+    ).catch(() => undefined);
+    throw error;
+  }
 }
 
 /** Confirms the service belongs to this user before any state change. */
