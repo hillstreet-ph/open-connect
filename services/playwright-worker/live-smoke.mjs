@@ -39,12 +39,14 @@ try {
   );
   await page.locator("#focus").click();
   await page.keyboard.press("Control+l");
-  await page.keyboard.type("https://example.com/?manual-browser-proof=1");
+  await page.waitForTimeout(300);
+  await page.keyboard.type("https://example.com/?manual-browser-proof=1", { delay: 40 });
   await page.keyboard.press("Enter");
   await page.waitForTimeout(2000);
   await page.locator("#focus").click();
   await page.keyboard.press("Control+l");
-  await page.keyboard.type("http://127.0.0.1:8081/paste");
+  await page.waitForTimeout(300);
+  await page.keyboard.type("http://127.0.0.1:8081/paste", { delay: 40 });
   await page.keyboard.press("Enter");
   await page.waitForTimeout(2000);
   await page.locator("#paste").fill("manual-paste-proof");
