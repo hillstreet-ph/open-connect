@@ -1,0 +1,32 @@
+name: ChatGPT extension validation
+on:
+  pull_request:
+    paths:
+      - 'integrations/chatgpt-extension/**'
+      - '.github/workflows/chatgpt-extension-validation.yml'
+  push:
+    paths:
+      - 'integrations/chatgpt-extension/**'
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: integrations/chatgpt-extension
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Static validation
+        run: |
+          node test-static.mjs
+          node --test autonomy/*.test.mjs export/*.test.mjs
+      - name: Verify no forbidden automatic approval behavior
+        run: |
+          if grep -Ein 'auto.?approve|bypass.?approval' background.js content.js panel.js suggestions.js; then
+            echo 'Review approval-related behavior before release'
+            exit 1
+          fi
