@@ -4,7 +4,10 @@ import { detectPasswordCsv, mapPasswordCsvRow } from "./password-csv-mapping.ts"
 
 test("detects browser, Bitwarden and Proton headers without exposing values", () => {
   assert.equal(detectPasswordCsv(["name", "url", "username", "password"]), "browser");
-  assert.equal(detectPasswordCsv(["type", "name", "login_uri", "login_username", "login_password"]), "bitwarden");
+  assert.equal(
+    detectPasswordCsv(["type", "name", "login_uri", "login_username", "login_password"]),
+    "bitwarden",
+  );
   assert.equal(detectPasswordCsv(["type", "name", "url", "email", "password", "vault"]), "proton");
   assert.equal(detectPasswordCsv(["Title", "Website", "Username", "Password"]), "1password");
   assert.equal(detectPasswordCsv(["URL", "url", "username", "password"]), "unknown");
@@ -35,7 +38,14 @@ test("maps browser and Bitwarden logins with optional standard TOTP", () => {
 test("flags fields and malformed records without leaking their contents", () => {
   const item = mapPasswordCsvRow(
     ["type", "name", "login_uri", "login_username", "login_password", "fields"],
-    ["login", "Example", "https://example.com", "private-user", "private-password", "private-field"],
+    [
+      "login",
+      "Example",
+      "https://example.com",
+      "private-user",
+      "private-password",
+      "private-field",
+    ],
   );
   assert.equal(item.status, "review");
   assert.doesNotMatch(JSON.stringify(item), /private/);

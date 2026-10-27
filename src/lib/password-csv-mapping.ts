@@ -2,7 +2,11 @@ import { mapProtonLogin, type ProtonCsvRow, type ProtonLoginMapping } from "./pr
 
 export type CsvSource = "proton" | "bitwarden" | "1password" | "browser" | "unknown";
 
-const normalizeHeader = (value: string) => value.trim().toLowerCase().replace(/[\s_-]+/g, "");
+const normalizeHeader = (value: string) =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, "");
 
 /** Detect documented schemas; reject ambiguous or duplicate fields instead of guessing. */
 export function detectPasswordCsv(headers: string[]): CsvSource {
@@ -11,8 +15,7 @@ export function detectPasswordCsv(headers: string[]): CsvSource {
   const has = (...required: string[]) => required.every((name) => names.includes(name));
   if (has("type", "name", "url", "password", "vault")) return "proton";
   if (has("type", "name", "loginuri", "loginusername", "loginpassword")) return "bitwarden";
-  if (has("title", "website", "username", "password") && !names.includes("url"))
-    return "1password";
+  if (has("title", "website", "username", "password") && !names.includes("url")) return "1password";
   if (has("url", "username", "password")) return "browser";
   return "unknown";
 }
@@ -25,9 +28,44 @@ export function mapPasswordCsvRow(headers: string[], values: string[]): ProtonLo
   const cells = new Map(headers.map((name, index) => [normalizeHeader(name), values[index] || ""]));
   const read = (name: string) => cells.get(name) || "";
   const knownBySource: Record<Exclude<CsvSource, "unknown">, string[]> = {
-    proton: ["type", "name", "url", "email", "username", "password", "note", "totp", "autofillurls", "vault"],
-    bitwarden: ["type", "name", "loginuri", "loginusername", "loginpassword", "logintotp", "notes", "fields", "folder", "favorite", "reprompt"],
-    "1password": ["title", "website", "username", "password", "onetimepassword", "otpauth", "otp", "favorite", "archived", "tags", "notes"],
+    proton: [
+      "type",
+      "name",
+      "url",
+      "email",
+      "username",
+      "password",
+      "note",
+      "totp",
+      "autofillurls",
+      "vault",
+    ],
+    bitwarden: [
+      "type",
+      "name",
+      "loginuri",
+      "loginusername",
+      "loginpassword",
+      "logintotp",
+      "notes",
+      "fields",
+      "folder",
+      "favorite",
+      "reprompt",
+    ],
+    "1password": [
+      "title",
+      "website",
+      "username",
+      "password",
+      "onetimepassword",
+      "otpauth",
+      "otp",
+      "favorite",
+      "archived",
+      "tags",
+      "notes",
+    ],
     browser: ["name", "title", "url", "username", "password", "note", "notes"],
   };
   const known = new Set(knownBySource[source]);
