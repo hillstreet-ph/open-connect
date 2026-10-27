@@ -49,7 +49,7 @@ try {
   await page.keyboard.type("http://127.0.0.1:8081/paste", { delay: 40 });
   await page.keyboard.press("Enter");
   await page.waitForTimeout(2000);
-  await page.locator("#paste").fill("manual-paste-proof");
+  await page.locator("#paste").fill("manual-paste-proof Mixed_CASE!@#42");
   await page.locator("#send-paste").click();
   await page.waitForTimeout(1500);
   await rpc({ method: "view/end" });
@@ -57,7 +57,7 @@ try {
     method: "tools/call",
     params: { name: "browser_snapshot", arguments: {} },
   });
-  if (!JSON.stringify(snapshot).includes("manual-paste-proof"))
+  if (!JSON.stringify(snapshot).includes("manual-paste-proof Mixed_CASE!@#42"))
     throw new Error(
       `Viewer paste input did not reach the browser: ${JSON.stringify(snapshot).slice(0, 2000)}`,
     );
