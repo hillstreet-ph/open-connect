@@ -1,1 +1,176 @@
-aW1wb3J0IHsgY3JlYXRlU2VydmVyRm4gfSBmcm9tICJAdGFuc3RhY2svcmVhY3Qtc3RhcnQiOwppbXBvcnQgeyByZXF1aXJlU3VwYWJhc2VBdXRoIH0gZnJvbSAiQC9pbnRlZ3JhdGlvbnMvc3VwYWJhc2UvYXV0aC1taWRkbGV3YXJlIjsKaW1wb3J0IHsKICBpc0FjY2Vzc1Byb2ZpbGUsCiAgc2NvcGVzRm9yUHJvZmlsZSwKICB2YWxpZGF0ZUtleUFjY2Vzc0NoYW5nZSwKICByZXF1aXJlS2V5U2NvcGVBdXRob3JpdHksCiAgdHlwZSBBY2Nlc3NQcm9maWxlLAp9IGZyb20gIkAvbGliL2FjY2Vzcy1wcm9maWxlcyI7CgovKioKICogRnVsbCBhdXRvbm9tb3VzIHN1cmZhY2UgZm9yIG9jX2xpdmVfIGtleXMuCiAqIE5ldyBrZXlzIGF1dG8tZ3JhbnQgYWxsIHByb2R1Y3Qgc2NvcGVzIHNvIENoYXRHUFQgLyBDbGF1ZGUgLyBHcm9rIC8gT3BlbiBXZWJVSQogKiAvIFBpcGVkcmVhbSAvIENvbXBvc2lvIGFnZW50cyB3b3JrIHdpdGhvdXQgbWFudWFsIHNjb3BlIHBpY2tpbmcuCiAqLwpleHBvcnQgY29uc3QgREVGQVVMVF9LRVlfU0NPUEVTID0gc2NvcGVzRm9yUHJvZmlsZSgiZGV2ZWxvcGVyIik7CgpleHBvcnQgY29uc3QgbGlzdEFwaUtleXMgPSBjcmVhdGVTZXJ2ZXJGbih7IG1ldGhvZDogIkdFVCIgfSkKICAubWlkZGxld2FyZShbcmVxdWlyZVN1cGFiYXNlQXV0aF0pCiAgLmhhbmRsZXIoYXN5bmMgKHsgY29udGV4dCB9KSA9PiB7CiAgICBjb25zdCB7IGRhdGEsIGVycm9yIH0gPSBhd2FpdCBjb250ZXh0LnN1cGFiYXNlCiAgICAgIC5mcm9tKCJhcGlfa2V5cyIpCiAgICAgIC5zZWxlY3QoCiAgICAgICAgImlkLCBuYW1lLCBrZXlfcHJlZml4LCBzY29wZXMsIGFjY2Vzc19wcm9maWxlLCBvcmdhbml6YXRpb25faWQsIHdvcmtzcGFjZV9pZCwgcHJvamVjdF9pZCwgbGFzdF91c2VkX2F0LCByZXZva2VkX2F0LCBleHBpcmVzX2F0LCBjcmVhdGVkX2F0IiwKICAgICAgKQogICAgICAuaXMoInJldm9rZWRfYXQiLCBudWxsKQogICAgICAub3JkZXIoImNyZWF0ZWRfYXQiLCB7IGFzY2VuZGluZzogZmFsc2UgfSk7CiAgICBpZiAoZXJyb3IpIHRocm93IG5ldyBFcnJvcihlcnJvci5tZXNzYWdlKTsKICAgIHJldHVybiAoZGF0YSA/PyBbXSkubWFwKChrZXkpID0+ICh7CiAgICAgIC4uLmtleSwKICAgICAgYWN0aXZlOiAha2V5LnJldm9rZWRfYXQgJiYgKCFrZXkuZXhwaXJlc19hdCB8fCBEYXRlLnBhcnNlKGtleS5leHBpcmVzX2F0KSA+IERhdGUubm93KCkpLAogICAgfSkpOwogIH0pOwoKZXhwb3J0IGNvbnN0IGNyZWF0ZUFwaUtleSA9IGNyZWF0ZVNlcnZlckZuKHsgbWV0aG9kOiAiUE9TVCIgfSkKICAubWlkZGxld2FyZShbcmVxdWlyZVN1cGFiYXNlQXV0aF0pCiAgLnZhbGlkYXRvcigKICAgIChpbnB1dDogewogICAgICBtb2RlbE9ubHk/OiBib29sZWFuOwogICAgICBuYW1lPzogc3RyaW5nOwogICAgICBwcm9maWxlPzogQWNjZXNzUHJvZmlsZTsKICAgICAgc2NvcGVzPzogc3RyaW5nW107CiAgICAgIG9yZ2FuaXphdGlvbklkPzogc3RyaW5nIHwgdW5kZWZpbmVkOwogICAgICB3b3Jrc3BhY2VJZD86IHN0cmluZzsKICAgICAgcHJvamVjdElkPzogc3RyaW5nIHwgdW5kZWZpbmVkOwogICAgfSkgPT4gewogICAgICBjb25zdCBwcm9maWxlID0gaXNBY2Nlc3NQcm9maWxlKGlucHV0Py5wcm9maWxlID8/ICIiKSA/IGlucHV0LnByb2ZpbGUhIDogImRldmVsb3BlciI7CiAgICAgIHJldHVybiB7CiAgICAgICAgbW9kZWxPbmx5OiBpbnB1dD8ubW9kZWxPbmx5ID09PSB0cnVlLAogICAgICAgIG5hbWU6IChpbnB1dD8ubmFtZSA/PyAiIikudHJpbSgpIHx8ICJEZWZhdWx0IGtleSIsCiAgICAgICAgcHJvZmlsZTogaW5wdXQ/Lm1vZGVsT25seSA9PT0gdHJ1ZSA/ICJjdXN0b20iIDogcHJvZmlsZSwKICAgICAgICBzY29wZXM6CiAgICAgICAgICBpbnB1dD8ubW9kZWxPbmx5ID09PSB0cnVlCiAgICAgICAgICAgID8gWyJtb2RlbHM6cmVhZCIsICJtb2RlbHM6aW52b2tlIl0KICAgICAgICAgICAgOiBzY29wZXNGb3JQcm9maWxlKHByb2ZpbGUsIGlucHV0Py5zY29wZXMpLAogICAgICAgIG9yZ2FuaXphdGlvbklkOiBpbnB1dD8ub3JnYW5pemF0aW9uSWQgfHwgbnVsbCwKICAgICAgICB3b3Jrc3BhY2VJZDogaW5wdXQ/LndvcmtzcGFjZUlkIHx8IG51bGwsCiAgICAgICAgcHJvamVjdElkOiBpbnB1dD8ucHJvamVjdElkIHx8IG51bGwsCiAgICAgIH07CiAgICB9LAogICkKICAuaGFuZGxlcihhc3luYyAoeyBkYXRhLCBjb250ZXh0IH0pID0+IHsKICAgIGlmIChkYXRhLnNjb3Blcy5pbmNsdWRlcygiY29udHJvbDp3cml0ZSIpKSB7CiAgICAgIGNvbnN0IHsgZGF0YTogcm9sZXMsIGVycm9yIH0gPSBhd2FpdCBjb250ZXh0LnN1cGFiYXNlCiAgICAgICAgLmZyb20oInVzZXJfcm9sZXMiKQogICAgICAgIC5zZWxlY3QoInJvbGUiKQogICAgICAgIC5lcSgidXNlcl9pZCIsIGNvbnRleHQudXNlcklkKTsKICAgICAgaWYgKGVycm9yKSB0aHJvdyBuZXcgRXJyb3IoZXJyb3IubWVzc2FnZSk7CiAgICAgIHJlcXVpcmVLZXlTY29wZUF1dGhvcml0eSgKICAgICAgICAocm9sZXMgPz8gW10pLm1hcCgocm93KSA9PiByb3cucm9sZSksCiAgICAgICAgZGF0YS5zY29wZXMsCiAgICAgICk7CiAgICB9CiAgICBsZXQgb3JnYW5pemF0aW9uSWQgPSBkYXRhLm9yZ2FuaXphdGlvbklkOwogICAgbGV0IHdvcmtzcGFjZUlkID0gZGF0YS53b3Jrc3BhY2VJZDsKICAgIGNvbnN0IHByb2plY3RJZCA9IGRhdGEucHJvamVjdElkOwoKICAgIGlmIChwcm9qZWN0SWQpIHsKICAgICAgY29uc3QgeyBkYXRhOiBwcm9qZWN0LCBlcnJvciB9ID0gYXdhaXQgY29udGV4dC5zdXBhYmFzZQogICAgICAgIC5mcm9tKCJwcm9qZWN0cyIpCiAgICAgICAgLnNlbGVjdCgiaWQsb3JnYW5pemF0aW9uX2lkLHdvcmtzcGFjZV9pZCIpCiAgICAgICAgLmVxKCJpZCIsIHByb2plY3RJZCkKICAgICAgICAubWF5YmVTaW5nbGUoKTsKICAgICAgaWYgKGVycm9yIHx8ICFwcm9qZWN0KSB0aHJvdyBuZXcgRXJyb3IoIlByb2plY3QgaXMgdW5hdmFpbGFibGUgdG8gdGhpcyB1c2VyIik7CiAgICAgIGlmIChvcmdhbml6YXRpb25JZCAmJiBvcmdhbml6YXRpb25JZCAhPT0gcHJvamVjdC5vcmdhbml6YXRpb25faWQpIHsKICAgICAgICB0aHJvdyBuZXcgRXJyb3IoIlByb2plY3QgZG9lcyBub3QgYmVsb25nIHRvIHRoZSBzZWxlY3RlZCBvcmdhbml6YXRpb24iKTsKICAgICAgfQogICAgICBpZiAod29ya3NwYWNlSWQgJiYgd29ya3NwYWNlSWQgIT09IHByb2plY3Qud29ya3NwYWNlX2lkKSB7CiAgICAgICAgdGhyb3cgbmV3IEVycm9yKCJQcm9qZWN0IGRvZXMgbm90IGJlbG9uZyB0byB0aGUgc2VsZWN0ZWQgd29ya3NwYWNlIik7CiAgICAgIH0KICAgICAgb3JnYW5pemF0aW9uSWQgPSBwcm9qZWN0Lm9yZ2FuaXphdGlvbl9pZDsKICAgICAgd29ya3NwYWNlSWQgPSBwcm9qZWN0LndvcmtzcGFjZV9pZDsKICAgIH0KCiAgICBpZiAod29ya3NwYWNlSWQpIHsKICAgICAgY29uc3QgeyBkYXRhOiB3b3Jrc3BhY2UsIGVycm9yIH0gPSBhd2FpdCBjb250ZXh0LnN1cGFiYXNlCiAgICAgICAgLmZyb20oIndvcmtzcGFjZXMiKQogICAgICAgIC5zZWxlY3QoImlkLG9yZ2FuaXphdGlvbl9pZCIpCiAgICAgICAgLmVxKCJpZCIsIHdvcmtzcGFjZUlkKQogICAgICAgIC5tYXliZVNpbmdsZSgpOwogICAgICBpZiAoZXJyb3IgfHwgIXdvcmtzcGFjZSkgdGhyb3cgbmV3IEVycm9yKCJXb3Jrc3BhY2UgaXMgdW5hdmFpbGFibGUgdG8gdGhpcyB1c2VyIik7CiAgICAgIGlmIChvcmdhbml6YXRpb25JZCAmJiBvcmdhbml6YXRpb25JZCAhPT0gd29ya3NwYWNlLm9yZ2FuaXphdGlvbl9pZCkgewogICAgICAgIHRocm93IG5ldyBFcnJvcigiV29ya3NwYWNlIGRvZXMgbm90IGJlbG9uZyB0byB0aGUgc2VsZWN0ZWQgb3JnYW5pemF0aW9uIik7CiAgICAgIH0KICAgICAgb3JnYW5pemF0aW9uSWQgPSB3b3Jrc3BhY2Uub3JnYW5pemF0aW9uX2lkOwogICAgfQoKICAgIGlmIChvcmdhbml6YXRpb25JZCkgewogICAgICBjb25zdCB7IGRhdGE6IG9yZ2FuaXphdGlvbiwgZXJyb3IgfSA9IGF3YWl0IGNvbnRleHQuc3VwYWJhc2UKICAgICAgICAuZnJvbSgib3JnYW5pemF0aW9ucyIpCiAgICAgICAgLnNlbGVjdCgiaWQiKQogICAgICAgIC5lcSgiaWQiLCBvcmdhbml6YXRpb25JZCkKICAgICAgICAubWF5YmVTaW5nbGUoKTsKICAgICAgaWYgKGVycm9yIHx8ICFvcmdhbml6YXRpb24pIHRocm93IG5ldyBFcnJvcigiT3JnYW5pemF0aW9uIGlzIHVuYXZhaWxhYmxlIHRvIHRoaXMgdXNlciIpOwogICAgfQoKICAgIGNvbnN0IHsgZ2VuZXJhdGVLZXkgfSA9IGF3YWl0IGltcG9ydCgiLi9nYXRld2F5LnNlcnZlciIpOwogICAgY29uc3Qga2V5ID0gZ2VuZXJhdGVLZXkoZGF0YS5tb2RlbE9ubHkpOwogICAgY29uc3QgeyBlcnJvciB9ID0gYXdhaXQgY29udGV4dC5zdXBhYmFzZS5mcm9tKCJhcGlfa2V5cyIpLmluc2VydCh7CiAgICAgIHVzZXJfaWQ6IGNvbnRleHQudXNlcklkLAogICAgICBuYW1lOiBkYXRhLm5hbWUsCiAgICAgIGtleV9wcmVmaXg6IGtleS5wcmVmaXgsCiAgICAgIGtleV9oYXNoOiBrZXkuaGFzaCwKICAgICAgc2NvcGVzOiBkYXRhLnNjb3BlcywKICAgICAgYWNjZXNzX3Byb2ZpbGU6IGRhdGEucHJvZmlsZSwKICAgICAgb3JnYW5pemF0aW9uX2lkOiBvcmdhbml6YXRpb25JZCwKICAgICAgd29ya3NwYWNlX2lkOiB3b3Jrc3BhY2VJZCwKICAgICAgcHJvamVjdF9pZDogcHJvamVjdElkLAogICAgfSk7CiAgICBpZiAoZXJyb3IpIHRocm93IG5ldyBFcnJvcihlcnJvci5tZXNzYWdlKTsKICAgIHJldHVybiB7IGtleToga2V5LnJhdywgc2NvcGVzOiBkYXRhLnNjb3BlcywgcHJvZmlsZTogZGF0YS5wcm9maWxlIH07CiAgfSk7CgpleHBvcnQgY29uc3QgdXBkYXRlQXBpS2V5QWNjZXNzID0gY3JlYXRlU2VydmVyRm4oeyBtZXRob2Q6ICJQT1NUIiB9KQogIC5taWRkbGV3YXJlKFtyZXF1aXJlU3VwYWJhc2VBdXRoXSkKICAudmFsaWRhdG9yKHZhbGlkYXRlS2V5QWNjZXNzQ2hhbmdlKQogIC5oYW5kbGVyKGFzeW5jICh7IGRhdGEsIGNvbnRleHQgfSkgPT4gewogICAgY29uc3QgeyBkYXRhOiByZXN1bHQsIGVycm9yIH0gPSBhd2FpdCBjb250ZXh0LnN1cGFiYXNlLnJwYygib2NfdXBkYXRlX293bmVkX2tleV9hY2Nlc3MiLCB7CiAgICAgIHBfa2V5X2lkOiBkYXRhLmlkLAogICAgICBwX3Byb2ZpbGU6IGRhdGEucHJvZmlsZSwKICAgICAgcF9jdXN0b21fc2NvcGVzOiBkYXRhLnByb2ZpbGUgPT09ICJjdXN0b20iID8gZGF0YS5zY29wZXMgOiBbXSwKICAgIH0pOwogICAgaWYgKGVycm9yKSB0aHJvdyBuZXcgRXJyb3IoZXJyb3IubWVzc2FnZSk7CiAgICByZXR1cm4gcmVzdWx0OwogIH0pOwoKZXhwb3J0IGNvbnN0IHJlbmFtZUFwaUtleSA9IGNyZWF0ZVNlcnZlckZuKHsgbWV0aG9kOiAiUE9TVCIgfSkKICAubWlkZGxld2FyZShbcmVxdWlyZVN1cGFiYXNlQXV0aF0pCiAgLnZhbGlkYXRvcigoaW5wdXQ6IHsgaWQ6IHN0cmluZzsgbmFtZTogc3RyaW5nIH0pID0+IHsKICAgIGNvbnN0IG5hbWUgPSAoaW5wdXQ/Lm5hbWUgPz8gIiIpLnRyaW0oKTsKICAgIGlmICghbmFtZSkgdGhyb3cgbmV3IEVycm9yKCJLZXkgbmFtZSBjYW5ub3QgYmUgZW1wdHkiKTsKICAgIGlmIChuYW1lLmxlbmd0aCA+IDEyMCkgdGhyb3cgbmV3IEVycm9yKCJLZXkgbmFtZSBpcyB0b28gbG9uZyAoMTIwIGNoYXJhY3RlcnMgbWF4KSIpOwogICAgcmV0dXJuIHsgaWQ6IGlucHV0LmlkLCBuYW1lIH07CiAgfSkKICAuaGFuZGxlcihhc3luYyAoeyBkYXRhLCBjb250ZXh0IH0pID0+IHsKICAgIGNvbnN0IHsgZXJyb3IgfSA9IGF3YWl0IGNvbnRleHQuc3VwYWJhc2UKICAgICAgLmZyb20oImFwaV9rZXlzIikKICAgICAgLnVwZGF0ZSh7IG5hbWU6IGRhdGEubmFtZSB9KQogICAgICAuZXEoImlkIiwgZGF0YS5pZCkKICAgICAgLmVxKCJ1c2VyX2lkIiwgY29udGV4dC51c2VySWQpOwogICAgaWYgKGVycm9yKSB0aHJvdyBuZXcgRXJyb3IoZXJyb3IubWVzc2FnZSk7CiAgICByZXR1cm4geyBvazogdHJ1ZSwgbmFtZTogZGF0YS5uYW1lIH07CiAgfSk7CgpleHBvcnQgY29uc3QgcmV2b2tlQXBpS2V5ID0gY3JlYXRlU2VydmVyRm4oeyBtZXRob2Q6ICJQT1NUIiB9KQogIC5taWRkbGV3YXJlKFtyZXF1aXJlU3VwYWJhc2VBdXRoXSkKICAudmFsaWRhdG9yKChpbnB1dDogeyBpZDogc3RyaW5nIH0pID0+ICh7IGlkOiBpbnB1dC5pZCB9KSkKICAuaGFuZGxlcihhc3luYyAoeyBkYXRhLCБjb250ZXh0IH0pID0+IHsKICAgIGNvbnN0IHsgZXJyb3IgfSA9IGF3YWl0IGNvbnRleHQuc3VwYWJhc2UKICAgICAgLmZyb20oImFwaV9rZXlzIikKICAgICAgLnVwZGF0ZSh7IHJldm9rZWRfYXQ6IG5ldyBEYXRlKCkudG9JU09TdHJpbmcoKSB9KQogICAgICAuZXEoImlkIiwgZGF0YS5pZCkKICAgICAgLmVxKCJ1c2VyX2lkIiwgY29udGV4dC51c2VySWQpOwogICAgaWYgKGVycm9yKSB0aHJvdyBuZXcgRXJyb3IoZXJyb3IubWVzc2FnZSk7CiAgICByZXR1cm4geyBvazogdHJ1ZSB9OwogIH0pOwo=
+import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import {
+  isAccessProfile,
+  scopesForProfile,
+  validateKeyAccessChange,
+  requireKeyScopeAuthority,
+  type AccessProfile,
+} from "@/lib/access-profiles";
+
+/**
+ * Full autonomous surface for oc_live_ keys.
+ * New keys auto-grant all product scopes so ChatGPT / Claude / Grok / Open WebUI
+ * / Pipedream / Composio agents work without manual scope picking.
+ */
+export const DEFAULT_KEY_SCOPES = scopesForProfile("developer");
+
+export const listApiKeys = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("api_keys")
+      .select(
+        "id, name, key_prefix, scopes, access_profile, organization_id, workspace_id, project_id, last_used_at, revoked_at, expires_at, created_at",
+      )
+      .is("revoked_at", null)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((key) => ({
+      ...key,
+      active: !key.revoked_at && (!key.expires_at || Date.parse(key.expires_at) > Date.now()),
+    }));
+  });
+
+export const createApiKey = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator(
+    (input: {
+      modelOnly?: boolean;
+      name?: string;
+      profile?: AccessProfile;
+      scopes?: string[];
+      organizationId?: string | undefined;
+      workspaceId?: string;
+      projectId?: string | undefined;
+    }) => {
+      const profile = isAccessProfile(input?.profile ?? "") ? input.profile! : "developer";
+      return {
+        modelOnly: input?.modelOnly === true,
+        name: (input?.name ?? "").trim() || "Default key",
+        profile: input?.modelOnly === true ? "custom" : profile,
+        scopes:
+          input?.modelOnly === true
+            ? ["models:read", "models:invoke"]
+            : scopesForProfile(profile, input?.scopes),
+        organizationId: input?.organizationId || null,
+        workspaceId: input?.workspaceId || null,
+        projectId: input?.projectId || null,
+      };
+    },
+  )
+  .handler(async ({ data, context }) => {
+    if (data.scopes.includes("control:write")) {
+      const { data: roles, error } = await context.supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", context.userId);
+      if (error) throw new Error(error.message);
+      requireKeyScopeAuthority(
+        (roles ?? []).map((row) => row.role),
+        data.scopes,
+      );
+    }
+    let organizationId = data.organizationId;
+    let workspaceId = data.workspaceId;
+    const projectId = data.projectId;
+
+    if (projectId) {
+      const { data: project, error } = await context.supabase
+        .from("projects")
+        .select("id,organization_id,workspace_id")
+        .eq("id", projectId)
+        .maybeSingle();
+      if (error || !project) throw new Error("Project is unavailable to this user");
+      if (organizationId && organizationId !== project.organization_id) {
+        throw new Error("Project does not belong to the selected organization");
+      }
+      if (workspaceId && workspaceId !== project.workspace_id) {
+        throw new Error("Project does not belong to the selected workspace");
+      }
+      organizationId = project.organization_id;
+      workspaceId = project.workspace_id;
+    }
+
+    if (workspaceId) {
+      const { data: workspace, error } = await context.supabase
+        .from("workspaces")
+        .select("id,organization_id")
+        .eq("id", workspaceId)
+        .maybeSingle();
+      if (error || !workspace) throw new Error("Workspace is unavailable to this user");
+      if (organizationId && organizationId !== workspace.organization_id) {
+        throw new Error("Workspace does not belong to the selected organization");
+      }
+      organizationId = workspace.organization_id;
+    }
+
+    if (organizationId) {
+      const { data: organization, error } = await context.supabase
+        .from("organizations")
+        .select("id")
+        .eq("id", organizationId)
+        .maybeSingle();
+      if (error || !organization) throw new Error("Organization is unavailable to this user");
+    }
+
+    const { generateKey } = await import("./gateway.server");
+    const key = generateKey(data.modelOnly);
+    const { error } = await context.supabase.from("api_keys").insert({
+      user_id: context.userId,
+      name: data.name,
+      key_prefix: key.prefix,
+      key_hash: key.hash,
+      scopes: data.scopes,
+      access_profile: data.profile,
+      organization_id: organizationId,
+      workspace_id: workspaceId,
+      project_id: projectId,
+    });
+    if (error) throw new Error(error.message);
+    return { key: key.raw, scopes: data.scopes, profile: data.profile };
+  });
+
+export const updateApiKeyAccess = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator(validateKeyAccessChange)
+  .handler(async ({ data, context }) => {
+    const { data: result, error } = await context.supabase.rpc("oc_update_owned_key_access", {
+      p_key_id: data.id,
+      p_profile: data.profile,
+      p_custom_scopes: data.profile === "custom" ? data.scopes : [],
+    });
+    if (error) throw new Error(error.message);
+    return result;
+  });
+
+export const renameApiKey = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { id: string; name: string }) => {
+    const name = (input?.name ?? "").trim();
+    if (!name) throw new Error("Key name cannot be empty");
+    if (name.length > 120) throw new Error("Key name is too long (120 characters max)");
+    return { id: input.id, name };
+  })
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("api_keys")
+      .update({ name: data.name })
+      .eq("id", data.id)
+      .eq("user_id", context.userId);
+    if (error) throw new Error(error.message);
+    return { ok: true, name: data.name };
+  });
+
+export const revokeApiKey = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { id: string }) => ({ id: input.id }))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("api_keys")
+      .update({ revoked_at: new Date().toISOString() })
+      .eq("id", data.id)
+      .eq("user_id", context.userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
