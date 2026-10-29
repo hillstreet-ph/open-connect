@@ -1,6 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { normalizeCredentialValue, sameCredentialIdentity } from "./credential-save-policy";
+import {
+  NOTES_MAX_LENGTH,
+  findCredentialNotes,
+  resolveNotesForUpdate,
+  withoutNotes,
+} from "./credential-notes";
 
 export type SecretType =
   "api_key" | "oauth_token" | "mcp_url" | "bot_token" | "password" | "totp" | "other";
@@ -65,12 +71,27 @@ export function credentialMetadata(value: unknown): CredentialMetadata {
   };
 }
 
+/** Credential metadata as sent to list views: note text is never included. */
+export type CredentialListItem = Omit<CredentialMetadata, "notes"> & { has_notes: boolean };
+
 export const listSecrets = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .handler(async ({ context }): Promise<CredentialListItem[]> => {
     const { data, error } = await context.supabase.rpc("list_credential_secrets");
     if (error) throw new Error(error.message);
-    return Array.isArray(data) ? data.map(credentialMetadata) : [];
+    return Array.isArray(data) ? data.map((row) => withoutNotes(credentialMetadata(row))) : [];
+  });
+
+/** Returns the notes of exactly one owned credential, on explicit user request. */
+export const revealCredentialNotes = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { id: string }) => ({ id: (input?.id ?? "").trim() }))
+  .handler(async ({ data, context }) => {
+    if (!data.id) throw new Error("id required");
+    const { data: rows, error } = await context.supabase.rpc("list_credential_secrets");
+    if (error) throw new Error(error.message);
+    const owned = Array.isArray(rows) ? rows.map(credentialMetadata) : [];
+    return { notes: findCredentialNotes(owned, data.id) };
   });
 
 export const createSecret = createServerFn({ method: "POST" })
@@ -285,29 +306,55 @@ export const importCredentials = createServerFn({ method: "POST" })
 
 export const updateSecretOrganization = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input: { id: string; notes?: string; tags?: string[]; project_ids?: string[] }) => ({
-    id: (input?.id ?? "").trim(),
-    notes: (input?.notes ?? "").slice(0, 4000),
-    tags: Array.isArray(input?.tags)
-      ? input.tags
-          .map((tag) => tag.trim().toLowerCase().slice(0, 40))
-          .filter(Boolean)
-          .slice(0, 20)
-      : [],
-    project_ids: Array.isArray(input?.project_ids)
-      ? [...new Set(input.project_ids.map((id) => id.trim()).filter(Boolean))]
-      : [],
-  }))
+  .validator(
+    (input: {
+      id: string;
+      notes?: string | undefined;
+      tags?: string[];
+      project_ids?: string[];
+    }) => ({
+      id: (input?.id ?? "").trim(),
+      // undefined = notes were not loaded/edited in the UI; the stored value is preserved.
+      notes: typeof input?.notes === "string" ? input.notes.slice(0, NOTES_MAX_LENGTH) : undefined,
+      tags: Array.isArray(input?.tags)
+        ? input.tags
+            .map((tag) => tag.trim().toLowerCase().slice(0, 40))
+            .filter(Boolean)
+            .slice(0, 20)
+        : [],
+      project_ids: Array.isArray(input?.project_ids)
+        ? [...new Set(input.project_ids.map((id) => id.trim()).filter(Boolean))]
+        : [],
+    }),
+  )
   .handler(async ({ data, context }) => {
     if (!data.id) throw new Error("id required");
+    let currentNotes: string | null = null;
+    if (data.notes === undefined) {
+      const { data: rows, error: inventoryError } =
+        await context.supabase.rpc("list_credential_secrets");
+      if (inventoryError || !Array.isArray(rows))
+        throw new Error("Existing notes could not be checked. Nothing was changed.");
+      currentNotes = findCredentialNotes(rows.map(credentialMetadata), data.id);
+    }
     const { data: result, error } = await context.supabase.rpc("update_credential_organization", {
       p_credential_id: data.id,
-      p_notes: data.notes,
+      p_notes: resolveNotesForUpdate(data.notes, currentNotes),
       p_tags: data.tags,
       p_project_ids: data.project_ids,
     });
     if (error) throw new Error(error.message);
-    return result;
+    // The RPC echoes notes; never send them back in a mutation response.
+    const organization = (result ?? {}) as {
+      credential_id?: string;
+      tags?: string[];
+      project_ids?: string[];
+    };
+    return {
+      credential_id: organization.credential_id ?? data.id,
+      tags: Array.isArray(organization.tags) ? organization.tags : [],
+      project_ids: Array.isArray(organization.project_ids) ? organization.project_ids : [],
+    };
   });
 
 export const updateSecretValue = createServerFn({ method: "POST" })
