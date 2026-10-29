@@ -54,7 +54,7 @@ export const Route = createFileRoute("/_authenticated/integrations")({
       {
         name: "description",
         content:
-          "Manage separate API Key, Apps, AI Agents, and Custom MCP integrations for Open-Connect.",
+          "Manage separate Personal Token, Apps, AI Agents, and Custom MCP integrations for Open-Connect.",
       },
     ],
   }),
@@ -122,7 +122,7 @@ function IntegrationsPage() {
   const { user } = useAuth();
   const { section } = Route.useSearch();
   const sectionTitles: Record<IntegrationSection, string> = {
-    "api-key": "API Key",
+    "api-key": "Personal Token",
     apps: "Apps",
     "ai-agents": "AI Agents",
     "custom-mcp": "Custom MCP",
@@ -372,8 +372,8 @@ function IntegrationsPage() {
         <section id="api-key" hidden={section !== "api-key"} className="scroll-mt-6">
           <div className="mb-4">
             <p className="mt-1 text-sm text-muted-foreground">
-              Create and revoke scoped keys for clients that use bearer authentication. ChatGPT uses
-              OAuth and does not need an API key.
+              Create and revoke scoped Personal Tokens for clients that use bearer authentication.
+              ChatGPT uses OAuth and does not need a token.
             </p>
           </div>
           <ApiKeysCard />
