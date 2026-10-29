@@ -123,8 +123,76 @@ function isH3SwallowedErrorBody(body: string): boolean {
   }
 }
 
+/**
+ * Unhandled gateway failures must stay machine-readable. The MCP route dispatches
+ * tools whose handlers throw curated, safe Error messages; without this net every
+ * such throw surfaced as an HTML 500 page that JSON-RPC clients cannot parse
+ * (see #513). MCP and API requests now receive a JSON-RPC error object whose
+ * data.message carries the actionable reason. Secrets are never included.
+ */
+async function structuredFailureResponse(
+  request: Request,
+  error: unknown,
+  rpcBodyClone: Request | null,
+): Promise<Response> {
+  const url = new URL(request.url);
+  const isJsonEndpoint =
+    request.method === "POST" &&
+    (url.pathname === "/mcp" ||
+      url.pathname === "/v1" ||
+      url.pathname.startsWith("/v1/") ||
+      url.pathname.startsWith("/api/"));
+  if (!isJsonEndpoint) {
+    return new Response(renderErrorPage(), {
+      status: 500,
+      headers: { "content-type": "text/html; charset=utf-8" },
+    });
+  }
+
+  let requestId: string | number | null = null;
+  if (rpcBodyClone) {
+    try {
+      const body = (await rpcBodyClone.json()) as { id?: string | number };
+      if (typeof body?.id === "string" || typeof body?.id === "number") requestId = body.id;
+    } catch {
+      // Body already consumed or not JSON-RPC; id stays null per JSON-RPC 2.0 §5.1.6.1.
+    }
+  }
+
+  return new Response(
+    JSON.stringify({
+      jsonrpc: "2.0",
+      id: requestId,
+      error: {
+        code: -32603,
+        message: "Internal error",
+        data: {
+          status: "failed",
+          code: "gateway_tool_error",
+          message:
+            error instanceof Error && error.message
+              ? error.message.slice(0, 300)
+              : "The gateway request failed. Try again.",
+          secrets_exposed: false,
+        },
+      },
+    }),
+    {
+      status: 500,
+      headers: {
+        "content-type": "application/json; charset=utf-8",
+        "access-control-allow-origin": "*",
+        "cache-control": "no-store",
+      },
+    },
+  );
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
+    const url = new URL(request.url);
+    const rpcBodyClone =
+      request.method === "POST" && url.pathname === "/mcp" ? request.clone() : null;
     try {
       return await runWithRuntimeEnv(env, async () => {
         const wellKnown = handleWellKnown(request);
@@ -136,10 +204,7 @@ export default {
       });
     } catch (error) {
       console.error(error);
-      return new Response(renderErrorPage(), {
-        status: 500,
-        headers: { "content-type": "text/html; charset=utf-8" },
-      });
+      return structuredFailureResponse(request, error, rpcBodyClone);
     }
   },
 };
