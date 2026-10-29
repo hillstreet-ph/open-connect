@@ -2,11 +2,12 @@ import { McpConnectionCard } from "@/components/mcp-connection-card";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Copy, KeyRound, Loader2 } from "lucide-react";
+import { Check, Copy, KeyRound, Loader2, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   createApiKey,
   listApiKeys,
+  renameApiKey,
   revokeApiKey,
   updateApiKeyAccess,
 } from "@/lib/api-keys.functions";
@@ -37,6 +38,7 @@ export function ApiKeysCard({ modelOnly = false }: { modelOnly?: boolean }) {
   const list = useServerFn(listApiKeys);
   const create = useServerFn(createApiKey);
   const revoke = useServerFn(revokeApiKey);
+  const rename = useServerFn(renameApiKey);
   const update = useServerFn(updateApiKeyAccess);
   const getRoles = useServerFn(getMyRoles);
   const listProj = useServerFn(listProjects);
@@ -90,6 +92,16 @@ export function ApiKeysCard({ modelOnly = false }: { modelOnly?: boolean }) {
       setFreshKey(null);
       toast.success("Key revoked and removed");
     },
+  });
+
+  const renameMutation = useMutation({
+    mutationFn: (input: { id: string; name: string }) => rename({ data: input }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["api-keys"] });
+      toast.success("Key renamed");
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Could not rename key"),
   });
 
   return (
@@ -202,7 +214,12 @@ export function ApiKeysCard({ modelOnly = false }: { modelOnly?: boolean }) {
                   className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border px-3 py-2"
                 >
                   <span className="min-w-0">
-                    <span className="block truncate font-medium">{key.name}</span>
+                    <KeyNameEditor
+                      name={key.name}
+                      editable={key.active && !key.revoked_at}
+                      pending={renameMutation.isPending}
+                      onRename={(name) => renameMutation.mutate({ id: key.id, name })}
+                    />
                     <span className="font-mono text-xs text-muted-foreground">
                       {key.key_prefix}…
                     </span>
@@ -257,6 +274,86 @@ export function ApiKeysCard({ modelOnly = false }: { modelOnly?: boolean }) {
         <McpConnectionCard key={freshKey ? "fresh" : "existing"} freshKey={freshKey} />
       ) : null}
     </div>
+  );
+}
+
+function KeyNameEditor(props: {
+  name: string;
+  editable: boolean;
+  pending: boolean;
+  onRename: (name: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(props.name);
+
+  if (!editing) {
+    return (
+      <span className="flex items-center gap-1.5">
+        <span className="truncate font-medium">{props.name}</span>
+        {props.editable ? (
+          <button
+            type="button"
+            aria-label={`Rename ${props.name}`}
+            className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
+            onClick={() => {
+              setValue(props.name);
+              setEditing(true);
+            }}
+          >
+            <Pencil className="size-3" />
+          </button>
+        ) : null}
+      </span>
+    );
+  }
+
+  const submit = () => {
+    const next = value.trim();
+    if (!next || next === props.name) {
+      setEditing(false);
+      return;
+    }
+    props.onRename(next);
+    setEditing(false);
+  };
+
+  return (
+    <span className="flex items-center gap-1">
+      <Input
+        aria-label="New key name"
+        value={value}
+        autoFocus
+        disabled={props.pending}
+        onChange={(event) => setValue(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            submit();
+          } else if (event.key === "Escape") {
+            setEditing(false);
+          }
+        }}
+        className="h-7 max-w-40 text-sm"
+      />
+      <Button
+        size="sm"
+        variant="ghost"
+        aria-label="Save key name"
+        disabled={props.pending}
+        onClick={submit}
+      >
+        <Check className="size-3.5" />
+      </Button>
+      <Button
+        size="sm"
+        variant="ghost"
+        aria-label="Cancel rename"
+        disabled={props.pending}
+        onClick={() => setEditing(false)}
+      >
+        <X className="size-3.5" />
+      </Button>
+    </span>
   );
 }
 
