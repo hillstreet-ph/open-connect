@@ -433,9 +433,10 @@ function SettingsPage() {
                   <KeyRound className="size-4" />
                 </div>
                 <div>
-                  <h2 className="font-medium">API Key</h2>
+                  <h2 className="font-medium">Personal Token</h2>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Create and manage scoped keys for clients that use bearer authentication.
+                    Create and manage scoped Personal Tokens for clients that use bearer
+                    authentication.
                   </p>
                 </div>
               </div>
