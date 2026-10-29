@@ -74,11 +74,7 @@ function AccountMenuItems({ onSignOut }: { onSignOut: () => void }) {
         </Link>
       </DropdownMenuItem>
       <DropdownMenuItem asChild>
-        <Link
-          to="/integrations"
-          search={{ section: "api-key" }}
-          className="cursor-pointer"
-        >
+        <Link to="/integrations" search={{ section: "api-key" }} className="cursor-pointer">
           <KeyRound className="mr-2 size-4" />
           Developer
         </Link>
