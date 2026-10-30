@@ -55,6 +55,13 @@ export async function validateConnectionCredential(
   send: typeof fetch = fetch,
 ): Promise<Validation> {
   const bearer = { Authorization: `Bearer ${setup.apiKey}` };
+
+  if (setup.authType === "subscription") {
+    return {
+      verified: true,
+      detail: "Subscription credential stored; no API-key probe performed.",
+    };
+  }
   if (setup.provider === "custom_api" && setup.openapi) {
     const api = openApiOperations(setup.openapi);
     if (new URL(api.endpoint).origin !== new URL(setup.endpointUrl).origin)

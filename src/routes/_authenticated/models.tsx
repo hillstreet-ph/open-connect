@@ -64,7 +64,11 @@ function ModelsPage() {
   const configureFn = useServerFn(configureAppConnection);
   const testProviderFn = useServerFn(testAiProviderCredential);
   const providerTest = useMutation({
-    mutationFn: (input: { provider: string; api_key: string }) => testProviderFn({ data: input }),
+    mutationFn: (input: {
+      provider: string;
+      api_key: string;
+      auth_type?: "api_key" | "subscription";
+    }) => testProviderFn({ data: input }),
   });
   const [activeProvider, setActiveProvider] = useState<string | null>(null);
   const disconnectFn = useServerFn(disconnectApp);
@@ -72,6 +76,7 @@ function ModelsPage() {
   const [accountLabel, setAccountLabel] = useState("AI Gateway");
   const [providerKey, setProviderKey] = useState("");
   const [providerUrl, setProviderUrl] = useState("");
+  const [authType, setAuthType] = useState<"api_key" | "subscription">("api_key");
   const connections = useQuery({
     queryKey: ["app-connections"],
     queryFn: () => listFn({}),
@@ -95,6 +100,9 @@ function ModelsPage() {
     setAccountLabel(account?.identity.label || "AI Gateway");
     setProviderUrl(account?.metadata.endpoint_url || provider.baseUrl);
     setProviderKey("");
+    setAuthType((account?.metadata as Record<string, unknown> | null)?.["auth_type"] === "subscription"
+      ? "subscription"
+      : "api_key");
   }
   const removeConnection = useMutation({
     mutationFn: (id: string) => disconnectFn({ data: { id } }),
@@ -120,7 +128,7 @@ function ModelsPage() {
           account_label: accountLabel.trim() || "AI Gateway",
           endpoint_url: providerUrl || provider.baseUrl,
           api_key: providerKey,
-          auth_type: "api_key",
+          auth_type: authType,
         },
       });
     },
@@ -423,17 +431,53 @@ function ModelsPage() {
                   <Label htmlFor={`provider-url-${provider.id}`}>API base URL</Label>
                   <Input
                     id={`provider-url-${provider.id}`}
-                    readOnly
                     type="url"
                     value={providerUrl}
                     onChange={(event) => setProviderUrl(event.target.value)}
                     className="font-mono text-xs"
+                    placeholder={provider.baseUrl}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor={`provider-key-${provider.id}`}>
-                    Provider API key or access token
-                  </Label>
+                  <Label htmlFor={`provider-auth-${provider.id}`}>Authentication</Label>
+                  <div
+                    id={`provider-auth-${provider.id}`}
+                    role="radiogroup"
+                    aria-label="Authentication method"
+                    className="flex flex-wrap gap-1 border-border rounded-lg border p-1"
+                  >
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={authType === "api_key"}
+                      onClick={() => setAuthType("api_key")}
+                      className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
+                        authType === "api_key"
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "border-input text-muted-foreground hover:bg-muted"
+                      }`}
+                    >
+                      API key
+                    </button>
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={authType === "subscription"}
+                      onClick={() => setAuthType("subscription")}
+                      className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
+                        authType === "subscription"
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "border-input text-muted-foreground hover:bg-muted"
+                      }`}
+                    >
+                      Subscription (OAuth)
+                    </button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {authType === "subscription"
+                      ? "Sign in with the provider account. The access token is stored in the credential vault; clients only use their Open-Connect key."
+                      : "Provider API key or access token used to call the provider gateway directly."}
+                  </p>
                   <Input
                     id={`provider-key-${provider.id}`}
                     type="password"
@@ -444,7 +488,11 @@ function ModelsPage() {
                       setProviderKey(event.target.value);
                       providerTest.reset();
                     }}
-                    placeholder="Paste provider API key or token"
+                    placeholder={
+                      authType === "subscription"
+                        ? "Paste OAuth access token"
+                        : "Paste provider API key or token"
+                    }
                     className="font-mono"
                   />
                 </div>
@@ -455,20 +503,26 @@ function ModelsPage() {
                     disabled={
                       providerTest.isPending ||
                       configureMutation.isPending ||
-                      providerKey.trim().length < 8
+                      providerKey.trim().length <
+                        (authType === "subscription" ? 1 : 8)
                     }
                     onClick={() =>
-                      providerTest.mutate({ provider: provider.id, api_key: providerKey })
+                      providerTest.mutate({
+                        provider: provider.id,
+                        api_key: providerKey,
+                        auth_type: authType,
+                      })
                     }
                   >
-                    {providerTest.isPending ? "Testing…" : "Test API key"}
+                    {providerTest.isPending ? "Testing…" : "Test credential"}
                   </Button>
                   <Button
                     size="sm"
                     disabled={
                       providerTest.isPending ||
                       configureMutation.isPending ||
-                      providerKey.trim().length < 8
+                      providerKey.trim().length <
+                        (authType === "subscription" ? 1 : 8)
                     }
                     onClick={() => configureMutation.mutate()}
                   >

@@ -14,7 +14,7 @@ export type ConnectionSetupInput = {
   transport?: "http" | "sse" | "openapi";
   openapi?: unknown;
   icon_data?: string;
-  auth_type?: "none" | "bearer" | "api_key" | "personal_access_token";
+  auth_type?: "none" | "bearer" | "api_key" | "personal_access_token" | "subscription";
 };
 
 export type ConnectionSetupApp = {
@@ -30,7 +30,12 @@ export function normalizeConnectionSetup(input: ConnectionSetupInput, app: Conne
   if (app.oauth) throw new Error("Use provider authorization for this application");
 
   const apiKey = (input?.api_key ?? "").trim();
-  if (!["custom_mcp", "custom_api"].includes(provider) && apiKey.length < 8) {
+  const isSubscription = input?.auth_type === "subscription";
+  if (
+    !isSubscription &&
+    !["custom_mcp", "custom_api"].includes(provider) &&
+    apiKey.length < 8
+  ) {
     throw new Error("Credential must contain at least 8 characters");
   }
 
@@ -39,12 +44,19 @@ export function normalizeConnectionSetup(input: ConnectionSetupInput, app: Conne
   const authType =
     input?.auth_type ??
     (["custom_mcp", "custom_api"].includes(provider) && !apiKey ? "none" : "bearer");
-  if (["custom_mcp", "custom_api"].includes(provider) && authType !== "none" && apiKey.length < 8) {
+  if (
+    ["custom_mcp", "custom_api"].includes(provider) &&
+    authType !== "none" &&
+    authType !== "subscription" &&
+    apiKey.length < 8
+  ) {
     throw new Error("Credential must contain at least 8 characters when authentication is enabled");
   }
   let endpointUrl = (input?.endpoint_url ?? "").trim();
 
-  if (!["none", "bearer", "api_key", "personal_access_token"].includes(authType))
+  if (
+    !["none", "bearer", "api_key", "personal_access_token", "subscription"].includes(authType)
+  )
     throw new Error("Unsupported authentication type");
   const transport = input.transport ?? (provider === "custom_api" ? "openapi" : "http");
   if (!["http", "sse", "openapi"].includes(transport))

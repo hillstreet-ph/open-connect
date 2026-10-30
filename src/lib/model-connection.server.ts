@@ -63,6 +63,38 @@ const COMPATIBLE_MODEL_ENDPOINTS: Record<string, string> = Object.fromEntries(
   COMPATIBLE_GATEWAY_PROVIDERS.map((provider) => [provider.id, provider.baseUrl]),
 );
 
+/** Resolve the upstream base URL for a saved gateway connection.
+ *
+ * A saved custom endpoint_url (set on the AI Gateway page) wins over the
+ * provider's canonical base URL so users can point a provider at a private
+ * or self-hosted OpenAI-compatible gateway. LiteLLM keeps its own validated
+ * endpoint from metadata.
+ */
+function savedConnectionBaseUrl(connection: SavedModelConnection): string {
+  if (connection.provider === "litellm") {
+    return endpointForLiteLlm(connection.metadata);
+  }
+  const metadata =
+    connection.metadata && typeof connection.metadata === "object"
+      ? (connection.metadata as Record<string, unknown>)
+      : {};
+  const endpoint =
+    typeof metadata["endpoint_url"] === "string" && metadata["endpoint_url"].trim()
+      ? metadata["endpoint_url"].trim()
+      : null;
+  if (endpoint) {
+    try {
+      const url = new URL(endpoint);
+      if (url.protocol === "https:") return url.toString().replace(/\/+$/, "");
+    } catch {
+      // fall through to the canonical base URL below
+    }
+  }
+  return COMPATIBLE_MODEL_ENDPOINTS[
+    connection.provider as Exclude<SavedModelUpstream["name"], "litellm">
+  ]!;
+}
+
 /** Resolve connected OpenAI-compatible model providers for this user only. */
 export async function savedModelUpstreams(
   userId: string,
@@ -96,12 +128,7 @@ export async function savedModelUpstreams(
     }
     configured.push({
       name: connection.provider as SavedModelUpstream["name"],
-      baseUrl:
-        connection.provider === "litellm"
-          ? endpointForLiteLlm(connection.metadata)
-          : COMPATIBLE_MODEL_ENDPOINTS[
-              connection.provider as Exclude<SavedModelUpstream["name"], "litellm">
-            ]!,
+      baseUrl: savedConnectionBaseUrl(connection),
       headers: {
         Authorization: `Bearer ${credential}`,
         "Content-Type": "application/json",

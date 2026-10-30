@@ -1,0 +1,67 @@
+# Zeabur deployment — Open Connect control plane
+# End-to-end professional deploy: build image (control-plane-docker.yml) → publish to
+# Docker Hub → redeploy the Zeabur control-plane service.
+# Install path: .github/workflows/zeabur-deploy.yml
+# Required environment: zeabur-deploy
+# Required secrets: ZEABUR_TOKEN, ZEABUR_SERVICE_ID (control-plane service on Zeabur)
+
+name: Zeabur Deploy Control Plane
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Docker image tag to deploy (defaults to latest)"
+        required: false
+        default: latest
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zeabur-deploy-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'workflow_dispatch' }}
+
+env:
+  IMAGE_NAME: hillstreet/open-connect
+
+jobs:
+  deploy:
+    if: github.repository == 'hillstreet-ph/open-connect'
+    runs-on: ubuntu-latest
+    environment: zeabur-deploy
+    timeout-minutes: 10
+    steps:
+      - name: Require Zeabur credentials
+        env:
+          ZEABUR_TOKEN: ${{ secrets.ZEABUR_TOKEN }}
+          ZEABUR_SERVICE_ID: ${{ secrets.ZEABUR_SERVICE_ID }}
+        run: |
+          test -n "$ZEABUR_TOKEN" || { echo "::error::ZEABUR_TOKEN is not set"; exit 1; }
+          test -n "$ZEABUR_SERVICE_ID" || { echo "::error::ZEABUR_SERVICE_ID is not set"; exit 1; }
+
+      - name: Resolve image tag
+        id: tag
+        run: |
+          TAG="${{ github.event.inputs.image_tag || github.event.release.tag_name || 'latest' }}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "image=${IMAGE_NAME}:${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Trigger Zeabur redeploy of the control-plane service
+        env:
+          ZEABUR_TOKEN: ${{ secrets.ZEABUR_TOKEN }}
+          ZEABUR_SERVICE_ID: ${{ secrets.ZEABUR_SERVICE_ID }}
+          IMAGE: ${{ steps.tag.outputs.image }}
+        run: |
+          set -euo pipefail
+          # Zeabur redeploys a service when its image reference changes. Update the
+          # service's image via the Zeabur API and trigger a new deployment.
+          # Configure ZEABUR_API_BASE if your region uses a different endpoint.
+          API_BASE="${ZEABUR_API_BASE:-https://api.zeabur.com}"
+          curl --fail --show-error --silent --request POST "${API_BASE}/v2/services/${ZEABUR_SERVICE_ID}/deploy" \
+            --header "Authorization: Bearer ${ZEABUR_TOKEN}" \
+            --header "Content-Type: application/json" \
+            --data "{\"image\": \"${IMAGE}\"}" > /tmp/zeabur-deploy-response.json
+          cat /tmp/zeabur-deploy-response.json

@@ -14,12 +14,13 @@ export function connectionIdentity(value: unknown) {
   };
 }
 
-export function connectionAuthType(value: unknown): "none" | "bearer" | "api_key" | "oauth" {
+export function connectionAuthType(value: unknown): "none" | "bearer" | "api_key" | "oauth" | "subscription" {
   const metadata =
     value && typeof value === "object" && !Array.isArray(value)
       ? (value as Record<string, unknown>)
       : {};
   if (metadata["auth_type"] === "oauth") return "oauth";
+  if (metadata["auth_type"] === "subscription") return "subscription";
   return metadata["auth_type"] === "none"
     ? "none"
     : metadata["auth_type"] === "api_key"
