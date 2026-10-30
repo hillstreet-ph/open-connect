@@ -39,7 +39,11 @@ type Account = {
 
 type PermissionMode = "allow" | "ask" | "deny";
 
-type ConnectorPermissions = { tools: PermissionMode; skills: PermissionMode; apps: PermissionMode };
+type ConnectorPermissions = {
+  tools: PermissionMode;
+  skills: PermissionMode;
+  apps: PermissionMode;
+};
 
 const defaultPermissions: ConnectorPermissions = { tools: "allow", skills: "allow", apps: "allow" };
 
