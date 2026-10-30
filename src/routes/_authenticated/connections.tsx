@@ -329,11 +329,6 @@ function ConnectionsPage() {
         )}
         {user && (
           <>
-            <Button asChild variant="outline">
-              <Link to="/integrations" search={{ section: "ai-agents" }}>
-                AI and MCP integrations
-              </Link>
-            </Button>
             {isAdmin ? (
               <Button
                 variant="outline"

@@ -93,14 +93,14 @@ test("connection surfaces remain internal and separate from Marketplace", () => 
     "utf8",
   );
   assert.ok(integrations.includes("<ApiKeysCard />"));
-  assert.ok(integrations.includes("Connect ChatGPT with OAuth"));
   assert.ok(integrations.includes("setTelegramOpen(true)"));
   assert.ok(integrations.includes("inbound-integrations.functions"));
   assert.ok(integrations.includes("universal-connector-dialog"));
   assert.ok(integrations.includes("Remote MCP servers"));
-  for (const section of ['id="api-key"', 'id="apps"', 'id="ai-agents"', 'id="custom-mcp"']) {
+  for (const section of ['id="api-key"', 'id="apps"', 'id="custom-mcp"']) {
     assert.ok(integrations.includes(section), "Missing integration section " + section);
   }
+  assert.ok(!integrations.includes("ai-agents"), "AI Agents section should stay removed");
 
   const inboundMigration = readFileSync(
     path.resolve(process.cwd(), "supabase/migrations/20261005050000_inbound_integrations.sql"),
@@ -134,8 +134,8 @@ test("Integrations follows Data & privacy in Settings and includes account keys"
   for (const section of ["apps", "custom-mcp"]) {
     assert.ok(settings.includes('href="/integrations?section=' + section + '"'));
   }
-  // Personal Token lives in the account menu (Developer); AI Agents is reached from Integrations
-  // directly. Neither is duplicated as a Settings card.
+  // Personal Token lives in the account menu (Developer). It is not duplicated as a Settings
+  // card.
   assert.ok(!settings.includes('href="/integrations?section=api-key"'));
   assert.ok(!settings.includes('href="/integrations?section=ai-agents"'));
   assert.ok(settings.includes('title="Connectors"'));
