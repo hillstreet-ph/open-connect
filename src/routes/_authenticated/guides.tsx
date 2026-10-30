@@ -87,15 +87,14 @@ const userGuideSections = [
   {
     id: "roles",
     title: "Roles and permissions",
-    body: "Your role controls uploads, publishing, and admin. Defaults to user after signup.",
+    body: "Your role controls uploads, publishing, and admin. Defaults to Member after signup.",
     steps: [
-      "user — dashboard, keys, download, upload own packages",
-      "developer — toolkits",
-      "publisher — publish resources",
-      "admin / owner — verify packages, roles, admin panel",
+      "Member — dashboard, keys, download, upload own packages",
+      "Developer — toolkits, publishing, and verification",
+      "Admin — platform roles and System administration",
     ],
-    href: "/settings",
-    hrefLabel: "Account settings",
+    href: "/admin",
+    hrefLabel: "System administration",
   },
 ];
 

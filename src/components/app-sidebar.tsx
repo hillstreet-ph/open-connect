@@ -47,7 +47,8 @@ type Item = {
  * Resource types and Memory/Knowledge are organized inside Resources; Integrations are in Settings.
  *
  * Organization settings live in the user menu; workspaces manage projects and environments.
- * System administration appears once for privileged roles in the shared menu.
+ * System administration (organization, platform roles, access reference) opens from the single
+ * hillstreet-ph entry in the account menu, not from the sidebar or Settings.
  */
 
 const PRIMARY: Item[] = [

@@ -68,7 +68,7 @@ function AccountMenuItems({ onSignOut }: { onSignOut: () => void }) {
   return (
     <>
       <DropdownMenuItem asChild>
-        <Link to="/orgs" className="cursor-pointer">
+        <Link to="/admin" className="cursor-pointer">
           <Building2 className="mr-2 size-4" />
           hillstreet-ph
         </Link>

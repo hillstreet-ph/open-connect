@@ -1,6 +1,7 @@
 /**
  * Site structure — public marketing vs signed-in workspace.
- * Public: LobeHub-style discovery. Workspace: Studio, orgs, roles.
+ * Public: LobeHub-style discovery. Workspace: Studio and daily work; System
+ * administration (organization, platform roles, access reference) lives at /admin.
  */
 
 export type NavLink = {

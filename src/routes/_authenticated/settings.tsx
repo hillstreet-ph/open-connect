@@ -16,7 +16,6 @@ import {
   ShieldCheck,
   Trash2,
   Upload,
-  UsersRound,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,7 +30,6 @@ import { ControlApprovalsPanel } from "@/components/control-approvals-panel";
 import { DataControlsPanel } from "@/components/data-controls-panel";
 import { settingsTab } from "@/lib/settings-navigation";
 import { profileDraftValue } from "@/lib/react-compat";
-import { useRoles } from "@/hooks/use-roles";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
@@ -52,7 +50,6 @@ function SettingsPage() {
   const queryClient = useQueryClient();
   const location = useLocation();
   const navigate = Route.useNavigate();
-  const { isAdmin } = useRoles();
   const fileRef = useRef<HTMLInputElement>(null);
   const [nameDraft, setNameDraft] = useState<{ userId: string; value: string } | null>(null);
   const [avatarDraft, setAvatarDraft] = useState<{ userId: string; value: string } | null>(null);
@@ -349,31 +346,11 @@ function SettingsPage() {
         <TabsContent value="workspace">
           <div className="grid gap-4 md:grid-cols-2">
             <SettingsLinkCard
-              to="/orgs"
-              icon={Building2}
-              title="Organization & workspace"
-              description="Admin-managed organization membership, groups, and role assignments."
-            />
-            <SettingsLinkCard
-              to="/roles"
-              icon={KeyRound}
-              title="Access reference"
-              description="Review Admin, Developer, and Member access across platform, organization, and project scopes."
-            />
-            <SettingsLinkCard
               to="/projects"
               icon={Network}
               title="Projects & environments"
               description="Open assigned projects and access project-scoped environments."
             />
-            {isAdmin ? (
-              <SettingsLinkCard
-                to="/admin"
-                icon={UsersRound}
-                title="User roles"
-                description="Admins assign platform-level Member, Developer, and Admin roles."
-              />
-            ) : null}
           </div>
         </TabsContent>
         <TabsContent value="apps">
@@ -471,10 +448,7 @@ function SettingsLinkCard({
   hash,
 }: {
   to:
-    | "/orgs"
-    | "/roles"
     | "/projects"
-    | "/admin"
     | "/models"
     | "/integrations"
     | "/connections"

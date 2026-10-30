@@ -63,12 +63,10 @@ function pageTitle(pathname: string): string {
   if (canonical) return canonical.label;
   const map: Record<string, string> = {
     "/campaign-studio": "Campaign Studio",
-    "/orgs": "Organization",
     "/integrations": "Integrations",
     "/project-access": "Project access",
     "/custom-oauth-callback": "App authorization",
     "/api-keys": "API keys",
-    "/roles": "Access reference",
     "/guides": "Professional setup",
     "/settings": "Settings",
     "/admin": "System administration",
