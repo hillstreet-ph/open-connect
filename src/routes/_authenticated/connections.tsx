@@ -105,6 +105,7 @@ function ConnectionsPage() {
   const configureFn = useServerFn(configureAppConnection);
   const syncFn = useServerFn(syncComposioConnections);
   const [managedApp, setManagedApp] = useState<CatalogApp | null>(null);
+  const [managedConnectionId, setManagedConnectionId] = useState<string | undefined>();
   const [selectedApp, setSelectedApp] = useState<CatalogApp | null>(null);
   const [connectionName, setConnectionName] = useState("");
   const [description, setDescription] = useState("");
@@ -371,6 +372,24 @@ function ConnectionsPage() {
     );
   }, [customConnections, customQuery]);
 
+  // The Manage dialog is scoped: opening it from a specific connection card
+  // shows only that account. Custom accounts sharing the same endpoint are
+  // combined; catalog cards show every account for that provider.
+  const managedConnections = useMemo(() => {
+    if (!managedApp) return [];
+    const clicked = managedConnectionId
+      ? (mine.data ?? []).find((c) => c.id === managedConnectionId)
+      : undefined;
+    return (mine.data ?? []).filter((c) => {
+      if (c.provider !== managedApp.provider) return false;
+      if (!clicked) return true;
+      if (customProviders.has(c.provider)) {
+        return (c.metadata.endpoint_url || c.id) === (clicked.metadata.endpoint_url || clicked.id);
+      }
+      return c.id === clicked.id;
+    });
+  }, [managedApp, managedConnectionId, mine.data]);
+
   function statusBadgeClass(status: string) {
     if (status === "connected") return "border-emerald-500/40 bg-emerald-500/10 text-emerald-400";
     if (status === "pending") return "border-amber-500/40 bg-amber-500/10 text-amber-400";
@@ -382,12 +401,17 @@ function ConnectionsPage() {
   const connectedTotal = installedConnections.filter((c) => c.status === "connected").length;
   const pendingTotal = installedConnections.filter((c) => c.status === "pending").length;
 
+  function closeManagedDialog() {
+    setManagedApp(null);
+    setManagedConnectionId(undefined);
+  }
+
   function startReconnect(connection: AppConnection) {
     if (!managedApp) return;
     if (["custom_mcp", "custom_api"].includes(connection.provider)) {
       setCustomInitial(connection as ConnectorInitial);
       setCustomOpen(true);
-      setManagedApp(null);
+      closeManagedDialog();
       setDetailAccount(null);
       return;
     }
@@ -417,7 +441,7 @@ function ConnectionsPage() {
     );
     setApiKey("");
     setSelectedApp({ ...managedApp, display_name: connection.display_name });
-    setManagedApp(null);
+    closeManagedDialog();
     setDetailAccount(null);
   }
 
@@ -470,8 +494,12 @@ function ConnectionsPage() {
             variant="outline"
             className="shrink-0"
             onClick={() => {
-              if (app) setManagedApp(app as CatalogApp);
-              else toast.info("Manage accounts is not available for this connector yet.");
+              if (app) {
+                setManagedApp(app as CatalogApp);
+                setManagedConnectionId(connection.id);
+              } else {
+                toast.info("Manage accounts is not available for this connector yet.");
+              }
             }}
           >
             Manage
@@ -533,7 +561,10 @@ function ConnectionsPage() {
                   ? "Official provider OAuth setup is not available yet"
                   : undefined
               }
-              onClick={() => setManagedApp(app)}
+              onClick={() => {
+                setManagedApp(app);
+                setManagedConnectionId(undefined);
+              }}
             >
               <Plus className="size-4" aria-hidden="true" />
               {connection ? "Manage accounts" : "Connect account"}
@@ -855,7 +886,12 @@ function ConnectionsPage() {
         open={customOpen}
         onOpenChange={setCustomOpen}
       />
-      <Dialog open={Boolean(managedApp)} onOpenChange={(open) => !open && setManagedApp(null)}>
+      <Dialog
+        open={Boolean(managedApp)}
+        onOpenChange={(open) => {
+          if (!open) closeManagedDialog();
+        }}
+      >
         <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[85dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -873,73 +909,68 @@ function ConnectionsPage() {
               Manage each account separately. Adding an account keeps your existing connections.
             </DialogDescription>
           </DialogHeader>
-          {(mine.data ?? []).some((c) => c.provider === managedApp?.provider) ? (
+          {managedConnections.length > 0 ? (
             <div className="grid gap-2 sm:grid-cols-2">
-              {(mine.data ?? [])
-                .filter((c) => c.provider === managedApp?.provider)
-                .map((c) => {
-                  const reconnectReady = Boolean(
-                    managedApp && connectionReconnectReady(c, managedApp.oauth_ready),
-                  );
-                  return (
-                    <Card key={c.id} className="flex flex-col gap-2 p-3">
-                      <div className="flex min-w-0 items-start justify-between gap-2">
-                        <div className="flex min-w-0 items-center gap-2">
-                          <BrandLogo
-                            provider={c.provider}
-                            name={c.display_name}
-                            logoUrl={managedApp?.logo}
-                            size="sm"
-                          />
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold">{c.display_name}</p>
-                            <p className="truncate text-xs text-muted-foreground">
-                              {connectionIdentityLine(c) ||
-                                c.metadata.endpoint_url ||
-                                c.identity.label}
-                            </p>
-                          </div>
+              {managedConnections.map((c) => {
+                const reconnectReady = Boolean(
+                  managedApp && connectionReconnectReady(c, managedApp.oauth_ready),
+                );
+                return (
+                  <Card key={c.id} className="flex flex-col gap-2 p-3">
+                    <div className="flex min-w-0 items-start justify-between gap-2">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <BrandLogo
+                          provider={c.provider}
+                          name={c.display_name}
+                          logoUrl={managedApp?.logo}
+                          size="sm"
+                        />
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold">{c.display_name}</p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {connectionIdentityLine(c) ||
+                              c.metadata.endpoint_url ||
+                              c.identity.label}
+                          </p>
                         </div>
-                        <Badge
-                          variant="outline"
-                          className={`shrink-0 ${statusBadgeClass(c.status)}`}
-                        >
-                          {connectionStatusLabel(c.status)}
-                        </Badge>
                       </div>
-                      <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="outline" className={`shrink-0 ${statusBadgeClass(c.status)}`}>
+                        {connectionStatusLabel(c.status)}
+                      </Badge>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="shrink-0"
+                        onClick={() => setDetailAccount(c)}
+                      >
+                        Details
+                      </Button>
+                      {reconnectReady ? (
                         <Button
                           size="sm"
-                          variant="secondary"
+                          variant="outline"
                           className="shrink-0"
-                          onClick={() => setDetailAccount(c)}
+                          disabled={connectMutation.isPending}
+                          onClick={() => startReconnect(c)}
                         >
-                          Details
+                          Reconnect
                         </Button>
-                        {reconnectReady ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="shrink-0"
-                            disabled={connectMutation.isPending}
-                            onClick={() => startReconnect(c)}
-                          >
-                            Reconnect
-                          </Button>
-                        ) : null}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="shrink-0 border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300"
-                          disabled={disconnectMutation.isPending}
-                          onClick={() => disconnectMutation.mutate(c.id)}
-                        >
-                          Disconnect
-                        </Button>
-                      </div>
-                    </Card>
-                  );
-                })}
+                      ) : null}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="shrink-0 border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                        disabled={disconnectMutation.isPending}
+                        onClick={() => disconnectMutation.mutate(c.id)}
+                      >
+                        Disconnect
+                      </Button>
+                    </div>
+                  </Card>
+                );
+              })}
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
@@ -958,7 +989,7 @@ function ConnectionsPage() {
               if (["custom_mcp", "custom_api"].includes(managedApp.provider)) {
                 setCustomInitial(undefined);
                 setCustomOpen(true);
-                setManagedApp(null);
+                closeManagedDialog();
                 return;
               }
               if (managedApp.oauth) connectMutation.mutate(managedApp.provider);
@@ -971,7 +1002,7 @@ function ConnectionsPage() {
                 setEndpointUrl("");
                 setApiKey("");
                 setSelectedApp(managedApp);
-                setManagedApp(null);
+                closeManagedDialog();
               }
             }}
           >
@@ -987,7 +1018,7 @@ function ConnectionsPage() {
             onClick={() => {
               setCustomInitial(undefined);
               setCustomOpen(true);
-              setManagedApp(null);
+              closeManagedDialog();
             }}
           >
             Connect a custom MCP or API endpoint
