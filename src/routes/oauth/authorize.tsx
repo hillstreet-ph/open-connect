@@ -1,5 +1,5 @@
 import { oauthCallback } from "@/lib/mcp-oauth-contract";
-import { scopesForProfile } from "@/lib/access-profiles";
+import { scopeCapability, scopesForProfile } from "@/lib/access-profiles";
 import { useRoles } from "@/hooks/use-roles";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
@@ -181,10 +181,21 @@ function AuthorizePage() {
             Auto can discover tools and continue permitted routine actions. It does not approve
             OAuth consent or override required operation and provider confirmations.
           </p>
-          <ul className="mb-4 list-disc pl-5 text-sm">
-            {grantedScopes.map((s) => (
-              <li key={s}>{s}</li>
-            ))}
+          <ul className="mb-4 space-y-1.5 text-sm">
+            {grantedScopes.map((s) => {
+              const cap = scopeCapability(s);
+              return (
+                <li key={s} className="flex items-start gap-2">
+                  <span className="mt-0.5 shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                    {cap.kind}
+                  </span>
+                  <span>
+                    {cap.label}
+                    <span className="ml-1 font-mono text-[10px] text-muted-foreground">{s}</span>
+                  </span>
+                </li>
+              );
+            })}
           </ul>
           {grantedScopes.includes("control:write") ? (
             <p className="mb-4 text-sm">
