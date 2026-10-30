@@ -18,7 +18,7 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Lint
         run: bunx eslint . --format json > eslint.json || true
-      - name: Post lint output
+      - name: Post lint errors only
         uses: actions/github-script@v9
         with:
           script: |
@@ -28,7 +28,9 @@ jobs:
               const results = JSON.parse(fs.readFileSync('eslint.json', 'utf8'));
               for (const f of results) {
                 for (const m of f.messages) {
-                  out += f.filePath.replace(process.env.GITHUB_WORKSPACE + '/', '') + ':' + m.line + ':' + m.column + ' [' + m.ruleId + '] ' + m.message + '\n';
+                  if (m.severity === 2) {
+                    out += f.filePath.replace(process.env.GITHUB_WORKSPACE + '/', '') + ':' + m.line + ':' + m.column + ' [' + m.ruleId + '] ' + m.message + '\n';
+                  }
                 }
               }
             } catch (e) {
@@ -38,5 +40,5 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: 560,
-              body: 'Lint output for commit ' + context.sha.slice(0, 7) + ':\n' + (out || 'eslint reported no errors'),
+              body: 'ESLint ERRORS for commit ' + context.sha.slice(0, 7) + ':\n' + (out || 'NONE'),
             });
