@@ -1,0 +1,42 @@
+name: Lint diagnostics
+
+on:
+  pull_request:
+    branches: [main, development]
+
+jobs:
+  lint-diag:
+    name: Lint diagnostics
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install
+        run: bun install --frozen-lockfile
+      - name: Lint
+        run: bunx eslint . --format json > eslint.json || true
+      - name: Post lint output
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            let out = '';
+            try {
+              const results = JSON.parse(fs.readFileSync('eslint.json', 'utf8'));
+              for (const f of results) {
+                for (const m of f.messages) {
+                  out += f.filePath.replace(process.env.GITHUB_WORKSPACE + '/', '') + ':' + m.line + ':' + m.column + ' [' + m.ruleId + '] ' + m.message + '\n';
+                }
+              }
+            } catch (e) {
+              out = 'Could not parse eslint output: ' + e.message;
+            }
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: 560,
+              body: 'Lint output for commit ' + context.sha.slice(0, 7) + ':\n' + (out || 'eslint reported no errors'),
+            });
