@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
-import { adminTab, settingsTab } from "./settings-navigation.ts";
+import { adminTab, settingsTab, settingsTabList } from "./settings-navigation.ts";
 import { isAppPath } from "./shell.ts";
 import {
   appCategories,
@@ -114,7 +114,7 @@ test("connection surfaces remain internal and separate from Marketplace", () => 
   }
 });
 
-test("Integrations follows Data & privacy in Settings and includes account keys", () => {
+test("Settings keeps only personal tabs and duplicates no sidebar destinations", () => {
   const sourceRoot = path.resolve(process.cwd(), "src");
   const userMenu = readFileSync(path.join(sourceRoot, "components/user-menu.tsx"), "utf8");
   const settings = readFileSync(
@@ -127,24 +127,49 @@ test("Integrations follows Data & privacy in Settings and includes account keys"
   assert.ok(userMenu.includes('search={{ section: "api-key" }}'));
   assert.ok(userMenu.includes("Developer"));
   assert.ok(!userMenu.includes('to="/api-keys"'));
+
+  // Settings keeps personal tabs only, in this order.
+  assert.deepEqual(settingsTabList(), ["profile", "security", "data", "integrations"]);
   assert.ok(
-    settings.indexOf('value="data">Data & privacy') <
+    settings.indexOf('value="data">Data Controls') <
       settings.indexOf('value="integrations">Integrations'),
   );
+
+  // Every destination that already has a sidebar entry must not be repeated as a Settings card.
+  for (const route of [
+    "/projects",
+    "/models",
+    "/connections",
+    "/secrets",
+    "/automations",
+    "/memory",
+    "/knowledge",
+  ]) {
+    assert.ok(!settings.includes(`to="${route}"`), "Settings duplicates sidebar route " + route);
+  }
+  for (const title of [
+    "Projects & environments",
+    "AI Gateway",
+    "Connectors",
+    "Credentials & secrets",
+    "Memory",
+    "Knowledge",
+  ]) {
+    assert.ok(!settings.includes(`title="${title}"`), "Settings repeats card " + title);
+  }
+
+  // Only the two account-owned integration deep links remain.
   for (const section of ["apps", "custom-mcp"]) {
     assert.ok(settings.includes('href="/integrations?section=' + section + '"'));
   }
-  // Personal Token lives in the account menu (Developer). It is not duplicated as a Settings
-  // card.
   assert.ok(!settings.includes('href="/integrations?section=api-key"'));
   assert.ok(!settings.includes('href="/integrations?section=ai-agents"'));
-  assert.ok(settings.includes('title="Connectors"'));
-  assert.ok(settings.includes('title="AI Gateway"'));
-  assert.ok(!settings.includes('title="Integrations"'));
-  assert.ok(settings.includes('title="Memory"'));
-  assert.ok(settings.includes('title="Knowledge"'));
-  assert.ok(!settings.includes('title="Memory & knowledge"'));
   assert.ok(!settings.includes('to="/api-keys"'));
+
+  // Approval surfaces are removed everywhere.
+  assert.ok(!settings.includes("ControlApprovalsPanel"));
+  assert.ok(!settings.includes('value="approvals"'));
+  assert.ok(!settings.includes("Approval requests"));
 });
 
 test("Toolkit creation reads from the personal library, not the Marketplace catalog", () => {
@@ -451,6 +476,30 @@ test("Marketplace installs stay in the personal library and agent context reads 
   assert.match(scopes, /"knowledge:read"/);
 });
 
+test("Approval surfaces are removed from the sidebar, navigation, and shell", () => {
+  const sourceRoot = path.resolve(process.cwd(), "src");
+  const sidebar = readFileSync(path.join(sourceRoot, "components/app-sidebar.tsx"), "utf8");
+  const shell = readFileSync(path.join(sourceRoot, "components/workspace-shell.tsx"), "utf8");
+
+  assert.ok(!sidebar.includes("/approvals"), "Sidebar must not link to Approvals");
+  assert.ok(!sidebar.includes("ShieldCheck"), "Sidebar must drop the Approvals icon");
+  assert.ok(
+    !flatAppNav().some((item) => item.to === "/approvals"),
+    "App navigation must not expose Approvals",
+  );
+  assert.ok(!shell.includes("approvals"), "Workspace header must not link to Approvals");
+  assert.ok(!settingsTabList().includes("approvals"));
+
+  const removed = [
+    "routes/_authenticated/approvals.tsx",
+    "components/control-approvals-panel.tsx",
+    "lib/control-approvals.functions.ts",
+  ];
+  for (const file of removed) {
+    assert.throws(() => readFileSync(path.join(sourceRoot, file), "utf8"), /ENOENT/, file);
+  }
+});
+
 test("System administration keeps one entry point with organization, roles, and access tabs", () => {
   const sourceRoot = path.resolve(process.cwd(), "src");
   const userMenu = readFileSync(path.join(sourceRoot, "components/user-menu.tsx"), "utf8");
@@ -495,19 +544,11 @@ test("System administration tabs fall back safely for unknown values", () => {
 });
 
 test("settings deep links select their exact tab and unknown hashes have a safe default", () => {
-  for (const tab of [
-    "profile",
-    "security",
-    "workspace",
-    "apps",
-    "data",
-    "integrations",
-    "approvals",
-  ]) {
+  for (const tab of settingsTabList()) {
     assert.equal(settingsTab(tab), tab);
     assert.equal(settingsTab("#" + tab), tab);
   }
-  for (const hash of ["", "missing", "#approvals/other", "__proto__"])
+  for (const hash of ["", "missing", "#workspace", "#apps", "#approvals/other", "__proto__"])
     assert.equal(settingsTab(hash), "profile");
 });
 

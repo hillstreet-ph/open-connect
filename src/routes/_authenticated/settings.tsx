@@ -1,22 +1,7 @@
-import { createFileRoute, Link, useLocation } from "@tanstack/react-router";
+import { createFileRoute, useLocation } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
-import {
-  Bell,
-  BookOpen,
-  Brain,
-  Building2,
-  KeyRound,
-  Loader2,
-  MessageCircle,
-  Network,
-  Save,
-  Server,
-  Sparkles,
-  ShieldCheck,
-  Trash2,
-  Upload,
-} from "lucide-react";
+import { KeyRound, Loader2, MessageCircle, Save, Server, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ProfileAvatarBadge } from "@/components/user-menu";
@@ -26,7 +11,6 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ControlApprovalsPanel } from "@/components/control-approvals-panel";
 import { DataControlsPanel } from "@/components/data-controls-panel";
 import { settingsTab } from "@/lib/settings-navigation";
 import { profileDraftValue } from "@/lib/react-compat";
@@ -35,7 +19,10 @@ export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
     meta: [
       { title: "Settings — Open-Connect" },
-      { name: "description", content: "Account, workspace, integrations, data, and security." },
+      {
+        name: "description",
+        content: "Account profile, security, data controls, and integrations.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -200,16 +187,10 @@ function SettingsPage() {
           className="h-auto w-full flex-wrap justify-start gap-2"
         >
           <TabsTrigger value="profile">Profile</TabsTrigger>
-          <TabsTrigger value="approvals">Approval requests</TabsTrigger>
           <TabsTrigger value="security">Security & login</TabsTrigger>
-          <TabsTrigger value="workspace">Workspace</TabsTrigger>
-          <TabsTrigger value="apps">Apps & system</TabsTrigger>
           <TabsTrigger value="data">Data Controls</TabsTrigger>
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
         </TabsList>
-        <TabsContent value="approvals">
-          <ControlApprovalsPanel />
-        </TabsContent>
         <TabsContent value="profile">
           <Card className="shadow-panel">
             <CardHeader>
@@ -343,60 +324,8 @@ function SettingsPage() {
             </CardContent>
           </Card>
         </TabsContent>
-        <TabsContent value="workspace">
-          <div className="grid gap-4 md:grid-cols-2">
-            <SettingsLinkCard
-              to="/projects"
-              icon={Network}
-              title="Projects & environments"
-              description="Open assigned projects and access project-scoped environments."
-            />
-          </div>
-        </TabsContent>
-        <TabsContent value="apps">
-          <div className="grid gap-4 md:grid-cols-2">
-            <SettingsLinkCard
-              to="/models"
-              icon={Sparkles}
-              title="AI Gateway"
-              description="Configure model providers and routing. Provider keys are managed separately from client integrations."
-            />
-            <SettingsLinkCard
-              to="/connections"
-              icon={Network}
-              title="Connectors"
-              description="Connect Open-Connect to external app accounts. Connections belong to their owner and are shared with projects explicitly."
-            />
-            <SettingsLinkCard
-              to="/secrets"
-              icon={ShieldCheck}
-              title="Credentials & secrets"
-              description="Use brokered credential references without exposing raw secret values."
-            />
-            <SettingsLinkCard
-              to="/automations"
-              icon={Bell}
-              title="Automations & notifications"
-              description="Review scheduled workflows, alerts, and operational actions."
-            />
-          </div>
-        </TabsContent>
-        <TabsContent value="data" className="space-y-5">
+        <TabsContent value="data">
           <DataControlsPanel />
-          <div className="grid gap-4 md:grid-cols-2">
-            <SettingsLinkCard
-              to="/memory"
-              icon={Brain}
-              title="Memory"
-              description="Manage durable project decisions, instructions, preferences, and summaries."
-            />
-            <SettingsLinkCard
-              to="/knowledge"
-              icon={BookOpen}
-              title="Knowledge"
-              description="Manage reusable documents, repositories, URLs, and other project sources."
-            />
-          </div>
         </TabsContent>
         <TabsContent value="integrations">
           <div className="grid gap-4 md:grid-cols-2">
@@ -437,45 +366,5 @@ function SettingsPage() {
         </TabsContent>
       </Tabs>
     </div>
-  );
-}
-
-function SettingsLinkCard({
-  to,
-  icon: Icon,
-  title,
-  description,
-  hash,
-}: {
-  to:
-    | "/projects"
-    | "/models"
-    | "/integrations"
-    | "/connections"
-    | "/secrets"
-    | "/automations"
-    | "/memory"
-    | "/knowledge";
-  hash?: string;
-  icon: typeof Building2;
-  title: string;
-  description: string;
-}) {
-  return (
-    <Link
-      to={to}
-      {...(hash ? { hash } : {})}
-      className="block rounded-xl border bg-card p-5 shadow-panel transition-colors hover:bg-accent/40"
-    >
-      <div className="flex items-start gap-3">
-        <div className="rounded-lg bg-primary/10 p-2 text-primary">
-          <Icon className="size-4" />
-        </div>
-        <div>
-          <h2 className="font-medium">{title}</h2>
-          <p className="mt-1 text-sm text-muted-foreground">{description}</p>
-        </div>
-      </div>
-    </Link>
   );
 }
