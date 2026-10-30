@@ -134,12 +134,13 @@ function ConnectionsPage() {
   const catalog = useQuery({
     queryKey: ["connection-catalog"],
     queryFn: () => catalogFn({}),
+    refetchInterval: 60_000,
   });
   const mine = useQuery({
     queryKey: ["app-connections", user?.id],
     queryFn: () => listFn({}),
     enabled: Boolean(user),
-    refetchInterval: postOAuth ? 3000 : 30_000,
+    refetchInterval: postOAuth ? 3000 : 15_000,
   });
   type AppConnection = NonNullable<typeof mine.data>[number];
   const [detailAccount, setDetailAccount] = useState<AppConnection | null>(null);
@@ -187,10 +188,23 @@ function ConnectionsPage() {
           : "No authorized accounts match your Open-Connect user. Connect an app to authorize it.",
       );
       void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
+      void queryClient.invalidateQueries({ queryKey: ["connection-catalog"] });
       void queryClient.invalidateQueries({ queryKey: ["connection-details"] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Composio sync failed"),
   });
+
+  const autoSynced = useRef(false);
+  useEffect(() => {
+    if (!user || !isAdmin || autoSynced.current) return;
+    autoSynced.current = true;
+    void syncFn({})
+      .then(() => {
+        void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
+        void queryClient.invalidateQueries({ queryKey: ["connection-catalog"] });
+      })
+      .catch(() => undefined);
+  }, [user, isAdmin, syncFn, queryClient]);
 
   useEffect(() => {
     if (!user || !mine.data || discoveredLogin.current === user.id) return;
@@ -372,9 +386,32 @@ function ConnectionsPage() {
     );
   }, [customConnections, customQuery]);
 
-  // The Manage dialog is scoped: opening it from a specific connection card
-  // shows only that account. Custom accounts sharing the same endpoint are
-  // combined; catalog cards show every account for that provider.
+  // One merged card per app: all accounts of the same provider (Installed) or
+  // of the same custom endpoint (Custom) are combined, avoiding duplicates.
+  const installedGroups = useMemo(() => {
+    const map = new Map<string, NonNullable<typeof mine.data>>();
+    for (const c of filteredInstalledConnections) {
+      const list = map.get(c.provider) ?? [];
+      list.push(c);
+      map.set(c.provider, list);
+    }
+    return [...map.values()];
+  }, [filteredInstalledConnections]);
+
+  const customGroups = useMemo(() => {
+    const map = new Map<string, NonNullable<typeof mine.data>>();
+    for (const c of filteredCustomConnections) {
+      const key = String(c.metadata.endpoint_url || c.id);
+      const list = map.get(key) ?? [];
+      list.push(c);
+      map.set(key, list);
+    }
+    return [...map.values()];
+  }, [filteredCustomConnections]);
+
+  // The Manage dialog combines every account of the same app, even when the
+  // accounts use different credentials. Custom accounts are combined only
+  // when they share the same endpoint URL (the same server).
   const managedConnections = useMemo(() => {
     if (!managedApp) return [];
     const clicked = managedConnectionId
@@ -382,11 +419,10 @@ function ConnectionsPage() {
       : undefined;
     return (mine.data ?? []).filter((c) => {
       if (c.provider !== managedApp.provider) return false;
-      if (!clicked) return true;
-      if (customProviders.has(c.provider)) {
+      if (customProviders.has(c.provider) && clicked) {
         return (c.metadata.endpoint_url || c.id) === (clicked.metadata.endpoint_url || clicked.id);
       }
-      return c.id === clicked.id;
+      return true;
     });
   }, [managedApp, managedConnectionId, mine.data]);
 
@@ -445,73 +481,45 @@ function ConnectionsPage() {
     setDetailAccount(null);
   }
 
-  function renderConnectionCard(connection: NonNullable<typeof mine.data>[number]) {
-    const app = (catalog.data ?? []).find((item) => item.provider === connection.provider);
+  function renderGroupedCard(connections: AppConnection[]) {
+    const first = connections[0];
+    if (!first) return null;
+    const app = (catalog.data ?? []).find((item) => item.provider === first.provider);
+    const connectedCount = connections.filter((c) => c.status === "connected").length;
+    const pendingCount = connections.filter((c) => c.status === "pending").length;
+    const groupStatus = connections.some((c) => c.status === "error")
+      ? "error"
+      : pendingCount > 0
+        ? "pending"
+        : "connected";
     return (
-      <Card key={connection.id} className="flex flex-col gap-2 p-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <BrandLogo
-            provider={connection.provider}
-            name={connection.display_name}
-            logoUrl={app?.logo}
-          />
-          <div className="min-w-0">
-            <p className="font-semibold leading-snug">{connection.display_name}</p>
-            <p className="text-xs text-muted-foreground">{connection.provider}</p>
-            {connection.status === "connected" && connectionIdentityLine(connection) ? (
-              <p className="truncate text-xs text-emerald-500">
-                Connected as {connectionIdentityLine(connection)}
-              </p>
-            ) : connection.identity.label ? (
-              <p className="truncate text-xs text-muted-foreground">{connection.identity.label}</p>
-            ) : null}
+      <Card key={first.id} className="flex flex-col gap-1.5 p-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <BrandLogo provider={first.provider} name={first.display_name} logoUrl={app?.logo} />
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-semibold leading-snug">{first.display_name}</p>
+            <p className="truncate text-xs text-muted-foreground">{first.provider}</p>
           </div>
+          <Badge variant="outline" className={`shrink-0 ${statusBadgeClass(groupStatus)}`}>
+            {connectionStatusLabel(groupStatus)}
+          </Badge>
         </div>
-        <Badge variant="outline" className={`w-fit ${statusBadgeClass(connection.status)}`}>
-          {connectionStatusLabel(connection.status)}
-        </Badge>
-        {connection.status === "error" ? (
-          <p className="text-xs text-red-400">
-            Check the endpoint URL and credential, then reconnect to retry validation.
-          </p>
-        ) : null}
-        <div className="flex flex-wrap items-center gap-2">
-          {connection.status !== "connected" && customProviders.has(connection.provider) ? (
-            <Button
-              size="sm"
-              variant="outline"
-              className="shrink-0"
-              onClick={() => {
-                setCustomInitial(connection as ConnectorInitial);
-                setCustomOpen(true);
-              }}
-            >
-              Reconnect
-            </Button>
-          ) : null}
+        <p className="truncate text-xs text-muted-foreground">{`${connections.length} account${connections.length === 1 ? "" : "s"} · ${connectedCount} connected${pendingCount ? ` · ${pendingCount} pending` : ""}`}</p>
+        <div className="flex flex-wrap items-center gap-1.5">
           <Button
             size="sm"
             variant="outline"
-            className="shrink-0"
+            className="h-7 shrink-0 px-2.5 text-xs"
             onClick={() => {
               if (app) {
                 setManagedApp(app as CatalogApp);
-                setManagedConnectionId(connection.id);
+                setManagedConnectionId(first.id);
               } else {
                 toast.info("Manage accounts is not available for this connector yet.");
               }
             }}
           >
             Manage
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="shrink-0 border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300"
-            disabled={disconnectMutation.isPending}
-            onClick={() => disconnectMutation.mutate(connection.id)}
-          >
-            Disconnect
           </Button>
         </div>
       </Card>
@@ -527,8 +535,8 @@ function ConnectionsPage() {
       (c) => c.provider === app.provider && c.status === "pending",
     ).length;
     return (
-      <Card key={app.provider} className="flex flex-col gap-2 p-3">
-        <div className="flex min-w-0 items-center gap-3">
+      <Card key={app.provider} className="flex flex-col gap-1.5 p-2">
+        <div className="flex min-w-0 items-center gap-2">
           <BrandLogo provider={app.provider} name={app.display_name} logoUrl={app.logo} />
           <div className="min-w-0">
             <p className="font-semibold leading-snug">{app.display_name}</p>
@@ -541,7 +549,7 @@ function ConnectionsPage() {
           </div>
         </div>
         {!user ? (
-          <Button asChild size="sm" variant="outline" className="shrink-0">
+          <Button asChild size="sm" variant="outline" className="h-7 shrink-0 px-2.5 text-xs">
             <Link to="/auth">Sign in</Link>
           </Button>
         ) : (
@@ -554,7 +562,7 @@ function ConnectionsPage() {
             <Button
               size="sm"
               variant="outline"
-              className="shrink-0 border-blue-600 bg-blue-700 text-white hover:bg-blue-800 hover:text-white focus-visible:ring-2 focus-visible:ring-blue-400"
+              className="h-7 shrink-0 border-blue-600 bg-blue-700 px-2.5 text-xs text-white hover:bg-blue-800 hover:text-white focus-visible:ring-2 focus-visible:ring-blue-400"
               disabled={connectMutation.isPending}
               title={
                 app.oauth && !app.oauth_ready
@@ -576,11 +584,11 @@ function ConnectionsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:py-16">
+    <div className="mx-auto max-w-6xl px-4 py-6 sm:py-10">
       <Badge variant="outline" className="mb-2 border-primary/40 text-primary">
         Internal · Connectors
       </Badge>
-      <h1 className="text-2xl font-semibold sm:text-4xl">Connectors</h1>
+      <h1 className="text-2xl font-semibold sm:text-3xl">Connectors</h1>
       <p className="mt-2 max-w-xl text-sm text-muted-foreground">
         Connect external apps such as Google, Slack, and ChatGPT-style plugins, plus custom MCP
         servers. Credentials stay server-side.
@@ -655,7 +663,7 @@ function ConnectionsPage() {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="shrink-0"
+                  className="h-7 shrink-0 px-2.5 text-xs"
                   onClick={() => {
                     setCustomInitial(undefined);
                     setCustomOpen(true);
@@ -683,8 +691,8 @@ function ConnectionsPage() {
                   />
                 </div>
               </div>
-              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                {filteredInstalledConnections.map((item) => renderConnectionCard(item))}
+              <div className="grid gap-1.5 sm:grid-cols-3 xl:grid-cols-5">
+                {installedGroups.map((group) => renderGroupedCard(group))}
               </div>
               {filteredInstalledConnections.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
@@ -697,7 +705,7 @@ function ConnectionsPage() {
       )}
 
       {tab === "discover" && (
-        <div className="mt-8 space-y-8">
+        <div className="mt-6 space-y-6">
           <div className="space-y-3">
             <div className="relative max-w-md">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -718,7 +726,7 @@ function ConnectionsPage() {
                   type="button"
                   size="sm"
                   variant="outline"
-                  className="shrink-0"
+                  className="h-7 shrink-0 px-2.5 text-xs"
                   onClick={() => {
                     setCategory("All");
                     setQuery("");
@@ -764,7 +772,7 @@ function ConnectionsPage() {
               <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {group.category}
               </h2>
-              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="grid gap-1.5 sm:grid-cols-3 xl:grid-cols-5">
                 {group.apps.map((app) => renderCatalogCard(app))}
               </div>
             </div>
@@ -778,7 +786,7 @@ function ConnectionsPage() {
       )}
 
       {tab === "custom" && (
-        <div className="mt-8 space-y-8">
+        <div className="mt-6 space-y-6">
           <div>
             <h2 className="text-lg font-semibold">Custom connectors</h2>
             <p className="mt-1 max-w-xl text-sm text-muted-foreground">
@@ -815,8 +823,8 @@ function ConnectionsPage() {
                   />
                 </div>
               </div>
-              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                {filteredCustomConnections.map((connection) => renderConnectionCard(connection))}
+              <div className="grid gap-1.5 sm:grid-cols-3 xl:grid-cols-5">
+                {customGroups.map((group) => renderGroupedCard(group))}
               </div>
               {filteredCustomConnections.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
@@ -829,14 +837,14 @@ function ConnectionsPage() {
             <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Add a custom connector
             </h3>
-            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-1.5 sm:grid-cols-3 xl:grid-cols-5">
               {customCatalog.map((app) => renderCatalogCard(app))}
             </div>
           </div>
         </div>
       )}
 
-      <Card className="mt-12 bg-pillar shadow-panel">
+      <Card className="mt-8 bg-pillar shadow-panel">
         <CardHeader className="p-5">
           <Badge variant="outline" className="w-fit border-primary/40 text-primary">
             <Lock className="mr-1 size-3" /> Credential boundary
@@ -910,13 +918,13 @@ function ConnectionsPage() {
             </DialogDescription>
           </DialogHeader>
           {managedConnections.length > 0 ? (
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid gap-1.5 sm:grid-cols-2">
               {managedConnections.map((c) => {
                 const reconnectReady = Boolean(
                   managedApp && connectionReconnectReady(c, managedApp.oauth_ready),
                 );
                 return (
-                  <Card key={c.id} className="flex flex-col gap-2 p-3">
+                  <Card key={c.id} className="flex flex-col gap-1.5 p-2">
                     <div className="flex min-w-0 items-start justify-between gap-2">
                       <div className="flex min-w-0 items-center gap-2">
                         <BrandLogo
@@ -942,7 +950,7 @@ function ConnectionsPage() {
                       <Button
                         size="sm"
                         variant="secondary"
-                        className="shrink-0"
+                        className="h-7 shrink-0 px-2.5 text-xs"
                         onClick={() => setDetailAccount(c)}
                       >
                         Details
@@ -951,7 +959,7 @@ function ConnectionsPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="shrink-0"
+                          className="h-7 shrink-0 px-2.5 text-xs"
                           disabled={connectMutation.isPending}
                           onClick={() => startReconnect(c)}
                         >
@@ -961,7 +969,7 @@ function ConnectionsPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="shrink-0 border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                        className="h-7 shrink-0 border-red-500/50 px-2.5 text-xs text-red-400 hover:bg-red-500/10 hover:text-red-300"
                         disabled={disconnectMutation.isPending}
                         onClick={() => disconnectMutation.mutate(c.id)}
                       >
@@ -1077,7 +1085,7 @@ function ConnectionsPage() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="shrink-0"
+                    className="h-7 shrink-0 px-2.5 text-xs"
                     onClick={() => {
                       setConnectionName("Composio");
                       setEndpointUrl("https://connect.composio.dev/mcp");
@@ -1092,7 +1100,7 @@ function ConnectionsPage() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="shrink-0"
+                    className="h-7 shrink-0 px-2.5 text-xs"
                     onClick={() => {
                       setAuthType("bearer");
                       setApiKey("");
@@ -1104,7 +1112,7 @@ function ConnectionsPage() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="shrink-0"
+                    className="h-7 shrink-0 px-2.5 text-xs"
                     onClick={() => {
                       setAuthType("none");
                       setApiKey("");
@@ -1207,7 +1215,7 @@ function ConnectionsPage() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="shrink-0"
+                    className="h-7 shrink-0 px-2.5 text-xs"
                     onClick={() => {
                       setAuthType("api_key");
                       setAuthHeader("X-API-Key");
@@ -1220,7 +1228,7 @@ function ConnectionsPage() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="shrink-0"
+                    className="h-7 shrink-0 px-2.5 text-xs"
                     onClick={() => {
                       setAuthType("api_key");
                       setAuthHeader("Authorization");
@@ -1233,7 +1241,7 @@ function ConnectionsPage() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="shrink-0"
+                    className="h-7 shrink-0 px-2.5 text-xs"
                     onClick={() => {
                       setAuthType("none");
                       setApiKey("");
