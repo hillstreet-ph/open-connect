@@ -103,7 +103,12 @@ function ConnectionsPage() {
   const [endpointUrl, setEndpointUrl] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [authType, setAuthType] = useState<"none" | "bearer" | "api_key">("bearer");
-  const [postOAuth, setPostOAuth] = useState<{ provider: string; until: number } | null>(null);
+  const [postOAuth, setPostOAuth] = useState<{ provider: string; until: number } | null>(() => {
+    if (typeof window === "undefined") return null;
+    const connected = new URLSearchParams(window.location.search).get("connected");
+    if (!connected) return null;
+    return { provider: connected.toLowerCase(), until: Date.now() + 90_000 };
+  });
   const endpointProviders = new Set([
     "proton_pass",
     "proton_drive",
@@ -129,9 +134,9 @@ function ConnectionsPage() {
   // still be finishing the account handoff, so confirm completion by polling
   // instead of leaving the connection stuck on "Authorization pending".
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const connected = params.get("connected");
+    const connected = new URLSearchParams(window.location.search).get("connected");
     if (!connected) return;
+    const params = new URLSearchParams(window.location.search);
     params.delete("connected");
     const rest = params.toString();
     window.history.replaceState(
@@ -140,7 +145,6 @@ function ConnectionsPage() {
       window.location.pathname + (rest ? "?" + rest : ""),
     );
     toast.info(`Completing ${connected} authorization…`);
-    setPostOAuth({ provider: connected.toLowerCase(), until: Date.now() + 90_000 });
   }, []);
 
   useEffect(() => {
@@ -150,13 +154,13 @@ function ConnectionsPage() {
     const hasPending = list.some((c) => c.provider === provider && c.status === "pending");
     const hasConnected = list.some((c) => c.provider === provider && c.status === "connected");
     if (hasConnected && !hasPending) {
-      setPostOAuth(null);
       toast.success(`${provider} connected and verified`);
+      setTimeout(() => setPostOAuth(null), 0);
       return;
     }
     if (!hasPending || Date.now() > postOAuth.until) {
-      setPostOAuth(null);
       toast.info("Authorization is still pending on the provider. Refresh status to check again.");
+      setTimeout(() => setPostOAuth(null), 0);
     }
   }, [postOAuth, mine.data]);
 
