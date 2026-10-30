@@ -26,16 +26,17 @@ const DEFAULT_BASES: Record<string, string> = {
 };
 
 function base(setup: Setup) {
-  const official = AI_GATEWAY_PROVIDERS.find(
-    (provider) => provider.id === setup.provider,
-  );
+  const official = AI_GATEWAY_PROVIDERS.find((provider) => provider.id === setup.provider);
   const legacyBase = ["commandcode", "cerebras"].includes(setup.provider)
     ? DEFAULT_BASES[setup.provider]
     : undefined;
-  return (official?.baseUrl || legacyBase || setup.endpointUrl || DEFAULT_BASES[setup.provider] || "").replace(
-    /\/$/,
-    "",
-  );
+  return (
+    official?.baseUrl ||
+    legacyBase ||
+    setup.endpointUrl ||
+    DEFAULT_BASES[setup.provider] ||
+    ""
+  ).replace(/\/$/, "");
 }
 
 async function checkedFetch(url: string, init: RequestInit, send: typeof fetch): Promise<Response> {

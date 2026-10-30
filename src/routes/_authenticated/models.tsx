@@ -453,16 +453,22 @@ function ModelsPage() {
                     size="sm"
                     variant="outline"
                     disabled={
-                      providerTest.isPending || configureMutation.isPending || providerKey.trim().length < 8
+                      providerTest.isPending ||
+                      configureMutation.isPending ||
+                      providerKey.trim().length < 8
                     }
-                    onClick={() => providerTest.mutate({ provider: provider.id, api_key: providerKey })}
+                    onClick={() =>
+                      providerTest.mutate({ provider: provider.id, api_key: providerKey })
+                    }
                   >
                     {providerTest.isPending ? "Testing…" : "Test API key"}
                   </Button>
                   <Button
                     size="sm"
                     disabled={
-                      providerTest.isPending || configureMutation.isPending || providerKey.trim().length < 8
+                      providerTest.isPending ||
+                      configureMutation.isPending ||
+                      providerKey.trim().length < 8
                     }
                     onClick={() => configureMutation.mutate()}
                   >
@@ -487,10 +493,14 @@ function ModelsPage() {
                   </Button>
                 </div>
                 {providerTest.data && (
-                  <p role="status" className="text-sm">{providerTest.data.detail}</p>
+                  <p role="status" className="text-sm">
+                    {providerTest.data.detail}
+                  </p>
                 )}
                 {providerTest.error && (
-                  <p role="alert" className="text-sm text-destructive">{providerTest.error.message}</p>
+                  <p role="alert" className="text-sm text-destructive">
+                    {providerTest.error.message}
+                  </p>
                 )}
               </div>
             ) : null}

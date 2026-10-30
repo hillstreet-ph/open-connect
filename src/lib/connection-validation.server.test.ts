@@ -140,7 +140,6 @@ test("browser provider verification is read-only and uses official keyed hosts",
   }
 });
 
-
 test("native model providers require a valid model catalog response", async () => {
   for (const [provider, body] of [
     ["anthropic", { data: [{ id: "test" }] }],
