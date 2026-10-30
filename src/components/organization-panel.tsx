@@ -13,6 +13,9 @@ import {
   setOrganizationMemberGroups,
   updateOrganizationMemberRole,
 } from "@/lib/orgs.functions";
+import { assignRole, listRoleAssignments } from "@/lib/roles.functions";
+import { ALL_ROLES, roleLabel, canonicalAppRole, type AppRole } from "@/lib/rbac";
+import { useRoles } from "@/hooks/use-roles";
 import { ORG_ROLES, ORG_ROLE_LABEL, type OrgRole } from "@/lib/identity";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,8 +23,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+const selectClass = "flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm";
+
 export function OrganizationPanel() {
   const qc = useQueryClient();
+  const { isAdmin: isPlatformAdmin } = useRoles();
   const getOrganization = useServerFn(getCanonicalOrganization);
   const listPeople = useServerFn(listOrganizationPeople);
   const createGroup = useServerFn(createOrganizationGroup);
@@ -30,11 +36,14 @@ export function OrganizationPanel() {
   const removeMember = useServerFn(removeOrganizationMember);
   const setGroups = useServerFn(setOrganizationMemberGroups);
   const getOrgAccess = useServerFn(getOrganizationAccess);
+  const listAssignments = useServerFn(listRoleAssignments);
+  const assignPlatformRole = useServerFn(assignRole);
 
   const [groupName, setGroupName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<OrgRole>("member");
   const [roleDrafts, setRoleDrafts] = useState<Record<string, string>>({});
+  const [platformDrafts, setPlatformDrafts] = useState<Record<string, string>>({});
   const [groupDrafts, setGroupDrafts] = useState<Record<string, string>>({});
   const [inviteGroupId, setInviteGroupId] = useState("");
 
@@ -48,12 +57,23 @@ export function OrganizationPanel() {
     queryFn: () => getOrgAccess({ data: { organizationId: activeOrgId } }),
     enabled: Boolean(activeOrgId),
   });
-  const isAdmin = access.data?.isAdmin === true;
+  const isOrgAdmin = access.data?.isAdmin === true;
   const people = useQuery({
     queryKey: ["organization-people", activeOrgId],
     queryFn: () => listPeople({ data: { organizationId: activeOrgId } }),
-    enabled: Boolean(activeOrgId && isAdmin),
+    enabled: Boolean(activeOrgId && isOrgAdmin),
   });
+  const assignments = useQuery({
+    queryKey: ["role-assignments"],
+    queryFn: () => listAssignments({}),
+    enabled: isPlatformAdmin,
+  });
+  const platformByUser = new Map<string, AppRole>(
+    (assignments.data ?? []).map((row: { user_id: string; role: AppRole }) => [
+      row.user_id,
+      canonicalAppRole(row.role),
+    ]),
+  );
 
   const groupMutation = useMutation({
     mutationFn: () => createGroup({ data: { organizationId: activeOrgId, name: groupName } }),
@@ -73,6 +93,15 @@ export function OrganizationPanel() {
       void qc.invalidateQueries({ queryKey: ["organization-people", activeOrgId] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not update role"),
+  });
+
+  const platformMutation = useMutation({
+    mutationFn: (input: { email: string; role: AppRole }) => assignPlatformRole({ data: input }),
+    onSuccess: () => {
+      toast.success("Platform role updated");
+      void qc.invalidateQueries({ queryKey: ["role-assignments"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not update platform role"),
   });
 
   const groupMemberMutation = useMutation({
@@ -112,6 +141,30 @@ export function OrganizationPanel() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not invite member"),
   });
 
+  const saving =
+    roleMutation.isPending || platformMutation.isPending || groupMemberMutation.isPending;
+
+  function saveMember(member: {
+    user_id: string;
+    email: string;
+    role: string;
+    groupIds: string[];
+  }) {
+    const orgRole = roleDrafts[member.user_id] ?? member.role;
+    const currentPlatform = (platformByUser.get(member.user_id) ?? "user") as AppRole;
+    const platformRole = (platformDrafts[member.user_id] ?? currentPlatform) as AppRole;
+    const currentGroup = member.groupIds.length === 1 ? member.groupIds[0] : "";
+    const groupId = groupDrafts[member.user_id] ?? currentGroup;
+
+    if (orgRole !== member.role) roleMutation.mutate({ userId: member.user_id, role: orgRole });
+    if (isPlatformAdmin && platformRole !== currentPlatform && member.email) {
+      platformMutation.mutate({ email: member.email, role: platformRole });
+    }
+    if (groupId !== currentGroup) {
+      groupMemberMutation.mutate({ userId: member.user_id, groupIds: groupId ? [groupId] : [] });
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -127,14 +180,14 @@ export function OrganizationPanel() {
         </p>
       </div>
 
-      <Card className={`shadow-panel ${isAdmin ? "" : "hidden"}`}>
+      <Card className={`shadow-panel ${isOrgAdmin ? "" : "hidden"}`}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <UsersRound className="size-4" /> People & groups
           </CardTitle>
           <CardDescription>
-            Invite teammates, assign a least-privilege role, and organize access into reusable
-            groups. New users receive a secure Supabase invitation email.
+            Invite teammates and set each person's organization and platform role in one place. New
+            users receive a secure Supabase invitation email.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -163,7 +216,7 @@ export function OrganizationPanel() {
                     <Label htmlFor="invite-role">Role</Label>
                     <select
                       id="invite-role"
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                      className={selectClass}
                       value={inviteRole}
                       onChange={(event) => setInviteRole(event.target.value as OrgRole)}
                     >
@@ -178,7 +231,7 @@ export function OrganizationPanel() {
                     <Label htmlFor="invite-group">Group (optional)</Label>
                     <select
                       id="invite-group"
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                      className={selectClass}
                       value={inviteGroupId}
                       onChange={(event) => setInviteGroupId(event.target.value)}
                     >
@@ -256,125 +309,134 @@ export function OrganizationPanel() {
               <div>
                 <h3 className="mb-2 text-sm font-medium">Members</h3>
                 <div className="space-y-2">
-                  {people.data.members.map((member) => (
-                    <div key={member.id} className="space-y-3 rounded-md border p-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <span className="block truncate text-sm font-medium">
-                            {member.profile?.display_name || member.email || "Workspace member"}
-                          </span>
-                          <span className="block truncate text-xs text-muted-foreground">
-                            {member.email}
-                          </span>
+                  {people.data.members.map((member) => {
+                    const currentPlatform = (platformByUser.get(member.user_id) ??
+                      "user") as AppRole;
+                    const platformRole = (platformDrafts[member.user_id] ??
+                      currentPlatform) as AppRole;
+                    const orgRole = roleDrafts[member.user_id] ?? member.role;
+                    const currentGroup = member.groupIds.length === 1 ? member.groupIds[0] : "";
+                    const groupId = groupDrafts[member.user_id] ?? currentGroup;
+                    const dirty =
+                      orgRole !== member.role ||
+                      (isPlatformAdmin && platformRole !== currentPlatform) ||
+                      groupId !== currentGroup;
+                    return (
+                      <div key={member.id} className="space-y-3 rounded-md border p-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <span className="block truncate text-sm font-medium">
+                              {member.profile?.display_name || member.email || "Workspace member"}
+                            </span>
+                            <span className="block truncate text-xs text-muted-foreground">
+                              {member.email}
+                            </span>
+                          </div>
+                          <Badge variant="outline" className="capitalize">
+                            {ORG_ROLE_LABEL[orgRole as OrgRole] ?? orgRole}
+                          </Badge>
                         </div>
-                        <Badge variant="outline" className="capitalize">
-                          {member.role}
-                        </Badge>
-                      </div>
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label htmlFor={"member-role-" + member.user_id}>Organization role</Label>
-                          <select
-                            id={"member-role-" + member.user_id}
-                            className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                            value={roleDrafts[member.user_id] ?? member.role}
-                            onChange={(event) =>
-                              setRoleDrafts((current) => ({
-                                ...current,
-                                [member.user_id]: event.target.value,
-                              }))
-                            }
-                          >
-                            {ORG_ROLES.map((r) => (
-                              <option key={r} value={r}>
-                                {ORG_ROLE_LABEL[r]}
-                              </option>
-                            ))}
-                          </select>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div className="space-y-2">
+                            <Label htmlFor={"member-role-" + member.user_id}>
+                              Organization role
+                            </Label>
+                            <select
+                              id={"member-role-" + member.user_id}
+                              className={selectClass}
+                              value={orgRole}
+                              onChange={(event) =>
+                                setRoleDrafts((current) => ({
+                                  ...current,
+                                  [member.user_id]: event.target.value,
+                                }))
+                              }
+                            >
+                              {ORG_ROLES.map((r) => (
+                                <option key={r} value={r}>
+                                  {ORG_ROLE_LABEL[r]}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          {isPlatformAdmin ? (
+                            <div className="space-y-2">
+                              <Label htmlFor={"member-platform-" + member.user_id}>
+                                Platform role
+                              </Label>
+                              <select
+                                id={"member-platform-" + member.user_id}
+                                className={selectClass}
+                                value={platformRole}
+                                onChange={(event) =>
+                                  setPlatformDrafts((current) => ({
+                                    ...current,
+                                    [member.user_id]: event.target.value,
+                                  }))
+                                }
+                              >
+                                {ALL_ROLES.map((r) => (
+                                  <option key={r} value={r}>
+                                    {roleLabel(r)}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          ) : null}
+                          <div className="space-y-2 sm:col-span-2">
+                            <Label htmlFor={"member-group-" + member.user_id}>Group</Label>
+                            <select
+                              id={"member-group-" + member.user_id}
+                              className={selectClass}
+                              value={groupId}
+                              onChange={(event) =>
+                                setGroupDrafts((current) => ({
+                                  ...current,
+                                  [member.user_id]: event.target.value,
+                                }))
+                              }
+                            >
+                              <option value="">No group</option>
+                              {(people.data?.groups ?? []).map((group) => (
+                                <option key={group.id} value={group.id}>
+                                  {group.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
                           <Button
                             size="sm"
                             variant="outline"
-                            disabled={
-                              roleMutation.isPending ||
-                              (roleDrafts[member.user_id] ?? member.role) === member.role
-                            }
-                            onClick={() =>
-                              roleMutation.mutate({
-                                userId: member.user_id,
-                                role: roleDrafts[member.user_id] ?? member.role,
-                              })
-                            }
+                            disabled={!dirty || saving}
+                            onClick={() => saveMember(member)}
                           >
-                            <Save className="mr-1 size-3" /> Save role
+                            <Save className="mr-1 size-3" /> Save
                           </Button>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor={"member-group-" + member.user_id}>Group</Label>
-                          <select
-                            id={"member-group-" + member.user_id}
-                            className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                            value={
-                              groupDrafts[member.user_id] ??
-                              (member.groupIds.length === 1 ? member.groupIds[0] : "")
-                            }
-                            onChange={(event) =>
-                              setGroupDrafts((current) => ({
-                                ...current,
-                                [member.user_id]: event.target.value,
-                              }))
-                            }
-                          >
-                            <option value="">No group</option>
-                            {(people.data?.groups ?? []).map((group) => (
-                              <option key={group.id} value={group.id}>
-                                {group.name}
-                              </option>
-                            ))}
-                          </select>
                           <Button
                             size="sm"
-                            variant="outline"
-                            disabled={
-                              groupMemberMutation.isPending ||
-                              (groupDrafts[member.user_id] ??
-                                (member.groupIds.length === 1 ? member.groupIds[0] : "")) ===
-                                (member.groupIds.length === 1 ? member.groupIds[0] : "")
-                            }
+                            variant="ghost"
+                            className="text-destructive"
+                            disabled={removeMutation.isPending}
                             onClick={() => {
-                              const groupId =
-                                groupDrafts[member.user_id] ??
-                                (member.groupIds.length === 1 ? member.groupIds[0] : "");
-                              groupMemberMutation.mutate({
-                                userId: member.user_id,
-                                groupIds: groupId ? [groupId] : [],
-                              });
+                              if (
+                                window.confirm(
+                                  "Remove " +
+                                    (member.email || "this member") +
+                                    " and their HillStreet project grants?",
+                                )
+                              ) {
+                                removeMutation.mutate(member.user_id);
+                              }
                             }}
                           >
-                            <Save className="mr-1 size-3" /> Move group
+                            <Trash2 className="mr-1 size-4" /> Remove
                           </Button>
                         </div>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-destructive"
-                        disabled={removeMutation.isPending}
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              "Remove " +
-                                (member.email || "this member") +
-                                " and their HillStreet project grants?",
-                            )
-                          ) {
-                            removeMutation.mutate(member.user_id);
-                          }
-                        }}
-                      >
-                        <Trash2 className="mr-1 size-4" /> Remove
-                      </Button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
               <div>
@@ -399,7 +461,7 @@ export function OrganizationPanel() {
           ) : null}
         </CardContent>
       </Card>
-      {!access.isLoading && !isAdmin ? (
+      {!access.isLoading && !isOrgAdmin ? (
         <Card className="shadow-panel">
           <CardHeader>
             <CardTitle className="text-base">Organization settings are admin-managed</CardTitle>

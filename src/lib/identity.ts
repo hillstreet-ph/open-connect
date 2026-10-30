@@ -33,6 +33,13 @@ export function appRoleToOrgRole(role: string): OrgRole {
   return "member";
 }
 
+/** Map an organization role onto the canonical platform app_role. */
+export function orgRoleToAppRole(role: OrgRole): "admin" | "developer" | "user" {
+  if (role === "admin") return "admin";
+  if (role === "developer") return "developer";
+  return "user";
+}
+
 export function hasOrgRole(roles: OrgRole[], required: OrgRole): boolean {
   return roles.some((r) => ORG_ROLE_RANK[r] >= ORG_ROLE_RANK[required]);
 }

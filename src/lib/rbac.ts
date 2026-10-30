@@ -102,6 +102,13 @@ export function roleLabel(role: AppRole): string {
   return role.charAt(0).toUpperCase() + role.slice(1);
 }
 
+/** Collapse legacy platform values onto the canonical assignable role for UI selection. */
+export function canonicalAppRole(role: AppRole): AppRole {
+  if (role === "owner") return "admin";
+  if (role === "publisher") return "developer";
+  return role;
+}
+
 /** UI mirrors existing server revoke rules; the server remains authoritative. */
 export function canRevokeRole(
   roles: AppRole[],

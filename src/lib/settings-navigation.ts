@@ -7,9 +7,11 @@ export function settingsTab(hash: string): string {
   return settingsTabs.some((value) => value === tab) ? tab : "profile";
 }
 
-const adminTabs = ["roles", "organization", "access"] as const;
+const adminTabs = ["organization", "access"] as const;
 export type AdminTab = (typeof adminTabs)[number];
 export function adminTab(value: string): AdminTab {
   const tab = value.replace(/^#/, "");
+  // Legacy "#roles" deep links fold into the merged people-and-roles surface.
+  if (tab === "roles") return "organization";
   return adminTabs.some((candidate) => candidate === tab) ? (tab as AdminTab) : "organization";
 }
