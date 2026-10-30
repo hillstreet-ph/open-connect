@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   typecheck-diagnostics:
@@ -23,11 +23,32 @@ jobs:
         run: |
           set +e
           bun run typecheck > /tmp/tc.txt 2>&1
-          code=$?
-          {
-            echo "## Typecheck output (exit $code)"
-            echo '~~~'
-            head -c 20000 /tmp/tc.txt
-            echo '~~~'
-          } >> "$GITHUB_STEP_SUMMARY"
+          echo "exit_code=$?" >> /tmp/tc.txt
           exit 0
+      - name: Commit output to diagnostics branch
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            const content = fs.readFileSync('/tmp/tc.txt', 'utf8').slice(0, 60000);
+            const branch = 'typecheck-output';
+            const path = 'typecheck.txt';
+            let sha;
+            try {
+              const f = await github.rest.repos.getContent({ owner: context.repo.owner, repo: context.repo.repo, path, ref: branch });
+              sha = f.data.sha;
+            } catch (e) {
+              try {
+                const base = await github.rest.git.getRef({ owner: context.repo.owner, repo: context.repo.repo, ref: 'heads/main' });
+                await github.rest.git.createRef({ owner: context.repo.owner, repo: context.repo.repo, ref: 'refs/heads/' + branch, sha: base.data.object.sha });
+              } catch (e2) {}
+            }
+            await github.rest.repos.createOrUpdateFileContents({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              path,
+              branch,
+              message: 'typecheck output',
+              content: Buffer.from(content).toString('base64'),
+              sha,
+            });
