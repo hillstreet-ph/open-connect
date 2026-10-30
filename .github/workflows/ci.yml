@@ -67,11 +67,12 @@ jobs:
 
   publish-required-build-status:
     name: Publish required build status
-    if: always() && github.event_name == 'pull_request'
+    if: always() && (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch')
     needs: [validate]
     runs-on: ubuntu-latest
     permissions:
       statuses: write
+      pull_requests: read
     steps:
       - name: Publish the protected-branch status from the CI result
         uses: actions/github-script@v9
@@ -80,16 +81,25 @@ jobs:
         with:
           script: |
             const state = process.env.VALIDATION_RESULT === 'success' ? 'success' : 'failure';
-            const { data: pullRequest } = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.issue.number,
-            });
-            const shas = new Set([
-              context.payload.pull_request.head.sha,
-              pullRequest.merge_commit_sha,
-            ].filter(Boolean));
-            for (const sha of shas) {
+            let shas = [];
+            if (context.payload.pull_request) {
+              const { data: pullRequest } = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.issue.number,
+              });
+              shas = [context.payload.pull_request.head.sha, pullRequest.merge_commit_sha].filter(Boolean);
+            } else {
+              const branch = context.ref.replace('refs/heads/', '');
+              const { data: prs } = await github.rest.pulls.list({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                head: context.repo.owner + ':' + branch,
+                state: 'open',
+              });
+              shas = prs.map(pr => pr.head.sha).filter(Boolean);
+            }
+            for (const sha of new Set(shas)) {
               await github.rest.repos.createCommitStatus({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -98,7 +108,7 @@ jobs:
                 context: 'Build & validate',
                 description: state === 'success'
                   ? 'Lint, tests, build, and SSR validation passed.'
-                  : `Validation job concluded as ${process.env.VALIDATION_RESULT}.`,
+                  : 'Validation job concluded as ' + process.env.VALIDATION_RESULT + '.',
               });
             }
 
