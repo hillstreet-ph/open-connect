@@ -97,3 +97,32 @@ export function requireKeyScopeAuthority(roles: readonly string[], scopes: reado
     throw new Error("Administrator permissions require an Admin account");
   }
 }
+
+export type CapabilityKind = "identity" | "read" | "interact" | "write";
+
+/** Human-readable capability for each scope, with a read / interact / write kind. */
+export const SCOPE_CAPABILITIES: Record<KeyScope, { label: string; kind: CapabilityKind }> = {
+  openid: { label: "Verify your sign-in identity", kind: "identity" },
+  "mcp:connect": { label: "Connect to the MCP server", kind: "identity" },
+  "resources:read": { label: "Read resources", kind: "read" },
+  "resources:write": { label: "Create and edit resources", kind: "write" },
+  "memory:read": { label: "Read memory", kind: "read" },
+  "knowledge:read": { label: "Read knowledge", kind: "read" },
+  "connections:read": { label: "View connected accounts", kind: "read" },
+  "connections:invoke": { label: "Run connector tools on connected apps", kind: "interact" },
+  "models:read": { label: "List models", kind: "read" },
+  "models:invoke": { label: "Run model inference", kind: "interact" },
+  "tools:invoke": { label: "Run platform tools (cloud browser, sandboxes)", kind: "interact" },
+  "secrets:read": { label: "Read credential metadata (never secret values)", kind: "read" },
+  "agents:invoke": { label: "Run agents", kind: "interact" },
+  "control:write": { label: "Publish resources and run admin control operations", kind: "write" },
+};
+
+export function scopeCapability(scope: string): { label: string; kind: CapabilityKind } {
+  return (
+    (SCOPE_CAPABILITIES as Record<string, { label: string; kind: CapabilityKind }>)[scope] ?? {
+      label: scope,
+      kind: "read",
+    }
+  );
+}
