@@ -31,6 +31,7 @@ export type ComposioToolkit = {
   name: string;
   category: string;
   authMethods: string[];
+  logo: string;
 };
 
 let toolkitCatalogCache: { expiresAt: number; items: ComposioToolkit[] } | undefined;
@@ -68,6 +69,23 @@ function toolkitAuthMethods(toolkit: Record<string, unknown>): string[] {
   ];
 }
 
+/** Official app mark from the Composio catalog; only public http(s) images are accepted. */
+function toolkitLogo(toolkit: Record<string, unknown>): string {
+  const media = toolkit["media"] as { logo?: unknown } | undefined;
+  const candidates = [
+    toolkit["logo"],
+    toolkit["logo_url"],
+    (toolkit["meta"] as { logo?: unknown } | undefined)?.logo,
+    media?.logo,
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate !== "string") continue;
+    const value = candidate.trim();
+    if (/^https?:\/\//i.test(value) && value.length <= 512) return value;
+  }
+  return "";
+}
+
 export async function listComposioToolkits(): Promise<ComposioToolkit[]> {
   if (!composioApiKey()) return [];
   if (toolkitCatalogCache && toolkitCatalogCache.expiresAt > Date.now())
@@ -96,6 +114,7 @@ export async function listComposioToolkits(): Promise<ComposioToolkit[]> {
             raw["category"],
         ),
         authMethods: toolkitAuthMethods(raw),
+        logo: toolkitLogo(raw),
       });
     }
     cursor = page.next_cursor ?? "";

@@ -340,9 +340,10 @@ export const listConnectionCatalog = createServerFn({ method: "GET" }).handler(a
       scopes: readonly string[];
       oauth: boolean;
       auth_methods?: string[];
+      logo: string;
     }
   >();
-  for (const item of CATALOG) catalog.set(item.provider, item);
+  for (const item of CATALOG) catalog.set(item.provider, { ...item, logo: "" });
   for (const toolkit of toolkits) {
     if (catalog.has(toolkit.slug)) continue;
     catalog.set(toolkit.slug, {
@@ -352,7 +353,14 @@ export const listConnectionCatalog = createServerFn({ method: "GET" }).handler(a
       scopes: [],
       oauth: toolkit.authMethods.includes("OAUTH2"),
       auth_methods: toolkit.authMethods,
+      logo: toolkit.logo,
     });
+  }
+  // Curated catalog entries that match a toolkit slug keep their entry but
+  // still receive the official Composio mark for that toolkit.
+  for (const toolkit of toolkits) {
+    const curated = catalog.get(toolkit.slug);
+    if (curated && curated.logo === "") curated.logo = toolkit.logo;
   }
   return [...catalog.values()].map((item) => {
     const toolkit = toolkitBySlug.get(item.provider);
@@ -367,6 +375,7 @@ export const listConnectionCatalog = createServerFn({ method: "GET" }).handler(a
       provider: item.provider,
       display_name: item.display_name,
       category: item.category,
+      logo: item.logo,
       scopes: [...item.scopes],
       auth_methods:
         item.auth_methods ??
@@ -399,6 +408,15 @@ export const listAppConnections = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     const connections = data ?? [];
+    const providerLogos = new Map<string, string>();
+    try {
+      const { listComposioToolkits } = await import("@/lib/managed-connectors.server");
+      for (const toolkit of await listComposioToolkits()) {
+        providerLogos.set(toolkit.slug, toolkit.logo);
+      }
+    } catch {
+      // Official catalog logos are best-effort; connections stay fully usable without them.
+    }
     const pendingManaged = connections.filter(
       (connection) =>
         connection.status === "pending" &&
@@ -450,6 +468,7 @@ export const listAppConnections = createServerFn({ method: "GET" })
       );
       return {
         ...connection,
+        logo: providerLogos.get(connection.provider) ?? "",
         browser_login: connectionUsesBrowserLogin({ credential_reference, metadata }),
         identity: connectionIdentity(metadata),
         metadata:

@@ -50,6 +50,7 @@ type CatalogApp = {
   oauth_supported?: boolean;
   connection_method?: string;
   auth_methods?: string[];
+  logo?: string;
 };
 
 function connectionStatusLabel(status: string) {
@@ -368,7 +369,11 @@ function ConnectionsPage() {
                 return (
                   <Card key={app.provider} className="flex flex-col gap-4 p-5">
                     <div className="flex min-w-0 items-center gap-3">
-                      <BrandLogo provider={app.provider} name={app.display_name} />
+                      <BrandLogo
+                        provider={app.provider}
+                        name={app.display_name}
+                        logoUrl={app.logo}
+                      />
                       <div className="min-w-0">
                         <p className="font-semibold leading-snug">{app.display_name}</p>
                         <p className="text-xs text-muted-foreground">
@@ -451,7 +456,17 @@ function ConnectionsPage() {
       <Dialog open={Boolean(managedApp)} onOpenChange={(open) => !open && setManagedApp(null)}>
         <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[85dvh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{managedApp?.display_name} accounts</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              {managedApp && (
+                <BrandLogo
+                  provider={managedApp.provider}
+                  name={managedApp.display_name}
+                  logoUrl={managedApp.logo}
+                  size="sm"
+                />
+              )}
+              {managedApp?.display_name} accounts
+            </DialogTitle>
             <DialogDescription>
               Manage each account separately. Adding an account keeps your existing connections.
             </DialogDescription>
