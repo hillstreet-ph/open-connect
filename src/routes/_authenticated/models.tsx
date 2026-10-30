@@ -30,7 +30,7 @@ export const Route = createFileRoute("/_authenticated/models")({
       {
         name: "description",
         content:
-          "One OpenAI-compatible gateway for OpenRouter, OpenAI, Claude, Gemini, Grok and more. List every model with your sk-oc- Organization Token.",
+          "One OpenAI-compatible gateway for OpenRouter, OpenAI, Claude, Gemini, Grok and more. List every model with your sk-oc- API Key.",
       },
     ],
   }),
@@ -165,7 +165,7 @@ function ModelsPage() {
             <span className="text-primary">https://open-connect.site/v1</span>
           </div>
           <div className="rounded-lg border border-border/70 bg-background/60 px-4 py-3">
-            <span className="text-muted-foreground">Organization Token </span>
+            <span className="text-muted-foreground">API Key </span>
             <span className="text-accent">sk-oc-…</span>
             <span className="ml-2 text-muted-foreground">(create above)</span>
           </div>
