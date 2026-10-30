@@ -830,7 +830,7 @@ function ConnectionsPage() {
           </DialogHeader>
           {detailAccount ? (
             <ConnectionAccountCard
-              account={detailAccount}
+              account={(mine.data ?? []).find((c) => c.id === detailAccount.id) ?? detailAccount}
               category={managedApp?.category}
               statusLabel={
                 detailAccount.provider === "custom_api" && detailAccount.status === "connected"
