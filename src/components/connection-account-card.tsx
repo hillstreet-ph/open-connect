@@ -9,6 +9,7 @@ import {
 } from "@/lib/connector-capabilities.functions";
 import { toast } from "sonner";
 import { getConnectionDetails } from "@/lib/connection-details.functions";
+import { BrandLogo } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -22,6 +23,7 @@ type Account = {
   status: string;
   provider_account_id: string | null;
   scopes: string[] | null;
+  logo?: string;
   metadata?: {
     endpoint_url?: string;
     description?: string;
@@ -106,6 +108,13 @@ export function ConnectionAccountCard({
     <article className="min-w-0 space-y-4 rounded-xl border bg-card p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
+          <BrandLogo
+            provider={account.provider}
+            name={account.display_name}
+            logoUrl={account.logo}
+            size="sm"
+            className="mb-2"
+          />
           {account.display_name !== title && (
             <p className="mb-1 break-words text-sm font-semibold">{account.display_name}</p>
           )}
