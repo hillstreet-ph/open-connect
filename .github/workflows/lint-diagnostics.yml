@@ -35,4 +35,4 @@ jobs:
             const tree = await github.rest.git.createTree({ owner, repo, tree: [{ path: 'eslint-errors.txt', mode: '100644', type: 'blob', sha: blob.data.sha }] });
             const commit = await github.rest.git.createCommit({ owner, repo, message: 'lint diagnostics', tree: tree.data.sha, parents: [] });
             try { await github.rest.git.createRef({ owner, repo, ref, sha: commit.data.sha }); }
-            catch (e) { await github.rest.git.updateRef({ owner, repo, ref, sha: commit.data.sha, force: true }); }
+            catch (e) { await github.rest.git.updateRef({ owner, repo, ref: 'heads/lint-output', sha: commit.data.sha, force: true }); }
