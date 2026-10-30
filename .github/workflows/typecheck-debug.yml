@@ -1,0 +1,24 @@
+name: Typecheck debug
+on:
+  push:
+    branches: [feat/connectors-identity-ux]
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/pull/544/merge
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck > tc-out.txt 2>&1 || true
+      - run: cat tc-out.txt
+      - run: |
+          grep -nE "error TS|error " tc-out.txt | head -30 > tc-ann.txt || true
+          tail -5 tc-out.txt >> tc-ann.txt || true
+          nl -ba tc-ann.txt
+          while IFS= read -r line; do
+            echo "::error::${line}"
+          done < tc-ann.txt
