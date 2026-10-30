@@ -987,8 +987,8 @@ function ConnectionsPage() {
               <div className="space-y-2">
                 <Label>Common setups</Label>
                 <p className="text-xs text-muted-foreground">
-                  Frequent header conventions for API connectors. Review the fields after applying
-                  a preset.
+                  Frequent header conventions for API connectors. Review the fields after applying a
+                  preset.
                 </p>
                 <div className="grid gap-2 sm:grid-cols-3">
                   <Button
