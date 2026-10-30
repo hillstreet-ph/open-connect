@@ -140,6 +140,8 @@ function ConnectionsPage() {
     enabled: Boolean(user),
     refetchInterval: postOAuth ? 3000 : 30_000,
   });
+  type AppConnection = NonNullable<typeof mine.data>[number];
+  const [detailAccount, setDetailAccount] = useState<AppConnection | null>(null);
 
   // Managed OAuth returns to /connections?connected=<provider>. Composio may
   // still be finishing the account handoff, so confirm completion by polling
@@ -379,6 +381,45 @@ function ConnectionsPage() {
 
   const connectedTotal = installedConnections.filter((c) => c.status === "connected").length;
   const pendingTotal = installedConnections.filter((c) => c.status === "pending").length;
+
+  function startReconnect(connection: AppConnection) {
+    if (!managedApp) return;
+    if (["custom_mcp", "custom_api"].includes(connection.provider)) {
+      setCustomInitial(connection as ConnectorInitial);
+      setCustomOpen(true);
+      setManagedApp(null);
+      setDetailAccount(null);
+      return;
+    }
+    if (connectionUsesBrowserLogin(connection)) {
+      toast.info(
+        "Authorize the same provider account to reconnect. The existing connection is kept until you choose to disconnect it.",
+      );
+      connectMutation.mutate({
+        provider: managedApp.provider,
+        connection_id: connection.id,
+      });
+      setDetailAccount(null);
+      return;
+    }
+    setConnectionName(connection.display_name);
+    setDescription(connection.metadata.description || "");
+    setAuthHeader(connection.metadata.auth_header || "X-API-Key");
+    setReconnectId(connection.id);
+    setAccountLabel(connection.identity.label || "Default account");
+    setEndpointUrl(connection.metadata.endpoint_url || "");
+    setAuthType(
+      connection.metadata.auth_type === "none"
+        ? "none"
+        : connection.metadata.auth_type === "api_key"
+          ? "api_key"
+          : "bearer",
+    );
+    setApiKey("");
+    setSelectedApp({ ...managedApp, display_name: connection.display_name });
+    setManagedApp(null);
+    setDetailAccount(null);
+  }
 
   function renderConnectionCard(connection: NonNullable<typeof mine.data>[number]) {
     const app = (catalog.data ?? []).find((item) => item.provider === connection.provider);
@@ -776,6 +817,36 @@ function ConnectionsPage() {
         </CardHeader>
       </Card>
 
+      <Dialog open={Boolean(detailAccount)} onOpenChange={(open) => !open && setDetailAccount(null)}>
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[85dvh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{detailAccount?.display_name} · account details</DialogTitle>
+            <DialogDescription>
+              Capabilities, permissions, and information for this connected account.
+            </DialogDescription>
+          </DialogHeader>
+          {detailAccount ? (
+            <ConnectionAccountCard
+              account={detailAccount}
+              category={managedApp?.category}
+              statusLabel={
+                detailAccount.provider === "custom_api" && detailAccount.status === "connected"
+                  ? "API schema validated · verify provider access"
+                  : connectionStatusLabel(detailAccount.status)
+              }
+              busy={disconnectMutation.isPending || connectMutation.isPending}
+              reconnectReady={Boolean(
+                managedApp && connectionReconnectReady(detailAccount, managedApp.oauth_ready),
+              )}
+              onReconnect={() => startReconnect(detailAccount)}
+              onDisconnect={() => {
+                disconnectMutation.mutate(detailAccount.id);
+                setDetailAccount(null);
+              }}
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
       <UniversalConnectorDialog
         initial={customInitial}
         open={customOpen}
@@ -799,62 +870,79 @@ function ConnectionsPage() {
               Manage each account separately. Adding an account keeps your existing connections.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            {(mine.data ?? [])
-              .filter((c) => c.provider === managedApp?.provider)
-              .map((c) => (
-                <ConnectionAccountCard
-                  key={c.id}
-                  account={c}
-                  category={managedApp?.category}
-                  statusLabel={
-                    c.provider === "custom_api" && c.status === "connected"
-                      ? "API schema validated · verify provider access"
-                      : connectionStatusLabel(c.status)
-                  }
-                  busy={disconnectMutation.isPending || connectMutation.isPending}
-                  reconnectReady={Boolean(
+          {(mine.data ?? []).some((c) => c.provider === managedApp?.provider) ? (
+            <div className="grid gap-2 sm:grid-cols-2">
+              {(mine.data ?? [])
+                .filter((c) => c.provider === managedApp?.provider)
+                .map((c) => {
+                  const reconnectReady = Boolean(
                     managedApp && connectionReconnectReady(c, managedApp.oauth_ready),
-                  )}
-                  onDisconnect={() => disconnectMutation.mutate(c.id)}
-                  onReconnect={() => {
-                    if (!managedApp) return;
-                    if (["custom_mcp", "custom_api"].includes(c.provider)) {
-                      setCustomInitial(c as ConnectorInitial);
-                      setCustomOpen(true);
-                      setManagedApp(null);
-                      return;
-                    }
-                    if (connectionUsesBrowserLogin(c)) {
-                      toast.info(
-                        "Authorize the same provider account to reconnect. The existing connection is kept until you choose to disconnect it.",
-                      );
-                      connectMutation.mutate({
-                        provider: managedApp.provider,
-                        connection_id: c.id,
-                      });
-                    } else {
-                      setConnectionName(c.display_name);
-                      setDescription(c.metadata.description || "");
-                      setAuthHeader(c.metadata.auth_header || "X-API-Key");
-                      setReconnectId(c.id);
-                      setAccountLabel(c.identity.label || "Default account");
-                      setEndpointUrl(c.metadata.endpoint_url || "");
-                      setAuthType(
-                        c.metadata.auth_type === "none"
-                          ? "none"
-                          : c.metadata.auth_type === "api_key"
-                            ? "api_key"
-                            : "bearer",
-                      );
-                      setApiKey("");
-                      setSelectedApp({ ...managedApp, display_name: c.display_name });
-                      setManagedApp(null);
-                    }
-                  }}
-                />
-              ))}
-          </div>
+                  );
+                  return (
+                    <Card key={c.id} className="flex flex-col gap-2 p-3">
+                      <div className="flex min-w-0 items-start justify-between gap-2">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <BrandLogo
+                            provider={c.provider}
+                            name={c.display_name}
+                            logoUrl={managedApp?.logo}
+                            size="sm"
+                          />
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold">{c.display_name}</p>
+                            <p className="truncate text-xs text-muted-foreground">
+                              {connectionIdentityLine(c) ||
+                                c.metadata.endpoint_url ||
+                                c.identity.label}
+                            </p>
+                          </div>
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className={`shrink-0 ${statusBadgeClass(c.status)}`}
+                        >
+                          {connectionStatusLabel(c.status)}
+                        </Badge>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="shrink-0"
+                          onClick={() => setDetailAccount(c)}
+                        >
+                          Details
+                        </Button>
+                        {reconnectReady ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="shrink-0"
+                            disabled={connectMutation.isPending}
+                            onClick={() => startReconnect(c)}
+                          >
+                            Reconnect
+                          </Button>
+                        ) : null}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="shrink-0 border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                          disabled={disconnectMutation.isPending}
+                          onClick={() => disconnectMutation.mutate(c.id)}
+                        >
+                          Disconnect
+                        </Button>
+                      </div>
+                    </Card>
+                  );
+                })}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No accounts connected yet for {managedApp?.display_name}.
+            </p>
+          )}
           <Button
             className="bg-blue-700 text-white hover:bg-blue-800 hover:text-white"
             disabled={
