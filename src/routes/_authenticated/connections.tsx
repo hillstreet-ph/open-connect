@@ -817,7 +817,10 @@ function ConnectionsPage() {
         </CardHeader>
       </Card>
 
-      <Dialog open={Boolean(detailAccount)} onOpenChange={(open) => !open && setDetailAccount(null)}>
+      <Dialog
+        open={Boolean(detailAccount)}
+        onOpenChange={(open) => !open && setDetailAccount(null)}
+      >
         <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[85dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{detailAccount?.display_name} · account details</DialogTitle>
