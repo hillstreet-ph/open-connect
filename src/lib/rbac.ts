@@ -30,6 +30,23 @@ export type Capability =
   | "manage_roles"
   | "admin_panel";
 
+export type CapabilityGroup = "Workspace" | "Resources" | "Administration";
+
+/** Canonical capability catalog: label + group for the access matrix. */
+export const CAPABILITY_DOCS: { id: Capability; label: string; group: CapabilityGroup }[] = [
+  { id: "dashboard", label: "Dashboard & Studio", group: "Workspace" },
+  { id: "orgs", label: "Organization & projects", group: "Workspace" },
+  { id: "api_keys", label: "API keys", group: "Workspace" },
+  { id: "connections", label: "Connections & secrets (metadata)", group: "Workspace" },
+  { id: "download_resources", label: "Download marketplace packages", group: "Resources" },
+  { id: "upload_resources", label: "Upload own packages", group: "Resources" },
+  { id: "manage_toolkits", label: "Manage toolkits", group: "Resources" },
+  { id: "publish_resources", label: "Publish resources", group: "Resources" },
+  { id: "verify_resources", label: "Verify resources", group: "Resources" },
+  { id: "manage_roles", label: "Manage platform roles", group: "Administration" },
+  { id: "admin_panel", label: "System administration", group: "Administration" },
+];
+
 /** Minimum role required for each capability */
 export const CAPABILITY_MIN_ROLE: Record<Capability, AppRole> = {
   dashboard: "user",
@@ -48,65 +65,17 @@ export const CAPABILITY_MIN_ROLE: Record<Capability, AppRole> = {
   admin_panel: "admin",
 };
 
-/** Human-readable role matrix for workspace UI */
-export const ROLE_SCOPE_MATRIX: {
-  role: AppRole;
-  summary: string;
-  can: string[];
-}[] = [
-  {
-    role: "user",
-    summary:
-      "Standard signed-in access to the workspace, personal resources, and assigned organization and project areas",
-    can: [
-      "Dashboard · Studio · Organizations",
-      "Download / view marketplace skills",
-      "Upload packages (own)",
-      "API keys (full autonomous scopes)",
-      "Agents · Connections · Secrets",
-      "Guides & professional E2E setup",
-    ],
-  },
-  {
-    role: "developer",
-    summary:
-      "Everything a Member has, plus toolkit management, resource publishing, and resource verification",
-    can: [
-      "Manage toolkits",
-      "Bundle capabilities for agents",
-      "Publish marketplace resources",
-      "Verify marketplace resources",
-    ],
-  },
-  {
-    role: "admin",
-    summary:
-      "Everything a Developer can do, plus manage platform roles and access system administration",
-    can: ["Manage roles", "Admin panel"],
-  },
-];
-
-/** Agent / API key scopes (oc_live_ keys) — auto-granted on create */
-export const KEY_SCOPE_DOCS: { scope: string; meaning: string }[] = [
-  { scope: "openid", meaning: "OIDC identity for OAuth MCP clients" },
-  { scope: "mcp:connect", meaning: "Call MCP tools/list and tools/call at /mcp" },
-  { scope: "resources:read", meaning: "Read marketplace catalog via MCP/API" },
-  { scope: "resources:write", meaning: "Upload / manage own packages" },
-  { scope: "connections:read", meaning: "List app capability grants" },
-  {
-    scope: "connections:invoke",
-    meaning: "Invoke Pipedream / Composio / connected apps server-side",
-  },
-  { scope: "models:read", meaning: "List models and probe /v1" },
-  { scope: "models:invoke", meaning: "POST /v1/chat/completions (LiteLLM / OpenRouter)" },
-  { scope: "tools:invoke", meaning: "Run tools, browser skills, MultiOn orchestration" },
-  { scope: "secrets:read", meaning: "Resolve vault references for agents (server-side only)" },
-  { scope: "agents:invoke", meaning: "Run agent sessions and toolkits" },
-  {
-    scope: "control:write",
-    meaning: "Run Admin-authorized control operations with policy gates",
-  },
-];
+/** Canonical one-line summary for each platform role. */
+export const PLATFORM_ROLE_SUMMARY: Record<AppRole, string> = {
+  user: "Standard signed-in access to the workspace, personal resources, and assigned organization and project areas",
+  developer:
+    "Everything a Member has, plus toolkit management, resource publishing, and resource verification",
+  publisher:
+    "Legacy Developer-level access. Migrated to Developer; no longer offered for new assignments.",
+  admin:
+    "Everything a Developer can do, plus managing platform roles and using system administration",
+  owner: "Legacy Admin-level access. Migrated to Admin; no longer offered for new assignments.",
+};
 
 export function highestRole(roles: AppRole[]): AppRole {
   if (!roles.length) return "user";
@@ -119,6 +88,11 @@ export function hasRole(roles: AppRole[], required: AppRole): boolean {
 
 export function can(roles: AppRole[], capability: Capability): boolean {
   return hasRole(roles, CAPABILITY_MIN_ROLE[capability]);
+}
+
+/** Access level for one role/capability pair, derived from CAPABILITY_MIN_ROLE. */
+export function capabilityLevel(role: AppRole, capability: Capability): "full" | "denied" {
+  return hasRole([role], CAPABILITY_MIN_ROLE[capability]) ? "full" : "denied";
 }
 
 export function roleLabel(role: AppRole): string {

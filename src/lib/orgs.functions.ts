@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { ORG_ROLES, type OrgRole } from "@/lib/identity";
 
 function slugify(raw: string) {
   return raw
@@ -198,7 +199,7 @@ export const inviteOrganizationMember = createServerFn({ method: "POST" })
     (input: {
       organizationId: string;
       email: string;
-      role: "admin" | "developer" | "member";
+      role: OrgRole;
       groupId?: string | undefined;
     }) => ({
       organizationId: input.organizationId,
@@ -571,11 +572,11 @@ export const updateOrganizationMemberRole = createServerFn({ method: "POST" })
   .validator((input: { organizationId: string; userId: string; role: string }) => ({
     organizationId: input.organizationId,
     userId: input.userId,
-    role: input.role as "admin" | "developer" | "member",
+    role: input.role as OrgRole,
   }))
   .handler(async ({ data, context }) => {
     if (!data.organizationId || !data.userId) throw new Error("Organization and member required");
-    if (!["admin", "developer", "member"].includes(data.role)) {
+    if (!ORG_ROLES.includes(data.role)) {
       throw new Error("Choose Admin, Developer, or Member");
     }
     await requireOrganizationManager(context.supabase, data.organizationId, context.userId);

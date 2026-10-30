@@ -13,6 +13,7 @@ import {
   setOrganizationMemberGroups,
   updateOrganizationMemberRole,
 } from "@/lib/orgs.functions";
+import { ORG_ROLES, ORG_ROLE_LABEL, type OrgRole } from "@/lib/identity";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,7 +33,7 @@ export function OrganizationPanel() {
 
   const [groupName, setGroupName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<"admin" | "developer" | "member">("member");
+  const [inviteRole, setInviteRole] = useState<OrgRole>("member");
   const [roleDrafts, setRoleDrafts] = useState<Record<string, string>>({});
   const [groupDrafts, setGroupDrafts] = useState<Record<string, string>>({});
   const [inviteGroupId, setInviteGroupId] = useState("");
@@ -164,13 +165,13 @@ export function OrganizationPanel() {
                       id="invite-role"
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                       value={inviteRole}
-                      onChange={(event) =>
-                        setInviteRole(event.target.value as "admin" | "developer" | "member")
-                      }
+                      onChange={(event) => setInviteRole(event.target.value as OrgRole)}
                     >
-                      <option value="member">Member</option>
-                      <option value="developer">Developer</option>
-                      <option value="admin">Admin</option>
+                      {ORG_ROLES.map((r) => (
+                        <option key={r} value={r}>
+                          {ORG_ROLE_LABEL[r]}
+                        </option>
+                      ))}
                     </select>
                   </div>
                   <div className="space-y-2">
@@ -284,9 +285,11 @@ export function OrganizationPanel() {
                               }))
                             }
                           >
-                            <option value="member">Member</option>
-                            <option value="developer">Developer</option>
-                            <option value="admin">Admin</option>
+                            {ORG_ROLES.map((r) => (
+                              <option key={r} value={r}>
+                                {ORG_ROLE_LABEL[r]}
+                              </option>
+                            ))}
                           </select>
                           <Button
                             size="sm"

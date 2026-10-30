@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { useRoles } from "@/hooks/use-roles";
 import { assignRole, listRoleAssignments, revokeRole } from "@/lib/roles.functions";
-import { roleLabel, canRevokeRole, type AppRole } from "@/lib/rbac";
+import { ALL_ROLES, roleLabel, canRevokeRole, type AppRole } from "@/lib/rbac";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,7 +49,7 @@ export function PlatformRolesPanel() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Revoke failed"),
   });
 
-  const grantable: AppRole[] = ["user", "developer", "admin"];
+  const grantable: AppRole[] = ALL_ROLES;
 
   return (
     <div className="space-y-6">

@@ -1,93 +1,32 @@
-import { Link } from "@tanstack/react-router";
-import { ROLE_SCOPE_MATRIX, KEY_SCOPE_DOCS, roleLabel, type AppRole } from "@/lib/rbac";
-import { ORG_ROLE_LABEL, PROJECT_ROLE_LABEL, type OrgRole, type ProjectRole } from "@/lib/identity";
 import { useRoles } from "@/hooks/use-roles";
+import {
+  ALL_ROLES,
+  CAPABILITY_DOCS,
+  capabilityLevel,
+  PLATFORM_ROLE_SUMMARY,
+  roleLabel,
+  type AppRole,
+} from "@/lib/rbac";
+import {
+  ORG_ROLE_SUMMARY,
+  PROJECT_ROLE_SUMMARY,
+  type OrgRole,
+  type ProjectRole,
+} from "@/lib/identity";
+import { AVAILABLE_KEY_SCOPES, scopeCapability } from "@/lib/access-profiles";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-const ORG_ROLES: OrgRole[] = ["member", "developer", "admin"];
-const PROJECT_ROLES: ProjectRole[] = ["member", "developer", "admin"];
-
-const MATRIX: { capability: string; levels: Record<AppRole, "full" | "scoped" | "denied"> }[] = [
-  {
-    capability: "Dashboard & Studio",
-    levels: { user: "full", developer: "full", publisher: "full", admin: "full", owner: "full" },
-  },
-  {
-    capability: "Download marketplace packages",
-    levels: { user: "full", developer: "full", publisher: "full", admin: "full", owner: "full" },
-  },
-  {
-    capability: "Upload own packages",
-    levels: { user: "full", developer: "full", publisher: "full", admin: "full", owner: "full" },
-  },
-  {
-    capability: "API keys (full autonomous scopes)",
-    levels: { user: "full", developer: "full", publisher: "full", admin: "full", owner: "full" },
-  },
-  {
-    capability: "Connections · secrets (metadata)",
-    levels: { user: "full", developer: "full", publisher: "full", admin: "full", owner: "full" },
-  },
-  {
-    capability: "Manage toolkits",
-    levels: { user: "denied", developer: "full", publisher: "full", admin: "full", owner: "full" },
-  },
-  {
-    capability: "Publish resources",
-    levels: {
-      user: "denied",
-      developer: "full",
-      publisher: "full",
-      admin: "full",
-      owner: "full",
-    },
-  },
-  {
-    capability: "Verify resources",
-    levels: {
-      user: "denied",
-      developer: "full",
-      publisher: "full",
-      admin: "full",
-      owner: "full",
-    },
-  },
-  {
-    capability: "Manage roles",
-    levels: {
-      user: "denied",
-      developer: "denied",
-      publisher: "denied",
-      admin: "full",
-      owner: "full",
-    },
-  },
-  {
-    capability: "Admin panel",
-    levels: {
-      user: "denied",
-      developer: "denied",
-      publisher: "denied",
-      admin: "full",
-      owner: "full",
-    },
-  },
+/** The three role names that apply at every human scope, with their per-scope vocabulary. */
+const HUMAN_ROLES: { name: string; platform: AppRole; org: OrgRole; project: ProjectRole }[] = [
+  { name: "Member", platform: "user", org: "member", project: "member" },
+  { name: "Developer", platform: "developer", org: "developer", project: "developer" },
+  { name: "Admin", platform: "admin", org: "admin", project: "admin" },
 ];
 
-const ROLES: AppRole[] = ["user", "developer", "admin"];
-
-function Cell({ level }: { level: "full" | "scoped" | "denied" }) {
+function Level({ level }: { level: "full" | "denied" }) {
   if (level === "full") {
     return <span className="inline-block size-2.5 rounded-full bg-primary" title="full" />;
-  }
-  if (level === "scoped") {
-    return (
-      <span
-        className="inline-block size-2.5 rounded-full border-2 border-primary bg-transparent"
-        title="scoped"
-      />
-    );
   }
   return (
     <span
@@ -116,95 +55,62 @@ export function AccessReferencePanel() {
         </Badge>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card className="shadow-panel">
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-sm">Organization roles</CardTitle>
-            <CardDescription>Admin · Developer · Member</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2 px-4 pb-4 text-xs text-muted-foreground">
-            {ORG_ROLES.map((r) => (
-              <div key={r} className="rounded-lg border border-border/60 px-3 py-2">
-                <span className="font-medium text-foreground">{ORG_ROLE_LABEL[r]}</span>
-                <p className="mt-0.5">
-                  {r === "admin" &&
-                    "Manage people, groups, settings, and project sharing within the organization."}
-                  {r === "developer" &&
-                    "Build, publish, and verify shared resources and develop assigned projects."}
-                  {r === "member" &&
-                    "Use the workspace, resources, and projects explicitly shared with you."}
-                </p>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-        <Card className="shadow-panel">
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-sm">Project roles</CardTitle>
-            <CardDescription>Admin · Developer · Member</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2 px-4 pb-4 text-xs text-muted-foreground">
-            {PROJECT_ROLES.map((r) => (
-              <div key={r} className="rounded-lg border border-border/60 px-3 py-2">
-                <span className="font-medium text-foreground">{PROJECT_ROLE_LABEL[r]}</span>
-                <p className="mt-0.5">
-                  {r === "admin" &&
-                    "Manage this project, its collaborators, installs, and environments."}
-                  {r === "developer" && "Build project resources, tools, and project-scoped keys."}
-                  {r === "member" &&
-                    "Use resources and features explicitly shared with this project."}
-                </p>
-              </div>
-            ))}
-            <p className="pt-1 text-[11px]">
-              Same person can have different roles in each project. Project access is assigned
-              explicitly. See{" "}
-              <Link
-                to="/admin"
-                hash="organization"
-                className="text-primary underline-offset-2 hover:underline"
-              >
-                Organization
-              </Link>
-              .
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className="shadow-panel border-primary/20">
-        <CardHeader className="p-4 pb-2">
-          <CardTitle className="text-sm">Settings & administration</CardTitle>
+      <Card className="overflow-hidden shadow-panel">
+        <CardHeader className="border-b border-border/60 p-4">
+          <CardTitle className="text-sm">Human roles</CardTitle>
           <CardDescription>
-            Platform, organization, and project permissions have separate scopes.
+            The same three names apply at platform, organization, and project scope. Scope
+            determines what each role can do.
           </CardDescription>
         </CardHeader>
-        <CardContent className="px-4 pb-4 text-sm text-muted-foreground">
-          Open your user avatar menu for personal settings, organizations, and credentials. Platform
-          roles are Member, Developer, and Admin. Developers can publish and verify marketplace
-          resources; platform Admins manage platform roles. Organization and project access remain
-          separately scoped, Admins manage the organization; no separate Owner role is used.
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[40rem] border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-border bg-muted/30 text-left text-[11px] uppercase tracking-wider text-muted-foreground">
+                <th className="px-4 py-3 font-medium">Role</th>
+                <th className="px-4 py-3 font-medium">Platform</th>
+                <th className="px-4 py-3 font-medium">Organization</th>
+                <th className="px-4 py-3 font-medium">Project</th>
+              </tr>
+            </thead>
+            <tbody>
+              {HUMAN_ROLES.map((row) => (
+                <tr
+                  key={row.name}
+                  className={
+                    row.platform === primary
+                      ? "border-b border-border/60 bg-primary/5"
+                      : "border-b border-border/60"
+                  }
+                >
+                  <td className="px-4 py-3 align-top font-medium text-foreground">{row.name}</td>
+                  <td className="px-4 py-3 align-top text-xs text-muted-foreground">
+                    {PLATFORM_ROLE_SUMMARY[row.platform]}
+                  </td>
+                  <td className="px-4 py-3 align-top text-xs text-muted-foreground">
+                    {ORG_ROLE_SUMMARY[row.org]}
+                  </td>
+                  <td className="px-4 py-3 align-top text-xs text-muted-foreground">
+                    {PROJECT_ROLE_SUMMARY[row.project]}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <CardContent className="border-t border-border/60 px-4 py-3 text-[11px] text-muted-foreground">
+          A person may hold a different role per project. Organization membership does not grant
+          project access; Admins grant project access from each project's access screen. Legacy
+          Owner and Publisher values migrate to Admin and Developer.
         </CardContent>
       </Card>
-
-      <div className="flex flex-wrap gap-4 text-[11px] text-muted-foreground">
-        <span className="inline-flex items-center gap-1.5">
-          <span className="size-2.5 rounded-full bg-primary" /> full
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <span className="size-2.5 rounded-full border-2 border-primary" /> within scope
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <span className="size-2.5 rounded-full border border-muted-foreground/40" /> denied
-        </span>
-      </div>
 
       <Card className="overflow-hidden shadow-panel">
         <CardHeader className="border-b border-border/60 p-4">
           <CardTitle className="text-sm">Platform capabilities</CardTitle>
           <CardDescription>
-            Clients use the Member role. Platform roles do not describe membership in a specific
-            organization or project.
+            Minimum platform role required for each capability. Organization and project roles apply
+            within their own scope and are not described here.
           </CardDescription>
         </CardHeader>
         <div className="overflow-x-auto">
@@ -212,7 +118,7 @@ export function AccessReferencePanel() {
             <thead>
               <tr className="border-b border-border bg-muted/30 text-left text-[11px] uppercase tracking-wider text-muted-foreground">
                 <th className="px-4 py-3 font-medium">Capability</th>
-                {ROLES.map((r) => (
+                {ALL_ROLES.map((r) => (
                   <th key={r} className="px-3 py-3 text-center font-medium">
                     {roleLabel(r)}
                   </th>
@@ -220,12 +126,12 @@ export function AccessReferencePanel() {
               </tr>
             </thead>
             <tbody>
-              {MATRIX.map((row) => (
-                <tr key={row.capability} className="border-b border-border/60 hover:bg-muted/20">
-                  <td className="px-4 py-3 text-sm">{row.capability}</td>
-                  {ROLES.map((r) => (
+              {CAPABILITY_DOCS.map((row) => (
+                <tr key={row.id} className="border-b border-border/60 hover:bg-muted/20">
+                  <td className="px-4 py-3 text-sm">{row.label}</td>
+                  {ALL_ROLES.map((r) => (
                     <td key={r} className="px-3 py-3 text-center">
-                      <Cell level={row.levels[r]} />
+                      <Level level={capabilityLevel(r, row.id)} />
                     </td>
                   ))}
                 </tr>
@@ -233,9 +139,17 @@ export function AccessReferencePanel() {
             </tbody>
           </table>
         </div>
+        <CardContent className="flex flex-wrap gap-4 border-t border-border/60 px-4 py-3 text-[11px] text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="size-2.5 rounded-full bg-primary" /> allowed
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="size-2.5 rounded-full border border-muted-foreground/40" /> denied
+          </span>
+        </CardContent>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2">
         <Card className="shadow-panel">
           <CardHeader className="p-4 pb-2">
             <CardTitle className="text-sm">Machine principals</CardTitle>
@@ -244,18 +158,6 @@ export function AccessReferencePanel() {
             AI Client · AI Agent · Service Account · API Client · MCP Client — never human org
             roles. Authenticate with <code className="text-primary">oc_live_</code> keys under
             scopes.
-          </CardContent>
-        </Card>
-        <Card className="shadow-panel">
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-sm">API key scopes</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-1.5 px-4 pb-4 font-mono text-[11px] text-muted-foreground">
-            {KEY_SCOPE_DOCS.slice(0, 6).map((s) => (
-              <div key={s.scope}>
-                <span className="text-primary">{s.scope}</span>
-              </div>
-            ))}
           </CardContent>
         </Card>
         <Card className="shadow-panel">
@@ -271,24 +173,16 @@ export function AccessReferencePanel() {
 
       <Card className="shadow-panel">
         <CardHeader className="p-4 pb-2">
-          <CardTitle className="text-base">Canonical role summaries</CardTitle>
+          <CardTitle className="text-sm">API key scopes</CardTitle>
           <CardDescription>
-            Platform capabilities; organization and project roles apply within their respective
-            scope.
+            New <code className="text-primary">oc_live_</code> keys receive these scopes.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-3 p-4 pt-2 sm:grid-cols-2 lg:grid-cols-3">
-          {ROLE_SCOPE_MATRIX.filter((row) => ROLES.includes(row.role)).map((row) => (
-            <div
-              key={row.role}
-              className={
-                row.role === primary
-                  ? "rounded-xl border border-primary/40 bg-primary/5 p-3"
-                  : "rounded-xl border border-border/70 p-3"
-              }
-            >
-              <p className="text-sm font-medium">{roleLabel(row.role)}</p>
-              <p className="mt-1 text-xs text-muted-foreground">{row.summary}</p>
+        <CardContent className="grid gap-1.5 px-4 pb-4 text-[11px] text-muted-foreground sm:grid-cols-2">
+          {AVAILABLE_KEY_SCOPES.map((scope) => (
+            <div key={scope} className="flex items-baseline gap-2">
+              <code className="text-primary">{scope}</code>
+              <span>{scopeCapability(scope).label}</span>
             </div>
           ))}
         </CardContent>

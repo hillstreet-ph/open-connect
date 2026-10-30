@@ -73,3 +73,19 @@ export const PROJECT_ROLE_LABEL: Record<ProjectRole, string> = {
   developer: "Developer",
   member: "Member",
 };
+
+/** Canonical ordered org/project role lists (lowest → highest privilege). */
+export const ORG_ROLES: OrgRole[] = ["member", "developer", "admin"];
+export const PROJECT_ROLES: ProjectRole[] = ["member", "developer", "admin"];
+
+export const ORG_ROLE_SUMMARY: Record<OrgRole, string> = {
+  admin: "Manage people, groups, settings, and project sharing within the organization.",
+  developer: "Build, publish, and verify shared resources and develop assigned projects.",
+  member: "Use the workspace, resources, and projects explicitly shared with you.",
+};
+
+export const PROJECT_ROLE_SUMMARY: Record<ProjectRole, string> = {
+  admin: "Manage this project, its collaborators, installs, and environments.",
+  developer: "Build project resources, tools, and project-scoped keys.",
+  member: "Use resources and features explicitly shared with this project.",
+};
