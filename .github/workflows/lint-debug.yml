@@ -12,7 +12,9 @@ jobs:
       - run: bun run lint > lint-out.txt 2>&1 || true
       - run: cat lint-out.txt
       - run: |
-          grep -nE "error|✖" lint-out.txt | head -50 || true
+          grep -nE "error|✖|Problem|fatal|OOM|memory|Cannot|ELIFECYCLE" lint-out.txt | head -12 > lint-ann.txt || true
+          tail -6 lint-out.txt >> lint-ann.txt || true
+          nl -ba lint-ann.txt
           while IFS= read -r line; do
             echo "::error::${line}"
-          done < <(grep -nE "  [0-9]+:[0-9]+  error" lint-out.txt | head -50 || true)
+          done < lint-ann.txt
