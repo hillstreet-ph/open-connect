@@ -1,0 +1,76 @@
+name: Lint diagnostics
+
+on:
+  pull_request:
+    branches: [main, development]
+
+permissions:
+  contents: write
+
+jobs:
+  lint-diag:
+    name: Lint diagnostics
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install
+        run: bun install --frozen-lockfile
+      - name: Lint
+        run: bunx eslint . --format json > eslint.json || true
+      - name: Commit errors to lint-output branch
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            let out = '';
+            try {
+              const results = JSON.parse(fs.readFileSync('eslint.json', 'utf8'));
+              for (const f of results) {
+                for (const m of f.messages) {
+                  if (m.severity === 2) {
+                    out += f.filePath.replace(process.env.GITHUB_WORKSPACE + '/', '') + ':' + m.line + ':' + m.column + ' [' + m.ruleId + '] ' + m.message + '\n';
+                  }
+                }
+              }
+            } catch (e) {
+              out = 'Could not parse eslint output: ' + e.message;
+            }
+            if (!out) out = 'NONE';
+            const blob = await github.rest.git.createBlob({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              content: 'Errors for commit ' + context.sha + '\n' + out,
+              encoding: 'utf-8',
+            });
+            const tree = await github.rest.git.createTree({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tree: [{ path: 'eslint-errors.txt', mode: '100644', type: 'blob', sha: blob.data.sha }],
+            });
+            const commit = await github.rest.git.createCommit({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              message: 'lint diagnostics for ' + context.sha.slice(0, 7),
+              tree: tree.data.sha,
+              parents: [],
+            });
+            try {
+              await github.rest.git.createRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: 'refs/heads/lint-output',
+                sha: commit.data.sha,
+              });
+            } catch (e) {
+              await github.rest.git.updateRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: 'heads/lint-output',
+                sha: commit.data.sha,
+                force: true,
+              });
+            }
