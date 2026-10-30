@@ -8,7 +8,7 @@ export type SavedModelConnection = {
 };
 
 export type SavedModelUpstream = {
-  name: (typeof COMPATIBLE_GATEWAY_PROVIDERS)[number]["id"];
+  name: (typeof COMPATIBLE_GATEWAY_PROVIDERS)[number]["id"] | "litellm";
   baseUrl: string;
   headers: Record<string, string>;
 };
@@ -60,10 +60,7 @@ function endpointForLiteLlm(metadata: unknown): string {
 }
 
 const COMPATIBLE_MODEL_ENDPOINTS: Record<string, string> = Object.fromEntries(
-  COMPATIBLE_GATEWAY_PROVIDERS.filter((provider) => provider.id !== "litellm").map((provider) => [
-    provider.id,
-    provider.baseUrl,
-  ]),
+  COMPATIBLE_GATEWAY_PROVIDERS.map((provider) => [provider.id, provider.baseUrl]),
 );
 
 /** Resolve connected OpenAI-compatible model providers for this user only. */
