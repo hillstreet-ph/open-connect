@@ -27,5 +27,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          jq -n --rawfile out /tmp/lint.txt --arg SHA "$GITHUB_SHA" --arg fence "```" '{body: ("Lint output for commit " + $SHA + ":\n" + $fence + "\n" + $out + "\n" + $fence)}' > /tmp/payload.json
+          jq -n --rawfile out /tmp/lint.txt --arg SHA "$GITHUB_SHA" '{body: ("Lint output for commit " + $SHA + ":\n" + $out)}' > /tmp/payload.json
           gh api "repos/${{ github.repository }}/issues/560/comments" --input /tmp/payload.json
