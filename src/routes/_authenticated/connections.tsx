@@ -379,9 +379,7 @@ function ConnectionsPage() {
                 Connected as {connectionIdentityLine(connection)}
               </p>
             ) : connection.identity.label ? (
-              <p className="truncate text-xs text-muted-foreground">
-                {connection.identity.label}
-              </p>
+              <p className="truncate text-xs text-muted-foreground">{connection.identity.label}</p>
             ) : null}
           </div>
         </div>

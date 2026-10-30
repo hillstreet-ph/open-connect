@@ -215,9 +215,7 @@ export function ConnectionAccountCard({
                 <Button
                   size="sm"
                   disabled={rename.isPending}
-                  onClick={() =>
-                    rename.mutate({ displayName: editName, accountLabel: editLabel })
-                  }
+                  onClick={() => rename.mutate({ displayName: editName, accountLabel: editLabel })}
                 >
                   {rename.isPending ? "Saving…" : "Save"}
                 </Button>
