@@ -362,7 +362,7 @@ export function ConnectionAccountCard({
               ) : null}
               <div className="max-h-72 space-y-2 overflow-auto">
                 {tools.map((tool) => (
-                  <div key={tool.name} className="rounded-lg border p-3">
+                  <div key={tool.name} className="rounded-lg border p-2.5">
                     <p className="break-all text-sm font-medium">{tool.name}</p>
                     {snapshot?.tools && (
                       <label className="mt-2 flex items-center gap-2 text-xs">
@@ -395,7 +395,7 @@ export function ConnectionAccountCard({
                 account access.
               </p>
               {details.data?.skills.map((skill) => (
-                <div key={skill.id} className="rounded-lg border p-3">
+                <div key={skill.id} className="rounded-lg border p-2.5">
                   <p className="text-sm font-medium">{skill.name}</p>
                   <p className="text-xs text-muted-foreground">{skill.description}</p>
                   <Badge variant="outline">{skill.verified ? "Verified" : "Unverified"}</Badge>
@@ -414,7 +414,7 @@ export function ConnectionAccountCard({
                 or grant permissions.
               </p>
               {details.data?.toolkits.map((toolkit) => (
-                <div key={toolkit.id} className="rounded-lg border p-3">
+                <div key={toolkit.id} className="rounded-lg border p-2.5">
                   <p className="text-sm font-medium">{toolkit.name}</p>
                   <p className="text-xs text-muted-foreground">{toolkit.description}</p>
                 </div>
@@ -470,7 +470,7 @@ export function ConnectionAccountCard({
                   them.
                 </p>
               ) : null}
-              <div className="space-y-2 rounded-lg border border-border/70 p-3">
+              <div className="space-y-2 rounded-lg border border-border/70 p-2.5">
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Agent access
                 </p>
