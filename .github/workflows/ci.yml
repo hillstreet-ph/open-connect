@@ -28,7 +28,9 @@ jobs:
       - name: Dependency security audit
         run: bun audit
       - name: Lint
-        run: bun run lint
+        run: |
+          bunx eslint . --format github || true
+          bun run lint
       - name: Unit and navigation tests
         run: bun run test
       - name: OAuth database regression tests
