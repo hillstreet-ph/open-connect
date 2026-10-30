@@ -22,21 +22,10 @@ jobs:
           set +e
           bun run lint > /tmp/lint.txt 2>&1
           echo "lint exit code: $?" >> /tmp/lint.txt
-          echo "sha: $GITHUB_SHA" >> /tmp/lint.txt
           exit 0
       - name: Post lint output
-        uses: actions/github-script@v9
-        with:
-          script: |
-            const fs = require('fs');
-            let out = 'no output';
-            try { out = fs.readFileSync('/tmp/lint.txt', 'utf8'); } catch (e) {}
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: 560,
-              body: 'Lint output for ' + context.sha + ':
-```
-' + out.slice(-8000) + '
-```',
-            });
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          jq -n --rawfile out /tmp/lint.txt --arg SHA "$GITHUB_SHA" --arg fence "```" '{body: ("Lint output for commit " + $SHA + ":\n" + $fence + "\n" + $out + "\n" + $fence)}' > /tmp/payload.json
+          gh api "repos/${{ github.repository }}/issues/560/comments" --input /tmp/payload.json
