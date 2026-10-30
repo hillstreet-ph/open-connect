@@ -5,7 +5,7 @@ type Props = {
   provider: string;
   name?: string;
   /** Official app mark (for example the Composio catalog logo). Falls back to the brand set. */
-  logoUrl?: string;
+  logoUrl?: string | undefined;
   size?: "sm" | "md" | "lg";
   className?: string;
 };
