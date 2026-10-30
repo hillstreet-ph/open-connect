@@ -3,10 +3,10 @@ name: Typecheck diagnostics
 on:
   pull_request:
     branches: [main, development]
+  workflow_dispatch:
 
 permissions:
   contents: read
-  issues: write
 
 jobs:
   typecheck-diagnostics:
@@ -19,22 +19,15 @@ jobs:
           bun-version: latest
       - name: Install
         run: bun install --frozen-lockfile
-      - name: Typecheck and capture output
-        id: tc
+      - name: Typecheck
         run: |
           set +e
           bun run typecheck > /tmp/tc.txt 2>&1
           code=$?
-          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
-          exit 0
-      - name: Post output to issue 560
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
           {
-            echo "Typecheck output for run on ${{ github.sha }} (exit ${{ steps.tc.outputs.exit_code }}):"
+            echo "## Typecheck output (exit $code)"
             echo '~~~'
-            head -c 14000 /tmp/tc.txt
+            head -c 20000 /tmp/tc.txt
             echo '~~~'
-          } > /tmp/body.txt
-          gh api repos/hillstreet-ph/open-connect/issues/560/comments -F body=@/tmp/body.txt || echo "comment failed"
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 0
