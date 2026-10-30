@@ -93,14 +93,14 @@ test("connection surfaces remain internal and separate from Marketplace", () => 
     "utf8",
   );
   assert.ok(integrations.includes("<ApiKeysCard />"));
-  assert.ok(integrations.includes("Connect ChatGPT with OAuth"));
   assert.ok(integrations.includes("setTelegramOpen(true)"));
   assert.ok(integrations.includes("inbound-integrations.functions"));
   assert.ok(integrations.includes("universal-connector-dialog"));
   assert.ok(integrations.includes("Remote MCP servers"));
-  for (const section of ['id="api-key"', 'id="apps"', 'id="ai-agents"', 'id="custom-mcp"']) {
+  for (const section of ['id="api-key"', 'id="apps"', 'id="custom-mcp"']) {
     assert.ok(integrations.includes(section), "Missing integration section " + section);
   }
+  assert.ok(!integrations.includes("ai-agents"), "AI Agents section should stay removed");
 
   const inboundMigration = readFileSync(
     path.resolve(process.cwd(), "supabase/migrations/20261005050000_inbound_integrations.sql"),
