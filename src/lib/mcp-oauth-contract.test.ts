@@ -48,9 +48,7 @@ test("success and denial callbacks identify the same issuer and preserve client 
   }
 });
 test("native loopback callbacks are built for the client's own port", () => {
-  const url = new URL(
-    oauthCallback("http://127.0.0.1:1455/callback", "s", { code: "one-time" }),
-  );
+  const url = new URL(oauthCallback("http://127.0.0.1:1455/callback", "s", { code: "one-time" }));
   assert.equal(url.origin, "http://127.0.0.1:1455");
   assert.equal(url.searchParams.get("code"), "one-time");
   assert.equal(url.searchParams.get("iss"), "https://open-connect.site");
