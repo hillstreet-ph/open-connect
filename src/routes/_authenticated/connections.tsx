@@ -402,7 +402,7 @@ function ConnectionsPage() {
   const pendingTotal = installedConnections.filter((c) => c.status === "pending").length;
 
   function closeManagedDialog() {
-    closeManagedDialog();
+    setManagedApp(null);
     setManagedConnectionId(undefined);
   }
 
