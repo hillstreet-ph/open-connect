@@ -39,12 +39,21 @@ type Account = {
 
 type PermissionMode = "allow" | "ask" | "deny";
 
-type ConnectorPermissions = { tools: PermissionMode; skills: PermissionMode };
+type ConnectorPermissions = {
+  tools: PermissionMode;
+  skills: PermissionMode;
+  apps: PermissionMode;
+};
 
-const defaultPermissions: ConnectorPermissions = { tools: "allow", skills: "allow" };
+const defaultPermissions: ConnectorPermissions = {
+  tools: "allow",
+  skills: "allow",
+  apps: "allow",
+};
 
 export function ConnectionAccountCard({
   account,
+  category,
   statusLabel,
   busy,
   reconnectReady,
@@ -52,6 +61,7 @@ export function ConnectionAccountCard({
   onDisconnect,
 }: {
   account: Account;
+  category?: string | undefined;
   statusLabel: string;
   busy: boolean;
   reconnectReady: boolean;
@@ -110,7 +120,7 @@ export function ConnectionAccountCard({
     }
   });
 
-  function updatePermission(scope: "tools" | "skills", value: PermissionMode) {
+  function updatePermission(scope: "tools" | "skills" | "apps", value: PermissionMode) {
     const current = permissions[account.id] ?? defaultPermissions;
     const next = { ...permissions, [account.id]: { ...current, [scope]: value } };
     setPermissions(next);
@@ -336,10 +346,9 @@ export function ConnectionAccountCard({
             <TabsList className="flex h-auto max-w-full flex-wrap justify-start overflow-x-auto">
               <TabsTrigger value="tools">Tools ({details.data?.tools.length ?? 0})</TabsTrigger>
               <TabsTrigger value="skills">Skills ({details.data?.skills.length ?? 0})</TabsTrigger>
-              <TabsTrigger value="toolkits">
-                Toolkits ({details.data?.toolkits.length ?? 0})
-              </TabsTrigger>
+              <TabsTrigger value="apps">Apps ({details.data?.toolkits.length ?? 0})</TabsTrigger>
               <TabsTrigger value="permissions">Permissions</TabsTrigger>
+              <TabsTrigger value="information">Information</TabsTrigger>
             </TabsList>
             <TabsContent value="tools" className="space-y-3">
               <Input
@@ -399,10 +408,10 @@ export function ConnectionAccountCard({
                 <Link to="/library">Open resources</Link>
               </Button>
             </TabsContent>
-            <TabsContent value="toolkits" className="space-y-3">
+            <TabsContent value="apps" className="space-y-3">
               <p className="text-xs text-muted-foreground">
-                Related toolkits already in your private library. Discovery does not install,
-                publish, or grant permissions.
+                Related apps already in your private library. Discovery does not install, publish,
+                or grant permissions.
               </p>
               {details.data?.toolkits.map((toolkit) => (
                 <div key={toolkit.id} className="rounded-lg border p-3">
@@ -411,12 +420,36 @@ export function ConnectionAccountCard({
                 </div>
               ))}
               {details.isSuccess && !details.data?.toolkits.length ? (
-                <p className="text-sm text-muted-foreground">
-                  No related toolkits in your library.
-                </p>
+                <p className="text-sm text-muted-foreground">No related apps in your library.</p>
               ) : null}
             </TabsContent>
             <TabsContent value="permissions" className="space-y-3">
+              <ul className="space-y-1 text-sm">
+                <li className="flex items-start gap-2">
+                  <Badge variant="outline" className="shrink-0">
+                    Interact
+                  </Badge>
+                  <span className="text-muted-foreground">
+                    Use the app on your behalf for the actions you approve.
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <Badge variant="outline" className="shrink-0">
+                    Read
+                  </Badge>
+                  <span className="text-muted-foreground">
+                    Read the account data needed for each approved request.
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <Badge variant="outline" className="shrink-0">
+                    Write
+                  </Badge>
+                  <span className="text-muted-foreground">
+                    Create and update data only for actions you explicitly approve.
+                  </span>
+                </li>
+              </ul>
               <p className="text-xs text-muted-foreground">
                 Granted scopes reported for this connection.
               </p>
@@ -441,7 +474,7 @@ export function ConnectionAccountCard({
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Agent access
                 </p>
-                {(["tools", "skills"] as const).map((scope) => {
+                {(["tools", "skills", "apps"] as const).map((scope) => {
                   const current = permissions[account.id] ?? defaultPermissions;
                   return (
                     <label
@@ -467,6 +500,39 @@ export function ConnectionAccountCard({
                   Applies when agents use this connector. Default is Always allow.
                 </p>
               </div>
+            </TabsContent>
+            <TabsContent value="information" className="space-y-3">
+              <dl className="grid gap-2 sm:grid-cols-2">
+                <div className="min-w-0">
+                  <dt className="text-xs text-muted-foreground">About</dt>
+                  <dd className="text-sm">Approved app access for your workspace agents.</dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="text-xs text-muted-foreground">Category</dt>
+                  <dd className="text-sm">{category || "Productivity"}</dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="text-xs text-muted-foreground">Developer</dt>
+                  <dd className="text-sm">Kairo Casino</dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="text-xs text-muted-foreground">Version</dt>
+                  <dd className="text-sm">0.8.0</dd>
+                </div>
+                <div className="min-w-0 sm:col-span-2">
+                  <dt className="text-xs text-muted-foreground">Website</dt>
+                  <dd className="truncate text-sm">
+                    <a
+                      className="text-primary underline-offset-4 hover:underline"
+                      href="https://open-connect.site"
+                      target="_blank"
+                      rel="noreferrer noopener"
+                    >
+                      https://open-connect.site
+                    </a>
+                  </dd>
+                </div>
+              </dl>
             </TabsContent>
           </Tabs>
         </div>

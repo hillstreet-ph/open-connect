@@ -141,30 +141,3 @@ jobs:
             echo "$p -> $effective_url $code"
             test "$code" = "200"
           done
-
-  debug-checks:
-    name: Temporary check diagnostics
-    if: always()
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      issues: write
-      checks: read
-      pull-requests: read
-    steps:
-      - name: Dump check data to issue 560
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          {
-            echo "## Check runs on HEAD"
-            gh api "repos/hillstreet-ph/open-connect/commits/374f7cbfbe2948108fbad78366a9740b0a7ca94f/check-runs"
-            gh api "repos/hillstreet-ph/open-connect/commits/2b58bcfb4353b60e85f2782491feb797647be232/check-runs"
-            echo "## Commit statuses 374f7cb"
-            gh api "repos/hillstreet-ph/open-connect/commits/374f7cbfbe2948108fbad78366a9740b0a7ca94f/status"
-            echo "## Check suites 374f7cb"
-            gh api "repos/hillstreet-ph/open-connect/commits/374f7cbfbe2948108fbad78366a9740b0a7ca94f/check-suites"
-            echo "## PR 554 state"
-            gh api repos/hillstreet-ph/open-connect/pulls/554 --jq '{head: .head.sha, mergeable: .mergeable, mergeable_state: .mergeable_state}'
-          } > /tmp/out.txt 2>&1 || true
-          gh api repos/hillstreet-ph/open-connect/issues/560/comments -f body="$(cat /tmp/out.txt)" || echo "comment failed"
