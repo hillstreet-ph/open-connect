@@ -129,7 +129,7 @@ test("stale gateway references are skipped and valid LiteLLM endpoints must be p
   );
 });
 
-test("resolves NVIDIA, Ollama Cloud, Groq, and Cerebras through fixed provider endpoints", async () => {
+test("resolves supported providers and excludes removed Cerebras", async () => {
   const providers = ["nvidia", "ollama_cloud", "groq", "cerebras"];
   const upstreams = await savedModelUpstreams("user-a", {
     find: async () =>
@@ -143,7 +143,7 @@ test("resolves NVIDIA, Ollama Cloud, Groq, and Cerebras through fixed provider e
   });
   assert.deepEqual(
     upstreams.map((upstream) => upstream.name),
-    providers,
+    ["nvidia", "ollama_cloud", "groq"],
   );
   assert.deepEqual(
     upstreams.map((upstream) => upstream.baseUrl),
@@ -151,7 +151,6 @@ test("resolves NVIDIA, Ollama Cloud, Groq, and Cerebras through fixed provider e
       "https://integrate.api.nvidia.com/v1",
       "https://ollama.com/v1",
       "https://api.groq.com/openai/v1",
-      "https://api.cerebras.ai/v1",
     ],
   );
 });
@@ -172,7 +171,7 @@ test("stale vault entries do not block other saved accounts or new compatible pr
   });
   assert.deepEqual(
     configured.map((item) => item.name),
-    providers,
+    providers.filter((provider) => provider !== "commandcode"),
   );
   let calls = 0;
   const recovered = await savedModelUpstreams("user-a", {
