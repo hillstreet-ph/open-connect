@@ -1,12 +1,7 @@
-const settingsTabs = [
-  "profile",
-  "security",
-  "workspace",
-  "apps",
-  "data",
-  "integrations",
-  "approvals",
-] as const;
+const settingsTabs = ["profile", "security", "data", "integrations"] as const;
+export function settingsTabList(): readonly string[] {
+  return settingsTabs;
+}
 export function settingsTab(hash: string): string {
   const tab = hash.replace(/^#/, "");
   return settingsTabs.some((value) => value === tab) ? tab : "profile";

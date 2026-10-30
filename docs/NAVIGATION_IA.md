@@ -39,7 +39,7 @@ Skills · Plugins · Tools · Agents · Prompts · MCP · Workflows · Templates
 ## Settings and administration
 
 The platform logo returns to Dashboard. The user avatar at the bottom of the sidebar opens account and system settings.
-Settings contains Profile, Security & login, Workspace, Apps & system, and Data & privacy tabs. Workspace links to assigned projects only.
+Settings holds personal account surfaces only: Profile, Security & login, Data Controls, and Integrations. Anything that already has a sidebar destination (Projects, Connectors, Credentials, AI Gateway, Automations, Memory, Knowledge) is not repeated in Settings.
 Credentials opens the existing scoped credential page.
 
 System administration is one page (`/admin`) with Organization, Platform roles, and Access reference tabs. It opens from the single `hillstreet-ph` entry in the account menu; it is not duplicated in Settings or the sidebar. Platform role assignment shows only for platform Admins. The old `/orgs` and `/roles` URLs redirect to the matching tab. Direct route authorization remains enforced.
