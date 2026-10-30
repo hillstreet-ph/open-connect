@@ -7,7 +7,7 @@ import {
   json,
   logGatewayRequest,
   isAutoFreeModel,
-  resolveAutoFreeRoutes,
+  resolveAutoRoutes,
   resolveModelId,
   resolveUserUpstreams,
 } from "@/lib/gateway.server";
@@ -40,10 +40,11 @@ export const Route = createFileRoute("/v1/chat/completions")({
             : "open-connect/auto";
         const autoFree = isAutoFreeModel(requestedModel);
         const routes = autoFree
-          ? await resolveAutoFreeRoutes(upstreams)
+          ? await resolveAutoRoutes(upstreams)
           : upstreams.map((upstream) => ({
               upstream,
               model: modelForUpstream(resolveModelId(requestedModel), upstream.name),
+              tier: "paid" as const,
             }));
         if (routes.length === 0) {
           return gatewayError(
@@ -56,9 +57,12 @@ export const Route = createFileRoute("/v1/chat/completions")({
 
         let lastError: { status: number; body: unknown } | null = null;
 
+        // Bound only the free-tier search; paid backups always get a full attempt
+        // so a rate-limited free pool still resolves to a working model.
         const deadline = Date.now() + 35_000;
         for (const route of routes) {
-          if (autoFree && !streaming && Date.now() >= deadline) break;
+          const freeTier = route.tier === "free";
+          if (freeTier && !streaming && Date.now() >= deadline) continue;
           const { upstream, model } = route;
           try {
             const response = await fetch(`${upstream.baseUrl}/chat/completions`, {
@@ -67,7 +71,7 @@ export const Route = createFileRoute("/v1/chat/completions")({
               redirect: "manual",
               body: JSON.stringify({ ...body, model }),
               signal: AbortSignal.timeout(
-                autoFree && !streaming
+                freeTier && !streaming
                   ? Math.max(1, Math.min(12_000, deadline - Date.now()))
                   : 120_000,
               ),
@@ -106,8 +110,15 @@ export const Route = createFileRoute("/v1/chat/completions")({
 
             if (!response.ok) {
               lastError = { status: response.status, body: result };
-              // try next upstream on 5xx / 404 model
-              if (autoFree || response.status >= 500 || response.status === 404) continue;
+              // Free tier always rolls forward; otherwise fail over on rate limit,
+              // 5xx, or an unavailable model so the next provider maintains continuity.
+              if (
+                freeTier ||
+                response.status === 429 ||
+                response.status >= 500 ||
+                response.status === 404
+              )
+                continue;
               await logGatewayRequest({
                 key,
                 endpoint: "/v1/chat/completions",
