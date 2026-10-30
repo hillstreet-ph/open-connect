@@ -65,6 +65,12 @@ function connectionStatusLabel(status: string) {
 
 const customProviders = new Set(["custom_mcp", "custom_api"]);
 
+type PermissionMode = "allow" | "ask" | "deny";
+
+type ConnectorPermissions = { tools: PermissionMode; skills: PermissionMode };
+
+const defaultPermissions: ConnectorPermissions = { tools: "allow", skills: "allow" };
+
 export const Route = createFileRoute("/_authenticated/connections")({
   head: () => ({
     meta: [
@@ -88,7 +94,16 @@ function ConnectionsPage() {
   const refreshCapabilities = useServerFn(refreshConnectorCapabilities);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string>("All");
-  const [tab, setTab] = useState<"installed" | "discover" | "personal">("installed");
+  const [tab, setTab] = useState<"discover" | "custom" | "installed">("discover");
+  const [permissions, setPermissions] = useState<Record<string, ConnectorPermissions>>(() => {
+    if (typeof window === "undefined") return {};
+    try {
+      const stored = window.localStorage.getItem("connector-permissions");
+      return stored ? (JSON.parse(stored) as Record<string, ConnectorPermissions>) : {};
+    } catch {
+      return {};
+    }
+  });
   const queryClient = useQueryClient();
   const catalogFn = useServerFn(listConnectionCatalog);
   const listFn = useServerFn(listAppConnections);
@@ -312,7 +327,7 @@ function ConnectionsPage() {
     ...new Set([...connectionCategories, ...(catalog.data ?? []).map((app) => app.category)]),
   ];
 
-  const personalCatalog = useMemo(
+  const customCatalog = useMemo(
     () => (catalog.data ?? []).filter((app) => customProviders.has(app.provider)),
     [catalog.data],
   );
@@ -328,7 +343,7 @@ function ConnectionsPage() {
     return [...list].sort((a, b) => rankStatus(a.status) - rankStatus(b.status));
   }, [mine.data]);
 
-  const personalConnections = useMemo(
+  const customConnections = useMemo(
     () => (mine.data ?? []).filter((c) => customProviders.has(c.provider)),
     [mine.data],
   );
@@ -343,6 +358,17 @@ function ConnectionsPage() {
 
   const connectedTotal = installedConnections.filter((c) => c.status === "connected").length;
   const pendingTotal = installedConnections.filter((c) => c.status === "pending").length;
+
+  function updatePermission(id: string, scope: "tools" | "skills", value: PermissionMode) {
+    const current = permissions[id] ?? defaultPermissions;
+    const next = { ...permissions, [id]: { ...current, [scope]: value } };
+    setPermissions(next);
+    try {
+      window.localStorage.setItem("connector-permissions", JSON.stringify(next));
+    } catch {
+      // Storage may be unavailable; the in-memory preference still applies.
+    }
+  }
 
   function renderConnectionCard(connection: NonNullable<typeof mine.data>[number]) {
     const app = (catalog.data ?? []).find((item) => item.provider === connection.provider);
@@ -365,7 +391,55 @@ function ConnectionsPage() {
         <Badge variant="outline" className={`w-fit ${statusBadgeClass(connection.status)}`}>
           {connectionStatusLabel(connection.status)}
         </Badge>
+        {connection.status === "error" ? (
+          <p className="text-xs text-red-400">
+            Check the endpoint URL and credential, then reconnect to retry validation.
+          </p>
+        ) : null}
+        <div className="space-y-2 rounded-lg border border-border/70 p-3">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Permissions
+          </p>
+          {(["tools", "skills"] as const).map((scope) => {
+            const current = permissions[connection.id] ?? defaultPermissions;
+            return (
+              <label
+                key={scope}
+                className="flex items-center justify-between gap-3 text-sm capitalize"
+              >
+                {scope}
+                <select
+                  value={current[scope]}
+                  onChange={(event) =>
+                    updatePermission(connection.id, scope, event.target.value as PermissionMode)
+                  }
+                  className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                >
+                  <option value="allow">Always allow</option>
+                  <option value="ask">Ask every time</option>
+                  <option value="deny">Don&apos;t allow</option>
+                </select>
+              </label>
+            );
+          })}
+          <p className="text-xs text-muted-foreground">
+            Applies when agents use this connector. Default is Always allow.
+          </p>
+        </div>
         <div className="flex flex-wrap items-center gap-2">
+          {connection.status !== "connected" && customProviders.has(connection.provider) ? (
+            <Button
+              size="sm"
+              variant="outline"
+              className="shrink-0"
+              onClick={() => {
+                setCustomInitial(connection as ConnectorInitial);
+                setCustomOpen(true);
+              }}
+            >
+              Reconnect
+            </Button>
+          ) : null}
           <Button
             size="sm"
             variant="outline"
@@ -458,7 +532,7 @@ function ConnectionsPage() {
 
       <div className="mt-6 flex flex-wrap items-center gap-2">
         <div className="flex rounded-lg border border-border/70 p-1">
-          {(["installed", "discover", "personal"] as const).map((t2) => (
+          {(["discover", "custom", "installed"] as const).map((t2) => (
             <button
               key={t2}
               type="button"
@@ -469,7 +543,7 @@ function ConnectionsPage() {
                   : "rounded-md px-4 py-1.5 text-sm text-muted-foreground hover:text-foreground"
               }
             >
-              {t2 === "installed" ? "Installed" : t2 === "discover" ? "Discover" : "Personal"}
+              {t2 === "discover" ? "Discover" : t2 === "custom" ? "Custom" : "Installed"}
             </button>
           ))}
         </div>
@@ -610,10 +684,10 @@ function ConnectionsPage() {
         </div>
       )}
 
-      {tab === "personal" && (
+      {tab === "custom" && (
         <div className="mt-8 space-y-8">
           <div>
-            <h2 className="text-lg font-semibold">Personal connectors</h2>
+            <h2 className="text-lg font-semibold">Custom connectors</h2>
             <p className="mt-1 max-w-xl text-sm text-muted-foreground">
               Private MCP servers and API endpoints for your account only. Public Composio
               connectors live in Discover.
@@ -631,17 +705,17 @@ function ConnectionsPage() {
               </Button>
             ) : null}
           </div>
-          {personalConnections.length > 0 ? (
+          {customConnections.length > 0 ? (
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {personalConnections.map((connection) => renderConnectionCard(connection))}
+              {customConnections.map((connection) => renderConnectionCard(connection))}
             </div>
           ) : null}
           <div>
             <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Add a personal connector
+              Add a custom connector
             </h3>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {personalCatalog.map((app) => renderCatalogCard(app))}
+              {customCatalog.map((app) => renderCatalogCard(app))}
             </div>
           </div>
         </div>
@@ -836,18 +910,54 @@ function ConnectionsPage() {
               </p>
             )}
             {selectedApp?.provider === "custom_mcp" && (
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setConnectionName("Composio");
-                  setEndpointUrl("https://connect.composio.dev/mcp");
-                  setAuthType("api_key");
-                  setAuthHeader("x-consumer-api-key");
-                  setApiKey("");
-                }}
-              >
-                Use Composio MCP preset
-              </Button>
+              <div className="space-y-2">
+                <Label>Common setups</Label>
+                <p className="text-xs text-muted-foreground">
+                  Professional presets for frequent MCP deployments. Review the fields after
+                  applying a preset.
+                </p>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={() => {
+                      setConnectionName("Composio");
+                      setEndpointUrl("https://connect.composio.dev/mcp");
+                      setAuthType("api_key");
+                      setAuthHeader("x-consumer-api-key");
+                      setApiKey("");
+                    }}
+                  >
+                    Composio MCP
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={() => {
+                      setAuthType("bearer");
+                      setApiKey("");
+                    }}
+                  >
+                    Bearer token
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={() => {
+                      setAuthType("none");
+                      setApiKey("");
+                    }}
+                  >
+                    Public · no auth
+                  </Button>
+                </div>
+              </div>
             )}
             {["custom_mcp", "custom_api"].includes(selectedApp?.provider ?? "") && (
               <>
