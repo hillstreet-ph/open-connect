@@ -799,94 +799,14 @@ function ConnectionsPage() {
               Manage each account separately. Adding an account keeps your existing connections.
             </DialogDescription>
           </DialogHeader>
-          {managedApp && (
-            <div className="rounded-lg border p-4 space-y-2">
-              <p className="font-medium">{connectionLogin(managedApp).label}</p>
-              <p className="text-sm text-muted-foreground">{connectionLogin(managedApp).detail}</p>
-              <p className="text-xs text-muted-foreground">
-                OAuth permissions are approved on the provider page. API keys and tokens belong in
-                the secure form, never in chat.
-              </p>
-            </div>
-          )}
-          {managedApp && (
-            <div className="rounded-lg border p-4 space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Information
-              </p>
-              <dl className="grid gap-2 sm:grid-cols-2">
-                <div className="min-w-0">
-                  <dt className="text-xs text-muted-foreground">About</dt>
-                  <dd className="text-sm">Approved app access for your workspace agents.</dd>
-                </div>
-                <div className="min-w-0">
-                  <dt className="text-xs text-muted-foreground">Category</dt>
-                  <dd className="text-sm">{managedApp.category || "Productivity"}</dd>
-                </div>
-                <div className="min-w-0">
-                  <dt className="text-xs text-muted-foreground">Developer</dt>
-                  <dd className="text-sm">Kairo Casino</dd>
-                </div>
-                <div className="min-w-0">
-                  <dt className="text-xs text-muted-foreground">Version</dt>
-                  <dd className="text-sm">0.8.0</dd>
-                </div>
-                <div className="min-w-0 sm:col-span-2">
-                  <dt className="text-xs text-muted-foreground">Website</dt>
-                  <dd className="truncate text-sm">
-                    <a
-                      className="text-primary underline-offset-4 hover:underline"
-                      href="https://open-connect.site"
-                      target="_blank"
-                      rel="noreferrer noopener"
-                    >
-                      https://open-connect.site
-                    </a>
-                  </dd>
-                </div>
-              </dl>
-            </div>
-          )}
-          {managedApp && (
-            <div className="rounded-lg border p-4 space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Permissions
-              </p>
-              <ul className="space-y-1 text-sm">
-                <li className="flex items-start gap-2">
-                  <Badge variant="outline" className="shrink-0">
-                    Interact
-                  </Badge>
-                  <span className="text-muted-foreground">
-                    Use the app on your behalf for the actions you approve.
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Badge variant="outline" className="shrink-0">
-                    Read
-                  </Badge>
-                  <span className="text-muted-foreground">
-                    Read the account data needed for each approved request.
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <Badge variant="outline" className="shrink-0">
-                    Write
-                  </Badge>
-                  <span className="text-muted-foreground">
-                    Create and update data only for actions you explicitly approve.
-                  </span>
-                </li>
-              </ul>
-            </div>
-          )}
-          <div className="space-y-3">
+                                        <div className="space-y-3">
             {(mine.data ?? [])
               .filter((c) => c.provider === managedApp?.provider)
               .map((c) => (
                 <ConnectionAccountCard
                   key={c.id}
                   account={c}
+                  category={managedApp?.category}
                   statusLabel={
                     c.provider === "custom_api" && c.status === "connected"
                       ? "API schema validated · verify provider access"
