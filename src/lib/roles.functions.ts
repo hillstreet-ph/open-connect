@@ -2,9 +2,9 @@ import { createServerFn } from "@tanstack/react-start";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { hasRole, type AppRole } from "@/lib/rbac";
+import { hasRole, ALL_ROLES, type AppRole } from "@/lib/rbac";
 
-const ASSIGNABLE_ROLES: AppRole[] = ["user", "developer", "admin"];
+const ASSIGNABLE_ROLES: AppRole[] = ALL_ROLES;
 const MANAGEABLE_ROLES: AppRole[] = ASSIGNABLE_ROLES;
 
 async function loadRoles(supabase: SupabaseClient, userId: string): Promise<AppRole[]> {

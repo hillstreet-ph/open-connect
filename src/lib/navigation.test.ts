@@ -533,6 +533,36 @@ test("System administration keeps one entry point with organization, roles, and 
   assert.ok(!settings.includes('title="User roles"'));
 });
 
+test("Access reference has one canonical rendering of each role fact", () => {
+  const sourceRoot = path.resolve(process.cwd(), "src");
+  const panel = readFileSync(
+    path.join(sourceRoot, "components/access-reference-panel.tsx"),
+    "utf8",
+  );
+  const rbac = readFileSync(path.join(sourceRoot, "lib/rbac.ts"), "utf8");
+  const identity = readFileSync(path.join(sourceRoot, "lib/identity.ts"), "utf8");
+
+  // The panel derives role facts from shared sources instead of re-declaring them.
+  assert.ok(panel.includes("CAPABILITY_DOCS"));
+  assert.ok(panel.includes("capabilityLevel"));
+  assert.ok(panel.includes("PLATFORM_ROLE_SUMMARY"));
+  assert.ok(panel.includes("ORG_ROLE_SUMMARY"));
+  assert.ok(panel.includes("PROJECT_ROLE_SUMMARY"));
+  assert.ok(panel.includes("AVAILABLE_KEY_SCOPES"));
+  assert.ok(panel.includes("scopeCapability"));
+  assert.ok(!panel.includes("ROLE_SCOPE_MATRIX"));
+  assert.ok(!panel.includes("KEY_SCOPE_DOCS"));
+
+  // Role labels are defined once per vocabulary and reused across the app.
+  assert.ok(rbac.includes("export const PLATFORM_ROLE_SUMMARY"));
+  assert.ok(identity.includes("export const ORG_ROLES"));
+  assert.ok(identity.includes("export const PROJECT_ROLES"));
+
+  // The old duplicate matrix/scope lists are gone from the canonical libs.
+  assert.ok(!rbac.includes("ROLE_SCOPE_MATRIX"));
+  assert.ok(!rbac.includes("KEY_SCOPE_DOCS"));
+});
+
 test("System administration tabs fall back safely for unknown values", () => {
   for (const tab of ["roles", "organization", "access"]) {
     assert.equal(adminTab(tab), tab);
