@@ -33,6 +33,8 @@ type Account = {
     icon_data?: string;
     capabilities?: unknown;
     disabled_tools?: string[];
+    disabled_skills?: string[];
+    disabled_toolkits?: string[];
   };
   identity: { label: string; login: string; name: string; email: string };
 };
@@ -81,8 +83,11 @@ export function ConnectionAccountCard({
     onError: (e) => toast.error(e.message),
   });
   const permission = useMutation({
-    mutationFn: (input: { tool: string; enabled: boolean }) =>
-      permissionFn({ data: { id: account.id, ...input } }),
+    mutationFn: (input: {
+      tool: string;
+      enabled: boolean;
+      kind?: "tools" | "skills" | "apps" | undefined;
+    }) => permissionFn({ data: { id: account.id, ...input } }),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["app-connections"] });
       void client.invalidateQueries({ queryKey: ["connection-details", account.id] });
@@ -364,19 +369,21 @@ export function ConnectionAccountCard({
                 {tools.map((tool) => (
                   <div key={tool.name} className="rounded-lg border p-2.5">
                     <p className="break-all text-sm font-medium">{tool.name}</p>
-                    {snapshot?.tools && (
-                      <label className="mt-2 flex items-center gap-2 text-xs">
-                        <input
-                          type="checkbox"
-                          checked={!account.metadata?.disabled_tools?.includes(tool.name)}
-                          disabled={permission.isPending}
-                          onChange={(e) =>
-                            permission.mutate({ tool: tool.name, enabled: e.target.checked })
-                          }
-                        />
-                        Allow this tool for this connection
-                      </label>
-                    )}
+                    <label className="mt-2 flex items-center gap-2 text-xs">
+                      <input
+                        type="checkbox"
+                        checked={!account.metadata?.disabled_tools?.includes(tool.name)}
+                        disabled={permission.isPending}
+                        onChange={(e) =>
+                          permission.mutate({
+                            tool: tool.name,
+                            enabled: e.target.checked,
+                            kind: "tools",
+                          })
+                        }
+                      />
+                      Allow this tool for this connection
+                    </label>
                     <p className="mt-1 whitespace-pre-wrap break-words text-xs text-muted-foreground">
                       {tool.description}
                     </p>
@@ -399,6 +406,21 @@ export function ConnectionAccountCard({
                   <p className="text-sm font-medium">{skill.name}</p>
                   <p className="text-xs text-muted-foreground">{skill.description}</p>
                   <Badge variant="outline">{skill.verified ? "Verified" : "Unverified"}</Badge>
+                  <label className="mt-2 flex items-center gap-2 text-xs">
+                    <input
+                      type="checkbox"
+                      checked={!account.metadata?.disabled_skills?.includes(skill.id)}
+                      disabled={permission.isPending}
+                      onChange={(e) =>
+                        permission.mutate({
+                          tool: skill.id,
+                          enabled: e.target.checked,
+                          kind: "skills",
+                        })
+                      }
+                    />
+                    Allow this skill for this connection
+                  </label>
                 </div>
               ))}
               {details.isSuccess && !details.data.skills.length ? (
@@ -417,6 +439,21 @@ export function ConnectionAccountCard({
                 <div key={toolkit.id} className="rounded-lg border p-2.5">
                   <p className="text-sm font-medium">{toolkit.name}</p>
                   <p className="text-xs text-muted-foreground">{toolkit.description}</p>
+                  <label className="mt-2 flex items-center gap-2 text-xs">
+                    <input
+                      type="checkbox"
+                      checked={!account.metadata?.disabled_toolkits?.includes(toolkit.id)}
+                      disabled={permission.isPending}
+                      onChange={(e) =>
+                        permission.mutate({
+                          tool: toolkit.id,
+                          enabled: e.target.checked,
+                          kind: "apps",
+                        })
+                      }
+                    />
+                    Allow this app for this connection
+                  </label>
                 </div>
               ))}
               {details.isSuccess && !details.data?.toolkits.length ? (
