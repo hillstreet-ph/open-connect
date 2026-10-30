@@ -886,11 +886,13 @@ export const renameAppConnection = createServerFn({ method: "POST" })
     if (!existing) throw new Error("Connection not found.");
     const metadata = { ...((existing.metadata as Record<string, unknown> | null) ?? {}) };
     if (accountLabel) metadata["account_label"] = accountLabel;
-    const update: Record<string, unknown> = { metadata };
-    if (displayName) update["display_name"] = displayName;
+    const updates = {
+      ...(displayName ? { display_name: displayName } : {}),
+      metadata: metadata as unknown as Record<string, string>,
+    };
     const { error } = await context.supabase
       .from("app_connections")
-      .update(update)
+      .update(updates)
       .eq("user_id", context.userId)
       .eq("id", data.id);
     if (error) throw new Error(error.message);
