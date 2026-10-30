@@ -72,7 +72,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       statuses: write
-      pull_requests: read
     steps:
       - name: Publish the protected-branch status from the CI result
         uses: actions/github-script@v9
