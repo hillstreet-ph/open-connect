@@ -131,9 +131,13 @@ test("Integrations follows Data & privacy in Settings and includes account keys"
     settings.indexOf('value="data">Data & privacy') <
       settings.indexOf('value="integrations">Integrations'),
   );
-  for (const section of ["api-key", "apps", "ai-agents", "custom-mcp"]) {
+  for (const section of ["apps", "custom-mcp"]) {
     assert.ok(settings.includes('href="/integrations?section=' + section + '"'));
   }
+  // Personal Token lives in the account menu (Developer); AI Agents is reached from Integrations
+  // directly. Neither is duplicated as a Settings card.
+  assert.ok(!settings.includes('href="/integrations?section=api-key"'));
+  assert.ok(!settings.includes('href="/integrations?section=ai-agents"'));
   assert.ok(settings.includes('title="Connectors"'));
   assert.ok(settings.includes('title="AI Gateway"'));
   assert.ok(!settings.includes('title="Integrations"'));
