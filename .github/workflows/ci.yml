@@ -42,7 +42,14 @@ jobs:
       - name: Production health contract tests
         run: python3 scripts/validate_production_health_test.py
       - name: Strict TypeScript validation
-        run: bun run typecheck
+        run: |
+          bun run typecheck > tc-out.txt 2>&1 || true
+          cat tc-out.txt
+          grep -E "error" tc-out.txt | head -40 > tc-ann.txt || true
+          while IFS= read -r line; do
+            echo "::error::${line}"
+          done < tc-ann.txt
+          test ! -s tc-out.txt
       - name: Production build
         env:
           VITE_SUPABASE_URL: https://huadtiuuoiriqrjpjxhr.supabase.co
