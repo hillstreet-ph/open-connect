@@ -494,7 +494,7 @@ export const listAppConnections = createServerFn({ method: "GET" })
           }
           const { error: updateError } = await context.supabase
             .from("app_connections")
-            .update({ metadata })
+            .update({ metadata: metadata as unknown as Record<string, string> })
             .eq("id", connection.id);
           if (updateError) return;
           connection.metadata = metadata as typeof connection.metadata;
