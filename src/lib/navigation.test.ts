@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
-import { settingsTab } from "./settings-navigation.ts";
+import { adminTab, settingsTab } from "./settings-navigation.ts";
 import { isAppPath } from "./shell.ts";
 import {
   appCategories,
@@ -449,6 +449,49 @@ test("Marketplace installs stay in the personal library and agent context reads 
   assert.match(mcp, /resolveUserUpstreams/);
   assert.match(scopes, /"memory:read"/);
   assert.match(scopes, /"knowledge:read"/);
+});
+
+test("System administration keeps one entry point with organization, roles, and access tabs", () => {
+  const sourceRoot = path.resolve(process.cwd(), "src");
+  const userMenu = readFileSync(path.join(sourceRoot, "components/user-menu.tsx"), "utf8");
+  const settings = readFileSync(
+    path.join(sourceRoot, "routes/_authenticated/settings.tsx"),
+    "utf8",
+  );
+  const admin = readFileSync(path.join(sourceRoot, "routes/_authenticated/admin.tsx"), "utf8");
+  const orgs = readFileSync(path.join(sourceRoot, "routes/_authenticated/orgs.tsx"), "utf8");
+  const roles = readFileSync(path.join(sourceRoot, "routes/_authenticated/roles.tsx"), "utf8");
+
+  assert.ok(userMenu.includes('to="/admin"'), "hillstreet-ph opens System administration");
+  assert.ok(userMenu.includes("hillstreet-ph"));
+  assert.ok(!userMenu.includes('to="/orgs"'));
+
+  assert.ok(admin.includes('value="organization"'));
+  assert.ok(admin.includes('value="access"'));
+  assert.ok(admin.includes('value="roles"'));
+  assert.ok(admin.includes("OrganizationPanel"));
+  assert.ok(admin.includes("AccessReferencePanel"));
+  assert.ok(admin.includes("PlatformRolesPanel"));
+
+  assert.ok(orgs.includes('to: "/admin"') && orgs.includes('hash: "organization"'));
+  assert.ok(roles.includes('to: "/admin"') && roles.includes('hash: "access"'));
+
+  // Settings must not repeat the administration links; the account menu owns that entry.
+  assert.ok(!settings.includes('to="/orgs"'));
+  assert.ok(!settings.includes('to="/roles"'));
+  assert.ok(!settings.includes('to="/admin"'));
+  assert.ok(!settings.includes('title="Access reference"'));
+  assert.ok(!settings.includes('title="User roles"'));
+});
+
+test("System administration tabs fall back safely for unknown values", () => {
+  for (const tab of ["roles", "organization", "access"]) {
+    assert.equal(adminTab(tab), tab);
+    assert.equal(adminTab("#" + tab), tab);
+  }
+  for (const value of ["", "missing", "#organization/other", "__proto__"]) {
+    assert.equal(adminTab(value), "organization");
+  }
 });
 
 test("settings deep links select their exact tab and unknown hashes have a safe default", () => {
