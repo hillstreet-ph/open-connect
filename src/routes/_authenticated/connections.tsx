@@ -317,9 +317,7 @@ function ConnectionsPage() {
       list.push(app);
       map.set(app.category, list);
     }
-    return catOptions
-      .filter((c) => map.has(c))
-      .map((c) => ({ category: c, apps: map.get(c)! }));
+    return catOptions.filter((c) => map.has(c)).map((c) => ({ category: c, apps: map.get(c)! }));
   }, [results, catOptions]);
 
   const connectionsByProvider = new Map<string, NonNullable<typeof mine.data>[number]>();
