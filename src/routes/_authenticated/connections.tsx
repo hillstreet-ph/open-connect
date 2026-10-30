@@ -799,7 +799,7 @@ function ConnectionsPage() {
               Manage each account separately. Adding an account keeps your existing connections.
             </DialogDescription>
           </DialogHeader>
-                                        <div className="space-y-3">
+          <div className="space-y-3">
             {(mine.data ?? [])
               .filter((c) => c.provider === managedApp?.provider)
               .map((c) => (
