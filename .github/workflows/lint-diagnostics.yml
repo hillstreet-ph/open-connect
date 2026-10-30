@@ -1,0 +1,34 @@
+name: Lint diagnostics
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lint-diag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install
+        run: bun install --frozen-lockfile
+      - name: Lint
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          bunx eslint . > /tmp/lint.txt 2>&1 || true
+          cat /tmp/lint.txt
+          {
+            echo "## Lint diagnostics $(git rev-parse HEAD)"
+            echo '```'
+            cat /tmp/lint.txt
+            echo '```'
+          } > /tmp/comment.md
+          gh api repos/hillstreet-ph/open-connect/issues/560/comments -f body="$(cat /tmp/comment.md)" || echo "comment failed"
+          ! grep -qE "error|warning" /tmp/lint.txt
