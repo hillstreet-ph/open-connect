@@ -61,7 +61,7 @@ export function ConnectionAccountCard({
   onDisconnect,
 }: {
   account: Account;
-  category?: string;
+  category?: string | undefined;
   statusLabel: string;
   busy: boolean;
   reconnectReady: boolean;
