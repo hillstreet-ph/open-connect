@@ -36,6 +36,12 @@ type Account = {
   identity: { label: string; login: string; name: string; email: string };
 };
 
+type PermissionMode = "allow" | "ask" | "deny";
+
+type ConnectorPermissions = { tools: PermissionMode; skills: PermissionMode };
+
+const defaultPermissions: ConnectorPermissions = { tools: "allow", skills: "allow" };
+
 export function ConnectionAccountCard({
   account,
   statusLabel,
@@ -90,6 +96,26 @@ export function ConnectionAccountCard({
     | undefined;
   const [expanded, setExpanded] = useState(false);
   const [search, setSearch] = useState("");
+  const [permissions, setPermissions] = useState<Record<string, ConnectorPermissions>>(() => {
+    if (typeof window === "undefined") return {};
+    try {
+      const stored = window.localStorage.getItem("connector-permissions");
+      return stored ? (JSON.parse(stored) as Record<string, ConnectorPermissions>) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  function updatePermission(scope: "tools" | "skills", value: PermissionMode) {
+    const current = permissions[account.id] ?? defaultPermissions;
+    const next = { ...permissions, [account.id]: { ...current, [scope]: value } };
+    setPermissions(next);
+    try {
+      window.localStorage.setItem("connector-permissions", JSON.stringify(next));
+    } catch {
+      // Storage may be unavailable; the in-memory preference still applies.
+    }
+  }
   const detailsFn = useServerFn(getConnectionDetails);
   const details = useQuery({
     queryKey: ["connection-details", account.id, account.status],
@@ -105,7 +131,7 @@ export function ConnectionAccountCard({
       `${tool.name} ${tool.description}`.toLowerCase().includes(search.toLowerCase()),
     );
   return (
-    <article className="min-w-0 space-y-4 rounded-xl border bg-card p-4">
+    <article className="min-w-0 space-y-3 rounded-xl border bg-card p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <BrandLogo
@@ -212,7 +238,7 @@ export function ConnectionAccountCard({
       )}
       {expanded ? (
         <div id={`capabilities-${account.id}`} className="min-w-0 space-y-3 border-t pt-4">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm font-medium">Account capabilities</p>
             <Button
               size="sm"
@@ -237,7 +263,7 @@ export function ConnectionAccountCard({
             <p className="text-xs text-muted-foreground">{details.data.identityNotice}</p>
           ) : null}
           <Tabs defaultValue="tools" className="min-w-0">
-            <TabsList className="flex h-auto flex-wrap justify-start">
+            <TabsList className="flex h-auto max-w-full flex-wrap justify-start overflow-x-auto">
               <TabsTrigger value="tools">Tools ({details.data?.tools.length ?? 0})</TabsTrigger>
               <TabsTrigger value="skills">Skills ({details.data?.skills.length ?? 0})</TabsTrigger>
               <TabsTrigger value="toolkits">
@@ -341,6 +367,36 @@ export function ConnectionAccountCard({
                   them.
                 </p>
               ) : null}
+              <div className="space-y-2 rounded-lg border border-border/70 p-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Agent access
+                </p>
+                {(["tools", "skills"] as const).map((scope) => {
+                  const current = permissions[account.id] ?? defaultPermissions;
+                  return (
+                    <label
+                      key={scope}
+                      className="flex items-center justify-between gap-3 text-sm capitalize"
+                    >
+                      {scope}
+                      <select
+                        value={current[scope]}
+                        onChange={(event) =>
+                          updatePermission(scope, event.target.value as PermissionMode)
+                        }
+                        className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                      >
+                        <option value="allow">Always allow</option>
+                        <option value="ask">Ask every time</option>
+                        <option value="deny">Don&apos;t allow</option>
+                      </select>
+                    </label>
+                  );
+                })}
+                <p className="text-xs text-muted-foreground">
+                  Applies when agents use this connector. Default is Always allow.
+                </p>
+              </div>
             </TabsContent>
           </Tabs>
         </div>
