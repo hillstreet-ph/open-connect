@@ -24,6 +24,7 @@ import {
 import { listProjects } from "@/lib/orgs.functions";
 import { getMyRoles } from "@/lib/roles.functions";
 import { hasRole } from "@/lib/rbac";
+import { formatDateTime, formatRelative } from "@/lib/date-time";
 
 const PROFILE_LABELS: Record<AccessProfile, string> = {
   read_only: "Read only",
@@ -209,59 +210,86 @@ export function ApiKeysCard({ modelOnly = false }: { modelOnly?: boolean }) {
           <ul className="space-y-2 text-sm">
             {visibleKeys.length ? (
               visibleKeys.map((key) => (
-                <li
-                  key={key.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border px-3 py-2"
-                >
-                  <span className="min-w-0">
-                    <KeyNameEditor
-                      name={key.name}
-                      editable={key.active && !key.revoked_at}
-                      pending={renameMutation.isPending}
-                      onRename={(name) => renameMutation.mutate({ id: key.id, name })}
-                    />
-                    <span className="font-mono text-xs text-muted-foreground">
-                      {key.key_prefix}…
-                    </span>
-                    <Badge variant="secondary" className="ml-2 text-[10px]">
-                      {key.key_prefix.startsWith("sk-oc-")
-                        ? "Models only"
-                        : (PROFILE_LABELS[(key.access_profile as AccessProfile) ?? "custom"] ??
-                          "Legacy")}
-                    </Badge>
-                    {key.project_id ? (
-                      <Badge variant="outline" className="ml-2 text-[10px]">
-                        Project scoped
-                      </Badge>
-                    ) : null}
-                  </span>
-                  {key.active && !key.key_prefix.startsWith("sk-oc-") ? (
-                    <KeyAccessEditor
-                      key={`${key.id}:${key.access_profile}:${key.scopes?.join(",")}`}
-                      name={key.name}
-                      profile={key.access_profile}
-                      scopes={key.scopes ?? []}
-                      isAdmin={isAdmin}
-                      pending={updateMutation.isPending}
-                      onApply={(profile, scopes) =>
-                        updateMutation.mutate({ id: key.id, profile, scopes })
-                      }
-                    />
-                  ) : null}
-                  {key.revoked_at ? (
-                    <Badge variant="outline" className="text-muted-foreground">
-                      Revoked
-                    </Badge>
-                  ) : (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => revokeMutation.mutate(key.id)}
-                      disabled={revokeMutation.isPending}
-                    >
-                      Revoke
-                    </Button>
-                  )}
+                <li key={key.id} className="rounded-lg border border-border px-3 py-2.5">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <KeyNameEditor
+                          name={key.name}
+                          editable={key.active && !key.revoked_at}
+                          pending={renameMutation.isPending}
+                          onRename={(name) => renameMutation.mutate({ id: key.id, name })}
+                        />
+                        {key.active && !key.revoked_at ? (
+                          <Badge
+                            variant="secondary"
+                            className="border-transparent bg-emerald-500/15 text-[10px] text-emerald-600 dark:text-emerald-400"
+                          >
+                            Active
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                            {key.revoked_at ? "Revoked" : "Inactive"}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                        <span className="font-mono text-xs text-muted-foreground">
+                          {key.key_prefix}…
+                        </span>
+                        <Badge variant="secondary" className="text-[10px]">
+                          {key.key_prefix.startsWith("sk-oc-")
+                            ? "Models only"
+                            : (PROFILE_LABELS[(key.access_profile as AccessProfile) ?? "custom"] ??
+                              "Legacy")}
+                        </Badge>
+                        {key.project_id ? (
+                          <Badge variant="outline" className="text-[10px]">
+                            Project scoped
+                          </Badge>
+                        ) : null}
+                      </div>
+                      <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                        <span title={formatDateTime(key.created_at)}>
+                          Created {formatRelative(key.created_at)}
+                        </span>
+                        {" · "}
+                        <span
+                          title={key.last_used_at ? formatDateTime(key.last_used_at) : undefined}
+                        >
+                          {key.last_used_at
+                            ? `Last used ${formatRelative(key.last_used_at)}`
+                            : "Never used"}
+                        </span>
+                        {key.expires_at ? ` · Expires ${formatRelative(key.expires_at)}` : ""}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {key.active && !key.key_prefix.startsWith("sk-oc-") ? (
+                        <KeyAccessEditor
+                          key={`${key.id}:${key.access_profile}:${key.scopes?.join(",")}`}
+                          name={key.name}
+                          profile={key.access_profile}
+                          scopes={key.scopes ?? []}
+                          isAdmin={isAdmin}
+                          pending={updateMutation.isPending}
+                          onApply={(profile, scopes) =>
+                            updateMutation.mutate({ id: key.id, profile, scopes })
+                          }
+                        />
+                      ) : null}
+                      {key.revoked_at ? null : (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => revokeMutation.mutate(key.id)}
+                          disabled={revokeMutation.isPending}
+                        >
+                          Revoke
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                 </li>
               ))
             ) : !keys.isLoading && !keys.isError ? (
