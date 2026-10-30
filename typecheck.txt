@@ -1,6 +1,2 @@
 $ tsc --noEmit
-src/routes/_authenticated/connections.tsx(806,18): error TS2375: Type '{ key: string; account: { gateway_ready?: boolean; logo: string; browser_login: boolean; identity: { label: string; login: string; name: string; email: string; }; metadata: { endpoint_url: string; transport: string; ... 8 more ...; description: string; } | { ...; }; ... 7 more ...; created_at: string; }; ... 5 more ...' is not assignable to type '{ account: Account; category?: string; statusLabel: string; busy: boolean; reconnectReady: boolean; onReconnect: () => void; onDisconnect: () => void; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
-  Types of property 'category' are incompatible.
-    Type 'string | undefined' is not assignable to type 'string'.
-      Type 'undefined' is not assignable to type 'string'.
-exit_code=2
+exit_code=0
