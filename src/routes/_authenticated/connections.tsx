@@ -854,19 +854,25 @@ function ConnectionsPage() {
               </p>
               <ul className="space-y-1 text-sm">
                 <li className="flex items-start gap-2">
-                  <Badge variant="outline" className="shrink-0">Interact</Badge>
+                  <Badge variant="outline" className="shrink-0">
+                    Interact
+                  </Badge>
                   <span className="text-muted-foreground">
                     Use the app on your behalf for the actions you approve.
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <Badge variant="outline" className="shrink-0">Read</Badge>
+                  <Badge variant="outline" className="shrink-0">
+                    Read
+                  </Badge>
                   <span className="text-muted-foreground">
                     Read the account data needed for each approved request.
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <Badge variant="outline" className="shrink-0">Write</Badge>
+                  <Badge variant="outline" className="shrink-0">
+                    Write
+                  </Badge>
                   <span className="text-muted-foreground">
                     Create and update data only for actions you explicitly approve.
                   </span>
