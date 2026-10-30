@@ -38,11 +38,10 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
             </div>
             <Link
               to="/settings"
-              hash="approvals"
               className="shrink-0 rounded-md px-2 py-2 text-xs font-medium hover:bg-accent focus-visible:outline focus-visible:outline-2"
-              title="Review your approval requests"
+              title="Open your account settings"
             >
-              Approvals
+              Settings
             </Link>
             <WorkspaceSearch />
           </header>
@@ -63,12 +62,10 @@ function pageTitle(pathname: string): string {
   if (canonical) return canonical.label;
   const map: Record<string, string> = {
     "/campaign-studio": "Campaign Studio",
-    "/orgs": "Organization",
     "/integrations": "Integrations",
     "/project-access": "Project access",
     "/custom-oauth-callback": "App authorization",
     "/api-keys": "API keys",
-    "/roles": "Access reference",
     "/guides": "Professional setup",
     "/settings": "Settings",
     "/admin": "System administration",
