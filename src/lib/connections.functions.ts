@@ -471,8 +471,7 @@ export const listAppConnections = createServerFn({ method: "GET" })
         managedConnected.map(async (connection) => {
           const current = connectionIdentity(connection.metadata);
           if (current.email || current.login || current.name) return;
-          const existingMetadata =
-            (connection.metadata as Record<string, unknown> | null) ?? {};
+          const existingMetadata = (connection.metadata as Record<string, unknown> | null) ?? {};
           const attemptedAt = Date.parse(String(existingMetadata["identity_checked_at"] ?? ""));
           if (Number.isFinite(attemptedAt) && Date.now() - attemptedAt < 24 * 3600_000) return;
           const accountId = connection.credential_reference!.split("/").pop()!;
