@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { collectAutoFreeRoutes } from "./auto-free-routing.ts";
+import { collectAutoFreeRoutes, appendPaidBackupRoutes } from "./auto-free-routing.ts";
 
 test("catalog discovery runs concurrently and the free router precedes slow providers", async () => {
   const upstreams = [
@@ -33,4 +33,40 @@ test("LiteLLM zero-cost free router remains available without an OpenRouter acco
   const upstream = { name: "litellm" };
   const routes = await collectAutoFreeRoutes([upstream], async () => ["openrouter/free"]);
   assert.deepEqual(routes, [{ upstream, model: "openrouter/free" }]);
+});
+
+test("paid backup follows every free route and runs once per eligible upstream", () => {
+  const openrouter = { name: "openrouter" };
+  const openai = { name: "openai" };
+  const groq = { name: "groq" };
+  const free = [
+    { upstream: openrouter, model: "openrouter/free" },
+    { upstream: groq, model: "llama-3.3-70b:free" },
+  ];
+  const ladder = appendPaidBackupRoutes(free, [openrouter, openai, groq], (upstream) =>
+    upstream.name === "openrouter"
+      ? "openai/gpt-4o-mini"
+      : upstream.name === "openai"
+        ? "gpt-4o-mini"
+        : null,
+  );
+  assert.deepEqual(ladder, [
+    { upstream: openrouter, model: "openrouter/free", tier: "free" },
+    { upstream: groq, model: "llama-3.3-70b:free", tier: "free" },
+    { upstream: openrouter, model: "openai/gpt-4o-mini", tier: "paid" },
+    { upstream: openai, model: "gpt-4o-mini", tier: "paid" },
+  ]);
+});
+
+test("a paid backup identical to an existing free route is not retried", () => {
+  const openrouter = { name: "openrouter" };
+  const free = [{ upstream: openrouter, model: "openai/gpt-4o-mini" }];
+  const ladder = appendPaidBackupRoutes(free, [openrouter], () => "openai/gpt-4o-mini");
+  assert.deepEqual(ladder, [{ upstream: openrouter, model: "openai/gpt-4o-mini", tier: "free" }]);
+});
+
+test("with no free routes the ladder is paid backups only", () => {
+  const openai = { name: "openai" };
+  const ladder = appendPaidBackupRoutes([], [openai], () => "gpt-4o-mini");
+  assert.deepEqual(ladder, [{ upstream: openai, model: "gpt-4o-mini", tier: "paid" }]);
 });
