@@ -928,7 +928,9 @@ function ConnectionsPage() {
                         <div className="min-w-0">
                           <p className="truncate text-sm font-semibold">{c.display_name}</p>
                           <p className="truncate text-xs text-muted-foreground">
-                            {connectionIdentityLine(c) || c.metadata.endpoint_url || c.identity.label}
+                            {connectionIdentityLine(c) ||
+                              c.metadata.endpoint_url ||
+                              c.identity.label}
                           </p>
                         </div>
                       </div>
