@@ -281,15 +281,15 @@ function ConnectionsPage() {
 
   const results = useMemo(() => {
     const term = query.trim().toLowerCase();
-    return publicCatalog
-      .filter((app) => category === "All" || app.category === category)
-      .filter(
-        (app) =>
-          !term ||
-          app.display_name.toLowerCase().includes(term) ||
-          app.provider.toLowerCase().includes(term) ||
-          app.category.toLowerCase().includes(term),
-      );
+    return publicCatalog.filter((app) => {
+      const matchesCat = category === "All" || app.category === category;
+      const matchesTerm =
+        !term ||
+        app.display_name.toLowerCase().includes(term) ||
+        app.provider.toLowerCase().includes(term) ||
+        app.category.toLowerCase().includes(term);
+      return matchesCat && matchesTerm;
+    });
   }, [publicCatalog, query, category]);
 
   // Accurate, duplicate-free category list: only categories that actually
