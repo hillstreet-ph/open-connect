@@ -673,6 +673,37 @@ export const removeOrganizationMember = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const cancelOrganizationInvitation = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { organizationId: string; invitationId: string }) => ({
+    organizationId: input.organizationId,
+    invitationId: input.invitationId,
+  }))
+  .handler(async ({ data, context }) => {
+    if (!data.organizationId || !data.invitationId) {
+      throw new Error("Organization and invitation required");
+    }
+    await requireOrganizationManager(context.supabase, data.organizationId, context.userId);
+    const { data: invitation, error: lookupError } = await context.supabase
+      .from("organization_invitations")
+      .select("id, status")
+      .eq("id", data.invitationId)
+      .eq("organization_id", data.organizationId)
+      .maybeSingle();
+    if (lookupError) throw new Error(lookupError.message);
+    if (!invitation) throw new Error("Invitation not found");
+    if (invitation.status !== "pending") {
+      throw new Error("Only pending invitations can be cancelled");
+    }
+    const { error } = await context.supabase
+      .from("organization_invitations")
+      .update({ status: "revoked" })
+      .eq("id", data.invitationId)
+      .eq("organization_id", data.organizationId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const setOrganizationMemberGroups = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: { organizationId: string; userId: string; groupIds: string[] }) => ({
