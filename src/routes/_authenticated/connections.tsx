@@ -105,6 +105,7 @@ function ConnectionsPage() {
   const configureFn = useServerFn(configureAppConnection);
   const syncFn = useServerFn(syncComposioConnections);
   const [managedApp, setManagedApp] = useState<CatalogApp | null>(null);
+  const [managedConnectionId, setManagedConnectionId] = useState<string | undefined>();
   const [selectedApp, setSelectedApp] = useState<CatalogApp | null>(null);
   const [connectionName, setConnectionName] = useState("");
   const [description, setDescription] = useState("");
@@ -142,6 +143,11 @@ function ConnectionsPage() {
   });
   type AppConnection = NonNullable<typeof mine.data>[number];
   const [detailAccount, setDetailAccount] = useState<AppConnection | null>(null);
+
+  // Reset the Manage dialog scope whenever the dialog itself closes.
+  useEffect(() => {
+    if (!managedApp) setManagedConnectionId(undefined);
+  }, [managedApp]);
 
   // Managed OAuth returns to /connections?connected=<provider>. Composio may
   // still be finishing the account handoff, so confirm completion by polling
@@ -371,6 +377,26 @@ function ConnectionsPage() {
     );
   }, [customConnections, customQuery]);
 
+  // The Manage dialog is scoped: opening it from a specific connection card
+  // shows only that account. Custom accounts sharing the same endpoint are
+  // combined; catalog cards show every account for that provider.
+  const managedConnections = useMemo(() => {
+    if (!managedApp) return [];
+    const clicked = managedConnectionId
+      ? (mine.data ?? []).find((c) => c.id === managedConnectionId)
+      : undefined;
+    return (mine.data ?? []).filter((c) => {
+      if (c.provider !== managedApp.provider) return false;
+      if (!clicked) return true;
+      if (customProviders.has(c.provider)) {
+        return (
+          (c.metadata.endpoint_url || c.id) === (clicked.metadata.endpoint_url || clicked.id)
+        );
+      }
+      return c.id === clicked.id;
+    });
+  }, [managedApp, managedConnectionId, mine.data]);
+
   function statusBadgeClass(status: string) {
     if (status === "connected") return "border-emerald-500/40 bg-emerald-500/10 text-emerald-400";
     if (status === "pending") return "border-amber-500/40 bg-amber-500/10 text-amber-400";
@@ -470,8 +496,12 @@ function ConnectionsPage() {
             variant="outline"
             className="shrink-0"
             onClick={() => {
-              if (app) setManagedApp(app as CatalogApp);
-              else toast.info("Manage accounts is not available for this connector yet.");
+              if (app) {
+                setManagedApp(app as CatalogApp);
+                setManagedConnectionId(connection.id);
+              } else {
+                toast.info("Manage accounts is not available for this connector yet.");
+              }
             }}
           >
             Manage
@@ -533,7 +563,10 @@ function ConnectionsPage() {
                   ? "Official provider OAuth setup is not available yet"
                   : undefined
               }
-              onClick={() => setManagedApp(app)}
+              onClick={() => {
+                setManagedApp(app);
+                setManagedConnectionId(undefined);
+              }}
             >
               <Plus className="size-4" aria-hidden="true" />
               {connection ? "Manage accounts" : "Connect account"}
@@ -855,7 +888,15 @@ function ConnectionsPage() {
         open={customOpen}
         onOpenChange={setCustomOpen}
       />
-      <Dialog open={Boolean(managedApp)} onOpenChange={(open) => !open && setManagedApp(null)}>
+      <Dialog
+        open={Boolean(managedApp)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setManagedApp(null);
+            setManagedConnectionId(undefined);
+          }
+        }}
+      >
         <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[85dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -873,11 +914,9 @@ function ConnectionsPage() {
               Manage each account separately. Adding an account keeps your existing connections.
             </DialogDescription>
           </DialogHeader>
-          {(mine.data ?? []).some((c) => c.provider === managedApp?.provider) ? (
+          {managedConnections.length > 0 ? (
             <div className="grid gap-2 sm:grid-cols-2">
-              {(mine.data ?? [])
-                .filter((c) => c.provider === managedApp?.provider)
-                .map((c) => {
+              {managedConnections.map((c) => {
                   const reconnectReady = Boolean(
                     managedApp && connectionReconnectReady(c, managedApp.oauth_ready),
                   );
