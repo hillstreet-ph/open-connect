@@ -21,7 +21,6 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedAgentsRouteImport } from './routes/_authenticated/agents'
 import { Route as AuthenticatedAiAgencyRouteImport } from './routes/_authenticated/ai-agency'
 import { Route as AuthenticatedApiKeysRouteImport } from './routes/_authenticated/api-keys'
-import { Route as AuthenticatedApprovalsRouteImport } from './routes/_authenticated/approvals'
 import { Route as AuthenticatedAutomationsRouteImport } from './routes/_authenticated/automations'
 import { Route as AuthenticatedCampaignStudioRouteImport } from './routes/_authenticated/campaign-studio'
 import { Route as AuthenticatedCloudRouteImport } from './routes/_authenticated/cloud'
@@ -128,11 +127,6 @@ const AuthenticatedAiAgencyRoute = AuthenticatedAiAgencyRouteImport.update({
 const AuthenticatedApiKeysRoute = AuthenticatedApiKeysRouteImport.update({
   id: '/api-keys',
   path: '/api-keys',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedApprovalsRoute = AuthenticatedApprovalsRouteImport.update({
-  id: '/approvals',
-  path: '/approvals',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAutomationsRoute =
@@ -400,7 +394,6 @@ export interface FileRoutesByFullPath {
   '/agents': typeof AuthenticatedAgentsRoute
   '/ai-agency': typeof AuthenticatedAiAgencyRoute
   '/api-keys': typeof AuthenticatedApiKeysRoute
-  '/approvals': typeof AuthenticatedApprovalsRoute
   '/automations': typeof AuthenticatedAutomationsRoute
   '/campaign-studio': typeof AuthenticatedCampaignStudioRoute
   '/cloud': typeof AuthenticatedCloudRoute
@@ -462,7 +455,6 @@ export interface FileRoutesByTo {
   '/agents': typeof AuthenticatedAgentsRoute
   '/ai-agency': typeof AuthenticatedAiAgencyRoute
   '/api-keys': typeof AuthenticatedApiKeysRoute
-  '/approvals': typeof AuthenticatedApprovalsRoute
   '/automations': typeof AuthenticatedAutomationsRoute
   '/campaign-studio': typeof AuthenticatedCampaignStudioRoute
   '/cloud': typeof AuthenticatedCloudRoute
@@ -526,7 +518,6 @@ export interface FileRoutesById {
   '/_authenticated/agents': typeof AuthenticatedAgentsRoute
   '/_authenticated/ai-agency': typeof AuthenticatedAiAgencyRoute
   '/_authenticated/api-keys': typeof AuthenticatedApiKeysRoute
-  '/_authenticated/approvals': typeof AuthenticatedApprovalsRoute
   '/_authenticated/automations': typeof AuthenticatedAutomationsRoute
   '/_authenticated/campaign-studio': typeof AuthenticatedCampaignStudioRoute
   '/_authenticated/cloud': typeof AuthenticatedCloudRoute
@@ -590,7 +581,6 @@ export interface FileRouteTypes {
     | '/agents'
     | '/ai-agency'
     | '/api-keys'
-    | '/approvals'
     | '/automations'
     | '/campaign-studio'
     | '/cloud'
@@ -652,7 +642,6 @@ export interface FileRouteTypes {
     | '/agents'
     | '/ai-agency'
     | '/api-keys'
-    | '/approvals'
     | '/automations'
     | '/campaign-studio'
     | '/cloud'
@@ -715,7 +704,6 @@ export interface FileRouteTypes {
     | '/_authenticated/agents'
     | '/_authenticated/ai-agency'
     | '/_authenticated/api-keys'
-    | '/_authenticated/approvals'
     | '/_authenticated/automations'
     | '/_authenticated/campaign-studio'
     | '/_authenticated/cloud'
@@ -874,13 +862,6 @@ declare module '@tanstack/react-router' {
       path: '/api-keys'
       fullPath: '/api-keys'
       preLoaderRoute: typeof AuthenticatedApiKeysRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/approvals': {
-      id: '/_authenticated/approvals'
-      path: '/approvals'
-      fullPath: '/approvals'
-      preLoaderRoute: typeof AuthenticatedApprovalsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/automations': {
@@ -1255,7 +1236,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAgentsRoute: typeof AuthenticatedAgentsRoute
   AuthenticatedAiAgencyRoute: typeof AuthenticatedAiAgencyRoute
   AuthenticatedApiKeysRoute: typeof AuthenticatedApiKeysRoute
-  AuthenticatedApprovalsRoute: typeof AuthenticatedApprovalsRoute
   AuthenticatedAutomationsRoute: typeof AuthenticatedAutomationsRoute
   AuthenticatedCampaignStudioRoute: typeof AuthenticatedCampaignStudioRoute
   AuthenticatedCloudRoute: typeof AuthenticatedCloudRoute
@@ -1296,7 +1276,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAgentsRoute: AuthenticatedAgentsRoute,
   AuthenticatedAiAgencyRoute: AuthenticatedAiAgencyRoute,
   AuthenticatedApiKeysRoute: AuthenticatedApiKeysRoute,
-  AuthenticatedApprovalsRoute: AuthenticatedApprovalsRoute,
   AuthenticatedAutomationsRoute: AuthenticatedAutomationsRoute,
   AuthenticatedCampaignStudioRoute: AuthenticatedCampaignStudioRoute,
   AuthenticatedCloudRoute: AuthenticatedCloudRoute,
