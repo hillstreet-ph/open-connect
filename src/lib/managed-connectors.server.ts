@@ -257,7 +257,9 @@ export async function createManagedConnectionLink(input: {
     body: JSON.stringify({
       auth_config_id: authConfigId,
       user_id: input.userId,
-      alias: input.alias || `open-connect-${input.provider}`,
+      alias:
+        input.alias ||
+        `open-connect-${input.provider}-${crypto.randomUUID().replaceAll("-", "").slice(0, 8)}`,
       callback_url: input.callbackUrl,
       experimental: { account_type: "PRIVATE" },
     }),

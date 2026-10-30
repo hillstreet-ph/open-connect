@@ -484,7 +484,15 @@ function ConnectionsPage() {
   function renderGroupedCard(connections: AppConnection[]) {
     const first = connections[0];
     if (!first) return null;
-    const app = (catalog.data ?? []).find((item) => item.provider === first.provider);
+    const app = (catalog.data ?? []).find((item) => item.provider === first.provider) ?? {
+      provider: first.provider,
+      display_name: first.display_name,
+      category: customProviders.has(first.provider) ? "Custom" : "Installed",
+      scopes: [],
+      oauth: false,
+      oauth_ready: false,
+      logo: "",
+    };
     const connectedCount = connections.filter((c) => c.status === "connected").length;
     const pendingCount = connections.filter((c) => c.status === "pending").length;
     const groupStatus = connections.some((c) => c.status === "error")
@@ -505,18 +513,26 @@ function ConnectionsPage() {
           </Badge>
         </div>
         <p className="truncate text-xs text-muted-foreground">{`${connections.length} account${connections.length === 1 ? "" : "s"} · ${connectedCount} connected${pendingCount ? ` · ${pendingCount} pending` : ""}`}</p>
+        <div className="space-y-0.5">
+          {connections.slice(0, 3).map((c) => (
+            <p key={c.id} className="truncate text-xs text-muted-foreground">
+              {`${connectionIdentityLine(c) || c.identity.label || c.metadata.endpoint_url || (c.status === "pending" ? "Account awaiting sign-in" : "Account")} · ${c.status}`}
+            </p>
+          ))}
+          {connections.length > 3 ? (
+            <p className="text-xs text-muted-foreground">
+              {`+${connections.length - 3} more account${connections.length === 4 ? "" : "s"}`}
+            </p>
+          ) : null}
+        </div>
         <div className="flex flex-wrap items-center gap-1.5">
           <Button
             size="sm"
             variant="outline"
             className="h-7 shrink-0 px-2.5 text-xs"
             onClick={() => {
-              if (app) {
-                setManagedApp(app as CatalogApp);
-                setManagedConnectionId(first.id);
-              } else {
-                toast.info("Manage accounts is not available for this connector yet.");
-              }
+              setManagedApp(app as CatalogApp);
+              setManagedConnectionId(first.id);
             }}
           >
             Manage
@@ -663,13 +679,13 @@ function ConnectionsPage() {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-7 shrink-0 px-2.5 text-xs"
+                  className="h-7 shrink-0 px-2 text-xs"
                   onClick={() => {
                     setCustomInitial(undefined);
                     setCustomOpen(true);
                   }}
                 >
-                  <Plus className="size-4" />
+                  <Plus className="size-3.5" />
                   Add custom MCP
                 </Button>
               </div>
@@ -795,13 +811,14 @@ function ConnectionsPage() {
             </p>
             {user ? (
               <Button
-                className="mt-3 shrink-0"
+                size="sm"
+                className="mt-2 h-7 shrink-0 px-2 text-xs"
                 onClick={() => {
                   setCustomInitial(undefined);
                   setCustomOpen(true);
                 }}
               >
-                <Plus className="size-4" />
+                <Plus className="size-3.5" />
                 Add custom MCP
               </Button>
             ) : null}
@@ -938,7 +955,10 @@ function ConnectionsPage() {
                           <p className="truncate text-xs text-muted-foreground">
                             {connectionIdentityLine(c) ||
                               c.metadata.endpoint_url ||
-                              c.identity.label}
+                              c.identity.label ||
+                              (c.status === "pending"
+                                ? "Awaiting provider sign-in to identify the account"
+                                : "Account")}
                           </p>
                         </div>
                       </div>
