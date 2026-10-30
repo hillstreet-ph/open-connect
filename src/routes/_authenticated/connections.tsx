@@ -78,7 +78,7 @@ export const Route = createFileRoute("/_authenticated/connections")({
       {
         name: "description",
         content:
-          "Connect app accounts, apps, and MCP servers. Credentials stay server-side; AI clients and model providers are managed separately.",
+          "Connect external apps and MCP servers. Credentials stay server-side; AI clients and model providers are managed separately.",
       },
     ],
   }),
@@ -303,9 +303,9 @@ function ConnectionsPage() {
   }, [publicCatalog]);
 
   const catOptions = useMemo(() => {
-    const known = connectionCategories.filter((c) => categoryCounts.has(c));
+    const known: string[] = connectionCategories.filter((c) => categoryCounts.has(c));
     const extra = [...categoryCounts.keys()]
-      .filter((c) => !connectionCategories.includes(c as (typeof connectionCategories)[number]))
+      .filter((c) => !(connectionCategories as readonly string[]).includes(c))
       .sort((a, b) => a.localeCompare(b));
     return [...known, ...extra];
   }, [categoryCounts]);
@@ -732,8 +732,7 @@ function ConnectionsPage() {
             <>
               <div className="flex flex-wrap items-center gap-3">
                 <p className="text-sm text-muted-foreground">
-                  {customConnections.length} custom connector
-                  {customConnections.length === 1 ? "" : "s"}
+                  {customConnections.length} custom connectors
                 </p>
                 <div className="relative ml-auto w-full max-w-xs">
                   <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -820,10 +819,7 @@ function ConnectionsPage() {
               <dl className="grid gap-2 sm:grid-cols-2">
                 <div className="min-w-0">
                   <dt className="text-xs text-muted-foreground">About</dt>
-                  <dd className="text-sm">
-                    {managedApp.display_name} — connect this app to your Open-Connect workspace so
-                    agents can use it through approved permissions.
-                  </dd>
+                  <dd className="text-sm">Approved app access for your workspace agents.</dd>
                 </div>
                 <div className="min-w-0">
                   <dt className="text-xs text-muted-foreground">Category</dt>
@@ -860,25 +856,19 @@ function ConnectionsPage() {
               </p>
               <ul className="space-y-1 text-sm">
                 <li className="flex items-start gap-2">
-                  <Badge variant="outline" className="shrink-0">
-                    Interact
-                  </Badge>
+                  <Badge variant="outline" className="shrink-0">Interact</Badge>
                   <span className="text-muted-foreground">
                     Use the app on your behalf for the actions you approve.
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <Badge variant="outline" className="shrink-0">
-                    Read
-                  </Badge>
+                  <Badge variant="outline" className="shrink-0">Read</Badge>
                   <span className="text-muted-foreground">
                     Read the account data needed for each approved request.
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <Badge variant="outline" className="shrink-0">
-                    Write
-                  </Badge>
+                  <Badge variant="outline" className="shrink-0">Write</Badge>
                   <span className="text-muted-foreground">
                     Create and update data only for actions you explicitly approve.
                   </span>
