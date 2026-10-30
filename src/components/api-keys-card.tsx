@@ -112,11 +112,11 @@ export function ApiKeysCard({ modelOnly = false }: { modelOnly?: boolean }) {
             <KeyRound className="size-4" />
           </span>
           <CardTitle className="mt-3 text-base">
-            {modelOnly ? "Organization Token" : "Personal Token"}
+            {modelOnly ? "API Key" : "Personal Token"}
           </CardTitle>
           <CardDescription>
             {modelOnly
-              ? "Create a model-scoped sk-oc- Organization Token for https://open-connect.site/v1. Connect your model providers below first."
+              ? "Create a model-scoped sk-oc- API Key for https://open-connect.site/v1. Connect your model providers below first."
               : "Create oc_live_ Personal Tokens for MCP tools, resources and agent actions. Administrators can select Administrator · full control. Model keys are managed in AI Gateway."}
           </CardDescription>
         </CardHeader>
@@ -129,7 +129,7 @@ export function ApiKeysCard({ modelOnly = false }: { modelOnly?: boolean }) {
             }}
           >
             <Input
-              aria-label="Token name"
+              aria-label={modelOnly ? "API key name" : "Token name"}
               value={name}
               onChange={(event) => setName(event.target.value)}
               placeholder="Key name (e.g. local agent)"
