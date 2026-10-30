@@ -338,9 +338,7 @@ export function ConnectionAccountCard({
             <TabsList className="flex h-auto max-w-full flex-wrap justify-start overflow-x-auto">
               <TabsTrigger value="tools">Tools ({details.data?.tools.length ?? 0})</TabsTrigger>
               <TabsTrigger value="skills">Skills ({details.data?.skills.length ?? 0})</TabsTrigger>
-              <TabsTrigger value="apps">
-                Apps ({details.data?.toolkits.length ?? 0})
-              </TabsTrigger>
+              <TabsTrigger value="apps">Apps ({details.data?.toolkits.length ?? 0})</TabsTrigger>
               <TabsTrigger value="permissions">Permissions</TabsTrigger>
               <TabsTrigger value="information">Information</TabsTrigger>
             </TabsList>
