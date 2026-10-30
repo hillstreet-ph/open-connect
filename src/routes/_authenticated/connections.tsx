@@ -78,7 +78,7 @@ export const Route = createFileRoute("/_authenticated/connections")({
       {
         name: "description",
         content:
-          "Connect app accounts, Composio toolkits, and MCP servers. Credentials stay server-side; AI clients and model providers are managed separately.",
+          "Connect app accounts, apps, and MCP servers. Credentials stay server-side; AI clients and model providers are managed separately.",
       },
     ],
   }),
@@ -94,6 +94,7 @@ function ConnectionsPage() {
   const refreshCapabilities = useServerFn(refreshConnectorCapabilities);
   const [query, setQuery] = useState("");
   const [installedQuery, setInstalledQuery] = useState("");
+  const [customQuery, setCustomQuery] = useState("");
   const [category, setCategory] = useState<string>("All");
   const [tab, setTab] = useState<"discover" | "custom" | "installed">("discover");
   const queryClient = useQueryClient();
@@ -280,16 +281,34 @@ function ConnectionsPage() {
 
   const results = useMemo(() => {
     const term = query.trim().toLowerCase();
-    return publicCatalog.filter((app) => {
-      const matchesCat = category === "All" || app.category === category;
-      const matchesTerm =
-        !term ||
-        app.display_name.toLowerCase().includes(term) ||
-        app.provider.includes(term) ||
-        app.category.toLowerCase().includes(term);
-      return matchesCat && matchesTerm;
-    });
+    return publicCatalog
+      .filter((app) => category === "All" || app.category === category)
+      .filter(
+        (app) =>
+          !term ||
+          app.display_name.toLowerCase().includes(term) ||
+          app.provider.toLowerCase().includes(term) ||
+          app.category.toLowerCase().includes(term),
+      );
   }, [publicCatalog, query, category]);
+
+  // Accurate, duplicate-free category list: only categories that actually
+  // contain apps appear, each with its live app count.
+  const categoryCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const app of publicCatalog) {
+      counts.set(app.category, (counts.get(app.category) ?? 0) + 1);
+    }
+    return counts;
+  }, [publicCatalog]);
+
+  const catOptions = useMemo(() => {
+    const known = connectionCategories.filter((c) => categoryCounts.has(c));
+    const extra = [...categoryCounts.keys()]
+      .filter((c) => !connectionCategories.includes(c as (typeof connectionCategories)[number]))
+      .sort((a, b) => a.localeCompare(b));
+    return [...known, ...extra];
+  }, [categoryCounts]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, typeof results>();
@@ -298,14 +317,10 @@ function ConnectionsPage() {
       list.push(app);
       map.set(app.category, list);
     }
-    const order = [
-      "All",
-      ...new Set([...connectionCategories, ...results.map((app) => app.category)]),
-    ];
-    return order
-      .filter((c) => c !== "All" && map.has(c))
+    return catOptions
+      .filter((c) => map.has(c))
       .map((c) => ({ category: c, apps: map.get(c)! }));
-  }, [results]);
+  }, [results, catOptions]);
 
   const connectionsByProvider = new Map<string, NonNullable<typeof mine.data>[number]>();
   for (const item of mine.data ?? []) {
@@ -314,11 +329,6 @@ function ConnectionsPage() {
       connectionsByProvider.set(item.provider, item);
     }
   }
-  const catOptions = [
-    "All",
-    ...new Set([...connectionCategories, ...(catalog.data ?? []).map((app) => app.category)]),
-  ];
-
   const customCatalog = useMemo(
     () => (catalog.data ?? []).filter((app) => customProviders.has(app.provider)),
     [catalog.data],
@@ -349,6 +359,17 @@ function ConnectionsPage() {
     () => (mine.data ?? []).filter((c) => customProviders.has(c.provider)),
     [mine.data],
   );
+  const filteredCustomConnections = useMemo(() => {
+    const term = customQuery.trim().toLowerCase();
+    if (!term) return customConnections;
+    return customConnections.filter(
+      (c) =>
+        c.display_name.toLowerCase().includes(term) ||
+        c.provider.toLowerCase().includes(term) ||
+        (c.identity.label || "").toLowerCase().includes(term) ||
+        (c.metadata.description || "").toLowerCase().includes(term),
+    );
+  }, [customConnections, customQuery]);
 
   function statusBadgeClass(status: string) {
     if (status === "connected") return "border-emerald-500/40 bg-emerald-500/10 text-emerald-400";
@@ -491,8 +512,8 @@ function ConnectionsPage() {
       </Badge>
       <h1 className="text-2xl font-semibold sm:text-4xl">Connectors</h1>
       <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-        Connect external app accounts, Composio toolkits, and MCP servers. Credentials stay
-        server-side.
+        Connect external apps such as Google, Slack, and ChatGPT-style plugins, plus custom MCP
+        servers. Credentials stay server-side.
       </p>
 
       <div className="mt-6 flex flex-wrap items-center gap-2">
@@ -615,22 +636,42 @@ function ConnectionsPage() {
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Search public connectors…"
                 className="pl-9"
+                aria-label="Search public connectors"
               />
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Button
+            {(query.trim() || category !== "All") && (
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-sm text-muted-foreground">
+                  {results.length} connector{results.length === 1 ? "" : "s"} found
+                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="shrink-0"
+                  onClick={() => {
+                    setCategory("All");
+                    setQuery("");
+                  }}
+                >
+                  Clear filters
+                </Button>
+              </div>
+            )}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                key="All"
+                aria-pressed={category === "All"}
                 type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setCategory("All");
-                  setQuery("");
-                }}
+                onClick={() => setCategory("All")}
+                className={
+                  category === "All"
+                    ? "rounded-full border border-primary/50 bg-primary/15 px-3 py-1.5 text-xs font-medium text-primary"
+                    : "rounded-full border border-border/70 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+                }
               >
-                Show all connectors
-              </Button>
-            </div>
-            <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
+                All ({publicCatalog.length})
+              </button>
               {catOptions.map((c) => (
                 <button
                   key={c}
@@ -639,11 +680,11 @@ function ConnectionsPage() {
                   onClick={() => setCategory(c)}
                   className={
                     category === c
-                      ? "shrink-0 rounded-full border border-primary/50 bg-primary/15 px-3 py-1.5 text-xs text-primary"
-                      : "shrink-0 rounded-full border border-border/70 px-3 py-1.5 text-xs text-muted-foreground"
+                      ? "rounded-full border border-primary/50 bg-primary/15 px-3 py-1.5 text-xs font-medium text-primary"
+                      : "rounded-full border border-border/70 px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
                   }
                 >
-                  {c}
+                  {c} ({categoryCounts.get(c) ?? 0})
                 </button>
               ))}
             </div>
@@ -671,8 +712,8 @@ function ConnectionsPage() {
           <div>
             <h2 className="text-lg font-semibold">Custom connectors</h2>
             <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-              Private MCP servers and API endpoints for your account only. Public Composio
-              connectors live in Discover.
+              Private MCP servers and API endpoints for your account only. Public apps live in
+              Discover.
             </p>
             {user ? (
               <Button
@@ -688,9 +729,32 @@ function ConnectionsPage() {
             ) : null}
           </div>
           {customConnections.length > 0 ? (
-            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-              {customConnections.map((connection) => renderConnectionCard(connection))}
-            </div>
+            <>
+              <div className="flex flex-wrap items-center gap-3">
+                <p className="text-sm text-muted-foreground">
+                  {customConnections.length} custom connector
+                  {customConnections.length === 1 ? "" : "s"}
+                </p>
+                <div className="relative ml-auto w-full max-w-xs">
+                  <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={customQuery}
+                    onChange={(event) => setCustomQuery(event.target.value)}
+                    placeholder="Search custom…"
+                    className="pl-9"
+                    aria-label="Search custom connectors"
+                  />
+                </div>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                {filteredCustomConnections.map((connection) => renderConnectionCard(connection))}
+              </div>
+              {filteredCustomConnections.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No custom connectors match this search.
+                </p>
+              ) : null}
+            </>
           ) : null}
           <div>
             <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -746,6 +810,80 @@ function ConnectionsPage() {
                 OAuth permissions are approved on the provider page. API keys and tokens belong in
                 the secure form, never in chat.
               </p>
+            </div>
+          )}
+          {managedApp && (
+            <div className="rounded-lg border p-4 space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Information
+              </p>
+              <dl className="grid gap-2 sm:grid-cols-2">
+                <div className="min-w-0">
+                  <dt className="text-xs text-muted-foreground">About</dt>
+                  <dd className="text-sm">
+                    {managedApp.display_name} — connect this app to your Open-Connect workspace so
+                    agents can use it through approved permissions.
+                  </dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="text-xs text-muted-foreground">Category</dt>
+                  <dd className="text-sm">{managedApp.category || "Productivity"}</dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="text-xs text-muted-foreground">Developer</dt>
+                  <dd className="text-sm">Kairo Casino</dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="text-xs text-muted-foreground">Version</dt>
+                  <dd className="text-sm">0.8.0</dd>
+                </div>
+                <div className="min-w-0 sm:col-span-2">
+                  <dt className="text-xs text-muted-foreground">Website</dt>
+                  <dd className="truncate text-sm">
+                    <a
+                      className="text-primary underline-offset-4 hover:underline"
+                      href="https://open-connect.site"
+                      target="_blank"
+                      rel="noreferrer noopener"
+                    >
+                      https://open-connect.site
+                    </a>
+                  </dd>
+                </div>
+              </dl>
+            </div>
+          )}
+          {managedApp && (
+            <div className="rounded-lg border p-4 space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Permissions
+              </p>
+              <ul className="space-y-1 text-sm">
+                <li className="flex items-start gap-2">
+                  <Badge variant="outline" className="shrink-0">
+                    Interact
+                  </Badge>
+                  <span className="text-muted-foreground">
+                    Use the app on your behalf for the actions you approve.
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <Badge variant="outline" className="shrink-0">
+                    Read
+                  </Badge>
+                  <span className="text-muted-foreground">
+                    Read the account data needed for each approved request.
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <Badge variant="outline" className="shrink-0">
+                    Write
+                  </Badge>
+                  <span className="text-muted-foreground">
+                    Create and update data only for actions you explicitly approve.
+                  </span>
+                </li>
+              </ul>
             </div>
           )}
           <div className="space-y-3">
