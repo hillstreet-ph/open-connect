@@ -4,6 +4,9 @@ on:
   pull_request:
     branches: [main, development]
 
+permissions:
+  contents: write
+
 jobs:
   lint-diag:
     name: Lint diagnostics
@@ -18,7 +21,7 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Lint
         run: bunx eslint . --format json > eslint.json || true
-      - name: Post lint errors only
+      - name: Commit errors to lint-output branch
         uses: actions/github-script@v9
         with:
           script: |
@@ -36,9 +39,38 @@ jobs:
             } catch (e) {
               out = 'Could not parse eslint output: ' + e.message;
             }
-            await github.rest.issues.createComment({
+            if (!out) out = 'NONE';
+            const blob = await github.rest.git.createBlob({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: 560,
-              body: 'ESLint ERRORS for commit ' + context.sha.slice(0, 7) + ':\n' + (out || 'NONE'),
+              content: 'Errors for commit ' + context.sha + '\n' + out,
+              encoding: 'utf-8',
             });
+            const tree = await github.rest.git.createTree({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tree: [{ path: 'eslint-errors.txt', mode: '100644', type: 'blob', sha: blob.data.sha }],
+            });
+            const commit = await github.rest.git.createCommit({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              message: 'lint diagnostics for ' + context.sha.slice(0, 7),
+              tree: tree.data.sha,
+              parents: [],
+            });
+            try {
+              await github.rest.git.createRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: 'refs/heads/lint-output',
+                sha: commit.data.sha,
+              });
+            } catch (e) {
+              await github.rest.git.updateRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: 'heads/lint-output',
+                sha: commit.data.sha,
+                force: true,
+              });
+            }
