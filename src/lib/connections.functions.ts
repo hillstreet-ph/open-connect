@@ -870,6 +870,33 @@ export const disconnectApp = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const renameAppConnection = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { id: string; display_name?: string; account_label?: string }) => input)
+  .handler(async ({ data, context }) => {
+    const displayName = (data.display_name ?? "").trim().slice(0, 120);
+    const accountLabel = (data.account_label ?? "").trim().slice(0, 160);
+    const { data: existing, error: readError } = await context.supabase
+      .from("app_connections")
+      .select("id, metadata")
+      .eq("user_id", context.userId)
+      .eq("id", data.id)
+      .maybeSingle();
+    if (readError) throw new Error(readError.message);
+    if (!existing) throw new Error("Connection not found.");
+    const metadata = { ...((existing.metadata as Record<string, unknown> | null) ?? {}) };
+    if (accountLabel) metadata["account_label"] = accountLabel;
+    const update: Record<string, unknown> = { metadata };
+    if (displayName) update["display_name"] = displayName;
+    const { error } = await context.supabase
+      .from("app_connections")
+      .update(update)
+      .eq("user_id", context.userId)
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const testAiProviderCredential = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: { provider: string; api_key: string }) => input)

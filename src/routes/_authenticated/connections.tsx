@@ -63,6 +63,12 @@ function connectionStatusLabel(status: string) {
   return status.replaceAll("_", " ");
 }
 
+function connectionIdentityLine(connection: {
+  identity: { label: string; login: string; name: string; email: string };
+}) {
+  const id = connection.identity;
+  return id.email || id.login || id.name || id.label || "";
+}
 const customProviders = new Set(["custom_mcp", "custom_api"]);
 
 export const Route = createFileRoute("/_authenticated/connections")({
@@ -87,6 +93,7 @@ function ConnectionsPage() {
   const discoveredLogin = useRef<string | null>(null);
   const refreshCapabilities = useServerFn(refreshConnectorCapabilities);
   const [query, setQuery] = useState("");
+  const [installedQuery, setInstalledQuery] = useState("");
   const [category, setCategory] = useState<string>("All");
   const [tab, setTab] = useState<"discover" | "custom" | "installed">("discover");
   const queryClient = useQueryClient();
@@ -130,7 +137,7 @@ function ConnectionsPage() {
     queryKey: ["app-connections", user?.id],
     queryFn: () => listFn({}),
     enabled: Boolean(user),
-    refetchInterval: postOAuth ? 3000 : false,
+    refetchInterval: postOAuth ? 3000 : 30_000,
   });
 
   // Managed OAuth returns to /connections?connected=<provider>. Composio may
@@ -327,6 +334,16 @@ function ConnectionsPage() {
     const list = (mine.data ?? []).filter((c) => !customProviders.has(c.provider));
     return [...list].sort((a, b) => rankStatus(a.status) - rankStatus(b.status));
   }, [mine.data]);
+  const filteredInstalledConnections = useMemo(() => {
+    const term = installedQuery.trim().toLowerCase();
+    if (!term) return installedConnections;
+    return installedConnections.filter(
+      (c) =>
+        c.display_name.toLowerCase().includes(term) ||
+        c.provider.toLowerCase().includes(term) ||
+        connectionIdentityLine(c).toLowerCase().includes(term),
+    );
+  }, [installedConnections, installedQuery]);
 
   const customConnections = useMemo(
     () => (mine.data ?? []).filter((c) => customProviders.has(c.provider)),
@@ -347,7 +364,7 @@ function ConnectionsPage() {
   function renderConnectionCard(connection: NonNullable<typeof mine.data>[number]) {
     const app = (catalog.data ?? []).find((item) => item.provider === connection.provider);
     return (
-      <Card key={connection.id} className="flex flex-col gap-3 p-4">
+      <Card key={connection.id} className="flex flex-col gap-2 p-3">
         <div className="flex min-w-0 items-center gap-3">
           <BrandLogo
             provider={connection.provider}
@@ -357,8 +374,14 @@ function ConnectionsPage() {
           <div className="min-w-0">
             <p className="font-semibold leading-snug">{connection.display_name}</p>
             <p className="text-xs text-muted-foreground">{connection.provider}</p>
-            {connection.identity.label ? (
-              <p className="truncate text-xs text-muted-foreground">{connection.identity.label}</p>
+            {connection.status === "connected" && connectionIdentityLine(connection) ? (
+              <p className="truncate text-xs text-emerald-500">
+                Connected as {connectionIdentityLine(connection)}
+              </p>
+            ) : connection.identity.label ? (
+              <p className="truncate text-xs text-muted-foreground">
+                {connection.identity.label}
+              </p>
             ) : null}
           </div>
         </div>
@@ -418,7 +441,7 @@ function ConnectionsPage() {
       (c) => c.provider === app.provider && c.status === "pending",
     ).length;
     return (
-      <Card key={app.provider} className="flex flex-col gap-3 p-4">
+      <Card key={app.provider} className="flex flex-col gap-2 p-3">
         <div className="flex min-w-0 items-center gap-3">
           <BrandLogo provider={app.provider} name={app.display_name} logoUrl={app.logo} />
           <div className="min-w-0">
@@ -556,12 +579,29 @@ function ConnectionsPage() {
             </Card>
           ) : (
             <>
-              <p className="text-sm text-muted-foreground">
-                {connectedTotal} connected · {pendingTotal} pending
-              </p>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                {installedConnections.map((connection) => renderConnectionCard(connection))}
+              <div className="flex flex-wrap items-center gap-3">
+                <p className="text-sm text-muted-foreground">
+                  {connectedTotal} connected · {pendingTotal} pending
+                </p>
+                <div className="relative ml-auto w-full max-w-xs">
+                  <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={installedQuery}
+                    onChange={(event) => setInstalledQuery(event.target.value)}
+                    placeholder="Search installed…"
+                    className="pl-9"
+                    aria-label="Search installed connectors"
+                  />
+                </div>
               </div>
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                {filteredInstalledConnections.map((item) => renderConnectionCard(item))}
+              </div>
+              {filteredInstalledConnections.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No installed connectors match this search.
+                </p>
+              ) : null}
             </>
           )}
         </div>
@@ -615,7 +655,7 @@ function ConnectionsPage() {
               <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {group.category}
               </h2>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                 {group.apps.map((app) => renderCatalogCard(app))}
               </div>
             </div>
@@ -650,7 +690,7 @@ function ConnectionsPage() {
             ) : null}
           </div>
           {customConnections.length > 0 ? (
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
               {customConnections.map((connection) => renderConnectionCard(connection))}
             </div>
           ) : null}
@@ -658,7 +698,7 @@ function ConnectionsPage() {
             <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Add a custom connector
             </h3>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
               {customCatalog.map((app) => renderCatalogCard(app))}
             </div>
           </div>
