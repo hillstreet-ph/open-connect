@@ -156,9 +156,7 @@ function ConnectionsPage() {
     }
     if (!hasPending || Date.now() > postOAuth.until) {
       setPostOAuth(null);
-      toast.info(
-        "Authorization is still pending on the provider. Refresh status to check again.",
-      );
+      toast.info("Authorization is still pending on the provider. Refresh status to check again.");
     }
   }, [postOAuth, mine.data]);
 
