@@ -45,7 +45,11 @@ type ConnectorPermissions = {
   apps: PermissionMode;
 };
 
-const defaultPermissions: ConnectorPermissions = { tools: "allow", skills: "allow", apps: "allow" };
+const defaultPermissions: ConnectorPermissions = {
+  tools: "allow",
+  skills: "allow",
+  apps: "allow",
+};
 
 export function ConnectionAccountCard({
   account,
