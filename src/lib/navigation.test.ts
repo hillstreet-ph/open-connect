@@ -548,8 +548,19 @@ test("Organization panel owns people and roles in one place", () => {
   assert.ok(panel.includes("assignRole"));
   // Legacy platform values (owner/publisher) collapse onto assignable roles for the select.
   assert.ok(panel.includes("canonicalAppRole"));
+  // Pending invitations can be cancelled with confirmation.
+  assert.ok(panel.includes("cancelOrganizationInvitation"));
+  assert.ok(panel.includes("Cancel invitation"));
   // No second "assign by email" form duplicating the invite flow.
   assert.ok(!panel.includes("Assign role"));
+});
+
+test("cancelling an invitation revokes only pending rows for organization managers", () => {
+  const fn = readFileSync(path.resolve(process.cwd(), "src/lib/orgs.functions.ts"), "utf8");
+  assert.ok(fn.includes("export const cancelOrganizationInvitation"));
+  assert.ok(fn.includes('status: "revoked"'));
+  assert.ok(fn.includes("requireOrganizationManager"));
+  assert.ok(fn.includes('if (invitation.status !== "pending")'));
 });
 
 test("Access reference has one canonical rendering of each role fact", () => {
