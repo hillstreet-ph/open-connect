@@ -500,7 +500,7 @@ test("Approval surfaces are removed from the sidebar, navigation, and shell", ()
   }
 });
 
-test("System administration keeps one entry point with organization, roles, and access tabs", () => {
+test("System administration keeps one entry point with organization and access tabs", () => {
   const sourceRoot = path.resolve(process.cwd(), "src");
   const userMenu = readFileSync(path.join(sourceRoot, "components/user-menu.tsx"), "utf8");
   const settings = readFileSync(
@@ -517,13 +517,16 @@ test("System administration keeps one entry point with organization, roles, and 
 
   assert.ok(admin.includes('value="organization"'));
   assert.ok(admin.includes('value="access"'));
-  assert.ok(admin.includes('value="roles"'));
   assert.ok(admin.includes("OrganizationPanel"));
   assert.ok(admin.includes("AccessReferencePanel"));
-  assert.ok(admin.includes("PlatformRolesPanel"));
+  // Platform roles are managed inside the Organization people list, not a separate tab.
+  assert.ok(!admin.includes('value="roles"'));
+  assert.ok(!admin.includes("PlatformRolesPanel"));
+  assert.ok(!admin.includes("platform-roles-panel"));
 
+  // Both legacy URLs land on the merged organization surface.
   assert.ok(orgs.includes('to: "/admin"') && orgs.includes('hash: "organization"'));
-  assert.ok(roles.includes('to: "/admin"') && roles.includes('hash: "access"'));
+  assert.ok(roles.includes('to: "/admin"') && roles.includes('hash: "organization"'));
 
   // Settings must not repeat the administration links; the account menu owns that entry.
   assert.ok(!settings.includes('to="/orgs"'));
@@ -531,6 +534,22 @@ test("System administration keeps one entry point with organization, roles, and 
   assert.ok(!settings.includes('to="/admin"'));
   assert.ok(!settings.includes('title="Access reference"'));
   assert.ok(!settings.includes('title="User roles"'));
+});
+
+test("Organization panel owns people and roles in one place", () => {
+  const panel = readFileSync(
+    path.resolve(process.cwd(), "src/components/organization-panel.tsx"),
+    "utf8",
+  );
+  // One people list carries the organization role, platform role, and group controls.
+  assert.ok(panel.includes("Organization role"));
+  assert.ok(panel.includes("Platform role"));
+  assert.ok(panel.includes("roleLabel"));
+  assert.ok(panel.includes("assignRole"));
+  // Legacy platform values (owner/publisher) collapse onto assignable roles for the select.
+  assert.ok(panel.includes("canonicalAppRole"));
+  // No second "assign by email" form duplicating the invite flow.
+  assert.ok(!panel.includes("Assign role"));
 });
 
 test("Access reference has one canonical rendering of each role fact", () => {
@@ -564,10 +583,13 @@ test("Access reference has one canonical rendering of each role fact", () => {
 });
 
 test("System administration tabs fall back safely for unknown values", () => {
-  for (const tab of ["roles", "organization", "access"]) {
+  for (const tab of ["organization", "access"]) {
     assert.equal(adminTab(tab), tab);
     assert.equal(adminTab("#" + tab), tab);
   }
+  // Legacy "#roles" deep links fold into the merged organization surface.
+  assert.equal(adminTab("roles"), "organization");
+  assert.equal(adminTab("#roles"), "organization");
   for (const value of ["", "missing", "#organization/other", "__proto__"]) {
     assert.equal(adminTab(value), "organization");
   }
