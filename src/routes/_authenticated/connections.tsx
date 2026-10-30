@@ -63,13 +63,13 @@ function connectionStatusLabel(status: string) {
   return status.replaceAll("_", " ");
 }
 
+function connectionIdentityLine(connection: {
+  identity: { label: string; login: string; name: string; email: string };
+}) {
+  const id = connection.identity;
+  return id.email || id.login || id.name || id.label || "";
+}
 const customProviders = new Set(["custom_mcp", "custom_api"]);
-
-type PermissionMode = "allow" | "ask" | "deny";
-
-type ConnectorPermissions = { tools: PermissionMode; skills: PermissionMode };
-
-const defaultPermissions: ConnectorPermissions = { tools: "allow", skills: "allow" };
 
 export const Route = createFileRoute("/_authenticated/connections")({
   head: () => ({
@@ -93,17 +93,9 @@ function ConnectionsPage() {
   const discoveredLogin = useRef<string | null>(null);
   const refreshCapabilities = useServerFn(refreshConnectorCapabilities);
   const [query, setQuery] = useState("");
+  const [installedQuery, setInstalledQuery] = useState("");
   const [category, setCategory] = useState<string>("All");
   const [tab, setTab] = useState<"discover" | "custom" | "installed">("discover");
-  const [permissions, setPermissions] = useState<Record<string, ConnectorPermissions>>(() => {
-    if (typeof window === "undefined") return {};
-    try {
-      const stored = window.localStorage.getItem("connector-permissions");
-      return stored ? (JSON.parse(stored) as Record<string, ConnectorPermissions>) : {};
-    } catch {
-      return {};
-    }
-  });
   const queryClient = useQueryClient();
   const catalogFn = useServerFn(listConnectionCatalog);
   const listFn = useServerFn(listAppConnections);
@@ -145,7 +137,7 @@ function ConnectionsPage() {
     queryKey: ["app-connections", user?.id],
     queryFn: () => listFn({}),
     enabled: Boolean(user),
-    refetchInterval: postOAuth ? 3000 : false,
+    refetchInterval: postOAuth ? 3000 : 30_000,
   });
 
   // Managed OAuth returns to /connections?connected=<provider>. Composio may
@@ -342,6 +334,16 @@ function ConnectionsPage() {
     const list = (mine.data ?? []).filter((c) => !customProviders.has(c.provider));
     return [...list].sort((a, b) => rankStatus(a.status) - rankStatus(b.status));
   }, [mine.data]);
+  const filteredInstalledConnections = useMemo(() => {
+    const term = installedQuery.trim().toLowerCase();
+    if (!term) return installedConnections;
+    return installedConnections.filter(
+      (c) =>
+        c.display_name.toLowerCase().includes(term) ||
+        c.provider.toLowerCase().includes(term) ||
+        connectionIdentityLine(c).toLowerCase().includes(term),
+    );
+  }, [installedConnections, installedQuery]);
 
   const customConnections = useMemo(
     () => (mine.data ?? []).filter((c) => customProviders.has(c.provider)),
@@ -359,21 +361,10 @@ function ConnectionsPage() {
   const connectedTotal = installedConnections.filter((c) => c.status === "connected").length;
   const pendingTotal = installedConnections.filter((c) => c.status === "pending").length;
 
-  function updatePermission(id: string, scope: "tools" | "skills", value: PermissionMode) {
-    const current = permissions[id] ?? defaultPermissions;
-    const next = { ...permissions, [id]: { ...current, [scope]: value } };
-    setPermissions(next);
-    try {
-      window.localStorage.setItem("connector-permissions", JSON.stringify(next));
-    } catch {
-      // Storage may be unavailable; the in-memory preference still applies.
-    }
-  }
-
   function renderConnectionCard(connection: NonNullable<typeof mine.data>[number]) {
     const app = (catalog.data ?? []).find((item) => item.provider === connection.provider);
     return (
-      <Card key={connection.id} className="flex flex-col gap-4 p-5">
+      <Card key={connection.id} className="flex flex-col gap-2 p-3">
         <div className="flex min-w-0 items-center gap-3">
           <BrandLogo
             provider={connection.provider}
@@ -383,7 +374,11 @@ function ConnectionsPage() {
           <div className="min-w-0">
             <p className="font-semibold leading-snug">{connection.display_name}</p>
             <p className="text-xs text-muted-foreground">{connection.provider}</p>
-            {connection.identity.label ? (
+            {connection.status === "connected" && connectionIdentityLine(connection) ? (
+              <p className="truncate text-xs text-emerald-500">
+                Connected as {connectionIdentityLine(connection)}
+              </p>
+            ) : connection.identity.label ? (
               <p className="truncate text-xs text-muted-foreground">{connection.identity.label}</p>
             ) : null}
           </div>
@@ -396,36 +391,6 @@ function ConnectionsPage() {
             Check the endpoint URL and credential, then reconnect to retry validation.
           </p>
         ) : null}
-        <div className="space-y-2 rounded-lg border border-border/70 p-3">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Permissions
-          </p>
-          {(["tools", "skills"] as const).map((scope) => {
-            const current = permissions[connection.id] ?? defaultPermissions;
-            return (
-              <label
-                key={scope}
-                className="flex items-center justify-between gap-3 text-sm capitalize"
-              >
-                {scope}
-                <select
-                  value={current[scope]}
-                  onChange={(event) =>
-                    updatePermission(connection.id, scope, event.target.value as PermissionMode)
-                  }
-                  className="h-8 rounded-md border border-input bg-background px-2 text-xs"
-                >
-                  <option value="allow">Always allow</option>
-                  <option value="ask">Ask every time</option>
-                  <option value="deny">Don&apos;t allow</option>
-                </select>
-              </label>
-            );
-          })}
-          <p className="text-xs text-muted-foreground">
-            Applies when agents use this connector. Default is Always allow.
-          </p>
-        </div>
         <div className="flex flex-wrap items-center gap-2">
           {connection.status !== "connected" && customProviders.has(connection.provider) ? (
             <Button
@@ -474,7 +439,7 @@ function ConnectionsPage() {
       (c) => c.provider === app.provider && c.status === "pending",
     ).length;
     return (
-      <Card key={app.provider} className="flex flex-col gap-4 p-5">
+      <Card key={app.provider} className="flex flex-col gap-2 p-3">
         <div className="flex min-w-0 items-center gap-3">
           <BrandLogo provider={app.provider} name={app.display_name} logoUrl={app.logo} />
           <div className="min-w-0">
@@ -612,12 +577,29 @@ function ConnectionsPage() {
             </Card>
           ) : (
             <>
-              <p className="text-sm text-muted-foreground">
-                {connectedTotal} connected · {pendingTotal} pending
-              </p>
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                {installedConnections.map((connection) => renderConnectionCard(connection))}
+              <div className="flex flex-wrap items-center gap-3">
+                <p className="text-sm text-muted-foreground">
+                  {connectedTotal} connected · {pendingTotal} pending
+                </p>
+                <div className="relative ml-auto w-full max-w-xs">
+                  <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={installedQuery}
+                    onChange={(event) => setInstalledQuery(event.target.value)}
+                    placeholder="Search installed…"
+                    className="pl-9"
+                    aria-label="Search installed connectors"
+                  />
+                </div>
               </div>
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                {filteredInstalledConnections.map((item) => renderConnectionCard(item))}
+              </div>
+              {filteredInstalledConnections.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No installed connectors match this search.
+                </p>
+              ) : null}
             </>
           )}
         </div>
@@ -671,7 +653,7 @@ function ConnectionsPage() {
               <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {group.category}
               </h2>
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                 {group.apps.map((app) => renderCatalogCard(app))}
               </div>
             </div>
@@ -706,7 +688,7 @@ function ConnectionsPage() {
             ) : null}
           </div>
           {customConnections.length > 0 ? (
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
               {customConnections.map((connection) => renderConnectionCard(connection))}
             </div>
           ) : null}
@@ -714,7 +696,7 @@ function ConnectionsPage() {
             <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Add a custom connector
             </h3>
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
               {customCatalog.map((app) => renderCatalogCard(app))}
             </div>
           </div>
@@ -1039,6 +1021,55 @@ function ConnectionsPage() {
                   />
                 </div>
               )}
+            {selectedApp?.provider === "custom_api" && (
+              <div className="space-y-2">
+                <Label>Common setups</Label>
+                <p className="text-xs text-muted-foreground">
+                  Frequent header conventions for API connectors. Review the fields after applying a
+                  preset.
+                </p>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={() => {
+                      setAuthType("api_key");
+                      setAuthHeader("X-API-Key");
+                      setApiKey("");
+                    }}
+                  >
+                    X-API-Key
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={() => {
+                      setAuthType("api_key");
+                      setAuthHeader("Authorization");
+                      setApiKey("");
+                    }}
+                  >
+                    Authorization
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={() => {
+                      setAuthType("none");
+                      setApiKey("");
+                    }}
+                  >
+                    Public · no auth
+                  </Button>
+                </div>
+              </div>
+            )}
             {selectedApp?.provider === "custom_api" && (
               <p className="rounded-lg border p-3 text-sm text-muted-foreground">
                 Saves a private API URL and credential profile. This does not discover tools or
