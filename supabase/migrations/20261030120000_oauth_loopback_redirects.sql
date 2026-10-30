@@ -19,6 +19,7 @@ returns text language sql immutable set search_path = pg_temp as $function$
 $function$;
 
 revoke all on function public.oc_redirect_uri_key(text) from public;
+grant execute on function public.oc_redirect_uri_key(text) to authenticated;
 
 create or replace function public.oc_register_oauth_client(p_name text, p_redirect_uris text[])
  returns jsonb
