@@ -483,6 +483,7 @@ function ConnectionsPage() {
 
   function renderGroupedCard(connections: AppConnection[]) {
     const first = connections[0];
+    if (!first) return null;
     const app = (catalog.data ?? []).find((item) => item.provider === first.provider);
     const connectedCount = connections.filter((c) => c.status === "connected").length;
     const pendingCount = connections.filter((c) => c.status === "pending").length;
