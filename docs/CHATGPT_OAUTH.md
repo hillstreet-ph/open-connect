@@ -34,6 +34,12 @@ registration and PKCE S256. Compatible clients may use a dedicated bearer API ke
 Do not paste a key into a URL, prompt, skill, or shared configuration. Keep model access at
 `https://open-connect.site/v1` separate from the MCP tools endpoint.
 
+Dynamic registration accepts `https` callbacks for web clients and `http` loopback callbacks
+(`127.0.0.1`, `localhost`, `::1`) for native/desktop clients such as Qoder, Cursor and Claude
+Code, per RFC 8252 §7.3. Loopback callbacks match by host and path, so the client may use any
+local port it chooses at runtime; the port is intentionally ignored. Public clients register
+with `token_endpoint_auth_method` `none` (or omit it); no client secret is issued.
+
 ChatGPT, Manus, Claude, Grok, Mistral, and Hermes each control their own MCP installation,
 OAuth support, tool refresh, and action approvals. Use the host's supported MCP settings or
 an authorized MCP bridge; an endpoint URL does not enable MCP in a host that lacks support.
