@@ -457,6 +457,51 @@ export const listAppConnections = createServerFn({ method: "GET" })
         }),
       );
     }
+    // Professional account identity: resolve the connected provider account
+    // (which Google, GitHub, or Gmail account) once through the provider's
+    // read-only profile endpoint and store it so account cards stay labeled.
+    const managedConnected = connections.filter(
+      (connection) =>
+        connection.status === "connected" &&
+        connection.credential_reference?.startsWith("composio://connected-account/"),
+    );
+    if (managedConnected.length) {
+      const { getManagedAccountIdentity } = await import("@/lib/managed-connectors.server");
+      await Promise.all(
+        managedConnected.map(async (connection) => {
+          const current = connectionIdentity(connection.metadata);
+          if (current.email || current.login || current.name) return;
+          const existingMetadata =
+            (connection.metadata as Record<string, unknown> | null) ?? {};
+          const attemptedAt = Date.parse(String(existingMetadata["identity_checked_at"] ?? ""));
+          if (Number.isFinite(attemptedAt) && Date.now() - attemptedAt < 24 * 3600_000) return;
+          const accountId = connection.credential_reference!.split("/").pop()!;
+          const metadata = { ...existingMetadata };
+          try {
+            const identity = await getManagedAccountIdentity(
+              connection.provider,
+              accountId,
+              context.userId,
+            );
+            if (identity && (identity.email || identity.login || identity.name)) {
+              metadata["account_login"] = identity.login;
+              metadata["account_name"] = identity.name;
+              metadata["account_email"] = identity.email;
+            } else {
+              metadata["identity_checked_at"] = new Date().toISOString();
+            }
+          } catch {
+            metadata["identity_checked_at"] = new Date().toISOString();
+          }
+          const { error: updateError } = await context.supabase
+            .from("app_connections")
+            .update({ metadata })
+            .eq("id", connection.id);
+          if (updateError) return;
+          connection.metadata = metadata as typeof connection.metadata;
+        }),
+      );
+    }
     return connections.map(({ credential_reference, metadata, ...connection }) => {
       const isModelGateway = AI_GATEWAY_PROVIDERS.some(
         (provider) => provider.id === connection.provider,
