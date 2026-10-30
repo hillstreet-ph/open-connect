@@ -1,0 +1,42 @@
+name: Lint debug
+
+on:
+  push:
+    branches: [feat/connectors-apps-information]
+  workflow_dispatch:
+
+jobs:
+  lint-report:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install
+        run: bun install --frozen-lockfile
+      - name: Lint
+        run: |
+          set +e
+          bun run lint > /tmp/lint.txt 2>&1
+          echo "lint exit code: $?" >> /tmp/lint.txt
+          echo "sha: $GITHUB_SHA" >> /tmp/lint.txt
+          exit 0
+      - name: Post lint output
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            let out = 'no output';
+            try { out = fs.readFileSync('/tmp/lint.txt', 'utf8'); } catch (e) {}
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: 560,
+              body: 'Lint output for ' + context.sha + ':
+```
+' + out.slice(-8000) + '
+```',
+            });
