@@ -409,9 +409,7 @@ function ConnectionsPage() {
               {`${app.category} · ${connectionLogin(app).label}`}
             </p>
             {app.auth_methods?.length ? (
-              <p className="text-xs text-muted-foreground">
-                Auth: {app.auth_methods.join(" · ")}
-              </p>
+              <p className="text-xs text-muted-foreground">Auth: {app.auth_methods.join(" · ")}</p>
             ) : null}
           </div>
         </div>
