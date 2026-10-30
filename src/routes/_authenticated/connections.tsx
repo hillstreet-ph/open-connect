@@ -63,6 +63,8 @@ function connectionStatusLabel(status: string) {
   return status.replaceAll("_", " ");
 }
 
+const customProviders = new Set(["custom_mcp", "custom_api"]);
+
 export const Route = createFileRoute("/_authenticated/connections")({
   head: () => ({
     meta: [
@@ -86,6 +88,7 @@ function ConnectionsPage() {
   const refreshCapabilities = useServerFn(refreshConnectorCapabilities);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string>("All");
+  const [tab, setTab] = useState<"installed" | "discover" | "personal">("installed");
   const queryClient = useQueryClient();
   const catalogFn = useServerFn(listConnectionCatalog);
   const listFn = useServerFn(listAppConnections);
@@ -263,9 +266,14 @@ function ConnectionsPage() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Connection failed"),
   });
 
+  const publicCatalog = useMemo(
+    () => (catalog.data ?? []).filter((app) => !customProviders.has(app.provider)),
+    [catalog.data],
+  );
+
   const results = useMemo(() => {
     const term = query.trim().toLowerCase();
-    return (catalog.data ?? []).filter((app) => {
+    return publicCatalog.filter((app) => {
       const matchesCat = category === "All" || app.category === category;
       const matchesTerm =
         !term ||
@@ -274,7 +282,7 @@ function ConnectionsPage() {
         app.category.toLowerCase().includes(term);
       return matchesCat && matchesTerm;
     });
-  }, [catalog.data, query, category]);
+  }, [publicCatalog, query, category]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, typeof results>();
@@ -304,6 +312,139 @@ function ConnectionsPage() {
     ...new Set([...connectionCategories, ...(catalog.data ?? []).map((app) => app.category)]),
   ];
 
+  const personalCatalog = useMemo(
+    () => (catalog.data ?? []).filter((app) => customProviders.has(app.provider)),
+    [catalog.data],
+  );
+
+  function rankStatus(status: string) {
+    if (status === "connected") return 0;
+    if (status === "pending") return 1;
+    return 2;
+  }
+
+  const installedConnections = useMemo(() => {
+    const list = (mine.data ?? []).filter((c) => !customProviders.has(c.provider));
+    return [...list].sort((a, b) => rankStatus(a.status) - rankStatus(b.status));
+  }, [mine.data]);
+
+  const personalConnections = useMemo(
+    () => (mine.data ?? []).filter((c) => customProviders.has(c.provider)),
+    [mine.data],
+  );
+
+  function statusBadgeClass(status: string) {
+    if (status === "connected") return "border-emerald-500/40 bg-emerald-500/10 text-emerald-400";
+    if (status === "pending") return "border-amber-500/40 bg-amber-500/10 text-amber-400";
+    if (status === "error" || status === "degraded")
+      return "border-red-500/40 bg-red-500/10 text-red-400";
+    return "";
+  }
+
+  const connectedTotal = installedConnections.filter((c) => c.status === "connected").length;
+  const pendingTotal = installedConnections.filter((c) => c.status === "pending").length;
+
+  function renderConnectionCard(connection: NonNullable<typeof mine.data>[number]) {
+    const app = (catalog.data ?? []).find((item) => item.provider === connection.provider);
+    return (
+      <Card key={connection.id} className="flex flex-col gap-4 p-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <BrandLogo
+            provider={connection.provider}
+            name={connection.display_name}
+            logoUrl={app?.logo}
+          />
+          <div className="min-w-0">
+            <p className="font-semibold leading-snug">{connection.display_name}</p>
+            <p className="text-xs text-muted-foreground">{connection.provider}</p>
+            {connection.identity.label ? (
+              <p className="truncate text-xs text-muted-foreground">{connection.identity.label}</p>
+            ) : null}
+          </div>
+        </div>
+        <Badge variant="outline" className={`w-fit ${statusBadgeClass(connection.status)}`}>
+          {connectionStatusLabel(connection.status)}
+        </Badge>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="shrink-0"
+            onClick={() => {
+              if (app) setManagedApp(app as CatalogApp);
+              else toast.info("Manage accounts is not available for this connector yet.");
+            }}
+          >
+            Manage
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="shrink-0 border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+            disabled={disconnectMutation.isPending}
+            onClick={() => disconnectMutation.mutate(connection.id)}
+          >
+            Disconnect
+          </Button>
+        </div>
+      </Card>
+    );
+  }
+
+  function renderCatalogCard(app: CatalogApp) {
+    const connection = connectionsByProvider.get(app.provider);
+    const connectedCount = (mine.data ?? []).filter(
+      (c) => c.provider === app.provider && c.status === "connected",
+    ).length;
+    const pendingCount = (mine.data ?? []).filter(
+      (c) => c.provider === app.provider && c.status === "pending",
+    ).length;
+    return (
+      <Card key={app.provider} className="flex flex-col gap-4 p-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <BrandLogo provider={app.provider} name={app.display_name} logoUrl={app.logo} />
+          <div className="min-w-0">
+            <p className="font-semibold leading-snug">{app.display_name}</p>
+            <p className="text-xs text-muted-foreground">
+              {`${app.category} · ${connectionLogin(app).label}`}
+            </p>
+            {app.auth_methods?.length ? (
+              <p className="text-xs text-muted-foreground">Auth: {app.auth_methods.join(" · ")}</p>
+            ) : null}
+          </div>
+        </div>
+        {!user ? (
+          <Button asChild size="sm" variant="outline" className="shrink-0">
+            <Link to="/auth">Sign in</Link>
+          </Button>
+        ) : (
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            {connection && (
+              <Badge variant="outline">
+                {`${connectedCount} connected · ${pendingCount} pending`}
+              </Badge>
+            )}
+            <Button
+              size="sm"
+              variant="outline"
+              className="shrink-0 border-blue-600 bg-blue-700 text-white hover:bg-blue-800 hover:text-white focus-visible:ring-2 focus-visible:ring-blue-400"
+              disabled={connectMutation.isPending}
+              title={
+                app.oauth && !app.oauth_ready
+                  ? "Official provider OAuth setup is not available yet"
+                  : undefined
+              }
+              onClick={() => setManagedApp(app)}
+            >
+              <Plus className="size-4" aria-hidden="true" />
+              {connection ? "Manage accounts" : "Connect account"}
+            </Button>
+          </div>
+        )}
+      </Card>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:py-16">
       <Badge variant="outline" className="mb-2 border-primary/40 text-primary">
@@ -315,75 +456,44 @@ function ConnectionsPage() {
         server-side.
       </p>
 
-      <div className="mt-6 flex flex-wrap gap-2">
-        {user && (
-          <Button
-            onClick={() => {
-              setCustomInitial(undefined);
-              setCustomOpen(true);
-            }}
-          >
-            <Plus className="size-4" />
-            Add custom MCP
-          </Button>
-        )}
-        {user && (
-          <>
-            {isAdmin ? (
-              <Button
-                variant="outline"
-                disabled={syncMutation.isPending}
-                onClick={() => syncMutation.mutate()}
-              >
-                {syncMutation.isPending ? "Syncing…" : "Sync Composio accounts"}
-              </Button>
-            ) : null}
+      <div className="mt-6 flex flex-wrap items-center gap-2">
+        <div className="flex rounded-lg border border-border/70 p-1">
+          {(["installed", "discover", "personal"] as const).map((t2) => (
+            <button
+              key={t2}
+              type="button"
+              onClick={() => setTab(t2)}
+              className={
+                tab === t2
+                  ? "rounded-md bg-primary/15 px-4 py-1.5 text-sm font-medium text-primary"
+                  : "rounded-md px-4 py-1.5 text-sm text-muted-foreground hover:text-foreground"
+              }
+            >
+              {t2 === "installed" ? "Installed" : t2 === "discover" ? "Discover" : "Personal"}
+            </button>
+          ))}
+        </div>
+        <div className="ml-auto flex flex-wrap gap-2">
+          {user ? (
             <Button
               variant="outline"
+              size="sm"
               disabled={mine.isFetching}
               onClick={() => void mine.refetch()}
             >
               Refresh status
             </Button>
-          </>
-        )}
-        <Button
-          type="button"
-          onClick={() => {
-            setCategory("All");
-            setQuery("");
-          }}
-        >
-          Show all connectors
-        </Button>
-      </div>
-
-      <div className="mt-8 space-y-3">
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search apps…"
-            className="pl-9"
-          />
-        </div>
-        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
-          {catOptions.map((c) => (
-            <button
-              key={c}
-              aria-pressed={category === c}
-              type="button"
-              onClick={() => setCategory(c)}
-              className={
-                category === c
-                  ? "shrink-0 rounded-full border border-primary/50 bg-primary/15 px-3 py-1.5 text-xs text-primary"
-                  : "shrink-0 rounded-full border border-border/70 px-3 py-1.5 text-xs text-muted-foreground"
-              }
+          ) : null}
+          {user && isAdmin ? (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={syncMutation.isPending}
+              onClick={() => syncMutation.mutate()}
             >
-              {c}
-            </button>
-          ))}
+              {syncMutation.isPending ? "Syncing…" : "Sync Composio accounts"}
+            </Button>
+          ) : null}
         </div>
       </div>
 
@@ -393,84 +503,149 @@ function ConnectionsPage() {
         </p>
       )}
 
-      <div className="mt-10 space-y-8">
-        {grouped.map((group) => (
-          <div key={group.category}>
-            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              {group.category}
-            </h2>
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {group.apps.map((app) => {
-                const connection = connectionsByProvider.get(app.provider);
-                return (
-                  <Card key={app.provider} className="flex flex-col gap-4 p-5">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <BrandLogo
-                        provider={app.provider}
-                        name={app.display_name}
-                        logoUrl={app.logo}
-                      />
-                      <div className="min-w-0">
-                        <p className="font-semibold leading-snug">{app.display_name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {`${app.category} · ${connectionLogin(app).label}`}
-                        </p>
-                        {app.auth_methods?.length ? (
-                          <p className="text-xs text-muted-foreground">
-                            Auth: {app.auth_methods.join(" · ")}
-                          </p>
-                        ) : null}
-                      </div>
-                    </div>
-                    {!user ? (
-                      <Button asChild size="sm" variant="outline" className="shrink-0">
-                        <Link to="/auth">Sign in</Link>
-                      </Button>
-                    ) : (
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        {connection && (
-                          <Badge variant="outline">
-                            {
-                              (mine.data ?? []).filter(
-                                (c) => c.provider === app.provider && c.status === "connected",
-                              ).length
-                            }{" "}
-                            connected ·{" "}
-                            {
-                              (mine.data ?? []).filter(
-                                (c) => c.provider === app.provider && c.status === "pending",
-                              ).length
-                            }{" "}
-                            pending
-                          </Badge>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="shrink-0 border-blue-600 bg-blue-700 text-white hover:bg-blue-800 hover:text-white focus-visible:ring-2 focus-visible:ring-blue-400"
-                          disabled={connectMutation.isPending}
-                          title={
-                            app.oauth && !app.oauth_ready
-                              ? "Official provider OAuth setup is not available yet"
-                              : undefined
-                          }
-                          onClick={() => setManagedApp(app as CatalogApp)}
-                        >
-                          <Plus className="size-4" aria-hidden="true" />
-                          {connection ? "Manage accounts" : "Connect account"}
-                        </Button>
-                      </div>
-                    )}
-                  </Card>
-                );
-              })}
+      {tab === "installed" && (
+        <div className="mt-8 space-y-4">
+          {!user ? (
+            <Card className="p-6">
+              <p className="text-sm text-muted-foreground">Sign in to manage your connectors.</p>
+              <Button asChild size="sm" variant="outline" className="mt-3 shrink-0">
+                <Link to="/auth">Sign in</Link>
+              </Button>
+            </Card>
+          ) : installedConnections.length === 0 ? (
+            <Card className="p-6">
+              <p className="font-medium">No connectors installed</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Browse the public directory or add a private MCP server to get started.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button size="sm" onClick={() => setTab("discover")}>
+                  Browse public directory
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="shrink-0"
+                  onClick={() => {
+                    setCustomInitial(undefined);
+                    setCustomOpen(true);
+                  }}
+                >
+                  <Plus className="size-4" />
+                  Add custom MCP
+                </Button>
+              </div>
+            </Card>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground">
+                {connectedTotal} connected · {pendingTotal} pending
+              </p>
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {installedConnections.map((connection) => renderConnectionCard(connection))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {tab === "discover" && (
+        <div className="mt-8 space-y-8">
+          <div className="space-y-3">
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search public connectors…"
+                className="pl-9"
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setCategory("All");
+                  setQuery("");
+                }}
+              >
+                Show all connectors
+              </Button>
+            </div>
+            <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
+              {catOptions.map((c) => (
+                <button
+                  key={c}
+                  aria-pressed={category === c}
+                  type="button"
+                  onClick={() => setCategory(c)}
+                  className={
+                    category === c
+                      ? "shrink-0 rounded-full border border-primary/50 bg-primary/15 px-3 py-1.5 text-xs text-primary"
+                      : "shrink-0 rounded-full border border-border/70 px-3 py-1.5 text-xs text-muted-foreground"
+                  }
+                >
+                  {c}
+                </button>
+              ))}
             </div>
           </div>
-        ))}
-        {grouped.length === 0 ? (
-          <p className="text-center text-sm text-muted-foreground">No apps match this filter.</p>
-        ) : null}
-      </div>
+          {grouped.map((group) => (
+            <div key={group.category}>
+              <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {group.category}
+              </h2>
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {group.apps.map((app) => renderCatalogCard(app))}
+              </div>
+            </div>
+          ))}
+          {grouped.length === 0 ? (
+            <p className="text-center text-sm text-muted-foreground">
+              No public connectors match this filter.
+            </p>
+          ) : null}
+        </div>
+      )}
+
+      {tab === "personal" && (
+        <div className="mt-8 space-y-8">
+          <div>
+            <h2 className="text-lg font-semibold">Personal connectors</h2>
+            <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+              Private MCP servers and API endpoints for your account only. Public Composio
+              connectors live in Discover.
+            </p>
+            {user ? (
+              <Button
+                className="mt-3 shrink-0"
+                onClick={() => {
+                  setCustomInitial(undefined);
+                  setCustomOpen(true);
+                }}
+              >
+                <Plus className="size-4" />
+                Add custom MCP
+              </Button>
+            ) : null}
+          </div>
+          {personalConnections.length > 0 ? (
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {personalConnections.map((connection) => renderConnectionCard(connection))}
+            </div>
+          ) : null}
+          <div>
+            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Add a personal connector
+            </h3>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {personalCatalog.map((app) => renderCatalogCard(app))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <Card className="mt-12 bg-pillar shadow-panel">
         <CardHeader className="p-5">
