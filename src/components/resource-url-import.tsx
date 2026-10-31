@@ -36,7 +36,7 @@ export function ResourceUrlImport() {
       </CardHeader>
       <CardContent className="space-y-3">
         <Label htmlFor="resource-source-url">Source URL</Label>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <Input
             id="resource-source-url"
             className="min-w-0 flex-1"
@@ -45,7 +45,9 @@ export function ResourceUrlImport() {
             onChange={(e) => setUrl(e.target.value)}
             placeholder="https://www.skills.sh/"
           />
-          <Button disabled={mutation.isPending || !url.trim()} onClick={() => mutation.mutate()}>
+          <Button
+            className="w-full whitespace-nowrap sm:w-auto"
+            disabled={mutation.isPending || !url.trim()} onClick={() => mutation.mutate()}>
             {mutation.isPending ? "Fetching & publishing…" : "Import & publish"}
           </Button>
         </div>
