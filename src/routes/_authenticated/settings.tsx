@@ -1,7 +1,7 @@
 import { createFileRoute, useLocation } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
-import { KeyRound, Loader2, MessageCircle, Save, Server, Trash2, Upload } from "lucide-react";
+import { KeyRound, Loader2, MessageCircle, Save, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ProfileAvatarBadge } from "@/components/user-menu";
@@ -352,23 +352,6 @@ function SettingsPage() {
                   <h2 className="font-medium">Apps</h2>
                   <p className="mt-1 text-sm text-muted-foreground">
                     Connect account-owned apps such as Telegram and manage their credentials.
-                  </p>
-                </div>
-              </div>
-            </a>
-            <a
-              href="/integrations?section=custom-mcp"
-              className="block rounded-xl border bg-card p-5 shadow-panel transition-colors hover:bg-accent/40"
-            >
-              <div className="flex items-start gap-3">
-                <div className="rounded-lg bg-primary/10 p-2 text-primary">
-                  <Server className="size-4" />
-                </div>
-                <div>
-                  <h2 className="font-medium">Custom MCP</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Add and manage remote MCP servers separately from Connectors and Marketplace
-                    resources.
                   </p>
                 </div>
               </div>

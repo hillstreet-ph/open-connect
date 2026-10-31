@@ -1,9 +1,8 @@
-import { UniversalConnectorDialog } from "@/components/universal-connector-dialog";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { Bot, Copy, Loader2, MessageCircle, Server, Trash2 } from "lucide-react";
+import { Bot, Copy, Loader2, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { ApiKeysCard } from "@/components/api-keys-card";
@@ -25,7 +24,7 @@ import {
   listInboundIntegrations,
 } from "@/lib/inbound-integrations.functions";
 
-const integrationSections = ["api-key", "apps", "custom-mcp"] as const;
+const integrationSections = ["api-key", "apps"] as const;
 type IntegrationSection = (typeof integrationSections)[number];
 
 function parseIntegrationSection(value: unknown): IntegrationSection {
@@ -43,7 +42,7 @@ export const Route = createFileRoute("/_authenticated/integrations")({
       { title: "Integrations — Open-Connect" },
       {
         name: "description",
-        content: "Manage Personal Token, Apps, and Custom MCP integrations for Open-Connect.",
+        content: "Manage Personal Tokens and app integrations for Open-Connect.",
       },
     ],
   }),
@@ -58,13 +57,11 @@ function IntegrationsPage() {
   const sectionTitles: Record<IntegrationSection, string> = {
     "api-key": "Personal Token",
     apps: "Apps",
-    "custom-mcp": "Custom MCP",
   };
   const queryClient = useQueryClient();
   const listFn = useServerFn(listInboundIntegrations);
   const configureFn = useServerFn(configureTelegramIntegration);
   const disconnectFn = useServerFn(deleteInboundIntegration);
-  const [customConnectorOpen, setCustomConnectorOpen] = useState(false);
   const [mcpOpen, setMcpOpen] = useState(false);
   const [telegramOpen, setTelegramOpen] = useState(false);
   const [botLabel, setBotLabel] = useState("");
@@ -134,69 +131,6 @@ function IntegrationsPage() {
         </p>
       </header>
 
-      <section id="custom-mcp" hidden={section !== "custom-mcp"} className="scroll-mt-6">
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold">Custom MCP</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Manage account-owned remote MCP servers and the inbound endpoint AI clients use. These
-            stay separate from app Connectors and Marketplace resources.
-          </p>
-        </div>
-        <Card className="shadow-panel">
-          <CardHeader>
-            <CardTitle>Remote MCP servers</CardTitle>
-            <CardDescription>
-              Add HTTP, SSE or API connections in one private connector profile. Authentication and
-              tool permissions are managed in Connectors.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Button onClick={() => setCustomConnectorOpen(true)}>Add custom MCP</Button>
-            <Button asChild variant="outline">
-              <Link to="/connections">Manage connected accounts and permissions</Link>
-            </Button>
-          </CardContent>
-        </Card>
-        <UniversalConnectorDialog
-          open={customConnectorOpen}
-          onOpenChange={setCustomConnectorOpen}
-        />
-
-        <Card className="shadow-panel">
-          <CardHeader className="p-5">
-            <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Bot className="size-5" />
-            </div>
-            <CardTitle className="mt-3 text-base">Open-Connect MCP endpoint</CardTitle>
-            <CardDescription>
-              Compatible clients connect here and receive only the capabilities allowed for your
-              account and project access.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 px-5 pb-5">
-            <div className="flex flex-wrap items-center gap-2">
-              <code className="min-w-0 flex-1 break-all rounded-md bg-muted px-3 py-2 text-sm">
-                {MCP_ENDPOINT}
-              </code>
-              <Button variant="outline" size="sm" onClick={() => void copyEndpoint()}>
-                <Copy className="mr-2 size-4" />
-                Copy URL
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-              <Badge variant="secondary">OAuth supported</Badge>
-              <Badge variant="secondary">Bearer key supported</Badge>
-              <span className="self-center">
-                OAuth clients sign in and approve in their client.
-              </span>
-            </div>
-            <Button variant="outline" size="sm" onClick={() => setMcpOpen(true)}>
-              Client setup instructions
-            </Button>
-          </CardContent>
-        </Card>
-      </section>
-
       <section id="apps" hidden={section !== "apps"} className="scroll-mt-6">
         <div className="mb-4">
           <h2 className="text-lg font-semibold">Apps</h2>
@@ -265,6 +199,39 @@ function IntegrationsPage() {
             </p>
           </div>
           <ApiKeysCard />
+          <Card className="shadow-panel">
+            <CardHeader className="p-5">
+              <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Bot className="size-5" />
+              </div>
+              <CardTitle className="mt-3 text-base">Open-Connect MCP endpoint</CardTitle>
+              <CardDescription>
+                Compatible clients connect here and receive only the capabilities allowed for your
+                account and project access.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 px-5 pb-5">
+              <div className="flex flex-wrap items-center gap-2">
+                <code className="min-w-0 flex-1 break-all rounded-md bg-muted px-3 py-2 text-sm">
+                  {MCP_ENDPOINT}
+                </code>
+                <Button variant="outline" size="sm" onClick={() => void copyEndpoint()}>
+                  <Copy className="mr-2 size-4" />
+                  Copy URL
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                <Badge variant="secondary">OAuth supported</Badge>
+                <Badge variant="secondary">Bearer key supported</Badge>
+                <span className="self-center">
+                  OAuth clients sign in and approve in their client.
+                </span>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setMcpOpen(true)}>
+                Client setup instructions
+              </Button>
+            </CardContent>
+          </Card>
         </section>
       ) : null}
 

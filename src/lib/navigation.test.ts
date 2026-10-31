@@ -95,9 +95,9 @@ test("connection surfaces remain internal and separate from Marketplace", () => 
   assert.ok(integrations.includes("<ApiKeysCard />"));
   assert.ok(integrations.includes("setTelegramOpen(true)"));
   assert.ok(integrations.includes("inbound-integrations.functions"));
-  assert.ok(integrations.includes("universal-connector-dialog"));
-  assert.ok(integrations.includes("Remote MCP servers"));
-  for (const section of ['id="api-key"', 'id="apps"', 'id="custom-mcp"']) {
+  assert.ok(!integrations.includes("universal-connector-dialog"));
+  assert.ok(!integrations.includes("Remote MCP servers"));
+  for (const section of ['id="api-key"', 'id="apps"']) {
     assert.ok(integrations.includes(section), "Missing integration section " + section);
   }
   assert.ok(!integrations.includes("ai-agents"), "AI Agents section should stay removed");
@@ -158,10 +158,11 @@ test("Settings keeps only personal tabs and duplicates no sidebar destinations",
     assert.ok(!settings.includes(`title="${title}"`), "Settings repeats card " + title);
   }
 
-  // Only the two account-owned integration deep links remain.
-  for (const section of ["apps", "custom-mcp"]) {
+  // Settings links to Apps; Custom MCP is removed from Integrations.
+  for (const section of ["apps"]) {
     assert.ok(settings.includes('href="/integrations?section=' + section + '"'));
   }
+  assert.ok(!settings.includes('href="/integrations?section=custom-mcp"'));
   assert.ok(!settings.includes('href="/integrations?section=api-key"'));
   assert.ok(!settings.includes('href="/integrations?section=ai-agents"'));
   assert.ok(!settings.includes('to="/api-keys"'));
