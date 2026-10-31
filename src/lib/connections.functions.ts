@@ -625,6 +625,22 @@ export const syncComposioConnections = createServerFn({ method: "POST" })
     return { imported, existing: plan.existing, matched: plan.matched };
   });
 
+/** Composio toolkit slug aliases so AI Gateway providers can use hosted sign-in. */
+const AI_GATEWAY_COMPOSIO_SLUGS: Record<string, string[]> = {
+  openai: ["openai"],
+  anthropic: ["anthropic"],
+  google: ["gemini"],
+  mistral: ["mistral", "mistral_ai"],
+  deepseek: ["deepseek"],
+  groq: ["groq", "groqcloud"],
+  xai: ["grok", "xai", "x_ai"],
+  huggingface: ["hugging_face", "huggingface"],
+  nvidia: ["nvidia", "nvidia_nim", "nim"],
+  openrouter: ["openrouter"],
+  ollama_cloud: ["ollama", "ollama_cloud"],
+  kilo: ["kilocode", "kilo"],
+};
+
 export const connectApp = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: { provider: string; connection_id?: string }) => ({
@@ -634,7 +650,10 @@ export const connectApp = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { managedConnectorReady, connectionMethod, listComposioToolkits } =
       await import("@/lib/managed-connectors.server");
-    const toolkit = (await listComposioToolkits()).find((item) => item.slug === data.provider);
+    const toolkits = await listComposioToolkits();
+    const candidateSlugs = [data.provider, ...(AI_GATEWAY_COMPOSIO_SLUGS[data.provider] ?? [])];
+    const toolkit = toolkits.find((item) => candidateSlugs.includes(item.slug));
+    const gatewayProvider = AI_GATEWAY_PROVIDERS.find((item) => item.id === data.provider);
     const app =
       CATALOG.find((item) => item.provider === data.provider) ??
       (toolkit
@@ -645,7 +664,14 @@ export const connectApp = createServerFn({ method: "POST" })
             scopes: [] as string[],
             oauth: toolkit.authMethods.includes("OAUTH2"),
           }
-        : undefined);
+        : gatewayProvider
+          ? {
+              provider: gatewayProvider.id,
+              display_name: gatewayProvider.name,
+              scopes: [] as string[],
+              oauth: true,
+            }
+          : undefined);
     if (!app) throw new Error("Unknown application");
     const ready = managedConnectorReady(app.provider) || Boolean(toolkit);
     // Toolkits without an OAuth scheme accept only API keys or tokens; routing
