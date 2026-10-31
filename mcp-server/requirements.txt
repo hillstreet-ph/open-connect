@@ -1,0 +1,7 @@
+mcp[cli]
+fastapi
+uvicorn[standard]
+pydantic
+pydantic-settings
+httpx
+python-dotenv
