@@ -79,10 +79,20 @@ test("falls back safely for missing or unrecognized agents", () => {
 });
 
 test("flags loopback and private addresses", () => {
-  for (const ip of ["127.0.0.1", "10.0.0.4", "192.168.1.20", "169.254.1.1", "::1", "fd00::1"]) {
+  for (const ip of [
+    "127.0.0.1",
+    "10.0.0.4",
+    "192.168.1.20",
+    "169.254.1.1",
+    "172.16.0.1",
+    "172.20.5.5",
+    "172.31.255.255",
+    "::1",
+    "fd00::1",
+  ]) {
     assert.equal(isPrivateIp(ip), true, ip);
   }
-  for (const ip of ["103.226.24.32", "8.8.8.8", "2606:4700::1111"]) {
+  for (const ip of ["103.226.24.32", "8.8.8.8", "2606:4700::1111", "172.15.0.1", "172.32.0.1"]) {
     assert.equal(isPrivateIp(ip), false, ip);
   }
   assert.equal(isPrivateIp(null), true);

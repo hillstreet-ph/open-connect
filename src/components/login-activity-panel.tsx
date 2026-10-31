@@ -34,22 +34,22 @@ function DeviceIcon({ kind }: { kind: DeviceKind }) {
 
 export function LoginActivityPanel() {
   const { user } = useRouteContext({ from: "/_authenticated" });
-  return <AccountLoginActivity key={user.id} />;
+  return <AccountLoginActivity key={user.id} userId={user.id} />;
 }
 
-function AccountLoginActivity() {
+function AccountLoginActivity({ userId }: { userId: string }) {
   const queryClient = useQueryClient();
   const listFn = useServerFn(listLoginActivity);
   const revokeFn = useServerFn(revokeLoginSession);
   const revokeOthersFn = useServerFn(revokeOtherLoginSessions);
 
   const query = useQuery({
-    queryKey: ["login-activity"],
+    queryKey: ["login-activity", userId],
     queryFn: () => listFn(),
     refetchInterval: 60000,
   });
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ["login-activity"] });
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ["login-activity", userId] });
 
   const revoke = useMutation({
     mutationFn: (sessionId: string) => revokeFn({ data: { sessionId } }),

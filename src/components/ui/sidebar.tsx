@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { SIDEBAR_COOKIE_NAME, SIDEBAR_COOKIE_MAX_AGE, writeSidebarOpen } from "@/lib/sidebar-state";
+import { writeSidebarOpen } from "@/lib/sidebar-state";
 
 const SIDEBAR_WIDTH = "16rem";
 const SIDEBAR_WIDTH_MOBILE = "18rem";

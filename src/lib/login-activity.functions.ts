@@ -5,7 +5,6 @@ import {
   describeLocation,
   isPrivateIp,
   locationFallback,
-  parseUserAgent,
   type GeoLocation,
   type SessionActivity,
 } from "@/lib/login-activity";

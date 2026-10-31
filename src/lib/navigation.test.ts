@@ -174,6 +174,11 @@ test("Settings keeps only personal tabs and duplicates no sidebar destinations",
   // Login activity lives in the personal security tab, with per-session sign out.
   assert.ok(settings.includes("LoginActivityPanel"));
   assert.ok(settings.indexOf('value="security"') < settings.indexOf("<LoginActivityPanel />"));
+
+  const panel = readFileSync(path.join(sourceRoot, "components/login-activity-panel.tsx"), "utf8");
+  // The cache must be keyed to the account so a switch in another tab cannot show stale rows.
+  assert.ok(panel.includes('queryKey: ["login-activity", userId]'));
+  assert.ok(panel.includes("key={user.id}"));
 });
 
 test("Workspace header keeps a single account entry point and a persistent sidebar toggle", () => {
@@ -186,7 +191,6 @@ test("Workspace header keeps a single account entry point and a persistent sideb
   assert.ok(!shell.includes("Open your account settings"));
   assert.ok(shell.includes("sidebarDefaultOpen"), "Sidebar toggle state must be restored");
   assert.ok(sidebar.includes("writeSidebarOpen"));
-  assert.ok(sidebar.includes("SIDEBAR_COOKIE_NAME"));
   const sidebarState = readFileSync(path.join(sourceRoot, "lib/sidebar-state.ts"), "utf8");
   assert.ok(sidebarState.includes("export function sidebarDefaultOpen"));
   assert.ok(sidebarState.includes("SIDEBAR_COOKIE_NAME"));

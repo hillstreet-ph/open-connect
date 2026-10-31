@@ -114,7 +114,8 @@ export function describeDevice(parsed: ParsedUserAgent): string {
   return osKnown ? `${parsed.browser} on ${parsed.os}` : parsed.browser;
 }
 
-const PRIVATE_IP = /^(10\.|127\.|192\.168\.|169\.254\.|::1$|fc|fd|fe80)/i;
+const PRIVATE_IP =
+  /^(10\.|127\.|192\.168\.|169\.254\.|172\.(1[6-9]|2[0-9]|3[01])\.|::1$|fc|fd|fe80)/i;
 
 /** True when an address is loopback, link-local, or RFC1918 private. */
 export function isPrivateIp(ip: string | null | undefined): boolean {
