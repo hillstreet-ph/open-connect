@@ -2,7 +2,7 @@ import { McpConnectionCard } from "@/components/mcp-connection-card";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, Copy, KeyRound, Loader2, Pencil, X } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, Copy, KeyRound, Loader2, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   createApiKey,
@@ -47,6 +47,7 @@ export function ApiKeysCard({ modelOnly = false }: { modelOnly?: boolean }) {
   const [profile, setProfile] = useState<AccessProfile>("developer");
   const [projectId, setProjectId] = useState("");
   const [freshKey, setFreshKey] = useState<string | null>(null);
+  const [keysOpen, setKeysOpen] = useState(false);
 
   const keys = useQuery({
     queryKey: ["api-keys"],
@@ -202,96 +203,118 @@ export function ApiKeysCard({ modelOnly = false }: { modelOnly?: boolean }) {
             </div>
           ) : null}
 
-          {keys.isLoading ? (
-            <p role="status">Loading keys…</p>
-          ) : keys.isError ? (
-            <p role="alert">Could not load keys. Refresh and try again.</p>
-          ) : null}
-          <ul className="space-y-2 text-sm">
-            {visibleKeys.length ? (
-              visibleKeys.map((key) => (
-                <li key={key.id} className="rounded-lg border border-border px-3 py-2.5">
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <KeyNameEditor
-                          name={key.name}
-                          editable={key.active && !key.revoked_at}
-                          pending={renameMutation.isPending}
-                          onRename={(name) => renameMutation.mutate({ id: key.id, name })}
-                        />
-                        {key.active && !key.revoked_at ? (
-                          <Badge
-                            variant="secondary"
-                            className="border-transparent bg-emerald-500/15 text-[10px] text-emerald-600 dark:text-emerald-400"
-                          >
-                            Active
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-[10px] text-muted-foreground">
-                            {key.revoked_at ? "Revoked" : "Inactive"}
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                        <span className="font-mono text-xs text-muted-foreground">
-                          {key.key_prefix}…
-                        </span>
-                        <Badge variant="secondary" className="text-[10px]">
-                          {key.key_prefix.startsWith("sk-oc-")
-                            ? "Models only"
-                            : (PROFILE_LABELS[(key.access_profile as AccessProfile) ?? "custom"] ??
-                              "Legacy")}
-                        </Badge>
-                        {key.project_id ? (
-                          <Badge variant="outline" className="text-[10px]">
-                            Project scoped
-                          </Badge>
-                        ) : null}
-                      </div>
-                      <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-                        <span>Created {formatDateTime(key.created_at)}</span>
-                        {" · "}
-                        <span>
-                          {key.last_used_at
-                            ? `Last used ${formatDateTime(key.last_used_at)}`
-                            : "Never used"}
-                        </span>
-                        {key.expires_at ? ` · Expires ${formatRelative(key.expires_at)}` : ""}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {key.active && !key.key_prefix.startsWith("sk-oc-") ? (
-                        <KeyAccessEditor
-                          key={`${key.id}:${key.access_profile}:${key.scopes?.join(",")}`}
-                          name={key.name}
-                          profile={key.access_profile}
-                          scopes={key.scopes ?? []}
-                          isAdmin={isAdmin}
-                          pending={updateMutation.isPending}
-                          onApply={(profile, scopes) =>
-                            updateMutation.mutate({ id: key.id, profile, scopes })
-                          }
-                        />
-                      ) : null}
-                      {key.revoked_at ? null : (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => revokeMutation.mutate(key.id)}
-                          disabled={revokeMutation.isPending}
-                        >
-                          Revoke
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </li>
-              ))
-            ) : !keys.isLoading && !keys.isError ? (
-              <li className="text-muted-foreground">No keys yet.</li>
+          <div className="space-y-2">
+            <button
+              type="button"
+              aria-expanded={keysOpen}
+              onClick={() => setKeysOpen((open) => !open)}
+              className="flex w-full items-center gap-1.5 text-left text-sm font-medium"
+            >
+              {keysOpen ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
+              Generated keys
+              <span className="text-xs font-normal text-muted-foreground">
+                ({visibleKeys.length})
+              </span>
+            </button>
+            {keysOpen ? (
+              <>
+                {keys.isLoading ? (
+                  <p role="status">Loading keys…</p>
+                ) : keys.isError ? (
+                  <p role="alert">Could not load keys. Refresh and try again.</p>
+                ) : null}
+                <ul className="space-y-2 text-sm">
+                  {visibleKeys.length ? (
+                    visibleKeys.map((key) => (
+                      <li key={key.id} className="rounded-lg border border-border px-3 py-2.5">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <KeyNameEditor
+                                name={key.name}
+                                editable={key.active && !key.revoked_at}
+                                pending={renameMutation.isPending}
+                                onRename={(name) => renameMutation.mutate({ id: key.id, name })}
+                              />
+                              {key.active && !key.revoked_at ? (
+                                <Badge
+                                  variant="secondary"
+                                  className="border-transparent bg-emerald-500/15 text-[10px] text-emerald-600 dark:text-emerald-400"
+                                >
+                                  Active
+                                </Badge>
+                              ) : (
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px] text-muted-foreground"
+                                >
+                                  {key.revoked_at ? "Revoked" : "Inactive"}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                              <span className="font-mono text-xs text-muted-foreground">
+                                {key.key_prefix}…
+                              </span>
+                              <Badge variant="secondary" className="text-[10px]">
+                                {key.key_prefix.startsWith("sk-oc-")
+                                  ? "Models only"
+                                  : (PROFILE_LABELS[
+                                      (key.access_profile as AccessProfile) ?? "custom"
+                                    ] ?? "Legacy")}
+                              </Badge>
+                              {key.project_id ? (
+                                <Badge variant="outline" className="text-[10px]">
+                                  Project scoped
+                                </Badge>
+                              ) : null}
+                            </div>
+                            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                              <span>Created {formatDateTime(key.created_at)}</span>
+                              {" · "}
+                              <span>
+                                {key.last_used_at
+                                  ? `Last used ${formatDateTime(key.last_used_at)}`
+                                  : "Never used"}
+                              </span>
+                              {key.expires_at ? ` · Expires ${formatRelative(key.expires_at)}` : ""}
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            {key.active && !key.key_prefix.startsWith("sk-oc-") ? (
+                              <KeyAccessEditor
+                                key={`${key.id}:${key.access_profile}:${key.scopes?.join(",")}`}
+                                name={key.name}
+                                profile={key.access_profile}
+                                scopes={key.scopes ?? []}
+                                isAdmin={isAdmin}
+                                pending={updateMutation.isPending}
+                                onApply={(profile, scopes) =>
+                                  updateMutation.mutate({ id: key.id, profile, scopes })
+                                }
+                              />
+                            ) : null}
+                            {key.revoked_at ? null : (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => revokeMutation.mutate(key.id)}
+                                disabled={revokeMutation.isPending}
+                              >
+                                Revoke
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </li>
+                    ))
+                  ) : !keys.isLoading && !keys.isError ? (
+                    <li className="text-muted-foreground">No keys yet.</li>
+                  ) : null}
+                </ul>
+              </>
             ) : null}
-          </ul>
+          </div>
         </CardContent>
       </Card>
       {!modelOnly ? (
