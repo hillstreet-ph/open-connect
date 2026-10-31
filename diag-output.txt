@@ -18,10 +18,6 @@ $ eslint .
 /home/runner/work/open-connect/open-connect/src/components/ui/toggle.tsx
   42:18  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
 
-/home/runner/work/open-connect/open-connect/src/lib/resource-import.functions.ts
-  291:32  error  Replace `⏎··url:·URL,⏎··skill?:·string·|·null,⏎` with `url:·URL,·skill?:·string·|·null`                                                                                                    prettier/prettier
-  303:21  error  Replace `⏎······"Skill·selection·is·supported·for·GitHub·and·skills.sh·repository·URLs·only.",⏎····` with `"Skill·selection·is·supported·for·GitHub·and·skills.sh·repository·URLs·only."`  prettier/prettier
-
 /home/runner/work/open-connect/open-connect/src/routes/__root.tsx
    22:10  warning  Fast refresh only works when a file only exports components. Move your component(s) to a separate file. If all exports are HOCs, add them to the `extraHOCs` option  react-refresh/only-export-components
    44:10  warning  Fast refresh only works when a file only exports components. Move your component(s) to a separate file. If all exports are HOCs, add them to the `extraHOCs` option  react-refresh/only-export-components
@@ -139,15 +135,9 @@ $ eslint .
   70:10  warning  Fast refresh only works when a file only exports components. Move your component(s) to a separate file. If all exports are HOCs, add them to the `extraHOCs` option  react-refresh/only-export-components
   82:10  warning  Fast refresh only works when a file only exports components. Move your component(s) to a separate file. If all exports are HOCs, add them to the `extraHOCs` option  react-refresh/only-export-components
 
-✖ 57 problems (2 errors, 55 warnings)
-  2 errors and 0 warnings potentially fixable with the `--fix` option.
+✖ 55 problems (0 errors, 55 warnings)
 
-error: script "lint" exited with code 1
-lint_exit=1
+lint_exit=0
 
 $ tsc --noEmit
-src/lib/resource-import.functions.ts(276,8): error TS18048: 'url' is possibly 'undefined'.
-src/lib/resource-import.functions.ts(276,38): error TS18048: 'url' is possibly 'undefined'.
-src/lib/resource-import.functions.ts(288,12): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
-  Type 'undefined' is not assignable to type 'string'.
-typecheck_exit=2
+typecheck_exit=0
