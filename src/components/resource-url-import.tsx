@@ -47,7 +47,9 @@ export function ResourceUrlImport() {
           />
           <Button
             className="w-full whitespace-nowrap sm:w-auto"
-            disabled={mutation.isPending || !url.trim()} onClick={() => mutation.mutate()}>
+            disabled={mutation.isPending || !url.trim()}
+            onClick={() => mutation.mutate()}
+          >
             {mutation.isPending ? "Fetching & publishing…" : "Import & publish"}
           </Button>
         </div>
