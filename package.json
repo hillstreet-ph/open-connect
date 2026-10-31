@@ -140,6 +140,7 @@
     "ip-address": "10.7.4",
     "js-yaml": "4.3.2",
     "launch-editor": "2.14.2",
+    "minimatch": "11.0.3",
     "qs": "6.16.2",
     "seroval": "1.6.12",
     "shell-quote": "1.12.0",
