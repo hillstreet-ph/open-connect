@@ -30,6 +30,21 @@ UI already calls `supabase.auth.signInWithOAuth({ provider: "github" })`.
 
 Same pattern for Google if desired.
 
+## Connecting Google and GitHub to an existing account
+
+Settings → **Security & login** → **Connected accounts** links an extra sign-in
+provider to the account you are already signed in to, so it uses the same profile,
+roles, and data. Nothing is merged into a second account.
+
+- Providers: Google and GitHub (the same two enabled for sign-in).
+- Supabase Auth → Providers must have **Enable Manual Linking** on
+  (`security_manual_linking_enabled`); the client calls `auth.linkIdentity()`.
+- Disconnect calls `auth.unlinkIdentity()`. The last remaining identity cannot be
+  disconnected, so a user can never lock themselves out.
+- A failed link returns to `/settings#security` with the provider error, shown as a
+  toast (for example "already connected to a different account").
+- The redirect target must stay on the allow list: `https://open-connect.site/settings`.
+
 ## Make tanauancharles1@gmail.com platform Owner
 
 After the user exists in `auth.users` (sign up once with email or GitHub):
@@ -77,3 +92,5 @@ Free-tier limits (OpenRouter): ~20 RPM; 50 or 1000 RPD depending on ≥$10 lifet
 | Redirect loop | Wrong Site URL | Set Site URL to open-connect.site |
 | Session but no owner UI | Missing `user_roles.owner` | Run SQL above |
 | Duplicate /login vs /auth | Intentional redirect | Use `/auth` only in links |
+| Connect Google/GitHub missing | Manual linking disabled | Supabase → Auth → Providers → Enable Manual Linking |
+| Link fails "already connected" | Identity belongs to another account | Sign in with that provider instead |
