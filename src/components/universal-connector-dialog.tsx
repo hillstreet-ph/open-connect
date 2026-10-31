@@ -7,7 +7,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { configureAppConnection } from "@/lib/connections.functions";
-import { beginCustomOAuth } from "@/lib/custom-oauth.functions";
 import { refreshConnectorCapabilities } from "@/lib/connector-capabilities.functions";
 import { openApiOperations } from "@/lib/openapi-connector";
 import { Button } from "@/components/ui/button";
@@ -72,17 +71,12 @@ function ConnectorForm({
     [header, setHeader] = useState(String(initial?.metadata["auth_header"] || "X-API-Key")),
     [secret, setSecret] = useState(""),
     [icon, setIcon] = useState(String(initial?.metadata["icon_data"] || "")),
-    [schema, setSchema] = useState<unknown>(initial?.metadata["openapi"]),
-    [clientId, setClientId] = useState(String(initial?.metadata["oauth_client_id"] || "")),
-    [clientSecret, setClientSecret] = useState(""),
-    [issuer, setIssuer] = useState(String(initial?.metadata["oauth_issuer"] || "")),
-    [scope, setScope] = useState("");
+    [schema, setSchema] = useState<unknown>(initial?.metadata["openapi"]);
   const file = useRef<HTMLInputElement>(null),
     iconFile = useRef<HTMLInputElement>(null);
   const client = useQueryClient();
   const loadSchema = useServerFn(loadPluginSchema);
   const save = useServerFn(configureAppConnection),
-    oauth = useServerFn(beginCustomOAuth),
     discover = useServerFn(refreshConnectorCapabilities);
   const mutation = useMutation({
     mutationFn: async () => {
@@ -100,13 +94,6 @@ function ConnectorForm({
         new_account: !initial?.id,
         ...(initial?.id ? { connection_id: initial.id } : {}),
       };
-      if (auth === "oauth") {
-        const result = await oauth({
-          data: { ...input, client_id: clientId, client_secret: clientSecret, issuer, scope },
-        });
-        window.location.assign(result.authorization_url);
-        return;
-      }
       const result = await save({
         data: {
           ...input,
@@ -120,14 +107,9 @@ function ConnectorForm({
     },
     onSuccess: () => {
       setSecret("");
-      setClientSecret("");
       void client.invalidateQueries({ queryKey: ["app-connections"] });
-      toast.success(
-        auth === "oauth"
-          ? "Opening provider authorization"
-          : "Connection saved; discovered capabilities are available in its account card",
-      );
-      if (auth !== "oauth") onComplete();
+      toast.success("Connection saved; discovered capabilities are available in its account card");
+      onComplete();
     },
     onError: (e) => toast.error(e.message),
   });
@@ -167,7 +149,7 @@ function ConnectorForm({
       setProtocol(config["type"] === "sse" ? "sse" : "http");
       setName(String(doc.name || entry?.[0] || "Custom connector"));
       setDescription(String(doc.description || ""));
-      toast.success("Manifest detected. Review its endpoint and enter authentication separately.");
+      toast.success("Manifest detected. Review its endpoint and enter the credential.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not inspect manifest");
     }
@@ -324,23 +306,6 @@ function ConnectorForm({
             </p>
           )}
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="universal-auth">Authentication</Label>
-          <select
-            id="universal-auth"
-            className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-            value={auth}
-            onChange={(e) => setAuth(e.target.value)}
-          >
-            <option value="oauth" disabled={protocol === "openapi"}>
-              OAuth 2.1 · sign in (recommended for MCP)
-            </option>
-            <option value="bearer">Authorization · Bearer token</option>
-            <option value="api_key">API key · custom header</option>
-            <option value="personal_access_token">Personal access token</option>
-            <option value="none">No authentication · public servers only</option>
-          </select>
-        </div>
         {auth === "api_key" && (
           <div className="space-y-2">
             <Label htmlFor="universal-header">Credential header</Label>
@@ -351,7 +316,7 @@ function ConnectorForm({
             />
           </div>
         )}
-        {auth !== "none" && auth !== "oauth" && (
+        {auth !== "none" && (
           <div className="space-y-2">
             <Label htmlFor="universal-secret">Credential / token</Label>
             <Input
@@ -361,33 +326,11 @@ function ConnectorForm({
               value={secret}
               onChange={(e) => setSecret(e.target.value)}
             />
-          </div>
-        )}
-        {auth === "oauth" && (
-          <details className="rounded-lg border p-3 text-sm">
-            <summary className="cursor-pointer">Advanced OAuth settings (optional)</summary>
-            <p className="my-3 text-xs text-muted-foreground">
-              Compatible servers discover authorization and dynamically register. Pre-registered
-              clients need the issuer and client ID below. Redirect URI:
-              https://open-connect.site/custom-oauth-callback
+            <p className="text-xs text-muted-foreground">
+              Paste the server's access token or API key. It is encrypted at rest and never shared
+              with agents.
             </p>
-            {[
-              ["Issuer URL", issuer, setIssuer],
-              ["Client ID", clientId, setClientId],
-              ["Client secret", clientSecret, setClientSecret],
-              ["Requested scopes", scope, setScope],
-            ].map(([title, value, setter]) => (
-              <label key={title as string} className="mt-3 block space-y-1">
-                {title as string}
-                <Input
-                  type={title === "Client secret" ? "password" : "text"}
-                  autoComplete="off"
-                  value={value as string}
-                  onChange={(e) => (setter as (v: string) => void)(e.target.value)}
-                />
-              </label>
-            ))}
-          </details>
+          </div>
         )}
         <p className="text-xs text-muted-foreground">
           Connecting discovers tool, prompt and resource descriptors. It does not execute tools,
@@ -400,15 +343,11 @@ function ConnectorForm({
             !name.trim() ||
             !endpoint.trim() ||
             (protocol === "openapi" && !schema) ||
-            (auth !== "none" && auth !== "oauth" && secret.trim().length < 8)
+            (auth !== "none" && secret.trim().length < 8)
           }
           onClick={() => mutation.mutate()}
         >
-          {mutation.isPending
-            ? "Connecting…"
-            : auth === "oauth"
-              ? "Authorize & connect"
-              : "Connect & discover"}
+          {mutation.isPending ? "Connecting…" : "Connect & discover"}
         </Button>
         <Button asChild variant="link">
           <Link to="/studio">Create or upload a connector plugin in Studio</Link>

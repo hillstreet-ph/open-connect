@@ -17,10 +17,10 @@ export function connectionLogin(app: LoginApp) {
       (app.oauth_supported ?? schemes.some((scheme) => ["OAUTH2", "OAUTH1"].includes(scheme))));
   if (app.provider === "custom_mcp")
     return {
-      label: "OAuth or API/token",
-      action: "Choose sign-in method",
+      label: "API/token",
+      action: "Connect MCP server",
       detail:
-        "Prefer OAuth for servers that publish OAuth discovery. You can also use a bearer token, personal access token or API key.",
+        "Enter the server URL and its access token. The credential is stored privately; agent access stays limited to the provider's actual grant.",
     };
   if (["proton_pass", "proton_drive"].includes(app.provider))
     return {
@@ -59,9 +59,9 @@ export function connectionLogin(app: LoginApp) {
   };
 }
 
-export function defaultConnectorAuth(protocol: string, saved?: unknown): string {
-  if (typeof saved === "string" && saved) return saved;
-  return protocol === "openapi" ? "bearer" : "oauth";
+export function defaultConnectorAuth(_protocol: string, saved?: unknown): string {
+  if (typeof saved === "string" && saved) return saved === "oauth" ? "bearer" : saved;
+  return "bearer";
 }
 
 export function authForProtocol(protocol: string, auth: string): string {
@@ -80,8 +80,8 @@ export function connectionUsesBrowserLogin(account: {
       : {};
   return Boolean(
     account.credential_reference?.startsWith("composio://connected-account/") ||
-    ["oauth", "managed_oauth"].includes(String(metadata["mode"] ?? "")) ||
-    metadata["auth_type"] === "oauth",
+      ["oauth", "managed_oauth"].includes(String(metadata["mode"] ?? "")) ||
+      metadata["auth_type"] === "oauth",
   );
 }
 
