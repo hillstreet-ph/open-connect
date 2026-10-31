@@ -1,0 +1,56 @@
+name: Lint diagnostics
+
+on:
+  push:
+    branches: ["feat/studio-sections-polish"]
+
+permissions:
+  contents: write
+
+jobs:
+  diagnostics:
+    name: Diagnostics
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install
+        run: bun install --frozen-lockfile
+      - name: Run diagnostics
+        run: |
+          set +e
+          bun run lint > diag-output.txt 2>&1
+          echo "lint_exit=$?" >> diag-output.txt
+          echo "" >> diag-output.txt
+          bun run typecheck >> diag-output.txt 2>&1
+          echo "typecheck_exit=$?" >> diag-output.txt
+          exit 0
+      - name: Publish output
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const content = fs.readFileSync('diag-output.txt', 'utf8');
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const branch = 'lint-output';
+            const path = 'diag-output.txt';
+            let sha;
+            try {
+              const existing = await github.rest.repos.getContent({ owner, repo, ref: `refs/heads/${branch}`, path });
+              sha = existing.data.sha;
+            } catch (e) {
+              sha = undefined;
+            }
+            await github.rest.repos.createOrUpdateFileContents({
+              owner,
+              repo,
+              branch,
+              path,
+              message: 'Update diagnostics [skip ci]',
+              content: Buffer.from(content).toString('base64'),
+              sha,
+            });
