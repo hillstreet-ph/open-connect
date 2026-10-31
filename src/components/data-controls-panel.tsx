@@ -1,3 +1,4 @@
+ypescript
 import { ContextStoragePanel } from "@/components/context-storage-panel";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -165,7 +166,11 @@ function AccountDataControls({ studio, userId }: { studio: boolean; userId: stri
                   "Save activity across Open-Connect",
                   "Index Memory, Knowledge, created resources, Toolkits, and verified capability runs. Activity stores record identifiers, not tool payloads.",
                 ],
-                ["save_helper_memory", "Automatically save Agent-Helper memory", "Save redacted interaction summaries to Memory after replies. Assistant text remains unverified; this does not save every external app conversation."],
+                [
+                  "save_helper_memory",
+                  "Automatically save Agent-Helper memory",
+                  "Save redacted interaction summaries to Memory after replies. Assistant text remains unverified; this does not save every external app conversation.",
+                ],
                 [
                   "suggest_drafts",
                   "Suggest reusable drafts",
