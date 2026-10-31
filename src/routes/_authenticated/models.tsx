@@ -20,6 +20,7 @@ import { BrandLogo } from "@/components/brand-logo";
 import { useAuth } from "@/hooks/use-auth";
 import {
   configureAppConnection,
+  connectApp,
   disconnectApp,
   listAppConnections,
   testAiProviderCredential,
@@ -83,6 +84,21 @@ function ModelsPage() {
     },
     onError: (error) =>
       toast.error(error instanceof Error ? error.message : "Subscription sign-in unavailable"),
+  });
+  const connectHostedFn = useServerFn(connectApp);
+  const [hostedProvider, setHostedProvider] = useState<string | null>(null);
+  const hostedConnect = useMutation({
+    mutationFn: (provider: string) => {
+      setHostedProvider(provider);
+      return connectHostedFn({ data: { provider } });
+    },
+    onSuccess: (result) => {
+      window.open(result.authorization_url, "_blank", "noopener");
+      void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Hosted sign-in unavailable"),
+    onSettled: () => setHostedProvider(null),
   });
   const [activeProvider, setActiveProvider] = useState<string | null>(null);
   const [aliasesOpen, setAliasesOpen] = useState(false);
@@ -411,6 +427,18 @@ function ModelsPage() {
                     {provider.id === "openai" ? "Sign in · ChatGPT" : "Sign in · Claude"}
                   </Button>
                 ) : null}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={!user || hostedConnect.isPending}
+                  onClick={() => hostedConnect.mutate(provider.id)}
+                  title="Connect through Composio hosted sign-in for official provider apps"
+                >
+                  {hostedProvider === provider.id ? (
+                    <Loader2 className="mr-1 size-3.5 animate-spin" />
+                  ) : null}
+                  Connect · Composio
+                </Button>
                 <Button
                   size="sm"
                   variant="outline"
