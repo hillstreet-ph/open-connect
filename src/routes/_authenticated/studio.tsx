@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Boxes,
@@ -73,8 +74,17 @@ function SectionHeading({
   );
 }
 
+type StudioView = "build" | "packages" | "review" | "context" | "toolkits";
+
 function StudioPage() {
   const { primary, can } = useRoles();
+  const [view, setView] = useState<StudioView>("build");
+  useEffect(() => {
+    const hash = window.location.hash.replace("#", "");
+    if (hash === "app-setup") setView("build");
+    else if (["packages", "review", "context", "toolkits"].includes(hash))
+      setView(hash as StudioView);
+  }, []);
   return (
     <div className="mx-auto max-w-6xl space-y-8 px-4 py-6 sm:px-6 sm:py-10">
       <header>
@@ -94,58 +104,50 @@ function StudioPage() {
         </p>
         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
           <Button
-            asChild
             size="sm"
-            variant="outline"
+            variant={view === "build" ? "default" : "outline"}
             className="w-full justify-start whitespace-normal text-left"
+            onClick={() => setView("build")}
           >
-            <a href="#app-setup">Build & install</a>
+            Build & install
           </Button>
           <Button
-            asChild
             size="sm"
-            variant="outline"
+            variant={view === "packages" ? "default" : "outline"}
             className="w-full justify-start whitespace-normal text-left"
+            onClick={() => setView("packages")}
           >
-            <a href="#packages">
-              <PackageOpen className="size-3.5" />
-              Packages
-            </a>
+            <PackageOpen className="size-3.5" />
+            Packages
           </Button>
           {can("verify_resources") ? (
             <Button
-              asChild
               size="sm"
-              variant="outline"
+              variant={view === "review" ? "default" : "outline"}
               className="w-full justify-start whitespace-normal text-left"
+              onClick={() => setView("review")}
             >
-              <a href="#review">
-                <ShieldCheck className="size-3.5" />
-                Resource review
-              </a>
+              <ShieldCheck className="size-3.5" />
+              Resource review
             </Button>
           ) : null}
           <Button
-            asChild
             size="sm"
-            variant="outline"
+            variant={view === "context" ? "default" : "outline"}
             className="w-full justify-start whitespace-normal text-left"
+            onClick={() => setView("context")}
           >
-            <a href="#context">
-              <Brain className="size-3.5" />
-              Memory & Knowledge
-            </a>
+            <Brain className="size-3.5" />
+            Memory & Knowledge
           </Button>
           <Button
-            asChild
             size="sm"
-            variant="outline"
+            variant={view === "toolkits" ? "default" : "outline"}
             className="w-full justify-start whitespace-normal text-left"
+            onClick={() => setView("toolkits")}
           >
-            <a href="#toolkits">
-              <Boxes className="size-3.5" />
-              Toolkits
-            </a>
+            <Boxes className="size-3.5" />
+            Toolkits
           </Button>
           <Button
             asChild
@@ -165,41 +167,47 @@ function StudioPage() {
         <DataControlsPanel studio />
       </section>
 
-      <AppSetupWorkbench />
-      <ResourceUrlImport />
-      <section id="packages" className="scroll-mt-6 space-y-4">
-        <SectionHeading
-          icon={PackageOpen}
-          label="Packages & capabilities"
-          title="Upload once, publish once"
-          description="Upload a package draft. Automatic detection fills the metadata, and the catalog type remains editable before review and publishing."
-        />
-        <div className="flex flex-wrap gap-2">
-          {packageTypes.map((type) => (
-            <Badge key={type} variant="secondary">
-              {type}
-            </Badge>
-          ))}
+      {view === "build" ? (
+        <div className="space-y-8">
+          <AppSetupWorkbench />
+          <ResourceUrlImport />
         </div>
-        {can("upload_resources") ? (
-          <div className="max-w-3xl">
-            <ResourceLibraryCard
-              allowedTypes={publishablePackageTypes}
-              title="Upload package"
-              cardDescription="Agents, skills, prompts, plugins, MCP, tools, and guides publish to Marketplace and enter your personal library. Memory and Knowledge stay private in their Studio section below."
-              showResourceList={false}
-            />
+      ) : null}
+      {view === "packages" ? (
+        <section id="packages" className="scroll-mt-6 space-y-4">
+          <SectionHeading
+            icon={PackageOpen}
+            label="Packages & capabilities"
+            title="Upload once, publish once"
+            description="Upload a package draft. Automatic detection fills the metadata, and the catalog type remains editable before review and publishing."
+          />
+          <div className="flex flex-wrap gap-2">
+            {packageTypes.map((type) => (
+              <Badge key={type} variant="secondary">
+                {type}
+              </Badge>
+            ))}
           </div>
-        ) : (
-          <Card>
-            <CardContent className="p-5 text-sm text-muted-foreground">
-              Your role cannot upload packages. Contact an administrator to raise permissions.
-            </CardContent>
-          </Card>
-        )}
-      </section>
+          {can("upload_resources") ? (
+            <div className="max-w-3xl">
+              <ResourceLibraryCard
+                allowedTypes={publishablePackageTypes}
+                title="Upload package"
+                cardDescription="Agents, skills, prompts, plugins, MCP, tools, and guides publish to Marketplace and enter your personal library. Memory and Knowledge stay private in their Studio section below."
+                showResourceList={false}
+              />
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="p-5 text-sm text-muted-foreground">
+                Your role cannot upload packages. Contact an administrator to raise permissions.
+              </CardContent>
+            </Card>
+          )}
+        </section>
+      ) : null}
 
-      {can("verify_resources") ? (
+      {view === "review" && can("verify_resources") ? (
         <section id="review" className="scroll-mt-6 space-y-4">
           <SectionHeading
             icon={ShieldCheck}
@@ -211,44 +219,48 @@ function StudioPage() {
         </section>
       ) : null}
 
-      <section id="context" className="scroll-mt-6 space-y-4">
-        <SectionHeading
-          icon={LibraryBig}
-          label="Context & data"
-          title="Create Memory or Knowledge"
-          description="Use one focused form at a time. Memory stores durable instructions and decisions; Knowledge stores reusable documents, sources, and reference material."
-        />
-        <Tabs defaultValue="memory" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="memory">
-              <Brain className="mr-2 size-4" />
-              Memory
-            </TabsTrigger>
-            <TabsTrigger value="knowledge">
-              <LibraryBig className="mr-2 size-4" />
-              Knowledge
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="memory" className="mt-4">
-            <MemoryKnowledgePage defaultSection="memory" studioMode />
-          </TabsContent>
-          <TabsContent value="knowledge" className="mt-4">
-            <MemoryKnowledgePage defaultSection="knowledge" studioMode />
-          </TabsContent>
-        </Tabs>
-      </section>
+      {view === "context" ? (
+        <section id="context" className="scroll-mt-6 space-y-4">
+          <SectionHeading
+            icon={LibraryBig}
+            label="Context & data"
+            title="Create Memory or Knowledge"
+            description="Use one focused form at a time. Memory stores durable instructions and decisions; Knowledge stores reusable documents, sources, and reference material."
+          />
+          <Tabs defaultValue="memory" className="w-full">
+            <TabsList className="grid w-full max-w-md grid-cols-2">
+              <TabsTrigger value="memory">
+                <Brain className="mr-2 size-4" />
+                Memory
+              </TabsTrigger>
+              <TabsTrigger value="knowledge">
+                <LibraryBig className="mr-2 size-4" />
+                Knowledge
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="memory" className="mt-4">
+              <MemoryKnowledgePage defaultSection="memory" studioMode />
+            </TabsContent>
+            <TabsContent value="knowledge" className="mt-4">
+              <MemoryKnowledgePage defaultSection="knowledge" studioMode />
+            </TabsContent>
+          </Tabs>
+        </section>
+      ) : null}
 
-      <section id="toolkits" className="scroll-mt-6 space-y-4">
-        <SectionHeading
-          icon={Layers3}
-          label="Bundles"
-          title="Build a Toolkit"
-          description="Combine capabilities already in your personal library into one reusable bundle, then publish it for project assignment."
-        />
-        <div className="max-w-3xl">
-          <ToolkitCreator />
-        </div>
-      </section>
+      {view === "toolkits" ? (
+        <section id="toolkits" className="scroll-mt-6 space-y-4">
+          <SectionHeading
+            icon={Layers3}
+            label="Bundles"
+            title="Build a Toolkit"
+            description="Combine capabilities already in your personal library into one reusable bundle, then publish it for project assignment."
+          />
+          <div className="max-w-3xl">
+            <ToolkitCreator />
+          </div>
+        </section>
+      ) : null}
 
       <Card className="bg-pillar">
         <CardHeader className="p-4">
