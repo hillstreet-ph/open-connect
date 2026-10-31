@@ -24,6 +24,7 @@ permissions:
   contents: write
   pull-requests: write
   checks: read
+  workflows: write
 
 concurrency:
   group: pr-automation-${{ github.event.pull_request.number || 'scheduled' }}
@@ -51,8 +52,8 @@ jobs:
 
       - name: Apply automatic fixes
         run: |
-          bunx prettier --write .
-          bunx eslint . --fix --no-error-on-unmatched-pattern || true
+          bunx prettier --write "src/**/*.{ts,tsx,css}" "scripts/**/*.py"
+          bunx eslint src --fix --no-error-on-unmatched-pattern || true
 
       - name: Commit and push fixes
         env:
