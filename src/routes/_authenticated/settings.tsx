@@ -1,3 +1,4 @@
+import { NotificationChannels } from "@/components/notification-channels";
 import { createFileRoute, useLocation } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
@@ -339,6 +340,7 @@ function SettingsPage() {
         </TabsContent>
         <TabsContent value="integrations" className="space-y-4">
           <IncomingWebhooks userId={user.id} />
+          <NotificationChannels userId={user.id} />
           <div className="grid gap-4 md:grid-cols-2">
             <a
               href="/integrations?section=apps"
