@@ -185,9 +185,86 @@ async function expandWebsiteUrl(url: URL): Promise<ImportSource[]> {
   return sources;
 }
 
+const SKILLS_SH_RESERVED = new Set([
+  "site",
+  "agent",
+  "agents",
+  "packs",
+  "pack",
+  "topic",
+  "topics",
+  "official",
+  "audits",
+  "docs",
+  "doc",
+  "trending",
+  "hot",
+  "about",
+  "api",
+  "login",
+  "settings",
+]);
+
+async function expandSkillsShUrl(url: URL): Promise<ImportSource[] | null> {
+  const segments = url.pathname.split("/").filter(Boolean);
+  const [owner, repo, skill] = segments;
+  if (!owner || !repo || !/^[a-zA-Z0-9_.-]+$/.test(owner + repo)) return null;
+  if (SKILLS_SH_RESERVED.has(owner)) return null;
+  if (!skill) return expandGitHubUrl(new URL(`https://github.com/${owner}/${repo}`));
+  const repository = JSON.parse(
+    await publicText(`https://api.github.com/repos/${owner}/${repo}`),
+  ) as { default_branch: string; license?: { spdx_id?: string } };
+  const branch = JSON.parse(
+    await publicText(
+      `https://api.github.com/repos/${owner}/${repo}/branches/${encodeURIComponent(repository.default_branch)}`,
+    ),
+  ) as { commit: { sha: string } };
+  const pin = branch.commit.sha;
+  const tree = JSON.parse(
+    await publicText(`https://api.github.com/repos/${owner}/${repo}/git/trees/${pin}?recursive=1`),
+  ) as { truncated?: boolean; tree: Array<{ path: string; type: string }> };
+  if (tree.truncated)
+    throw new Error(
+      "Repository tree is truncated. Import the GitHub repository URL directly instead.",
+    );
+  const slug = skill.replace(/[^a-zA-Z0-9_-]/g, "");
+  const nested = new RegExp(`(?:^|/)${slug}/skill[.]md$`, "i");
+  const flat = new RegExp(`^${slug}[.]md$`, "i");
+  let candidates = tree.tree.filter(
+    (t) => t.type === "blob" && (nested.test(t.path) || flat.test(t.path)),
+  );
+  if (!candidates.length) {
+    const allSkills = tree.tree.filter(
+      (t) => t.type === "blob" && (t.path.split("/").pop() ?? "").toLowerCase() === "skill.md",
+    );
+    if (allSkills.length === 1) candidates = allSkills;
+  }
+  if (!candidates.length)
+    throw new Error(
+      "Skill not found in that repository. Import the repository page or the GitHub repository URL instead.",
+    );
+  if (candidates.length > 25)
+    throw new Error("Skill matched more than 25 files. Import the repository page instead.");
+  const sources: ImportSource[] = [];
+  for (const item of candidates)
+    sources.push({
+      url: `https://raw.githubusercontent.com/${owner}/${repo}/${pin}/${item.path}`,
+      identity: `github:${owner}/${repo}/${item.path}`,
+      filename: item.path.split("/").pop()!,
+      version: `0.0.0+${pin.slice(0, 12)}`,
+      repository: `https://github.com/${owner}/${repo}`,
+      license: repository.license?.spdx_id,
+    });
+  return sources;
+}
+
 async function expandImportUrl(url: URL): Promise<ImportSource[]> {
   if (url.hostname === "github.com") {
     return expandGitHubUrl(url);
+  }
+  if (url.hostname === "skills.sh" || url.hostname === "www.skills.sh") {
+    const expanded = await expandSkillsShUrl(url);
+    if (expanded) return expanded;
   }
   return expandWebsiteUrl(url);
 }
