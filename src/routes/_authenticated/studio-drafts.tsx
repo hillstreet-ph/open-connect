@@ -42,9 +42,9 @@ function StudioDraftsPage() {
               until you publish them from Studio.
             </p>
           </div>
-          <Button asChild size="sm" variant="outline">
+          <Button asChild size="sm" variant="ghost" className="w-fit gap-2 px-2 sm:px-3">
             <Link to="/studio">
-              <ArrowLeft className="size-3.5" />
+              <ArrowLeft className="size-4" aria-hidden="true" />
               Back to Studio
             </Link>
           </Button>

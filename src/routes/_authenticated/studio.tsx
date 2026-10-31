@@ -67,7 +67,7 @@ function SectionHeading({
       <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
         <Icon className="size-4" />
       </span>
-      <div>
+      <div className="min-w-0">
         <p className="text-xs font-semibold uppercase tracking-wider text-primary">{label}</p>
         <h2 className="mt-0.5 text-lg font-semibold sm:text-xl">{title}</h2>
         <p className="mt-1 max-w-3xl text-sm text-muted-foreground">{description}</p>
@@ -80,7 +80,7 @@ function SectionBackButton({ onBack }: { onBack: () => void }) {
   return (
     <Button size="sm" variant="ghost" className="w-fit gap-2 px-2 sm:px-3" onClick={onBack}>
       <ArrowLeft className="size-4" aria-hidden="true" />
-      Back to overview
+      Back to Studio
     </Button>
   );
 }
