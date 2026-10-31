@@ -218,12 +218,17 @@ function GuidesPage() {
             Webhooks: professional setup from event to delivery
           </CardTitle>
           <CardDescription>
-            Configure a receiver, authenticate deliveries, and confirm the resulting action before
-            enabling production events. Automation webhook triggers and actions are currently not
-            connected in Open-Connect.
+            Add an incoming webhook in Settings → Integrations for senders that support custom
+            headers. Deliveries are saved to your private inbox; they do not trigger automations.
+            The steps below also apply when setting up a separate provider-specific receiver.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 px-5 pb-5">
+          <Button asChild size="sm" variant="outline">
+            <Link to="/settings" hash="integrations">
+              Add incoming webhook
+            </Link>
+          </Button>
           <ol className="list-decimal space-y-3 pl-5 text-sm text-muted-foreground">
             <li>
               <strong className="text-foreground">Choose the event and destination.</strong> Record
@@ -273,9 +278,9 @@ function GuidesPage() {
             storage.
           </p>
           <p className="text-xs text-muted-foreground">
-            The legacy connection-webhook helper is not a verified setup target here. Confirm its
-            deployed code and authentication before using it; this guide does not provision a
-            receiver or enable automation webhook execution.
+            The incoming webhook inbox uses a shared secret header; it does not verify provider
+            signatures or run automation actions. For providers requiring signed payloads or
+            challenges, use a compatible receiver.
           </p>
         </CardContent>
       </Card>

@@ -186,7 +186,11 @@ test("Settings keeps only personal tabs and duplicates no sidebar destinations",
   );
   // Disconnects are serialized, so two requests cannot both pass the server's
   // last-identity check and leave the account with no sign-in method.
-  assert.ok(connected.includes("disabled={!account.canDisconnect || disconnect.isPending}"));
+  assert.ok(
+    connected.includes(
+      "disabled={!account.canDisconnect || disconnect.isPending || connect.isPending}",
+    ),
+  );
   // Success is confirmed against real identities, not just the redirect parameter.
   assert.ok(connected.includes("isProviderLinked"));
 

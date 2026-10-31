@@ -4,6 +4,7 @@ import {
   buildConnectedAccounts,
   connectableProviderIds,
   describeLinkError,
+  describeAccountError,
   identityAccountLabel,
   isProviderLinked,
   parseAuthCallbackError,
@@ -122,4 +123,20 @@ test("linking failures are explained in plain language", () => {
     describeLinkError({ code: "weird_code", description: "Something odd" }),
     "Something odd",
   );
+});
+
+test("immediate linking and unlinking errors use actionable messages", () => {
+  assert.match(
+    describeAccountError({ code: "identity_already_exists", message: "raw" }, "failed"),
+    /already connected/,
+  );
+  assert.match(
+    describeAccountError({ code: "single_identity_not_deletable", message: "raw" }, "failed"),
+    /only sign-in method/,
+  );
+  assert.equal(
+    describeAccountError(new Error("Network unavailable"), "failed"),
+    "Network unavailable",
+  );
+  assert.equal(describeAccountError(null, "failed"), "failed");
 });
