@@ -12,7 +12,9 @@ insert into public.categories (slug, name, description) values
   ('productivity', 'Productivity', 'Docs, notes, tasks and scheduling'),
   ('data', 'Data', 'Databases, warehouses and analytics'),
   ('connections', 'Connections', 'External applications, messaging, and identity integrations'),
-  ('infrastructure', 'Infrastructure', 'Cloud, edge and deployment')
+  ('design', 'design', null),
+  ('infrastructure', 'Infrastructure', 'Cloud, edge and deployment'),
+  ('ai-models', 'ai-models', null)
 on conflict (slug) do update set
   name = excluded.name,
   description = excluded.description;
@@ -649,6 +651,15 @@ insert into public.resources (
     'vendored-upstream', 'https://github.com/master-kanor/manus-skills', 'https://github.com/master-kanor/manus-skills',
     '1.0.0+dd316db7', 'MIT', 'skill-source',
     '{"vendored_path":"skills/vendor/manus-skills/utility-skills/xlsx","upstream_repo":"https://github.com/master-kanor/manus-skills","requested":"https://github.com/master-kanor/manus-skills","review_state":"vendored_review_required","executable":false,"ingestion_mode":"vendored_source","license_declared":"Proprietary. LICENSE.txt has complete terms","content_hash":"dd316db7785a6be12966c2a2d848931fbf5f518b3cdb0a66fa62ee835ead1cfc","upstream_commit":"48c760280dab4df57951e31057720926b271f530","upstream_ref":"main"}'::jsonb,
+    array['ChatGPT','Claude','Codex','Open-Connect'],
+    false, false, true
+  ),
+  (
+    'open-nexu-open-design-taste-skill', 'taste-skill', 'Professional design assistance and aesthetic evaluation for AI-generated content, ensuring high-quality visual and experiential output.',
+    'skill', 'design', 'Nexu Open Design',
+    'vendored-upstream', 'https://github.com/nexu-io/open-design', 'https://github.com/nexu-io/open-design',
+    '1.0.0+0fb7d8a8', 'MIT', 'skill-source',
+    '{"vendored_path":"skills/vendor/nexu-open-design/","upstream_repo":"https://github.com/nexu-io/open-design","requested":"https://github.com/nexu-io/open-design","review_state":"vendored_review_required","executable":false,"ingestion_mode":"vendored_source","license_declared":null,"content_hash":"0fb7d8a8609e168050eb59afbcc84b78dddebe39c8d02bc1e03b28e7843355f4","upstream_commit":null,"upstream_ref":"main"}'::jsonb,
     array['ChatGPT','Claude','Codex','Open-Connect'],
     false, false, true
   ),
@@ -2262,6 +2273,15 @@ insert into public.resources (
     '{"vendored_path":"skills/vendor/openhands-extensions/vercel","upstream_repo":"https://github.com/OpenHands/extensions","requested":"https://github.com/OpenHands/extensions","review_state":"vendored_review_required","executable":false,"ingestion_mode":"vendored_source","license_declared":null,"content_hash":"4060634017206b72caca6ad05195cd015a5309569d336cbc5b04dab263769b12","upstream_commit":"d05780951082d4d83f785cb1d4c7f2be6d1c14a5","upstream_ref":"main"}'::jsonb,
     array['ChatGPT','Claude','Codex','Open-Connect'],
     false, false, true
+  ),
+  (
+    'open-openrouter-models-openrouter-models', 'openrouter-models', 'Access and manage AI models through OpenRouter gateway with comprehensive model catalog, routing, and optimization capabilities.',
+    'skill', 'ai-models', 'OpenRouter Models',
+    'vendored-upstream', 'https://github.com/OpenRouterTeam/skills', 'https://github.com/OpenRouterTeam/skills',
+    '1.0.0+96ec02e7', 'MIT', 'skill-source',
+    '{"vendored_path":"skills/vendor/openrouter-models/","upstream_repo":"https://github.com/OpenRouterTeam/skills","requested":"https://github.com/OpenRouterTeam/skills","review_state":"vendored_review_required","executable":false,"ingestion_mode":"vendored_source","license_declared":null,"content_hash":"96ec02e7fc7c862175135146e20d882610efd17efbd7c3c79ca8e6860275e833","upstream_commit":null,"upstream_ref":"main"}'::jsonb,
+    array['ChatGPT','Claude','Codex','Open-Connect'],
+    false, false, true
   )
 on conflict (slug) do update set
   name = excluded.name,
@@ -2402,6 +2422,7 @@ where source = 'vendored-upstream'
     'open-manus-skills-voice-ai-integration',
     'open-manus-skills-writing-plans',
     'open-manus-skills-xlsx',
+    'open-nexu-open-design-taste-skill',
     'open-openclaw-1password',
     'open-openclaw-add-model-provider',
     'open-openclaw-agent-transcript',
@@ -2580,5 +2601,6 @@ where source = 'vendored-upstream'
     'open-openhands-extensions-upstream-fork-sync',
     'open-openhands-extensions-use-jev',
     'open-openhands-extensions-uv',
-    'open-openhands-extensions-vercel'
+    'open-openhands-extensions-vercel',
+    'open-openrouter-models-openrouter-models'
   ]);

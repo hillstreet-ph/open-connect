@@ -9,7 +9,7 @@
     "review_required": true
   },
   "generated_from": "config/vendored-skills.manifest.json",
-  "count": 249,
+  "count": 251,
   "duplicate_count": 2,
   "duplicates": [
     {
@@ -2910,6 +2910,47 @@
       "identity": "https://github.com/master-kanor/manus-skills::xlsx",
       "group": "utility-skills",
       "rel_path": "utility-skills/xlsx"
+    },
+    {
+      "slug": "open-nexu-open-design-taste-skill",
+      "name": "taste-skill",
+      "description": "Professional design assistance and aesthetic evaluation for AI-generated content, ensuring high-quality visual and experiential output.",
+      "resource_type": "skill",
+      "category_slug": "design",
+      "author": "Nexu Open Design",
+      "source": "vendored-upstream",
+      "source_url": "https://github.com/nexu-io/open-design",
+      "repository_url": "https://github.com/nexu-io/open-design",
+      "version": "1.0.0+0fb7d8a8",
+      "license": "MIT",
+      "installation_type": "skill-source",
+      "source_bytes": 1606,
+      "installation_config": {
+        "vendored_path": "skills/vendor/nexu-open-design/",
+        "upstream_repo": "https://github.com/nexu-io/open-design",
+        "requested": "https://github.com/nexu-io/open-design",
+        "review_state": "vendored_review_required",
+        "executable": false,
+        "ingestion_mode": "vendored_source",
+        "license_declared": null,
+        "content_hash": "0fb7d8a8609e168050eb59afbcc84b78dddebe39c8d02bc1e03b28e7843355f4",
+        "upstream_commit": null,
+        "upstream_ref": "main"
+      },
+      "supported_clients": [
+        "ChatGPT",
+        "Claude",
+        "Codex",
+        "Open-Connect"
+      ],
+      "verified": false,
+      "featured": false,
+      "published": true,
+      "source_id": "nexu-open-design",
+      "trust": "verified_community",
+      "identity": "https://github.com/nexu-io/open-design::taste-skill",
+      "group": null,
+      "rel_path": ""
     },
     {
       "slug": "open-openclaw-1password",
@@ -10259,6 +10300,47 @@
       "identity": "https://github.com/openhands/extensions::vercel",
       "group": null,
       "rel_path": "vercel"
+    },
+    {
+      "slug": "open-openrouter-models-openrouter-models",
+      "name": "openrouter-models",
+      "description": "Access and manage AI models through OpenRouter gateway with comprehensive model catalog, routing, and optimization capabilities.",
+      "resource_type": "skill",
+      "category_slug": "ai-models",
+      "author": "OpenRouter Models",
+      "source": "vendored-upstream",
+      "source_url": "https://github.com/OpenRouterTeam/skills",
+      "repository_url": "https://github.com/OpenRouterTeam/skills",
+      "version": "1.0.0+96ec02e7",
+      "license": "MIT",
+      "installation_type": "skill-source",
+      "source_bytes": 1848,
+      "installation_config": {
+        "vendored_path": "skills/vendor/openrouter-models/",
+        "upstream_repo": "https://github.com/OpenRouterTeam/skills",
+        "requested": "https://github.com/OpenRouterTeam/skills",
+        "review_state": "vendored_review_required",
+        "executable": false,
+        "ingestion_mode": "vendored_source",
+        "license_declared": null,
+        "content_hash": "96ec02e7fc7c862175135146e20d882610efd17efbd7c3c79ca8e6860275e833",
+        "upstream_commit": null,
+        "upstream_ref": "main"
+      },
+      "supported_clients": [
+        "ChatGPT",
+        "Claude",
+        "Codex",
+        "Open-Connect"
+      ],
+      "verified": false,
+      "featured": false,
+      "published": true,
+      "source_id": "openrouter-models",
+      "trust": "official_first_party",
+      "identity": "https://github.com/openrouterteam/skills::openrouter-models",
+      "group": null,
+      "rel_path": ""
     }
   ]
 }

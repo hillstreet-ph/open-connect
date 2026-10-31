@@ -133,6 +133,38 @@
         ".agents/skills",
         "skills"
       ]
+    },
+    {
+      "id": "openrouter-models",
+      "name": "OpenRouter Models",
+      "repo": "https://github.com/OpenRouterTeam/skills",
+      "requested": "https://github.com/OpenRouterTeam/skills",
+      "ref": "main",
+      "license": "MIT",
+      "trust": "official_first_party",
+      "category": "ai-models",
+      "path": "openrouter-models",
+      "upstream_index": "skills/openrouter-models",
+      "description": "OpenRouter official model skills for accessing and managing AI models through OpenRouter gateway.",
+      "vendored_paths": [
+        "skills/openrouter-models"
+      ]
+    },
+    {
+      "id": "nexu-open-design",
+      "name": "Nexu Open Design",
+      "repo": "https://github.com/nexu-io/open-design",
+      "requested": "https://github.com/nexu-io/open-design",
+      "ref": "main",
+      "license": "MIT",
+      "trust": "verified_community",
+      "category": "design",
+      "path": "nexu-open-design",
+      "upstream_index": "skills",
+      "description": "Nexu open design skills including taste-skill for design assistance and aesthetic evaluation.",
+      "vendored_paths": [
+        "skills"
+      ]
     }
   ],
   "dedupe_renames": [
