@@ -254,6 +254,20 @@ function ConnectionsPage() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not remove connection"),
   });
 
+  const uninstallMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      for (const id of ids) {
+        await disconnectFn({ data: { id } });
+      }
+    },
+    onSuccess: (_result, ids) => {
+      toast.success(`${ids.length} account${ids.length === 1 ? "" : "s"} uninstalled`);
+      void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
+      void queryClient.invalidateQueries({ queryKey: ["connection-details"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not uninstall connector"),
+  });
+
   const configureMutation = useMutation({
     mutationFn: () =>
       configureFn({
@@ -503,17 +517,29 @@ function ConnectionsPage() {
         </div>
         <p className="truncate text-xs text-muted-foreground">{`${connections.length} account${connections.length === 1 ? "" : "s"} · ${connectedCount} connected${pendingCount ? ` · ${pendingCount} pending` : ""}`}</p>
         <div className="flex flex-wrap items-center justify-between gap-1.5">
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-7 shrink-0 px-2 text-xs"
-            onClick={() => {
-              setManagedApp(app as CatalogApp);
-              setManagedConnectionId(first.id);
-            }}
-          >
-            Manage
-          </Button>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 shrink-0 px-2 text-xs"
+              onClick={() => {
+                setManagedApp(app as CatalogApp);
+                setManagedConnectionId(first.id);
+              }}
+            >
+              Manage
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 shrink-0 border-red-500/50 px-2 text-xs text-red-400 hover:bg-red-500/10 hover:text-red-300"
+              disabled={uninstallMutation.isPending}
+              title={`Remove all ${connections.length} account${connections.length === 1 ? "" : "s"} of ${first.display_name}`}
+              onClick={() => uninstallMutation.mutate(connections.map((c) => c.id))}
+            >
+              Uninstall
+            </Button>
+          </div>
           <Badge variant="outline" className={`shrink-0 ${statusBadgeClass(groupStatus)}`}>
             {connectionStatusLabel(groupStatus)}
           </Badge>
