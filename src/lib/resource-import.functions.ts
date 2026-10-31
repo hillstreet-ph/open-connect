@@ -58,7 +58,9 @@ async function expandGitHubUrl(url: URL): Promise<ImportSource[]> {
       await publicText(`https://api.github.com/repos/${owner}/${repo}`),
     ) as { license?: { spdx_id?: string } };
     const tree = JSON.parse(
-      await publicText(`https://api.github.com/repos/${owner}/${repo}/git/trees/${pin}?recursive=1`),
+      await publicText(
+        `https://api.github.com/repos/${owner}/${repo}/git/trees/${pin}?recursive=1`,
+      ),
     ) as { truncated?: boolean; tree: Array<{ path: string; type: string }> };
     if (tree.truncated)
       throw new Error(
