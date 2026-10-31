@@ -22,6 +22,35 @@ function savedAccount(account: ManagedAccount, saved: SavedConnection[]) {
   );
 }
 
+/**
+ * Composio AI-provider toolkits sync under their Open-Connect AI Gateway provider
+ * ID so gateway cards and connectors share one provider. Connections flow one
+ * way: users authorize in Composio, then Open-Connect imports them by sync.
+ */
+const GATEWAY_PROVIDER_BY_SLUG: Record<string, { id: string; name: string }> = {
+  openai: { id: "openai", name: "OpenAI" },
+  anthropic: { id: "anthropic", name: "Anthropic / Claude" },
+  gemini: { id: "google", name: "Google / Gemini" },
+  mistral: { id: "mistral", name: "Mistral" },
+  mistral_ai: { id: "mistral", name: "Mistral" },
+  deepseek: { id: "deepseek", name: "DeepSeek" },
+  groq: { id: "groq", name: "Groq" },
+  groqcloud: { id: "groq", name: "Groq" },
+  grok: { id: "xai", name: "xAI / Grok" },
+  xai: { id: "xai", name: "xAI / Grok" },
+  x_ai: { id: "xai", name: "xAI / Grok" },
+  hugging_face: { id: "huggingface", name: "Hugging Face" },
+  huggingface: { id: "huggingface", name: "Hugging Face" },
+  nvidia: { id: "nvidia", name: "NVIDIA NIM" },
+  nvidia_nim: { id: "nvidia", name: "NVIDIA NIM" },
+  nim: { id: "nvidia", name: "NVIDIA NIM" },
+  openrouter: { id: "openrouter", name: "OpenRouter" },
+  ollama: { id: "ollama_cloud", name: "Ollama Cloud" },
+  ollama_cloud: { id: "ollama_cloud", name: "Ollama Cloud" },
+  kilocode: { id: "kilo", name: "Kilo Code Gateway" },
+  kilo: { id: "kilo", name: "Kilo Code Gateway" },
+};
+
 /** Plan metadata imports only. Account ownership and ACTIVE status are checked by the broker. */
 export function planComposioSync(
   accounts: ManagedAccount[],
@@ -32,11 +61,14 @@ export function planComposioSync(
   const unique = new Map(accounts.map((account) => [account.id, account]));
   const candidates = [...unique.values()]
     .filter((account) => !savedAccount(account, saved))
-    .map((account) => ({
-      account_id: account.id,
-      provider: account.provider,
-      display_name: labels.get(account.provider) ?? account.provider,
-    }));
+    .map((account) => {
+      const gateway = GATEWAY_PROVIDER_BY_SLUG[account.provider];
+      return {
+        account_id: account.id,
+        provider: gateway?.id ?? account.provider,
+        display_name: gateway?.name ?? labels.get(account.provider) ?? account.provider,
+      };
+    });
   return {
     matched: unique.size,
     existing: unique.size - candidates.length,
