@@ -1,6 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { normalizeCredentialValue, sameCredentialIdentity } from "./credential-save-policy";
+import {
+  NOTES_MAX_LENGTH,
+  findCredentialNotes,
+  resolveNotesForUpdate,
+  withoutNotes,
+} from "./credential-notes";
 
 export type SecretType =
   "api_key" | "oauth_token" | "mcp_url" | "bot_token" | "password" | "totp" | "other";
@@ -65,12 +71,27 @@ export function credentialMetadata(value: unknown): CredentialMetadata {
   };
 }
 
+/** Credential metadata as sent to list views: note text is never included. */
+export type CredentialListItem = Omit<CredentialMetadata, "notes"> & { has_notes: boolean };
+
 export const listSecrets = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .handler(async ({ context }): Promise<CredentialListItem[]> => {
     const { data, error } = await context.supabase.rpc("list_credential_secrets");
     if (error) throw new Error(error.message);
-    return Array.isArray(data) ? data.map(credentialMetadata) : [];
+    return Array.isArray(data) ? data.map((row) => withoutNotes(credentialMetadata(row))) : [];
+  });
+
+/** Returns the notes of exactly one owned credential, on explicit user request. */
+export const revealCredentialNotes = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { id: string }) => ({ id: (input?.id ?? "").trim() }))
+  .handler(async ({ data, context }) => {
+    if (!data.id) throw new Error("id required");
+    const { data: rows, error } = await context.supabase.rpc("list_credential_secrets");
+    if (error) throw new Error(error.message);
+    const owned = Array.isArray(rows) ? rows.map(credentialMetadata) : [];
+    return { notes: findCredentialNotes(owned, data.id) };
   });
 
 export const createSecret = createServerFn({ method: "POST" })
@@ -164,31 +185,176 @@ export const createSecret = createServerFn({ method: "POST" })
     return row;
   });
 
+// Each item costs two Supabase subrequests (create + organize). Cloudflare Workers allow
+// 50 subrequests per request on the free plan, so keep batches well under that.
+const IMPORT_BATCH_LIMIT = 15;
+const IMPORT_TYPES = new Set(["password", "totp", "other"]);
+
+export type CredentialImportResult = {
+  row: number;
+  status: "created" | "skipped" | "failed";
+  reason?: string;
+};
+
+/** Saves one batch of password-manager items; results never echo secret values. */
+export const importCredentials = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator(
+    (input: {
+      items: Array<{
+        row: number;
+        name: string;
+        secret_type: string;
+        secret_value: string;
+        email_address?: string;
+        username?: string;
+        website?: string;
+        notes?: string;
+        totp_secret?: string;
+        tags?: string[];
+      }>;
+    }) => {
+      const items = Array.isArray(input?.items) ? input.items : [];
+      if (items.length > IMPORT_BATCH_LIMIT)
+        throw new Error(`Import at most ${IMPORT_BATCH_LIMIT} credentials per batch`);
+      return items.map((item) => ({
+        row: Number(item?.row) || 0,
+        name: String(item?.name ?? "")
+          .trim()
+          .slice(0, 120),
+        secret_type: String(item?.secret_type ?? ""),
+        secret_value: normalizeCredentialValue(
+          String(item?.secret_value ?? ""),
+          String(item?.secret_type ?? ""),
+        ),
+        email_address: String(item?.email_address ?? "")
+          .trim()
+          .slice(0, 320),
+        username: String(item?.username ?? "")
+          .trim()
+          .slice(0, 320),
+        website: String(item?.website ?? "")
+          .trim()
+          .slice(0, 2048),
+        notes: String(item?.notes ?? "").slice(0, 4000),
+        totp_secret: String(item?.totp_secret ?? "").trim(),
+        tags: Array.isArray(item?.tags)
+          ? item.tags
+              .map((tag) => String(tag).trim().toLowerCase().slice(0, 40))
+              .filter(Boolean)
+              .slice(0, 20)
+          : [],
+      }));
+    },
+  )
+  .handler(async ({ data, context }): Promise<CredentialImportResult[]> => {
+    const { data: owned, error: inventoryError } =
+      await context.supabase.rpc("list_credential_secrets");
+    if (inventoryError || !Array.isArray(owned))
+      throw new Error("Existing credentials could not be checked. Nothing was imported.");
+    const existing = owned.map(credentialMetadata);
+    const results: CredentialImportResult[] = [];
+    for (const item of data) {
+      if (!item.name || !IMPORT_TYPES.has(item.secret_type) || item.secret_value.length < 4) {
+        results.push({ row: item.row, status: "failed", reason: "Missing name or secret" });
+        continue;
+      }
+      if (existing.some((other) => sameCredentialIdentity(item, other))) {
+        results.push({ row: item.row, status: "skipped", reason: "Already in your vault" });
+        continue;
+      }
+      const { data: row, error } = await context.supabase.rpc("create_credential_item", {
+        p_name: item.name,
+        p_secret_type: item.secret_type,
+        p_scopes: [],
+        p_secret_value: item.secret_value,
+        p_email_address: item.email_address,
+        p_username: item.username,
+        p_website: item.website,
+        p_notes: item.notes,
+        p_totp_secret: item.totp_secret,
+      });
+      const id = (row as { id?: string } | null)?.id;
+      if (error || !id) {
+        // Database messages can quote inputs; report a fixed reason instead.
+        results.push({ row: item.row, status: "failed", reason: "Vault rejected this item" });
+        continue;
+      }
+      if (item.tags.length) {
+        const { error: organizeError } = await context.supabase.rpc("organize_credential", {
+          p_credential_id: id,
+          p_tags: item.tags,
+          p_project_ids: [],
+        });
+        if (organizeError) {
+          await context.supabase.rpc("delete_credential_secret", { p_id: id });
+          results.push({ row: item.row, status: "failed", reason: "Tags could not be saved" });
+          continue;
+        }
+      }
+      existing.push({
+        ...credentialMetadata({ id, name: item.name }),
+        secret_type: item.secret_type,
+        email_address: item.email_address,
+        username: item.username,
+        website: item.website,
+      });
+      results.push({ row: item.row, status: "created" });
+    }
+    return results;
+  });
+
 export const updateSecretOrganization = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input: { id: string; notes?: string; tags?: string[]; project_ids?: string[] }) => ({
-    id: (input?.id ?? "").trim(),
-    notes: (input?.notes ?? "").slice(0, 4000),
-    tags: Array.isArray(input?.tags)
-      ? input.tags
-          .map((tag) => tag.trim().toLowerCase().slice(0, 40))
-          .filter(Boolean)
-          .slice(0, 20)
-      : [],
-    project_ids: Array.isArray(input?.project_ids)
-      ? [...new Set(input.project_ids.map((id) => id.trim()).filter(Boolean))]
-      : [],
-  }))
+  .validator(
+    (input: {
+      id: string;
+      notes?: string | undefined;
+      tags?: string[];
+      project_ids?: string[];
+    }) => ({
+      id: (input?.id ?? "").trim(),
+      // undefined = notes were not loaded/edited in the UI; the stored value is preserved.
+      notes: typeof input?.notes === "string" ? input.notes.slice(0, NOTES_MAX_LENGTH) : undefined,
+      tags: Array.isArray(input?.tags)
+        ? input.tags
+            .map((tag) => tag.trim().toLowerCase().slice(0, 40))
+            .filter(Boolean)
+            .slice(0, 20)
+        : [],
+      project_ids: Array.isArray(input?.project_ids)
+        ? [...new Set(input.project_ids.map((id) => id.trim()).filter(Boolean))]
+        : [],
+    }),
+  )
   .handler(async ({ data, context }) => {
     if (!data.id) throw new Error("id required");
+    let currentNotes: string | null = null;
+    if (data.notes === undefined) {
+      const { data: rows, error: inventoryError } =
+        await context.supabase.rpc("list_credential_secrets");
+      if (inventoryError || !Array.isArray(rows))
+        throw new Error("Existing notes could not be checked. Nothing was changed.");
+      currentNotes = findCredentialNotes(rows.map(credentialMetadata), data.id);
+    }
     const { data: result, error } = await context.supabase.rpc("update_credential_organization", {
       p_credential_id: data.id,
-      p_notes: data.notes,
+      p_notes: resolveNotesForUpdate(data.notes, currentNotes),
       p_tags: data.tags,
       p_project_ids: data.project_ids,
     });
     if (error) throw new Error(error.message);
-    return result;
+    // The RPC echoes notes; never send them back in a mutation response.
+    const organization = (result ?? {}) as {
+      credential_id?: string;
+      tags?: string[];
+      project_ids?: string[];
+    };
+    return {
+      credential_id: organization.credential_id ?? data.id,
+      tags: Array.isArray(organization.tags) ? organization.tags : [],
+      project_ids: Array.isArray(organization.project_ids) ? organization.project_ids : [],
+    };
   });
 
 export const updateSecretValue = createServerFn({ method: "POST" })

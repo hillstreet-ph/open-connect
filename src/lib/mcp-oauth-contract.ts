@@ -1,6 +1,7 @@
+import { isAcceptableRedirectUri } from "./oauth-redirect.ts";
+
 export const OAUTH_ISSUER = "https://open-connect.site";
 export const MCP_RESOURCE = `${OAUTH_ISSUER}/mcp`;
-
 /** One resource is supported; never silently accept a different audience. */
 export function oauthResource(value: unknown): string {
   if (value === undefined || value === "") return MCP_RESOURCE;
@@ -22,8 +23,8 @@ export function oauthCallback(
   result: { code: string } | { error: "access_denied" },
 ): string {
   const url = new URL(redirectUri);
-  if (url.protocol !== "https:" || url.username || url.password || url.hash)
-    throw new Error("Invalid OAuth callback.");
+  // https for web clients, http loopback for native clients (RFC 8252 §7.3).
+  if (!isAcceptableRedirectUri(redirectUri)) throw new Error("Invalid OAuth callback.");
   url.searchParams.delete("code");
   url.searchParams.delete("error");
   url.searchParams.delete("state");

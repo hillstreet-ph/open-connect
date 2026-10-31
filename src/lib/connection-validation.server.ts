@@ -16,6 +16,7 @@ const DEFAULT_BASES: Record<string, string> = {
   ollama_cloud: "https://ollama.com/v1",
   groq: "https://api.groq.com/openai/v1",
   cerebras: "https://api.cerebras.ai/v1",
+  commandcode: "https://api.commandcode.ai/provider/v1",
   openai: "https://api.openai.com/v1",
   anthropic: "https://api.anthropic.com/v1",
   google: "https://generativelanguage.googleapis.com/v1beta",
@@ -25,13 +26,17 @@ const DEFAULT_BASES: Record<string, string> = {
 };
 
 function base(setup: Setup) {
-  const official = AI_GATEWAY_PROVIDERS.find(
-    (provider) => provider.id === setup.provider && provider.id !== "litellm",
-  );
-  return (official?.baseUrl || setup.endpointUrl || DEFAULT_BASES[setup.provider] || "").replace(
-    /\/$/,
-    "",
-  );
+  const official = AI_GATEWAY_PROVIDERS.find((provider) => provider.id === setup.provider);
+  const legacyBase = ["commandcode", "cerebras"].includes(setup.provider)
+    ? DEFAULT_BASES[setup.provider]
+    : undefined;
+  return (
+    official?.baseUrl ||
+    legacyBase ||
+    setup.endpointUrl ||
+    DEFAULT_BASES[setup.provider] ||
+    ""
+  ).replace(/\/$/, "");
 }
 
 async function checkedFetch(url: string, init: RequestInit, send: typeof fetch): Promise<Response> {
@@ -193,21 +198,27 @@ export async function validateConnectionCredential(
   }
 
   if (setup.provider === "anthropic") {
-    await checkedFetch(
+    const response = await checkedFetch(
       `${base(setup)}/models`,
       { headers: { "x-api-key": setup.apiKey, "anthropic-version": "2023-06-01" } },
       send,
     );
-    return { verified: true, detail: "Anthropic models verified" };
+    const payload = (await response.json().catch(() => null)) as { data?: unknown } | null;
+    if (!Array.isArray(payload?.data))
+      throw new Error("Provider did not return a valid model catalog.");
+    return { verified: true, detail: `API key verified; ${payload.data.length} models fetched.` };
   }
 
   if (setup.provider === "google") {
-    await checkedFetch(
+    const response = await checkedFetch(
       `${DEFAULT_BASES["google"]}/models`,
       { headers: { "x-goog-api-key": setup.apiKey } },
       send,
     );
-    return { verified: true, detail: "Gemini models verified" };
+    const payload = (await response.json().catch(() => null)) as { models?: unknown } | null;
+    if (!Array.isArray(payload?.models))
+      throw new Error("Provider did not return a valid model catalog.");
+    return { verified: true, detail: `API key verified; ${payload.models.length} models fetched.` };
   }
 
   if (
@@ -233,7 +244,7 @@ export async function validateConnectionCredential(
     const payload = (await response.json().catch(() => null)) as { data?: unknown } | null;
     if (!Array.isArray(payload?.data))
       throw new Error("Provider did not return a valid model catalog. Check its API endpoint.");
-    return { verified: true, detail: "Provider models verified" };
+    return { verified: true, detail: `API key verified; ${payload.data.length} models fetched.` };
   }
 
   return { verified: false, detail: "Credential stored; provider validation is not available yet" };

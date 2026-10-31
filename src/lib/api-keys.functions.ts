@@ -144,6 +144,24 @@ export const updateApiKeyAccess = createServerFn({ method: "POST" })
     return result;
   });
 
+export const renameApiKey = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { id: string; name: string }) => {
+    const name = (input?.name ?? "").trim();
+    if (!name) throw new Error("Key name cannot be empty");
+    if (name.length > 120) throw new Error("Key name is too long (120 characters max)");
+    return { id: input.id, name };
+  })
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("api_keys")
+      .update({ name: data.name })
+      .eq("id", data.id)
+      .eq("user_id", context.userId);
+    if (error) throw new Error(error.message);
+    return { ok: true, name: data.name };
+  });
+
 export const revokeApiKey = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: { id: string }) => ({ id: input.id }))

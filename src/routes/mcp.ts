@@ -111,7 +111,8 @@ type McpTool = {
   _meta?: Record<string, unknown>;
 };
 
-const COMMAND_CENTER_URI = "ui://open-connect/command-center-v6.html";
+const COMMAND_CENTER_URI = "ui://open-connect/command-center-v7.html";
+const V6_COMMAND_CENTER_URI = "ui://open-connect/command-center-v6.html";
 const V5_COMMAND_CENTER_URI = "ui://open-connect/command-center-v5.html";
 const V4_COMMAND_CENTER_URI = "ui://open-connect/command-center-v4.html";
 const V3_COMMAND_CENTER_URI = "ui://open-connect/command-center-v3.html";
@@ -1587,6 +1588,7 @@ export const Route = createFileRoute("/mcp")({
           const uri = (body.params as { uri?: string } | undefined)?.uri;
           result =
             uri === COMMAND_CENTER_URI ||
+            uri === V6_COMMAND_CENTER_URI ||
             uri === V5_COMMAND_CENTER_URI ||
             uri === V4_COMMAND_CENTER_URI ||
             uri === V3_COMMAND_CENTER_URI ||
@@ -2221,8 +2223,15 @@ export const Route = createFileRoute("/mcp")({
               );
               result = { ...textResult(payload), structuredContent: payload };
             } catch (error) {
-              const failure = remoteMcpFailureResult(error);
-              if (!failure) throw error;
+              // Secret-safe fallback: unclassified discovery failures must not escape as HTTP 500.
+              const failure = remoteMcpFailureResult(error) ?? {
+                status: "unavailable",
+                code: "connection_tool_discovery_failed",
+                message:
+                  "Tool discovery failed for this connection. Verify the connection is active and retry.",
+                retryable: true,
+                secrets_exposed: false,
+              };
               result = { ...textResult(failure), structuredContent: failure, isError: true };
             }
           } else if (name === "call_connection_tool") {

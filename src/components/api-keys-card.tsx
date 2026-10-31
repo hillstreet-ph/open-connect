@@ -2,11 +2,12 @@ import { McpConnectionCard } from "@/components/mcp-connection-card";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Copy, KeyRound, Loader2 } from "lucide-react";
+import { Check, Copy, KeyRound, Loader2, Pencil, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   createApiKey,
   listApiKeys,
+  renameApiKey,
   revokeApiKey,
   updateApiKeyAccess,
 } from "@/lib/api-keys.functions";
@@ -23,6 +24,7 @@ import {
 import { listProjects } from "@/lib/orgs.functions";
 import { getMyRoles } from "@/lib/roles.functions";
 import { hasRole } from "@/lib/rbac";
+import { formatDateTime, formatRelative } from "@/lib/date-time";
 
 const PROFILE_LABELS: Record<AccessProfile, string> = {
   read_only: "Read only",
@@ -37,6 +39,7 @@ export function ApiKeysCard({ modelOnly = false }: { modelOnly?: boolean }) {
   const list = useServerFn(listApiKeys);
   const create = useServerFn(createApiKey);
   const revoke = useServerFn(revokeApiKey);
+  const rename = useServerFn(renameApiKey);
   const update = useServerFn(updateApiKeyAccess);
   const getRoles = useServerFn(getMyRoles);
   const listProj = useServerFn(listProjects);
@@ -92,6 +95,16 @@ export function ApiKeysCard({ modelOnly = false }: { modelOnly?: boolean }) {
     },
   });
 
+  const renameMutation = useMutation({
+    mutationFn: (input: { id: string; name: string }) => rename({ data: input }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["api-keys"] });
+      toast.success("Key renamed");
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Could not rename key"),
+  });
+
   return (
     <div className="space-y-6">
       <Card className="shadow-panel">
@@ -100,12 +113,12 @@ export function ApiKeysCard({ modelOnly = false }: { modelOnly?: boolean }) {
             <KeyRound className="size-4" />
           </span>
           <CardTitle className="mt-3 text-base">
-            {modelOnly ? "AI Gateway keys" : "Integration tokens"}
+            {modelOnly ? "API Key" : "Personal Token"}
           </CardTitle>
           <CardDescription>
             {modelOnly
-              ? "Create a model-scoped sk-oc- key for https://open-connect.site/v1. Connect your model providers below first."
-              : "Create oc_live_ tokens for MCP tools, resources and agent actions. Administrators can select Administrator · full control. Model keys are managed in AI Gateway."}
+              ? "Create a model-scoped sk-oc- API Key for https://open-connect.site/v1. Connect your model providers below first."
+              : "Create oc_live_ Personal Tokens for MCP tools, resources and agent actions. Administrators can select Administrator · full control. Model keys are managed in AI Gateway."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -117,7 +130,7 @@ export function ApiKeysCard({ modelOnly = false }: { modelOnly?: boolean }) {
             }}
           >
             <Input
-              aria-label="API key name"
+              aria-label={modelOnly ? "API key name" : "Token name"}
               value={name}
               onChange={(event) => setName(event.target.value)}
               placeholder="Key name (e.g. local agent)"
@@ -197,54 +210,86 @@ export function ApiKeysCard({ modelOnly = false }: { modelOnly?: boolean }) {
           <ul className="space-y-2 text-sm">
             {visibleKeys.length ? (
               visibleKeys.map((key) => (
-                <li
-                  key={key.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border px-3 py-2"
-                >
-                  <span className="min-w-0">
-                    <span className="block truncate font-medium">{key.name}</span>
-                    <span className="font-mono text-xs text-muted-foreground">
-                      {key.key_prefix}…
-                    </span>
-                    <Badge variant="secondary" className="ml-2 text-[10px]">
-                      {key.key_prefix.startsWith("sk-oc-")
-                        ? "Models only"
-                        : (PROFILE_LABELS[(key.access_profile as AccessProfile) ?? "custom"] ??
-                          "Legacy")}
-                    </Badge>
-                    {key.project_id ? (
-                      <Badge variant="outline" className="ml-2 text-[10px]">
-                        Project scoped
-                      </Badge>
-                    ) : null}
-                  </span>
-                  {key.active && !key.key_prefix.startsWith("sk-oc-") ? (
-                    <KeyAccessEditor
-                      key={`${key.id}:${key.access_profile}:${key.scopes?.join(",")}`}
-                      name={key.name}
-                      profile={key.access_profile}
-                      scopes={key.scopes ?? []}
-                      isAdmin={isAdmin}
-                      pending={updateMutation.isPending}
-                      onApply={(profile, scopes) =>
-                        updateMutation.mutate({ id: key.id, profile, scopes })
-                      }
-                    />
-                  ) : null}
-                  {key.revoked_at ? (
-                    <Badge variant="outline" className="text-muted-foreground">
-                      Revoked
-                    </Badge>
-                  ) : (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => revokeMutation.mutate(key.id)}
-                      disabled={revokeMutation.isPending}
-                    >
-                      Revoke
-                    </Button>
-                  )}
+                <li key={key.id} className="rounded-lg border border-border px-3 py-2.5">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <KeyNameEditor
+                          name={key.name}
+                          editable={key.active && !key.revoked_at}
+                          pending={renameMutation.isPending}
+                          onRename={(name) => renameMutation.mutate({ id: key.id, name })}
+                        />
+                        {key.active && !key.revoked_at ? (
+                          <Badge
+                            variant="secondary"
+                            className="border-transparent bg-emerald-500/15 text-[10px] text-emerald-600 dark:text-emerald-400"
+                          >
+                            Active
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                            {key.revoked_at ? "Revoked" : "Inactive"}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                        <span className="font-mono text-xs text-muted-foreground">
+                          {key.key_prefix}…
+                        </span>
+                        <Badge variant="secondary" className="text-[10px]">
+                          {key.key_prefix.startsWith("sk-oc-")
+                            ? "Models only"
+                            : (PROFILE_LABELS[(key.access_profile as AccessProfile) ?? "custom"] ??
+                              "Legacy")}
+                        </Badge>
+                        {key.project_id ? (
+                          <Badge variant="outline" className="text-[10px]">
+                            Project scoped
+                          </Badge>
+                        ) : null}
+                      </div>
+                      <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                        <span title={formatDateTime(key.created_at)}>
+                          Created {formatRelative(key.created_at)}
+                        </span>
+                        {" · "}
+                        <span
+                          title={key.last_used_at ? formatDateTime(key.last_used_at) : undefined}
+                        >
+                          {key.last_used_at
+                            ? `Last used ${formatRelative(key.last_used_at)}`
+                            : "Never used"}
+                        </span>
+                        {key.expires_at ? ` · Expires ${formatRelative(key.expires_at)}` : ""}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {key.active && !key.key_prefix.startsWith("sk-oc-") ? (
+                        <KeyAccessEditor
+                          key={`${key.id}:${key.access_profile}:${key.scopes?.join(",")}`}
+                          name={key.name}
+                          profile={key.access_profile}
+                          scopes={key.scopes ?? []}
+                          isAdmin={isAdmin}
+                          pending={updateMutation.isPending}
+                          onApply={(profile, scopes) =>
+                            updateMutation.mutate({ id: key.id, profile, scopes })
+                          }
+                        />
+                      ) : null}
+                      {key.revoked_at ? null : (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => revokeMutation.mutate(key.id)}
+                          disabled={revokeMutation.isPending}
+                        >
+                          Revoke
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                 </li>
               ))
             ) : !keys.isLoading && !keys.isError ? (
@@ -257,6 +302,86 @@ export function ApiKeysCard({ modelOnly = false }: { modelOnly?: boolean }) {
         <McpConnectionCard key={freshKey ? "fresh" : "existing"} freshKey={freshKey} />
       ) : null}
     </div>
+  );
+}
+
+function KeyNameEditor(props: {
+  name: string;
+  editable: boolean;
+  pending: boolean;
+  onRename: (name: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(props.name);
+
+  if (!editing) {
+    return (
+      <span className="flex items-center gap-1.5">
+        <span className="truncate font-medium">{props.name}</span>
+        {props.editable ? (
+          <button
+            type="button"
+            aria-label={`Rename ${props.name}`}
+            className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
+            onClick={() => {
+              setValue(props.name);
+              setEditing(true);
+            }}
+          >
+            <Pencil className="size-3" />
+          </button>
+        ) : null}
+      </span>
+    );
+  }
+
+  const submit = () => {
+    const next = value.trim();
+    if (!next || next === props.name) {
+      setEditing(false);
+      return;
+    }
+    props.onRename(next);
+    setEditing(false);
+  };
+
+  return (
+    <span className="flex items-center gap-1">
+      <Input
+        aria-label="New key name"
+        value={value}
+        autoFocus
+        disabled={props.pending}
+        onChange={(event) => setValue(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            submit();
+          } else if (event.key === "Escape") {
+            setEditing(false);
+          }
+        }}
+        className="h-7 max-w-40 text-sm"
+      />
+      <Button
+        size="sm"
+        variant="ghost"
+        aria-label="Save key name"
+        disabled={props.pending}
+        onClick={submit}
+      >
+        <Check className="size-3.5" />
+      </Button>
+      <Button
+        size="sm"
+        variant="ghost"
+        aria-label="Cancel rename"
+        disabled={props.pending}
+        onClick={() => setEditing(false)}
+      >
+        <X className="size-3.5" />
+      </Button>
+    </span>
   );
 }
 

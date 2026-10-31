@@ -15,6 +15,32 @@ const req = {
   code_challenge: "a".repeat(43),
   code_challenge_method: "S256",
 };
+test("hung OAuth requests time out, abort, and leave the flow recoverable", async () => {
+  const { withOAuthRequestTimeout } = await import("./oauth-consent.ts");
+  let signal;
+  await assert.rejects(
+    withOAuthRequestTimeout((value) => {
+      signal = value;
+      return new Promise(() => {});
+    }, 10),
+    /timed out.*restart/i,
+  );
+  assert.equal(signal.aborted, true);
+  assert.equal(await withOAuthRequestTimeout(async () => "recovered", 100), "recovered");
+});
+test("OAuth request wrapper preserves server failures and successful results", async () => {
+  const { withOAuthRequestTimeout } = await import("./oauth-consent.ts");
+  await assert.rejects(
+    withOAuthRequestTimeout(() => {
+      throw new Error("Denied");
+    }),
+    /Denied/,
+  );
+  assert.deepEqual(await withOAuthRequestTimeout(async () => ({ data: "code", error: null })), {
+    data: "code",
+    error: null,
+  });
+});
 test("consent preserves client requests and permits explicit role-checked profiles", () => {
   const requested = "mcp:connect resources:read";
   assert.deepEqual(consentScopes("requested", requested, false), requested.split(" "));
@@ -48,6 +74,16 @@ test("malformed callbacks return a stable error on server and browser", () => {
         error.message === "Invalid HTTPS callback. Restart from your client.",
     );
   }
+});
+
+test("accepts native loopback callbacks so desktop clients can connect", () => {
+  for (const redirect_uri of [
+    "http://127.0.0.1:1455/callback",
+    "http://localhost:8080/auth/callback",
+  ])
+    assert.equal(validateOAuthRequest({ ...req, redirect_uri }).redirect_uri, redirect_uri);
+  for (const redirect_uri of ["http://evil.example/callback", "http://10.0.0.5/callback"])
+    assert.throws(() => validateOAuthRequest({ ...req, redirect_uri }), /Invalid HTTPS callback/);
 });
 
 test("preserves requested scopes without adding write permissions", () => {

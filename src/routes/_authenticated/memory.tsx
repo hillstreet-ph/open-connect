@@ -319,9 +319,9 @@ export function MemoryKnowledgePage({
           </div>
         </>
       ) : (
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="font-medium">Create {defaultSection}</h3>
-          <div className="w-64">
+          <div className="w-full sm:w-64">
             <ProjectSelect value={projectId} onChange={setProjectId} projects={projectOptions} />
           </div>
         </div>

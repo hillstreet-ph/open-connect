@@ -61,12 +61,13 @@ test("reconnect preserves the saved account method even if the catalog changes i
   assert.equal(connectionUsesBrowserLogin({ browser_login: true, metadata: {} }), true);
   assert.equal(connectionUsesBrowserLogin({ browser_login: false, metadata: {} }), false);
 });
-test("new MCP connections prefer OAuth while saved auth choices and API protocols remain valid", () => {
-  assert.equal(defaultConnectorAuth("http"), "oauth");
-  assert.equal(defaultConnectorAuth("sse"), "oauth");
+test("new MCP connections default to a bearer credential while saved auth choices remain valid", () => {
+  assert.equal(defaultConnectorAuth("http"), "bearer");
+  assert.equal(defaultConnectorAuth("sse"), "bearer");
   assert.equal(defaultConnectorAuth("openapi"), "bearer");
-  for (const saved of ["none", "bearer", "api_key", "personal_access_token", "oauth"])
+  for (const saved of ["none", "bearer", "api_key", "personal_access_token"])
     assert.equal(defaultConnectorAuth("http", saved), saved);
+  assert.equal(defaultConnectorAuth("http", "oauth"), "bearer");
   assert.equal(authForProtocol("openapi", "oauth"), "bearer");
   assert.equal(authForProtocol("openapi", "api_key"), "api_key");
   assert.equal(authForProtocol("http", "oauth"), "oauth");

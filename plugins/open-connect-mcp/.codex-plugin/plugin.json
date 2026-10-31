@@ -1,0 +1,20 @@
+{
+  "interface": {
+    "capabilities": [],
+    "category": "Other",
+    "defaultPrompt": null,
+    "developerName": "App developer",
+    "displayName": "open-connect MCP",
+    "longDescription": "open-connect MCP",
+    "shortDescription": "open-connect MCP"
+  },
+  "apps": "./.app.json",
+  "name": "dev-6acaeb867398819195374ebecb7c3a97",
+  "version": "1.2.0",
+  "description": "open-connect MCP",
+  "author": {
+    "name": "App developer"
+  },
+  "keywords": [],
+  "skills": "./skills"
+}

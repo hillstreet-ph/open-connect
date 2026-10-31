@@ -1,21 +1,11 @@
-import { UniversalConnectorDialog } from "@/components/universal-connector-dialog";
+import { NotificationChannels } from "@/components/notification-channels";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import {
-  Bot,
-  Copy,
-  ExternalLink,
-  Loader2,
-  MessageCircle,
-  Server,
-  ShieldCheck,
-  Trash2,
-} from "lucide-react";
+import { Bot, Copy, Loader2, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
-import { BrandLogo } from "@/components/brand-logo";
 import { ApiKeysCard } from "@/components/api-keys-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,13 +25,13 @@ import {
   listInboundIntegrations,
 } from "@/lib/inbound-integrations.functions";
 
-const integrationSections = ["api-key", "apps", "ai-agents", "custom-mcp"] as const;
+const integrationSections = ["api-key", "apps"] as const;
 type IntegrationSection = (typeof integrationSections)[number];
 
 function parseIntegrationSection(value: unknown): IntegrationSection {
   return typeof value === "string" && integrationSections.includes(value as IntegrationSection)
     ? (value as IntegrationSection)
-    : "ai-agents";
+    : "api-key";
 }
 
 export const Route = createFileRoute("/_authenticated/integrations")({
@@ -53,8 +43,7 @@ export const Route = createFileRoute("/_authenticated/integrations")({
       { title: "Integrations — Open-Connect" },
       {
         name: "description",
-        content:
-          "Manage separate API Key, Apps, AI Agents, and Custom MCP integrations for Open-Connect.",
+        content: "Manage Personal Tokens and app integrations for Open-Connect.",
       },
     ],
   }),
@@ -63,76 +52,17 @@ export const Route = createFileRoute("/_authenticated/integrations")({
 
 const MCP_ENDPOINT = "https://open-connect.site/mcp";
 
-const aiClients = [
-  {
-    provider: "kilo",
-    name: "Kilo Code",
-    description:
-      "Use Open-Connect as a custom OpenAI-compatible model provider, or connect supported MCP tools.",
-    action: "View MCP setup",
-  },
-  {
-    provider: "commandcode",
-    name: "Command Code",
-    description:
-      "Use the Open-Connect /v1 base URL and a model key in BYOK Providers. Use a separate integration token for MCP tools.",
-    action: "View MCP setup",
-  },
-  {
-    provider: "chatgpt",
-    name: "ChatGPT",
-    description:
-      "Connect ChatGPT using OAuth. ChatGPT signs in and requests approval when it connects.",
-    action: "Connect with OAuth",
-  },
-  {
-    provider: "claude",
-    name: "Claude",
-    description: "Connect a compatible Claude client to your Open-Connect MCP server.",
-    action: "View MCP setup",
-  },
-  {
-    provider: "grok",
-    name: "Grok / xAI API",
-    description:
-      "Use xAI API remote MCP tools with Open-Connect. This connects through the xAI API, not Grok.com sign-in.",
-    action: "View MCP setup",
-  },
-  {
-    provider: "openwebui",
-    name: "Open WebUI",
-    description: "Connect your own Open WebUI client with a scoped key.",
-    action: "View MCP setup",
-  },
-  {
-    provider: "hermes",
-    name: "Hermes Agent",
-    description: "Give your agent access to tools allowed for your account and projects.",
-    action: "View MCP setup",
-  },
-  {
-    provider: "manus",
-    name: "Manus",
-    description: "Connect a supported agent through the Open-Connect MCP endpoint.",
-    action: "View MCP setup",
-  },
-];
-
 function IntegrationsPage() {
   const { user } = useAuth();
   const { section } = Route.useSearch();
   const sectionTitles: Record<IntegrationSection, string> = {
-    "api-key": "API Key",
+    "api-key": "Personal Token",
     apps: "Apps",
-    "ai-agents": "AI Agents",
-    "custom-mcp": "Custom MCP",
   };
   const queryClient = useQueryClient();
   const listFn = useServerFn(listInboundIntegrations);
   const configureFn = useServerFn(configureTelegramIntegration);
   const disconnectFn = useServerFn(deleteInboundIntegration);
-  const [oauthOpen, setOauthOpen] = useState(false);
-  const [customConnectorOpen, setCustomConnectorOpen] = useState(false);
   const [mcpOpen, setMcpOpen] = useState(false);
   const [telegramOpen, setTelegramOpen] = useState(false);
   const [botLabel, setBotLabel] = useState("");
@@ -154,7 +84,7 @@ function IntegrationsPage() {
           token: botToken,
         },
       }),
-    onSuccess: (result) => {
+    onSuccess: () => {
       toast.success("Telegram bot verified and saved securely");
       setBotLabel("");
       setBotToken("");
@@ -188,7 +118,7 @@ function IntegrationsPage() {
     <div className="mx-auto max-w-6xl space-y-10 px-4 py-10 sm:px-6 sm:py-14">
       <header>
         <Badge variant="outline" className="border-primary/40 text-primary">
-          Open-Connect · inbound
+          Open-Connect · integrations
         </Badge>
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
@@ -202,118 +132,12 @@ function IntegrationsPage() {
         </p>
       </header>
 
-      <section id="ai-agents" hidden={section !== "ai-agents"} className="scroll-mt-6">
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold">AI Agents</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Choose a client to see its own connection flow.
-          </p>
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {aiClients.map((client) => (
-            <Card key={client.provider} className="shadow-panel">
-              <CardHeader className="p-4">
-                <BrandLogo provider={client.provider} name={client.name} size="lg" />
-                <CardTitle className="mt-3 text-sm">{client.name}</CardTitle>
-                <CardDescription className="text-xs">{client.description}</CardDescription>
-              </CardHeader>
-              <CardContent className="px-4 pb-4">
-                {user ? (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="w-full"
-                    onClick={() =>
-                      client.provider === "chatgpt" ? setOauthOpen(true) : setMcpOpen(true)
-                    }
-                  >
-                    {client.provider === "chatgpt" ? (
-                      <ShieldCheck className="mr-2 size-4" />
-                    ) : (
-                      <Bot className="mr-2 size-4" />
-                    )}
-                    {client.action}
-                  </Button>
-                ) : (
-                  <Button asChild size="sm" variant="outline" className="w-full">
-                    <Link to="/auth">Sign in</Link>
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
-
-      <section id="custom-mcp" hidden={section !== "custom-mcp"} className="scroll-mt-6">
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold">Custom MCP</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Manage account-owned remote MCP servers and the inbound endpoint AI clients use. These
-            stay separate from app Connectors and Marketplace resources.
-          </p>
-        </div>
-        <Card className="shadow-panel">
-          <CardHeader>
-            <CardTitle>Remote MCP servers</CardTitle>
-            <CardDescription>
-              Add HTTP, SSE or API connections in one private connector profile. Authentication and
-              tool permissions are managed in Connectors.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Button onClick={() => setCustomConnectorOpen(true)}>Add custom MCP</Button>
-            <Button asChild variant="outline">
-              <Link to="/connections">Manage connected accounts and permissions</Link>
-            </Button>
-          </CardContent>
-        </Card>
-        <UniversalConnectorDialog
-          open={customConnectorOpen}
-          onOpenChange={setCustomConnectorOpen}
-        />
-
-        <Card className="shadow-panel">
-          <CardHeader className="p-5">
-            <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Bot className="size-5" />
-            </div>
-            <CardTitle className="mt-3 text-base">Open-Connect MCP endpoint</CardTitle>
-            <CardDescription>
-              Compatible clients connect here and receive only the capabilities allowed for your
-              account and project access.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 px-5 pb-5">
-            <div className="flex flex-wrap items-center gap-2">
-              <code className="min-w-0 flex-1 break-all rounded-md bg-muted px-3 py-2 text-sm">
-                {MCP_ENDPOINT}
-              </code>
-              <Button variant="outline" size="sm" onClick={() => void copyEndpoint()}>
-                <Copy className="mr-2 size-4" />
-                Copy URL
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-              <Badge variant="secondary">OAuth supported</Badge>
-              <Badge variant="secondary">Bearer key supported</Badge>
-              <span className="self-center">
-                OAuth clients sign in and approve in their client.
-              </span>
-            </div>
-            <Button variant="outline" size="sm" onClick={() => setMcpOpen(true)}>
-              Client setup instructions
-            </Button>
-          </CardContent>
-        </Card>
-      </section>
-
       <section id="apps" hidden={section !== "apps"} className="scroll-mt-6">
         <div className="mb-4">
           <h2 className="text-lg font-semibold">Apps</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Set up your bot for agent messaging. This is an Open-Connect integration, separate from
-            app connectors.
+            Set up bots for notifications and alerts. This is an Open-Connect integration, separate
+            from app connectors.
           </p>
         </div>
         <Card className="shadow-panel">
@@ -366,17 +190,54 @@ function IntegrationsPage() {
             )}
           </CardContent>
         </Card>
+        {user && section === "apps" ? (
+          <div className="mt-6">
+            <NotificationChannels userId={user.id} />
+          </div>
+        ) : null}
       </section>
 
       {user ? (
         <section id="api-key" hidden={section !== "api-key"} className="scroll-mt-6">
           <div className="mb-4">
             <p className="mt-1 text-sm text-muted-foreground">
-              Create and revoke scoped keys for clients that use bearer authentication. ChatGPT uses
-              OAuth and does not need an API key.
+              Create and revoke scoped Personal Tokens for clients that use bearer authentication.
             </p>
           </div>
           <ApiKeysCard />
+          <Card className="shadow-panel">
+            <CardHeader className="p-5">
+              <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Bot className="size-5" />
+              </div>
+              <CardTitle className="mt-3 text-base">Open-Connect MCP endpoint</CardTitle>
+              <CardDescription>
+                Compatible clients connect here and receive only the capabilities allowed for your
+                account and project access.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 px-5 pb-5">
+              <div className="flex flex-wrap items-center gap-2">
+                <code className="min-w-0 flex-1 break-all rounded-md bg-muted px-3 py-2 text-sm">
+                  {MCP_ENDPOINT}
+                </code>
+                <Button variant="outline" size="sm" onClick={() => void copyEndpoint()}>
+                  <Copy className="mr-2 size-4" />
+                  Copy URL
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                <Badge variant="secondary">OAuth supported</Badge>
+                <Badge variant="secondary">Bearer key supported</Badge>
+                <span className="self-center">
+                  OAuth clients sign in and approve in their client.
+                </span>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setMcpOpen(true)}>
+                Client setup instructions
+              </Button>
+            </CardContent>
+          </Card>
         </section>
       ) : null}
 
@@ -384,43 +245,6 @@ function IntegrationsPage() {
         Integrations belong to the signed-in account by default. Grant project access explicitly.
         Connector accounts, model provider keys, and resource catalog entries remain separate.
       </p>
-
-      <Dialog open={oauthOpen} onOpenChange={setOauthOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Connect ChatGPT with OAuth</DialogTitle>
-            <DialogDescription>
-              ChatGPT starts the OAuth request and Open-Connect shows sign-in and consent when the
-              client connects. No API key is needed.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 text-sm">
-            <ol className="list-decimal space-y-2 pl-5 text-muted-foreground">
-              <li>
-                In ChatGPT on the web, enable Developer mode, then create a custom app from Settings
-                → Apps. Workspace admins can create and publish it from Workspace settings → Apps.
-              </li>
-              <li>
-                Add the remote MCP URL:{" "}
-                <code className="break-all text-primary">{MCP_ENDPOINT}</code>, choose OAuth, and
-                scan the available tools.
-              </li>
-              <li>Sign in to Open-Connect and approve the account scopes requested by ChatGPT.</li>
-              <li>Test a read action, then test only the write actions you intend to allow.</li>
-            </ol>
-            <p className="text-xs text-muted-foreground">
-              Full write-capable MCP apps are available on ChatGPT Business, Enterprise, and Edu.
-              ChatGPT Pro currently supports read and fetch access only. OAuth access expires after
-              30 days; reconnect when ChatGPT requests authorization again.
-            </p>
-            <Button asChild className="w-full">
-              <a href="https://chatgpt.com" target="_blank" rel="noreferrer">
-                Open ChatGPT <ExternalLink className="ml-2 size-4" />
-              </a>
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={mcpOpen} onOpenChange={setMcpOpen}>
         <DialogContent className="sm:max-w-lg">

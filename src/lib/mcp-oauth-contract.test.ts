@@ -47,6 +47,14 @@ test("success and denial callbacks identify the same issuer and preserve client 
     assert.equal(url.searchParams.has("error"), "error" in result);
   }
 });
+test("native loopback callbacks are built for the client's own port", () => {
+  const url = new URL(oauthCallback("http://127.0.0.1:1455/callback", "s", { code: "one-time" }));
+  assert.equal(url.origin, "http://127.0.0.1:1455");
+  assert.equal(url.searchParams.get("code"), "one-time");
+  assert.equal(url.searchParams.get("iss"), "https://open-connect.site");
+  for (const redirectUri of ["http://evil.example/callback", "https://client.example/cb#x"])
+    assert.throws(() => oauthCallback(redirectUri, "s", { code: "x" }), /Invalid OAuth callback/);
+});
 test("profile identity is immutable account identity, never display data or a per-token value", () => {
   const id = "8ac5543f-9c9e-4807-9a15-5f1bcc65a9bf";
   assert.deepEqual(authenticatedProfile(id), { id });

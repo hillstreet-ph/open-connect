@@ -130,7 +130,7 @@ function parameters(value: unknown): URLSearchParams {
   return result;
 }
 
-function parseBundle(value: string) {
+export function parseTwilioBundle(value: string) {
   let bundle: Record<string, unknown>;
   try {
     bundle = JSON.parse(value) as Record<string, unknown>;
@@ -209,7 +209,7 @@ export async function callTwilioTool(
   const body = parameters(isWrite ? args["body"] : undefined);
   if (method === "DELETE" && body.size)
     throw new TwilioRequestError("DELETE does not accept a body.");
-  const bundle = parseBundle(await context.resolveCredential());
+  const bundle = parseTwilioBundle(await context.resolveCredential());
   const url = new URL(`https://api.twilio.com/2010-04-01/Accounts/${bundle.accountSid}${path}`);
   url.search = query.toString();
   let response: Response;

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
-import { settingsTab } from "./settings-navigation.ts";
+import { adminTab, settingsTab, settingsTabList } from "./settings-navigation.ts";
 import { isAppPath } from "./shell.ts";
 import {
   appCategories,
@@ -77,7 +77,7 @@ test("connection surfaces remain internal and separate from Marketplace", () => 
     assert.ok(sidebar.includes(route), "Missing connection route " + route);
   }
   assert.ok(sidebar.includes('to: "/connections", label: "Connectors"'));
-  assert.ok(!userMenu.includes('to="/integrations"'));
+  assert.ok(userMenu.includes('to="/integrations"'));
 
   const connectors = readFileSync(
     path.join(sourceRoot, "routes/_authenticated/connections.tsx"),
@@ -93,14 +93,14 @@ test("connection surfaces remain internal and separate from Marketplace", () => 
     "utf8",
   );
   assert.ok(integrations.includes("<ApiKeysCard />"));
-  assert.ok(integrations.includes("Connect ChatGPT with OAuth"));
   assert.ok(integrations.includes("setTelegramOpen(true)"));
   assert.ok(integrations.includes("inbound-integrations.functions"));
-  assert.ok(integrations.includes("universal-connector-dialog"));
-  assert.ok(integrations.includes("Remote MCP servers"));
-  for (const section of ['id="api-key"', 'id="apps"', 'id="ai-agents"', 'id="custom-mcp"']) {
+  assert.ok(!integrations.includes("universal-connector-dialog"));
+  assert.ok(!integrations.includes("Remote MCP servers"));
+  for (const section of ['id="api-key"', 'id="apps"']) {
     assert.ok(integrations.includes(section), "Missing integration section " + section);
   }
+  assert.ok(!integrations.includes("ai-agents"), "AI Agents section should stay removed");
 
   const inboundMigration = readFileSync(
     path.resolve(process.cwd(), "supabase/migrations/20261005050000_inbound_integrations.sql"),
@@ -114,7 +114,7 @@ test("connection surfaces remain internal and separate from Marketplace", () => 
   }
 });
 
-test("Integrations follows Data & privacy in Settings and includes account keys", () => {
+test("Settings keeps only personal tabs and duplicates no sidebar destinations", () => {
   const sourceRoot = path.resolve(process.cwd(), "src");
   const userMenu = readFileSync(path.join(sourceRoot, "components/user-menu.tsx"), "utf8");
   const settings = readFileSync(
@@ -123,22 +123,97 @@ test("Integrations follows Data & privacy in Settings and includes account keys"
   );
 
   assert.ok(userMenu.includes('to="/settings"'));
-  assert.ok(!userMenu.includes('to="/integrations"'));
+  assert.ok(userMenu.includes('to="/integrations"'));
+  assert.ok(userMenu.includes('search={{ section: "api-key" }}'));
+  assert.ok(userMenu.includes("Developer"));
   assert.ok(!userMenu.includes('to="/api-keys"'));
+
+  // Settings keeps personal tabs only, in this order.
+  assert.deepEqual(settingsTabList(), ["profile", "security", "data", "integrations"]);
   assert.ok(
-    settings.indexOf('value="data">Data & privacy') <
+    settings.indexOf('value="data">Data Controls') <
       settings.indexOf('value="integrations">Integrations'),
   );
-  for (const section of ["api-key", "apps", "ai-agents", "custom-mcp"]) {
+
+  // Every destination that already has a sidebar entry must not be repeated as a Settings card.
+  for (const route of [
+    "/projects",
+    "/models",
+    "/connections",
+    "/secrets",
+    "/automations",
+    "/memory",
+    "/knowledge",
+  ]) {
+    assert.ok(!settings.includes(`to="${route}"`), "Settings duplicates sidebar route " + route);
+  }
+  for (const title of [
+    "Projects & environments",
+    "AI Gateway",
+    "Connectors",
+    "Credentials & secrets",
+    "Memory",
+    "Knowledge",
+  ]) {
+    assert.ok(!settings.includes(`title="${title}"`), "Settings repeats card " + title);
+  }
+
+  // Settings links to Apps; Custom MCP is removed from Integrations.
+  for (const section of ["apps"]) {
     assert.ok(settings.includes('href="/integrations?section=' + section + '"'));
   }
-  assert.ok(settings.includes('title="Connectors"'));
-  assert.ok(settings.includes('title="AI Gateway"'));
-  assert.ok(!settings.includes('title="Integrations"'));
-  assert.ok(settings.includes('title="Memory"'));
-  assert.ok(settings.includes('title="Knowledge"'));
-  assert.ok(!settings.includes('title="Memory & knowledge"'));
+  assert.ok(!settings.includes('href="/integrations?section=custom-mcp"'));
+  assert.ok(!settings.includes('href="/integrations?section=api-key"'));
+  assert.ok(!settings.includes('href="/integrations?section=ai-agents"'));
   assert.ok(!settings.includes('to="/api-keys"'));
+
+  // Approval surfaces are removed everywhere.
+  assert.ok(!settings.includes("ControlApprovalsPanel"));
+  assert.ok(!settings.includes('value="approvals"'));
+  assert.ok(!settings.includes("Approval requests"));
+
+  // Login activity lives in the personal security tab, with per-session sign out.
+  assert.ok(settings.includes("LoginActivityPanel"));
+  assert.ok(settings.indexOf('value="security"') < settings.indexOf("<LoginActivityPanel />"));
+
+  // Connected accounts (Google/GitHub linking) live in the same security tab.
+  assert.ok(settings.includes("ConnectedAccountsPanel"));
+  assert.ok(settings.includes("AccountLinkCallbackNotice"));
+  assert.ok(settings.indexOf('value="security"') < settings.indexOf("<ConnectedAccountsPanel />"));
+
+  const connected = readFileSync(
+    path.join(sourceRoot, "components/connected-accounts-panel.tsx"),
+    "utf8",
+  );
+  // Disconnects are serialized, so two requests cannot both pass the server's
+  // last-identity check and leave the account with no sign-in method.
+  assert.ok(
+    connected.includes(
+      "disabled={!account.canDisconnect || disconnect.isPending || connect.isPending}",
+    ),
+  );
+  // Success is confirmed against real identities, not just the redirect parameter.
+  assert.ok(connected.includes("isProviderLinked"));
+
+  const panel = readFileSync(path.join(sourceRoot, "components/login-activity-panel.tsx"), "utf8");
+  // The cache must be keyed to the account so a switch in another tab cannot show stale rows.
+  assert.ok(panel.includes('queryKey: ["login-activity", userId]'));
+  assert.ok(panel.includes("key={user.id}"));
+});
+
+test("Workspace header keeps a single account entry point and a persistent sidebar toggle", () => {
+  const sourceRoot = path.resolve(process.cwd(), "src");
+  const shell = readFileSync(path.join(sourceRoot, "components/workspace-shell.tsx"), "utf8");
+  const sidebar = readFileSync(path.join(sourceRoot, "components/ui/sidebar.tsx"), "utf8");
+
+  // The account menu owns Settings and administration; the header must not duplicate them.
+  assert.ok(!shell.includes('to="/settings"'), "Header must not repeat the Settings link");
+  assert.ok(!shell.includes("Open your account settings"));
+  assert.ok(shell.includes("sidebarDefaultOpen"), "Sidebar toggle state must be restored");
+  assert.ok(sidebar.includes("writeSidebarOpen"));
+  const sidebarState = readFileSync(path.join(sourceRoot, "lib/sidebar-state.ts"), "utf8");
+  assert.ok(sidebarState.includes("export function sidebarDefaultOpen"));
+  assert.ok(sidebarState.includes("SIDEBAR_COOKIE_NAME"));
 });
 
 test("Toolkit creation reads from the personal library, not the Marketplace catalog", () => {
@@ -445,20 +520,142 @@ test("Marketplace installs stay in the personal library and agent context reads 
   assert.match(scopes, /"knowledge:read"/);
 });
 
+test("Approval surfaces are removed from the sidebar, navigation, and shell", () => {
+  const sourceRoot = path.resolve(process.cwd(), "src");
+  const sidebar = readFileSync(path.join(sourceRoot, "components/app-sidebar.tsx"), "utf8");
+  const shell = readFileSync(path.join(sourceRoot, "components/workspace-shell.tsx"), "utf8");
+
+  assert.ok(!sidebar.includes("/approvals"), "Sidebar must not link to Approvals");
+  assert.ok(!sidebar.includes("ShieldCheck"), "Sidebar must drop the Approvals icon");
+  assert.ok(
+    !flatAppNav().some((item) => item.to === "/approvals"),
+    "App navigation must not expose Approvals",
+  );
+  assert.ok(!shell.includes("approvals"), "Workspace header must not link to Approvals");
+  assert.ok(!settingsTabList().includes("approvals"));
+
+  const removed = [
+    "routes/_authenticated/approvals.tsx",
+    "components/control-approvals-panel.tsx",
+    "lib/control-approvals.functions.ts",
+  ];
+  for (const file of removed) {
+    assert.throws(() => readFileSync(path.join(sourceRoot, file), "utf8"), /ENOENT/, file);
+  }
+});
+
+test("System administration keeps one entry point with organization and access tabs", () => {
+  const sourceRoot = path.resolve(process.cwd(), "src");
+  const userMenu = readFileSync(path.join(sourceRoot, "components/user-menu.tsx"), "utf8");
+  const settings = readFileSync(
+    path.join(sourceRoot, "routes/_authenticated/settings.tsx"),
+    "utf8",
+  );
+  const admin = readFileSync(path.join(sourceRoot, "routes/_authenticated/admin.tsx"), "utf8");
+  const orgs = readFileSync(path.join(sourceRoot, "routes/_authenticated/orgs.tsx"), "utf8");
+  const roles = readFileSync(path.join(sourceRoot, "routes/_authenticated/roles.tsx"), "utf8");
+
+  assert.ok(userMenu.includes('to="/admin"'), "hillstreet-ph opens System administration");
+  assert.ok(userMenu.includes("hillstreet-ph"));
+  assert.ok(!userMenu.includes('to="/orgs"'));
+
+  assert.ok(admin.includes('value="organization"'));
+  assert.ok(admin.includes('value="access"'));
+  assert.ok(admin.includes("OrganizationPanel"));
+  assert.ok(admin.includes("AccessReferencePanel"));
+  // Platform roles are managed inside the Organization people list, not a separate tab.
+  assert.ok(!admin.includes('value="roles"'));
+  assert.ok(!admin.includes("PlatformRolesPanel"));
+  assert.ok(!admin.includes("platform-roles-panel"));
+
+  // Both legacy URLs land on the merged organization surface.
+  assert.ok(orgs.includes('to: "/admin"') && orgs.includes('hash: "organization"'));
+  assert.ok(roles.includes('to: "/admin"') && roles.includes('hash: "organization"'));
+
+  // Settings must not repeat the administration links; the account menu owns that entry.
+  assert.ok(!settings.includes('to="/orgs"'));
+  assert.ok(!settings.includes('to="/roles"'));
+  assert.ok(!settings.includes('to="/admin"'));
+  assert.ok(!settings.includes('title="Access reference"'));
+  assert.ok(!settings.includes('title="User roles"'));
+});
+
+test("Organization panel owns people and roles in one place", () => {
+  const panel = readFileSync(
+    path.resolve(process.cwd(), "src/components/organization-panel.tsx"),
+    "utf8",
+  );
+  // One people list carries the organization role, platform role, and group controls.
+  assert.ok(panel.includes("Organization role"));
+  assert.ok(panel.includes("Platform role"));
+  assert.ok(panel.includes("roleLabel"));
+  assert.ok(panel.includes("assignRole"));
+  // Legacy platform values (owner/publisher) collapse onto assignable roles for the select.
+  assert.ok(panel.includes("canonicalAppRole"));
+  // Pending invitations can be cancelled with confirmation.
+  assert.ok(panel.includes("cancelOrganizationInvitation"));
+  assert.ok(panel.includes("Cancel invitation"));
+  // No second "assign by email" form duplicating the invite flow.
+  assert.ok(!panel.includes("Assign role"));
+});
+
+test("cancelling an invitation revokes only pending rows for organization managers", () => {
+  const fn = readFileSync(path.resolve(process.cwd(), "src/lib/orgs.functions.ts"), "utf8");
+  assert.ok(fn.includes("export const cancelOrganizationInvitation"));
+  assert.ok(fn.includes('status: "revoked"'));
+  assert.ok(fn.includes("requireOrganizationManager"));
+  assert.ok(fn.includes('if (invitation.status !== "pending")'));
+});
+
+test("Access reference has one canonical rendering of each role fact", () => {
+  const sourceRoot = path.resolve(process.cwd(), "src");
+  const panel = readFileSync(
+    path.join(sourceRoot, "components/access-reference-panel.tsx"),
+    "utf8",
+  );
+  const rbac = readFileSync(path.join(sourceRoot, "lib/rbac.ts"), "utf8");
+  const identity = readFileSync(path.join(sourceRoot, "lib/identity.ts"), "utf8");
+
+  // The panel derives role facts from shared sources instead of re-declaring them.
+  assert.ok(panel.includes("CAPABILITY_DOCS"));
+  assert.ok(panel.includes("capabilityLevel"));
+  assert.ok(panel.includes("PLATFORM_ROLE_SUMMARY"));
+  assert.ok(panel.includes("ORG_ROLE_SUMMARY"));
+  assert.ok(panel.includes("PROJECT_ROLE_SUMMARY"));
+  assert.ok(panel.includes("AVAILABLE_KEY_SCOPES"));
+  assert.ok(panel.includes("scopeCapability"));
+  assert.ok(!panel.includes("ROLE_SCOPE_MATRIX"));
+  assert.ok(!panel.includes("KEY_SCOPE_DOCS"));
+
+  // Role labels are defined once per vocabulary and reused across the app.
+  assert.ok(rbac.includes("export const PLATFORM_ROLE_SUMMARY"));
+  assert.ok(identity.includes("export const ORG_ROLES"));
+  assert.ok(identity.includes("export const PROJECT_ROLES"));
+
+  // The old duplicate matrix/scope lists are gone from the canonical libs.
+  assert.ok(!rbac.includes("ROLE_SCOPE_MATRIX"));
+  assert.ok(!rbac.includes("KEY_SCOPE_DOCS"));
+});
+
+test("System administration tabs fall back safely for unknown values", () => {
+  for (const tab of ["organization", "access"]) {
+    assert.equal(adminTab(tab), tab);
+    assert.equal(adminTab("#" + tab), tab);
+  }
+  // Legacy "#roles" deep links fold into the merged organization surface.
+  assert.equal(adminTab("roles"), "organization");
+  assert.equal(adminTab("#roles"), "organization");
+  for (const value of ["", "missing", "#organization/other", "__proto__"]) {
+    assert.equal(adminTab(value), "organization");
+  }
+});
+
 test("settings deep links select their exact tab and unknown hashes have a safe default", () => {
-  for (const tab of [
-    "profile",
-    "security",
-    "workspace",
-    "apps",
-    "data",
-    "integrations",
-    "approvals",
-  ]) {
+  for (const tab of settingsTabList()) {
     assert.equal(settingsTab(tab), tab);
     assert.equal(settingsTab("#" + tab), tab);
   }
-  for (const hash of ["", "missing", "#approvals/other", "__proto__"])
+  for (const hash of ["", "missing", "#workspace", "#apps", "#approvals/other", "__proto__"])
     assert.equal(settingsTab(hash), "profile");
 });
 
@@ -513,4 +710,15 @@ test("public homepage removes Marketplace header navigation while preserving wor
     "utf8",
   );
   assert.ok(!project.includes("Back to projects"));
+});
+
+test("cloud computer is available from the single browser workspace", () => {
+  const cloud = appCategories.find((category) => category.id === "cloud");
+  assert.ok(cloud?.items.some((item) => item.to === "/cloud-browser"));
+  assert.ok(!cloud?.items.some((item) => item.to === "/cloud-computer"));
+  const oldRoute = readFileSync(
+    path.resolve(process.cwd(), "src/routes/_authenticated/cloud-computer.tsx"),
+    "utf8",
+  );
+  assert.match(oldRoute, /redirect\(\{ to: "\/cloud-browser", search: \{ mode: "computer" \}/);
 });

@@ -1,8 +1,9 @@
 import { oauthCallback } from "@/lib/mcp-oauth-contract";
-import { scopesForProfile } from "@/lib/access-profiles";
+import { scopeCapability, scopesForProfile } from "@/lib/access-profiles";
 import { useRoles } from "@/hooks/use-roles";
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { withOAuthRequestTimeout } from "@/lib/oauth-consent";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { consentScopes, validateOAuthRequest, type ConsentProfile } from "@/lib/oauth-policy";
@@ -31,7 +32,21 @@ function AuthorizePage() {
   const { isAdmin, loading: rolesLoading } = useRoles();
   const [access, setAccess] = useState<ConsentProfile>("requested");
   const [busy, setBusy] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
+  const inFlight = useRef(false);
   const [error, setError] = useState("");
+  useEffect(() => {
+    if (!redirecting) return;
+    const timer = setTimeout(() => {
+      setError(
+        "The client has not opened. Restart the connection from your client. Check that redirects are allowed in this browser.",
+      );
+      setBusy(false);
+      setRedirecting(false);
+      inFlight.current = false;
+    }, 15_000);
+    return () => clearTimeout(timer);
+  }, [redirecting]);
   let request: ReturnType<typeof validateOAuthRequest> | undefined;
   let invalid = "";
   try {
@@ -43,46 +58,66 @@ function AuthorizePage() {
     access === "requested" ? (request?.scope.split(" ") ?? []) : scopesForProfile(access);
   const needsAdmin = grantedScopes.includes("control:write") && !isAdmin;
   async function consent() {
-    if (!request || !user) return;
+    if (!request || !user || inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
     setError("");
     try {
-      const { data, error: failure } = await supabase.rpc(
-        "oc_authorize_oauth_client_resource" as never,
-        {
-          p_resource: request.resource,
-          p_client_id: request.client_id,
-          p_redirect_uri: request.redirect_uri,
-          p_challenge: request.code_challenge,
-          p_scopes: consentScopes(access, request.scope, isAdmin),
-        } as never,
+      const { data, error: failure } = await withOAuthRequestTimeout((signal) =>
+        supabase
+          .rpc(
+            "oc_authorize_oauth_client_resource" as never,
+            {
+              p_resource: request.resource,
+              p_client_id: request.client_id,
+              p_redirect_uri: request.redirect_uri,
+              p_challenge: request.code_challenge,
+              p_scopes: consentScopes(access, request.scope, isAdmin),
+            } as never,
+          )
+          .abortSignal(signal),
       );
       if (failure) throw new Error(failure.message);
       if (typeof data !== "string") throw new Error("Authorization failed.");
+      setRedirecting(true);
       window.location.assign(oauthCallback(request.redirect_uri, request.state, { code: data }));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Authorization failed.");
       setBusy(false);
+      setRedirecting(false);
+      inFlight.current = false;
     }
   }
   async function cancel() {
-    if (!request) return;
+    if (!request || inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
-    const { data, error: failure } = await supabase.rpc(
-      "oc_oauth_client_registered" as never,
-      {
-        p_client_id: request.client_id,
-        p_redirect_uri: request.redirect_uri,
-      } as never,
-    );
-    if (failure || data !== true) {
-      setError("Unregistered client or callback. Restart from your client.");
+    setError("");
+    try {
+      const { data, error: failure } = await withOAuthRequestTimeout((signal) =>
+        supabase
+          .rpc(
+            "oc_oauth_client_registered" as never,
+            {
+              p_client_id: request.client_id,
+              p_redirect_uri: request.redirect_uri,
+            } as never,
+          )
+          .abortSignal(signal),
+      );
+      if (failure || data !== true) {
+        throw new Error("Unregistered client or callback. Restart from your client.");
+      }
+      setRedirecting(true);
+      window.location.assign(
+        oauthCallback(request.redirect_uri, request.state, { error: "access_denied" }),
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not cancel. Restart from your client.");
       setBusy(false);
-      return;
+      setRedirecting(false);
+      inFlight.current = false;
     }
-    window.location.assign(
-      oauthCallback(request.redirect_uri, request.state, { error: "access_denied" }),
-    );
   }
   return (
     <main className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center px-4 py-12">
@@ -137,10 +172,30 @@ function AuthorizePage() {
             </label>
           ) : null}
           <h2 className="mt-4 font-medium">Permissions to allow</h2>
-          <ul className="mb-4 list-disc pl-5 text-sm">
-            {grantedScopes.map((s) => (
-              <li key={s}>{s}</li>
-            ))}
+          <p className="mt-2 text-sm text-muted-foreground">
+            Access profiles choose this client's API permissions. They do not change your account
+            role or grant access to another user's projects. Credential access is metadata only;
+            passwords and tokens are not returned through MCP.
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Auto can discover tools and continue permitted routine actions. It does not approve
+            OAuth consent or override required operation and provider confirmations.
+          </p>
+          <ul className="mb-4 space-y-1.5 text-sm">
+            {grantedScopes.map((s) => {
+              const cap = scopeCapability(s);
+              return (
+                <li key={s} className="flex items-start gap-2">
+                  <span className="mt-0.5 shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                    {cap.kind}
+                  </span>
+                  <span>
+                    {cap.label}
+                    <span className="ml-1 font-mono text-[10px] text-muted-foreground">{s}</span>
+                  </span>
+                </li>
+              );
+            })}
           </ul>
           {grantedScopes.includes("control:write") ? (
             <p className="mb-4 text-sm">
@@ -165,7 +220,7 @@ function AuthorizePage() {
                 onClick={() => void consent()}
                 className="rounded-md bg-primary px-4 py-2 text-primary-foreground disabled:opacity-50"
               >
-                {busy ? "Connecting…" : "Allow access"}
+                {redirecting ? "Returning to client…" : busy ? "Connecting…" : "Allow access"}
               </button>
               <p className="mt-3 text-xs">
                 Access expires after 30 days. Revoke it from API keys & MCP.

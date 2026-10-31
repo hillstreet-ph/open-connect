@@ -13,6 +13,7 @@ import {
   configureAppConnection,
   disconnectApp,
   listAppConnections,
+  testAiProviderCredential,
 } from "@/lib/connections.functions";
 import { listFreeModels } from "@/lib/model-catalog.functions";
 import { AI_GATEWAY_PROVIDERS, AI_GATEWAY_PROVIDER_IDS } from "@/lib/ai-gateway-providers";
@@ -29,7 +30,7 @@ export const Route = createFileRoute("/_authenticated/models")({
       {
         name: "description",
         content:
-          "One OpenAI-compatible gateway for OpenRouter, OpenAI, Claude, Gemini, Grok and more. List every model with your sk-oc- key.",
+          "One OpenAI-compatible gateway for OpenRouter, OpenAI, Claude, Gemini, Grok and more. List every model with your sk-oc- API Key.",
       },
     ],
   }),
@@ -61,6 +62,10 @@ function ModelsPage() {
   const listFn = useServerFn(listAppConnections);
   const freeModelsFn = useServerFn(listFreeModels);
   const configureFn = useServerFn(configureAppConnection);
+  const testProviderFn = useServerFn(testAiProviderCredential);
+  const providerTest = useMutation({
+    mutationFn: (input: { provider: string; api_key: string }) => testProviderFn({ data: input }),
+  });
   const [activeProvider, setActiveProvider] = useState<string | null>(null);
   const disconnectFn = useServerFn(disconnectApp);
   const [connectionId, setConnectionId] = useState<string | null>(null);
@@ -84,6 +89,7 @@ function ModelsPage() {
   );
   function openProvider(provider: (typeof AI_GATEWAY_PROVIDERS)[number], id: string | null = null) {
     const account = (connections.data ?? []).find((item) => item.id === id);
+    providerTest.reset();
     setActiveProvider(provider.id);
     setConnectionId(id);
     setAccountLabel(account?.identity.label || "AI Gateway");
@@ -159,7 +165,7 @@ function ModelsPage() {
             <span className="text-primary">https://open-connect.site/v1</span>
           </div>
           <div className="rounded-lg border border-border/70 bg-background/60 px-4 py-3">
-            <span className="text-muted-foreground">API key </span>
+            <span className="text-muted-foreground">API Key </span>
             <span className="text-accent">sk-oc-…</span>
             <span className="ml-2 text-muted-foreground">(create above)</span>
           </div>
@@ -348,7 +354,7 @@ function ModelsPage() {
               <Button
                 size="sm"
                 variant="outline"
-                disabled={!user || configureMutation.isPending}
+                disabled={!user || configureMutation.isPending || providerTest.isPending}
                 onClick={() => openProvider(provider)}
               >
                 Add account
@@ -417,7 +423,7 @@ function ModelsPage() {
                   <Label htmlFor={`provider-url-${provider.id}`}>API base URL</Label>
                   <Input
                     id={`provider-url-${provider.id}`}
-                    readOnly={provider.id !== "litellm"}
+                    readOnly
                     type="url"
                     value={providerUrl}
                     onChange={(event) => setProviderUrl(event.target.value)}
@@ -431,9 +437,13 @@ function ModelsPage() {
                   <Input
                     id={`provider-key-${provider.id}`}
                     type="password"
+                    disabled={providerTest.isPending}
                     autoComplete="off"
                     value={providerKey}
-                    onChange={(event) => setProviderKey(event.target.value)}
+                    onChange={(event) => {
+                      setProviderKey(event.target.value);
+                      providerTest.reset();
+                    }}
                     placeholder="Paste provider API key or token"
                     className="font-mono"
                   />
@@ -441,7 +451,25 @@ function ModelsPage() {
                 <div className="flex gap-2">
                   <Button
                     size="sm"
-                    disabled={configureMutation.isPending || providerKey.trim().length < 8}
+                    variant="outline"
+                    disabled={
+                      providerTest.isPending ||
+                      configureMutation.isPending ||
+                      providerKey.trim().length < 8
+                    }
+                    onClick={() =>
+                      providerTest.mutate({ provider: provider.id, api_key: providerKey })
+                    }
+                  >
+                    {providerTest.isPending ? "Testing…" : "Test API key"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    disabled={
+                      providerTest.isPending ||
+                      configureMutation.isPending ||
+                      providerKey.trim().length < 8
+                    }
                     onClick={() => configureMutation.mutate()}
                   >
                     {configureMutation.isPending ? (
@@ -454,6 +482,7 @@ function ModelsPage() {
                   <Button
                     size="sm"
                     variant="ghost"
+                    disabled={providerTest.isPending}
                     onClick={() => {
                       setActiveProvider(null);
                       setConnectionId(null);
@@ -463,6 +492,16 @@ function ModelsPage() {
                     Cancel
                   </Button>
                 </div>
+                {providerTest.data && (
+                  <p role="status" className="text-sm">
+                    {providerTest.data.detail}
+                  </p>
+                )}
+                {providerTest.error && (
+                  <p role="alert" className="text-sm text-destructive">
+                    {providerTest.error.message}
+                  </p>
+                )}
               </div>
             ) : null}
           </Card>

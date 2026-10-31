@@ -29,6 +29,7 @@ import {
   getTotpCode,
   listCredentialFolders,
   listSecrets,
+  revealCredentialNotes,
   revealSecret,
   type CredentialFolder,
   type SecretType,
@@ -44,7 +45,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CredentialImportPreview } from "@/components/credential-import-preview";
+import { CredentialImport } from "@/components/credential-import";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -128,6 +129,9 @@ const TYPE_DETAILS: Record<
   },
 };
 
+const CREDENTIALS_PAGE_SIZE = 50;
+const REVEAL_TIMEOUT_MS = 30_000;
+
 function SecretsPage() {
   const queryClient = useQueryClient();
   const listFn = useServerFn(listSecrets);
@@ -135,6 +139,7 @@ function SecretsPage() {
   const deleteFn = useServerFn(deleteSecret);
   const totpFn = useServerFn(getTotpCode);
   const revealFn = useServerFn(revealSecret);
+  const revealNotesFn = useServerFn(revealCredentialNotes);
   const listProjectsFn = useServerFn(listProjects);
   const updateOrganizationFn = useServerFn(updateSecretOrganization);
   const listFoldersFn = useServerFn(listCredentialFolders);
@@ -153,6 +158,8 @@ function SecretsPage() {
   const [showValue, setShowValue] = useState(false);
   const [totpCodes, setTotpCodes] = useState<Record<string, { code: string; seconds: number }>>({});
   const [revealedValues, setRevealedValues] = useState<Record<string, string>>({});
+  const [revealedNotes, setRevealedNotes] = useState<Record<string, string>>({});
+  const [pageState, setPageState] = useState({ filterKey: "", limit: CREDENTIALS_PAGE_SIZE });
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
   const [search, setSearch] = useState("");
@@ -164,6 +171,8 @@ function SecretsPage() {
   const [editingCredentialId, setEditingCredentialId] = useState<string | null>(null);
   const [editTags, setEditTags] = useState("");
   const [editNotes, setEditNotes] = useState("");
+  // Notes are only sent on save after they were explicitly loaded; otherwise the server keeps them.
+  const [editNotesLoaded, setEditNotesLoaded] = useState(false);
   const [editProjectIds, setEditProjectIds] = useState<string[]>([]);
   const [folderFilter, setFolderFilter] = useState("all");
   const [newFolderName, setNewFolderName] = useState("");
@@ -238,6 +247,17 @@ function SecretsPage() {
         .some((field) => String(field).toLowerCase().includes(query));
     });
   }, [folders.data, folderFilter, list.data, projectFilter, search, tagFilter, typeFilter]);
+
+  // Pagination restarts from the first page whenever the filters change.
+  const filterKey = [folderFilter, projectFilter, search, tagFilter, typeFilter].join("\u0000");
+  const visibleLimit = pageState.filterKey === filterKey ? pageState.limit : CREDENTIALS_PAGE_SIZE;
+  const showMoreCredentials = () =>
+    setPageState({ filterKey, limit: visibleLimit + CREDENTIALS_PAGE_SIZE });
+
+  const pagedCredentials = useMemo(
+    () => visibleCredentials.slice(0, visibleLimit),
+    [visibleCredentials, visibleLimit],
+  );
 
   const typeDetails = TYPE_DETAILS[secretType];
 
@@ -349,13 +369,16 @@ function SecretsPage() {
       updateOrganizationFn({
         data: {
           id: editingCredentialId ?? "",
-          notes: editNotes,
+          notes: editNotesLoaded ? editNotes : undefined,
           tags: editTags.split(","),
           project_ids: editProjectIds,
         },
       }),
     onSuccess: () => {
+      if (editingCredentialId) clearRevealedNotes(editingCredentialId);
       setEditingCredentialId(null);
+      setEditNotes("");
+      setEditNotesLoaded(false);
       toast.success("Credential organization updated");
       void queryClient.invalidateQueries({ queryKey: ["credential-secrets"] });
       void queryClient.invalidateQueries({ queryKey: ["project-credentials"] });
@@ -400,15 +423,40 @@ function SecretsPage() {
 
   function beginEditingOrganization(row: {
     id: string;
-    notes?: string | null;
     tags?: string[] | null;
     projects?: { id: string }[] | null;
   }) {
     setEditingCredentialId(row.id);
-    setEditNotes(row.notes ?? "");
+    const alreadyRevealed = revealedNotes[row.id];
+    setEditNotes(alreadyRevealed ?? "");
+    setEditNotesLoaded(alreadyRevealed !== undefined);
     setEditTags((row.tags ?? []).join(", "));
     setEditProjectIds((row.projects ?? []).map((project) => project.id));
   }
+
+  function clearRevealedNotes(id: string) {
+    setRevealedNotes((previous) => {
+      if (!(id in previous)) return previous;
+      const next = { ...previous };
+      delete next[id];
+      return next;
+    });
+  }
+
+  const revealNotesMutation = useMutation({
+    mutationFn: (input: { id: string; forEdit: boolean }) =>
+      revealNotesFn({ data: { id: input.id } }),
+    onSuccess: (result, input) => {
+      if (input.forEdit) {
+        setEditNotes(result.notes);
+        setEditNotesLoaded(true);
+        return;
+      }
+      setRevealedNotes((previous) => ({ ...previous, [input.id]: result.notes }));
+      window.setTimeout(() => clearRevealedNotes(input.id), REVEAL_TIMEOUT_MS);
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not reveal notes"),
+  });
 
   const totpMutation = useMutation({
     mutationFn: (id: string) => totpFn({ data: { id } }),
@@ -475,7 +523,7 @@ function SecretsPage() {
         </div>
       </div>
 
-      <CredentialImportPreview existing={list.data ?? []} />
+      <CredentialImport existing={list.data ?? []} />
       <Card className="mt-8 overflow-hidden border-border/80 shadow-panel">
         <CardHeader>
           <CardTitle className="text-base">Add login or credential</CardTitle>
@@ -888,8 +936,8 @@ function SecretsPage() {
         <CardHeader>
           <CardTitle className="text-base">Stored credentials</CardTitle>
           <CardDescription>
-            Values stay hidden until you explicitly reveal them. Revealed values clear after 30
-            seconds.
+            Values and notes stay hidden and are not loaded until you explicitly reveal them, one
+            item at a time. Revealed values and notes clear after 30 seconds.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -964,7 +1012,7 @@ function SecretsPage() {
             </p>
           ) : (
             <ul className="space-y-2">
-              {visibleCredentials.map((row) => (
+              {pagedCredentials.map((row) => (
                 <li key={row.id} className="rounded-xl border border-border px-4 py-3">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -1195,13 +1243,38 @@ function SecretsPage() {
                       </div>
                       <div className="space-y-1.5">
                         <Label htmlFor={`edit-notes-${row.id}`}>Notes</Label>
-                        <Textarea
-                          id={`edit-notes-${row.id}`}
-                          value={editNotes}
-                          onChange={(event) => setEditNotes(event.target.value)}
-                          placeholder="Notes"
-                          className="min-h-20"
-                        />
+                        {editNotesLoaded ? (
+                          <Textarea
+                            id={`edit-notes-${row.id}`}
+                            value={editNotes}
+                            onChange={(event) => setEditNotes(event.target.value)}
+                            placeholder="Notes"
+                            className="min-h-20"
+                          />
+                        ) : (
+                          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed bg-background p-2 text-xs text-muted-foreground">
+                            <Lock className="size-3.5" />
+                            <span>
+                              {row.has_notes
+                                ? "Notes are hidden and will be kept unchanged."
+                                : "No notes saved."}
+                            </span>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="ml-auto"
+                              onClick={() =>
+                                row.has_notes
+                                  ? revealNotesMutation.mutate({ id: row.id, forEdit: true })
+                                  : setEditNotesLoaded(true)
+                              }
+                              disabled={revealNotesMutation.isPending}
+                            >
+                              {row.has_notes ? "Load notes to edit" : "Add notes"}
+                            </Button>
+                          </div>
+                        )}
                       </div>
                       <div className="space-y-2">
                         <Label>Assigned projects</Label>
@@ -1241,7 +1314,11 @@ function SecretsPage() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => setEditingCredentialId(null)}
+                          onClick={() => {
+                            setEditingCredentialId(null);
+                            setEditNotes("");
+                            setEditNotesLoaded(false);
+                          }}
                           disabled={organizationMutation.isPending}
                         >
                           Cancel
@@ -1249,11 +1326,49 @@ function SecretsPage() {
                       </div>
                     </div>
                   ) : null}
-                  {row.website || row.notes ? (
+                  {row.website || row.has_notes ? (
                     <div className="mt-3 border-t border-border/70 pt-3 text-xs text-muted-foreground">
                       {row.website ? <p className="truncate">{row.website}</p> : null}
-                      {row.notes ? (
-                        <p className="mt-1 line-clamp-2 whitespace-pre-wrap">{row.notes}</p>
+                      {row.has_notes ? (
+                        revealedNotes[row.id] !== undefined ? (
+                          <div className="mt-2 rounded-lg border border-primary/30 bg-primary/5 p-2">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-medium text-foreground">Notes</span>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 gap-1.5"
+                                aria-label={`Hide notes for ${row.name}`}
+                                onClick={() => clearRevealedNotes(row.id)}
+                              >
+                                <EyeOff className="size-3.5" /> Hide
+                              </Button>
+                            </div>
+                            <p className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap break-words font-mono text-[11px]">
+                              {revealedNotes[row.id]}
+                            </p>
+                            <p className="mt-1 text-[10px]">
+                              Hides automatically after 30 seconds.
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="mt-1 flex items-center gap-2">
+                            <FileText className="size-3.5" />
+                            <span>Notes hidden</span>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 gap-1.5"
+                              aria-label={`Reveal notes for ${row.name}`}
+                              onClick={() =>
+                                revealNotesMutation.mutate({ id: row.id, forEdit: false })
+                              }
+                              disabled={revealNotesMutation.isPending}
+                            >
+                              <Eye className="size-3.5" /> Reveal notes
+                            </Button>
+                          </div>
+                        )
                       ) : null}
                     </div>
                   ) : null}
@@ -1261,6 +1376,26 @@ function SecretsPage() {
               ))}
             </ul>
           )}
+          {!list.isLoading && visibleCredentials.length > 0 ? (
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+              <span>
+                Showing {pagedCredentials.length} of {visibleCredentials.length}
+                {visibleCredentials.length !== (list.data ?? []).length
+                  ? ` matching (${(list.data ?? []).length} total)`
+                  : ""}
+              </span>
+              {pagedCredentials.length < visibleCredentials.length ? (
+                <Button size="sm" variant="outline" onClick={showMoreCredentials}>
+                  Show{" "}
+                  {Math.min(
+                    CREDENTIALS_PAGE_SIZE,
+                    visibleCredentials.length - pagedCredentials.length,
+                  )}{" "}
+                  more
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
         </CardContent>
       </Card>
 
