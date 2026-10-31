@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useRouterState } from "@tanstack/react-router";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { sidebarDefaultOpen } from "@/lib/sidebar-state";
 import { WorkspaceSearch } from "@/components/workspace-search";
 import { flatAppNav } from "@/lib/nav";
 import { AgentHelper } from "@/components/agent-helper";
@@ -15,12 +16,12 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
   const backTarget = workspaceBackTarget(pathname, hash);
 
   return (
-    <SidebarProvider defaultOpen>
+    <SidebarProvider defaultOpen={sidebarDefaultOpen()}>
       <div className="flex h-dvh w-full overflow-hidden" data-shell="app-ops">
         <AppSidebar />
         <SidebarInset className="min-h-0 min-w-0 overflow-hidden">
           <header className="relative z-20 flex min-h-14 shrink-0 items-center gap-2 border-b border-border/80 bg-background px-3 sm:gap-3 sm:px-4">
-            <SidebarTrigger className="-ml-1" />
+            <SidebarTrigger className="-ml-1" title="Toggle sidebar (Ctrl/⌘ B)" />
             <BackButton target={backTarget} />
             <div className="min-w-0 flex-1">
               <p className="truncate font-display text-sm font-semibold tracking-tight sm:text-base">
