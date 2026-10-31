@@ -2,7 +2,7 @@
   "name": "open-connect",
   "version": "1.0.0",
   "private": true,
-  "description": "Open-Connect single AI gateway \u2014 MCP, models, skills, plugins, connectors on open-connect.site",
+  "description": "Open-Connect single AI gateway — MCP, models, skills, plugins, connectors on open-connect.site",
   "sideEffects": false,
   "type": "module",
   "scripts": {
