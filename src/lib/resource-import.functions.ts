@@ -221,9 +221,7 @@ async function expandSkillsShUrl(url: URL): Promise<ImportSource[] | null> {
   ) as { commit: { sha: string } };
   const pin = branch.commit.sha;
   const tree = JSON.parse(
-    await publicText(
-      `https://api.github.com/repos/${owner}/${repo}/git/trees/${pin}?recursive=1`,
-    ),
+    await publicText(`https://api.github.com/repos/${owner}/${repo}/git/trees/${pin}?recursive=1`),
   ) as { truncated?: boolean; tree: Array<{ path: string; type: string }> };
   if (tree.truncated)
     throw new Error(
