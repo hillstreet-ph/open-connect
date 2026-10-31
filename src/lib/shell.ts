@@ -10,6 +10,7 @@ export const APP_ROUTE_PREFIXES = [
   "/secrets",
   "/guides",
   "/studio",
+  "/studio-drafts",
   "/orgs",
   "/roles",
   "/projects",
