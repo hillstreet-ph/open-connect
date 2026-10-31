@@ -211,8 +211,7 @@ function StudioPage() {
           ) : (
             <Card>
               <CardContent className="p-5 text-sm text-muted-foreground">
-                Your role cannot upload packages. Contact an administrator to
-                raise permissions.
+                Your role cannot upload packages. Contact an administrator to raise permissions.
               </CardContent>
             </Card>
           )}
