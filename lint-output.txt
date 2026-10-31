@@ -1,7 +1,6 @@
 
 /home/runner/work/open-connect/open-connect/src/components/data-controls-panel.tsx
-  1:1   error  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
-  1:10  error  Insert `;`                                                             prettier/prettier
+  44:0  error  Parsing error: Octal literals are not allowed. Use the syntax '0o0'
 
 /home/runner/work/open-connect/open-connect/src/components/ui/badge.tsx
   62:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
@@ -137,7 +136,6 @@
   70:10  warning  Fast refresh only works when a file only exports components. Move your component(s) to a separate file. If all exports are HOCs, add them to the `extraHOCs` option  react-refresh/only-export-components
   82:10  warning  Fast refresh only works when a file only exports components. Move your component(s) to a separate file. If all exports are HOCs, add them to the `extraHOCs` option  react-refresh/only-export-components
 
-✖ 56 problems (2 errors, 54 warnings)
-  1 error and 0 warnings potentially fixable with the `--fix` option.
+✖ 55 problems (1 error, 54 warnings)
 
 lint_exit=1
