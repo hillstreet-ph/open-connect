@@ -109,7 +109,7 @@ function AppSetupForm({ userId }: { userId: string | undefined }) {
             <div className="flex flex-wrap gap-2">
               <Button size="sm" onClick={() => setOpen(true)}>
                 Add custom MCP
-            </Button>
+              </Button>
               <Button asChild size="sm" variant="outline">
                 <Link to="/connections">Browse apps & accounts</Link>
               </Button>
