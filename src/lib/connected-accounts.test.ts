@@ -5,6 +5,7 @@ import {
   connectableProviderIds,
   describeLinkError,
   identityAccountLabel,
+  isProviderLinked,
   parseAuthCallbackError,
   providerLabel,
 } from "./connected-accounts.ts";
@@ -96,6 +97,14 @@ test("provider redirect errors are read from query string and fragment", () => {
   // A plain settings URL carries no error.
   assert.equal(parseAuthCallbackError("https://open-connect.site/settings#security"), null);
   assert.equal(parseAuthCallbackError("/settings?linked=google"), null);
+});
+
+test("a provider is only reported connected when an identity proves it", () => {
+  assert.equal(isProviderLinked([{ provider: "google" }], "google"), true);
+  assert.equal(isProviderLinked([{ provider: "email" }], "google"), false);
+  assert.equal(isProviderLinked([], "github"), false);
+  assert.equal(isProviderLinked(null, "github"), false);
+  assert.equal(isProviderLinked(undefined, "github"), false);
 });
 
 test("linking failures are explained in plain language", () => {

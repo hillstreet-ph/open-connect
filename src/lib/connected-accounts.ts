@@ -76,6 +76,20 @@ export function identityAccountLabel(identity: LabeledIdentity): string | null {
 }
 
 /**
+ * Whether the linked provider really is attached to the account.
+ *
+ * The `linked` redirect parameter is only a hint: a stale or shared callback URL
+ * can carry it without any link happening, so success is confirmed against the
+ * identities the auth client actually reports.
+ */
+export function isProviderLinked(
+  identities: readonly LabeledIdentity[] | null | undefined,
+  provider: string,
+): boolean {
+  return (identities ?? []).some((identity) => identity.provider === provider);
+}
+
+/**
  * Status for every connectable provider. A provider is "connected" when the user
  * already has an identity for it; the last remaining identity cannot be unlinked.
  */

@@ -11,7 +11,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   buildConnectedAccounts,
   describeLinkError,
+  isProviderLinked,
   parseAuthCallbackError,
+  providerLabel,
   type ConnectableProvider,
 } from "@/lib/connected-accounts";
 
@@ -45,10 +47,14 @@ function ProviderIcon({ provider }: { provider: ConnectableProvider }) {
  *
  * Rendered outside the tab panels so it runs on every callback. Waits for the
  * session to settle first, because Supabase consumes and clears the token
- * fragment while the client initializes.
+ * fragment while the client initializes. Success is confirmed against the
+ * account's real identities, so a stale or shared callback URL cannot claim a
+ * connection that never happened.
  */
 export function AccountLinkCallbackNotice() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { user } = useRouteContext({ from: "/_authenticated" });
   useEffect(() => {
     void (async () => {
       await supabase.auth.getSession();
@@ -63,10 +69,19 @@ export function AccountLinkCallbackNotice() {
         `${url.pathname}${url.search}#security`,
       );
       void navigate({ hash: "security", replace: true });
-      if (error) toast.error(describeLinkError(error));
-      else toast.success(`${linked} connected`);
+      if (error) {
+        toast.error(describeLinkError(error));
+        return;
+      }
+      const { data } = await supabase.auth.getUserIdentities();
+      void queryClient.invalidateQueries({ queryKey: ["connected-accounts", user.id] });
+      if (linked && isProviderLinked(data?.identities, linked)) {
+        toast.success(`${providerLabel(linked)} connected`);
+      } else {
+        toast.error("The connection did not complete. Please try again.");
+      }
     })();
-  }, [navigate]);
+  }, [navigate, queryClient, user.id]);
   return null;
 }
 
