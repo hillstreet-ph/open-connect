@@ -1,10 +1,6 @@
 
 /home/runner/work/open-connect/open-connect/src/components/data-controls-panel.tsx
-   14:9   error  Replace `⏎··Collapsible,⏎··CollapsibleContent,⏎··CollapsibleTrigger,⏎` with `·Collapsible,·CollapsibleContent,·CollapsibleTrigger·`                                                                                                                                        prettier/prettier
-  439:32  error  Replace `·size="sm"·disabled={build.isPending}·onClick={()·=>·build.mutate(d.id)}` with `⏎··························size="sm"⏎··························disabled={build.isPending}⏎··························onClick={()·=>·build.mutate(d.id)}⏎························`  prettier/prettier
-
-/home/runner/work/open-connect/open-connect/src/components/resource-library-card.tsx
-  428:10  error  Parsing error: Expected corresponding JSX closing tag for 'CardContent'
+  168:18  error  Replace `"save_helper_memory",·"Automatically·save·Agent-Helper·memory",·"Save·redacted·interaction·summaries·to·Memory·after·replies.·Assistant·text·remains·unverified;·this·does·not·save·every·external·app·conversation."` with `⏎··················"save_helper_memory",⏎··················"Automatically·save·Agent-Helper·memory",⏎··················"Save·redacted·interaction·summaries·to·Memory·after·replies.·Assistant·text·remains·unverified;·this·does·not·save·every·external·app·conversation.",⏎················`  prettier/prettier
 
 /home/runner/work/open-connect/open-connect/src/components/ui/badge.tsx
   62:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
@@ -140,7 +136,7 @@
   70:10  warning  Fast refresh only works when a file only exports components. Move your component(s) to a separate file. If all exports are HOCs, add them to the `extraHOCs` option  react-refresh/only-export-components
   82:10  warning  Fast refresh only works when a file only exports components. Move your component(s) to a separate file. If all exports are HOCs, add them to the `extraHOCs` option  react-refresh/only-export-components
 
-✖ 57 problems (3 errors, 54 warnings)
-  2 errors and 0 warnings potentially fixable with the `--fix` option.
+✖ 55 problems (1 error, 54 warnings)
+  1 error and 0 warnings potentially fixable with the `--fix` option.
 
 lint_exit=1
