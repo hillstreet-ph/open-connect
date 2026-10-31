@@ -66,7 +66,7 @@ async function expandGitHubUrl(url: URL): Promise<ImportSource[]> {
       throw new Error(
         "Repository tree is truncated. Import a specific resource file or a smaller directory.",
       );
-    const prefix = dirPath ? `${dirPath.replace(/\/+$/, "")}/` : "";
+    const prefix = dirPath ? `${dirPath.replace(/\/*$/, "")}/` : "";
     const candidates = tree.tree.filter(
       (t) =>
         t.type === "blob" &&
@@ -211,6 +211,14 @@ async function expandSkillsShUrl(url: URL): Promise<ImportSource[] | null> {
   if (!owner || !repo || !/^[a-zA-Z0-9_.-]+$/.test(owner + repo)) return null;
   if (SKILLS_SH_RESERVED.has(owner)) return null;
   if (!skill) return expandGitHubUrl(new URL(`https://github.com/${owner}/${repo}`));
+  return expandSkillSources(owner, repo, skill);
+}
+
+async function expandSkillSources(
+  owner: string,
+  repo: string,
+  skill: string,
+): Promise<ImportSource[]> {
   const repository = JSON.parse(
     await publicText(`https://api.github.com/repos/${owner}/${repo}`),
   ) as { default_branch: string; license?: { spdx_id?: string } };
@@ -258,7 +266,41 @@ async function expandSkillsShUrl(url: URL): Promise<ImportSource[] | null> {
   return sources;
 }
 
-async function expandImportUrl(url: URL): Promise<ImportSource[]> {
+function parseSkillsInstallCommand(raw: string): { url: string; skill: string | null } | null {
+  const tokens = raw.trim().split(" ").filter(Boolean);
+  if (tokens.length < 4) return null;
+  if ((tokens[0] || "").toLowerCase() !== "npx") return null;
+  if ((tokens[1] || "").toLowerCase() !== "skills") return null;
+  if ((tokens[2] || "").toLowerCase() !== "add") return null;
+  const url = tokens[3] ?? "";
+  if (!url.startsWith("http://") && !url.startsWith("https://")) return null;
+  let skill: string | null = null;
+  for (let i = 4; i < tokens.length; i++) {
+    const token = tokens[i] ?? "";
+    const next = tokens[i + 1] ?? "";
+    if (token === "--skill" || token === "--agent") {
+      if (next && !next.startsWith("--")) {
+        skill = next;
+      }
+    } else if (token.startsWith("--skill=") || token.startsWith("--agent=")) {
+      const value = token.slice(token.indexOf("=") + 1);
+      if (value) skill = value;
+    }
+  }
+  return { url, skill };
+}
+
+async function expandImportUrl(url: URL, skill?: string | null): Promise<ImportSource[]> {
+  if (skill) {
+    const segments = url.pathname.split("/").filter(Boolean);
+    const isGithub = url.hostname === "github.com";
+    const isSkillsSh = url.hostname === "skills.sh" || url.hostname === "www.skills.sh";
+    const [owner, repo] = segments;
+    if ((isGithub || isSkillsSh) && owner && repo && /^[a-zA-Z0-9_.-]+$/.test(owner + repo)) {
+      return expandSkillSources(owner, repo, skill);
+    }
+    throw new Error("Skill selection is supported for GitHub and skills.sh repository URLs only.");
+  }
   if (url.hostname === "github.com") {
     return expandGitHubUrl(url);
   }
@@ -271,9 +313,14 @@ async function expandImportUrl(url: URL): Promise<ImportSource[]> {
 
 export const importResourceUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input: { url: string }) => ({
-    url: normalizeRemoteMcpEndpoint("custom_mcp", input.url),
-  }))
+  .validator((input: { url: string }) => {
+    const command = parseSkillsInstallCommand(input.url);
+    if (command) return { url: command.url, skill: command.skill };
+    return {
+      url: normalizeRemoteMcpEndpoint("custom_mcp", input.url),
+      skill: null as string | null,
+    };
+  })
   .handler(async ({ data, context }) => {
     const url = new URL(data.url);
     if (
@@ -282,7 +329,7 @@ export const importResourceUrl = createServerFn({ method: "POST" })
       )
     )
       throw new Error("Use a public source URL without credentials; upload private files instead");
-    const sources = await expandImportUrl(url);
+    const sources = await expandImportUrl(url, data.skill);
     const db = context.supabase as SupabaseClient;
     const results: Array<{
       name: string;
