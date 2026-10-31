@@ -33,7 +33,7 @@ jobs:
             const content = fs.readFileSync('type-output.txt', 'utf8');
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const branch = 'type-output';
+            const branch = 'lint-output';
             const path = 'type-output.txt';
             let sha;
             try {
