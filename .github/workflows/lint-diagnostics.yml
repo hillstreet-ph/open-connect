@@ -1,0 +1,64 @@
+name: Lint diagnostics
+
+on:
+  push:
+    branches-ignore: [main, development, lint-output]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  lint:
+    name: Capture lint output
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install
+        run: bun install --frozen-lockfile
+      - name: Run lint and capture output
+        run: |
+          set +e
+          bun run lint > lint-output.txt 2>&1
+          echo "lint exit code: $?" >> lint-output.txt
+          cat lint-output.txt
+      - name: Publish lint output to orphan branch
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            const content = fs.readFileSync('lint-output.txt', 'utf8');
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const blob = await github.rest.git.createBlob({ owner, repo, content, encoding: 'utf-8' });
+            const tree = await github.rest.git.createTree({
+              owner,
+              repo,
+              tree: [{ path: 'eslint-errors.txt', mode: '100644', type: 'blob', sha: blob.data.sha }],
+            });
+            const commit = await github.rest.git.createCommit({
+              owner,
+              repo,
+              message: 'lint diagnostics ' + context.sha.slice(0, 10),
+              tree: tree.data.sha,
+            });
+            try {
+              await github.rest.git.createRef({
+                owner,
+                repo,
+                ref: 'refs/heads/lint-output',
+                sha: commit.data.sha,
+              });
+            } catch (e) {
+              await github.rest.git.updateRef({
+                owner,
+                repo,
+                ref: 'heads/lint-output',
+                sha: commit.data.sha,
+                force: true,
+              });
+            }
