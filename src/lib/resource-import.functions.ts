@@ -17,7 +17,7 @@ type ImportSource = {
 };
 
 const RESOURCE_FILE_PATTERN =
-  /(?:^|\/)(?:skill\.md|plugin\.json|ai-plugin\.json|openapi\.json|agents\.md)$/i;
+  /(?:^|\/)(?:skill\.md|agent\.md|agents\.md|prompt\.md|guide\.md|tool\.md|plugin\.json|ai-plugin\.json|openapi\.json|mcp\.json)$/i;
 const MAX_IMPORT_SOURCES = 100;
 
 async function expandGitHubUrl(url: URL): Promise<ImportSource[]> {
@@ -42,6 +42,52 @@ async function expandGitHubUrl(url: URL): Promise<ImportSource[]> {
       version: `0.0.0+${commit.sha.slice(0, 12)}`,
       repository: `https://github.com/${owner}/${repo}`,
     });
+    return sources;
+  }
+  if (segments[2] === "tree" && segments.length >= 4) {
+    const ref = segments[3]!;
+    const dirPath = segments.slice(4).join("/");
+    const commit = JSON.parse(
+      await publicText(
+        `https://api.github.com/repos/${owner}/${repo}/commits/${encodeURIComponent(ref)}`,
+      ),
+    ) as { sha: string };
+    if (!/^[a-f0-9]{40}$/.test(commit.sha)) throw new Error("Source commit could not be pinned");
+    const pin = commit.sha;
+    const repository = JSON.parse(
+      await publicText(`https://api.github.com/repos/${owner}/${repo}`),
+    ) as { license?: { spdx_id?: string } };
+    const tree = JSON.parse(
+      await publicText(
+        `https://api.github.com/repos/${owner}/${repo}/git/trees/${pin}?recursive=1`,
+      ),
+    ) as { truncated?: boolean; tree: Array<{ path: string; type: string }> };
+    if (tree.truncated)
+      throw new Error(
+        "Repository tree is truncated. Import a specific resource file or a smaller directory.",
+      );
+    const prefix = dirPath ? `${dirPath.replace(/\/*$/, "")}/` : "";
+    const candidates = tree.tree.filter(
+      (t) =>
+        t.type === "blob" &&
+        (!prefix || t.path.startsWith(prefix)) &&
+        RESOURCE_FILE_PATTERN.test(t.path),
+    );
+    if (!candidates.length)
+      throw new Error(
+        "No supported resource files found in that directory. Supported files: skill.md, agent.md, agents.md, prompt.md, guide.md, tool.md, plugin.json, ai-plugin.json, openapi.json, mcp.json.",
+      );
+    if (candidates.length > 25)
+      throw new Error("Directory has more than 25 candidates. Import a smaller directory.");
+    for (const item of candidates)
+      sources.push({
+        url: `https://raw.githubusercontent.com/${owner}/${repo}/${pin}/${item.path}`,
+        identity: `github:${owner}/${repo}/${item.path}`,
+        filename: item.path.split("/").pop()!,
+        version: `0.0.0+${pin.slice(0, 12)}`,
+        repository: `https://github.com/${owner}/${repo}`,
+        license: repository.license?.spdx_id,
+      });
     return sources;
   }
   if (segments.length !== 2) throw new Error("Use a repository root or a GitHub blob URL");
@@ -139,18 +185,142 @@ async function expandWebsiteUrl(url: URL): Promise<ImportSource[]> {
   return sources;
 }
 
-async function expandImportUrl(url: URL): Promise<ImportSource[]> {
+const SKILLS_SH_RESERVED = new Set([
+  "site",
+  "agent",
+  "agents",
+  "packs",
+  "pack",
+  "topic",
+  "topics",
+  "official",
+  "audits",
+  "docs",
+  "doc",
+  "trending",
+  "hot",
+  "about",
+  "api",
+  "login",
+  "settings",
+]);
+
+async function expandSkillsShUrl(url: URL): Promise<ImportSource[] | null> {
+  const segments = url.pathname.split("/").filter(Boolean);
+  const [owner, repo, skill] = segments;
+  if (!owner || !repo || !/^[a-zA-Z0-9_.-]+$/.test(owner + repo)) return null;
+  if (SKILLS_SH_RESERVED.has(owner)) return null;
+  if (!skill) return expandGitHubUrl(new URL(`https://github.com/${owner}/${repo}`));
+  return expandSkillSources(owner, repo, skill);
+}
+
+async function expandSkillSources(
+  owner: string,
+  repo: string,
+  skill: string,
+): Promise<ImportSource[]> {
+  const repository = JSON.parse(
+    await publicText(`https://api.github.com/repos/${owner}/${repo}`),
+  ) as { default_branch: string; license?: { spdx_id?: string } };
+  const branch = JSON.parse(
+    await publicText(
+      `https://api.github.com/repos/${owner}/${repo}/branches/${encodeURIComponent(repository.default_branch)}`,
+    ),
+  ) as { commit: { sha: string } };
+  const pin = branch.commit.sha;
+  const tree = JSON.parse(
+    await publicText(`https://api.github.com/repos/${owner}/${repo}/git/trees/${pin}?recursive=1`),
+  ) as { truncated?: boolean; tree: Array<{ path: string; type: string }> };
+  if (tree.truncated)
+    throw new Error(
+      "Repository tree is truncated. Import the GitHub repository URL directly instead.",
+    );
+  const slug = skill.replace(/[^a-zA-Z0-9_-]/g, "");
+  const nested = new RegExp(`(?:^|/)${slug}/skill[.]md$`, "i");
+  const flat = new RegExp(`^${slug}[.]md$`, "i");
+  let candidates = tree.tree.filter(
+    (t) => t.type === "blob" && (nested.test(t.path) || flat.test(t.path)),
+  );
+  if (!candidates.length) {
+    const allSkills = tree.tree.filter(
+      (t) => t.type === "blob" && (t.path.split("/").pop() ?? "").toLowerCase() === "skill.md",
+    );
+    if (allSkills.length === 1) candidates = allSkills;
+  }
+  if (!candidates.length)
+    throw new Error(
+      "Skill not found in that repository. Import the repository page or the GitHub repository URL instead.",
+    );
+  if (candidates.length > 25)
+    throw new Error("Skill matched more than 25 files. Import the repository page instead.");
+  const sources: ImportSource[] = [];
+  for (const item of candidates)
+    sources.push({
+      url: `https://raw.githubusercontent.com/${owner}/${repo}/${pin}/${item.path}`,
+      identity: `github:${owner}/${repo}/${item.path}`,
+      filename: item.path.split("/").pop()!,
+      version: `0.0.0+${pin.slice(0, 12)}`,
+      repository: `https://github.com/${owner}/${repo}`,
+      license: repository.license?.spdx_id,
+    });
+  return sources;
+}
+
+function parseSkillsInstallCommand(raw: string): { url: string; skill: string | null } | null {
+  const tokens = raw.trim().split(" ").filter(Boolean);
+  if (tokens.length < 4) return null;
+  if ((tokens[0] || "").toLowerCase() !== "npx") return null;
+  if ((tokens[1] || "").toLowerCase() !== "skills") return null;
+  if ((tokens[2] || "").toLowerCase() !== "add") return null;
+  const url = tokens[3] ?? "";
+  if (!url.startsWith("http://") && !url.startsWith("https://")) return null;
+  let skill: string | null = null;
+  for (let i = 4; i < tokens.length; i++) {
+    const token = tokens[i] ?? "";
+    const next = tokens[i + 1] ?? "";
+    if (token === "--skill" || token === "--agent") {
+      if (next && !next.startsWith("--")) {
+        skill = next;
+      }
+    } else if (token.startsWith("--skill=") || token.startsWith("--agent=")) {
+      const value = token.slice(token.indexOf("=") + 1);
+      if (value) skill = value;
+    }
+  }
+  return { url, skill };
+}
+
+async function expandImportUrl(url: URL, skill?: string | null): Promise<ImportSource[]> {
+  if (skill) {
+    const segments = url.pathname.split("/").filter(Boolean);
+    const isGithub = url.hostname === "github.com";
+    const isSkillsSh = url.hostname === "skills.sh" || url.hostname === "www.skills.sh";
+    const [owner, repo] = segments;
+    if ((isGithub || isSkillsSh) && owner && repo && /^[a-zA-Z0-9_.-]+$/.test(owner + repo)) {
+      return expandSkillSources(owner, repo, skill);
+    }
+    throw new Error("Skill selection is supported for GitHub and skills.sh repository URLs only.");
+  }
   if (url.hostname === "github.com") {
     return expandGitHubUrl(url);
+  }
+  if (url.hostname === "skills.sh" || url.hostname === "www.skills.sh") {
+    const expanded = await expandSkillsShUrl(url);
+    if (expanded) return expanded;
   }
   return expandWebsiteUrl(url);
 }
 
 export const importResourceUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input: { url: string }) => ({
-    url: normalizeRemoteMcpEndpoint("custom_mcp", input.url),
-  }))
+  .validator((input: { url: string }) => {
+    const command = parseSkillsInstallCommand(input.url);
+    if (command) return { url: command.url, skill: command.skill };
+    return {
+      url: normalizeRemoteMcpEndpoint("custom_mcp", input.url),
+      skill: null as string | null,
+    };
+  })
   .handler(async ({ data, context }) => {
     const url = new URL(data.url);
     if (
@@ -159,7 +329,7 @@ export const importResourceUrl = createServerFn({ method: "POST" })
       )
     )
       throw new Error("Use a public source URL without credentials; upload private files instead");
-    const sources = await expandImportUrl(url);
+    const sources = await expandImportUrl(url, data.skill);
     const db = context.supabase as SupabaseClient;
     const results: Array<{
       name: string;

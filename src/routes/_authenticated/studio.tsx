@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
+  ArrowLeft,
   Boxes,
   Brain,
   Layers3,
@@ -66,12 +67,21 @@ function SectionHeading({
       <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
         <Icon className="size-4" />
       </span>
-      <div>
+      <div className="min-w-0">
         <p className="text-xs font-semibold uppercase tracking-wider text-primary">{label}</p>
         <h2 className="mt-0.5 text-lg font-semibold sm:text-xl">{title}</h2>
         <p className="mt-1 max-w-3xl text-sm text-muted-foreground">{description}</p>
       </div>
     </div>
+  );
+}
+
+function SectionBackButton({ onBack }: { onBack: () => void }) {
+  return (
+    <Button size="sm" variant="ghost" className="w-fit gap-2 px-2 sm:px-3" onClick={onBack}>
+      <ArrowLeft className="size-4" aria-hidden="true" />
+      Back to Studio
+    </Button>
   );
 }
 
@@ -129,26 +139,6 @@ function StudioPage() {
             <PackageOpen className="size-3.5" />
             Packages
           </Button>
-          {can("verify_resources") ? (
-            <Button
-              size="sm"
-              variant={view === "review" ? "default" : "outline"}
-              className="w-full justify-start whitespace-normal text-left"
-              onClick={() => setView("review")}
-            >
-              <ShieldCheck className="size-3.5" />
-              Resource review
-            </Button>
-          ) : null}
-          <Button
-            size="sm"
-            variant={view === "context" ? "default" : "outline"}
-            className="w-full justify-start whitespace-normal text-left"
-            onClick={() => setView("context")}
-          >
-            <Brain className="size-3.5" />
-            Memory & Knowledge
-          </Button>
           <Button
             size="sm"
             variant={view === "toolkits" ? "default" : "outline"}
@@ -169,6 +159,26 @@ function StudioPage() {
               Reusable drafts
             </Link>
           </Button>
+          {can("verify_resources") ? (
+            <Button
+              size="sm"
+              variant={view === "review" ? "default" : "outline"}
+              className="w-full justify-start whitespace-normal text-left"
+              onClick={() => setView("review")}
+            >
+              <ShieldCheck className="size-3.5" />
+              Resource review
+            </Button>
+          ) : null}
+          <Button
+            size="sm"
+            variant={view === "context" ? "default" : "outline"}
+            className="w-full justify-start whitespace-normal text-left"
+            onClick={() => setView("context")}
+          >
+            <Brain className="size-3.5" />
+            Memory & Knowledge
+          </Button>
         </div>
       </header>
 
@@ -176,6 +186,7 @@ function StudioPage() {
 
       {view === "packages" ? (
         <section id="packages" className="scroll-mt-6 space-y-4">
+          <SectionBackButton onBack={() => setView("build")} />
           <div className="max-w-3xl">
             <ResourceUrlImport />
           </div>
@@ -213,6 +224,7 @@ function StudioPage() {
 
       {view === "review" && can("verify_resources") ? (
         <section id="review" className="scroll-mt-6 space-y-4">
+          <SectionBackButton onBack={() => setView("build")} />
           <SectionHeading
             icon={ShieldCheck}
             label="Marketplace review"
@@ -225,6 +237,7 @@ function StudioPage() {
 
       {view === "context" ? (
         <section id="context" className="scroll-mt-6 space-y-4">
+          <SectionBackButton onBack={() => setView("build")} />
           <SectionHeading
             icon={LibraryBig}
             label="Context & data"
@@ -254,6 +267,7 @@ function StudioPage() {
 
       {view === "toolkits" ? (
         <section id="toolkits" className="scroll-mt-6 space-y-4">
+          <SectionBackButton onBack={() => setView("build")} />
           <SectionHeading
             icon={Layers3}
             label="Bundles"
