@@ -150,6 +150,40 @@ test("website sync-all imports every candidate in bounded batches and retries ex
   );
 });
 
+test("composio ai provider accounts sync under their open-connect gateway provider", () => {
+  const accounts = [
+    { id: "ca_nim", provider: "nvidia_nim" },
+    { id: "ca_grok", provider: "grok" },
+    { id: "ca_gmail", provider: "gmail" },
+  ];
+  const plan = planComposioSync(accounts, [], [{ slug: "gmail", name: "Gmail" }]);
+  assert.deepEqual(
+    plan.candidates.map((candidate) => `${candidate.provider}:${candidate.display_name}`),
+    ["nvidia:NVIDIA NIM", "xai:xAI / Grok", "gmail:Gmail"],
+  );
+  const imported = composioImportRecords(
+    "owner",
+    accounts,
+    [],
+    [],
+    ["ca_nim", "ca_grok", "ca_gmail"],
+  );
+  assert.equal(imported.records[0]?.provider, "nvidia");
+  assert.equal(imported.records[0]?.display_name, "NVIDIA NIM");
+  assert.equal(imported.records[1]?.provider, "xai");
+  assert.equal(imported.records[2]?.provider, "gmail");
+  assert.equal(
+    imported.records.every((record) => record.credential_reference?.startsWith("composio://")),
+    true,
+  );
+  const saved = imported.records.map((record) => ({
+    provider: record.provider,
+    provider_account_id: record.provider_account_id,
+    credential_reference: record.credential_reference,
+  }));
+  assert.equal(composioImportBatches("owner", accounts, saved, []).batches.length, 0);
+});
+
 test("native account matches require both provider and exact account ID; no-op import preserves bindings", () => {
   const accounts = [{ id: "ca_native", provider: "custom_app" }];
   const saved = [
