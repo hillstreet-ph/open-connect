@@ -178,7 +178,7 @@ function AccountDataControls({ studio, userId }: { studio: boolean; userId: stri
               ] as const
             ).map(([key, title, description]) => (
               <div key={key} className="flex items-start justify-between gap-4">
-                <div>
+                <div className="min-w-0">
                   <Label htmlFor={`data-${key}`} className="text-sm font-medium">
                     {title}
                   </Label>
@@ -395,7 +395,7 @@ function AccountDataControls({ studio, userId }: { studio: boolean; userId: stri
                 Use placeholders and secure credential references. Remove personal information
                 before sharing.
               </p>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button disabled={saveDraft.isPending} onClick={() => saveDraft.mutate()}>
                   Save private draft
                 </Button>
