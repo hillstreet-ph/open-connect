@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataControlsPanel } from "@/components/data-controls-panel";
+import { LoginActivityPanel } from "@/components/login-activity-panel";
 import { settingsTab } from "@/lib/settings-navigation";
 import { profileDraftValue } from "@/lib/react-compat";
 
@@ -266,7 +267,8 @@ function SettingsPage() {
             </CardContent>
           </Card>
         </TabsContent>
-        <TabsContent value="security">
+        <TabsContent value="security" className="space-y-4">
+          <LoginActivityPanel />
           <Card className="shadow-panel">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">

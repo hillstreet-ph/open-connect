@@ -170,6 +170,30 @@ test("Settings keeps only personal tabs and duplicates no sidebar destinations",
   assert.ok(!settings.includes("ControlApprovalsPanel"));
   assert.ok(!settings.includes('value="approvals"'));
   assert.ok(!settings.includes("Approval requests"));
+
+  // Login activity lives in the personal security tab, with per-session sign out.
+  assert.ok(settings.includes("LoginActivityPanel"));
+  assert.ok(settings.indexOf('value="security"') < settings.indexOf("<LoginActivityPanel />"));
+
+  const panel = readFileSync(path.join(sourceRoot, "components/login-activity-panel.tsx"), "utf8");
+  // The cache must be keyed to the account so a switch in another tab cannot show stale rows.
+  assert.ok(panel.includes('queryKey: ["login-activity", userId]'));
+  assert.ok(panel.includes("key={user.id}"));
+});
+
+test("Workspace header keeps a single account entry point and a persistent sidebar toggle", () => {
+  const sourceRoot = path.resolve(process.cwd(), "src");
+  const shell = readFileSync(path.join(sourceRoot, "components/workspace-shell.tsx"), "utf8");
+  const sidebar = readFileSync(path.join(sourceRoot, "components/ui/sidebar.tsx"), "utf8");
+
+  // The account menu owns Settings and administration; the header must not duplicate them.
+  assert.ok(!shell.includes('to="/settings"'), "Header must not repeat the Settings link");
+  assert.ok(!shell.includes("Open your account settings"));
+  assert.ok(shell.includes("sidebarDefaultOpen"), "Sidebar toggle state must be restored");
+  assert.ok(sidebar.includes("writeSidebarOpen"));
+  const sidebarState = readFileSync(path.join(sourceRoot, "lib/sidebar-state.ts"), "utf8");
+  assert.ok(sidebarState.includes("export function sidebarDefaultOpen"));
+  assert.ok(sidebarState.includes("SIDEBAR_COOKIE_NAME"));
 });
 
 test("Toolkit creation reads from the personal library, not the Marketplace catalog", () => {

@@ -41,3 +41,6 @@ __pycache__/
 .pytest_cache/
 
 supabase/.temp/
+
+# Agent working notes
+.openhands/
