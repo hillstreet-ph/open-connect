@@ -2,7 +2,7 @@ import { isResourceApproved } from "@/lib/resource-approval";
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Download, Loader2, Trash2, Upload } from "lucide-react";
+import { ChevronDown, Download, Loader2, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { detectResourceMeta, isArchiveFilename } from "@/lib/resource-detect";
@@ -16,6 +16,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AddToProjectButton } from "@/components/add-to-project";
 import { SUPPORTED_RESOURCE_LICENSES } from "@/lib/resource-license";
@@ -357,60 +362,69 @@ export function ResourceLibraryCard({
           Upload package
         </Button>
 
-        <div className="space-y-2">
-          <h3 className="text-sm font-medium text-muted-foreground">Your packages</h3>
-          <ul className="space-y-2">
-            {visibleResources.length === 0 ? (
-              <li className="text-sm text-muted-foreground">No uploads yet.</li>
-            ) : (
-              visibleResources.map((r) => (
-                <li
-                  key={r.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-3 py-2"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate font-medium">{r.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      <Badge variant="secondary" className="mr-2 uppercase">
-                        {r.resource_type}
-                      </Badge>
-                      <Badge variant={r.published ? "default" : "outline"} className="mr-2">
-                        {r.published ? "Published" : "Draft"}
-                      </Badge>
-                      {isResourceApproved(r) ? <Badge variant="outline">Verified</Badge> : null}
-                      {r.package_filename || r.slug || "untitled"}
-                      {typeof r.package_size === "number" && r.package_size > 0
-                        ? ` · ${formatBytes(r.package_size)}`
-                        : ""}
-                    </p>
-                  </div>
-                  <div className="flex gap-1">
-                    {showProjectAssignment ? <AddToProjectButton resourceId={r.id} /> : null}
-                    {r.package_path ? (
+        <Collapsible defaultOpen={false} className="space-y-2">
+          <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 rounded-lg border border-border px-3 py-2 text-left text-sm font-medium hover:bg-muted/50">
+            <span>Your packages</span>
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+              {visibleResources.length} item(s)
+              <ChevronDown className="size-4" />
+            </span>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-2">
+            <ul className="space-y-2">
+              {visibleResources.length === 0 ? (
+                <li className="text-sm text-muted-foreground">No uploads yet.</li>
+              ) : (
+                visibleResources.map((r) => (
+                  <li
+                    key={r.id}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-3 py-2"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">{r.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        <Badge variant="secondary" className="mr-2 uppercase">
+                          {r.resource_type}
+                        </Badge>
+                        <Badge variant={r.published ? "default" : "outline"} className="mr-2">
+                          {r.published ? "Published" : "Draft"}
+                        </Badge>
+                        {isResourceApproved(r) ? <Badge variant="outline">Verified</Badge> : null}
+                        {r.package_filename || r.slug || "untitled"}
+                        {typeof r.package_size === "number" && r.package_size > 0
+                          ? ` · ${formatBytes(r.package_size)}`
+                          : ""}
+                      </p>
+                    </div>
+                    <div className="flex gap-1">
+                      {showProjectAssignment ? <AddToProjectButton resourceId={r.id} /> : null}
+                      {r.package_path ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => downloadMutation.mutate(r.id)}
+                          disabled={downloadMutation.isPending}
+                          aria-label="Download"
+                        >
+                          <Download className="size-3.5" />
+                        </Button>
+                      ) : null}
                       <Button
                         size="sm"
-                        variant="outline"
-                        onClick={() => downloadMutation.mutate(r.id)}
-                        disabled={downloadMutation.isPending}
-                        aria-label="Download"
+                        variant="ghost"
+                        onClick={() => deleteMutation.mutate(r.id)}
+                        disabled={deleteMutation.isPending}
+                        aria-label="Delete"
                       >
-                        <Download className="size-3.5" />
+                        <Trash2 className="size-3.5" />
                       </Button>
-                    ) : null}
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => deleteMutation.mutate(r.id)}
-                      disabled={deleteMutation.isPending}
-                      aria-label="Delete"
-                    >
-                      <Trash2 className="size-3.5" />
-                    </Button>
-                  </div>
-                </li>
-              ))
-            )}
-          </ul>
+                    </div>
+                  </li>
+                ))
+              )}
+            </ul>
+          </CollapsibleContent>
+        </Collapsible>
         </div>
       </CardContent>
     </Card>

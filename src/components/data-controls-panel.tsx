@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useRouteContext } from "@tanstack/react-router";
-import { Download, Loader2, Database, Sparkles } from "lucide-react";
+import { ChevronDown, Download, Loader2, Database, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   getDataControls,
   saveDataControls,
@@ -404,43 +409,54 @@ function AccountDataControls({ studio, userId }: { studio: boolean; userId: stri
               </div>
             </div>
           )}
-          {drafts.map((d) => (
-            <div
-              key={d.id}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4"
-            >
-              <div className="min-w-0">
-                <p className="break-words font-medium">{d.title}</p>
-                <p className="text-xs text-muted-foreground">
-                  {d.resource_type} ·{" "}
-                  {d.resource_id ? "Built for resource review" : "Private draft"}
+          <Collapsible defaultOpen={false} className="space-y-2">
+            <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-sm font-medium hover:bg-muted/50">
+              <span>Your drafts</span>
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                {drafts.length} item(s)
+                <ChevronDown className="size-4" />
+              </span>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-3">
+              {drafts.map((d) => (
+                <div
+                  key={d.id}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4"
+                >
+                  <div className="min-w-0">
+                    <p className="break-words font-medium">{d.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {d.resource_type} ·{" "}
+                      {d.resource_id ? "Built for resource review" : "Private draft"}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {!d.resource_id ? (
+                      <>
+                        <Button size="sm" variant="outline" onClick={() => edit(d)}>
+                          Edit
+                        </Button>
+                        <Button size="sm" disabled={build.isPending} onClick={() => build.mutate(d.id)}>
+                          Build for review
+                        </Button>
+                      </>
+                    ) : (
+                      <Button size="sm" variant="outline" asChild>
+                        <Link to="/studio" hash="review">
+                          Review & publish
+                        </Link>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {!drafts.length && (
+                <p className="text-sm text-muted-foreground">
+                  No drafts yet. Start one here, or enable usage-based suggestions in Data Controls.
                 </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {!d.resource_id ? (
-                  <>
-                    <Button size="sm" variant="outline" onClick={() => edit(d)}>
-                      Edit
-                    </Button>
-                    <Button size="sm" disabled={build.isPending} onClick={() => build.mutate(d.id)}>
-                      Build for review
-                    </Button>
-                  </>
-                ) : (
-                  <Button size="sm" variant="outline" asChild>
-                    <Link to="/studio" hash="review">
-                      Review & publish
-                    </Link>
-                  </Button>
-                )}
-              </div>
-            </div>
-          ))}
-          {!drafts.length && (
-            <p className="text-sm text-muted-foreground">
-              No drafts yet. Start one here, or enable usage-based suggestions in Data Controls.
-            </p>
-          )}
+              )}
+            </CollapsibleContent>
+          </Collapsible>
           {studio && (
             <Button variant="link" asChild>
               <Link to="/settings" hash="data">
