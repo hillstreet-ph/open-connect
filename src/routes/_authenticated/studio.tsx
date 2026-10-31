@@ -176,6 +176,9 @@ function StudioPage() {
 
       {view === "packages" ? (
         <section id="packages" className="scroll-mt-6 space-y-4">
+          <div className="max-w-3xl">
+            <ResourceUrlImport />
+          </div>
           <SectionHeading
             icon={PackageOpen}
             label="Packages & capabilities"
@@ -205,9 +208,6 @@ function StudioPage() {
               </CardContent>
             </Card>
           )}
-          <div className="max-w-3xl">
-            <ResourceUrlImport />
-          </div>
         </section>
       ) : null}
 
