@@ -1,3 +1,4 @@
+import { NotificationChannels } from "@/components/notification-channels";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -83,7 +84,7 @@ function IntegrationsPage() {
           token: botToken,
         },
       }),
-    onSuccess: (result) => {
+    onSuccess: () => {
       toast.success("Telegram bot verified and saved securely");
       setBotLabel("");
       setBotToken("");
@@ -117,7 +118,7 @@ function IntegrationsPage() {
     <div className="mx-auto max-w-6xl space-y-10 px-4 py-10 sm:px-6 sm:py-14">
       <header>
         <Badge variant="outline" className="border-primary/40 text-primary">
-          Open-Connect · inbound
+          Open-Connect · integrations
         </Badge>
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
@@ -135,8 +136,8 @@ function IntegrationsPage() {
         <div className="mb-4">
           <h2 className="text-lg font-semibold">Apps</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Set up your bot for agent messaging. This is an Open-Connect integration, separate from
-            app connectors.
+            Set up bots for notifications and alerts. This is an Open-Connect integration, separate
+            from app connectors.
           </p>
         </div>
         <Card className="shadow-panel">
@@ -189,6 +190,11 @@ function IntegrationsPage() {
             )}
           </CardContent>
         </Card>
+        {user && section === "apps" ? (
+          <div className="mt-6">
+            <NotificationChannels userId={user.id} />
+          </div>
+        ) : null}
       </section>
 
       {user ? (

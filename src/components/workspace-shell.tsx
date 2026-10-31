@@ -1,3 +1,4 @@
+import { NotificationInbox } from "@/components/notification-inbox";
 import { workspaceBackTarget } from "@/lib/back-navigation";
 import { BackButton } from "@/components/back-button";
 import type { ReactNode } from "react";
@@ -29,6 +30,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
               </p>
             </div>
             <WorkspaceSearch />
+            <NotificationInbox />
           </header>
           <div className="min-h-0 min-w-0 flex-1 overflow-auto overscroll-contain pb-[max(5rem,env(safe-area-inset-bottom))]">
             {children}
