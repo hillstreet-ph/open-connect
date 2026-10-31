@@ -682,6 +682,7 @@ export const connectApp = createServerFn({ method: "POST" })
         const detail = error instanceof Error ? error.message : "broker error";
         throw new Error(
           `Hosted sign-in is not available for ${app.display_name}. Connect it with an API key or token instead. (${detail})`,
+          { cause: error },
         );
       }
       const record = {

@@ -214,6 +214,7 @@ async function authConfigForToolkit(toolkitSlug: string, apiKey: string): Promis
     const detail = error instanceof Error ? error.message : "broker error";
     throw new Error(
       `Hosted authorization is not available for ${toolkitSlug}. Connect this app with an API key or token instead. (${detail})`,
+      { cause: error },
     );
   }
 }
