@@ -268,11 +268,11 @@ export function getBestModel(
   // If we prefer free, return the first free model
   if (preferFree) {
     const freeCandidates = candidates.filter((m) => m.free);
-    if (freeCandidates.length > 0) return freeCandidates[0];
+    if (freeCandidates.length > 0) return freeCandidates[0] ?? null;
   }
 
   // Otherwise return the best candidate
-  return candidates[0];
+  return candidates[0] ?? null;
 }
 
 /**
@@ -289,14 +289,15 @@ export function rotateModel(
 
   // Try to find next free model
   for (let i = currentIndex + 1; i < sorted.length; i++) {
-    if (sorted[i].free) return sorted[i];
+    const candidate = sorted[i];
+    if (candidate?.free) return candidate;
   }
 
   // If no free models available, return next paid model
-  if (currentIndex + 1 < sorted.length) return sorted[currentIndex + 1];
+  if (currentIndex + 1 < sorted.length) return sorted[currentIndex + 1] ?? null;
 
   // Wrap around to first model
-  return sorted[0];
+  return sorted[0] ?? null;
 }
 
 /**
@@ -399,7 +400,12 @@ export function addCustomProvider(id: string, name: string, baseUrl: string): Ai
  * Get all providers including custom ones
  */
 export function getAllProviders(): AiGatewayProvider[] {
-  return [...AI_GATEWAY_PROVIDERS];
+  return AI_GATEWAY_PROVIDERS.map((provider) => ({
+    id: provider.id,
+    name: provider.name,
+    baseUrl: provider.baseUrl,
+    custom: false,
+  }));
 }
 
 /**
