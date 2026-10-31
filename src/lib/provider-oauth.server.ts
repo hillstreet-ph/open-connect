@@ -1,5 +1,8 @@
 export const GITHUB_OAUTH_SCOPES = ["repo", "read:user", "workflow"] as const;
 
+export const ANTHROPIC_OAUTH_SCOPES = [] as const;
+export const OPENAI_OAUTH_SCOPES = [] as const;
+
 /** Match only rows already restricted to this user and provider by the caller. */
 export function selectOAuthConnectionTarget<T extends { id: string }, U extends { id: string }>(
   pending: T,
@@ -37,21 +40,40 @@ export async function sha256(value: string): Promise<string> {
 }
 
 export function oauthConfig(provider: string) {
-  if (provider !== "github") {
-    throw new Error("Official OAuth is not available for this provider yet.");
+  if (provider === "github") {
+    const clientId = process.env["GITHUB_CLIENT_ID"]?.trim();
+    const clientSecret = process.env["GITHUB_CLIENT_SECRET"]?.trim();
+    const appUrl = (process.env["VITE_APP_URL"] || "https://open-connect.site").trim();
+    if (!clientId || !clientSecret) {
+      throw new Error(
+        "GitHub OAuth is not configured. Add GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET to the Cloudflare production environment.",
+      );
+    }
+    return { clientId, clientSecret, appUrl };
   }
-
-  const clientId = process.env["GITHUB_CLIENT_ID"]?.trim();
-  const clientSecret = process.env["GITHUB_CLIENT_SECRET"]?.trim();
-  const appUrl = (process.env["VITE_APP_URL"] || "https://open-connect.site").trim();
-
-  if (!clientId || !clientSecret) {
-    throw new Error(
-      "GitHub OAuth is not configured. Add GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET to the Cloudflare production environment.",
-    );
+  if (provider === "anthropic") {
+    const clientId = process.env["ANTHROPIC_CLIENT_ID"]?.trim();
+    const clientSecret = process.env["ANTHROPIC_CLIENT_SECRET"]?.trim();
+    const appUrl = (process.env["VITE_APP_URL"] || "https://open-connect.site").trim();
+    if (!clientId || !clientSecret) {
+      throw new Error(
+        "Anthropic OAuth is not configured. Add ANTHROPIC_CLIENT_ID and ANTHROPIC_CLIENT_SECRET to the Cloudflare production environment.",
+      );
+    }
+    return { clientId, clientSecret, appUrl };
   }
-
-  return { clientId, clientSecret, appUrl };
+  if (provider === "openai") {
+    const clientId = process.env["OPENAI_CLIENT_ID"]?.trim();
+    const clientSecret = process.env["OPENAI_CLIENT_SECRET"]?.trim();
+    const appUrl = (process.env["VITE_APP_URL"] || "https://open-connect.site").trim();
+    if (!clientId || !clientSecret) {
+      throw new Error(
+        "OpenAI OAuth is not configured. Add OPENAI_CLIENT_ID and OPENAI_CLIENT_SECRET to the Cloudflare production environment.",
+      );
+    }
+    return { clientId, clientSecret, appUrl };
+  }
+  throw new Error("Official OAuth is not available for this provider yet.");
 }
 
 export async function exchangeGitHubCode(input: {

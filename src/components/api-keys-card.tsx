@@ -113,7 +113,7 @@ export function ApiKeysCard({ modelOnly = false }: { modelOnly?: boolean }) {
             <KeyRound className="size-4" />
           </span>
           <CardTitle className="mt-3 text-base">
-            {modelOnly ? "API Key" : "Personal Token"}
+            {modelOnly ? "API Keys" : "Personal Token"}
           </CardTitle>
           <CardDescription>
             {modelOnly

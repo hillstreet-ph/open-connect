@@ -4,10 +4,15 @@ import { testFreeModel } from "@/lib/model-check.functions";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { CheckCircle2, KeyRound, List, Loader2 } from "lucide-react";
+import { CheckCircle2, KeyRound, List, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { BrandLogo } from "@/components/brand-logo";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { useAuth } from "@/hooks/use-auth";
 import {
   configureAppConnection,
@@ -35,21 +40,40 @@ export const Route = createFileRoute("/_authenticated/models")({
     ],
   }),
   component: ModelsPage,
-});
-
 const aliases = [
-  { alias: "open-connect/auto", body: "Free-only · routes across connected OpenRouter / LiteLLM" },
-  { alias: "open-connect/fast", body: "Low latency · gpt-4o-mini" },
-  { alias: "open-connect/coding", body: "Code · gpt-4o" },
-  { alias: "open-connect/reasoning", body: "Reasoning · gpt-4o" },
+  { alias: "open-connect/auto", body: "Free-only \u00b7 routes across connected OpenRouter / LiteLLM" },
+  { alias: "open-connect/fast", body: "Low latency \u00b7 gpt-4o-mini" },
+  { alias: "open-connect/coding", body: "Code \u00b7 gpt-4o" },
+  { alias: "open-connect/reasoning", body: "Reasoning \u00b7 gpt-4o" },
   { alias: "open-connect/claude", body: "Claude Sonnet via OpenRouter" },
   { alias: "open-connect/gemini", body: "Gemini 2.5 Flash" },
-  { alias: "open-connect/vision", body: "Multimodal · gpt-4o" },
+  { alias: "open-connect/vision", body: "Multimodal \u00b7 gpt-4o" },
   { alias: "gpt-4o", body: "OpenAI GPT-4o" },
   { alias: "claude-sonnet", body: "Anthropic Claude Sonnet" },
   { alias: "gemini-flash", body: "Google Gemini Flash" },
   { alias: "grok-2", body: "xAI Grok" },
 ];
+
+function CollapsibleAliases({ aliases }: { aliases: Array<{ alias: string; body: string }> }) {
+  const [isOpen, setIsOpen] = useState(true);
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="mt-5">
+      <CollapsibleTrigger className="flex w-full items-center justify-between">
+        <span className="text-sm font-medium">Show aliases</span>
+        {isOpen ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+      </CollapsibleTrigger>
+      <CollapsibleContent className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {aliases.map((item) => (
+          <Card key={item.alias} className="p-4">
+            <p className="font-mono text-sm text-primary">{item.alias}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{item.body}</p>
+          </Card>
+        ))}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
 const gatewayProviders = AI_GATEWAY_PROVIDER_IDS;
 
 function ModelsPage() {
@@ -304,39 +328,43 @@ function ModelsPage() {
       </Card>
 
       <h2 className="mt-14 text-xl font-semibold">Stable aliases</h2>
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {aliases.map((item) => (
-          <Card key={item.alias} className="p-4">
-            <p className="font-mono text-sm text-primary">{item.alias}</p>
-            <p className="mt-1 text-xs text-muted-foreground">{item.body}</p>
-          </Card>
-        ))}
-      </div>
+      <CollapsibleAliases aliases={aliases} />
 
       <Card className="mt-8">
         <CardHeader>
-          <CardTitle>Test free inference</CardTitle>
+          <CardTitle>Test & Refresh</CardTitle>
           <CardDescription>
-            Send a short test through your connected free-model routes. Free models are subject to
+            Test your connected free-model routes and refresh the model list. Free models are subject to
             provider quotas and availability.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <Button disabled={modelTest.isPending} onClick={() => modelTest.mutate()}>
-            {modelTest.isPending ? "Testing…" : "Test free model"}
-          </Button>
+        <CardContent className="space-y-4">
+          <div className="flex gap-2">
+            <Button disabled={modelTest.isPending} onClick={() => modelTest.mutate()}>
+              {modelTest.isPending ? "Testing\u2026" : "Test free model"}
+            </Button>
+            <Button
+              variant="outline"
+              disabled={freeModels.isFetching || !user}
+              onClick={() => void freeModels.refetch()}
+            >
+              {freeModels.isFetching ? <Loader2 className="mr-1 size-3.5 animate-spin" /> : null}
+              Refresh list
+            </Button>
+          </div>
           {modelTest.data && (
-            <p role="status" className="mt-3 text-sm">
+            <p role="status" className="text-sm">
               Inference verified: {modelTest.data.model}
             </p>
           )}
           {modelTest.error && (
-            <p role="alert" className="mt-3 text-sm text-destructive">
+            <p role="alert" className="text-sm text-destructive">
               {modelTest.error.message}
             </p>
           )}
         </CardContent>
       </Card>
+      <h2 className="mt-14 text-xl font-semibold">AI provider credentials</h2>
       <h2 className="mt-14 text-xl font-semibold">AI provider credentials</h2>
       <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
         Connect compatible model APIs here to load their model catalogs into the gateway. Auto uses
