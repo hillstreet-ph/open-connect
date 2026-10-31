@@ -3,15 +3,14 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Boxes,
   Brain,
-  Building2,
   Layers3,
   LibraryBig,
   PackageOpen,
   ShieldCheck,
+  Sparkles,
 } from "lucide-react";
 import { ResourceLibraryCard } from "@/components/resource-library-card";
 import { ResourceReviewPanel } from "@/components/resource-review-panel";
-import { DataControlsPanel } from "@/components/data-controls-panel";
 import { ResourceUrlImport } from "@/components/resource-url-import";
 import { AppSetupWorkbench } from "@/components/app-setup-workbench";
 import { ToolkitCreator } from "@/components/toolkit-creator";
@@ -165,17 +164,13 @@ function StudioPage() {
             variant="ghost"
             className="w-full justify-start whitespace-normal text-left"
           >
-            <Link to="/projects">
-              <Building2 className="size-3.5" />
-              Projects
+            <Link to="/studio-drafts">
+              <Sparkles className="size-3.5" />
+              Reusable drafts
             </Link>
           </Button>
         </div>
       </header>
-
-      <section id="reuse-drafts" className="scroll-mt-6">
-        <DataControlsPanel studio />
-      </section>
 
       {view === "build" ? (
         <div className="space-y-8">

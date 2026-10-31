@@ -50,6 +50,7 @@ import { Route as AuthenticatedSecretsRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedSkillsRouteImport } from './routes/_authenticated/skills'
 import { Route as AuthenticatedStudioRouteImport } from './routes/_authenticated/studio'
+import { Route as AuthenticatedStudioDraftsRouteImport } from './routes/_authenticated/studio-drafts'
 import { Route as AuthenticatedTasksRouteImport } from './routes/_authenticated/tasks'
 import { Route as AuthenticatedToolkitsRouteImport } from './routes/_authenticated/toolkits'
 import { Route as AuthenticatedToolsRouteImport } from './routes/_authenticated/tools'
@@ -284,6 +285,12 @@ const AuthenticatedStudioRoute = AuthenticatedStudioRouteImport.update({
   path: '/studio',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedStudioDraftsRoute =
+  AuthenticatedStudioDraftsRouteImport.update({
+    id: '/studio-drafts',
+    path: '/studio-drafts',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedTasksRoute = AuthenticatedTasksRouteImport.update({
   id: '/tasks',
   path: '/tasks',
@@ -429,6 +436,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRoute
   '/skills': typeof AuthenticatedSkillsRoute
   '/studio': typeof AuthenticatedStudioRoute
+  '/studio-drafts': typeof AuthenticatedStudioDraftsRoute
   '/tasks': typeof AuthenticatedTasksRoute
   '/toolkits': typeof AuthenticatedToolkitsRoute
   '/tools': typeof AuthenticatedToolsRoute
@@ -491,6 +499,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsRoute
   '/skills': typeof AuthenticatedSkillsRoute
   '/studio': typeof AuthenticatedStudioRoute
+  '/studio-drafts': typeof AuthenticatedStudioDraftsRoute
   '/tasks': typeof AuthenticatedTasksRoute
   '/toolkits': typeof AuthenticatedToolkitsRoute
   '/tools': typeof AuthenticatedToolsRoute
@@ -555,6 +564,7 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/skills': typeof AuthenticatedSkillsRoute
   '/_authenticated/studio': typeof AuthenticatedStudioRoute
+  '/_authenticated/studio-drafts': typeof AuthenticatedStudioDraftsRoute
   '/_authenticated/tasks': typeof AuthenticatedTasksRoute
   '/_authenticated/toolkits': typeof AuthenticatedToolkitsRoute
   '/_authenticated/tools': typeof AuthenticatedToolsRoute
@@ -619,6 +629,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/skills'
     | '/studio'
+    | '/studio-drafts'
     | '/tasks'
     | '/toolkits'
     | '/tools'
@@ -681,6 +692,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/skills'
     | '/studio'
+    | '/studio-drafts'
     | '/tasks'
     | '/toolkits'
     | '/tools'
@@ -744,6 +756,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/_authenticated/skills'
     | '/_authenticated/studio'
+    | '/_authenticated/studio-drafts'
     | '/_authenticated/tasks'
     | '/_authenticated/toolkits'
     | '/_authenticated/tools'
@@ -1080,6 +1093,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStudioRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/studio-drafts': {
+      id: '/_authenticated/studio-drafts'
+      path: '/studio-drafts'
+      fullPath: '/studio-drafts'
+      preLoaderRoute: typeof AuthenticatedStudioDraftsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/tasks': {
       id: '/_authenticated/tasks'
       path: '/tasks'
@@ -1285,6 +1305,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedSkillsRoute: typeof AuthenticatedSkillsRoute
   AuthenticatedStudioRoute: typeof AuthenticatedStudioRoute
+  AuthenticatedStudioDraftsRoute: typeof AuthenticatedStudioDraftsRoute
   AuthenticatedTasksRoute: typeof AuthenticatedTasksRoute
   AuthenticatedToolkitsRoute: typeof AuthenticatedToolkitsRoute
   AuthenticatedToolsRoute: typeof AuthenticatedToolsRoute
@@ -1325,6 +1346,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedSkillsRoute: AuthenticatedSkillsRoute,
   AuthenticatedStudioRoute: AuthenticatedStudioRoute,
+  AuthenticatedStudioDraftsRoute: AuthenticatedStudioDraftsRoute,
   AuthenticatedTasksRoute: AuthenticatedTasksRoute,
   AuthenticatedToolkitsRoute: AuthenticatedToolkitsRoute,
   AuthenticatedToolsRoute: AuthenticatedToolsRoute,
