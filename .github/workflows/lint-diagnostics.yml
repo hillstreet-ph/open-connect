@@ -14,6 +14,7 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       - run: bunx eslint . --format json > eslint.json || true
+      - run: bun audit > audit.txt 2>&1 || true
       - uses: actions/github-script@v9
         with:
           script: |
@@ -27,7 +28,9 @@ jobs:
                 }
               }
             }
-            const content = lines.join('\n') || 'CLEAN';
+            let audit = '';
+            try { audit = fs.readFileSync('audit.txt', 'utf8').slice(0, 40000); } catch (e) { audit = String(e); }
+            const content = (lines.join('\n') || 'LINT CLEAN') + '\n===AUDIT===\n' + audit;
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const ref = 'refs/heads/lint-output';
