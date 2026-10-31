@@ -18,11 +18,12 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { BrandLogo } from "@/components/brand-logo";
 import { useAuth } from "@/hooks/use-auth";
+import { useRoles } from "@/hooks/use-roles";
 import {
   configureAppConnection,
-  connectApp,
   disconnectApp,
   listAppConnections,
+  syncComposioConnections,
   testAiProviderCredential,
 } from "@/lib/connections.functions";
 import { listFreeModels } from "@/lib/model-catalog.functions";
@@ -85,20 +86,21 @@ function ModelsPage() {
     onError: (error) =>
       toast.error(error instanceof Error ? error.message : "Subscription sign-in unavailable"),
   });
-  const connectHostedFn = useServerFn(connectApp);
-  const [hostedProvider, setHostedProvider] = useState<string | null>(null);
-  const hostedConnect = useMutation({
-    mutationFn: (provider: string) => {
-      setHostedProvider(provider);
-      return connectHostedFn({ data: { provider } });
-    },
+  const { isAdmin } = useRoles();
+  const syncComposioFn = useServerFn(syncComposioConnections);
+  const composioSync = useMutation({
+    mutationFn: () => syncComposioFn({}),
     onSuccess: (result) => {
-      window.open(result.authorization_url, "_blank", "noopener");
+      toast.success(
+        result.matched
+          ? `${result.imported} Composio accounts synced; ${result.existing} already linked`
+          : "No authorized Composio accounts match your Open-Connect user.",
+      );
       void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
+      void queryClient.invalidateQueries({ queryKey: ["free-model-catalog"] });
     },
     onError: (error) =>
-      toast.error(error instanceof Error ? error.message : "Hosted sign-in unavailable"),
-    onSettled: () => setHostedProvider(null),
+      toast.error(error instanceof Error ? error.message : "Composio sync failed"),
   });
   const [activeProvider, setActiveProvider] = useState<string | null>(null);
   const [aliasesOpen, setAliasesOpen] = useState(false);
@@ -430,13 +432,28 @@ function ModelsPage() {
         </div>
       ) : null}
 
-      <h2 className="mt-14 text-xl font-semibold">AI provider credentials</h2>
+      <div className="mt-14 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-xl font-semibold">AI provider credentials</h2>
+        {user && isAdmin ? (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={composioSync.isPending}
+            onClick={() => composioSync.mutate()}
+            title="Import accounts already connected in Composio into Open-Connect"
+          >
+            {composioSync.isPending ? <Loader2 className="mr-1 size-3.5 animate-spin" /> : null}
+            {composioSync.isPending ? "Syncing…" : "Sync from Composio"}
+          </Button>
+        ) : null}
+      </div>
       <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
         Connect compatible model APIs here to load their model catalogs into the gateway. Connected
         providers are fetched in real time, free and paid. Auto uses only provider models explicitly
         marked free or configured at zero cost first, then rotates to other models automatically
         when limits are hit; named paid models remain available through the gateway and follow the
-        provider's billing.
+        provider's billing. Accounts already connected in Composio are imported with Sync from
+        Composio; provider API keys are added directly on each card.
       </p>
       <div className="mt-5 grid gap-3 xl:grid-cols-2">
         {AI_GATEWAY_PROVIDERS.map((provider) => (
@@ -466,18 +483,6 @@ function ModelsPage() {
                     {provider.id === "openai" ? "Sign in · ChatGPT" : "Sign in · Claude"}
                   </Button>
                 ) : null}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={!user || hostedConnect.isPending}
-                  onClick={() => hostedConnect.mutate(provider.id)}
-                  title="Connect through Composio hosted sign-in for official provider apps"
-                >
-                  {hostedProvider === provider.id ? (
-                    <Loader2 className="mr-1 size-3.5 animate-spin" />
-                  ) : null}
-                  Connect · Composio
-                </Button>
                 <Button
                   size="sm"
                   variant="outline"
