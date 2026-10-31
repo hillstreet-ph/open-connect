@@ -4,8 +4,16 @@ import { useServerFn } from "@tanstack/react-start";
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { completeOAuthConnection } from "@/lib/connections.functions";
+import { completeAiProviderSignIn } from "@/lib/ai-provider-signin.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+const SUBSCRIPTION_PROVIDERS = new Set(["openai", "anthropic"]);
+
+function providerFromState(state: string): string {
+  const provider = state.split(":")[0] ?? "";
+  return SUBSCRIPTION_PROVIDERS.has(provider) ? provider : "github";
+}
 
 export const Route = createFileRoute("/_authenticated/connections/oauth/callback")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -13,7 +21,7 @@ export const Route = createFileRoute("/_authenticated/connections/oauth/callback
     state: typeof search["state"] === "string" ? search["state"] : "",
     error: typeof search["error"] === "string" ? search["error"] : "",
   }),
-  head: () => ({ meta: [{ title: "GitHub authorization — Open-Connect" }] }),
+  head: () => ({ meta: [{ title: "Authorization — Open-Connect" }] }),
   component: OAuthCallbackPage,
 });
 
@@ -21,10 +29,14 @@ function OAuthCallbackPage() {
   const search = Route.useSearch();
   const navigate = useNavigate();
   const complete = useServerFn(completeOAuthConnection);
+  const completeAi = useServerFn(completeAiProviderSignIn);
   const started = useRef(false);
+  const provider = providerFromState(search.state);
   const mutation = useMutation({
     mutationFn: () =>
-      complete({ data: { provider: "github", code: search.code, state: search.state } }),
+      provider === "github"
+        ? complete({ data: { provider: "github", code: search.code, state: search.state } })
+        : completeAi({ data: { provider, code: search.code, state: search.state } }),
     onSuccess: () => {
       window.setTimeout(() => void navigate({ to: "/connections" }), 900);
     },
@@ -36,10 +48,13 @@ function OAuthCallbackPage() {
     mutation.mutate();
   }, [mutation, search.code, search.error, search.state]);
 
+  const providerLabel =
+    provider === "openai" ? "ChatGPT" : provider === "anthropic" ? "Claude" : "GitHub";
+
   const error =
     search.error ||
     (!search.code || !search.state
-      ? "GitHub did not return a complete authorization response."
+      ? "The provider did not return a complete authorization response."
       : "") ||
     (mutation.error instanceof Error ? mutation.error.message : "");
 
@@ -56,10 +71,10 @@ function OAuthCallbackPage() {
               <Loader2 className="size-5 animate-spin text-primary" />
             )}
             {error
-              ? "GitHub authorization failed"
+              ? `${providerLabel} authorization failed`
               : mutation.isSuccess
-                ? "GitHub connected"
-                : "Verifying GitHub authorization"}
+                ? `${providerLabel} connected`
+                : `Verifying ${providerLabel} authorization`}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 text-sm text-muted-foreground">
@@ -67,8 +82,8 @@ function OAuthCallbackPage() {
             {error
               ? error
               : mutation.isSuccess
-                ? "The GitHub identity was verified and its token was stored securely in Vault."
-                : "Open-Connect is exchanging the one-time code and verifying your GitHub identity."}
+                ? "The identity was verified and its token was stored securely in Vault."
+                : "Open-Connect is exchanging the one-time code and verifying the provider identity."}
           </p>
           {error ? (
             <Button asChild>
