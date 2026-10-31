@@ -18,9 +18,6 @@ $ eslint .
 /home/runner/work/open-connect/open-connect/src/components/ui/toggle.tsx
   42:18  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
 
-/home/runner/work/open-connect/open-connect/src/lib/resource-import.functions.ts
-  61:24  error  Replace ``https://api.github.com/repos/${owner}/${repo}/git/trees/${pin}?recursive=1`` with `⏎········`https://api.github.com/repos/${owner}/${repo}/git/trees/${pin}?recursive=1`,⏎······`  prettier/prettier
-
 /home/runner/work/open-connect/open-connect/src/routes/__root.tsx
    22:10  warning  Fast refresh only works when a file only exports components. Move your component(s) to a separate file. If all exports are HOCs, add them to the `extraHOCs` option  react-refresh/only-export-components
    44:10  warning  Fast refresh only works when a file only exports components. Move your component(s) to a separate file. If all exports are HOCs, add them to the `extraHOCs` option  react-refresh/only-export-components
@@ -138,11 +135,9 @@ $ eslint .
   70:10  warning  Fast refresh only works when a file only exports components. Move your component(s) to a separate file. If all exports are HOCs, add them to the `extraHOCs` option  react-refresh/only-export-components
   82:10  warning  Fast refresh only works when a file only exports components. Move your component(s) to a separate file. If all exports are HOCs, add them to the `extraHOCs` option  react-refresh/only-export-components
 
-✖ 56 problems (1 error, 55 warnings)
-  1 error and 0 warnings potentially fixable with the `--fix` option.
+✖ 55 problems (0 errors, 55 warnings)
 
-error: script "lint" exited with code 1
-lint_exit=1
+lint_exit=0
 
 $ tsc --noEmit
 typecheck_exit=0
