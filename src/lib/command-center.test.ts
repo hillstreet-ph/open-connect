@@ -56,6 +56,10 @@ function widget(openai: object = {}) {
     "results",
     "scopes",
     "access",
+    "worker-status",
+    "preset",
+    "suggestions",
+    "session-status",
   ])
     elements.set(id, element());
   const listeners = new Map<string, (e: object) => void>();
@@ -96,6 +100,10 @@ function widget(openai: object = {}) {
     results: elements.get("results")!,
     access: elements.get("access")!,
     scopeText: elements.get("scopes")!,
+    workerStatus: elements.get("worker-status")!,
+    preset: elements.get("preset")!,
+    suggestions: elements.get("suggestions")!,
+    sessionStatus: elements.get("session-status")!,
     reject: (id: string | number, message: string) =>
       listeners.get("message")!({
         source: parent,
@@ -122,6 +130,31 @@ const status = {
   scopes: ["tools:invoke"],
   auto: { enabled: true },
 };
+test("compact widget links to real destinations and reflects worker permissions and Auto state", () => {
+  const w = widget();
+  w.send({
+    structuredContent: {
+      ...status,
+      scopes: ["resources:read", "models:invoke", "agents:invoke"],
+      auto: { enabled: true, scope: "personal" },
+    },
+  });
+  assert.match(w.workerStatus.textContent, /model worker · Auto On/);
+  assert.match(w.status.textContent, /Auto discovery · Auto On/);
+  assert.deepEqual(
+    w.grid.children.map((c) => c.attrs["href"]),
+    ["/library", "/connections", "/secrets", "/models", "/resources", "/ai-agency"].map(
+      (p) => "https://open-connect.site" + p,
+    ),
+  );
+  w.send({
+    structuredContent: { ...status, scopes: [], auto: { enabled: true, scope: "personal" } },
+  });
+  assert.match(w.workerStatus.textContent, /Not granted/);
+  w.send({ structuredContent: { auto: { enabled: false } } });
+  assert.match(w.workerStatus.textContent, /Auto Off/);
+  assert.match(w.status.textContent, /Auto discovery · Auto Off/);
+});
 async function flush() {
   for (let i = 0; i < 8; i++) await Promise.resolve();
 }
@@ -134,6 +167,34 @@ async function connect(w: ReturnType<typeof widget>) {
   w.reply(call.id, { structuredContent: status });
   await flush();
 }
+test("starter prompts fill the goal without executing tools", () => {
+  const w = widget();
+  const before = w.requests.length;
+  for (const preset of ["discover", "task", "maintain"]) {
+    w.preset.value = preset;
+    w.preset.events["change"]!();
+    assert.ok(w.goal.value.length > 50);
+    assert.equal(w.requests.length, before);
+  }
+});
+test("discovery recommends editable follow-ups without executing or marking the goal complete", async () => {
+  const w = widget();
+  await connect(w);
+  w.send({ structuredContent: { ...status, scopes: ["resources:read"] } });
+  w.goal.value = "Review my project";
+  const task = w.discover.events["click"]!();
+  await flush();
+  w.reply(w.requests.at(-1)!.id, {
+    structuredContent: { matches: [{ name: "Project tools", description: "Available" }] },
+  });
+  await task;
+  assert.match(w.sessionStatus.textContent, /Discovery complete.*not executed/);
+  assert.equal(w.suggestions.children.length, 3);
+  const before = w.requests.length;
+  await w.suggestions.children[0]!.events["click"]!();
+  assert.match(w.goal.value, /Review my project/);
+  assert.equal(w.requests.length, before);
+});
 test("initializes the bridge, preserves zero counts, and renders values as text", async () => {
   const w = widget();
   await connect(w);
@@ -144,11 +205,11 @@ test("initializes the bridge, preserves zero counts, and renders values as text"
   assert.equal(w.grid.children[1]!.children[1]!.textContent, "0");
   assert.deepEqual(
     w.grid.children.map((c) => c.children[0]!.textContent),
-    ["Resources", "Connections", "Credentials", "Models"],
+    ["Resources", "Connections", "Credentials", "AI Gateway", "Marketplace", "AI Agency"],
   );
   assert.equal(w.grid.children[2]!.children[1]!.textContent, "Not granted");
   w.send({ content: [{ type: "text", text: "bad JSON" }] });
-  assert.equal(w.grid.children.length, 4);
+  assert.equal(w.grid.children.length, 6);
 });
 test("ignores foreign frames and handles legacy globals and metadata envelopes", () => {
   const w = widget();

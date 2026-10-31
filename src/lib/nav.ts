@@ -1,6 +1,7 @@
 /**
  * Site structure — public marketing vs signed-in workspace.
- * Public: LobeHub-style discovery. Workspace: Studio, orgs, roles.
+ * Public: LobeHub-style discovery. Workspace: Studio and daily work; System
+ * administration (organization, platform roles, access reference) lives at /admin.
  */
 
 export type NavLink = {
@@ -49,7 +50,6 @@ export const appCategories: NavCategory[] = [
       { to: "/tasks", label: "Task" },
       { to: "/schedule", label: "Schedules" },
       { to: "/automations", label: "Automations" },
-      { to: "/approvals", label: "Approvals" },
     ],
   },
   {

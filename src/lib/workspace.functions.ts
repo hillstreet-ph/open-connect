@@ -7,6 +7,7 @@ import {
   type CloudWorkspaceKind,
 } from "@/lib/remote-mcp";
 import { credentialMetadata } from "@/lib/secrets.functions";
+import { withoutNotes } from "@/lib/credential-notes";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ProjectResourceRow } from "@/lib/resource-categories";
 import { createServerFn } from "@tanstack/react-start";
@@ -337,7 +338,7 @@ export const listMyCredentialMetadata = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase.rpc("list_credential_secrets");
     if (error) throw new Error(error.message);
-    return Array.isArray(data) ? data.map(credentialMetadata) : [];
+    return Array.isArray(data) ? data.map((row) => withoutNotes(credentialMetadata(row))) : [];
   });
 
 export const listProjectCredentials = createServerFn({ method: "GET" })

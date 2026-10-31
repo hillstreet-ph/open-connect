@@ -12,7 +12,6 @@ import {
   Plug,
   Sparkles,
   Workflow,
-  ShieldCheck,
   UsersRound,
 } from "lucide-react";
 import {
@@ -47,7 +46,8 @@ type Item = {
  * Resource types and Memory/Knowledge are organized inside Resources; Integrations are in Settings.
  *
  * Organization settings live in the user menu; workspaces manage projects and environments.
- * System administration appears once for privileged roles in the shared menu.
+ * System administration (organization, platform roles, access reference) opens from the single
+ * hillstreet-ph entry in the account menu, not from the sidebar or Settings.
  */
 
 const PRIMARY: Item[] = [
@@ -60,7 +60,6 @@ const WORK: Item[] = [
   { to: "/tasks", label: "Task", icon: ListTodo },
   { to: "/schedule", label: "Schedules", icon: CalendarClock },
   { to: "/automations", label: "Automations", icon: Workflow },
-  { to: "/approvals", label: "Approvals", icon: ShieldCheck },
 ];
 
 const CLOUD: Item[] = [

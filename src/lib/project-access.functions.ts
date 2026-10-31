@@ -2,9 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-
-const PROJECT_ROLES = ["admin", "developer", "member"] as const;
-type ProjectRole = (typeof PROJECT_ROLES)[number];
+import { PROJECT_ROLES, type ProjectRole } from "@/lib/identity";
 
 async function requireProjectAdmin(supabase: SupabaseClient, userId: string, projectId: string) {
   if (!projectId) throw new Error("projectId required");

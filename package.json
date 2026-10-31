@@ -2,7 +2,7 @@
   "name": "open-connect",
   "version": "1.0.0",
   "private": true,
-  "description": "Open-Connect single AI gateway \u2014 MCP, models, skills, plugins, connectors on open-connect.site",
+  "description": "Open-Connect single AI gateway — MCP, models, skills, plugins, connectors on open-connect.site",
   "sideEffects": false,
   "type": "module",
   "scripts": {
@@ -12,13 +12,13 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "test:control": "node --experimental-strip-types --test src/lib/browser-verification.test.ts src/lib/resource-license.test.ts src/lib/resource-review-bulk.test.ts src/lib/library-bulk.test.ts src/lib/mcp-client.server.test.ts src/lib/automation-model.server.test.ts src/lib/auto-free-routing.test.ts src/lib/data-controls.test.ts src/lib/context-storage.test.ts src/lib/universal-connect.test.ts src/lib/app-setup.test.ts src/lib/resource-safety.server.test.ts src/lib/model-provider-state.test.ts src/lib/model-connection.server.test.ts src/lib/command-center.test.ts src/lib/agent-team.test.ts src/lib/ai-agency.test.ts src/lib/workforce.test.ts src/lib/workforce.server.test.ts src/lib/ai-agency-run-store.test.ts src/lib/agent-learning.server.test.ts src/lib/data-controls.server.test.ts src/lib/auto-mode.server.test.ts src/lib/browser-credential-matching.test.ts src/lib/automation-readiness.test.ts src/lib/access-profiles.test.ts src/lib/autonomous-control.test.ts src/lib/autonomous-mcp-contract.test.ts src/lib/calculator.test.ts src/lib/e2b.server.test.ts src/lib/cloud-workspace-policy.test.ts src/lib/cloud-workspace-input.test.ts src/lib/cloud-terminal-input.test.ts src/lib/migrated-resource-download.test.ts src/lib/mcp-transport.server.test.ts src/lib/tinyfish-broker.test.ts src/lib/connection-validation.server.test.ts src/lib/connections.functions.test.ts src/lib/connection-login.test.ts src/lib/connection-presentation.test.ts src/lib/connection-repair.test.ts src/lib/custom-mcp.server.test.ts src/lib/managed-connectors.server.test.ts src/lib/managed-mcp-policy.test.ts src/lib/managed-mcp.server.test.ts src/lib/provider-oauth.server.test.ts src/lib/runtime-env.server.test.ts src/lib/schedule-cron.test.ts src/lib/operations.test.ts src/lib/ops-data.server.test.ts src/lib/task-board.test.ts src/lib/github-actions-oidc.test.ts src/lib/twilio.server.test.ts src/lib/composio-sync.test.ts src/lib/hubstaff-admin.server.test.ts src/lib/control-approvals.server.test.ts src/lib/telegram.server.test.ts src/lib/admin-management.server.test.ts && node --experimental-strip-types --test src/lib/resource-approval.test.ts && node --experimental-strip-types --test src/lib/resource-review-store.test.ts",
-    "test:navigation": "node --experimental-strip-types --test src/lib/navigation.test.ts src/lib/auth-return.test.ts src/lib/persistent-session.test.ts src/lib/shared-resources.test.ts src/lib/react-compat.test.ts",
-    "test:credentials": "node --experimental-strip-types --test src/lib/credential-import.test.ts && node --test services/proton-mcp/executor.test.mjs services/proton-mcp/server.test.mjs scripts/credential-broker.test.mjs scripts/capability-router.test.mjs scripts/credential-storage.test.mjs scripts/supabase-advisor-hardening.test.mjs scripts/open-connect-access-check.test.mjs",
+    "test:control": "node --experimental-strip-types --test src/lib/browser-verification.test.ts src/lib/resource-license.test.ts src/lib/resource-review-bulk.test.ts src/lib/library-bulk.test.ts src/lib/mcp-client.server.test.ts src/lib/automation-model.server.test.ts src/lib/auto-free-routing.test.ts src/lib/data-controls.test.ts src/lib/context-storage.test.ts src/lib/universal-connect.test.ts src/lib/app-setup.test.ts src/lib/resource-safety.server.test.ts src/lib/model-provider-state.test.ts src/lib/model-connection.server.test.ts src/lib/command-center.test.ts src/lib/agent-team.test.ts src/lib/ai-agency.test.ts src/lib/workforce.test.ts src/lib/workforce.server.test.ts src/lib/ai-agency-run-store.test.ts src/lib/agent-learning.server.test.ts src/lib/data-controls.server.test.ts src/lib/auto-mode.server.test.ts src/lib/browser-credential-matching.test.ts src/lib/automation-readiness.test.ts src/lib/incoming-webhook.server.test.ts src/lib/notification-dispatch.server.test.ts src/lib/access-profiles.test.ts src/lib/autonomous-control.test.ts src/lib/autonomous-mcp-contract.test.ts src/lib/calculator.test.ts src/lib/e2b.server.test.ts src/lib/cloud-workspace-policy.test.ts src/lib/cloud-workspace-input.test.ts src/lib/cloud-terminal-input.test.ts src/lib/migrated-resource-download.test.ts src/lib/mcp-transport.server.test.ts src/lib/tinyfish-broker.test.ts src/lib/connection-validation.server.test.ts src/lib/connections.functions.test.ts src/lib/connection-login.test.ts src/lib/connection-presentation.test.ts src/lib/connection-repair.test.ts src/lib/custom-mcp.server.test.ts src/lib/managed-connectors.server.test.ts src/lib/managed-mcp-policy.test.ts src/lib/managed-mcp.server.test.ts src/lib/provider-oauth.server.test.ts src/lib/runtime-env.server.test.ts src/lib/schedule-cron.test.ts src/lib/operations.test.ts src/lib/ops-data.server.test.ts src/lib/task-board.test.ts src/lib/github-actions-oidc.test.ts src/lib/twilio.server.test.ts src/lib/cloud-resources.server.test.ts src/lib/composio-sync.test.ts src/lib/hubstaff-admin.server.test.ts src/lib/control-approvals.server.test.ts src/lib/telegram.server.test.ts src/lib/admin-management.server.test.ts && node --experimental-strip-types --test src/lib/resource-approval.test.ts && node --experimental-strip-types --test src/lib/resource-review-store.test.ts",
+    "test:navigation": "node --experimental-strip-types --test src/lib/navigation.test.ts src/lib/login-activity.test.ts src/lib/connected-accounts.test.ts src/lib/sidebar-state.test.ts src/lib/auth-return.test.ts src/lib/persistent-session.test.ts src/lib/shared-resources.test.ts src/lib/react-compat.test.ts",
+    "test:credentials": "node --experimental-strip-types --test src/lib/credential-import.test.ts src/lib/credential-notes.test.ts && node --test services/proton-mcp/executor.test.mjs services/proton-mcp/server.test.mjs scripts/credential-broker.test.mjs scripts/capability-router.test.mjs scripts/credential-storage.test.mjs scripts/supabase-advisor-hardening.test.mjs scripts/open-connect-access-check.test.mjs",
     "test:campaign": "node --experimental-strip-types --test src/lib/campaign-studio.test.ts",
     "test:registry": "node --experimental-strip-types --test src/lib/registry-normalize.test.ts src/lib/databricks.server.test.ts src/lib/chatgpt-action.server.test.ts src/lib/agent-helper-policy.test.ts src/lib/agent-helper-runner.test.ts src/lib/agent-helper-context.server.test.ts src/lib/model-catalog.test.ts src/lib/vendored-skills.test.ts scripts/sync-claude-library.test.mjs scripts/sync-claude-marketplaces.test.mjs && node --experimental-strip-types --test src/lib/resource-document.server.test.ts && node --experimental-strip-types --test src/lib/agent-chat.test.ts && node --test scripts/agent-platform-discovery.test.mjs",
     "test:otp": "node --test supabase/functions/hillstreet-otp-worker/verify-admin.test.mjs",
-    "test": "node --experimental-strip-types --test src/lib/gateway-keys.test.ts src/lib/oauth-policy.test.mjs src/lib/mcp-oauth-contract.test.ts src/lib/provider-api-presets.test.ts src/lib/openapi-connector.server.test.ts && npm run test:control && npm run test:navigation && npm run test:credentials && npm run test:campaign && npm run test:registry && npm run test:otp && bun test src/lib/mcp-execution.test.ts src/lib/cloud-live-view.test.ts src/lib/browser-control.test.ts src/lib/tinyfish.test.ts src/lib/browser-providers.test.ts src/lib/browser-vault.test.ts && npm run test:playwright",
+    "test": "node --experimental-strip-types --test src/lib/gateway-keys.test.ts src/lib/oauth-policy.test.mjs src/lib/oauth-redirect.test.ts src/lib/mcp-oauth-contract.test.ts src/lib/date-time.test.ts src/lib/provider-api-presets.test.ts src/lib/openapi-connector.server.test.ts && npm run test:control && npm run test:navigation && npm run test:credentials && npm run test:campaign && npm run test:registry && npm run test:otp && bun test src/lib/mcp-execution.test.ts src/lib/cloud-live-view.test.ts src/lib/browser-control.test.ts src/lib/tinyfish.test.ts src/lib/browser-providers.test.ts src/lib/browser-vault.test.ts && npm run test:playwright",
     "marketplace:collect": "node --experimental-strip-types scripts/collect-marketplace-resources.mjs",
     "marketplace:validate": "node --experimental-strip-types scripts/validate-marketplace-catalog.mjs",
     "skills:generate": "node --experimental-strip-types scripts/generate-vendored-skills.mjs",
@@ -43,7 +43,8 @@
     "agent-platforms:sync": "node --experimental-strip-types scripts/collect-marketplace-resources.mjs --agent-platforms --write-catalog",
     "test:playwright": "node --test services/playwright-worker/*.test.mjs",
     "test:workforce:browser": "bun scripts/test-workforce-browser.mjs",
-    "test:workforce:db": "node scripts/test-workforce-db.mjs"
+    "test:workforce:db": "node scripts/test-workforce-db.mjs",
+    "test:login:db": "node scripts/test-login-activity-db.mjs"
   },
   "dependencies": {
     "@browserbasehq/sdk": "2.22.0",
@@ -131,6 +132,7 @@
     "vite": "8.3.5"
   },
   "overrides": {
+    "@hono/node-server": "2.1.5",
     "body-parser": "2.4.0",
     "brace-expansion": "5.0.12",
     "fast-uri": "3.1.9",
@@ -138,6 +140,9 @@
     "ip-address": "10.7.4",
     "js-yaml": "4.3.2",
     "launch-editor": "2.14.2",
+    "minimatch": "11.0.3",
+    "qs": "6.16.2",
+    "seroval": "1.6.12",
     "shell-quote": "1.12.0",
     "source-map-js": "1.2.2"
   }

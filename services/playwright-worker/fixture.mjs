@@ -2,6 +2,12 @@
 import http from "node:http";
 http
   .createServer((req, res) => {
+    if (req.url === "/paste") {
+      res.setHeader("Content-Type", "text/html");
+      return res.end(
+        '<html><body><input autofocus oninput="document.getElementById(\'output\').textContent=this.value"><p id="output"></p></body></html>',
+      );
+    }
     if (req.url === "/signin")
       res.setHeader("Set-Cookie", "session=fixture; Path=/; Max-Age=3600; HttpOnly; SameSite=Lax");
     const signedIn = req.url === "/signin" || req.headers.cookie?.includes("session=fixture");
