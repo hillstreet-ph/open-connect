@@ -525,8 +525,8 @@ function SpecialistProfile({
           </p>
         </section>
         <Button asChild variant="link">
-          <Link to="/integrations" search={{ section: "ai-agents" }}>
-            ChatGPT and external app setup
+          <Link to="/integrations" search={{ section: "api-key" }}>
+            Developer API keys and app setup
           </Link>
         </Button>
       </DialogContent>

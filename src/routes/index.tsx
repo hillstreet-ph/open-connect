@@ -110,7 +110,7 @@ function Home() {
           </p>
           <Link
             to="/integrations"
-            search={{ section: "ai-agents" }}
+            search={{ section: "api-key" }}
             className="mt-6 inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
           >
             View integration setup <ArrowRight className="size-4" />

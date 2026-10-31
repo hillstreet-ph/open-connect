@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { ORG_ROLES, type OrgRole } from "@/lib/identity";
 
 function slugify(raw: string) {
   return raw
@@ -198,7 +199,7 @@ export const inviteOrganizationMember = createServerFn({ method: "POST" })
     (input: {
       organizationId: string;
       email: string;
-      role: "admin" | "developer" | "member";
+      role: OrgRole;
       groupId?: string | undefined;
     }) => ({
       organizationId: input.organizationId,
@@ -571,11 +572,11 @@ export const updateOrganizationMemberRole = createServerFn({ method: "POST" })
   .validator((input: { organizationId: string; userId: string; role: string }) => ({
     organizationId: input.organizationId,
     userId: input.userId,
-    role: input.role as "admin" | "developer" | "member",
+    role: input.role as OrgRole,
   }))
   .handler(async ({ data, context }) => {
     if (!data.organizationId || !data.userId) throw new Error("Organization and member required");
-    if (!["admin", "developer", "member"].includes(data.role)) {
+    if (!ORG_ROLES.includes(data.role)) {
       throw new Error("Choose Admin, Developer, or Member");
     }
     await requireOrganizationManager(context.supabase, data.organizationId, context.userId);
@@ -668,6 +669,37 @@ export const removeOrganizationMember = createServerFn({ method: "POST" })
       .delete()
       .eq("organization_id", data.organizationId)
       .eq("user_id", data.userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const cancelOrganizationInvitation = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { organizationId: string; invitationId: string }) => ({
+    organizationId: input.organizationId,
+    invitationId: input.invitationId,
+  }))
+  .handler(async ({ data, context }) => {
+    if (!data.organizationId || !data.invitationId) {
+      throw new Error("Organization and invitation required");
+    }
+    await requireOrganizationManager(context.supabase, data.organizationId, context.userId);
+    const { data: invitation, error: lookupError } = await context.supabase
+      .from("organization_invitations")
+      .select("id, status")
+      .eq("id", data.invitationId)
+      .eq("organization_id", data.organizationId)
+      .maybeSingle();
+    if (lookupError) throw new Error(lookupError.message);
+    if (!invitation) throw new Error("Invitation not found");
+    if (invitation.status !== "pending") {
+      throw new Error("Only pending invitations can be cancelled");
+    }
+    const { error } = await context.supabase
+      .from("organization_invitations")
+      .update({ status: "revoked" })
+      .eq("id", data.invitationId)
+      .eq("organization_id", data.organizationId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

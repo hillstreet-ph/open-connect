@@ -31,6 +31,7 @@ export type ComposioToolkit = {
   name: string;
   category: string;
   authMethods: string[];
+  logo: string;
 };
 
 let toolkitCatalogCache: { expiresAt: number; items: ComposioToolkit[] } | undefined;
@@ -68,6 +69,23 @@ function toolkitAuthMethods(toolkit: Record<string, unknown>): string[] {
   ];
 }
 
+/** Official app mark from the Composio catalog; only public http(s) images are accepted. */
+function toolkitLogo(toolkit: Record<string, unknown>): string {
+  const media = toolkit["media"] as { logo?: unknown } | undefined;
+  const candidates = [
+    toolkit["logo"],
+    toolkit["logo_url"],
+    (toolkit["meta"] as { logo?: unknown } | undefined)?.logo,
+    media?.logo,
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate !== "string") continue;
+    const value = candidate.trim();
+    if (/^https?:\/\//i.test(value) && value.length <= 512) return value;
+  }
+  return "";
+}
+
 export async function listComposioToolkits(): Promise<ComposioToolkit[]> {
   if (!composioApiKey()) return [];
   if (toolkitCatalogCache && toolkitCatalogCache.expiresAt > Date.now())
@@ -96,6 +114,7 @@ export async function listComposioToolkits(): Promise<ComposioToolkit[]> {
             raw["category"],
         ),
         authMethods: toolkitAuthMethods(raw),
+        logo: toolkitLogo(raw),
       });
     }
     cursor = page.next_cursor ?? "";
@@ -157,39 +176,47 @@ async function authConfigForToolkit(toolkitSlug: string, apiKey: string): Promis
       `No enabled custom auth config exists for ${toolkitSlug}. Create one in Composio before connecting.`,
     );
   }
-  const query = new URLSearchParams({
-    toolkit_slug: toolkitSlug,
-    is_composio_managed: "true",
-    limit: "50",
-  });
-  const listed = await composioRequest<{
-    items?: Array<{
-      id?: string;
-      toolkit?: { slug?: string };
-      is_composio_managed?: boolean;
-    }>;
-  }>(`/auth_configs?${query}`, apiKey);
-  const existing = (listed.items ?? []).find(
-    (item) =>
-      item.id?.startsWith("ac_") &&
-      item.toolkit?.slug?.toLowerCase() === toolkitSlug.toLowerCase() &&
-      item.is_composio_managed !== false,
-  );
-  if (existing?.id) return existing.id;
-  const created = await composioRequest<{ auth_config?: { id?: string } }>(
-    "/auth_configs",
-    apiKey,
-    {
-      method: "POST",
-      body: JSON.stringify({
-        toolkit: { slug: toolkitSlug },
-        auth_config: { type: "use_composio_managed_auth" },
-      }),
-    },
-  );
-  if (!created.auth_config?.id?.startsWith("ac_"))
-    throw new Error(`Could not create Composio authorization config for ${toolkitSlug}.`);
-  return created.auth_config.id;
+  try {
+    const query = new URLSearchParams({
+      toolkit_slug: toolkitSlug,
+      is_composio_managed: "true",
+      limit: "50",
+    });
+    const listed = await composioRequest<{
+      items?: Array<{
+        id?: string;
+        toolkit?: { slug?: string };
+        is_composio_managed?: boolean;
+      }>;
+    }>(`/auth_configs?${query}`, apiKey);
+    const existing = (listed.items ?? []).find(
+      (item) =>
+        item.id?.startsWith("ac_") &&
+        item.toolkit?.slug?.toLowerCase() === toolkitSlug.toLowerCase() &&
+        item.is_composio_managed !== false,
+    );
+    if (existing?.id) return existing.id;
+    const created = await composioRequest<{ auth_config?: { id?: string } }>(
+      "/auth_configs",
+      apiKey,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          toolkit: { slug: toolkitSlug },
+          auth_config: { type: "use_composio_managed_auth" },
+        }),
+      },
+    );
+    if (!created.auth_config?.id?.startsWith("ac_"))
+      throw new Error(`Could not create Composio authorization config for ${toolkitSlug}.`);
+    return created.auth_config.id;
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : "broker error";
+    throw new Error(
+      `Hosted authorization is not available for ${toolkitSlug}. Connect this app with an API key or token instead. (${detail})`,
+      { cause: error },
+    );
+  }
 }
 
 export async function composioRequest<T>(
@@ -238,7 +265,9 @@ export async function createManagedConnectionLink(input: {
     body: JSON.stringify({
       auth_config_id: authConfigId,
       user_id: input.userId,
-      alias: input.alias || `open-connect-${input.provider}`,
+      alias:
+        input.alias ||
+        `open-connect-${input.provider}-${crypto.randomUUID().replaceAll("-", "").slice(0, 8)}`,
       callback_url: input.callbackUrl,
       experimental: { account_type: "PRIVATE" },
     }),

@@ -28,7 +28,7 @@ Projects own tasks, schedules, automations, agents, resources, connections, mode
 | 3 | Build | Studio, Agents, Toolkits |
 | 4 | Discover | Marketplace, Resources, Agents, Skills, MCP, Tools, Toolkits, Prompts, Memory, Knowledge, Others |
 | 5 | Connections | Plugins, Connectors, Credentials, AI Gateway |
-| 6 | User avatar menu | Integrations, API keys & MCP, Settings, Organizations & workspaces, Help, Sign out |
+| 6 | User avatar menu | hillstreet-ph (System administration), Developer, Settings, Help, Sign out |
 
 Naming: use **Schedules** (noun), not “Scheduled”.
 
@@ -39,11 +39,10 @@ Skills · Plugins · Tools · Agents · Prompts · MCP · Workflows · Templates
 ## Settings and administration
 
 The platform logo returns to Dashboard. The user avatar at the bottom of the sidebar opens account and system settings.
-Settings contains Profile, Security & login, Workspace, Apps & system, and Data & privacy tabs. Workspace links to the one canonical organization/workspace, assigned projects, access reference, and Admin-only platform role assignment.
-Organization & workspace opens the existing organization management page; it does not claim to switch active tenant context.
+Settings holds personal account surfaces only: Profile, Security & login, Data Controls, and Integrations. Anything that already has a sidebar destination (Projects, Connectors, Credentials, AI Gateway, Automations, Memory, Knowledge) is not repeated in Settings.
 Credentials opens the existing scoped credential page.
 
-Settings → Workspace contains Access reference (`/roles`) and, for platform Admins only, User roles (`/admin`). These role tools are removed from the account menu to avoid duplicate navigation. Direct route authorization remains enforced.
+System administration is one page (`/admin`) with Organization and Access reference tabs. It opens from the single `hillstreet-ph` entry in the account menu; it is not duplicated in Settings or the sidebar. The Organization tab is one people list where each person's organization role, platform role, and group are set together; the platform-role control shows only for platform Admins. The old `/orgs` and `/roles` URLs redirect to the Organization tab. Direct route authorization remains enforced.
 Marketplace remains the single resource registry entry. Existing URLs and server authorization remain unchanged.
 
 ## Product rule
@@ -57,11 +56,11 @@ Open Connect is the gateway and control plane. Independent applications consume 
 | Personal settings | Every signed-in account | Settings: Profile; Security & login |
 | Client workspace | Member (stored as user) | Daily work, own credentials and API keys |
 | Toolkit management | Developer and higher | Build, using manage_toolkits capability |
-| System administration | Platform admin and owner | Settings → Workspace: User roles; Access reference |
-| Owner role management | Platform owner only | Within the shared User roles page |
-| Organizations and projects | Existing membership policies | Organizations & workspaces; Projects |
+| System administration | Platform admin and owner | Account menu → `hillstreet-ph` (`/admin`); Organization and Access reference tabs |
+| Organization membership | Organization Admins | System administration → Organization tab |
+| Organizations and projects | Existing membership policies | Organization tab; Projects |
 
-System administration manages platform roles; Organization settings manages HillStreet membership and groups; each project controls its own collaboration grants. Admin, Developer, and Member are the only human role labels across those scopes. Navigation adds no access. Clients use Member-level human identity plus their own scoped machine credentials.
+System administration's Organization tab manages both platform roles and HillStreet membership and groups; each project controls its own collaboration grants. Admin, Developer, and Member are the only human role labels across those scopes. Navigation adds no access. Clients use Member-level human identity plus their own scoped machine credentials.
 
 ## Account menu placement and MCP verification
 

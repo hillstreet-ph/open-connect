@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  open-connect-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: open-connect-mcp
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - COMPOSIO_API_KEY=${COMPOSIO_API_KEY}
+      - COMPOSIO_DEVELOPER_TOKEN=${COMPOSIO_DEVELOPER_TOKEN}
+      - AI_GATEWAY_API_KEY=${AI_GATEWAY_API_KEY}
+      - OPEN_CONNECT_API_KEY=${OPEN_CONNECT_API_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=8000
+      - ENVIRONMENT=production
+      - LOG_LEVEL=INFO
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health', timeout=5).raise_for_status()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s

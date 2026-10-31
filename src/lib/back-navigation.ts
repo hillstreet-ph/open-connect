@@ -25,7 +25,7 @@ export function workspaceBackTarget(pathname: string, hash = ""): BackTarget | n
   }
   if (path.startsWith("/projects/")) return { to: "/projects", label: "Back to projects" };
   if (path.startsWith("/admin/")) return { to: "/admin", label: "Back to administration" };
-  if (["/admin", "/roles", "/orgs", "/guides", "/campaign-studio", "/api-keys"].includes(path))
+  if (["/admin", "/guides", "/campaign-studio", "/api-keys"].includes(path))
     return { to: "/dashboard", label: "Back to workspace" };
   return null;
 }
