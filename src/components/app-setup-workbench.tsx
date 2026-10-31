@@ -107,7 +107,9 @@ function AppSetupForm({ userId }: { userId: string | undefined }) {
           <section className="min-w-0 space-y-3">
             <h3 className="font-semibold">1. Connect & inspect</h3>
             <div className="flex flex-wrap gap-2">
-              <Button size="sm" onClick={() => setOpen(true)}>Add custom MCP</Button>
+              <Button size="sm" onClick={() => setOpen(true)}>
+              Add custom MCP
+            </Button>
               <Button asChild size="sm" variant="outline">
                 <Link to="/connections">Browse apps & accounts</Link>
               </Button>
