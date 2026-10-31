@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 import { safeAuthReturn } from "@/lib/auth-return";
+import { clearAuthCallbackError, parseAuthCallbackError } from "@/lib/connected-accounts";
 
 type AuthMode = "signin" | "signup" | "reset" | "update_password";
 
@@ -45,6 +46,19 @@ function AuthPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    const callbackError = parseAuthCallbackError(window.location.href);
+    if (callbackError) {
+      window.history.replaceState(
+        window.history.state,
+        "",
+        clearAuthCallbackError(window.location.href),
+      );
+      toast.error(
+        callbackError.code === "access_denied"
+          ? "Sign-in was cancelled. Please try again."
+          : callbackError.description,
+      );
+    }
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {

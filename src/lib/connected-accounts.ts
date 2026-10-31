@@ -179,3 +179,16 @@ export function describeAccountError(error: unknown, fallback: string): string {
   const description = typeof candidate.message === "string" ? candidate.message : fallback;
   return describeLinkError({ code, description });
 }
+
+/** Remove a handled provider error without losing the requested sign-in destination. */
+export function clearAuthCallbackError(url: string): string {
+  const parsed = new URL(url);
+  for (const key of ["error", "error_code", "error_description"]) parsed.searchParams.delete(key);
+  const hash = new URLSearchParams(parsed.hash.slice(1));
+  if (["error", "error_code", "error_description"].some((key) => hash.has(key))) {
+    for (const key of ["error", "error_code", "error_description"]) hash.delete(key);
+    const remaining = hash.toString();
+    parsed.hash = remaining ? `#${remaining}` : "";
+  }
+  return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+}

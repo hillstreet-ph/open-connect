@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   buildConnectedAccounts,
+  clearAuthCallbackError,
   connectableProviderIds,
   describeLinkError,
   describeAccountError,
@@ -139,4 +140,27 @@ test("immediate linking and unlinking errors use actionable messages", () => {
     "Network unavailable",
   );
   assert.equal(describeAccountError(null, "failed"), "failed");
+});
+
+test("handled sign-in callback errors are removed while the destination remains", () => {
+  assert.equal(
+    clearAuthCallbackError(
+      "https://open-connect.site/auth?returnTo=%2Fsettings&error=access_denied&error_description=Cancelled",
+    ),
+    "/auth?returnTo=%2Fsettings",
+  );
+  assert.equal(
+    clearAuthCallbackError(
+      "https://open-connect.site/auth?returnTo=%2Fsettings#error=access_denied&error_description=Cancelled",
+    ),
+    "/auth?returnTo=%2Fsettings",
+  );
+  assert.equal(
+    clearAuthCallbackError("https://open-connect.site/auth?error=access_denied#security"),
+    "/auth#security",
+  );
+  assert.equal(
+    clearAuthCallbackError("https://open-connect.site/auth#error=access_denied&state=example"),
+    "/auth#state=example",
+  );
 });
