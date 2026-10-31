@@ -1,0 +1,90 @@
+name: PR Automation - auto-fix, auto-update, auto-merge, auto-deploy
+
+# Automatic pipeline for every pull request targeting main:
+#   1. autofix: applies Prettier and ESLint fixes and pushes them to the PR branch
+#   2. auto-update: keeps open PR branches up to date with main
+#   3. auto-merge: enables GitHub auto-merge so PRs merge as soon as required checks pass
+#   4. auto-deploy: deployment to production happens automatically on merge to main
+#      (Cloudflare Pages and Zeabur are already bound to the main branch).
+#
+# NOTE: pushes made with the default GITHUB_TOKEN do not re-trigger CI workflows.
+# For fully automatic validation after auto-fixes, create a PAT with
+# contents:write and pull-requests:write and store it as the repository secret
+# AUTOMATION_TOKEN (Settings > Secrets and variables > Actions).
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+  workflows: write
+
+concurrency:
+  group: pr-automation-${{ github.event.pull_request.number || 'scheduled' }}
+  cancel-in-progress: false
+
+jobs:
+  autofix:
+    name: Auto-fix formatting and lint issues
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Apply automatic fixes
+        run: |
+          bunx prettier --write "src/**/*.{ts,tsx,css}"
+          bunx eslint src --fix --no-error-on-unmatched-pattern || true
+
+      - name: Commit and push fixes
+        env:
+          AUTOMATION_TOKEN: ${{ secrets.AUTOMATION_TOKEN }}
+        run: |
+          git config user.name "open-connect-autofixer[bot]"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No automatic fixes required."
+            exit 0
+          fi
+          git commit -m "style: apply automatic formatting and lint fixes"
+          if [ -n "$AUTOMATION_TOKEN" ]; then
+            git push "https://x-access-token:$AUTOMATION_TOKEN@github.com/${{ github.repository }}.git" HEAD:${{ github.event.pull_request.head.ref }}
+          else
+            git push
+          fi
+
+  auto-update-and-merge:
+    name: Update branches and enable auto-merge
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Update PR branches and enable auto-merge
+        env:
+          GH_TOKEN: ${{ secrets.AUTOMATION_TOKEN || github.token }}
+        run: |
+          for pr in $(gh pr list --repo "${{ github.repository }}" --state open --base main --json number --jq '.[].number'); do
+            echo "Processing PR #$pr"
+            gh pr update-branch --repo "${{ github.repository }}" "$pr" || echo "Update skipped for #$pr (conflicts or up to date)"
+            gh pr merge --repo "${{ github.repository }}" "$pr" --squash --auto --delete-branch || echo "Auto-merge not enabled for #$pr"
+          done
