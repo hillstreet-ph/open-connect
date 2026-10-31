@@ -1,0 +1,35 @@
+name: Lint diagnostics
+
+on:
+  push:
+
+permissions:
+  contents: write
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run lint > lint-output.txt || echo "lint_exit=$?" >> lint-output.txt
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require("fs");
+            const content = fs.readFileSync("lint-output.txt", "utf8");
+            await github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: "refs/heads/lint-output",
+              sha: context.sha,
+            }).catch(() => {});
+            await github.rest.repos.createOrUpdateFileContents({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              path: "lint-output.txt",
+              message: "lint output",
+              content: Buffer.from(content).toString("base64"),
+              branch: "lint-output",
+            });
