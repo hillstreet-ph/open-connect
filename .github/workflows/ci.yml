@@ -35,6 +35,8 @@ jobs:
         run: bun run test:oauth:db
       - name: Workforce database regression tests
         run: bun run test:workforce:db
+      - name: Login activity database regression tests
+        run: bun run test:login:db
       - name: Consolidated resource integrity
         run: python3 scripts/consolidate_resources.py
       - name: Marketplace branch history regression tests

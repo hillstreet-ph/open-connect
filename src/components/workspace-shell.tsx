@@ -1,9 +1,10 @@
 import { workspaceBackTarget } from "@/lib/back-navigation";
 import { BackButton } from "@/components/back-button";
 import type { ReactNode } from "react";
-import { Link, useRouterState } from "@tanstack/react-router";
+import { useRouterState } from "@tanstack/react-router";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { sidebarDefaultOpen } from "@/lib/sidebar-state";
 import { useRoles } from "@/hooks/use-roles";
 import { roleLabel } from "@/lib/rbac";
 import { Badge } from "@/components/ui/badge";
@@ -19,12 +20,12 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
   const backTarget = workspaceBackTarget(pathname, hash);
 
   return (
-    <SidebarProvider defaultOpen>
+    <SidebarProvider defaultOpen={sidebarDefaultOpen()}>
       <div className="flex h-dvh w-full overflow-hidden" data-shell="app-ops">
         <AppSidebar />
         <SidebarInset className="min-h-0 min-w-0 overflow-hidden">
           <header className="relative z-20 flex min-h-14 shrink-0 items-center gap-2 border-b border-border/80 bg-background px-3 sm:gap-3 sm:px-4">
-            <SidebarTrigger className="-ml-1" />
+            <SidebarTrigger className="-ml-1" title="Toggle sidebar (Ctrl/⌘ B)" />
             <BackButton target={backTarget} />
             <div className="min-w-0 flex-1">
               <p className="truncate font-display text-sm font-semibold tracking-tight sm:text-base">
@@ -36,13 +37,6 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
                 {roleLabel(primary)}
               </Badge>
             </div>
-            <Link
-              to="/settings"
-              className="shrink-0 rounded-md px-2 py-2 text-xs font-medium hover:bg-accent focus-visible:outline focus-visible:outline-2"
-              title="Open your account settings"
-            >
-              Settings
-            </Link>
             <WorkspaceSearch />
           </header>
           <div className="min-h-0 min-w-0 flex-1 overflow-auto overscroll-contain pb-[max(5rem,env(safe-area-inset-bottom))]">
