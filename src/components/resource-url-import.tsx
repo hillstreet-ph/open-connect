@@ -27,7 +27,7 @@ export function ResourceUrlImport() {
     onError: (e) => toast.error(e.message),
   });
   return (
-    <Card>
+    <Card className="shadow-panel">
       <CardHeader>
         <CardTitle className="text-base">Import website or GitHub resources</CardTitle>
         <CardDescription>
