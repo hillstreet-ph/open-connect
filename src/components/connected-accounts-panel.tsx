@@ -189,10 +189,9 @@ function AccountIdentities({ userId }: { userId: string }) {
                     variant="ghost"
                     size="sm"
                     className="text-destructive hover:text-destructive"
-                    disabled={
-                      !account.canDisconnect ||
-                      (disconnect.isPending && disconnect.variables === account.provider)
-                    }
+                    // Serialize disconnects: a second request from this page could pass the
+                    // server's last-identity check alongside the first and remove both.
+                    disabled={!account.canDisconnect || disconnect.isPending}
                     title={
                       account.canDisconnect
                         ? `Disconnect ${account.label}`

@@ -180,6 +180,16 @@ test("Settings keeps only personal tabs and duplicates no sidebar destinations",
   assert.ok(settings.includes("AccountLinkCallbackNotice"));
   assert.ok(settings.indexOf('value="security"') < settings.indexOf("<ConnectedAccountsPanel />"));
 
+  const connected = readFileSync(
+    path.join(sourceRoot, "components/connected-accounts-panel.tsx"),
+    "utf8",
+  );
+  // Disconnects are serialized, so two requests cannot both pass the server's
+  // last-identity check and leave the account with no sign-in method.
+  assert.ok(connected.includes("disabled={!account.canDisconnect || disconnect.isPending}"));
+  // Success is confirmed against real identities, not just the redirect parameter.
+  assert.ok(connected.includes("isProviderLinked"));
+
   const panel = readFileSync(path.join(sourceRoot, "components/login-activity-panel.tsx"), "utf8");
   // The cache must be keyed to the account so a switch in another tab cannot show stale rows.
   assert.ok(panel.includes('queryKey: ["login-activity", userId]'));
