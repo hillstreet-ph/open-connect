@@ -10,9 +10,16 @@
  * - Real-time model catalog fetching
  */
 
-import { AI_GATEWAY_PROVIDERS, type AiGatewayProvider } from "./ai-gateway-providers";
+import { AI_GATEWAY_PROVIDERS } from "./ai-gateway-providers";
 import { fetchFreeModelCatalog } from "./model-catalog";
 import { resolveUpstreams, type Upstream } from "./gateway.server";
+
+export type AiGatewayProvider = {
+  id: string;
+  name: string;
+  baseUrl: string;
+  custom: boolean;
+};
 
 export type ModelCapability = {
   id: string;
@@ -40,7 +47,10 @@ export type ModelUsageStats = {
 // In-memory cache for model capabilities and usage stats
 const modelCapabilityCache = new Map<string, ModelCapability>();
 const modelUsageStats = new Map<string, ModelUsageStats>();
-const providerHealth = new Map<string, { healthy: boolean; lastCheck: Date; latency: number }>();
+const providerHealth = new Map<
+  string,
+  { healthy: boolean; lastCheck: Date; latency: number }
+>();
 
 // Professional model capabilities mapping
 export const PROFESSIONAL_CAPABILITIES: Record<string, string[]> = {
@@ -98,7 +108,10 @@ function extractProvider(modelId: string): string {
 /**
  * Check if a model is free
  */
-async function isFreeModel(modelId: string, upstream: Upstream): Promise<boolean> {
+async function isFreeModel(
+  modelId: string,
+  upstream: Upstream,
+): Promise<boolean> {
   // Check if model ends with :free
   if (modelId.endsWith(":free")) return true;
 
@@ -126,7 +139,10 @@ function getMaxTokens(modelId: string): number {
 /**
  * Get pricing for a model
  */
-function getPricing(modelId: string, free: boolean): { prompt: number; completion: number } {
+function getPricing(
+  modelId: string,
+  free: boolean,
+): { prompt: number; completion: number } {
   if (free) return { prompt: 0, completion: 0 };
 
   const pricingMap: Record<string, { prompt: number; completion: number }> = {
@@ -374,7 +390,9 @@ export function isRateLimited(modelId: string): boolean {
 /**
  * Get healthy models (not rate limited)
  */
-export function getHealthyModels(models: ModelCapability[]): ModelCapability[] {
+export function getHealthyModels(
+  models: ModelCapability[],
+): ModelCapability[] {
   return models.filter((m) => !isRateLimited(m.id));
 }
 
@@ -465,4 +483,4 @@ export async function autoSelectParallelModels(
 }
 
 // Export types
-export type { AiGatewayProvider, Upstream };
+export type { Upstream };
