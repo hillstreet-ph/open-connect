@@ -565,9 +565,6 @@ function ConnectionsPage() {
             <p className="text-xs text-muted-foreground">
               {`${app.category} · ${connectionLogin(app).label}`}
             </p>
-            {app.auth_methods?.length ? (
-              <p className="text-xs text-muted-foreground">Auth: {app.auth_methods.join(" · ")}</p>
-            ) : null}
           </div>
         </div>
         {!user ? (
@@ -612,8 +609,8 @@ function ConnectionsPage() {
       </Badge>
       <h1 className="text-2xl font-semibold sm:text-3xl">Connectors</h1>
       <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-        Connect external apps such as Google, Slack, and ChatGPT-style plugins, plus custom MCP
-        servers. Credentials stay server-side.
+        Connect external apps such as Google, Slack, and ChatGPT-style plugins. Credentials stay
+        server-side.
       </p>
 
       <div className="mt-6 flex flex-wrap items-center gap-2">
@@ -713,7 +710,7 @@ function ConnectionsPage() {
                   />
                 </div>
               </div>
-              <div className="grid gap-1.5 sm:grid-cols-3 xl:grid-cols-5">
+              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 xl:grid-cols-5">
                 {installedGroups.map((group) => renderGroupedCard(group))}
               </div>
               {filteredInstalledConnections.length === 0 ? (
@@ -794,7 +791,7 @@ function ConnectionsPage() {
               <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {group.category}
               </h2>
-              <div className="grid gap-1.5 sm:grid-cols-3 xl:grid-cols-5">
+              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 xl:grid-cols-5">
                 {group.apps.map((app) => renderCatalogCard(app))}
               </div>
             </div>
@@ -846,7 +843,7 @@ function ConnectionsPage() {
                   />
                 </div>
               </div>
-              <div className="grid gap-1.5 sm:grid-cols-3 xl:grid-cols-5">
+              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 xl:grid-cols-5">
                 {customGroups.map((group) => renderGroupedCard(group))}
               </div>
               {filteredCustomConnections.length === 0 ? (
@@ -1039,20 +1036,6 @@ function ConnectionsPage() {
                 ? connectionLogin(managedApp).action
                 : "Connect account"}
           </Button>
-          <Button
-            variant="outline"
-            onClick={() => {
-              setCustomInitial(undefined);
-              setCustomOpen(true);
-              closeManagedDialog();
-            }}
-          >
-            Connect a custom MCP or API endpoint
-          </Button>
-          <p className="text-xs text-muted-foreground">
-            Custom MCP supports discovered OAuth and API/token authentication. API connectors
-            require the provider's documented OpenAPI definition and credential.
-          </p>
         </DialogContent>
       </Dialog>
 
@@ -1092,54 +1075,9 @@ function ConnectionsPage() {
               </p>
             )}
             {selectedApp?.provider === "custom_mcp" && (
-              <div className="space-y-2">
-                <Label>Common setups</Label>
-                <p className="text-xs text-muted-foreground">
-                  Professional presets for frequent MCP deployments. Review the fields after
-                  applying a preset.
-                </p>
-                <div className="grid gap-2 sm:grid-cols-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-7 shrink-0 px-2.5 text-xs"
-                    onClick={() => {
-                      setConnectionName("Composio");
-                      setEndpointUrl("https://connect.composio.dev/mcp");
-                      setAuthType("api_key");
-                      setAuthHeader("x-consumer-api-key");
-                      setApiKey("");
-                    }}
-                  >
-                    Composio MCP
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-7 shrink-0 px-2.5 text-xs"
-                    onClick={() => {
-                      setAuthType("bearer");
-                      setApiKey("");
-                    }}
-                  >
-                    Bearer token
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-7 shrink-0 px-2.5 text-xs"
-                    onClick={() => {
-                      setAuthType("none");
-                      setApiKey("");
-                    }}
-                  >
-                    Public · no auth
-                  </Button>
-                </div>
-              </div>
+              <p className="text-xs text-muted-foreground">
+                Use the complete Streamable HTTP MCP endpoint and its access token.
+              </p>
             )}
             {["custom_mcp", "custom_api"].includes(selectedApp?.provider ?? "") && (
               <>
@@ -1192,23 +1130,6 @@ function ConnectionsPage() {
                 />
               </div>
             ) : null}
-            {["custom_mcp", "custom_api"].includes(selectedApp?.provider ?? "") ? (
-              <div className="space-y-2">
-                <Label htmlFor="connection-auth-type">MCP authentication</Label>
-                <select
-                  id="connection-auth-type"
-                  value={authType}
-                  onChange={(event) =>
-                    setAuthType(event.target.value as "none" | "bearer" | "api_key")
-                  }
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                >
-                  <option value="none">No authentication</option>
-                  <option value="bearer">Bearer token</option>
-                  <option value="api_key">API key header</option>
-                </select>
-              </div>
-            ) : null}
             {authType === "api_key" &&
               ["custom_mcp", "custom_api"].includes(selectedApp?.provider ?? "") && (
                 <div className="space-y-2">
@@ -1222,66 +1143,10 @@ function ConnectionsPage() {
                 </div>
               )}
             {selectedApp?.provider === "custom_api" && (
-              <div className="space-y-2">
-                <Label>Common setups</Label>
-                <p className="text-xs text-muted-foreground">
-                  Frequent header conventions for API connectors. Review the fields after applying a
-                  preset.
-                </p>
-                <div className="grid gap-2 sm:grid-cols-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-7 shrink-0 px-2.5 text-xs"
-                    onClick={() => {
-                      setAuthType("api_key");
-                      setAuthHeader("X-API-Key");
-                      setApiKey("");
-                    }}
-                  >
-                    X-API-Key
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-7 shrink-0 px-2.5 text-xs"
-                    onClick={() => {
-                      setAuthType("api_key");
-                      setAuthHeader("Authorization");
-                      setApiKey("");
-                    }}
-                  >
-                    Authorization
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-7 shrink-0 px-2.5 text-xs"
-                    onClick={() => {
-                      setAuthType("none");
-                      setApiKey("");
-                    }}
-                  >
-                    Public · no auth
-                  </Button>
-                </div>
-              </div>
-            )}
-            {selectedApp?.provider === "custom_api" && (
               <p className="rounded-lg border p-3 text-sm text-muted-foreground">
                 Saves a private API URL and credential profile. This does not discover tools or
                 execute API requests. A reviewed adapter or MCP server is required for agent tool
                 access.
-              </p>
-            )}
-            {selectedApp?.provider === "custom_mcp" && (
-              <p className="text-xs text-muted-foreground">
-                Use the complete Streamable HTTP MCP endpoint. For Composio Connect, choose API key
-                header and enter x-consumer-api-key with your consumer key, or use its OAuth-enabled
-                client.
               </p>
             )}
             {!["custom_mcp", "custom_api"].includes(selectedApp?.provider ?? "") ||
