@@ -19,12 +19,17 @@ jobs:
           script: |
             const fs = require("fs");
             const content = fs.readFileSync("lint-output.txt", "utf8");
+            await github.rest.git.deleteRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: "heads/lint-output",
+            }).catch(() => {});
             await github.rest.git.createRef({
               owner: context.repo.owner,
               repo: context.repo.repo,
               ref: "refs/heads/lint-output",
               sha: context.sha,
-            }).catch(() => {});
+            });
             await github.rest.repos.createOrUpdateFileContents({
               owner: context.repo.owner,
               repo: context.repo.repo,
