@@ -74,13 +74,19 @@ export function IncomingWebhooks({ userId }: { userId: string | undefined }) {
               onChange={(e) => setName(e.target.value)}
             />
           </div>
-          <Button disabled={!name.trim() || add.isPending} onClick={() => add.mutate()}>
+          <Button
+            disabled={!name.trim() || add.isPending || !!created}
+            onClick={() => add.mutate()}
+          >
             Add webhook
           </Button>
         </div>
         {created ? (
           <div role="status" className="space-y-2 rounded border p-3 text-sm">
-            <p>Save this secret now. It will not be shown again.</p>
+            <p>
+              Save this secret now. It will not be shown again. Select Done before adding another
+              webhook.
+            </p>
             <p className="break-all">
               URL: <code>{endpoint(created.id)}</code>
             </p>

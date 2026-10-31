@@ -109,7 +109,7 @@ export function NotificationChannels({ userId }: { userId: string }) {
           className="space-y-3 rounded-lg border p-4"
           onSubmit={(event) => {
             event.preventDefault();
-            add.mutate();
+            if (!secret) add.mutate();
           }}
         >
           <h3 className="font-medium">Add notification destination</h3>
@@ -237,7 +237,11 @@ export function NotificationChannels({ userId }: { userId: string }) {
           <Button
             type="submit"
             disabled={
-              add.isPending || !name.trim() || !destination.trim() || (kind === "telegram" && !bot)
+              add.isPending ||
+              !!secret ||
+              !name.trim() ||
+              !destination.trim() ||
+              (kind === "telegram" && !bot)
             }
           >
             {add.isPending ? "Saving…" : "Add destination"}
@@ -245,7 +249,10 @@ export function NotificationChannels({ userId }: { userId: string }) {
         </form>
         {secret ? (
           <div role="status" className="space-y-2 rounded border p-3 text-sm">
-            <p>Save this signing secret now. It will not be shown again.</p>
+            <p>
+              Save this signing secret now. It will not be shown again. Confirm below before adding
+              another destination.
+            </p>
             <code className="block break-all">{secret}</code>
             <Button size="sm" variant="outline" onClick={() => setSecret(null)}>
               I saved the secret
