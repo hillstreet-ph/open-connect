@@ -5,9 +5,6 @@ import { useRouterState } from "@tanstack/react-router";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { sidebarDefaultOpen } from "@/lib/sidebar-state";
-import { useRoles } from "@/hooks/use-roles";
-import { roleLabel } from "@/lib/rbac";
-import { Badge } from "@/components/ui/badge";
 import { WorkspaceSearch } from "@/components/workspace-search";
 import { flatAppNav } from "@/lib/nav";
 import { AgentHelper } from "@/components/agent-helper";
@@ -15,7 +12,6 @@ import { AgentHelper } from "@/components/agent-helper";
 export function WorkspaceShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const hash = useRouterState({ select: (s) => s.location.hash });
-  const { primary } = useRoles();
   const title = pageTitle(pathname);
   const backTarget = workspaceBackTarget(pathname, hash);
 
@@ -31,11 +27,6 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
               <p className="truncate font-display text-sm font-semibold tracking-tight sm:text-base">
                 {title}
               </p>
-            </div>
-            <div className="hidden items-center gap-2 md:flex">
-              <Badge variant="outline" className="text-[10px] uppercase">
-                {roleLabel(primary)}
-              </Badge>
             </div>
             <WorkspaceSearch />
           </header>

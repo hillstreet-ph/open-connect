@@ -166,12 +166,12 @@ function GuidesPage() {
             </span>
             <CardTitle className="mt-3 text-base">Professional setup E2E</CardTitle>
             <CardDescription>
-              Control-plane policy demo package (YAML, tests, validator). Not a marketplace listing.
+              Webhook delivery setup and a control-plane policy demo with tests and a validator.
             </CardDescription>
           </CardHeader>
           <CardContent className="px-5 pb-5">
             <Button asChild variant="outline" className="w-full">
-              <a href="#professional-e2e">Open E2E package</a>
+              <a href="#professional-e2e">Open professional setup</a>
             </Button>
           </CardContent>
         </Card>
@@ -212,6 +212,74 @@ function GuidesPage() {
       >
         Professional setup E2E
       </h2>
+      <Card id="webhook-setup" className="mt-3 scroll-mt-6 shadow-panel">
+        <CardHeader className="p-5 pb-3">
+          <CardTitle className="text-base">
+            Webhooks: professional setup from event to delivery
+          </CardTitle>
+          <CardDescription>
+            Configure a receiver, authenticate deliveries, and confirm the resulting action before
+            enabling production events. Automation webhook triggers and actions are currently not
+            connected in Open-Connect.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4 px-5 pb-5">
+          <ol className="list-decimal space-y-3 pl-5 text-sm text-muted-foreground">
+            <li>
+              <strong className="text-foreground">Choose the event and destination.</strong> Record
+              the provider, event names, owning project, HTTPS receiver URL, and expected action.
+              Start with a staging receiver and synthetic events. Connecting an app does not
+              automatically register its webhooks.
+            </li>
+            <li>
+              <strong className="text-foreground">Prepare and protect the receiver.</strong> Deploy
+              a receiver that implements your provider’s documented verification method. Check the
+              signature against the original request bytes before parsing or processing; enforce
+              timestamps when the provider signs them. Keep signing secrets in server secret
+              storage, separate from app access tokens. Reject unauthenticated requests before any
+              action.
+            </li>
+            <li>
+              <strong className="text-foreground">Register only the events you need.</strong> In the
+              provider’s webhook configuration, enter the verified receiver URL, select the intended
+              events, and configure the matching signing secret. Complete any provider verification
+              challenge. Never put a secret in the URL or a browser configuration.
+            </li>
+            <li>
+              <strong className="text-foreground">Prove a valid delivery.</strong> Use the
+              provider’s signed test delivery, then perform one harmless staging action that emits a
+              real event. Match the delivery ID in the provider log to the receiver log and the
+              expected result. A successful HTTP response alone does not prove the action completed.
+            </li>
+            <li>
+              <strong className="text-foreground">Test failure and recovery.</strong> Confirm a
+              missing or invalid signature causes rejection with no action. Redeliver the same event
+              and verify its durable delivery ID prevents duplicate actions. Test failed processing,
+              bounded retries with backoff, and recovery from the failed-delivery queue. Acknowledge
+              promptly only after durable acceptance; process longer work asynchronously.
+            </li>
+            <li>
+              <strong className="text-foreground">Enable and monitor production.</strong> Repeat the
+              checks using separate production secrets and the intended event scope. Monitor
+              delivery failures, queue age, and action results without logging secrets or full
+              sensitive payloads. To roll back, disable the provider subscription and pause
+              processing; retain failed delivery IDs for controlled replay. Reverify after rotation.
+            </li>
+          </ol>
+          <p className="text-xs text-muted-foreground">
+            Troubleshooting: no deliveries → check subscription and event filters; authentication
+            failures → check signing secret, raw request body, and signed timestamp; timeouts →
+            check durable acceptance and queue health; duplicate actions → check delivery ID
+            storage.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            The legacy connection-webhook helper is not a verified setup target here. Confirm its
+            deployed code and authentication before using it; this guide does not provision a
+            receiver or enable automation webhook execution.
+          </p>
+        </CardContent>
+      </Card>
+
       <Card className="mt-3 shadow-panel">
         <CardHeader className="p-5">
           <CardTitle className="text-base">Control plane demo package</CardTitle>
