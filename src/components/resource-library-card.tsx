@@ -1,3 +1,4 @@
+ypescript
 import { isResourceApproved } from "@/lib/resource-approval";
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -84,7 +85,7 @@ export function ResourceLibraryCard({
   const [resourceType, setResourceType] = useState<string>(defaultType);
   const [license, setLicense] = useState<string>("proprietary");
   const [signals, setSignals] = useState<string[]>([]);
-  const [confidence, setConfidence] = useState<string>("");
+  const [confidence, setConfidence] = useState("");
   const [busy, setBusy] = useState(false);
   const [bulkProgress, setBulkProgress] = useState<string>("");
 
@@ -185,7 +186,7 @@ export function ResourceLibraryCard({
         name: name || file.name,
         slug: slug || "resource",
         description: description || "",
-        resource_type,
+        resource_type: resourceType,
         license,
       });
       toast.success("Saved as a draft for review");
