@@ -1,16 +1,17 @@
+import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
+  ArrowLeft,
   Boxes,
   Brain,
-  Building2,
   Layers3,
   LibraryBig,
   PackageOpen,
   ShieldCheck,
+  Sparkles,
 } from "lucide-react";
 import { ResourceLibraryCard } from "@/components/resource-library-card";
 import { ResourceReviewPanel } from "@/components/resource-review-panel";
-import { DataControlsPanel } from "@/components/data-controls-panel";
 import { ResourceUrlImport } from "@/components/resource-url-import";
 import { AppSetupWorkbench } from "@/components/app-setup-workbench";
 import { ToolkitCreator } from "@/components/toolkit-creator";
@@ -48,6 +49,8 @@ const publishablePackageTypes = [
   "guide",
 ] as const;
 
+type StudioView = "build" | "packages" | "review" | "context" | "toolkits";
+
 function SectionHeading({
   icon: Icon,
   label,
@@ -61,22 +64,48 @@ function SectionHeading({
 }) {
   return (
     <div className="flex items-start gap-3">
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
-        <Icon className="size-5" />
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+        <Icon className="size-4" />
       </span>
-      <div>
+      <div className="min-w-0">
         <p className="text-xs font-semibold uppercase tracking-wider text-primary">{label}</p>
-        <h2 className="mt-0.5 text-xl font-semibold">{title}</h2>
+        <h2 className="mt-0.5 text-lg font-semibold sm:text-xl">{title}</h2>
         <p className="mt-1 max-w-3xl text-sm text-muted-foreground">{description}</p>
       </div>
     </div>
   );
 }
 
+function SectionBackButton({ onBack }: { onBack: () => void }) {
+  return (
+    <Button size="sm" variant="ghost" className="w-fit gap-2 px-2 sm:px-3" onClick={onBack}>
+      <ArrowLeft className="size-4" aria-hidden="true" />
+      Back to Studio
+    </Button>
+  );
+}
+
 function StudioPage() {
   const { primary, can } = useRoles();
+  const [view, setView] = useState<StudioView>("build");
+  useEffect(() => {
+    const applyHash = () => {
+      const hash = window.location.hash.replace("#", "");
+      if (hash === "app-setup") {
+        setView("build");
+      } else if (["packages", "review", "context", "toolkits"].includes(hash)) {
+        setView(hash as StudioView);
+      }
+    };
+    const timer = window.setTimeout(applyHash, 0);
+    window.addEventListener("hashchange", applyHash);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("hashchange", applyHash);
+    };
+  }, []);
   return (
-    <div className="mx-auto max-w-6xl space-y-12 px-4 py-8 sm:px-6 sm:py-12">
+    <div className="mx-auto max-w-6xl space-y-8 px-4 py-6 sm:px-6 sm:py-10">
       <header>
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline" className="border-primary/40 text-primary">
@@ -92,85 +121,110 @@ function StudioPage() {
           review resources before they are verified and published. Manage library items and assign
           them to projects from their library pages.
         </p>
-        <div className="mt-5 flex flex-wrap gap-2">
-          <Button asChild size="sm" variant="outline">
-            <a href="#app-setup">Build & install</a>
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+          <Button
+            size="sm"
+            variant={view === "build" ? "default" : "outline"}
+            className="w-full justify-start whitespace-normal text-left"
+            onClick={() => setView("build")}
+          >
+            Build & install
           </Button>
-          <Button asChild size="sm" variant="outline">
-            <a href="#packages">
-              <PackageOpen className="size-3.5" />
-              Packages
-            </a>
+          <Button
+            size="sm"
+            variant={view === "packages" ? "default" : "outline"}
+            className="w-full justify-start whitespace-normal text-left"
+            onClick={() => setView("packages")}
+          >
+            <PackageOpen className="size-3.5" />
+            Packages
+          </Button>
+          <Button
+            size="sm"
+            variant={view === "toolkits" ? "default" : "outline"}
+            className="w-full justify-start whitespace-normal text-left"
+            onClick={() => setView("toolkits")}
+          >
+            <Boxes className="size-3.5" />
+            Toolkits
+          </Button>
+          <Button
+            asChild
+            size="sm"
+            variant="ghost"
+            className="w-full justify-start whitespace-normal text-left"
+          >
+            <Link to="/studio-drafts">
+              <Sparkles className="size-3.5" />
+              Reusable drafts
+            </Link>
           </Button>
           {can("verify_resources") ? (
-            <Button asChild size="sm" variant="outline">
-              <a href="#review">
-                <ShieldCheck className="size-3.5" />
-                Resource review
-              </a>
+            <Button
+              size="sm"
+              variant={view === "review" ? "default" : "outline"}
+              className="w-full justify-start whitespace-normal text-left"
+              onClick={() => setView("review")}
+            >
+              <ShieldCheck className="size-3.5" />
+              Resource review
             </Button>
           ) : null}
-          <Button asChild size="sm" variant="outline">
-            <a href="#context">
-              <Brain className="size-3.5" />
-              Memory & Knowledge
-            </a>
-          </Button>
-          <Button asChild size="sm" variant="outline">
-            <a href="#toolkits">
-              <Boxes className="size-3.5" />
-              Toolkits
-            </a>
-          </Button>
-          <Button asChild size="sm" variant="ghost">
-            <Link to="/projects">
-              <Building2 className="size-3.5" />
-              Projects
-            </Link>
+          <Button
+            size="sm"
+            variant={view === "context" ? "default" : "outline"}
+            className="w-full justify-start whitespace-normal text-left"
+            onClick={() => setView("context")}
+          >
+            <Brain className="size-3.5" />
+            Memory & Knowledge
           </Button>
         </div>
       </header>
 
-      <section id="reuse-drafts" className="scroll-mt-6">
-        <DataControlsPanel studio />
-      </section>
+      {view === "build" ? <AppSetupWorkbench /> : null}
 
-      <AppSetupWorkbench />
-      <ResourceUrlImport />
-      <section id="packages" className="scroll-mt-6 space-y-5">
-        <SectionHeading
-          icon={PackageOpen}
-          label="Packages & capabilities"
-          title="Upload once, publish once"
-          description="Upload a package draft. Automatic detection fills the metadata, and the catalog type remains editable before review and publishing."
-        />
-        <div className="flex flex-wrap gap-2">
-          {packageTypes.map((type) => (
-            <Badge key={type} variant="secondary">
-              {type}
-            </Badge>
-          ))}
-        </div>
-        {can("upload_resources") ? (
+      {view === "packages" ? (
+        <section id="packages" className="scroll-mt-6 space-y-4">
+          <SectionBackButton onBack={() => setView("build")} />
           <div className="max-w-3xl">
-            <ResourceLibraryCard
-              allowedTypes={publishablePackageTypes}
-              title="Upload package"
-              cardDescription="Agents, skills, prompts, plugins, MCP, tools, and guides publish to Marketplace and enter your personal library. Memory and Knowledge stay private in their Studio section below."
-              showResourceList={false}
-            />
+            <ResourceUrlImport />
           </div>
-        ) : (
-          <Card>
-            <CardContent className="p-5 text-sm text-muted-foreground">
-              Your role cannot upload packages. Contact an administrator to raise permissions.
-            </CardContent>
-          </Card>
-        )}
-      </section>
+          <SectionHeading
+            icon={PackageOpen}
+            label="Packages & capabilities"
+            title="Upload once, publish once"
+            description="Upload a package draft. Automatic detection fills the metadata, and the catalog type remains editable before review and publishing."
+          />
+          <div className="flex flex-wrap gap-2">
+            {packageTypes.map((type) => (
+              <Badge key={type} variant="secondary">
+                {type}
+              </Badge>
+            ))}
+          </div>
+          {can("upload_resources") ? (
+            <div className="max-w-3xl">
+              <ResourceLibraryCard
+                allowedTypes={publishablePackageTypes}
+                title="Upload package"
+                cardDescription="Agents, skills, prompts, plugins, MCP, tools, and guides publish to Marketplace and enter your personal library. Memory and Knowledge stay private in their Studio section below."
+                showResourceList={false}
+              />
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="p-5 text-sm text-muted-foreground">
+                Your role cannot upload packages. Contact an administrator to raise permissions.
+              </CardContent>
+            </Card>
+          )}
+        </section>
+      ) : null}
 
-      {can("verify_resources") ? (
-        <section id="review" className="scroll-mt-6 space-y-5">
+      {view === "review" && can("verify_resources") ? (
+        <section id="review" className="scroll-mt-6 space-y-4">
+          <SectionBackButton onBack={() => setView("build")} />
           <SectionHeading
             icon={ShieldCheck}
             label="Marketplace review"
@@ -181,54 +235,60 @@ function StudioPage() {
         </section>
       ) : null}
 
-      <section id="context" className="scroll-mt-6 space-y-5">
-        <SectionHeading
-          icon={LibraryBig}
-          label="Context & data"
-          title="Create Memory or Knowledge"
-          description="Use one focused form at a time. Memory stores durable instructions and decisions; Knowledge stores reusable documents, sources, and reference material."
-        />
-        <Tabs defaultValue="memory" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="memory">
-              <Brain className="mr-2 size-4" />
-              Memory
-            </TabsTrigger>
-            <TabsTrigger value="knowledge">
-              <LibraryBig className="mr-2 size-4" />
-              Knowledge
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="memory" className="mt-4">
-            <MemoryKnowledgePage defaultSection="memory" studioMode />
-          </TabsContent>
-          <TabsContent value="knowledge" className="mt-4">
-            <MemoryKnowledgePage defaultSection="knowledge" studioMode />
-          </TabsContent>
-        </Tabs>
-      </section>
+      {view === "context" ? (
+        <section id="context" className="scroll-mt-6 space-y-4">
+          <SectionBackButton onBack={() => setView("build")} />
+          <SectionHeading
+            icon={LibraryBig}
+            label="Context & data"
+            title="Create Memory or Knowledge"
+            description="Use one focused form at a time. Memory stores durable instructions and decisions; Knowledge stores reusable documents, sources, and reference material."
+          />
+          <Tabs defaultValue="memory" className="w-full">
+            <TabsList className="grid w-full max-w-md grid-cols-2">
+              <TabsTrigger value="memory">
+                <Brain className="mr-2 size-4" />
+                Memory
+              </TabsTrigger>
+              <TabsTrigger value="knowledge">
+                <LibraryBig className="mr-2 size-4" />
+                Knowledge
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="memory" className="mt-4">
+              <MemoryKnowledgePage defaultSection="memory" studioMode />
+            </TabsContent>
+            <TabsContent value="knowledge" className="mt-4">
+              <MemoryKnowledgePage defaultSection="knowledge" studioMode />
+            </TabsContent>
+          </Tabs>
+        </section>
+      ) : null}
 
-      <section id="toolkits" className="scroll-mt-6 space-y-5">
-        <SectionHeading
-          icon={Layers3}
-          label="Bundles"
-          title="Build a Toolkit"
-          description="Combine capabilities already in your personal library into one reusable bundle, then publish it for project assignment."
-        />
-        <div className="max-w-3xl">
-          <ToolkitCreator />
-        </div>
-      </section>
+      {view === "toolkits" ? (
+        <section id="toolkits" className="scroll-mt-6 space-y-4">
+          <SectionBackButton onBack={() => setView("build")} />
+          <SectionHeading
+            icon={Layers3}
+            label="Bundles"
+            title="Build a Toolkit"
+            description="Combine capabilities already in your personal library into one reusable bundle, then publish it for project assignment."
+          />
+          <div className="max-w-3xl">
+            <ToolkitCreator />
+          </div>
+        </section>
+      ) : null}
 
       <Card className="bg-pillar">
-        <CardHeader className="p-5">
+        <CardHeader className="p-4">
           <CardTitle className="text-base">Use what you created</CardTitle>
           <CardDescription>
             Open the matching sidebar library to review items, see project assignment badges, and
             add each item to a project.
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-wrap gap-2 px-5 pb-5">
+        <CardContent className="flex flex-wrap gap-2 px-4 pb-4">
           <Button asChild size="sm">
             <Link to="/agents">Agents</Link>
           </Button>

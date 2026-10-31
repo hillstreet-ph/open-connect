@@ -2223,8 +2223,15 @@ export const Route = createFileRoute("/mcp")({
               );
               result = { ...textResult(payload), structuredContent: payload };
             } catch (error) {
-              const failure = remoteMcpFailureResult(error);
-              if (!failure) throw error;
+              // Secret-safe fallback: unclassified discovery failures must not escape as HTTP 500.
+              const failure = remoteMcpFailureResult(error) ?? {
+                status: "unavailable",
+                code: "connection_tool_discovery_failed",
+                message:
+                  "Tool discovery failed for this connection. Verify the connection is active and retry.",
+                retryable: true,
+                secrets_exposed: false,
+              };
               result = { ...textResult(failure), structuredContent: failure, isError: true };
             }
           } else if (name === "call_connection_tool") {

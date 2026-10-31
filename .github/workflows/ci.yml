@@ -35,6 +35,8 @@ jobs:
         run: bun run test:oauth:db
       - name: Workforce database regression tests
         run: bun run test:workforce:db
+      - name: Login activity database regression tests
+        run: bun run test:login:db
       - name: Consolidated resource integrity
         run: python3 scripts/consolidate_resources.py
       - name: Marketplace branch history regression tests
@@ -67,7 +69,7 @@ jobs:
 
   publish-required-build-status:
     name: Publish required build status
-    if: always() && github.event_name == 'pull_request'
+    if: always() && (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch')
     needs: [validate]
     runs-on: ubuntu-latest
     permissions:
@@ -80,16 +82,13 @@ jobs:
         with:
           script: |
             const state = process.env.VALIDATION_RESULT === 'success' ? 'success' : 'failure';
-            const { data: pullRequest } = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.issue.number,
-            });
-            const shas = new Set([
-              context.payload.pull_request.head.sha,
-              pullRequest.merge_commit_sha,
-            ].filter(Boolean));
-            for (const sha of shas) {
+            // Bind every published status to immutable SHAs from this validated event.
+            // A branch or PR may advance while the validator is running.
+            const shas = [context.sha];
+            if (context.payload.pull_request) {
+              shas.push(context.payload.pull_request.head.sha);
+            }
+            for (const sha of new Set(shas)) {
               await github.rest.repos.createCommitStatus({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -98,7 +97,7 @@ jobs:
                 context: 'Build & validate',
                 description: state === 'success'
                   ? 'Lint, tests, build, and SSR validation passed.'
-                  : `Validation job concluded as ${process.env.VALIDATION_RESULT}.`,
+                  : 'Validation job concluded as ' + process.env.VALIDATION_RESULT + '.',
               });
             }
 

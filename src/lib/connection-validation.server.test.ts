@@ -139,3 +139,19 @@ test("browser provider verification is read-only and uses official keyed hosts",
     assert.equal(calls, 1);
   }
 });
+
+test("native model providers require a valid model catalog response", async () => {
+  for (const [provider, body] of [
+    ["anthropic", { data: [{ id: "test" }] }],
+    ["google", { models: [{ name: "test" }] }],
+  ] as const) {
+    const setup = normalizeConnectionSetup({ provider, api_key: "test-secret" }, app(provider));
+    const result = await validateConnectionCredential(setup, async () => Response.json(body));
+    assert.equal(result.verified, true);
+    assert.match(result.detail, /1 models fetched/);
+    await assert.rejects(
+      validateConnectionCredential(setup, async () => new Response("<html>login</html>")),
+      /valid model catalog/,
+    );
+  }
+});

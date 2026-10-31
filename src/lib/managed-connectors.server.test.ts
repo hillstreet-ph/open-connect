@@ -331,6 +331,7 @@ test("Composio toolkit discovery follows cursors and exposes supported auth meth
               name: "Sample OAuth",
               categories: [{ name: "productivity" }],
               composio_managed_auth_schemes: ["OAUTH2", "API_KEY"],
+              logo: "https://cdn.composio.dev/sample-oauth.svg",
             },
           ]
         : [
@@ -339,6 +340,12 @@ test("Composio toolkit discovery follows cursors and exposes supported auth meth
               name: "Sample Key",
               categories: ["data"],
               auth_schemes: ["API_KEY"],
+              media: { logo: "https://cdn.composio.dev/sample-key.svg" },
+            },
+            {
+              slug: "unsafe_logo",
+              name: "Unsafe Logo",
+              logo: "javascript:alert(1)",
             },
           ];
     return new Response(JSON.stringify({ items, next_cursor: calls === 1 ? "next" : null }), {
@@ -349,10 +356,13 @@ test("Composio toolkit discovery follows cursors and exposes supported auth meth
     const toolkits = await listComposioToolkits();
     assert.deepEqual(
       toolkits.map(({ slug }) => slug),
-      ["sample_oauth", "sample_key"],
+      ["sample_oauth", "sample_key", "unsafe_logo"],
     );
     assert.deepEqual(toolkits[0]!.authMethods, ["OAUTH2", "API_KEY"]);
     assert.equal(toolkits[0]!.category, "Productivity");
+    assert.equal(toolkits[0]!.logo, "https://cdn.composio.dev/sample-oauth.svg");
+    assert.equal(toolkits[1]!.logo, "https://cdn.composio.dev/sample-key.svg");
+    assert.equal(toolkits[2]!.logo, "");
     assert.equal(calls, 2);
   } finally {
     globalThis.fetch = originalFetch;

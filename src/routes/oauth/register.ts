@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { oauthDatabase } from "@/lib/oauth-client.server";
+import { isAcceptableRedirectUri } from "@/lib/oauth-redirect";
 const headers = {
   "content-type": "application/json",
   "access-control-allow-origin": "*",
@@ -27,19 +28,12 @@ export const Route = createFileRoute("/oauth/register")({
           )
             throw Error();
           for (const value of body.redirect_uris) {
-            const u = new URL(value);
-            if (
-              typeof value !== "string" ||
-              value.length > 2048 ||
-              u.protocol !== "https:" ||
-              u.username ||
-              u.password ||
-              u.hash
-            )
-              throw Error();
+            // https for web clients, http loopback for native clients (RFC 8252 §7.3).
+            if (!isAcceptableRedirectUri(value)) throw Error();
           }
-          if (body.token_endpoint_auth_method && body.token_endpoint_auth_method !== "none")
-            throw Error();
+          // Native clients omit the auth method or send "none"; both mean public PKCE.
+          const authMethod = body.token_endpoint_auth_method;
+          if (authMethod && authMethod !== "none") throw Error();
           const { data, error } = await oauthDatabase().rpc("oc_register_oauth_client", {
             p_name: typeof body.client_name === "string" ? body.client_name : "MCP client",
             p_redirect_uris: body.redirect_uris,

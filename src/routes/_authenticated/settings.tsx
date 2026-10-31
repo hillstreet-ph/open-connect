@@ -1,24 +1,8 @@
-import { createFileRoute, Link, useLocation } from "@tanstack/react-router";
+import { NotificationChannels } from "@/components/notification-channels";
+import { createFileRoute, useLocation } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
-import {
-  Bell,
-  BookOpen,
-  Bot,
-  Brain,
-  Building2,
-  KeyRound,
-  Loader2,
-  MessageCircle,
-  Network,
-  Save,
-  Server,
-  Sparkles,
-  ShieldCheck,
-  Trash2,
-  Upload,
-  UsersRound,
-} from "lucide-react";
+import { KeyRound, Loader2, MessageCircle, Save, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ProfileAvatarBadge } from "@/components/user-menu";
@@ -28,17 +12,24 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ControlApprovalsPanel } from "@/components/control-approvals-panel";
 import { DataControlsPanel } from "@/components/data-controls-panel";
+import { IncomingWebhooks } from "@/components/incoming-webhooks";
+import {
+  ConnectedAccountsPanel,
+  AccountLinkCallbackNotice,
+} from "@/components/connected-accounts-panel";
+import { LoginActivityPanel } from "@/components/login-activity-panel";
 import { settingsTab } from "@/lib/settings-navigation";
 import { profileDraftValue } from "@/lib/react-compat";
-import { useRoles } from "@/hooks/use-roles";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
     meta: [
       { title: "Settings — Open-Connect" },
-      { name: "description", content: "Account, workspace, integrations, data, and security." },
+      {
+        name: "description",
+        content: "Account profile, security, data controls, and integrations.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -51,9 +42,9 @@ const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 function SettingsPage() {
   const queryClient = useQueryClient();
+  const { user } = Route.useRouteContext();
   const location = useLocation();
   const navigate = Route.useNavigate();
-  const { isAdmin } = useRoles();
   const fileRef = useRef<HTMLInputElement>(null);
   const [nameDraft, setNameDraft] = useState<{ userId: string; value: string } | null>(null);
   const [avatarDraft, setAvatarDraft] = useState<{ userId: string; value: string } | null>(null);
@@ -187,6 +178,7 @@ function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-14">
+      <AccountLinkCallbackNotice />
       <h1 className="text-3xl font-semibold">Settings</h1>
       <p className="mt-2 text-sm text-muted-foreground">
         Manage your profile, workspace access, connected apps, data, and security.
@@ -204,16 +196,10 @@ function SettingsPage() {
           className="h-auto w-full flex-wrap justify-start gap-2"
         >
           <TabsTrigger value="profile">Profile</TabsTrigger>
-          <TabsTrigger value="approvals">Approval requests</TabsTrigger>
           <TabsTrigger value="security">Security & login</TabsTrigger>
-          <TabsTrigger value="workspace">Workspace</TabsTrigger>
-          <TabsTrigger value="apps">Apps & system</TabsTrigger>
           <TabsTrigger value="data">Data Controls</TabsTrigger>
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
         </TabsList>
-        <TabsContent value="approvals">
-          <ControlApprovalsPanel />
-        </TabsContent>
         <TabsContent value="profile">
           <Card className="shadow-panel">
             <CardHeader>
@@ -289,7 +275,9 @@ function SettingsPage() {
             </CardContent>
           </Card>
         </TabsContent>
-        <TabsContent value="security">
+        <TabsContent value="security" className="space-y-4">
+          <ConnectedAccountsPanel />
+          <LoginActivityPanel />
           <Card className="shadow-panel">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
@@ -347,99 +335,13 @@ function SettingsPage() {
             </CardContent>
           </Card>
         </TabsContent>
-        <TabsContent value="workspace">
-          <div className="grid gap-4 md:grid-cols-2">
-            <SettingsLinkCard
-              to="/orgs"
-              icon={Building2}
-              title="Organization & workspace"
-              description="Admin-managed organization membership, groups, and role assignments."
-            />
-            <SettingsLinkCard
-              to="/roles"
-              icon={KeyRound}
-              title="Access reference"
-              description="Review Admin, Developer, and Member access across platform, organization, and project scopes."
-            />
-            <SettingsLinkCard
-              to="/projects"
-              icon={Network}
-              title="Projects & environments"
-              description="Open assigned projects and access project-scoped environments."
-            />
-            {isAdmin ? (
-              <SettingsLinkCard
-                to="/admin"
-                icon={UsersRound}
-                title="User roles"
-                description="Admins assign platform-level Member, Developer, and Admin roles."
-              />
-            ) : null}
-          </div>
-        </TabsContent>
-        <TabsContent value="apps">
-          <div className="grid gap-4 md:grid-cols-2">
-            <SettingsLinkCard
-              to="/models"
-              icon={Sparkles}
-              title="AI Gateway"
-              description="Configure model providers and routing. Provider keys are managed separately from client integrations."
-            />
-            <SettingsLinkCard
-              to="/connections"
-              icon={Network}
-              title="Connectors"
-              description="Connect Open-Connect to external app accounts. Connections belong to their owner and are shared with projects explicitly."
-            />
-            <SettingsLinkCard
-              to="/secrets"
-              icon={ShieldCheck}
-              title="Credentials & secrets"
-              description="Use brokered credential references without exposing raw secret values."
-            />
-            <SettingsLinkCard
-              to="/automations"
-              icon={Bell}
-              title="Automations & notifications"
-              description="Review scheduled workflows, alerts, and operational actions."
-            />
-          </div>
-        </TabsContent>
-        <TabsContent value="data" className="space-y-5">
+        <TabsContent value="data">
           <DataControlsPanel />
-          <div className="grid gap-4 md:grid-cols-2">
-            <SettingsLinkCard
-              to="/memory"
-              icon={Brain}
-              title="Memory"
-              description="Manage durable project decisions, instructions, preferences, and summaries."
-            />
-            <SettingsLinkCard
-              to="/knowledge"
-              icon={BookOpen}
-              title="Knowledge"
-              description="Manage reusable documents, repositories, URLs, and other project sources."
-            />
-          </div>
         </TabsContent>
-        <TabsContent value="integrations">
+        <TabsContent value="integrations" className="space-y-4">
+          <IncomingWebhooks userId={user.id} />
+          <NotificationChannels userId={user.id} />
           <div className="grid gap-4 md:grid-cols-2">
-            <a
-              href="/integrations?section=api-key"
-              className="block rounded-xl border bg-card p-5 shadow-panel transition-colors hover:bg-accent/40"
-            >
-              <div className="flex items-start gap-3">
-                <div className="rounded-lg bg-primary/10 p-2 text-primary">
-                  <KeyRound className="size-4" />
-                </div>
-                <div>
-                  <h2 className="font-medium">API Key</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Create and manage scoped keys for clients that use bearer authentication.
-                  </p>
-                </div>
-              </div>
-            </a>
             <a
               href="/integrations?section=apps"
               className="block rounded-xl border bg-card p-5 shadow-panel transition-colors hover:bg-accent/40"
@@ -456,86 +358,9 @@ function SettingsPage() {
                 </div>
               </div>
             </a>
-            <a
-              href="/integrations?section=ai-agents"
-              className="block rounded-xl border bg-card p-5 shadow-panel transition-colors hover:bg-accent/40"
-            >
-              <div className="flex items-start gap-3">
-                <div className="rounded-lg bg-primary/10 p-2 text-primary">
-                  <Bot className="size-4" />
-                </div>
-                <div>
-                  <h2 className="font-medium">AI Agents</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Set up AI clients such as ChatGPT to connect with Open-Connect using OAuth or
-                    MCP.
-                  </p>
-                </div>
-              </div>
-            </a>
-            <a
-              href="/integrations?section=custom-mcp"
-              className="block rounded-xl border bg-card p-5 shadow-panel transition-colors hover:bg-accent/40"
-            >
-              <div className="flex items-start gap-3">
-                <div className="rounded-lg bg-primary/10 p-2 text-primary">
-                  <Server className="size-4" />
-                </div>
-                <div>
-                  <h2 className="font-medium">Custom MCP</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Add and manage remote MCP servers separately from Connectors and Marketplace
-                    resources.
-                  </p>
-                </div>
-              </div>
-            </a>
           </div>
         </TabsContent>
       </Tabs>
     </div>
-  );
-}
-
-function SettingsLinkCard({
-  to,
-  icon: Icon,
-  title,
-  description,
-  hash,
-}: {
-  to:
-    | "/orgs"
-    | "/roles"
-    | "/projects"
-    | "/admin"
-    | "/models"
-    | "/integrations"
-    | "/connections"
-    | "/secrets"
-    | "/automations"
-    | "/memory"
-    | "/knowledge";
-  hash?: string;
-  icon: typeof Building2;
-  title: string;
-  description: string;
-}) {
-  return (
-    <Link
-      to={to}
-      {...(hash ? { hash } : {})}
-      className="block rounded-xl border bg-card p-5 shadow-panel transition-colors hover:bg-accent/40"
-    >
-      <div className="flex items-start gap-3">
-        <div className="rounded-lg bg-primary/10 p-2 text-primary">
-          <Icon className="size-4" />
-        </div>
-        <div>
-          <h2 className="font-medium">{title}</h2>
-          <p className="mt-1 text-sm text-muted-foreground">{description}</p>
-        </div>
-      </div>
-    </Link>
   );
 }

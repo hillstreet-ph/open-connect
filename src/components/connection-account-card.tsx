@@ -1,14 +1,16 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { RefreshCw, Unplug, Wrench, UserRound } from "lucide-react";
+import { RefreshCw, Unplug, Wrench, UserRound, Pencil } from "lucide-react";
 import {
   refreshConnectorCapabilities,
   setConnectorToolPermission,
   connectorStudioDraft,
 } from "@/lib/connector-capabilities.functions";
+import { renameAppConnection } from "@/lib/connections.functions";
 import { toast } from "sonner";
 import { getConnectionDetails } from "@/lib/connection-details.functions";
+import { BrandLogo } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -22,6 +24,7 @@ type Account = {
   status: string;
   provider_account_id: string | null;
   scopes: string[] | null;
+  logo?: string;
   metadata?: {
     endpoint_url?: string;
     description?: string;
@@ -30,12 +33,29 @@ type Account = {
     icon_data?: string;
     capabilities?: unknown;
     disabled_tools?: string[];
+    disabled_skills?: string[];
+    disabled_toolkits?: string[];
   };
   identity: { label: string; login: string; name: string; email: string };
 };
 
+type PermissionMode = "allow" | "ask" | "deny";
+
+type ConnectorPermissions = {
+  tools: PermissionMode;
+  skills: PermissionMode;
+  apps: PermissionMode;
+};
+
+const defaultPermissions: ConnectorPermissions = {
+  tools: "allow",
+  skills: "allow",
+  apps: "allow",
+};
+
 export function ConnectionAccountCard({
   account,
+  category,
   statusLabel,
   busy,
   reconnectReady,
@@ -43,6 +63,7 @@ export function ConnectionAccountCard({
   onDisconnect,
 }: {
   account: Account;
+  category?: string | undefined;
   statusLabel: string;
   busy: boolean;
   reconnectReady: boolean;
@@ -62,8 +83,11 @@ export function ConnectionAccountCard({
     onError: (e) => toast.error(e.message),
   });
   const permission = useMutation({
-    mutationFn: (input: { tool: string; enabled: boolean }) =>
-      permissionFn({ data: { id: account.id, ...input } }),
+    mutationFn: (input: {
+      tool: string;
+      enabled: boolean;
+      kind?: "tools" | "skills" | "apps" | undefined;
+    }) => permissionFn({ data: { id: account.id, ...input } }),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["app-connections"] });
       void client.invalidateQueries({ queryKey: ["connection-details", account.id] });
@@ -88,43 +112,139 @@ export function ConnectionAccountCard({
     | undefined;
   const [expanded, setExpanded] = useState(false);
   const [search, setSearch] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editLabel, setEditLabel] = useState("");
+  const [permissions, setPermissions] = useState<Record<string, ConnectorPermissions>>(() => {
+    if (typeof window === "undefined") return {};
+    try {
+      const stored = window.localStorage.getItem("connector-permissions");
+      return stored ? (JSON.parse(stored) as Record<string, ConnectorPermissions>) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  function updatePermission(scope: "tools" | "skills" | "apps", value: PermissionMode) {
+    const current = permissions[account.id] ?? defaultPermissions;
+    const next = { ...permissions, [account.id]: { ...current, [scope]: value } };
+    setPermissions(next);
+    try {
+      window.localStorage.setItem("connector-permissions", JSON.stringify(next));
+    } catch {
+      // Storage may be unavailable; the in-memory preference still applies.
+    }
+  }
+  const renameFn = useServerFn(renameAppConnection);
+  const rename = useMutation({
+    mutationFn: (input: { displayName: string; accountLabel: string }) =>
+      renameFn({ data: { id: account.id, ...input } }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ["app-connections"] });
+      void client.invalidateQueries({ queryKey: ["connection-details", account.id] });
+      setEditing(false);
+      toast.success("Account name updated");
+    },
+    onError: (e) => toast.error(e.message),
+  });
   const detailsFn = useServerFn(getConnectionDetails);
   const details = useQuery({
     queryKey: ["connection-details", account.id, account.status],
     queryFn: () => detailsFn({ data: { connectionId: account.id } }),
     enabled: expanded || account.status === "connected",
     staleTime: 60_000,
+    refetchInterval: 15_000,
   });
   const identity = details.data?.identity ?? account.identity;
   const title = identity.name || identity.login || identity.email || identity.label;
+  const rawIdentityLines = [
+    identity.email,
+    identity.login ? `@${identity.login}` : "",
+    identity.label,
+  ];
+  const identityLines: string[] = [];
+  for (const line of rawIdentityLines) {
+    const trimmed = line.trim();
+    if (trimmed && trimmed !== title && !identityLines.includes(trimmed)) {
+      identityLines.push(trimmed);
+    }
+  }
   const tools = (snapshot?.tools ?? details.data?.tools ?? [])
     .map((t) => ({ name: t.name, description: t.description || "" }))
     .filter((tool) =>
       `${tool.name} ${tool.description}`.toLowerCase().includes(search.toLowerCase()),
     );
   return (
-    <article className="min-w-0 space-y-4 rounded-xl border bg-card p-4">
+    <article className="min-w-0 space-y-2 rounded-xl border bg-card p-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
+          <BrandLogo
+            provider={account.provider}
+            name={account.display_name}
+            logoUrl={account.logo}
+            size="sm"
+            className="mb-2"
+          />
           {account.display_name !== title && (
             <p className="mb-1 break-words text-sm font-semibold">{account.display_name}</p>
           )}
           {account.metadata?.icon_data && (
-            <img src={account.metadata.icon_data} alt="" className="mb-2 size-10 rounded-lg" />
+            <img src={account.metadata.icon_data} alt="" className="mb-2 size-8 rounded-lg" />
           )}
-          <p className="flex items-center gap-2 font-medium">
-            <UserRound className="size-4 shrink-0" aria-hidden="true" />
-            <span className="break-words">{title || "Account identity unavailable"}</span>
-          </p>
-          {identity.email && identity.email !== title ? (
-            <p className="mt-1 break-all text-sm text-muted-foreground">{identity.email}</p>
+          <div className="flex items-center gap-2">
+            <p className="flex min-w-0 items-center gap-2 font-medium">
+              <UserRound className="size-4 shrink-0" aria-hidden="true" />
+              <span className="break-words">{title || "Account identity unavailable"}</span>
+            </p>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="ml-auto size-7 shrink-0 p-0"
+              aria-label="Edit account name"
+              onClick={() => {
+                setEditName(account.display_name);
+                setEditLabel(identity.label || account.identity.label || "");
+                setEditing(true);
+              }}
+            >
+              <Pencil className="size-3.5" aria-hidden="true" />
+            </Button>
+          </div>
+          {editing ? (
+            <div className="mt-2 space-y-2">
+              <Input
+                aria-label="Connector display name"
+                placeholder="Display name"
+                maxLength={120}
+                value={editName}
+                onChange={(event) => setEditName(event.target.value)}
+              />
+              <Input
+                aria-label="Account label"
+                placeholder="Account label"
+                maxLength={160}
+                value={editLabel}
+                onChange={(event) => setEditLabel(event.target.value)}
+              />
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  disabled={rename.isPending}
+                  onClick={() => rename.mutate({ displayName: editName, accountLabel: editLabel })}
+                >
+                  {rename.isPending ? "Saving…" : "Save"}
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setEditing(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
           ) : null}
-          {identity.login && identity.login !== title ? (
-            <p className="text-sm text-muted-foreground">@{identity.login}</p>
-          ) : null}
-          {identity.label && identity.label !== title ? (
-            <p className="text-sm text-muted-foreground">{identity.label}</p>
-          ) : null}
+          {identityLines.map((line) => (
+            <p key={line} className="break-all text-xs text-muted-foreground">
+              {line}
+            </p>
+          ))}
           {account.metadata?.description && (
             <p className="mt-2 break-words text-sm text-muted-foreground">
               {account.metadata.description}
@@ -143,7 +263,7 @@ export function ConnectionAccountCard({
                 : ""}
             </p>
           )}
-          <p className="mt-1 break-all text-xs text-muted-foreground">
+          <p className="mt-1 truncate text-xs text-muted-foreground/70">
             Account reference: {account.provider_account_id || account.id}
           </p>
         </div>
@@ -202,8 +322,8 @@ export function ConnectionAccountCard({
         </div>
       )}
       {expanded ? (
-        <div id={`capabilities-${account.id}`} className="min-w-0 space-y-3 border-t pt-4">
-          <div className="flex items-center justify-between gap-2">
+        <div id={`capabilities-${account.id}`} className="min-w-0 space-y-3 border-t pt-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm font-medium">Account capabilities</p>
             <Button
               size="sm"
@@ -228,13 +348,12 @@ export function ConnectionAccountCard({
             <p className="text-xs text-muted-foreground">{details.data.identityNotice}</p>
           ) : null}
           <Tabs defaultValue="tools" className="min-w-0">
-            <TabsList className="flex h-auto flex-wrap justify-start">
+            <TabsList className="flex h-auto max-w-full flex-wrap justify-start overflow-x-auto">
               <TabsTrigger value="tools">Tools ({details.data?.tools.length ?? 0})</TabsTrigger>
               <TabsTrigger value="skills">Skills ({details.data?.skills.length ?? 0})</TabsTrigger>
-              <TabsTrigger value="toolkits">
-                Toolkits ({details.data?.toolkits.length ?? 0})
-              </TabsTrigger>
+              <TabsTrigger value="apps">Apps ({details.data?.toolkits.length ?? 0})</TabsTrigger>
               <TabsTrigger value="permissions">Permissions</TabsTrigger>
+              <TabsTrigger value="information">Information</TabsTrigger>
             </TabsList>
             <TabsContent value="tools" className="space-y-3">
               <Input
@@ -248,21 +367,23 @@ export function ConnectionAccountCard({
               ) : null}
               <div className="max-h-72 space-y-2 overflow-auto">
                 {tools.map((tool) => (
-                  <div key={tool.name} className="rounded-lg border p-3">
+                  <div key={tool.name} className="rounded-lg border p-2.5">
                     <p className="break-all text-sm font-medium">{tool.name}</p>
-                    {snapshot?.tools && (
-                      <label className="mt-2 flex items-center gap-2 text-xs">
-                        <input
-                          type="checkbox"
-                          checked={!account.metadata?.disabled_tools?.includes(tool.name)}
-                          disabled={permission.isPending}
-                          onChange={(e) =>
-                            permission.mutate({ tool: tool.name, enabled: e.target.checked })
-                          }
-                        />
-                        Allow this tool for this connection
-                      </label>
-                    )}
+                    <label className="mt-2 flex items-center gap-2 text-xs">
+                      <input
+                        type="checkbox"
+                        checked={!account.metadata?.disabled_tools?.includes(tool.name)}
+                        disabled={permission.isPending}
+                        onChange={(e) =>
+                          permission.mutate({
+                            tool: tool.name,
+                            enabled: e.target.checked,
+                            kind: "tools",
+                          })
+                        }
+                      />
+                      Allow this tool for this connection
+                    </label>
                     <p className="mt-1 whitespace-pre-wrap break-words text-xs text-muted-foreground">
                       {tool.description}
                     </p>
@@ -281,10 +402,25 @@ export function ConnectionAccountCard({
                 account access.
               </p>
               {details.data?.skills.map((skill) => (
-                <div key={skill.id} className="rounded-lg border p-3">
+                <div key={skill.id} className="rounded-lg border p-2.5">
                   <p className="text-sm font-medium">{skill.name}</p>
                   <p className="text-xs text-muted-foreground">{skill.description}</p>
                   <Badge variant="outline">{skill.verified ? "Verified" : "Unverified"}</Badge>
+                  <label className="mt-2 flex items-center gap-2 text-xs">
+                    <input
+                      type="checkbox"
+                      checked={!account.metadata?.disabled_skills?.includes(skill.id)}
+                      disabled={permission.isPending}
+                      onChange={(e) =>
+                        permission.mutate({
+                          tool: skill.id,
+                          enabled: e.target.checked,
+                          kind: "skills",
+                        })
+                      }
+                    />
+                    Allow this skill for this connection
+                  </label>
                 </div>
               ))}
               {details.isSuccess && !details.data.skills.length ? (
@@ -294,24 +430,63 @@ export function ConnectionAccountCard({
                 <Link to="/library">Open resources</Link>
               </Button>
             </TabsContent>
-            <TabsContent value="toolkits" className="space-y-3">
+            <TabsContent value="apps" className="space-y-3">
               <p className="text-xs text-muted-foreground">
-                Related toolkits already in your private library. Discovery does not install,
-                publish, or grant permissions.
+                Related apps already in your private library. Discovery does not install, publish,
+                or grant permissions.
               </p>
               {details.data?.toolkits.map((toolkit) => (
-                <div key={toolkit.id} className="rounded-lg border p-3">
+                <div key={toolkit.id} className="rounded-lg border p-2.5">
                   <p className="text-sm font-medium">{toolkit.name}</p>
                   <p className="text-xs text-muted-foreground">{toolkit.description}</p>
+                  <label className="mt-2 flex items-center gap-2 text-xs">
+                    <input
+                      type="checkbox"
+                      checked={!account.metadata?.disabled_toolkits?.includes(toolkit.id)}
+                      disabled={permission.isPending}
+                      onChange={(e) =>
+                        permission.mutate({
+                          tool: toolkit.id,
+                          enabled: e.target.checked,
+                          kind: "apps",
+                        })
+                      }
+                    />
+                    Allow this app for this connection
+                  </label>
                 </div>
               ))}
               {details.isSuccess && !details.data?.toolkits.length ? (
-                <p className="text-sm text-muted-foreground">
-                  No related toolkits in your library.
-                </p>
+                <p className="text-sm text-muted-foreground">No related apps in your library.</p>
               ) : null}
             </TabsContent>
             <TabsContent value="permissions" className="space-y-3">
+              <ul className="space-y-1 text-sm">
+                <li className="flex items-start gap-2">
+                  <Badge variant="outline" className="shrink-0">
+                    Interact
+                  </Badge>
+                  <span className="text-muted-foreground">
+                    Use the app on your behalf for the actions you approve.
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <Badge variant="outline" className="shrink-0">
+                    Read
+                  </Badge>
+                  <span className="text-muted-foreground">
+                    Read the account data needed for each approved request.
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <Badge variant="outline" className="shrink-0">
+                    Write
+                  </Badge>
+                  <span className="text-muted-foreground">
+                    Create and update data only for actions you explicitly approve.
+                  </span>
+                </li>
+              </ul>
               <p className="text-xs text-muted-foreground">
                 Granted scopes reported for this connection.
               </p>
@@ -332,6 +507,69 @@ export function ConnectionAccountCard({
                   them.
                 </p>
               ) : null}
+              <div className="space-y-2 rounded-lg border border-border/70 p-2.5">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Agent access
+                </p>
+                {(["tools", "skills", "apps"] as const).map((scope) => {
+                  const current = permissions[account.id] ?? defaultPermissions;
+                  return (
+                    <label
+                      key={scope}
+                      className="flex items-center justify-between gap-3 text-sm capitalize"
+                    >
+                      {scope}
+                      <select
+                        value={current[scope]}
+                        onChange={(event) =>
+                          updatePermission(scope, event.target.value as PermissionMode)
+                        }
+                        className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                      >
+                        <option value="allow">Always allow</option>
+                        <option value="ask">Ask every time</option>
+                        <option value="deny">Don&apos;t allow</option>
+                      </select>
+                    </label>
+                  );
+                })}
+                <p className="text-xs text-muted-foreground">
+                  Applies when agents use this connector. Default is Always allow.
+                </p>
+              </div>
+            </TabsContent>
+            <TabsContent value="information" className="space-y-3">
+              <dl className="grid gap-2 sm:grid-cols-2">
+                <div className="min-w-0">
+                  <dt className="text-xs text-muted-foreground">About</dt>
+                  <dd className="text-sm">Approved app access for your workspace agents.</dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="text-xs text-muted-foreground">Category</dt>
+                  <dd className="text-sm">{category || "Productivity"}</dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="text-xs text-muted-foreground">Developer</dt>
+                  <dd className="text-sm">Kairo Casino</dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="text-xs text-muted-foreground">Version</dt>
+                  <dd className="text-sm">0.8.0</dd>
+                </div>
+                <div className="min-w-0 sm:col-span-2">
+                  <dt className="text-xs text-muted-foreground">Website</dt>
+                  <dd className="truncate text-sm">
+                    <a
+                      className="text-primary underline-offset-4 hover:underline"
+                      href="https://open-connect.site"
+                      target="_blank"
+                      rel="noreferrer noopener"
+                    >
+                      https://open-connect.site
+                    </a>
+                  </dd>
+                </div>
+              </dl>
             </TabsContent>
           </Tabs>
         </div>

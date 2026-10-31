@@ -56,7 +56,7 @@ export function CommandCodeSetup() {
           Providers. Keep tokens out of commands, chat, and committed configuration.
         </p>
         <div className="flex flex-wrap gap-4">
-          <Link className="underline" to="/integrations" search={{ section: "custom-mcp" }}>
+          <Link className="underline" to="/integrations" search={{ section: "api-key" }}>
             Open MCP integrations
           </Link>
           <a
