@@ -66,7 +66,7 @@ async function expandGitHubUrl(url: URL): Promise<ImportSource[]> {
       throw new Error(
         "Repository tree is truncated. Import a specific resource file or a smaller directory.",
       );
-    const prefix = dirPath ? `${dirPath.replace(/\/+$/, "")}/` : "";
+    const prefix = dirPath ? `${dirPath.replace(/\/*$/, "")}/` : "";
     const candidates = tree.tree.filter(
       (t) =>
         t.type === "blob" &&
@@ -272,14 +272,16 @@ function parseSkillsInstallCommand(raw: string): { url: string; skill: string | 
   if ((tokens[0] || "").toLowerCase() !== "npx") return null;
   if ((tokens[1] || "").toLowerCase() !== "skills") return null;
   if ((tokens[2] || "").toLowerCase() !== "add") return null;
-  const url = tokens[3];
+  const url = tokens[3] ?? "";
   if (!url.startsWith("http://") && !url.startsWith("https://")) return null;
   let skill: string | null = null;
   for (let i = 4; i < tokens.length; i++) {
-    const token = tokens[i] || "";
-    const next = tokens[i + 1];
-    if ((token === "--skill" || token === "--agent") && next && !next.startsWith("--")) {
-      skill = next;
+    const token = tokens[i] ?? "";
+    const next = tokens[i + 1] ?? "";
+    if (token === "--skill" || token === "--agent") {
+      if (next && !next.startsWith("--")) {
+        skill = next;
+      }
     } else if (token.startsWith("--skill=") || token.startsWith("--agent=")) {
       const value = token.slice(token.indexOf("=") + 1);
       if (value) skill = value;
@@ -288,10 +290,7 @@ function parseSkillsInstallCommand(raw: string): { url: string; skill: string | 
   return { url, skill };
 }
 
-async function expandImportUrl(
-  url: URL,
-  skill?: string | null,
-): Promise<ImportSource[]> {
+async function expandImportUrl(url: URL, skill?: string | null): Promise<ImportSource[]> {
   if (skill) {
     const segments = url.pathname.split("/").filter(Boolean);
     const isGithub = url.hostname === "github.com";
@@ -300,9 +299,7 @@ async function expandImportUrl(
     if ((isGithub || isSkillsSh) && owner && repo && /^[a-zA-Z0-9_.-]+$/.test(owner + repo)) {
       return expandSkillSources(owner, repo, skill);
     }
-    throw new Error(
-      "Skill selection is supported for GitHub and skills.sh repository URLs only.",
-    );
+    throw new Error("Skill selection is supported for GitHub and skills.sh repository URLs only.");
   }
   if (url.hostname === "github.com") {
     return expandGitHubUrl(url);
