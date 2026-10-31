@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useRouteContext } from "@tanstack/react-router";
-import { Check, GitBranch, Globe, Link2, Loader2, Unlink } from "lucide-react";
+import { Check, GitBranch, Globe, Link2, Loader2, RefreshCw, Unlink } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -153,6 +153,11 @@ function AccountIdentities({ userId }: { userId: string }) {
           Connect Google or GitHub to sign in to this account without a password. A connected
           provider uses the same profile, roles, and data.
         </CardDescription>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Connected means the provider is linked to this account. To test sign-in, open
+          open-connect.site in a private browser window, choose the provider, and check that your
+          usual profile and data appear. Your current session stays signed in.
+        </p>
       </CardHeader>
       <CardContent>
         {query.isLoading ? (
@@ -162,7 +167,7 @@ function AccountIdentities({ userId }: { userId: string }) {
           </div>
         ) : query.isError ? (
           <p className="text-sm text-muted-foreground">
-            Could not load your connected accounts. Please refresh the page.
+            Could not load your connected accounts. Try refreshing the connection status.
           </p>
         ) : (
           <ul className="divide-y divide-border/70">
@@ -230,6 +235,18 @@ function AccountIdentities({ userId }: { userId: string }) {
             ))}
           </ul>
         )}
+        {!query.isLoading ? (
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-4"
+            disabled={query.isFetching || connect.isPending || disconnect.isPending}
+            onClick={() => void query.refetch()}
+          >
+            <RefreshCw className={query.isFetching ? "mr-2 size-4 animate-spin" : "mr-2 size-4"} />
+            {query.isFetching ? "Checking…" : "Refresh connection status"}
+          </Button>
+        ) : null}
       </CardContent>
     </Card>
   );
