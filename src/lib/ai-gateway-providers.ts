@@ -1,3 +1,11 @@
+export type AiGatewayProvider = {
+  id: string;
+  name: string;
+  baseUrl: string;
+  oauth?: boolean;
+  custom?: boolean;
+};
+
 export const AI_GATEWAY_PROVIDERS = [
   { id: "openrouter", name: "OpenRouter", baseUrl: "https://openrouter.ai/api/v1" },
   { id: "openai", name: "OpenAI", baseUrl: "https://api.openai.com/v1" },
@@ -16,7 +24,7 @@ export const AI_GATEWAY_PROVIDERS = [
   { id: "xai", name: "xAI / Grok", baseUrl: "https://api.x.ai/v1" },
   { id: "mistral", name: "Mistral", baseUrl: "https://api.mistral.ai/v1" },
   { id: "deepseek", name: "DeepSeek", baseUrl: "https://api.deepseek.com/v1" },
-] as const;
+] as const satisfies AiGatewayProvider[];
 
 export type AiGatewayProvider = typeof AI_GATEWAY_PROVIDERS[number];
 
