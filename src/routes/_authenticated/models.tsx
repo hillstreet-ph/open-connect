@@ -1,10 +1,19 @@
 import { modelProviderState } from "@/lib/model-provider-state";
 import { ApiKeysCard } from "@/components/api-keys-card";
 import { testFreeModel } from "@/lib/model-check.functions";
+import { startAiProviderSignIn } from "@/lib/ai-provider-signin.functions";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { CheckCircle2, KeyRound, List, Loader2 } from "lucide-react";
+import {
+  BadgeCheck,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  KeyRound,
+  List,
+  Loader2,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { BrandLogo } from "@/components/brand-logo";
@@ -38,7 +47,7 @@ export const Route = createFileRoute("/_authenticated/models")({
 });
 
 const aliases = [
-  { alias: "open-connect/auto", body: "Free-only · routes across connected OpenRouter / LiteLLM" },
+  { alias: "open-connect/auto", body: "Free-first · rotates on limits · paid fallback" },
   { alias: "open-connect/fast", body: "Low latency · gpt-4o-mini" },
   { alias: "open-connect/coding", body: "Code · gpt-4o" },
   { alias: "open-connect/reasoning", body: "Reasoning · gpt-4o" },
@@ -66,7 +75,17 @@ function ModelsPage() {
   const providerTest = useMutation({
     mutationFn: (input: { provider: string; api_key: string }) => testProviderFn({ data: input }),
   });
+  const signInFn = useServerFn(startAiProviderSignIn);
+  const providerSignIn = useMutation({
+    mutationFn: (provider: string) => signInFn({ data: { provider } }),
+    onSuccess: (result) => {
+      window.open(result.authorization_url, "_blank", "noopener");
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Subscription sign-in unavailable"),
+  });
   const [activeProvider, setActiveProvider] = useState<string | null>(null);
+  const [aliasesOpen, setAliasesOpen] = useState(false);
   const disconnectFn = useServerFn(disconnectApp);
   const [connectionId, setConnectionId] = useState<string | null>(null);
   const [accountLabel, setAccountLabel] = useState("AI Gateway");
@@ -81,6 +100,7 @@ function ModelsPage() {
     queryKey: ["free-model-catalog", user?.id],
     queryFn: () => freeModelsFn({}),
     enabled: Boolean(user),
+    refetchInterval: 60_000,
   });
   const reconnectProviders = new Set(
     AI_GATEWAY_PROVIDERS.filter(
@@ -144,8 +164,10 @@ function ModelsPage() {
       </Badge>
       <h1 className="text-3xl font-semibold sm:text-4xl">AI Gateway</h1>
       <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
-        One gateway for OpenAI, Claude, Gemini, Grok and the full OpenRouter catalog. Provider
-        secrets stay on the server; clients only use an Open-Connect key.
+        One gateway for OpenAI, Claude, Gemini, Grok and the full OpenRouter catalog. Auto routing
+        uses free models first, rotates automatically when limits are hit, and falls back to paid or
+        subscription models. Provider secrets stay on the server; clients only use an Open-Connect
+        key.
       </p>
 
       <div className="mt-8">
@@ -207,22 +229,43 @@ function ModelsPage() {
                 Use <span className="font-mono text-primary">open-connect/auto</span> for all
                 projects and clients. It routes through your connected OpenRouter free-model router,
                 then tries only provider free endpoints, Ollama free-plan models, and LiteLLM models
-                explicitly priced at zero. Other connected models appear below and may cost money
-                according to the provider.
+                explicitly priced at zero. The list refreshes automatically every minute; other
+                connected models appear below and may cost money according to the provider.
               </CardDescription>
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => void freeModels.refetch()}
-              disabled={freeModels.isFetching || !user}
-            >
-              {freeModels.isFetching ? <Loader2 className="mr-1 size-3.5 animate-spin" /> : null}
-              Refresh list
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                disabled={modelTest.isPending}
+                onClick={() => modelTest.mutate()}
+                title="Send a short test through your connected free-model routes"
+              >
+                {modelTest.isPending ? <Loader2 className="mr-1 size-3.5 animate-spin" /> : null}
+                Test
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => void freeModels.refetch()}
+                disabled={freeModels.isFetching || !user}
+              >
+                {freeModels.isFetching ? <Loader2 className="mr-1 size-3.5 animate-spin" /> : null}
+                Refresh list
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
+          {modelTest.data ? (
+            <p role="status" className="mb-3 text-xs text-emerald-600 dark:text-emerald-400">
+              Inference verified: {modelTest.data.model}
+            </p>
+          ) : null}
+          {modelTest.error ? (
+            <p role="alert" className="mb-3 text-xs text-destructive">
+              {modelTest.error.message}
+            </p>
+          ) : null}
           {!user ? (
             <p className="text-sm text-muted-foreground">
               Sign in to view your connected free models.
@@ -273,7 +316,9 @@ function ModelsPage() {
               ) : (
                 <p className="text-sm text-muted-foreground">
                   {reconnectProviders.size > 0
-                    ? `A connected gateway is missing its saved credential reference (${[...reconnectProviders].join(", ")}). Reconnect its credential below, then refresh the list.`
+                    ? `A connected gateway is missing its saved credential reference (${[
+                        ...reconnectProviders,
+                      ].join(", ")}). Reconnect its credential below, then refresh the list.`
                     : "No individually priced free models were found. Auto still uses the OpenRouter free router when that connection is available. Connect OpenRouter or configure free pricing on your LiteLLM proxy, then refresh."}
                 </p>
               )}
@@ -303,62 +348,78 @@ function ModelsPage() {
         </CardContent>
       </Card>
 
-      <h2 className="mt-14 text-xl font-semibold">Stable aliases</h2>
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {aliases.map((item) => (
-          <Card key={item.alias} className="p-4">
-            <p className="font-mono text-sm text-primary">{item.alias}</p>
-            <p className="mt-1 text-xs text-muted-foreground">{item.body}</p>
-          </Card>
-        ))}
+      <div className="mt-14 flex items-center justify-between gap-3">
+        <h2 className="text-xl font-semibold">Stable aliases</h2>
+        <Button
+          size="sm"
+          variant="ghost"
+          aria-expanded={aliasesOpen}
+          onClick={() => setAliasesOpen((open) => !open)}
+        >
+          {aliasesOpen ? (
+            <ChevronUp className="mr-1 size-4" />
+          ) : (
+            <ChevronDown className="mr-1 size-4" />
+          )}
+          {aliasesOpen ? "Hide" : "Show"}
+        </Button>
       </div>
+      {aliasesOpen ? (
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {aliases.map((item) => (
+            <Card key={item.alias} className="p-4">
+              <p className="font-mono text-sm text-primary">{item.alias}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{item.body}</p>
+            </Card>
+          ))}
+        </div>
+      ) : null}
 
-      <Card className="mt-8">
-        <CardHeader>
-          <CardTitle>Test free inference</CardTitle>
-          <CardDescription>
-            Send a short test through your connected free-model routes. Free models are subject to
-            provider quotas and availability.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button disabled={modelTest.isPending} onClick={() => modelTest.mutate()}>
-            {modelTest.isPending ? "Testing…" : "Test free model"}
-          </Button>
-          {modelTest.data && (
-            <p role="status" className="mt-3 text-sm">
-              Inference verified: {modelTest.data.model}
-            </p>
-          )}
-          {modelTest.error && (
-            <p role="alert" className="mt-3 text-sm text-destructive">
-              {modelTest.error.message}
-            </p>
-          )}
-        </CardContent>
-      </Card>
       <h2 className="mt-14 text-xl font-semibold">AI provider credentials</h2>
       <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-        Connect compatible model APIs here to load their model catalogs into the gateway. Auto uses
-        only provider models explicitly marked free or configured at zero cost; named paid models
-        remain available through the gateway and follow the provider's billing.
+        Connect compatible model APIs here to load their model catalogs into the gateway. Connected
+        providers are fetched in real time, free and paid. Auto uses only provider models explicitly
+        marked free or configured at zero cost first, then rotates to other models automatically
+        when limits are hit; named paid models remain available through the gateway and follow the
+        provider's billing.
       </p>
-      <div className="mt-5 grid gap-4 xl:grid-cols-2">
+      <div className="mt-5 grid gap-3 xl:grid-cols-2">
         {AI_GATEWAY_PROVIDERS.map((provider) => (
-          <Card key={provider.id} className="p-4">
-            <div className="flex flex-wrap items-start justify-between gap-3">
+          <Card key={provider.id} className="p-3">
+            <div className="flex flex-wrap items-start justify-between gap-2">
               <div className="flex min-w-0 flex-1 items-center gap-2">
                 <BrandLogo provider={provider.id} name={provider.name} size="sm" />
-                <span className="break-words font-medium">{provider.name}</span>
+                <span className="break-words text-sm font-medium">{provider.name}</span>
+                {provider.official ? (
+                  <Badge variant="outline" className="text-[10px] text-primary">
+                    <BadgeCheck className="mr-1 size-3" /> Official provider
+                  </Badge>
+                ) : null}
               </div>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={!user || configureMutation.isPending || providerTest.isPending}
-                onClick={() => openProvider(provider)}
-              >
-                Add account
-              </Button>
+              <div className="flex items-center gap-2">
+                {provider.id === "openai" || provider.id === "anthropic" ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={!user || providerSignIn.isPending}
+                    onClick={() => providerSignIn.mutate(provider.id)}
+                    title="Sign in with your provider account to use subscription models"
+                  >
+                    {providerSignIn.isPending ? (
+                      <Loader2 className="mr-1 size-3.5 animate-spin" />
+                    ) : null}
+                    {provider.id === "openai" ? "Sign in · ChatGPT" : "Sign in · Claude"}
+                  </Button>
+                ) : null}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={!user || configureMutation.isPending || providerTest.isPending}
+                  onClick={() => openProvider(provider)}
+                >
+                  Add account
+                </Button>
+              </div>
             </div>
             {provider.id === "anthropic" ? (
               <p className="mt-2 text-xs text-muted-foreground">
@@ -366,9 +427,18 @@ function ModelsPage() {
                 chat through /v1.
               </p>
             ) : null}
-            <div className="mt-3 space-y-2">
+            {provider.id === "openai" || provider.id === "anthropic" ? (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Sign in uses your ChatGPT / Claude subscription once the provider OAuth app is
+                configured. API key accounts stay fully supported.
+              </p>
+            ) : null}
+            <div className="mt-2 space-y-2">
               {modelProviderState(connections.data ?? [], provider.id).accounts.map((account) => (
-                <div key={account.id} className="space-y-2 rounded-lg border border-border/70 p-3">
+                <div
+                  key={account.id}
+                  className="space-y-2 rounded-lg border border-border/70 px-3 py-2"
+                >
                   <p className="break-words text-sm">
                     {account.identity.label ||
                       account.identity.email ||
@@ -409,7 +479,7 @@ function ModelsPage() {
               ))}
             </div>
             {activeProvider === provider.id ? (
-              <div className="mt-4 space-y-3 border-t border-border/70 pt-4">
+              <div className="mt-3 space-y-3 border-t border-border/70 pt-3">
                 <div className="space-y-1.5">
                   <Label htmlFor={`account-label-${provider.id}`}>Account label</Label>
                   <Input
@@ -420,13 +490,15 @@ function ModelsPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor={`provider-url-${provider.id}`}>API base URL</Label>
+                  <Label htmlFor={`provider-url-${provider.id}`}>
+                    API base URL (custom endpoint supported)
+                  </Label>
                   <Input
                     id={`provider-url-${provider.id}`}
-                    readOnly
                     type="url"
                     value={providerUrl}
                     onChange={(event) => setProviderUrl(event.target.value)}
+                    placeholder="https://your-custom-provider.com/v1"
                     className="font-mono text-xs"
                   />
                 </div>
@@ -492,16 +564,16 @@ function ModelsPage() {
                     Cancel
                   </Button>
                 </div>
-                {providerTest.data && (
+                {providerTest.data ? (
                   <p role="status" className="text-sm">
                     {providerTest.data.detail}
                   </p>
-                )}
-                {providerTest.error && (
+                ) : null}
+                {providerTest.error ? (
                   <p role="alert" className="text-sm text-destructive">
                     {providerTest.error.message}
                   </p>
-                )}
+                ) : null}
               </div>
             ) : null}
           </Card>
@@ -509,7 +581,7 @@ function ModelsPage() {
       </div>
       <p className="mt-3 text-xs text-muted-foreground">
         Provider keys are never returned to the browser after saving. Clients continue using only
-        their scoped Open‑Connect key and the shared `/v1` base URL.
+        their scoped Open-Connect key and the shared `/v1` base URL.
       </p>
     </div>
   );

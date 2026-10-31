@@ -113,7 +113,7 @@ export function ApiKeysCard({ modelOnly = false }: { modelOnly?: boolean }) {
             <KeyRound className="size-4" />
           </span>
           <CardTitle className="mt-3 text-base">
-            {modelOnly ? "API Key" : "Personal Token"}
+            {modelOnly ? "API Keys" : "Personal Token"}
           </CardTitle>
           <CardDescription>
             {modelOnly
@@ -250,15 +250,11 @@ export function ApiKeysCard({ modelOnly = false }: { modelOnly?: boolean }) {
                         ) : null}
                       </div>
                       <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-                        <span title={formatDateTime(key.created_at)}>
-                          Created {formatRelative(key.created_at)}
-                        </span>
+                        <span>Created {formatDateTime(key.created_at)}</span>
                         {" · "}
-                        <span
-                          title={key.last_used_at ? formatDateTime(key.last_used_at) : undefined}
-                        >
+                        <span>
                           {key.last_used_at
-                            ? `Last used ${formatRelative(key.last_used_at)}`
+                            ? `Last used ${formatDateTime(key.last_used_at)}`
                             : "Never used"}
                         </span>
                         {key.expires_at ? ` · Expires ${formatRelative(key.expires_at)}` : ""}
