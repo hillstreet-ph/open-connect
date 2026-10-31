@@ -17,7 +17,7 @@ type ImportSource = {
 };
 
 const RESOURCE_FILE_PATTERN =
-  /(?:^|\/)(?:skill\.md|plugin\.json|ai-plugin\.json|openapi\.json|agents\.md)$/i;
+  /(?:^|\/)(?:skill\.md|agent\.md|agents\.md|prompt\.md|guide\.md|tool\.md|plugin\.json|ai-plugin\.json|openapi\.json|mcp\.json)$/i;
 const MAX_IMPORT_SOURCES = 100;
 
 async function expandGitHubUrl(url: URL): Promise<ImportSource[]> {
@@ -42,6 +42,50 @@ async function expandGitHubUrl(url: URL): Promise<ImportSource[]> {
       version: `0.0.0+${commit.sha.slice(0, 12)}`,
       repository: `https://github.com/${owner}/${repo}`,
     });
+    return sources;
+  }
+  if (segments[2] === "tree" && segments.length >= 4) {
+    const ref = segments[3]!;
+    const dirPath = segments.slice(4).join("/");
+    const commit = JSON.parse(
+      await publicText(
+        `https://api.github.com/repos/${owner}/${repo}/commits/${encodeURIComponent(ref)}`,
+      ),
+    ) as { sha: string };
+    if (!/^[a-f0-9]{40}$/.test(commit.sha)) throw new Error("Source commit could not be pinned");
+    const pin = commit.sha;
+    const repository = JSON.parse(
+      await publicText(`https://api.github.com/repos/${owner}/${repo}`),
+    ) as { license?: { spdx_id?: string } };
+    const tree = JSON.parse(
+      await publicText(`https://api.github.com/repos/${owner}/${repo}/git/trees/${pin}?recursive=1`),
+    ) as { truncated?: boolean; tree: Array<{ path: string; type: string }> };
+    if (tree.truncated)
+      throw new Error(
+        "Repository tree is truncated. Import a specific resource file or a smaller directory.",
+      );
+    const prefix = dirPath ? `${dirPath.replace(/\/+$/, "")}/` : "";
+    const candidates = tree.tree.filter(
+      (t) =>
+        t.type === "blob" &&
+        (!prefix || t.path.startsWith(prefix)) &&
+        RESOURCE_FILE_PATTERN.test(t.path),
+    );
+    if (!candidates.length)
+      throw new Error(
+        "No supported resource files found in that directory. Supported files: skill.md, agent.md, agents.md, prompt.md, guide.md, tool.md, plugin.json, ai-plugin.json, openapi.json, mcp.json.",
+      );
+    if (candidates.length > 25)
+      throw new Error("Directory has more than 25 candidates. Import a smaller directory.");
+    for (const item of candidates)
+      sources.push({
+        url: `https://raw.githubusercontent.com/${owner}/${repo}/${pin}/${item.path}`,
+        identity: `github:${owner}/${repo}/${item.path}`,
+        filename: item.path.split("/").pop()!,
+        version: `0.0.0+${pin.slice(0, 12)}`,
+        repository: `https://github.com/${owner}/${repo}`,
+        license: repository.license?.spdx_id,
+      });
     return sources;
   }
   if (segments.length !== 2) throw new Error("Use a repository root or a GitHub blob URL");
