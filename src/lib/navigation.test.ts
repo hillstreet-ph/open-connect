@@ -175,6 +175,11 @@ test("Settings keeps only personal tabs and duplicates no sidebar destinations",
   assert.ok(settings.includes("LoginActivityPanel"));
   assert.ok(settings.indexOf('value="security"') < settings.indexOf("<LoginActivityPanel />"));
 
+  // Connected accounts (Google/GitHub linking) live in the same security tab.
+  assert.ok(settings.includes("ConnectedAccountsPanel"));
+  assert.ok(settings.includes("AccountLinkCallbackNotice"));
+  assert.ok(settings.indexOf('value="security"') < settings.indexOf("<ConnectedAccountsPanel />"));
+
   const panel = readFileSync(path.join(sourceRoot, "components/login-activity-panel.tsx"), "utf8");
   // The cache must be keyed to the account so a switch in another tab cannot show stale rows.
   assert.ok(panel.includes('queryKey: ["login-activity", userId]'));
