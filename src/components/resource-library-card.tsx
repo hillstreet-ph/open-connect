@@ -16,11 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AddToProjectButton } from "@/components/add-to-project";
 import { SUPPORTED_RESOURCE_LICENSES } from "@/lib/resource-license";
@@ -189,7 +185,7 @@ export function ResourceLibraryCard({
         name: name || file.name,
         slug: slug || "resource",
         description: description || "",
-        resource_type: resourceType,
+        resource_type,
         license,
       });
       toast.success("Saved as a draft for review");
@@ -425,7 +421,6 @@ export function ResourceLibraryCard({
             </ul>
           </CollapsibleContent>
         </Collapsible>
-        </div>
       </CardContent>
     </Card>
   );

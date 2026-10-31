@@ -11,11 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   getDataControls,
   saveDataControls,
@@ -169,11 +165,7 @@ function AccountDataControls({ studio, userId }: { studio: boolean; userId: stri
                   "Save activity across Open-Connect",
                   "Index Memory, Knowledge, created resources, Toolkits, and verified capability runs. Activity stores record identifiers, not tool payloads.",
                 ],
-                [
-                  "save_helper_memory",
-                  "Automatically save Agent-Helper memory",
-                  "Save redacted interaction summaries to Memory after replies. Assistant text remains unverified; this does not save every external app conversation.",
-                ],
+                ["save_helper_memory", "Automatically save Agent-Helper memory", "Save redacted interaction summaries to Memory after replies. Assistant text remains unverified; this does not save every external app conversation."],
                 [
                   "suggest_drafts",
                   "Suggest reusable drafts",
@@ -436,7 +428,11 @@ function AccountDataControls({ studio, userId }: { studio: boolean; userId: stri
                         <Button size="sm" variant="outline" onClick={() => edit(d)}>
                           Edit
                         </Button>
-                        <Button size="sm" disabled={build.isPending} onClick={() => build.mutate(d.id)}>
+                        <Button
+                          size="sm"
+                          disabled={build.isPending}
+                          onClick={() => build.mutate(d.id)}
+                        >
                           Build for review
                         </Button>
                       </>
