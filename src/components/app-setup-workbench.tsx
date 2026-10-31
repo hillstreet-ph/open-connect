@@ -102,13 +102,13 @@ function AppSetupForm({ userId }: { userId: string | undefined }) {
           Provider credentials stay in the Vault.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="grid gap-6 lg:grid-cols-2">
+      <CardContent className="space-y-4">
+        <div className="grid gap-4 lg:grid-cols-2">
           <section className="min-w-0 space-y-3">
             <h3 className="font-semibold">1. Connect & inspect</h3>
             <div className="flex flex-wrap gap-2">
-              <Button onClick={() => setOpen(true)}>Add custom MCP</Button>
-              <Button asChild variant="outline">
+              <Button size="sm" onClick={() => setOpen(true)}>Add custom MCP</Button>
+              <Button asChild size="sm" variant="outline">
                 <Link to="/connections">Browse apps & accounts</Link>
               </Button>
             </div>
@@ -140,6 +140,7 @@ function AppSetupForm({ userId }: { userId: string | undefined }) {
               </p>
             )}
             <Button
+              size="sm"
               variant="outline"
               disabled={!selected || app?.status !== "connected" || details.isPending}
               onClick={() => details.mutate(selected)}
@@ -176,6 +177,7 @@ function AppSetupForm({ userId }: { userId: string | undefined }) {
               </div>
             )}
             <Button
+              size="sm"
               variant="outline"
               disabled={!ready.ready || !app?.executionSupported || draft.isPending}
               onClick={() => draft.mutate()}
@@ -199,10 +201,11 @@ function AppSetupForm({ userId }: { userId: string | undefined }) {
               <option value="cursor">Cursor · .cursor/mcp.json</option>
               <option value="portable">Portable · .mcp.json</option>
             </select>
-            <pre className="overflow-auto rounded-lg bg-muted p-3 text-xs">
+            <pre className="max-h-60 overflow-auto rounded-lg bg-muted p-3 text-xs">
               {JSON.stringify(config.config, null, 2)}
             </pre>
             <Button
+              size="sm"
               variant="outline"
               onClick={() =>
                 download(
@@ -238,9 +241,9 @@ function AppSetupForm({ userId }: { userId: string | undefined }) {
             </Button>
           </section>
         </div>
-        <section className="space-y-3 border-t pt-5">
+        <section className="space-y-3 border-t pt-4">
           <h3 className="font-semibold">3. Build a client or local server</h3>
-          <div className="flex flex-wrap items-end gap-3">
+          <div className="flex flex-wrap items-end gap-2">
             <div className="min-w-0 flex-1 space-y-2">
               <Label htmlFor="setup-name">App name</Label>
               <Input
@@ -250,7 +253,7 @@ function AppSetupForm({ userId }: { userId: string | undefined }) {
                 onChange={(e) => setName(e.target.value)}
               />
             </div>
-            <Button disabled={!name.trim()} onClick={exportStarter}>
+            <Button size="sm" disabled={!name.trim()} onClick={exportStarter}>
               Download Node setup ZIP
             </Button>
           </div>
