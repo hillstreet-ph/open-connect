@@ -12,6 +12,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataControlsPanel } from "@/components/data-controls-panel";
+import {
+  ConnectedAccountsPanel,
+  AccountLinkCallbackNotice,
+} from "@/components/connected-accounts-panel";
 import { LoginActivityPanel } from "@/components/login-activity-panel";
 import { settingsTab } from "@/lib/settings-navigation";
 import { profileDraftValue } from "@/lib/react-compat";
@@ -171,6 +175,7 @@ function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-14">
+      <AccountLinkCallbackNotice />
       <h1 className="text-3xl font-semibold">Settings</h1>
       <p className="mt-2 text-sm text-muted-foreground">
         Manage your profile, workspace access, connected apps, data, and security.
@@ -268,6 +273,7 @@ function SettingsPage() {
           </Card>
         </TabsContent>
         <TabsContent value="security" className="space-y-4">
+          <ConnectedAccountsPanel />
           <LoginActivityPanel />
           <Card className="shadow-panel">
             <CardHeader>
