@@ -47,10 +47,7 @@ export type ModelUsageStats = {
 // In-memory cache for model capabilities and usage stats
 const modelCapabilityCache = new Map<string, ModelCapability>();
 const modelUsageStats = new Map<string, ModelUsageStats>();
-const providerHealth = new Map<
-  string,
-  { healthy: boolean; lastCheck: Date; latency: number }
->();
+const providerHealth = new Map<string, { healthy: boolean; lastCheck: Date; latency: number }>();
 
 // Professional model capabilities mapping
 export const PROFESSIONAL_CAPABILITIES: Record<string, string[]> = {
@@ -108,10 +105,7 @@ function extractProvider(modelId: string): string {
 /**
  * Check if a model is free
  */
-async function isFreeModel(
-  modelId: string,
-  upstream: Upstream,
-): Promise<boolean> {
+async function isFreeModel(modelId: string, upstream: Upstream): Promise<boolean> {
   // Check if model ends with :free
   if (modelId.endsWith(":free")) return true;
 
@@ -139,10 +133,7 @@ function getMaxTokens(modelId: string): number {
 /**
  * Get pricing for a model
  */
-function getPricing(
-  modelId: string,
-  free: boolean,
-): { prompt: number; completion: number } {
+function getPricing(modelId: string, free: boolean): { prompt: number; completion: number } {
   if (free) return { prompt: 0, completion: 0 };
 
   const pricingMap: Record<string, { prompt: number; completion: number }> = {
@@ -181,9 +172,12 @@ export async function fetchAllModels(
             if (model && typeof model.id === "string" && model.id.length > 0) {
               const provider = extractProvider(model.id);
               const free = await isFreeModel(model.id, upstream);
-              const capabilities =
-                PROFESSIONAL_CAPABILITIES[model.id] ??
-                ["code", "reasoning", "tools", "skills"];
+              const capabilities = PROFESSIONAL_CAPABILITIES[model.id] ?? [
+                "code",
+                "reasoning",
+                "tools",
+                "skills",
+              ];
 
               models.push({
                 id: model.id,
@@ -342,11 +336,7 @@ export function getParallelModels(
 /**
  * Record model usage
  */
-export function recordModelUsage(
-  modelId: string,
-  tokens: number,
-  success: boolean = true,
-): void {
+export function recordModelUsage(modelId: string, tokens: number, success: boolean = true): void {
   const now = new Date();
   const stats: ModelUsageStats = modelUsageStats.get(modelId) ?? {
     modelId,
@@ -390,20 +380,14 @@ export function isRateLimited(modelId: string): boolean {
 /**
  * Get healthy models (not rate limited)
  */
-export function getHealthyModels(
-  models: ModelCapability[],
-): ModelCapability[] {
+export function getHealthyModels(models: ModelCapability[]): ModelCapability[] {
   return models.filter((m) => !isRateLimited(m.id));
 }
 
 /**
  * Add custom AI provider
  */
-export function addCustomProvider(
-  id: string,
-  name: string,
-  baseUrl: string,
-): AiGatewayProvider {
+export function addCustomProvider(id: string, name: string, baseUrl: string): AiGatewayProvider {
   const provider: AiGatewayProvider = {
     id,
     name,
@@ -425,16 +409,11 @@ export function getAllProviders(): AiGatewayProvider[] {
 /**
  * Ensure all models have professional setup
  */
-export function ensureProfessionalSetup(
-  models: ModelCapability[],
-): ModelCapability[] {
+export function ensureProfessionalSetup(models: ModelCapability[]): ModelCapability[] {
   return models.map((model) => ({
     ...model,
     capabilities: [
-      ...new Set([
-        ...model.capabilities,
-        ...(PROFESSIONAL_CAPABILITIES[model.id] ?? []),
-      ]),
+      ...new Set([...model.capabilities, ...(PROFESSIONAL_CAPABILITIES[model.id] ?? [])]),
     ],
     tools: [...new Set([...model.tools, ...PROFESSIONAL_TOOLS])],
     skills: [...new Set([...model.skills, ...PROFESSIONAL_SKILLS])],
@@ -448,9 +427,7 @@ export function getModelsByProvider(
   models: ModelCapability[],
   providerId: string,
 ): ModelCapability[] {
-  return models.filter(
-    (m) => m.provider === providerId || m.id.startsWith(`${providerId}/`),
-  );
+  return models.filter((m) => m.provider === providerId || m.id.startsWith(`${providerId}/`));
 }
 
 /**
