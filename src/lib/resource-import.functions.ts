@@ -34,8 +34,7 @@ async function expandGitHubUrl(url: URL): Promise<ImportSource[]> {
         `https://api.github.com/repos/${owner}/${repo}/commits/${encodeURIComponent(ref)}`,
       ),
     ) as { sha: string };
-    if (!/^[a-f0-9]{40}$/.test(commit.sha))
-      throw new Error("Source commit could not be pinned");
+    if (!/^[a-f0-9]{40}$/.test(commit.sha)) throw new Error("Source commit could not be pinned");
     sources.push({
       url: `https://raw.githubusercontent.com/${owner}/${repo}/${commit.sha}/${filePath}`,
       identity: `github:${owner}/${repo}/${filePath}`,
@@ -140,6 +139,13 @@ async function expandWebsiteUrl(url: URL): Promise<ImportSource[]> {
   return sources;
 }
 
+async function expandImportUrl(url: URL): Promise<ImportSource[]> {
+  if (url.hostname === "github.com") {
+    return expandGitHubUrl(url);
+  }
+  return expandWebsiteUrl(url);
+}
+
 export const importResourceUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: { url: string }) => ({
@@ -153,10 +159,7 @@ export const importResourceUrl = createServerFn({ method: "POST" })
       )
     )
       throw new Error("Use a public source URL without credentials; upload private files instead");
-    const sources =
-      url.hostname === "github.com"
-        ? await expandGitHubUrl(url)
-        : await expandWebsiteUrl(url);
+    const sources = await expandImportUrl(url);
     const db = context.supabase as SupabaseClient;
     const results: Array<{ name: string; status: string; id?: string; detail?: string }> = [];
     if (sources.length > MAX_IMPORT_SOURCES) {
