@@ -1,4 +1,3 @@
-ypescript
 import { isResourceApproved } from "@/lib/resource-approval";
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
