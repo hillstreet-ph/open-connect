@@ -60,7 +60,8 @@ export function IncomingWebhooks({ userId }: { userId: string | undefined }) {
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
           Receive JSON from senders that can set custom headers. Deliveries are saved in your
-          private inbox; they do not start automations. Provider-specific signatures and
+          private inbox and the notification bell. Enabled notification destinations receive receipt
+          summaries. Deliveries do not start automations. Provider-specific signatures and
           verification challenges are not supported.
         </p>
         <div className="flex flex-wrap items-end gap-2">
