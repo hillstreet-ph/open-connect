@@ -36,13 +36,10 @@ function StudioDraftsPage() {
         </div>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold sm:text-3xl">
-              Reusable Studio drafts
-            </h1>
+            <h1 className="text-2xl font-semibold sm:text-3xl">Reusable Studio drafts</h1>
             <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-              Create prompts, skills, guides, or Toolkit blueprints from your
-              own workflow. Drafts stay private until you build them for review
-              and publish from Studio.
+              Build reusable prompts, skills, guides, and Toolkit blueprints.
+              Drafts stay private until you publish them from Studio.
             </p>
           </div>
           <Button asChild size="sm" variant="outline">
