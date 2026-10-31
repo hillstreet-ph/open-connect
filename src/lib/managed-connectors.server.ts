@@ -176,39 +176,47 @@ async function authConfigForToolkit(toolkitSlug: string, apiKey: string): Promis
       `No enabled custom auth config exists for ${toolkitSlug}. Create one in Composio before connecting.`,
     );
   }
-  const query = new URLSearchParams({
-    toolkit_slug: toolkitSlug,
-    is_composio_managed: "true",
-    limit: "50",
-  });
-  const listed = await composioRequest<{
-    items?: Array<{
-      id?: string;
-      toolkit?: { slug?: string };
-      is_composio_managed?: boolean;
-    }>;
-  }>(`/auth_configs?${query}`, apiKey);
-  const existing = (listed.items ?? []).find(
-    (item) =>
-      item.id?.startsWith("ac_") &&
-      item.toolkit?.slug?.toLowerCase() === toolkitSlug.toLowerCase() &&
-      item.is_composio_managed !== false,
-  );
-  if (existing?.id) return existing.id;
-  const created = await composioRequest<{ auth_config?: { id?: string } }>(
-    "/auth_configs",
-    apiKey,
-    {
-      method: "POST",
-      body: JSON.stringify({
-        toolkit: { slug: toolkitSlug },
-        auth_config: { type: "use_composio_managed_auth" },
-      }),
-    },
-  );
-  if (!created.auth_config?.id?.startsWith("ac_"))
-    throw new Error(`Could not create Composio authorization config for ${toolkitSlug}.`);
-  return created.auth_config.id;
+  try {
+    const query = new URLSearchParams({
+      toolkit_slug: toolkitSlug,
+      is_composio_managed: "true",
+      limit: "50",
+    });
+    const listed = await composioRequest<{
+      items?: Array<{
+        id?: string;
+        toolkit?: { slug?: string };
+        is_composio_managed?: boolean;
+      }>;
+    }>(`/auth_configs?${query}`, apiKey);
+    const existing = (listed.items ?? []).find(
+      (item) =>
+        item.id?.startsWith("ac_") &&
+        item.toolkit?.slug?.toLowerCase() === toolkitSlug.toLowerCase() &&
+        item.is_composio_managed !== false,
+    );
+    if (existing?.id) return existing.id;
+    const created = await composioRequest<{ auth_config?: { id?: string } }>(
+      "/auth_configs",
+      apiKey,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          toolkit: { slug: toolkitSlug },
+          auth_config: { type: "use_composio_managed_auth" },
+        }),
+      },
+    );
+    if (!created.auth_config?.id?.startsWith("ac_"))
+      throw new Error(`Could not create Composio authorization config for ${toolkitSlug}.`);
+    return created.auth_config.id;
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : "broker error";
+    throw new Error(
+      `Hosted authorization is not available for ${toolkitSlug}. Connect this app with an API key or token instead. (${detail})`,
+      { cause: error },
+    );
+  }
 }
 
 export async function composioRequest<T>(

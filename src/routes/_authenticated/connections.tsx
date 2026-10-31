@@ -521,7 +521,7 @@ function ConnectionsPage() {
             <Button
               size="sm"
               variant="outline"
-              className="h-7 shrink-0 px-2 text-xs"
+              className="h-6 shrink-0 px-2 text-[11px]"
               onClick={() => {
                 setManagedApp(app as CatalogApp);
                 setManagedConnectionId(first.id);
@@ -568,7 +568,7 @@ function ConnectionsPage() {
           </div>
         </div>
         {!user ? (
-          <Button asChild size="sm" variant="outline" className="h-7 shrink-0 px-2.5 text-xs">
+          <Button asChild size="sm" variant="outline" className="h-6 shrink-0 px-2.5 text-[11px]">
             <Link to="/auth">Sign in</Link>
           </Button>
         ) : (
@@ -593,7 +593,7 @@ function ConnectionsPage() {
                 setManagedConnectionId(undefined);
               }}
             >
-              <Plus className="size-3.5" aria-hidden="true" />
+              <Plus className="size-3" aria-hidden="true" />
               {connection ? "Manage accounts" : "Connect account"}
             </Button>
           </div>
@@ -682,13 +682,13 @@ function ConnectionsPage() {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-7 shrink-0 px-2 text-xs"
+                  className="h-6 shrink-0 px-2 text-[11px]"
                   onClick={() => {
                     setCustomInitial(undefined);
                     setCustomOpen(true);
                   }}
                 >
-                  <Plus className="size-3.5" />
+                  <Plus className="size-3" />
                   Add custom MCP
                 </Button>
               </div>
@@ -745,7 +745,7 @@ function ConnectionsPage() {
                   type="button"
                   size="sm"
                   variant="outline"
-                  className="h-7 shrink-0 px-2.5 text-xs"
+                  className="h-6 shrink-0 px-2.5 text-[11px]"
                   onClick={() => {
                     setCategory("All");
                     setQuery("");
@@ -815,13 +815,13 @@ function ConnectionsPage() {
             {user ? (
               <Button
                 size="sm"
-                className="mt-2 h-7 shrink-0 px-2 text-xs"
+                className="mt-2 h-6 shrink-0 px-2 text-[11px]"
                 onClick={() => {
                   setCustomInitial(undefined);
                   setCustomOpen(true);
                 }}
               >
-                <Plus className="size-3.5" />
+                <Plus className="size-3" />
                 Add custom MCP
               </Button>
             ) : null}
@@ -965,7 +965,7 @@ function ConnectionsPage() {
                       <Button
                         size="sm"
                         variant="secondary"
-                        className="h-7 shrink-0 px-2.5 text-xs"
+                        className="h-6 shrink-0 px-2.5 text-[11px]"
                         onClick={() => setDetailAccount(c)}
                       >
                         Details
@@ -974,7 +974,7 @@ function ConnectionsPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-7 shrink-0 px-2.5 text-xs"
+                          className="h-6 shrink-0 px-2.5 text-[11px]"
                           disabled={connectMutation.isPending}
                           onClick={() => startReconnect(c)}
                         >
