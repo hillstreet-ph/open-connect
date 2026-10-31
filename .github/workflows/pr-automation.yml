@@ -52,7 +52,7 @@ jobs:
 
       - name: Apply automatic fixes
         run: |
-          bunx prettier --write "src/**/*.{ts,tsx,css}" "scripts/**/*.py"
+          bunx prettier --write "src/**/*.{ts,tsx,css}"
           bunx eslint src --fix --no-error-on-unmatched-pattern || true
 
       - name: Commit and push fixes
