@@ -110,6 +110,7 @@ $ eslint .
 /home/runner/work/open-connect/open-connect/src/routes/_authenticated/studio.tsx
   53:10  warning  Fast refresh only works when a file only exports components. Move your component(s) to a separate file. If all exports are HOCs, add them to the `extraHOCs` option  react-refresh/only-export-components
   78:10  warning  Fast refresh only works when a file only exports components. Move your component(s) to a separate file. If all exports are HOCs, add them to the `extraHOCs` option  react-refresh/only-export-components
+  87:10  warning  Fast refresh only works when a file only exports components. Move your component(s) to a separate file. If all exports are HOCs, add them to the `extraHOCs` option  react-refresh/only-export-components
 
 /home/runner/work/open-connect/open-connect/src/routes/_authenticated/tasks.tsx
   32:7   warning  Fast refresh only works when a file only exports components. Move your component(s) to a separate file. If all exports are HOCs, add them to the `extraHOCs` option  react-refresh/only-export-components
@@ -134,9 +135,10 @@ $ eslint .
   70:10  warning  Fast refresh only works when a file only exports components. Move your component(s) to a separate file. If all exports are HOCs, add them to the `extraHOCs` option  react-refresh/only-export-components
   82:10  warning  Fast refresh only works when a file only exports components. Move your component(s) to a separate file. If all exports are HOCs, add them to the `extraHOCs` option  react-refresh/only-export-components
 
-✖ 54 problems (0 errors, 54 warnings)
+✖ 55 problems (0 errors, 55 warnings)
 
 lint_exit=0
 
 $ tsc --noEmit
-typecheck_exit=0
+src/routes/_authenticated/studio.tsx(81,8): error TS2304: Cannot find name 'ArrowLeft'.
+typecheck_exit=2
