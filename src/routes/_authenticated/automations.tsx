@@ -14,7 +14,6 @@ import {
   type TriggerType,
 } from "@/lib/ops.functions";
 import { Link } from "@tanstack/react-router";
-import { IncomingWebhooks } from "@/components/incoming-webhooks";
 import { WorkTemplatePicker } from "@/components/work-template-picker";
 import { statusClass, statusLabel } from "@/lib/operations";
 import { useAuth } from "@/hooks/use-auth";
@@ -133,8 +132,6 @@ function AutomationsPage() {
           connected free model providers; agent and pipeline actions remain approval-gated plans.
         </p>
       </div>
-
-      <IncomingWebhooks userId={user?.id} />
 
       <WorkTemplatePicker
         kind="automation"

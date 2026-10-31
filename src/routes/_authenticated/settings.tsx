@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataControlsPanel } from "@/components/data-controls-panel";
+import { IncomingWebhooks } from "@/components/incoming-webhooks";
 import {
   ConnectedAccountsPanel,
   AccountLinkCallbackNotice,
@@ -40,6 +41,7 @@ const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 function SettingsPage() {
   const queryClient = useQueryClient();
+  const { user } = Route.useRouteContext();
   const location = useLocation();
   const navigate = Route.useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -335,7 +337,8 @@ function SettingsPage() {
         <TabsContent value="data">
           <DataControlsPanel />
         </TabsContent>
-        <TabsContent value="integrations">
+        <TabsContent value="integrations" className="space-y-4">
+          <IncomingWebhooks userId={user.id} />
           <div className="grid gap-4 md:grid-cols-2">
             <a
               href="/integrations?section=apps"

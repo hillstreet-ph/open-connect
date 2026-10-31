@@ -218,14 +218,14 @@ function GuidesPage() {
             Webhooks: professional setup from event to delivery
           </CardTitle>
           <CardDescription>
-            Add an incoming webhook on Automations for senders that support custom headers.
-            Deliveries are saved to your private inbox; they do not trigger automations. The steps
-            below also apply when setting up a separate provider-specific receiver.
+            Add an incoming webhook in Settings → Integrations for senders that support custom
+            headers. Deliveries are saved to your private inbox; they do not trigger automations.
+            The steps below also apply when setting up a separate provider-specific receiver.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 px-5 pb-5">
           <Button asChild size="sm" variant="outline">
-            <Link to="/automations" hash="incoming-webhooks">
+            <Link to="/settings" hash="integrations">
               Add incoming webhook
             </Link>
           </Button>

@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   buildConnectedAccounts,
   describeLinkError,
+  describeAccountError,
   isProviderLinked,
   parseAuthCallbackError,
   providerLabel,
@@ -73,9 +74,11 @@ export function AccountLinkCallbackNotice() {
         toast.error(describeLinkError(error));
         return;
       }
-      const { data } = await supabase.auth.getUserIdentities();
+      const { data, error: identitiesError } = await supabase.auth.getUserIdentities();
       void queryClient.invalidateQueries({ queryKey: ["connected-accounts", user.id] });
-      if (linked && isProviderLinked(data?.identities, linked)) {
+      if (identitiesError) {
+        toast.error("Could not verify the connection. Refresh and check connected accounts.");
+      } else if (linked && isProviderLinked(data?.identities, linked)) {
         toast.success(`${providerLabel(linked)} connected`);
       } else {
         toast.error("The connection did not complete. Please try again.");
@@ -116,9 +119,7 @@ function AccountIdentities({ userId }: { userId: string }) {
       if (error) throw error;
     },
     onError: (error) =>
-      toast.error(
-        error instanceof Error ? error.message : "Could not start the provider connection",
-      ),
+      toast.error(describeAccountError(error, "Could not start the provider connection")),
   });
 
   const disconnect = useMutation({
@@ -129,13 +130,17 @@ function AccountIdentities({ userId }: { userId: string }) {
       if (!identity) throw new Error("That connection is no longer available");
       const { error } = await supabase.auth.unlinkIdentity(identity);
       if (error) throw error;
+      return identity.identity_id;
     },
-    onSuccess: (_result, provider) => {
-      toast.success(`${provider} disconnected`);
-      void refresh();
+    onSuccess: async (identityId, provider) => {
+      queryClient.setQueryData<UserIdentity[]>(["connected-accounts", userId], (identities) =>
+        identities?.filter((identity) => identity.identity_id !== identityId),
+      );
+      await refresh();
+      toast.success(`${providerLabel(provider)} disconnected`);
     },
     onError: (error) =>
-      toast.error(error instanceof Error ? error.message : "Could not disconnect that account"),
+      toast.error(describeAccountError(error, "Could not disconnect that account")),
   });
 
   const accounts = buildConnectedAccounts(query.data);
@@ -191,7 +196,7 @@ function AccountIdentities({ userId }: { userId: string }) {
                     className="text-destructive hover:text-destructive"
                     // Serialize disconnects: a second request from this page could pass the
                     // server's last-identity check alongside the first and remove both.
-                    disabled={!account.canDisconnect || disconnect.isPending}
+                    disabled={!account.canDisconnect || disconnect.isPending || connect.isPending}
                     title={
                       account.canDisconnect
                         ? `Disconnect ${account.label}`
@@ -210,7 +215,7 @@ function AccountIdentities({ userId }: { userId: string }) {
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled={connect.isPending && connect.variables === account.provider}
+                    disabled={connect.isPending || disconnect.isPending}
                     onClick={() => connect.mutate(account.provider)}
                   >
                     {connect.isPending && connect.variables === account.provider ? (

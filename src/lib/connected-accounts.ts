@@ -170,3 +170,12 @@ export function describeLinkError(error: AuthCallbackError): string {
       return error.description;
   }
 }
+
+/** Explain immediate SDK errors using the same messages as redirect failures. */
+export function describeAccountError(error: unknown, fallback: string): string {
+  if (!error || typeof error !== "object") return fallback;
+  const candidate = error as { code?: unknown; message?: unknown };
+  const code = typeof candidate.code === "string" ? candidate.code : "";
+  const description = typeof candidate.message === "string" ? candidate.message : fallback;
+  return describeLinkError({ code, description });
+}
