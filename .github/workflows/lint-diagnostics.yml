@@ -25,16 +25,23 @@ jobs:
             const content = fs.readFileSync('lint-output.txt', 'utf8');
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const ref = 'refs/heads/lint-output';
+            const path = 'lint-output.txt';
+            let sha;
             try {
-              await github.rest.git.deleteRef({ owner, repo, ref });
+              const existing = await github.rest.repos.getContent({
+                owner,
+                repo,
+                path,
+                ref: 'lint-output',
+              });
+              sha = existing.data.sha;
             } catch (e) {}
-            await github.rest.git.createRef({ owner, repo, ref, sha: context.sha });
             await github.rest.repos.createOrUpdateFileContents({
               owner,
               repo,
-              path: 'lint-output.txt',
+              path,
               message: 'Lint diagnostics output',
               content: Buffer.from(content).toString('base64'),
               branch: 'lint-output',
+              sha,
             });
