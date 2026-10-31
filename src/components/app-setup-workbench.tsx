@@ -223,6 +223,14 @@ function AppSetupForm({ userId }: { userId: string | undefined }) {
               ChatGPT: add <code className="break-all">https://open-connect.site/mcp</code> as a
               custom connector and choose OAuth.
             </p>
+            <div className="space-y-1 rounded-lg border p-3 text-sm">
+              <p className="font-medium">Login flows for apps you build</p>
+              <ul className="list-disc space-y-1 pl-4 text-muted-foreground">
+                <li>OAuth: brokered browser sign-in, token held server-side.</li>
+                <li>API key or token: stored encrypted in the Vault.</li>
+                <li>Agents only receive an opaque credential reference.</li>
+              </ul>
+            </div>
             <Button asChild variant="link">
               <Link to="/integrations" search={{ section: "api-key" }}>
                 Scoped keys & OAuth setup

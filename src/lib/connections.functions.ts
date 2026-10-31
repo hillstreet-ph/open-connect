@@ -366,11 +366,19 @@ export const listConnectionCatalog = createServerFn({ method: "GET" }).handler(a
     const toolkit = toolkitBySlug.get(item.provider);
     const dynamicallyConnectable = Boolean(toolkit && process.env["COMPOSIO_API_KEY"]?.trim());
     const ready = managedConnectorReady(item.provider) || dynamicallyConnectable;
+    // Toolkits without an OAuth scheme accept only API keys or tokens, so they
+    // must never be routed to hosted authorization.
+    const oauthSchemes = (toolkit?.authMethods ?? []).some((scheme) =>
+      ["OAUTH2", "OAUTH1"].includes(scheme.toUpperCase()),
+    );
+    const oauthCapable = toolkit ? oauthSchemes : item.oauth;
     // The cloud browser calls TinyFish's REST API with a vault-held key, so it
     // must not be routed to a brokered OAuth account it cannot use.
-    const method = ["tinyfish", "browser_use", "browserbase"].includes(item.provider)
-      ? "api_key"
-      : connectionMethod(item.provider, item.oauth, ready);
+    const method =
+      ["tinyfish", "browser_use", "browserbase"].includes(item.provider) ||
+      (!oauthCapable && !managedConnectorReady(item.provider))
+        ? "api_key"
+        : connectionMethod(item.provider, oauthCapable, ready);
     return {
       provider: item.provider,
       display_name: item.display_name,
@@ -382,14 +390,7 @@ export const listConnectionCatalog = createServerFn({ method: "GET" }).handler(a
         toolkit?.authMethods ??
         (item.provider === "custom_mcp" ? ["MCP"] : []),
       oauth: method !== "api_key",
-      oauth_supported:
-        method !== "api_key" &&
-        (method === "native_oauth" ||
-          (toolkit
-            ? toolkit.authMethods.some((scheme) =>
-                ["OAUTH2", "OAUTH1"].includes(scheme.toUpperCase()),
-              )
-            : item.oauth)),
+      oauth_supported: method !== "api_key" && (method === "native_oauth" || oauthCapable),
       connection_method: method,
       oauth_ready:
         method === "native_oauth" ? githubReady : method === "managed_oauth" ? ready : false,
@@ -647,9 +648,21 @@ export const connectApp = createServerFn({ method: "POST" })
         : undefined);
     if (!app) throw new Error("Unknown application");
     const ready = managedConnectorReady(app.provider) || Boolean(toolkit);
-    const method = connectionMethod(app.provider, app.oauth, ready);
+    // Toolkits without an OAuth scheme accept only API keys or tokens; routing
+    // them to hosted authorization fails with a broker credentials error.
+    const oauthSchemes = (toolkit?.authMethods ?? []).some((scheme) =>
+      ["OAUTH2", "OAUTH1"].includes(scheme.toUpperCase()),
+    );
+    const oauthCapable = toolkit ? oauthSchemes : app.oauth;
+    const method =
+      ["tinyfish", "browser_use", "browserbase"].includes(app.provider) ||
+      (!oauthCapable && !managedConnectorReady(app.provider))
+        ? "api_key"
+        : connectionMethod(app.provider, oauthCapable, ready);
     if (method === "api_key")
-      throw new Error("This provider uses a verified API key or token connection.");
+      throw new Error(
+        `${app.display_name} connects with an API key or token. Use its Connect account dialog to add the credential.`,
+      );
 
     if (method === "managed_oauth") {
       const { createManagedConnectionLink } = await import("@/lib/managed-connectors.server");
@@ -657,12 +670,20 @@ export const connectApp = createServerFn({ method: "POST" })
         /\/$/,
         "",
       )}/connections?connected=${encodeURIComponent(app.provider)}`;
-      const link = await createManagedConnectionLink({
-        provider: app.provider,
-        toolkitSlug: toolkit?.slug ?? app.provider,
-        userId: context.userId,
-        callbackUrl,
-      });
+      let link: Awaited<ReturnType<typeof createManagedConnectionLink>>;
+      try {
+        link = await createManagedConnectionLink({
+          provider: app.provider,
+          toolkitSlug: toolkit?.slug ?? app.provider,
+          userId: context.userId,
+          callbackUrl,
+        });
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : "broker error";
+        throw new Error(
+          `Hosted sign-in is not available for ${app.display_name}. Connect it with an API key or token instead. (${detail})`,
+        );
+      }
       const record = {
         user_id: context.userId,
         provider: app.provider,
