@@ -344,11 +344,6 @@ function ConnectionsPage() {
       connectionsByProvider.set(item.provider, item);
     }
   }
-  const customCatalog = useMemo(
-    () => (catalog.data ?? []).filter((app) => customProviders.has(app.provider)),
-    [catalog.data],
-  );
-
   function rankStatus(status: string) {
     if (status === "connected") return 0;
     if (status === "pending") return 1;
@@ -504,32 +499,14 @@ function ConnectionsPage() {
       <Card key={first.id} className="flex flex-col gap-1.5 p-2">
         <div className="flex min-w-0 items-center gap-2">
           <BrandLogo provider={first.provider} name={first.display_name} logoUrl={app?.logo} />
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-semibold leading-snug">{first.display_name}</p>
-            <p className="truncate text-xs text-muted-foreground">{first.provider}</p>
-          </div>
-          <Badge variant="outline" className={`shrink-0 ${statusBadgeClass(groupStatus)}`}>
-            {connectionStatusLabel(groupStatus)}
-          </Badge>
+          <p className="min-w-0 flex-1 truncate font-semibold leading-snug">{first.display_name}</p>
         </div>
         <p className="truncate text-xs text-muted-foreground">{`${connections.length} account${connections.length === 1 ? "" : "s"} · ${connectedCount} connected${pendingCount ? ` · ${pendingCount} pending` : ""}`}</p>
-        <div className="space-y-0.5">
-          {connections.slice(0, 3).map((c) => (
-            <p key={c.id} className="truncate text-xs text-muted-foreground">
-              {`${connectionIdentityLine(c) || c.identity.label || c.metadata.endpoint_url || (c.status === "pending" ? "Account awaiting sign-in" : "Account")} · ${c.status}`}
-            </p>
-          ))}
-          {connections.length > 3 ? (
-            <p className="text-xs text-muted-foreground">
-              {`+${connections.length - 3} more account${connections.length === 4 ? "" : "s"}`}
-            </p>
-          ) : null}
-        </div>
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div className="flex flex-wrap items-center justify-between gap-1.5">
           <Button
             size="sm"
             variant="outline"
-            className="h-7 shrink-0 px-2.5 text-xs"
+            className="h-7 shrink-0 px-2 text-xs"
             onClick={() => {
               setManagedApp(app as CatalogApp);
               setManagedConnectionId(first.id);
@@ -537,6 +514,9 @@ function ConnectionsPage() {
           >
             Manage
           </Button>
+          <Badge variant="outline" className={`shrink-0 ${statusBadgeClass(groupStatus)}`}>
+            {connectionStatusLabel(groupStatus)}
+          </Badge>
         </div>
       </Card>
     );
@@ -578,7 +558,7 @@ function ConnectionsPage() {
             <Button
               size="sm"
               variant="outline"
-              className="h-7 shrink-0 border-blue-600 bg-blue-700 px-2.5 text-xs text-white hover:bg-blue-800 hover:text-white focus-visible:ring-2 focus-visible:ring-blue-400"
+              className="h-7 shrink-0 border-blue-600 bg-blue-700 px-2 text-xs text-white hover:bg-blue-800 hover:text-white focus-visible:ring-2 focus-visible:ring-blue-400"
               disabled={connectMutation.isPending}
               title={
                 app.oauth && !app.oauth_ready
@@ -590,7 +570,7 @@ function ConnectionsPage() {
                 setManagedConnectionId(undefined);
               }}
             >
-              <Plus className="size-4" aria-hidden="true" />
+              <Plus className="size-3.5" aria-hidden="true" />
               {connection ? "Manage accounts" : "Connect account"}
             </Button>
           </div>
@@ -850,14 +830,6 @@ function ConnectionsPage() {
               ) : null}
             </>
           ) : null}
-          <div>
-            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Add a custom connector
-            </h3>
-            <div className="grid gap-1.5 sm:grid-cols-3 xl:grid-cols-5">
-              {customCatalog.map((app) => renderCatalogCard(app))}
-            </div>
-          </div>
         </div>
       )}
 
