@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
+  Copy,
   KeyRound,
   List,
   Loader2,
@@ -63,6 +64,13 @@ const aliases = [
 ];
 const gatewayProviders = AI_GATEWAY_PROVIDER_IDS;
 
+function copyToClipboard(value: string, label: string) {
+  void navigator.clipboard?.writeText(value).then(
+    () => toast.success(label + " copied to clipboard"),
+    () => toast.error("Could not copy to clipboard"),
+  );
+}
+
 function ModelsPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -104,6 +112,7 @@ function ModelsPage() {
   });
   const [activeProvider, setActiveProvider] = useState<string | null>(null);
   const [aliasesOpen, setAliasesOpen] = useState(false);
+  const [modelsListOpen, setModelsListOpen] = useState(false);
   const [freeListOpen, setFreeListOpen] = useState(false);
   const [allModelsOpen, setAllModelsOpen] = useState(false);
   const disconnectFn = useServerFn(disconnectApp);
@@ -178,11 +187,11 @@ function ModelsPage() {
       toast.error(error instanceof Error ? error.message : "Provider setup failed"),
   });
   return (
-    <div className="mx-auto max-w-6xl px-4 py-16">
-      <Badge variant="outline" className="mb-3 border-primary/40 text-primary">
+    <div className="mx-auto max-w-6xl px-4 py-6 sm:py-10">
+      <Badge variant="outline" className="mb-2 border-primary/40 text-primary">
         Internal · Multi-provider gateway
       </Badge>
-      <h1 className="text-3xl font-semibold sm:text-4xl">AI Gateway</h1>
+      <h1 className="text-2xl font-semibold sm:text-3xl">AI Gateway</h1>
       <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
         One gateway for OpenAI, Claude, Gemini, Grok and the full OpenRouter catalog. Auto routing
         uses free models first, rotates automatically when limits are hit, and falls back to paid or
@@ -194,50 +203,74 @@ function ModelsPage() {
         <ApiKeysCard modelOnly />
       </div>
 
-      <Card className="mt-10 shadow-panel">
-        <CardHeader>
+      <Card className="mt-6 shadow-panel">
+        <CardHeader className="pb-2">
           <CardTitle className="text-base">Point any client here</CardTitle>
           <CardDescription>
             Open WebUI, LobeHub, Cursor, custom agents — same OpenAI-compatible API.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3 font-mono text-xs">
-          <div className="rounded-lg border border-border/70 bg-background/60 px-4 py-3">
-            <span className="text-muted-foreground">Base URL </span>
-            <span className="text-primary">https://open-connect.site/v1</span>
+        <CardContent className="space-y-2">
+          <div className="flex items-center gap-2 rounded-lg border border-border/70 bg-background/60 px-3 py-2 font-mono text-xs">
+            <span className="min-w-0 flex-1 break-all">
+              <span className="text-muted-foreground">Base URL </span>
+              <span className="text-primary">https://open-connect.site/v1</span>
+            </span>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 shrink-0 px-2 text-[11px]"
+              title="Copy base URL"
+              onClick={() => copyToClipboard("https://open-connect.site/v1", "Base URL")}
+            >
+              <Copy className="size-3" />
+            </Button>
           </div>
-          <div className="rounded-lg border border-border/70 bg-background/60 px-4 py-3">
-            <span className="text-muted-foreground">API Key </span>
-            <span className="text-accent">sk-oc-…</span>
-            <span className="ml-2 text-muted-foreground">(create above)</span>
+          <div className="flex items-center gap-2 rounded-lg border border-border/70 bg-background/60 px-3 py-2 font-mono text-xs">
+            <span className="min-w-0 flex-1 break-all">
+              <span className="text-muted-foreground">API Key </span>
+              <span className="text-accent">sk-oc-…</span>
+              <span className="ml-2 text-muted-foreground">(create above)</span>
+            </span>
           </div>
         </CardContent>
       </Card>
 
-      <Card className="mt-6 shadow-panel">
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <List className="size-4" /> Full model list
-          </CardTitle>
-          <CardDescription>
-            Authenticated GET /v1/models returns managed aliases plus every model from the connected
-            OpenRouter credential (OpenAI, Anthropic, Google, Meta, Mistral, DeepSeek, xAI, …).
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <pre className="overflow-x-auto rounded-lg border border-border bg-muted/30 p-3 text-[11px] leading-relaxed">
-            {`curl -sS https://open-connect.site/v1/models \\
+      <div className="mt-6 flex items-center justify-between gap-3">
+        <h2 className="text-base font-semibold">Full model list</h2>
+        <Button
+          size="sm"
+          variant="ghost"
+          aria-expanded={modelsListOpen}
+          onClick={() => setModelsListOpen((open) => !open)}
+        >
+          {modelsListOpen ? (
+            <ChevronUp className="mr-1 size-4" />
+          ) : (
+            <ChevronDown className="mr-1 size-4" />
+          )}
+          {modelsListOpen ? "Hide" : "Show"}
+        </Button>
+      </div>
+      {modelsListOpen ? (
+        <Card className="mt-3 shadow-panel">
+          <CardContent className="space-y-3 pt-4">
+            <pre className="overflow-x-auto rounded-lg border border-border bg-muted/30 p-3 text-[11px] leading-relaxed">
+              {`curl -sS https://open-connect.site/v1/models \\
   -H "Authorization: Bearer sk-oc-YOUR_KEY"`}
-          </pre>
-          <p className="text-xs text-muted-foreground">
-            Use the OpenAI-compatible provider setting and the base URL above. An Open-Connect key
-            works at this gateway, not directly at OpenAI or a separate LiteLLM server. If LiteLLM
-            reports token_not_found_in_db, verify the client base URL and reconnect LiteLLM below
-            using a key issued by that LiteLLM server. Renaming a key does not register it there.
-          </p>
-        </CardContent>
-      </Card>
-
+            </pre>
+            <p className="text-xs text-muted-foreground">
+              Authenticated GET /v1/models returns managed aliases plus every model from the
+              connected OpenRouter credential (OpenAI, Anthropic, Google, Meta, Mistral, DeepSeek,
+              xAI, …). Use the OpenAI-compatible provider setting and the base URL above. An
+              Open-Connect key works at this gateway, not directly at OpenAI or a separate LiteLLM
+              server. If LiteLLM reports token_not_found_in_db, verify the client base URL and
+              reconnect LiteLLM below using a key issued by that LiteLLM server. Renaming a key does
+              not register it there.
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
       <Card className="mt-6 shadow-panel" id="free-models">
         <CardHeader className="pb-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -405,8 +438,8 @@ function ModelsPage() {
         </CardContent>
       </Card>
 
-      <div className="mt-14 flex items-center justify-between gap-3">
-        <h2 className="text-xl font-semibold">Stable aliases</h2>
+      <div className="mt-10 flex items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold">Stable aliases</h2>
         <Button
           size="sm"
           variant="ghost"
@@ -432,8 +465,8 @@ function ModelsPage() {
         </div>
       ) : null}
 
-      <div className="mt-14 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-xl font-semibold">AI provider credentials</h2>
+      <div className="mt-10 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold">AI provider credentials</h2>
         {user && isAdmin ? (
           <Button
             size="sm"
@@ -455,30 +488,45 @@ function ModelsPage() {
         provider's billing. Accounts already connected in Composio are imported with Sync from
         Composio; provider API keys are added directly on each card.
       </p>
-      <div className="mt-5 grid gap-3 xl:grid-cols-2">
-        {AI_GATEWAY_PROVIDERS.map((provider) => (
-          <Card key={provider.id} className="p-3">
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <div className="flex min-w-0 flex-1 items-center gap-2">
+      <div className="mt-5 grid grid-cols-1 gap-1.5 sm:grid-cols-2 xl:grid-cols-3">
+        {AI_GATEWAY_PROVIDERS.map((provider) => {
+          const providerState = modelProviderState(connections.data ?? [], provider.id);
+          return (
+            <Card key={provider.id} className="flex flex-col gap-1.5 p-2">
+              <div className="flex min-w-0 items-center gap-2">
                 <BrandLogo provider={provider.id} name={provider.name} size="sm" />
-                <span className="break-words text-sm font-medium">{provider.name}</span>
+                <p className="min-w-0 flex-1 truncate text-sm font-semibold leading-snug">
+                  {provider.name}
+                </p>
                 {provider.official ? (
-                  <Badge variant="outline" className="text-[10px] text-primary">
-                    <BadgeCheck className="mr-1 size-3" /> Official provider
+                  <Badge variant="outline" className="shrink-0 text-[10px] text-primary">
+                    <BadgeCheck className="mr-1 size-3" /> Official
                   </Badge>
                 ) : null}
               </div>
-              <div className="flex items-center gap-2">
+              <p className="truncate text-xs text-muted-foreground">
+                {providerState.accounts.length ? (
+                  <>
+                    {providerState.accounts.length} account
+                    {providerState.accounts.length === 1 ? "" : "s"} · {providerState.ready.length}{" "}
+                    ready
+                  </>
+                ) : (
+                  "No accounts · add an API key or sign in"
+                )}
+              </p>
+              <div className="flex flex-wrap items-center gap-1.5">
                 {provider.id === "openai" || provider.id === "anthropic" ? (
                   <Button
                     size="sm"
                     variant="outline"
+                    className="h-6 shrink-0 px-2 text-[11px]"
                     disabled={!user || providerSignIn.isPending}
                     onClick={() => providerSignIn.mutate(provider.id)}
                     title="Sign in with your provider account to use subscription models"
                   >
                     {providerSignIn.isPending ? (
-                      <Loader2 className="mr-1 size-3.5 animate-spin" />
+                      <Loader2 className="mr-1 size-3 animate-spin" />
                     ) : null}
                     {provider.id === "openai" ? "Sign in · ChatGPT" : "Sign in · Claude"}
                   </Button>
@@ -486,171 +534,186 @@ function ModelsPage() {
                 <Button
                   size="sm"
                   variant="outline"
+                  className="h-6 shrink-0 px-2 text-[11px]"
                   disabled={!user || configureMutation.isPending || providerTest.isPending}
                   onClick={() => openProvider(provider)}
                 >
                   Add account
                 </Button>
               </div>
-            </div>
-            {provider.id === "anthropic" ? (
-              <p className="mt-2 text-xs text-muted-foreground">
-                Native Anthropic credential validation. Use an OpenAI-compatible router for Claude
-                chat through /v1.
-              </p>
-            ) : null}
-            {provider.id === "openai" || provider.id === "anthropic" ? (
-              <p className="mt-1 text-xs text-muted-foreground">
-                Sign in uses your ChatGPT / Claude subscription once the provider OAuth app is
-                configured. API key accounts stay fully supported.
-              </p>
-            ) : null}
-            <div className="mt-2 space-y-2">
-              {modelProviderState(connections.data ?? [], provider.id).accounts.map((account) => (
-                <div
-                  key={account.id}
-                  className="space-y-2 rounded-lg border border-border/70 px-3 py-2"
-                >
-                  <p className="break-words text-sm">
-                    {account.identity.label ||
-                      account.identity.email ||
-                      account.identity.login ||
-                      account.display_name}
-                  </p>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant={account.gateway_ready ? "secondary" : "outline"}>
-                      {account.gateway_ready ? (
-                        <>
-                          <CheckCircle2 className="mr-1 size-3" />{" "}
-                          {provider.id === "anthropic" ? "Credential verified" : "Ready"}
-                        </>
-                      ) : account.status === "disconnected" ? (
-                        "Disconnected"
-                      ) : (
-                        "Reconnect required"
-                      )}
-                    </Badge>
+              {provider.id === "anthropic" ? (
+                <p className="text-[11px] text-muted-foreground">
+                  Native Anthropic credential validation. Use an OpenAI-compatible router for Claude
+                  chat through /v1.
+                </p>
+              ) : null}
+              {provider.id === "openai" || provider.id === "anthropic" ? (
+                <p className="text-[11px] text-muted-foreground">
+                  Sign in uses your ChatGPT / Claude subscription once the provider OAuth app is
+                  configured. API key accounts stay fully supported.
+                </p>
+              ) : null}
+              {providerState.accounts.length ? (
+                <div className="space-y-1.5">
+                  {providerState.accounts.map((account) => (
+                    <div
+                      key={account.id}
+                      className="space-y-1 rounded-lg border border-border/70 px-2 py-1.5"
+                    >
+                      <p className="truncate text-xs font-medium">
+                        {account.identity.label ||
+                          account.identity.email ||
+                          account.identity.login ||
+                          account.display_name}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Badge
+                          variant={account.gateway_ready ? "secondary" : "outline"}
+                          className="shrink-0 text-[10px]"
+                        >
+                          {account.gateway_ready ? (
+                            <>
+                              <CheckCircle2 className="mr-1 size-3" />{" "}
+                              {provider.id === "anthropic" ? "Verified" : "Ready"}
+                            </>
+                          ) : account.status === "disconnected" ? (
+                            "Disconnected"
+                          ) : (
+                            "Reconnect required"
+                          )}
+                        </Badge>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-6 shrink-0 px-2 text-[11px]"
+                          disabled={configureMutation.isPending}
+                          onClick={() => openProvider(provider, account.id)}
+                        >
+                          Reconnect
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 shrink-0 px-2 text-[11px]"
+                          disabled={removeConnection.isPending || configureMutation.isPending}
+                          onClick={() => removeConnection.mutate(account.id)}
+                        >
+                          Disconnect
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              {activeProvider === provider.id ? (
+                <div className="space-y-2 border-t border-border/70 pt-2">
+                  <div className="space-y-1">
+                    <Label htmlFor={"account-label-" + provider.id} className="text-xs">
+                      Account label
+                    </Label>
+                    <Input
+                      id={"account-label-" + provider.id}
+                      className="h-8 text-xs"
+                      value={accountLabel}
+                      onChange={(event) => setAccountLabel(event.target.value)}
+                      placeholder="Personal or work account"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor={"provider-url-" + provider.id} className="text-xs">
+                      API base URL (custom endpoint supported)
+                    </Label>
+                    <Input
+                      id={"provider-url-" + provider.id}
+                      type="url"
+                      className="h-8 font-mono text-xs"
+                      value={providerUrl}
+                      onChange={(event) => setProviderUrl(event.target.value)}
+                      placeholder="https://your-custom-provider.com/v1"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor={"provider-key-" + provider.id} className="text-xs">
+                      Provider API key or access token
+                    </Label>
+                    <Input
+                      id={"provider-key-" + provider.id}
+                      type="password"
+                      className="h-8 font-mono text-xs"
+                      disabled={providerTest.isPending}
+                      autoComplete="off"
+                      value={providerKey}
+                      onChange={(event) => {
+                        setProviderKey(event.target.value);
+                        providerTest.reset();
+                      }}
+                      placeholder="Paste provider API key or token"
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
                     <Button
                       size="sm"
                       variant="outline"
-                      disabled={configureMutation.isPending}
-                      onClick={() => openProvider(provider, account.id)}
+                      className="h-7 px-2.5 text-xs"
+                      disabled={
+                        providerTest.isPending ||
+                        configureMutation.isPending ||
+                        providerKey.trim().length < 8
+                      }
+                      onClick={() =>
+                        providerTest.mutate({ provider: provider.id, api_key: providerKey })
+                      }
                     >
-                      Reconnect
+                      {providerTest.isPending ? "Testing…" : "Test API key"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="h-7 px-2.5 text-xs"
+                      disabled={
+                        providerTest.isPending ||
+                        configureMutation.isPending ||
+                        providerKey.trim().length < 8
+                      }
+                      onClick={() => configureMutation.mutate()}
+                    >
+                      {configureMutation.isPending ? (
+                        <Loader2 className="mr-1 size-3.5 animate-spin" />
+                      ) : (
+                        <KeyRound className="mr-1 size-3.5" />
+                      )}
+                      {connectionId ? "Verify and reconnect" : "Verify and connect"}
                     </Button>
                     <Button
                       size="sm"
                       variant="ghost"
-                      disabled={removeConnection.isPending || configureMutation.isPending}
-                      onClick={() => removeConnection.mutate(account.id)}
+                      className="h-7 px-2.5 text-xs"
+                      disabled={providerTest.isPending}
+                      onClick={() => {
+                        setActiveProvider(null);
+                        setConnectionId(null);
+                        setProviderKey("");
+                      }}
                     >
-                      Disconnect
+                      Cancel
                     </Button>
                   </div>
+                  {providerTest.data ? (
+                    <p role="status" className="text-xs">
+                      {providerTest.data.detail}
+                    </p>
+                  ) : null}
+                  {providerTest.error ? (
+                    <p role="alert" className="text-xs text-destructive">
+                      {providerTest.error.message}
+                    </p>
+                  ) : null}
                 </div>
-              ))}
-            </div>
-            {activeProvider === provider.id ? (
-              <div className="mt-3 space-y-3 border-t border-border/70 pt-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor={`account-label-${provider.id}`}>Account label</Label>
-                  <Input
-                    id={`account-label-${provider.id}`}
-                    value={accountLabel}
-                    onChange={(event) => setAccountLabel(event.target.value)}
-                    placeholder="Personal or work account"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor={`provider-url-${provider.id}`}>
-                    API base URL (custom endpoint supported)
-                  </Label>
-                  <Input
-                    id={`provider-url-${provider.id}`}
-                    type="url"
-                    value={providerUrl}
-                    onChange={(event) => setProviderUrl(event.target.value)}
-                    placeholder="https://your-custom-provider.com/v1"
-                    className="font-mono text-xs"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor={`provider-key-${provider.id}`}>
-                    Provider API key or access token
-                  </Label>
-                  <Input
-                    id={`provider-key-${provider.id}`}
-                    type="password"
-                    disabled={providerTest.isPending}
-                    autoComplete="off"
-                    value={providerKey}
-                    onChange={(event) => {
-                      setProviderKey(event.target.value);
-                      providerTest.reset();
-                    }}
-                    placeholder="Paste provider API key or token"
-                    className="font-mono"
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={
-                      providerTest.isPending ||
-                      configureMutation.isPending ||
-                      providerKey.trim().length < 8
-                    }
-                    onClick={() =>
-                      providerTest.mutate({ provider: provider.id, api_key: providerKey })
-                    }
-                  >
-                    {providerTest.isPending ? "Testing…" : "Test API key"}
-                  </Button>
-                  <Button
-                    size="sm"
-                    disabled={
-                      providerTest.isPending ||
-                      configureMutation.isPending ||
-                      providerKey.trim().length < 8
-                    }
-                    onClick={() => configureMutation.mutate()}
-                  >
-                    {configureMutation.isPending ? (
-                      <Loader2 className="mr-1 size-3.5 animate-spin" />
-                    ) : (
-                      <KeyRound className="mr-1 size-3.5" />
-                    )}
-                    {connectionId ? "Verify and reconnect" : "Verify and connect"}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    disabled={providerTest.isPending}
-                    onClick={() => {
-                      setActiveProvider(null);
-                      setConnectionId(null);
-                      setProviderKey("");
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-                {providerTest.data ? (
-                  <p role="status" className="text-sm">
-                    {providerTest.data.detail}
-                  </p>
-                ) : null}
-                {providerTest.error ? (
-                  <p role="alert" className="text-sm text-destructive">
-                    {providerTest.error.message}
-                  </p>
-                ) : null}
-              </div>
-            ) : null}
-          </Card>
-        ))}
+              ) : null}
+            </Card>
+          );
+        })}
       </div>
+
       <p className="mt-3 text-xs text-muted-foreground">
         Provider keys are never returned to the browser after saving. Clients continue using only
         their scoped Open-Connect key and the shared `/v1` base URL.
