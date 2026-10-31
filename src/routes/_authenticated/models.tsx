@@ -20,6 +20,7 @@ import { BrandLogo } from "@/components/brand-logo";
 import { useAuth } from "@/hooks/use-auth";
 import {
   configureAppConnection,
+  connectApp,
   disconnectApp,
   listAppConnections,
   testAiProviderCredential,
@@ -84,8 +85,25 @@ function ModelsPage() {
     onError: (error) =>
       toast.error(error instanceof Error ? error.message : "Subscription sign-in unavailable"),
   });
+  const connectHostedFn = useServerFn(connectApp);
+  const [hostedProvider, setHostedProvider] = useState<string | null>(null);
+  const hostedConnect = useMutation({
+    mutationFn: (provider: string) => {
+      setHostedProvider(provider);
+      return connectHostedFn({ data: { provider } });
+    },
+    onSuccess: (result) => {
+      window.open(result.authorization_url, "_blank", "noopener");
+      void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Hosted sign-in unavailable"),
+    onSettled: () => setHostedProvider(null),
+  });
   const [activeProvider, setActiveProvider] = useState<string | null>(null);
   const [aliasesOpen, setAliasesOpen] = useState(false);
+  const [freeListOpen, setFreeListOpen] = useState(false);
+  const [allModelsOpen, setAllModelsOpen] = useState(false);
   const disconnectFn = useServerFn(disconnectApp);
   const [connectionId, setConnectionId] = useState<string | null>(null);
   const [accountLabel, setAccountLabel] = useState("AI Gateway");
@@ -287,31 +305,51 @@ function ModelsPage() {
                 ))}
               </div>
               {freeModels.data?.models.length ? (
-                <div className="max-h-80 overflow-auto rounded-lg border border-border/70">
-                  <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-3 border-b bg-muted/30 px-3 py-2 text-xs font-medium text-muted-foreground">
-                    <span>Model</span>
-                    <span>Provider</span>
-                    <span>Catalog</span>
-                  </div>
-                  {freeModels.data.models.map((model) => (
-                    <div
-                      key={`${model.source}:${model.id}`}
-                      className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 border-b px-3 py-2 last:border-b-0"
-                    >
-                      <span className="break-all font-mono text-xs">{model.id}</span>
-                      <span className="text-xs text-muted-foreground">{model.provider}</span>
-                      <Badge variant="outline" className="text-[10px]">
-                        {
-                          {
-                            openrouter: "OpenRouter",
-                            litellm: "LiteLLM",
-                            nvidia: "NVIDIA",
-                            ollama_cloud: "Ollama Cloud",
-                          }[model.source]
-                        }
-                      </Badge>
+                <div>
+                  <button
+                    type="button"
+                    aria-expanded={freeListOpen}
+                    onClick={() => setFreeListOpen((open) => !open)}
+                    className="mb-2 flex w-full items-center gap-1.5 text-left text-sm font-semibold"
+                  >
+                    {freeListOpen ? (
+                      <ChevronUp className="size-4" />
+                    ) : (
+                      <ChevronDown className="size-4" />
+                    )}
+                    Free models
+                    <span className="text-xs font-normal text-muted-foreground">
+                      ({freeModels.data.models.length})
+                    </span>
+                  </button>
+                  {freeListOpen ? (
+                    <div className="max-h-80 overflow-auto rounded-lg border border-border/70">
+                      <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-3 border-b bg-muted/30 px-3 py-2 text-xs font-medium text-muted-foreground">
+                        <span>Model</span>
+                        <span>Provider</span>
+                        <span>Catalog</span>
+                      </div>
+                      {freeModels.data.models.map((model) => (
+                        <div
+                          key={`${model.source}:${model.id}`}
+                          className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 border-b px-3 py-2 last:border-b-0"
+                        >
+                          <span className="break-all font-mono text-xs">{model.id}</span>
+                          <span className="text-xs text-muted-foreground">{model.provider}</span>
+                          <Badge variant="outline" className="text-[10px]">
+                            {
+                              {
+                                openrouter: "OpenRouter",
+                                litellm: "LiteLLM",
+                                nvidia: "NVIDIA",
+                                ollama_cloud: "Ollama Cloud",
+                              }[model.source]
+                            }
+                          </Badge>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  ) : null}
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
@@ -326,23 +364,40 @@ function ModelsPage() {
           )}
           {freeModels.data?.allModels.length ? (
             <div className="mt-5">
-              <h3 className="mb-2 text-sm font-semibold">All connected models</h3>
-              <div className="max-h-96 overflow-auto rounded-lg border border-border/70">
-                {freeModels.data.allModels.map((model) => (
-                  <div
-                    key={model.id}
-                    className="flex items-center justify-between gap-3 border-b px-3 py-2 last:border-b-0"
-                  >
-                    <span className="break-all font-mono text-xs">{model.id}</span>
-                    <Badge
-                      variant={model.free ? "secondary" : "outline"}
-                      className="shrink-0 text-[10px]"
+              <button
+                type="button"
+                aria-expanded={allModelsOpen}
+                onClick={() => setAllModelsOpen((open) => !open)}
+                className="mb-2 flex w-full items-center gap-1.5 text-left text-sm font-semibold"
+              >
+                {allModelsOpen ? (
+                  <ChevronUp className="size-4" />
+                ) : (
+                  <ChevronDown className="size-4" />
+                )}
+                All connected models
+                <span className="text-xs font-normal text-muted-foreground">
+                  ({freeModels.data.allModels.length})
+                </span>
+              </button>
+              {allModelsOpen ? (
+                <div className="max-h-96 overflow-auto rounded-lg border border-border/70">
+                  {freeModels.data.allModels.map((model) => (
+                    <div
+                      key={model.id}
+                      className="flex items-center justify-between gap-3 border-b px-3 py-2 last:border-b-0"
                     >
-                      {model.free ? "Auto · free eligible" : "Connected · check provider pricing"}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
+                      <span className="break-all font-mono text-xs">{model.id}</span>
+                      <Badge
+                        variant={model.free ? "secondary" : "outline"}
+                        className="shrink-0 text-[10px]"
+                      >
+                        {model.free ? "Auto · free eligible" : "Connected · check provider pricing"}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </div>
           ) : null}
         </CardContent>
@@ -411,6 +466,18 @@ function ModelsPage() {
                     {provider.id === "openai" ? "Sign in · ChatGPT" : "Sign in · Claude"}
                   </Button>
                 ) : null}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={!user || hostedConnect.isPending}
+                  onClick={() => hostedConnect.mutate(provider.id)}
+                  title="Connect through Composio hosted sign-in for official provider apps"
+                >
+                  {hostedProvider === provider.id ? (
+                    <Loader2 className="mr-1 size-3.5 animate-spin" />
+                  ) : null}
+                  Connect · Composio
+                </Button>
                 <Button
                   size="sm"
                   variant="outline"
