@@ -12,6 +12,10 @@ begin
   execute 'set local role authenticated';
   perform set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000002',true);
   if not public.oc_oauth_client_registered('fixture-client','https://example.test/callback') or public.oc_oauth_client_registered('fixture-client','https://evil.test/callback') then raise exception 'Callback registration mismatch'; end if;
+  -- Native loopback clients match by host and path regardless of the chosen port.
+  if public.oc_redirect_uri_key('http://127.0.0.1:1455/callback') <> public.oc_redirect_uri_key('http://127.0.0.1:8080/callback') then raise exception 'Loopback port not ignored'; end if;
+  if public.oc_redirect_uri_key('http://127.0.0.1:1455/callback') = public.oc_redirect_uri_key('http://127.0.0.1:1455/other') then raise exception 'Loopback paths collided'; end if;
+  if public.oc_redirect_uri_key('https://example.test/callback') <> 'https://example.test/callback' then raise exception 'HTTPS callback not exact'; end if;
   begin
     perform public.oc_authorize_oauth_client_resource('fixture-client','https://example.test/callback',challenge,array['mcp:connect'],'https://other.test/mcp');
     raise exception 'Wrong resource consent accepted';

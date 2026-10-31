@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OrganizationPanel } from "@/components/organization-panel";
 import { AccessReferencePanel } from "@/components/access-reference-panel";
-import { PlatformRolesPanel } from "@/components/platform-roles-panel";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({
@@ -23,10 +22,8 @@ export const Route = createFileRoute("/_authenticated/admin")({
 function AdminPage() {
   const navigate = Route.useNavigate();
   const location = useLocation();
-  const { primary, isAdmin } = useRoles();
-  const requested = adminTab(location.hash);
-  // Platform role assignment is admin-only; everyone can review the organization and access model.
-  const active = !isAdmin && requested === "roles" ? "organization" : requested;
+  const { primary } = useRoles();
+  const active = adminTab(location.hash);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:py-14">
@@ -53,15 +50,9 @@ function AdminPage() {
           aria-label="System administration sections"
           className="h-auto w-full flex-wrap justify-start gap-2"
         >
-          {isAdmin ? <TabsTrigger value="roles">Platform roles</TabsTrigger> : null}
           <TabsTrigger value="organization">Organization</TabsTrigger>
           <TabsTrigger value="access">Access reference</TabsTrigger>
         </TabsList>
-        {isAdmin ? (
-          <TabsContent value="roles">
-            <PlatformRolesPanel />
-          </TabsContent>
-        ) : null}
         <TabsContent value="organization">
           <OrganizationPanel />
         </TabsContent>

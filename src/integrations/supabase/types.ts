@@ -3402,10 +3402,23 @@ export type Database = {
         };
         Returns: Json;
       };
+      oc_login_activity: {
+        Args: never;
+        Returns: {
+          created_at: string;
+          id: string;
+          ip: string | null;
+          is_current: boolean;
+          last_active_at: string;
+          user_agent: string | null;
+        }[];
+      };
       oc_register_oauth_client: {
         Args: { p_name: string; p_redirect_uris: string[] };
         Returns: Json;
       };
+      oc_revoke_login_session: { Args: { p_session_id: string }; Returns: boolean };
+      oc_revoke_other_login_sessions: { Args: never; Returns: number };
       oc_verify_gateway_key: { Args: { p_key: string }; Returns: Json };
       organize_credential: {
         Args: {

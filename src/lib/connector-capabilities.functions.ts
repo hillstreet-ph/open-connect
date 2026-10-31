@@ -67,7 +67,14 @@ export const refreshConnectorCapabilities = createServerFn({ method: "POST" })
   });
 export const setConnectorToolPermission = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input: { id: string; tool: string; enabled: boolean }) => input)
+  .validator(
+    (input: {
+      id: string;
+      tool: string;
+      enabled: boolean;
+      kind?: "tools" | "skills" | "apps" | undefined;
+    }) => input,
+  )
   .handler(async ({ data, context }) => {
     const db = context.supabase as SupabaseClient;
     const { data: row, error } = await db
@@ -77,15 +84,20 @@ export const setConnectorToolPermission = createServerFn({ method: "POST" })
       .eq("user_id", context.userId)
       .single();
     if (error || !row) throw new Error("Owned connection not found");
-    const tools = row.metadata.capabilities?.tools as Array<{ name: string }> | undefined;
-    if (!tools?.some((t) => t.name === data.tool))
-      throw new Error("Refresh discovered tools before editing permissions");
-    const disabled = new Set<string>(row.metadata.disabled_tools || []);
+    const kind = data.kind ?? "tools";
+    const field =
+      kind === "skills"
+        ? "disabled_skills"
+        : kind === "apps"
+          ? "disabled_toolkits"
+          : "disabled_tools";
+    const metadata = row.metadata as Record<string, unknown>;
+    const disabled = new Set<string>((metadata[field] as string[] | undefined) || []);
     if (data.enabled) disabled.delete(data.tool);
     else disabled.add(data.tool);
     const saved = await db
       .from("app_connections")
-      .update({ metadata: { ...row.metadata, disabled_tools: [...disabled] } })
+      .update({ metadata: { ...row.metadata, [field]: [...disabled] } })
       .eq("id", data.id)
       .eq("user_id", context.userId)
       .eq("updated_at", row.updated_at)

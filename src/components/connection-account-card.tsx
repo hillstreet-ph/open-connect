@@ -33,18 +33,29 @@ type Account = {
     icon_data?: string;
     capabilities?: unknown;
     disabled_tools?: string[];
+    disabled_skills?: string[];
+    disabled_toolkits?: string[];
   };
   identity: { label: string; login: string; name: string; email: string };
 };
 
 type PermissionMode = "allow" | "ask" | "deny";
 
-type ConnectorPermissions = { tools: PermissionMode; skills: PermissionMode };
+type ConnectorPermissions = {
+  tools: PermissionMode;
+  skills: PermissionMode;
+  apps: PermissionMode;
+};
 
-const defaultPermissions: ConnectorPermissions = { tools: "allow", skills: "allow" };
+const defaultPermissions: ConnectorPermissions = {
+  tools: "allow",
+  skills: "allow",
+  apps: "allow",
+};
 
 export function ConnectionAccountCard({
   account,
+  category,
   statusLabel,
   busy,
   reconnectReady,
@@ -52,6 +63,7 @@ export function ConnectionAccountCard({
   onDisconnect,
 }: {
   account: Account;
+  category?: string | undefined;
   statusLabel: string;
   busy: boolean;
   reconnectReady: boolean;
@@ -71,8 +83,11 @@ export function ConnectionAccountCard({
     onError: (e) => toast.error(e.message),
   });
   const permission = useMutation({
-    mutationFn: (input: { tool: string; enabled: boolean }) =>
-      permissionFn({ data: { id: account.id, ...input } }),
+    mutationFn: (input: {
+      tool: string;
+      enabled: boolean;
+      kind?: "tools" | "skills" | "apps" | undefined;
+    }) => permissionFn({ data: { id: account.id, ...input } }),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["app-connections"] });
       void client.invalidateQueries({ queryKey: ["connection-details", account.id] });
@@ -110,7 +125,7 @@ export function ConnectionAccountCard({
     }
   });
 
-  function updatePermission(scope: "tools" | "skills", value: PermissionMode) {
+  function updatePermission(scope: "tools" | "skills" | "apps", value: PermissionMode) {
     const current = permissions[account.id] ?? defaultPermissions;
     const next = { ...permissions, [account.id]: { ...current, [scope]: value } };
     setPermissions(next);
@@ -336,10 +351,9 @@ export function ConnectionAccountCard({
             <TabsList className="flex h-auto max-w-full flex-wrap justify-start overflow-x-auto">
               <TabsTrigger value="tools">Tools ({details.data?.tools.length ?? 0})</TabsTrigger>
               <TabsTrigger value="skills">Skills ({details.data?.skills.length ?? 0})</TabsTrigger>
-              <TabsTrigger value="toolkits">
-                Toolkits ({details.data?.toolkits.length ?? 0})
-              </TabsTrigger>
+              <TabsTrigger value="apps">Apps ({details.data?.toolkits.length ?? 0})</TabsTrigger>
               <TabsTrigger value="permissions">Permissions</TabsTrigger>
+              <TabsTrigger value="information">Information</TabsTrigger>
             </TabsList>
             <TabsContent value="tools" className="space-y-3">
               <Input
@@ -353,21 +367,23 @@ export function ConnectionAccountCard({
               ) : null}
               <div className="max-h-72 space-y-2 overflow-auto">
                 {tools.map((tool) => (
-                  <div key={tool.name} className="rounded-lg border p-3">
+                  <div key={tool.name} className="rounded-lg border p-2.5">
                     <p className="break-all text-sm font-medium">{tool.name}</p>
-                    {snapshot?.tools && (
-                      <label className="mt-2 flex items-center gap-2 text-xs">
-                        <input
-                          type="checkbox"
-                          checked={!account.metadata?.disabled_tools?.includes(tool.name)}
-                          disabled={permission.isPending}
-                          onChange={(e) =>
-                            permission.mutate({ tool: tool.name, enabled: e.target.checked })
-                          }
-                        />
-                        Allow this tool for this connection
-                      </label>
-                    )}
+                    <label className="mt-2 flex items-center gap-2 text-xs">
+                      <input
+                        type="checkbox"
+                        checked={!account.metadata?.disabled_tools?.includes(tool.name)}
+                        disabled={permission.isPending}
+                        onChange={(e) =>
+                          permission.mutate({
+                            tool: tool.name,
+                            enabled: e.target.checked,
+                            kind: "tools",
+                          })
+                        }
+                      />
+                      Allow this tool for this connection
+                    </label>
                     <p className="mt-1 whitespace-pre-wrap break-words text-xs text-muted-foreground">
                       {tool.description}
                     </p>
@@ -386,10 +402,25 @@ export function ConnectionAccountCard({
                 account access.
               </p>
               {details.data?.skills.map((skill) => (
-                <div key={skill.id} className="rounded-lg border p-3">
+                <div key={skill.id} className="rounded-lg border p-2.5">
                   <p className="text-sm font-medium">{skill.name}</p>
                   <p className="text-xs text-muted-foreground">{skill.description}</p>
                   <Badge variant="outline">{skill.verified ? "Verified" : "Unverified"}</Badge>
+                  <label className="mt-2 flex items-center gap-2 text-xs">
+                    <input
+                      type="checkbox"
+                      checked={!account.metadata?.disabled_skills?.includes(skill.id)}
+                      disabled={permission.isPending}
+                      onChange={(e) =>
+                        permission.mutate({
+                          tool: skill.id,
+                          enabled: e.target.checked,
+                          kind: "skills",
+                        })
+                      }
+                    />
+                    Allow this skill for this connection
+                  </label>
                 </div>
               ))}
               {details.isSuccess && !details.data.skills.length ? (
@@ -399,24 +430,63 @@ export function ConnectionAccountCard({
                 <Link to="/library">Open resources</Link>
               </Button>
             </TabsContent>
-            <TabsContent value="toolkits" className="space-y-3">
+            <TabsContent value="apps" className="space-y-3">
               <p className="text-xs text-muted-foreground">
-                Related toolkits already in your private library. Discovery does not install,
-                publish, or grant permissions.
+                Related apps already in your private library. Discovery does not install, publish,
+                or grant permissions.
               </p>
               {details.data?.toolkits.map((toolkit) => (
-                <div key={toolkit.id} className="rounded-lg border p-3">
+                <div key={toolkit.id} className="rounded-lg border p-2.5">
                   <p className="text-sm font-medium">{toolkit.name}</p>
                   <p className="text-xs text-muted-foreground">{toolkit.description}</p>
+                  <label className="mt-2 flex items-center gap-2 text-xs">
+                    <input
+                      type="checkbox"
+                      checked={!account.metadata?.disabled_toolkits?.includes(toolkit.id)}
+                      disabled={permission.isPending}
+                      onChange={(e) =>
+                        permission.mutate({
+                          tool: toolkit.id,
+                          enabled: e.target.checked,
+                          kind: "apps",
+                        })
+                      }
+                    />
+                    Allow this app for this connection
+                  </label>
                 </div>
               ))}
               {details.isSuccess && !details.data?.toolkits.length ? (
-                <p className="text-sm text-muted-foreground">
-                  No related toolkits in your library.
-                </p>
+                <p className="text-sm text-muted-foreground">No related apps in your library.</p>
               ) : null}
             </TabsContent>
             <TabsContent value="permissions" className="space-y-3">
+              <ul className="space-y-1 text-sm">
+                <li className="flex items-start gap-2">
+                  <Badge variant="outline" className="shrink-0">
+                    Interact
+                  </Badge>
+                  <span className="text-muted-foreground">
+                    Use the app on your behalf for the actions you approve.
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <Badge variant="outline" className="shrink-0">
+                    Read
+                  </Badge>
+                  <span className="text-muted-foreground">
+                    Read the account data needed for each approved request.
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <Badge variant="outline" className="shrink-0">
+                    Write
+                  </Badge>
+                  <span className="text-muted-foreground">
+                    Create and update data only for actions you explicitly approve.
+                  </span>
+                </li>
+              </ul>
               <p className="text-xs text-muted-foreground">
                 Granted scopes reported for this connection.
               </p>
@@ -437,11 +507,11 @@ export function ConnectionAccountCard({
                   them.
                 </p>
               ) : null}
-              <div className="space-y-2 rounded-lg border border-border/70 p-3">
+              <div className="space-y-2 rounded-lg border border-border/70 p-2.5">
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Agent access
                 </p>
-                {(["tools", "skills"] as const).map((scope) => {
+                {(["tools", "skills", "apps"] as const).map((scope) => {
                   const current = permissions[account.id] ?? defaultPermissions;
                   return (
                     <label
@@ -467,6 +537,39 @@ export function ConnectionAccountCard({
                   Applies when agents use this connector. Default is Always allow.
                 </p>
               </div>
+            </TabsContent>
+            <TabsContent value="information" className="space-y-3">
+              <dl className="grid gap-2 sm:grid-cols-2">
+                <div className="min-w-0">
+                  <dt className="text-xs text-muted-foreground">About</dt>
+                  <dd className="text-sm">Approved app access for your workspace agents.</dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="text-xs text-muted-foreground">Category</dt>
+                  <dd className="text-sm">{category || "Productivity"}</dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="text-xs text-muted-foreground">Developer</dt>
+                  <dd className="text-sm">Kairo Casino</dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="text-xs text-muted-foreground">Version</dt>
+                  <dd className="text-sm">0.8.0</dd>
+                </div>
+                <div className="min-w-0 sm:col-span-2">
+                  <dt className="text-xs text-muted-foreground">Website</dt>
+                  <dd className="truncate text-sm">
+                    <a
+                      className="text-primary underline-offset-4 hover:underline"
+                      href="https://open-connect.site"
+                      target="_blank"
+                      rel="noreferrer noopener"
+                    >
+                      https://open-connect.site
+                    </a>
+                  </dd>
+                </div>
+              </dl>
             </TabsContent>
           </Tabs>
         </div>

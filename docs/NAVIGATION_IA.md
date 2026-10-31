@@ -42,7 +42,7 @@ The platform logo returns to Dashboard. The user avatar at the bottom of the sid
 Settings holds personal account surfaces only: Profile, Security & login, Data Controls, and Integrations. Anything that already has a sidebar destination (Projects, Connectors, Credentials, AI Gateway, Automations, Memory, Knowledge) is not repeated in Settings.
 Credentials opens the existing scoped credential page.
 
-System administration is one page (`/admin`) with Organization, Platform roles, and Access reference tabs. It opens from the single `hillstreet-ph` entry in the account menu; it is not duplicated in Settings or the sidebar. Platform role assignment shows only for platform Admins. The old `/orgs` and `/roles` URLs redirect to the matching tab. Direct route authorization remains enforced.
+System administration is one page (`/admin`) with Organization and Access reference tabs. It opens from the single `hillstreet-ph` entry in the account menu; it is not duplicated in Settings or the sidebar. The Organization tab is one people list where each person's organization role, platform role, and group are set together; the platform-role control shows only for platform Admins. The old `/orgs` and `/roles` URLs redirect to the Organization tab. Direct route authorization remains enforced.
 Marketplace remains the single resource registry entry. Existing URLs and server authorization remain unchanged.
 
 ## Product rule
@@ -56,11 +56,11 @@ Open Connect is the gateway and control plane. Independent applications consume 
 | Personal settings | Every signed-in account | Settings: Profile; Security & login |
 | Client workspace | Member (stored as user) | Daily work, own credentials and API keys |
 | Toolkit management | Developer and higher | Build, using manage_toolkits capability |
-| System administration | Platform admin and owner | Account menu → `hillstreet-ph` (`/admin`); Organization, Platform roles, Access reference tabs |
+| System administration | Platform admin and owner | Account menu → `hillstreet-ph` (`/admin`); Organization and Access reference tabs |
 | Organization membership | Organization Admins | System administration → Organization tab |
 | Organizations and projects | Existing membership policies | Organization tab; Projects |
 
-System administration manages platform roles; Organization settings manages HillStreet membership and groups; each project controls its own collaboration grants. Admin, Developer, and Member are the only human role labels across those scopes. Navigation adds no access. Clients use Member-level human identity plus their own scoped machine credentials.
+System administration's Organization tab manages both platform roles and HillStreet membership and groups; each project controls its own collaboration grants. Admin, Developer, and Member are the only human role labels across those scopes. Navigation adds no access. Clients use Member-level human identity plus their own scoped machine credentials.
 
 ## Account menu placement and MCP verification
 

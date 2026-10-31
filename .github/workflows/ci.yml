@@ -35,6 +35,8 @@ jobs:
         run: bun run test:oauth:db
       - name: Workforce database regression tests
         run: bun run test:workforce:db
+      - name: Login activity database regression tests
+        run: bun run test:login:db
       - name: Consolidated resource integrity
         run: python3 scripts/consolidate_resources.py
       - name: Marketplace branch history regression tests
@@ -80,23 +82,11 @@ jobs:
         with:
           script: |
             const state = process.env.VALIDATION_RESULT === 'success' ? 'success' : 'failure';
-            let shas = [];
+            // Bind every published status to immutable SHAs from this validated event.
+            // A branch or PR may advance while the validator is running.
+            const shas = [context.sha];
             if (context.payload.pull_request) {
-              const { data: pullRequest } = await github.rest.pulls.get({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: context.issue.number,
-              });
-              shas = [context.payload.pull_request.head.sha, pullRequest.merge_commit_sha].filter(Boolean);
-            } else {
-              const branch = context.ref.replace('refs/heads/', '');
-              const { data: prs } = await github.rest.pulls.list({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                head: context.repo.owner + ':' + branch,
-                state: 'open',
-              });
-              shas = prs.map(pr => pr.head.sha).filter(Boolean);
+              shas.push(context.payload.pull_request.head.sha);
             }
             for (const sha of new Set(shas)) {
               await github.rest.repos.createCommitStatus({

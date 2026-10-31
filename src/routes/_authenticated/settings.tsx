@@ -1,7 +1,8 @@
+import { NotificationChannels } from "@/components/notification-channels";
 import { createFileRoute, useLocation } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
-import { KeyRound, Loader2, MessageCircle, Save, Server, Trash2, Upload } from "lucide-react";
+import { KeyRound, Loader2, MessageCircle, Save, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ProfileAvatarBadge } from "@/components/user-menu";
@@ -12,6 +13,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataControlsPanel } from "@/components/data-controls-panel";
+import { IncomingWebhooks } from "@/components/incoming-webhooks";
+import {
+  ConnectedAccountsPanel,
+  AccountLinkCallbackNotice,
+} from "@/components/connected-accounts-panel";
+import { LoginActivityPanel } from "@/components/login-activity-panel";
 import { settingsTab } from "@/lib/settings-navigation";
 import { profileDraftValue } from "@/lib/react-compat";
 
@@ -35,6 +42,7 @@ const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 function SettingsPage() {
   const queryClient = useQueryClient();
+  const { user } = Route.useRouteContext();
   const location = useLocation();
   const navigate = Route.useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -170,6 +178,7 @@ function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-14">
+      <AccountLinkCallbackNotice />
       <h1 className="text-3xl font-semibold">Settings</h1>
       <p className="mt-2 text-sm text-muted-foreground">
         Manage your profile, workspace access, connected apps, data, and security.
@@ -266,7 +275,9 @@ function SettingsPage() {
             </CardContent>
           </Card>
         </TabsContent>
-        <TabsContent value="security">
+        <TabsContent value="security" className="space-y-4">
+          <ConnectedAccountsPanel />
+          <LoginActivityPanel />
           <Card className="shadow-panel">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
@@ -327,7 +338,9 @@ function SettingsPage() {
         <TabsContent value="data">
           <DataControlsPanel />
         </TabsContent>
-        <TabsContent value="integrations">
+        <TabsContent value="integrations" className="space-y-4">
+          <IncomingWebhooks userId={user.id} />
+          <NotificationChannels userId={user.id} />
           <div className="grid gap-4 md:grid-cols-2">
             <a
               href="/integrations?section=apps"
@@ -341,23 +354,6 @@ function SettingsPage() {
                   <h2 className="font-medium">Apps</h2>
                   <p className="mt-1 text-sm text-muted-foreground">
                     Connect account-owned apps such as Telegram and manage their credentials.
-                  </p>
-                </div>
-              </div>
-            </a>
-            <a
-              href="/integrations?section=custom-mcp"
-              className="block rounded-xl border bg-card p-5 shadow-panel transition-colors hover:bg-accent/40"
-            >
-              <div className="flex items-start gap-3">
-                <div className="rounded-lg bg-primary/10 p-2 text-primary">
-                  <Server className="size-4" />
-                </div>
-                <div>
-                  <h2 className="font-medium">Custom MCP</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Add and manage remote MCP servers separately from Connectors and Marketplace
-                    resources.
                   </p>
                 </div>
               </div>

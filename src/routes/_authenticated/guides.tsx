@@ -37,7 +37,7 @@ const userGuideSections = [
     title: "MCP client setup",
     body: "Point Claude, Cursor, Hermes, or any MCP client at the Open-Connect gateway with a scoped key.",
     steps: [
-      "Open Settings > Integrations and create a scoped API key that includes mcp:connect.",
+      "Open Integrations > Personal Token and create a scoped API key that includes mcp:connect.",
       "Set MCP URL to https://open-connect.site/mcp",
       "Add header Authorization: Bearer oc_live_…",
       "Call tools/list to see marketplace and platform tools.",
@@ -166,12 +166,12 @@ function GuidesPage() {
             </span>
             <CardTitle className="mt-3 text-base">Professional setup E2E</CardTitle>
             <CardDescription>
-              Control-plane policy demo package (YAML, tests, validator). Not a marketplace listing.
+              Webhook delivery setup and a control-plane policy demo with tests and a validator.
             </CardDescription>
           </CardHeader>
           <CardContent className="px-5 pb-5">
             <Button asChild variant="outline" className="w-full">
-              <a href="#professional-e2e">Open E2E package</a>
+              <a href="#professional-e2e">Open professional setup</a>
             </Button>
           </CardContent>
         </Card>
@@ -212,6 +212,133 @@ function GuidesPage() {
       >
         Professional setup E2E
       </h2>
+      <Card id="webhook-setup" className="mt-3 scroll-mt-6 shadow-panel">
+        <CardHeader className="p-5 pb-3">
+          <CardTitle className="text-base">
+            Webhooks: professional setup from event to delivery
+          </CardTitle>
+          <CardDescription>
+            Configure incoming receipts, notification alerts, and delivery monitoring in Settings.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4 px-5 pb-5">
+          <div className="flex flex-wrap gap-2">
+            <Button asChild size="sm" variant="outline">
+              <Link to="/settings" hash="integrations">
+                Open webhook settings
+              </Link>
+            </Button>
+            <Button asChild size="sm" variant="outline">
+              <Link to="/integrations" search={{ section: "apps" }}>
+                Set up a Telegram bot
+              </Link>
+            </Button>
+          </div>
+          <h3 className="font-medium">Incoming webhooks</h3>
+          <ol className="list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
+            <li>
+              Create an incoming webhook in Settings → Integrations. Save its URL and the secret
+              shown once.
+            </li>
+            <li>
+              Configure a sender that can POST JSON and set the <code>x-open-connect-secret</code>{" "}
+              and <code>x-open-connect-delivery-id</code> headers. Use a unique delivery ID for each
+              event and reuse it for retries. Limit each request to 64 KiB.
+            </li>
+            <li>
+              Send a synthetic event. A new receipt returns HTTP 202; a duplicate delivery ID
+              returns HTTP 200. An invalid secret returns HTTP 401. In Settings, open the webhook’s
+              deliveries to inspect the receipt; the notification bell also shows it.
+            </li>
+            <li>
+              Incoming receipts are stored only; they do not run automations. The built-in receiver
+              does not verify provider signatures or answer verification challenges. For senders
+              that require those features or cannot set the required headers, use a separate
+              compatible receiver.
+            </li>
+          </ol>
+          <h3 className="font-medium">Outbound alerts and monitoring</h3>
+          <ol className="list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
+            <li>
+              Under Notifications and alerts, add a Telegram destination using a connected bot and
+              numeric chat ID, or add a public HTTPS outbound webhook URL. Save its signing secret
+              when shown.
+            </li>
+            <li>
+              Use Send test alert and check the result in Outbound delivery monitoring. Sent means
+              the destination returned an acknowledgment; failed or interrupted attempts can be
+              retried manually.
+            </li>
+            <li>
+              New incoming receipts create <code>webhook.received</code> summaries for enabled
+              destinations; raw incoming payloads are not forwarded. Outbound receivers should
+              verify the HMAC signature and timestamp and deduplicate by event ID. The full headers
+              and retry contract are shown in Settings.
+            </li>
+          </ol>
+          <details className="rounded border p-3">
+            <summary className="cursor-pointer text-sm font-medium">
+              Separate provider-specific receiver setup
+            </summary>
+            <p className="my-3 text-xs text-muted-foreground">
+              These steps apply to a separate receiver, not the built-in shared-secret inbox.
+              Connecting an app does not register its webhooks.
+            </p>
+            <ol className="list-decimal space-y-3 pl-5 text-sm text-muted-foreground">
+              <li>
+                <strong className="text-foreground">Choose the event and destination.</strong>{" "}
+                Record the provider, event names, owning project, HTTPS receiver URL, and expected
+                action. Start with a staging receiver and synthetic events. Connecting an app does
+                not automatically register its webhooks.
+              </li>
+              <li>
+                <strong className="text-foreground">Prepare and protect the receiver.</strong>{" "}
+                Deploy a receiver that implements your provider’s documented verification method.
+                Check the signature against the original request bytes before parsing or processing;
+                enforce timestamps when the provider signs them. Keep signing secrets in server
+                secret storage, separate from app access tokens. Reject unauthenticated requests
+                before any action.
+              </li>
+              <li>
+                <strong className="text-foreground">Register only the events you need.</strong> In
+                the provider’s webhook configuration, enter the verified receiver URL, select the
+                intended events, and configure the matching signing secret. Complete any provider
+                verification challenge. Never put a secret in the URL or a browser configuration.
+              </li>
+              <li>
+                <strong className="text-foreground">Prove a valid delivery.</strong> Use the
+                provider’s signed test delivery, then perform one harmless staging action that emits
+                a real event. Match the delivery ID in the provider log to the receiver log and the
+                expected result. A successful HTTP response alone does not prove the action
+                completed.
+              </li>
+              <li>
+                <strong className="text-foreground">Test failure and recovery.</strong> Confirm a
+                missing or invalid signature causes rejection with no action. Redeliver the same
+                event and verify its durable delivery ID prevents duplicate actions. Test failed
+                processing, bounded retries with backoff, and recovery from the failed-delivery
+                queue. Acknowledge promptly only after durable acceptance; process longer work
+                asynchronously.
+              </li>
+              <li>
+                <strong className="text-foreground">Enable and monitor production.</strong> Repeat
+                the checks using separate production secrets and the intended event scope. Monitor
+                delivery failures, queue age, and action results without logging secrets or full
+                sensitive payloads. To roll back, disable the provider subscription and pause
+                processing; retain failed delivery IDs for controlled replay. Reverify after
+                rotation.
+              </li>
+            </ol>
+            <p className="text-xs text-muted-foreground">
+              Troubleshooting: no deliveries → check subscription and event filters; authentication
+              failures → check signing secret, raw request body, and signed timestamp; timeouts →
+              check durable acceptance and queue health; duplicate actions → check delivery ID
+              storage.
+            </p>
+          </details>
+        </CardContent>
+      </Card>
+
       <Card className="mt-3 shadow-panel">
         <CardHeader className="p-5">
           <CardTitle className="text-base">Control plane demo package</CardTitle>

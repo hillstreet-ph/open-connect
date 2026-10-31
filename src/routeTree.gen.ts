@@ -50,6 +50,7 @@ import { Route as AuthenticatedSecretsRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedSkillsRouteImport } from './routes/_authenticated/skills'
 import { Route as AuthenticatedStudioRouteImport } from './routes/_authenticated/studio'
+import { Route as AuthenticatedStudioDraftsRouteImport } from './routes/_authenticated/studio-drafts'
 import { Route as AuthenticatedTasksRouteImport } from './routes/_authenticated/tasks'
 import { Route as AuthenticatedToolkitsRouteImport } from './routes/_authenticated/toolkits'
 import { Route as AuthenticatedToolsRouteImport } from './routes/_authenticated/tools'
@@ -65,6 +66,7 @@ import { Route as ApiInternalSchedulerRouteImport } from './routes/api/internal/
 import { Route as ApiV1DatabricksRouteImport } from './routes/api/v1/databricks'
 import { Route as ApiV1HealthRouteImport } from './routes/api/v1/health'
 import { Route as ApiV1ResourcesRouteImport } from './routes/api/v1/resources'
+import { Route as ApiWebhooksIdRouteImport } from './routes/api/webhooks/$id'
 import { Route as V1ChatCompletionsRouteImport } from './routes/v1/chat/completions'
 import { Route as AuthenticatedConnectionsOauthCallbackRouteImport } from './routes/_authenticated/connections.oauth.callback'
 import { Route as ApiV1ActionsReadRouteImport } from './routes/api/v1/actions.read'
@@ -283,6 +285,12 @@ const AuthenticatedStudioRoute = AuthenticatedStudioRouteImport.update({
   path: '/studio',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedStudioDraftsRoute =
+  AuthenticatedStudioDraftsRouteImport.update({
+    id: '/studio-drafts',
+    path: '/studio-drafts',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedTasksRoute = AuthenticatedTasksRouteImport.update({
   id: '/tasks',
   path: '/tasks',
@@ -360,6 +368,11 @@ const ApiV1ResourcesRoute = ApiV1ResourcesRouteImport.update({
   path: '/api/v1/resources',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiWebhooksIdRoute = ApiWebhooksIdRouteImport.update({
+  id: '/api/webhooks/$id',
+  path: '/api/webhooks/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const V1ChatCompletionsRoute = V1ChatCompletionsRouteImport.update({
   id: '/v1/chat/completions',
   path: '/v1/chat/completions',
@@ -423,6 +436,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRoute
   '/skills': typeof AuthenticatedSkillsRoute
   '/studio': typeof AuthenticatedStudioRoute
+  '/studio-drafts': typeof AuthenticatedStudioDraftsRoute
   '/tasks': typeof AuthenticatedTasksRoute
   '/toolkits': typeof AuthenticatedToolkitsRoute
   '/tools': typeof AuthenticatedToolsRoute
@@ -438,6 +452,7 @@ export interface FileRoutesByFullPath {
   '/api/v1/databricks': typeof ApiV1DatabricksRoute
   '/api/v1/health': typeof ApiV1HealthRoute
   '/api/v1/resources': typeof ApiV1ResourcesRoute
+  '/api/webhooks/$id': typeof ApiWebhooksIdRoute
   '/v1/chat/completions': typeof V1ChatCompletionsRoute
   '/connections/oauth/callback': typeof AuthenticatedConnectionsOauthCallbackRoute
   '/api/v1/actions/read': typeof ApiV1ActionsReadRoute
@@ -484,6 +499,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsRoute
   '/skills': typeof AuthenticatedSkillsRoute
   '/studio': typeof AuthenticatedStudioRoute
+  '/studio-drafts': typeof AuthenticatedStudioDraftsRoute
   '/tasks': typeof AuthenticatedTasksRoute
   '/toolkits': typeof AuthenticatedToolkitsRoute
   '/tools': typeof AuthenticatedToolsRoute
@@ -499,6 +515,7 @@ export interface FileRoutesByTo {
   '/api/v1/databricks': typeof ApiV1DatabricksRoute
   '/api/v1/health': typeof ApiV1HealthRoute
   '/api/v1/resources': typeof ApiV1ResourcesRoute
+  '/api/webhooks/$id': typeof ApiWebhooksIdRoute
   '/v1/chat/completions': typeof V1ChatCompletionsRoute
   '/connections/oauth/callback': typeof AuthenticatedConnectionsOauthCallbackRoute
   '/api/v1/actions/read': typeof ApiV1ActionsReadRoute
@@ -547,6 +564,7 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/skills': typeof AuthenticatedSkillsRoute
   '/_authenticated/studio': typeof AuthenticatedStudioRoute
+  '/_authenticated/studio-drafts': typeof AuthenticatedStudioDraftsRoute
   '/_authenticated/tasks': typeof AuthenticatedTasksRoute
   '/_authenticated/toolkits': typeof AuthenticatedToolkitsRoute
   '/_authenticated/tools': typeof AuthenticatedToolsRoute
@@ -562,6 +580,7 @@ export interface FileRoutesById {
   '/api/v1/databricks': typeof ApiV1DatabricksRoute
   '/api/v1/health': typeof ApiV1HealthRoute
   '/api/v1/resources': typeof ApiV1ResourcesRoute
+  '/api/webhooks/$id': typeof ApiWebhooksIdRoute
   '/v1/chat/completions': typeof V1ChatCompletionsRoute
   '/_authenticated/connections/oauth/callback': typeof AuthenticatedConnectionsOauthCallbackRoute
   '/api/v1/actions/read': typeof ApiV1ActionsReadRoute
@@ -610,6 +629,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/skills'
     | '/studio'
+    | '/studio-drafts'
     | '/tasks'
     | '/toolkits'
     | '/tools'
@@ -625,6 +645,7 @@ export interface FileRouteTypes {
     | '/api/v1/databricks'
     | '/api/v1/health'
     | '/api/v1/resources'
+    | '/api/webhooks/$id'
     | '/v1/chat/completions'
     | '/connections/oauth/callback'
     | '/api/v1/actions/read'
@@ -671,6 +692,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/skills'
     | '/studio'
+    | '/studio-drafts'
     | '/tasks'
     | '/toolkits'
     | '/tools'
@@ -686,6 +708,7 @@ export interface FileRouteTypes {
     | '/api/v1/databricks'
     | '/api/v1/health'
     | '/api/v1/resources'
+    | '/api/webhooks/$id'
     | '/v1/chat/completions'
     | '/connections/oauth/callback'
     | '/api/v1/actions/read'
@@ -733,6 +756,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/_authenticated/skills'
     | '/_authenticated/studio'
+    | '/_authenticated/studio-drafts'
     | '/_authenticated/tasks'
     | '/_authenticated/toolkits'
     | '/_authenticated/tools'
@@ -748,6 +772,7 @@ export interface FileRouteTypes {
     | '/api/v1/databricks'
     | '/api/v1/health'
     | '/api/v1/resources'
+    | '/api/webhooks/$id'
     | '/v1/chat/completions'
     | '/_authenticated/connections/oauth/callback'
     | '/api/v1/actions/read'
@@ -773,6 +798,7 @@ export interface RootRouteChildren {
   ApiV1DatabricksRoute: typeof ApiV1DatabricksRoute
   ApiV1HealthRoute: typeof ApiV1HealthRoute
   ApiV1ResourcesRoute: typeof ApiV1ResourcesRoute
+  ApiWebhooksIdRoute: typeof ApiWebhooksIdRoute
   V1ChatCompletionsRoute: typeof V1ChatCompletionsRoute
   ApiV1ActionsReadRoute: typeof ApiV1ActionsReadRoute
   ApiV1ActionsWriteRoute: typeof ApiV1ActionsWriteRoute
@@ -1067,6 +1093,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStudioRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/studio-drafts': {
+      id: '/_authenticated/studio-drafts'
+      path: '/studio-drafts'
+      fullPath: '/studio-drafts'
+      preLoaderRoute: typeof AuthenticatedStudioDraftsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/tasks': {
       id: '/_authenticated/tasks'
       path: '/tasks'
@@ -1172,6 +1205,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiV1ResourcesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/webhooks/$id': {
+      id: '/api/webhooks/$id'
+      path: '/api/webhooks/$id'
+      fullPath: '/api/webhooks/$id'
+      preLoaderRoute: typeof ApiWebhooksIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/v1/chat/completions': {
       id: '/v1/chat/completions'
       path: '/v1/chat/completions'
@@ -1265,6 +1305,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedSkillsRoute: typeof AuthenticatedSkillsRoute
   AuthenticatedStudioRoute: typeof AuthenticatedStudioRoute
+  AuthenticatedStudioDraftsRoute: typeof AuthenticatedStudioDraftsRoute
   AuthenticatedTasksRoute: typeof AuthenticatedTasksRoute
   AuthenticatedToolkitsRoute: typeof AuthenticatedToolkitsRoute
   AuthenticatedToolsRoute: typeof AuthenticatedToolsRoute
@@ -1305,6 +1346,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedSkillsRoute: AuthenticatedSkillsRoute,
   AuthenticatedStudioRoute: AuthenticatedStudioRoute,
+  AuthenticatedStudioDraftsRoute: AuthenticatedStudioDraftsRoute,
   AuthenticatedTasksRoute: AuthenticatedTasksRoute,
   AuthenticatedToolkitsRoute: AuthenticatedToolkitsRoute,
   AuthenticatedToolsRoute: AuthenticatedToolsRoute,
@@ -1334,6 +1376,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiV1DatabricksRoute: ApiV1DatabricksRoute,
   ApiV1HealthRoute: ApiV1HealthRoute,
   ApiV1ResourcesRoute: ApiV1ResourcesRoute,
+  ApiWebhooksIdRoute: ApiWebhooksIdRoute,
   V1ChatCompletionsRoute: V1ChatCompletionsRoute,
   ApiV1ActionsReadRoute: ApiV1ActionsReadRoute,
   ApiV1ActionsWriteRoute: ApiV1ActionsWriteRoute,

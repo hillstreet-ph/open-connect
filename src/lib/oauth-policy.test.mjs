@@ -76,6 +76,16 @@ test("malformed callbacks return a stable error on server and browser", () => {
   }
 });
 
+test("accepts native loopback callbacks so desktop clients can connect", () => {
+  for (const redirect_uri of [
+    "http://127.0.0.1:1455/callback",
+    "http://localhost:8080/auth/callback",
+  ])
+    assert.equal(validateOAuthRequest({ ...req, redirect_uri }).redirect_uri, redirect_uri);
+  for (const redirect_uri of ["http://evil.example/callback", "http://10.0.0.5/callback"])
+    assert.throws(() => validateOAuthRequest({ ...req, redirect_uri }), /Invalid HTTPS callback/);
+});
+
 test("preserves requested scopes without adding write permissions", () => {
   assert.equal(
     validateOAuthRequest({ ...req, scope: "mcp:connect resources:read" }).scope,
