@@ -172,12 +172,7 @@ function StudioPage() {
         </div>
       </header>
 
-      {view === "build" ? (
-        <div className="space-y-8">
-          <AppSetupWorkbench />
-          <ResourceUrlImport />
-        </div>
-      ) : null}
+      {view === "build" ? <AppSetupWorkbench /> : null}
 
       {view === "packages" ? (
         <section id="packages" className="scroll-mt-6 space-y-4">
@@ -210,6 +205,9 @@ function StudioPage() {
               </CardContent>
             </Card>
           )}
+          <div className="max-w-3xl">
+            <ResourceUrlImport />
+          </div>
         </section>
       ) : null}
 
