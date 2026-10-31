@@ -80,8 +80,8 @@ export function connectionUsesBrowserLogin(account: {
       : {};
   return Boolean(
     account.credential_reference?.startsWith("composio://connected-account/") ||
-      ["oauth", "managed_oauth"].includes(String(metadata["mode"] ?? "")) ||
-      metadata["auth_type"] === "oauth",
+    ["oauth", "managed_oauth"].includes(String(metadata["mode"] ?? "")) ||
+    metadata["auth_type"] === "oauth",
   );
 }
 
