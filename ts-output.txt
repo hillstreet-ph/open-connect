@@ -1,0 +1,4 @@
+src/lib/resource-import.functions.ts(321,22): error TS2379: Argument of type '{ name: string; status: string; id: any; detail: string | undefined; }' is not assignable to parameter of type '{ name: string; status: string; id?: string; detail?: string; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'detail' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
