@@ -1,3 +1,2 @@
 $ tsc --noEmit
-src/components/resource-library-card.tsx(1,1): error TS2304: Cannot find name 'ypescript'.
-typecheck_exit=2
+typecheck_exit=0
