@@ -226,11 +226,7 @@ function extractRequiredCapabilities(task: string): string[] {
   const capabilities: string[] = [];
   const lowerTask = task.toLowerCase();
 
-  if (
-    lowerTask.includes("code") ||
-    lowerTask.includes("program") ||
-    lowerTask.includes("script")
-  ) {
+  if (lowerTask.includes("code") || lowerTask.includes("program") || lowerTask.includes("script")) {
     capabilities.push("code");
   }
   if (
