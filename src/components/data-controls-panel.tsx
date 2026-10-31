@@ -40,8 +40,7 @@ function AccountDataControls({ studio, userId }: { studio: boolean; userId: stri
   const query = useQuery({
     queryKey: ["data-controls", userId],
     queryFn: () => getControls(),
-    refetchInterval: 3
-0000,
+    refetchInterval: 30000,
   });
   const [draft, setDraft] = useState<DataControls | null>(null);
   const [editor, setEditor] = useState<{
@@ -104,8 +103,7 @@ function AccountDataControls({ studio, userId }: { studio: boolean; userId: stri
     },
     onError: (e) => toast.error(e.message),
   });
-  const
- build = useMutation({
+  const build = useMutation({
     mutationFn: (id: string) => buildDraftFn({ data: { id } }),
     onSuccess: () => {
       void refresh();
@@ -157,8 +155,7 @@ function AccountDataControls({ studio, userId }: { studio: boolean; userId: stri
             <CardDescription>
               Account-wide settings for Open-Connect. Your Memory, Knowledge and reusable drafts
               stay private until you explicitly publish a reviewed resource.
-  
-          </CardDescription>
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {(
@@ -200,8 +197,7 @@ function AccountDataControls({ studio, userId }: { studio: boolean; userId: stri
                 id="data-retention"
                 className="block rounded-md border bg-background p-2 text-sm"
                 value={settings.retention_days}
-                onChange={(e) => update(
-"retention_days", Number(e.target.value))}
+                onChange={(e) => update("retention_days", Number(e.target.value))}
               >
                 {[30, 90, 365].map((n) => (
                   <option key={n} value={n}>
@@ -245,8 +241,7 @@ function AccountDataControls({ studio, userId }: { studio: boolean; userId: stri
                 variant="outline"
                 disabled={clear.isPending}
                 onClick={() => {
-               
-   if (window.confirm("Clear your saved activity index? This cannot be undone."))
+                  if (window.confirm("Clear your saved activity index? This cannot be undone."))
                     clear.mutate();
                 }}
               >
@@ -287,8 +282,7 @@ function AccountDataControls({ studio, userId }: { studio: boolean; userId: stri
                 </p>
                 <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">
                   {group.summary}
-    
-            </p>
+                </p>
                 <div className="flex flex-wrap gap-2">
                   <Button
                     size="sm"
@@ -336,8 +330,7 @@ function AccountDataControls({ studio, userId }: { studio: boolean; userId: stri
                 .slice(0, 12)
                 .map(([name, count]) => (
                   <span
-  
-                  key={name}
+                    key={name}
                     className="max-w-full break-words rounded-lg border px-3 py-2 text-sm"
                   >
                     {name} · {count}
@@ -386,8 +379,7 @@ function AccountDataControls({ studio, userId }: { studio: boolean; userId: stri
                 value={editor.resource_type}
                 onChange={(e) => setEditor({ ...editor, resource_type: e.target.value })}
               >
-                {["prompt", "skill", "guide", "toolkit"].map((t)
- => (
+                {["prompt", "skill", "guide", "toolkit"].map((t) => (
                   <option key={t}>{t}</option>
                 ))}
               </select>
@@ -430,8 +422,7 @@ function AccountDataControls({ studio, userId }: { studio: boolean; userId: stri
                   <div className="min-w-0">
                     <p className="break-words font-medium">{d.title}</p>
                     <p className="text-xs text-muted-foreground">
-                      {d.resource
-_type} ·{" "}
+                      {d.resource_type} ·{" "}
                       {d.resource_id ? "Built for resource review" : "Private draft"}
                     </p>
                   </div>
