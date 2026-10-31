@@ -49,6 +49,8 @@ const publishablePackageTypes = [
   "guide",
 ] as const;
 
+type StudioView = "build" | "packages" | "review" | "context" | "toolkits";
+
 function SectionHeading({
   icon: Icon,
   label,
@@ -74,16 +76,24 @@ function SectionHeading({
   );
 }
 
-type StudioView = "build" | "packages" | "review" | "context" | "toolkits";
-
 function StudioPage() {
   const { primary, can } = useRoles();
   const [view, setView] = useState<StudioView>("build");
   useEffect(() => {
-    const hash = window.location.hash.replace("#", "");
-    if (hash === "app-setup") setView("build");
-    else if (["packages", "review", "context", "toolkits"].includes(hash))
-      setView(hash as StudioView);
+    const applyHash = () => {
+      const hash = window.location.hash.replace("#", "");
+      if (hash === "app-setup") {
+        setView("build");
+      } else if (["packages", "review", "context", "toolkits"].includes(hash)) {
+        setView(hash as StudioView);
+      }
+    };
+    const timer = window.setTimeout(applyHash, 0);
+    window.addEventListener("hashchange", applyHash);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("hashchange", applyHash);
+    };
   }, []);
   return (
     <div className="mx-auto max-w-6xl space-y-8 px-4 py-6 sm:px-6 sm:py-10">
@@ -173,6 +183,7 @@ function StudioPage() {
           <ResourceUrlImport />
         </div>
       ) : null}
+
       {view === "packages" ? (
         <section id="packages" className="scroll-mt-6 space-y-4">
           <SectionHeading
@@ -200,7 +211,8 @@ function StudioPage() {
           ) : (
             <Card>
               <CardContent className="p-5 text-sm text-muted-foreground">
-                Your role cannot upload packages. Contact an administrator to raise permissions.
+                Your role cannot upload packages. Contact an administrator to
+                raise permissions.
               </CardContent>
             </Card>
           )}
