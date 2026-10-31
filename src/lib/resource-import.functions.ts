@@ -161,7 +161,12 @@ export const importResourceUrl = createServerFn({ method: "POST" })
       throw new Error("Use a public source URL without credentials; upload private files instead");
     const sources = await expandImportUrl(url);
     const db = context.supabase as SupabaseClient;
-    const results: Array<{ name: string; status: string; id?: string; detail?: string }> = [];
+    const results: Array<{
+      name: string;
+      status: string;
+      id?: string;
+      detail?: string | undefined;
+    }> = [];
     if (sources.length > MAX_IMPORT_SOURCES) {
       results.push({
         name: `${sources.length - MAX_IMPORT_SOURCES} additional resource(s)`,
@@ -329,3 +334,4 @@ export const importResourceUrl = createServerFn({ method: "POST" })
     }
     return { results, publication_performed: publishedCount > 0, antivirus: "not_run" };
   });
+
