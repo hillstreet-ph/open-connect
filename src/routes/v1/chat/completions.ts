@@ -12,7 +12,7 @@ import {
   resolveOpenAutoRoutes,
   resolveUserUpstreams,
 } from "@/lib/gateway.server";
-import { isOpenAutoRequest } from "@/lib/open-auto-router";
+import { isOpenAutoRequest, isOpenAutoRotationStatus } from "@/lib/open-auto-router";
 
 export const Route = createFileRoute("/v1/chat/completions")({
   server: {
@@ -111,8 +111,13 @@ export const Route = createFileRoute("/v1/chat/completions")({
 
             if (!response.ok) {
               lastError = { status: response.status, body: result };
-              // try the next route on 5xx / 404, and rotate for Open-Auto tiered routing
-              if (autoFree || openAuto || response.status >= 500 || response.status === 404) continue;
+              // try the next route on 5xx / 404, and rotate Open-Auto past recoverable limits
+              const rotateRoute =
+                autoFree ||
+                (openAuto && isOpenAutoRotationStatus(response.status)) ||
+                response.status >= 500 ||
+                response.status === 404;
+              if (rotateRoute) continue;
               await logGatewayRequest({
                 key,
                 endpoint: "/v1/chat/completions",

@@ -254,7 +254,7 @@ export function resolveUpstreams(): Upstream[] {
   const fireworksBase = stripTrailingSlash(
     process.env["FIREWORKS_BASE_URL"] || "https://api.fireworks.ai/inference/v1",
   );
-  if (fireworksKey) {
+  if (fireworksKey && fireworksBase.startsWith("https://")) {
     const id = `fireworks:${fireworksBase}`;
     if (!seen.has(id)) {
       seen.add(id);
@@ -367,6 +367,7 @@ export async function resolveOpenAutoRoutes(upstreams: Upstream[]): Promise<Auto
     upstreams.flatMap((upstream, index) =>
       catalogs[index]!.map((model) => ({ upstream, model })),
     ),
+    isAutoFreeModel,
   );
 }
 export function resolveUpstream(): Upstream | null {

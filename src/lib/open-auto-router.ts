@@ -21,20 +21,25 @@ const TIER_RANK: Record<OpenAutoTier, number> = {
   subscription: 2,
 };
 
-/** Classify a model id into an Open-Auto cost tier. */
-export function openAutoTier(model: string): OpenAutoTier {
+/** Classify a model id into an Open-Auto cost tier; isFreeModel adds provider-aware detection. */
+export function openAutoTier(
+  model: string,
+  isFreeModel?: (model: string) => boolean,
+): OpenAutoTier {
   const id = (model || "").trim().toLowerCase();
   if (id.startsWith("subscription/")) return "subscription";
   if (id === "openrouter/free" || id.endsWith(":free") || id.endsWith("/free")) return "free";
+  if (isFreeModel?.(id)) return "free";
   return "paid";
 }
 
 /** Order routes free-first; stable within a tier so auto-detected catalogs keep provider order. */
 export function orderOpenAutoRoutes<T extends { name: string }>(
   routes: Array<{ upstream: T; model: string }>,
+  isFreeModel?: (model: string) => boolean,
 ): Array<OpenAutoRoute<T>> {
   return routes
-    .map((route) => ({ ...route, tier: openAutoTier(route.model) }))
+    .map((route) => ({ ...route, tier: openAutoTier(route.model, isFreeModel) }))
     .sort((a, b) => TIER_RANK[a.tier] - TIER_RANK[b.tier]);
 }
 
