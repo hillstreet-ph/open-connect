@@ -20,3 +20,7 @@ PLAYWRIGHT_WORKER_URL = "https://open-connect-playwright.zeabur.app"
 [[kv_namespaces]]
 binding = "OC_KV"
 id = "f4224065e31949268604c2c2b70b9aa1"
+
+# Workers AI — credential-free free-tier inference for the Open-Auto platform fallback
+[ai]
+binding = "OC_AI"

@@ -19,6 +19,11 @@ import { COMPATIBLE_GATEWAY_PROVIDERS } from "./ai-gateway-providers.ts";
 import { createHash } from "crypto";
 import { generateClientKey, isClientKey } from "./gateway-keys.ts";
 import { fetchFreeModelCatalog, isAutoFreeModel } from "./model-catalog";
+import {
+  CLOUDFLARE_AI_BASE_URL,
+  CLOUDFLARE_AI_FREE_MODELS,
+  CLOUDFLARE_AI_UPSTREAM_NAME,
+} from "./cloudflare-ai.server";
 
 export const KEY_PREFIX = "oc_live_";
 
@@ -247,6 +252,18 @@ export function resolveUpstreams(): Upstream[] {
     }
   }
 
+  // Credential-free platform fallback: the Workers AI binding needs no API
+  // key, so Open-Auto free-first routing works on every deployment without
+  // stored secrets.
+  const cloudflareId = `cloudflare:${CLOUDFLARE_AI_BASE_URL}`;
+  if (!seen.has(cloudflareId)) {
+    list.push({
+      name: CLOUDFLARE_AI_UPSTREAM_NAME,
+      baseUrl: CLOUDFLARE_AI_BASE_URL,
+      headers: {},
+    });
+  }
+
   return list;
 }
 
@@ -297,6 +314,9 @@ const autoFreeCatalogCache = new Map<string, { expiresAt: number; ids: string[] 
 /** Build free-only fallback routes from the current user's connected model gateways. */
 export async function resolveAutoFreeRoutes(upstreams: Upstream[]): Promise<AutoFreeRoute[]> {
   return collectAutoFreeRoutes(upstreams, async (upstream) => {
+    if (upstream.name === CLOUDFLARE_AI_UPSTREAM_NAME) {
+      return [...CLOUDFLARE_AI_FREE_MODELS];
+    }
     const cacheKey = createHash("sha256")
       .update(`${upstream.name}\n${upstream.baseUrl}\n${upstream.headers["Authorization"] ?? ""}`)
       .digest("hex");
@@ -416,6 +436,13 @@ export async function fetchMergedModelCatalog(configured?: Upstream[]): Promise<
   await Promise.all(
     upstreams.map(async (u) => {
       names.push(u.name);
+      if (u.name === CLOUDFLARE_AI_UPSTREAM_NAME) {
+        providers.add(u.name);
+        for (const id of CLOUDFLARE_AI_FREE_MODELS) {
+          ids.add(id);
+        }
+        return;
+      }
       try {
         const response = await fetch(`${u.baseUrl}/models`, {
           headers: u.headers,

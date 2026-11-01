@@ -2,6 +2,10 @@ import { modelForUpstream } from "@/lib/model-provider-state";
 import { createFileRoute } from "@tanstack/react-router";
 import { OpenAutoRotationError, routeOpenAutoChat } from "@/lib/open-auto-router";
 import {
+  CLOUDFLARE_AI_UPSTREAM_NAME,
+  runCloudflareChatCompletion,
+} from "@/lib/cloudflare-ai.server";
+import {
   authenticateKey,
   gatewayError,
   hasScope,
@@ -102,6 +106,13 @@ export const Route = createFileRoute("/v1/chat/completions")({
                   throw Object.assign(unbound, { status: 400 });
                 }
                 try {
+                  if (upstream.name === CLOUDFLARE_AI_UPSTREAM_NAME) {
+                    return await runCloudflareChatCompletion(modelId, {
+                      messages: (body["messages"] as Array<Record<string, unknown>>) ?? [],
+                      ...(autoTemperature !== undefined ? { temperature: autoTemperature } : {}),
+                      ...(autoMaxTokens !== undefined ? { max_tokens: autoMaxTokens } : {}),
+                    });
+                  }
                   const response = await fetch(`${upstream.baseUrl}/chat/completions`, {
                     method: "POST",
                     headers: upstream.headers,
@@ -165,9 +176,12 @@ export const Route = createFileRoute("/v1/chat/completions")({
         }
 
         const autoFree = isAutoFreeModel(requestedModel);
+        const routableUpstreams = autoFree
+          ? upstreams
+          : upstreams.filter((upstream) => upstream.name !== CLOUDFLARE_AI_UPSTREAM_NAME);
         const routes = autoFree
           ? await resolveAutoFreeRoutes(upstreams)
-          : upstreams.map((upstream) => ({
+          : routableUpstreams.map((upstream) => ({
               upstream,
               model: modelForUpstream(resolveModelId(requestedModel), upstream.name),
             }));
@@ -186,6 +200,29 @@ export const Route = createFileRoute("/v1/chat/completions")({
           if (autoFree && !streaming && Date.now() >= deadline) break;
           const { upstream, model } = route;
           try {
+            if (upstream.name === CLOUDFLARE_AI_UPSTREAM_NAME) {
+              if (streaming) {
+                lastError = {
+                  status: 400,
+                  body: {
+                    error: { message: "Cloudflare Workers AI does not support streaming." },
+                  },
+                };
+                continue;
+              }
+              const payload = await runCloudflareChatCompletion(model, {
+                messages: (body["messages"] as Array<Record<string, unknown>>) ?? [],
+              });
+              await logGatewayRequest({
+                key,
+                endpoint: "/v1/chat/completions",
+                model: requestedModel,
+                statusCode: 200,
+                upstream: upstream.name,
+                totalTokens: payload.usage.total_tokens,
+              });
+              return json(payload, 200);
+            }
             const response = await fetch(`${upstream.baseUrl}/chat/completions`, {
               method: "POST",
               headers: upstream.headers,
