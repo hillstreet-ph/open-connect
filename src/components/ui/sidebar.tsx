@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
-import { ChevronLeft, PanelLeft } from "lucide-react";
+import { PanelLeft } from "lucide-react";
 
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
@@ -284,20 +284,18 @@ SidebarTrigger.displayName = "SidebarTrigger";
 
 const SidebarRail = React.forwardRef<HTMLButtonElement, React.ComponentProps<"button">>(
   ({ className, ...props }, ref) => {
-    const { toggleSidebar, state } = useSidebar();
-    const collapsed = state === "collapsed";
+    const { toggleSidebar } = useSidebar();
 
     return (
       <button
         ref={ref}
         data-sidebar="rail"
-        aria-label={collapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+        aria-label="Toggle Sidebar"
         tabIndex={-1}
         onClick={toggleSidebar}
-        title={collapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+        title="Toggle Sidebar"
         className={cn(
-          "group/rail absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 cursor-pointer transition-all ease-linear after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] hover:after:bg-sidebar-border group-data-[side=left]:-right-4 group-data-[side=right]:left-0 sm:flex",
-          "hover:bg-sidebar-accent/40",
+          "absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] hover:after:bg-sidebar-border group-data-[side=left]:-right-4 group-data-[side=right]:left-0 sm:flex",
           "[[data-side=left]_&]:cursor-w-resize [[data-side=right]_&]:cursor-e-resize",
           "[[data-side=left][data-state=collapsed]_&]:cursor-e-resize [[data-side=right][data-state=collapsed]_&]:cursor-w-resize",
           "group-data-[collapsible=offcanvas]:translate-x-0 group-data-[collapsible=offcanvas]:after:left-full group-data-[collapsible=offcanvas]:hover:bg-sidebar",
@@ -306,13 +304,7 @@ const SidebarRail = React.forwardRef<HTMLButtonElement, React.ComponentProps<"bu
           className,
         )}
         {...props}
-      >
-        <span
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-sidebar-border bg-background p-0.5 text-sidebar-foreground opacity-0 shadow-sm transition-opacity duration-200 group-hover/rail:opacity-100 group-data-[collapsible=offcanvas]:hidden"
-        >
-          <ChevronLeft className="size-3.5 [[data-state=collapsed]_&]:rotate-180" />
-        </span>
-      </button>
+      />
     );
   },
 );
