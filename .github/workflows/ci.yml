@@ -49,9 +49,9 @@ jobs:
           bun run typecheck 2>&1 | tee /tmp/tsc-typecheck.log
           status=$?
           if [ "$status" -ne 0 ]; then
-            printf '\n## Strict TypeScript validation output\n```\n' >> "$GITHUB_STEP_SUMMARY"
-            tail -n 120 /tmp/tsc-typecheck.log >> "$GITHUB_STEP_SUMMARY"
-            printf '```\n' >> "$GITHUB_STEP_SUMMARY"
+            grep -E "error TS|Error:|\.ts\([0-9]+,[0-9]+\)" /tmp/tsc-typecheck.log | head -n 10 | while IFS= read -r line; do
+              echo "::error::${line}"
+            done
           fi
           exit "$status"
       - name: Production build
