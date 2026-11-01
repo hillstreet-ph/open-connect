@@ -1,5 +1,6 @@
 import { modelForUpstream } from "@/lib/model-provider-state";
 import { createFileRoute } from "@tanstack/react-router";
+import { routeOpenAutoChat } from "@/lib/open-auto-router";
 import {
   authenticateKey,
   gatewayError,
@@ -11,6 +12,9 @@ import {
   resolveModelId,
   resolveUserUpstreams,
 } from "@/lib/gateway.server";
+
+/** Open-Auto pyramid routing: free-first tiered selection across upstreams. */
+const OPEN_AUTO_MODEL_KEYS = new Set(["open-auto", "open-connect/open-auto"]);
 
 export const Route = createFileRoute("/v1/chat/completions")({
   server: {
@@ -38,6 +42,90 @@ export const Route = createFileRoute("/v1/chat/completions")({
           typeof body["model"] === "string" && body["model"].trim()
             ? (body["model"] as string).trim()
             : "open-connect/auto";
+        const streaming = body["stream"] === true;
+
+        // Open-Auto: free-first tiered routing with automatic rotation past
+        // rate limits, timeouts, and server errors across connected upstreams.
+        if (OPEN_AUTO_MODEL_KEYS.has(requestedModel)) {
+          if (streaming) {
+            return gatewayError(
+              "Streaming is not supported for Open-Auto routed requests.",
+              400,
+              "invalid_request",
+            );
+          }
+          const autoRoutes = await resolveAutoFreeRoutes(upstreams);
+          if (autoRoutes.length === 0) {
+            return gatewayError(
+              "No free candidate models are available for Open-Auto routing.",
+              503,
+              "free_models_unavailable",
+            );
+          }
+          const upstreamByModel = new Map(autoRoutes.map((route) => [route.model, route.upstream]));
+          const autoTools = body["tools"] as unknown[] | undefined;
+          const autoTemperature = body["temperature"] as number | undefined;
+          const autoMaxTokens = body["max_tokens"] as number | undefined;
+          const autoRequest = {
+            messages: (body["messages"] as Array<Record<string, unknown>>) ?? [],
+            ...(autoTools !== undefined ? { tools: autoTools } : {}),
+            ...(autoTemperature !== undefined ? { temperature: autoTemperature } : {}),
+            ...(autoMaxTokens !== undefined ? { max_tokens: autoMaxTokens } : {}),
+          };
+          try {
+            const { model, result } = await routeOpenAutoChat({
+              candidates: [...upstreamByModel.keys()].map((id) => ({ id })),
+              request: autoRequest,
+              chat: async (modelId) => {
+                const upstream = upstreamByModel.get(modelId);
+                if (!upstream) {
+                  const unbound = new Error("No upstream bound for the selected model.");
+                  throw Object.assign(unbound, { status: 400 });
+                }
+                const response = await fetch(`${upstream.baseUrl}/chat/completions`, {
+                  method: "POST",
+                  headers: upstream.headers,
+                  redirect: "manual",
+                  body: JSON.stringify({ ...body, model: modelId, stream: false }),
+                  signal: AbortSignal.timeout(30_000),
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                  const message =
+                    (payload as { error?: { message?: string } })?.error?.message ??
+                    `Upstream returned HTTP ${response.status}.`;
+                  const failure = new Error(message);
+                  throw Object.assign(failure, { status: response.status });
+                }
+                return payload;
+              },
+            });
+            await logGatewayRequest({
+              key,
+              endpoint: "/v1/chat/completions",
+              model,
+              statusCode: 200,
+              upstream: upstreamByModel.get(model)?.name ?? "open-auto",
+              totalTokens:
+                (result as { usage?: { total_tokens?: number } })?.usage?.total_tokens ?? null,
+            });
+            return json(result, 200);
+          } catch (error) {
+            const message = error instanceof Error ? error.message : "Open-Auto routing failed.";
+            await logGatewayRequest({
+              key,
+              endpoint: "/v1/chat/completions",
+              model: requestedModel,
+              statusCode: 502,
+              upstream: "open-auto",
+            });
+            return json(
+              { error: { message, type: "open_connect_error", code: "open_auto_failed" } },
+              502,
+            );
+          }
+        }
+
         const autoFree = isAutoFreeModel(requestedModel);
         const routes = autoFree
           ? await resolveAutoFreeRoutes(upstreams)
@@ -52,7 +140,6 @@ export const Route = createFileRoute("/v1/chat/completions")({
             "free_models_unavailable",
           );
         }
-        const streaming = body["stream"] === true;
 
         let lastError: { status: number; body: unknown } | null = null;
 
