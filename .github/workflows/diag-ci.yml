@@ -1,0 +1,35 @@
+name: Diagnose CI
+
+on:
+  push:
+    branches: [feat/open-auto-gateway-route]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - name: Collect diagnostics
+        run: |
+          {
+            echo "### Lint"
+            bun run lint 2>&1 | tail -60
+            echo "### Typecheck"
+            bunx tsc --noEmit 2>&1 | tail -60
+            echo "### Tests"
+            bun run test 2>&1 | tail -100
+          } > /tmp/diag.md
+          echo "--- end ---" >> /tmp/diag.md
+      - name: Comment on PR
+        run: |
+          curl -s -X POST \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            -d "{\"body\": $(cat /tmp/diag.md | head -c 60000 | jq -Rs .)}" \
+            https://api.github.com/repos/hillstreet-ph/open-connect/issues/730/comments
