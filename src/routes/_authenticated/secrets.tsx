@@ -510,7 +510,7 @@ function SecretsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8 sm:py-14">
+    <div className="mx-auto max-w-6xl px-4 py-6 sm:py-10">
       <div className="flex items-center gap-3">
         <span className="flex size-10 items-center justify-center rounded-lg bg-primary/15 text-primary">
           <Lock className="size-5" />
@@ -798,17 +798,18 @@ function SecretsPage() {
                         ) : null}
                       </div>
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1.5">
                       <Button
                         size="sm"
                         variant="outline"
+                        className="gap-1.5"
                         onClick={() =>
                           editingFolderId === folder.id
                             ? setEditingFolderId(null)
                             : beginEditingFolder(folder)
                         }
                       >
-                        <Pencil className="mr-1.5 size-3.5" />
+                        <Pencil className="size-3.5" />
                         {editingFolderId === folder.id ? "Close" : "Manage"}
                       </Button>
                       <Button
@@ -1046,11 +1047,11 @@ function SecretsPage() {
                           ))}
                       </div>
                     </div>
-                    <div className="flex flex-wrap items-center gap-1">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       <Button
                         size="sm"
                         variant="outline"
-                        className="gap-2"
+                        className="min-w-32 justify-center gap-1.5"
                         onClick={() => beginEditingValue(row.id)}
                       >
                         <Pencil className="size-3.5" /> Edit value
@@ -1058,7 +1059,7 @@ function SecretsPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="gap-2"
+                        className="min-w-32 justify-center gap-1.5"
                         onClick={() => beginEditingOrganization(row)}
                       >
                         <Pencil className="size-3.5" /> Organize
@@ -1067,7 +1068,7 @@ function SecretsPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="gap-2"
+                          className="min-w-32 justify-center gap-1.5"
                           onClick={() => revealMutation.mutate(row.id)}
                           disabled={revealMutation.isPending}
                         >
@@ -1079,7 +1080,7 @@ function SecretsPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="gap-2 font-mono"
+                            className="gap-1.5 font-mono"
                             aria-label={`Copy 2FA code for ${row.name}`}
                             onClick={() => copyTotp(row.id, totpCodes[row.id]!.code)}
                           >
@@ -1097,7 +1098,7 @@ function SecretsPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="gap-2"
+                            className="min-w-32 justify-center gap-1.5"
                             onClick={() => totpMutation.mutate(row.id)}
                             disabled={totpMutation.isPending}
                           >
@@ -1337,7 +1338,7 @@ function SecretsPage() {
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="h-7 gap-1.5"
+                                className="gap-1.5"
                                 aria-label={`Hide notes for ${row.name}`}
                                 onClick={() => clearRevealedNotes(row.id)}
                               >
@@ -1358,7 +1359,7 @@ function SecretsPage() {
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="h-7 gap-1.5"
+                              className="gap-1.5"
                               aria-label={`Reveal notes for ${row.name}`}
                               onClick={() =>
                                 revealNotesMutation.mutate({ id: row.id, forEdit: false })

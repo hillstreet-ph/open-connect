@@ -75,7 +75,7 @@ function CampaignStudioPage() {
 
   return (
     <main className="campaign-canvas min-h-full px-4 py-8 sm:px-7 lg:px-10">
-      <header className="mx-auto max-w-7xl border-b border-border pb-7">
+      <header className="mx-auto max-w-6xl border-b border-border pb-7">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <Badge className="mb-3 border-primary/30 bg-primary/10 text-primary hover:bg-primary/15">
@@ -99,7 +99,7 @@ function CampaignStudioPage() {
         </div>
       </header>
 
-      <div className="mx-auto mt-8 grid max-w-7xl gap-8 xl:grid-cols-[0.82fr_1.18fr]">
+      <div className="mx-auto mt-8 grid max-w-6xl gap-8 xl:grid-cols-[0.82fr_1.18fr]">
         <form onSubmit={submit} className="campaign-panel h-fit space-y-5 p-5 sm:p-7">
           <div className="flex items-center justify-between">
             <div>
