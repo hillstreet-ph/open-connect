@@ -1,0 +1,48 @@
+name: Diagnose lint
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  checks: write
+
+jobs:
+  diag:
+    name: Diagnose lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install
+        run: bun install --frozen-lockfile
+      - name: Lint with diagnostics
+        run: |
+          set +e
+          bunx eslint . --format unix > /tmp/lint.out 2>&1
+          code=$?
+          echo "eslint exit code: $code"
+          cat /tmp/lint.out
+          echo "## Lint diagnostics" >> $GITHUB_STEP_SUMMARY
+          echo '~~~' >> $GITHUB_STEP_SUMMARY
+          cat /tmp/lint.out >> $GITHUB_STEP_SUMMARY
+          echo '~~~' >> $GITHUB_STEP_SUMMARY
+          n=0
+          while IFS= read -r line; do
+            case "$line" in
+              *"\":"*":"*)
+                f="${line%%:*}"
+                rest="${line#*:}"
+                l="${rest%%:*}"
+                msg="${rest#*:}"
+                msg="${msg#*:}"
+                echo "::error file=$f,line=$l::$msg"
+                n=$((n+1))
+                if [ $n -ge 40 ]; then break; fi
+                ;;
+            esac
+          done < /tmp/lint.out
+          exit $code
