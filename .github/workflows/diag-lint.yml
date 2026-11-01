@@ -5,7 +5,8 @@ on:
     branches: [main]
 
 permissions:
-  checks: write
+  contents: read
+  pull-requests: write
 
 jobs:
   diag:
@@ -19,30 +20,26 @@ jobs:
           bun-version: latest
       - name: Install
         run: bun install --frozen-lockfile
-      - name: Lint with diagnostics
+      - name: Lint and report
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
         run: |
-          set +e
-          bunx eslint . --format unix > /tmp/lint.out 2>&1
-          code=$?
-          echo "eslint exit code: $code"
-          cat /tmp/lint.out
-          echo "## Lint diagnostics" >> $GITHUB_STEP_SUMMARY
-          echo '~~~' >> $GITHUB_STEP_SUMMARY
-          cat /tmp/lint.out >> $GITHUB_STEP_SUMMARY
-          echo '~~~' >> $GITHUB_STEP_SUMMARY
-          n=0
-          while IFS= read -r line; do
-            case "$line" in
-              *"\":"*":"*)
-                f="${line%%:*}"
-                rest="${line#*:}"
-                l="${rest%%:*}"
-                msg="${rest#*:}"
-                msg="${msg#*:}"
-                echo "::error file=$f,line=$l::$msg"
-                n=$((n+1))
-                if [ $n -ge 40 ]; then break; fi
-                ;;
-            esac
-          done < /tmp/lint.out
-          exit $code
+          {
+            echo "### bun / eslint versions"
+            bun --version
+            bunx eslint --version
+            echo "### bun run lint"
+            echo '~~~'
+            bun run lint 2>&1 || true
+            echo '~~~'
+            echo "### bunx eslint . (unix format)"
+            echo '~~~'
+            bunx eslint . --format unix 2>&1 || true
+            echo '~~~'
+            echo "### prettier check src"
+            echo '~~~'
+            bunx prettier --check "src/**/*.{ts,tsx,css}" 2>&1 || true
+            echo '~~~'
+          } > /tmp/diag.md
+          gh pr comment "$PR" --body-file /tmp/diag.md --repo "$GITHUB_REPOSITORY"
