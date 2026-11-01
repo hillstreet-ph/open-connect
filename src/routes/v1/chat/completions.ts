@@ -62,9 +62,7 @@ export const Route = createFileRoute("/v1/chat/completions")({
               "free_models_unavailable",
             );
           }
-          const upstreamByModel = new Map(
-            autoRoutes.map((route) => [route.model, route.upstream]),
-          );
+          const upstreamByModel = new Map(autoRoutes.map((route) => [route.model, route.upstream]));
           try {
             const { model, result } = await routeOpenAutoChat({
               candidates: [...upstreamByModel.keys()].map((id) => ({ id })),
