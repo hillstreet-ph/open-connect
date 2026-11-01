@@ -49,21 +49,48 @@ export const Route = createFileRoute("/_authenticated/models")({
   component: ModelsPage,
 });
 
-const aliases = [
-  { alias: "open-connect/auto", body: "Free-first · rotates on limits · paid fallback" },
-  { alias: "open-connect/high", body: "Flagship quality · gpt-4o" },
-  { alias: "open-connect/deep", body: "Extended reasoning · o3-mini" },
-  { alias: "open-connect/wide", body: "Multi-provider breadth · openrouter/auto" },
-  { alias: "open-connect/fast", body: "Low latency · gpt-4o-mini" },
-  { alias: "open-connect/coding", body: "Code · gpt-4o" },
-  { alias: "open-connect/reasoning", body: "Reasoning · gpt-4o" },
-  { alias: "open-connect/claude", body: "Claude Sonnet via OpenRouter" },
-  { alias: "open-connect/gemini", body: "Gemini 2.5 Flash" },
-  { alias: "open-connect/vision", body: "Multimodal · gpt-4o" },
-  { alias: "gpt-4o", body: "OpenAI GPT-4o" },
-  { alias: "claude-sonnet", body: "Anthropic Claude Sonnet" },
-  { alias: "gemini-flash", body: "Google Gemini Flash" },
-  { alias: "grok-2", body: "xAI Grok" },
+const aliasTiers = [
+  {
+    tier: "Apex · Open-Auto default",
+    items: [
+      {
+        alias: "open-connect/auto",
+        body: "Open-Auto · free first, rotates on limits, paid/subscription fallback",
+      },
+      {
+        alias: "open-connect/open-auto",
+        body: "Open-Auto wide · needs-based selection across every provider",
+      },
+    ],
+  },
+  {
+    tier: "Specialists",
+    items: [
+      { alias: "open-connect/high", body: "Flagship quality · gpt-4o" },
+      { alias: "open-connect/deep", body: "Extended reasoning · o3-mini" },
+      { alias: "open-connect/wide", body: "Multi-provider breadth · openrouter/auto" },
+      { alias: "open-connect/fast", body: "Low latency · gpt-4o-mini" },
+      { alias: "open-connect/coding", body: "Code specialist · gpt-4o" },
+      { alias: "open-connect/reasoning", body: "Reasoning specialist · gpt-4o" },
+      { alias: "open-connect/vision", body: "Multimodal · gpt-4o" },
+    ],
+  },
+  {
+    tier: "Providers",
+    items: [
+      { alias: "open-connect/claude", body: "Claude Sonnet via OpenRouter" },
+      { alias: "open-connect/gemini", body: "Gemini 2.5 Flash" },
+    ],
+  },
+  {
+    tier: "Short names",
+    items: [
+      { alias: "gpt-4o", body: "OpenAI GPT-4o" },
+      { alias: "claude-sonnet", body: "Anthropic Claude Sonnet" },
+      { alias: "gemini-flash", body: "Google Gemini Flash" },
+      { alias: "grok-2", body: "xAI Grok" },
+    ],
+  },
 ];
 const gatewayProviders = AI_GATEWAY_PROVIDER_IDS;
 
@@ -601,8 +628,8 @@ function ModelsPage() {
         </CardContent>
       </Card>
 
-      <div className="mt-10 flex items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold">Stable aliases</h2>
+      <div className="mt-6 flex items-center justify-between gap-3">
+        <h2 className="text-base font-semibold">Model aliases</h2>
         <Button
           size="sm"
           variant="ghost"
@@ -618,18 +645,37 @@ function ModelsPage() {
         </Button>
       </div>
       {aliasesOpen ? (
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {aliases.map((item) => (
-            <Card key={item.alias} className="p-4">
-              <p className="font-mono text-sm text-primary">{item.alias}</p>
-              <p className="mt-1 text-xs text-muted-foreground">{item.body}</p>
-            </Card>
-          ))}
-        </div>
+        <Card className="mt-3 shadow-panel">
+          <CardContent className="space-y-3 pt-4">
+            <p className="text-xs text-muted-foreground">
+              Pyramid routing. Open-Auto is the default: it inspects the task prompt and tool
+              request, picks the right model automatically, uses free models first, rotates when a
+              limit is hit, escalates to paid or subscription models for deep or professional work,
+              and can delegate to multiple models in parallel for faster execution. Specialist and
+              short aliases pin a specific route when you need full control.
+            </p>
+            {aliasTiers.map((group) => (
+              <div key={group.tier}>
+                <p className="mb-2 text-xs font-semibold">{group.tier}</p>
+                <div className="grid gap-1.5 sm:grid-cols-2 xl:grid-cols-3">
+                  {group.items.map((item) => (
+                    <div
+                      key={item.alias}
+                      className="rounded-lg border border-border/70 px-2.5 py-2"
+                    >
+                      <p className="break-all font-mono text-xs text-primary">{item.alias}</p>
+                      <p className="mt-0.5 text-[11px] text-muted-foreground">{item.body}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       ) : null}
 
-      <div className="mt-10 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold">AI provider credentials</h2>
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-base font-semibold">AI provider credentials</h2>
         {user && isAdmin ? (
           <Button
             size="sm"

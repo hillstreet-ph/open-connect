@@ -71,6 +71,10 @@ export const MODEL_ALIASES: Record<string, string> = {
   free: "openrouter/free",
   "openrouter/free": "openrouter/free",
 
+  // --- Open-Auto (pyramid default: needs-based selection across providers) ---
+  "open-connect/open-auto": "openrouter/auto",
+  "open-auto": "openrouter/auto",
+
   // --- Open-Connect virtual (stable for agents) ---
   "open-connect/high": "openai/gpt-4o",
   "open-connect/deep": "openai/o3-mini",
