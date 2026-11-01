@@ -60,12 +60,14 @@ function AgencyPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
         <Button
+          size="sm"
           variant={search.view === "teams" ? "outline" : "default"}
           onClick={() => void navigate({ to: "/ai-agency", search: {} })}
         >
           Workforce Directory
         </Button>
         <Button
+          size="sm"
           variant={search.view === "teams" ? "default" : "outline"}
           onClick={() => void navigate({ to: "/ai-agency", search: { view: "teams" } })}
         >
@@ -218,12 +220,12 @@ function AgencyWorkspace({ userId }: { userId: string | undefined }) {
         <h2 id="agency-templates" className="font-semibold">
           Start with a team template
         </h2>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {AGENCY_TEMPLATES.map((team) => (
             <button
               type="button"
               key={team.category}
-              className="space-y-2 rounded-xl border bg-card p-4 text-left transition hover:border-primary/60 focus-visible:outline focus-visible:outline-2"
+              className="space-y-2 rounded-xl border bg-card p-3 text-left transition hover:border-primary/60 focus-visible:outline focus-visible:outline-2"
               disabled={runMutation.isPending}
               onClick={() => loadDraft(team)}
             >
@@ -235,7 +237,7 @@ function AgencyWorkspace({ userId }: { userId: string | undefined }) {
           ))}
         </div>
       </section>
-      <Card className="space-y-4 p-4 sm:p-6">
+      <Card className="space-y-3 p-3 sm:p-4">
         <h2 className="font-semibold">{editing ? "Edit team" : "Create a private team"}</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
@@ -291,6 +293,7 @@ function AgencyWorkspace({ userId }: { userId: string | undefined }) {
         </div>
         <div className="flex flex-wrap gap-2">
           <Button
+            size="sm"
             disabled={
               !draft.name.trim() ||
               !rolesValidation.success ||
@@ -307,7 +310,7 @@ function AgencyWorkspace({ userId }: { userId: string | undefined }) {
             {editing ? "Save changes" : "Create team"}
           </Button>
           {editing ? (
-            <Button variant="outline" onClick={() => loadDraft(emptyDraft)}>
+            <Button size="sm" variant="outline" onClick={() => loadDraft(emptyDraft)}>
               Cancel edit
             </Button>
           ) : null}
@@ -322,7 +325,7 @@ function AgencyWorkspace({ userId }: { userId: string | undefined }) {
             <select
               aria-label="Filter team category"
               disabled={runMutation.isPending}
-              className="h-9 rounded-md border bg-background px-2 text-sm"
+              className="h-8 rounded-md border bg-background px-2 text-sm"
               value={category}
               onChange={(e) => {
                 setCategory(e.target.value);
@@ -360,15 +363,15 @@ function AgencyWorkspace({ userId }: { userId: string | undefined }) {
           </p>
         ) : null}
         {!teams.isPending && !teams.isError && (teams.data ?? []).length === 0 ? (
-          <p className="rounded-xl border border-dashed p-5 text-sm text-muted-foreground">
+          <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
             No matching teams. Choose a template above to create one.
           </p>
         ) : null}
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-2 sm:grid-cols-2">
           {(teams.data ?? []).map((team) => (
             <Card
               key={team.id}
-              className={`min-w-0 space-y-3 p-4 ${selectedId === team.id ? "border-primary/60" : ""}`}
+              className={`min-w-0 space-y-2 p-3 ${selectedId === team.id ? "border-primary/60" : ""}`}
             >
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="min-w-0 font-semibold [overflow-wrap:anywhere]">{team.name}</h3>
@@ -424,7 +427,7 @@ function AgencyWorkspace({ userId }: { userId: string | undefined }) {
           restored.
         </p>
       </section>
-      <Card className="space-y-4 p-4 sm:p-6">
+      <Card className="space-y-3 p-3 sm:p-4">
         <h2 className="font-semibold [overflow-wrap:anywhere]">
           {selected ? `Work with ${selected.name}` : "Select a saved team to begin"}
         </h2>
@@ -470,6 +473,7 @@ function AgencyWorkspace({ userId }: { userId: string | undefined }) {
           </p>
         </div>
         <Button
+          size="sm"
           disabled={
             !selected ||
             selected.archived ||
@@ -507,7 +511,7 @@ function AgencyWorkspace({ userId }: { userId: string | undefined }) {
           {runs.data?.map((item) => (
             <details
               key={item.id}
-              className="rounded-xl border p-4"
+              className="rounded-xl border p-3"
               open={item.id === runMutation.data?.id}
             >
               <summary className="cursor-pointer text-sm font-medium">
