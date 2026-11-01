@@ -67,12 +67,12 @@ export function ResourceUrlImport() {
             <Badge
               className={
                 r.status === "blocked" || r.status === "failed"
-                  ? "border-red-500/40 bg-red-500/15 text-red-700"
+                  ? "border-destructive/40 bg-destructive/15 text-destructive"
                   : r.status === "published"
-                    ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-700"
+                    ? "border-success/40 bg-success/15 text-success"
                     : r.status === "duplicate"
-                      ? "border-violet-500/40 bg-violet-500/15 text-violet-700"
-                      : "border-amber-500/40 bg-amber-500/15 text-amber-700"
+                      ? "border-chart-4/40 bg-chart-4/15 text-chart-4"
+                      : "border-warning/40 bg-warning/15 text-warning"
               }
             >
               {r.status}

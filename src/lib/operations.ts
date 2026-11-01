@@ -76,13 +76,13 @@ export function statusLabel(value: string) {
 }
 export function statusClass(value: string) {
   if (["done", "succeeded", "completed", "active", "enabled"].includes(value))
-    return "border-emerald-500/35 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
+    return "border-success/35 bg-success/10 text-success";
   if (["failed", "urgent"].includes(value))
     return "border-rose-500/35 bg-rose-500/10 text-rose-700 dark:text-rose-300";
   if (["blocked", "paused", "high", "approval_required"].includes(value))
-    return "border-amber-500/35 bg-amber-500/10 text-amber-800 dark:text-amber-300";
+    return "border-warning/35 bg-warning/10 text-warning";
   if (["in_progress", "running", "medium"].includes(value))
-    return "border-sky-500/35 bg-sky-500/10 text-sky-700 dark:text-sky-300";
+    return "border-primary/35 bg-primary/10 text-primary";
   return "border-border bg-muted text-muted-foreground";
 }
 export const RECURRENCES = [

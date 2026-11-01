@@ -497,7 +497,7 @@ function ModelsPage() {
         </CardHeader>
         <CardContent>
           {modelTest.data ? (
-            <p role="status" className="mb-3 text-xs text-emerald-600 dark:text-emerald-400">
+            <p role="status" className="mb-3 text-xs text-success">
               Inference verified: {modelTest.data.model}
             </p>
           ) : null}

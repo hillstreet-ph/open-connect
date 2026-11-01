@@ -212,7 +212,7 @@ function EmptyState() {
   return (
     <div className="campaign-empty flex min-h-[560px] flex-col items-center justify-center p-10 text-center">
       <div className="campaign-orbit">
-        <Sparkles className="size-7 text-amber-600" />
+        <Sparkles className="size-7 text-accent-strong" />
       </div>
       <p className="campaign-kicker mt-8">THE BOARD IS CLEAR</p>
       <h2 className="mt-2 max-w-md text-3xl font-semibold">
@@ -319,7 +319,7 @@ function CampaignBoard({ result, onReset }: { result: CampaignResult; onReset: (
           <div className="mt-5 space-y-3">
             {result.imagePrompts.map((prompt, index) => (
               <div key={prompt} className="border-l border-accent/60 pl-4">
-                <p className="font-mono text-[9px] text-amber-600">PROMPT {index + 1}</p>
+                <p className="font-mono text-[9px] text-accent-strong">PROMPT {index + 1}</p>
                 <p className="mt-1 text-xs leading-5 text-muted-foreground">{prompt}</p>
               </div>
             ))}
