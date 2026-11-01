@@ -51,6 +51,9 @@ export const Route = createFileRoute("/_authenticated/models")({
 
 const aliases = [
   { alias: "open-connect/auto", body: "Free-first · rotates on limits · paid fallback" },
+  { alias: "open-connect/high", body: "Flagship quality · gpt-4o" },
+  { alias: "open-connect/deep", body: "Extended reasoning · o3-mini" },
+  { alias: "open-connect/wide", body: "Multi-provider breadth · openrouter/auto" },
   { alias: "open-connect/fast", body: "Low latency · gpt-4o-mini" },
   { alias: "open-connect/coding", body: "Code · gpt-4o" },
   { alias: "open-connect/reasoning", body: "Reasoning · gpt-4o" },
