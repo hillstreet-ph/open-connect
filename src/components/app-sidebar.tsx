@@ -120,7 +120,7 @@ export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { can } = useRoles();
   return (
-    <Sidebar collapsible="icon" className="border-sidebar-border">
+    <Sidebar collapsible="offcanvas" className="border-sidebar-border">
       <SidebarHeader className="gap-1 border-b border-sidebar-border px-2 py-2">
         <WorkspaceSwitcher />
       </SidebarHeader>
