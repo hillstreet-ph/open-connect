@@ -25,18 +25,49 @@ const DEFAULT_BASES: Record<string, string> = {
   deepseek: "https://api.deepseek.com/v1",
 };
 
+function publicHttpsTarget(raw: string | null | undefined): string | undefined {
+  if (!raw || !raw.trim()) return undefined;
+  let url: URL;
+  try {
+    url = new URL(raw.trim());
+  } catch {
+    return undefined;
+  }
+  const hostname = url.hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  const privateAddress =
+    /^(?:0\.|10\.|127\.|169\.254\.|192\.168\.|172\.(?:1[6-9]|2\d|3[01])\.)/.test(hostname) ||
+    hostname === "::1" ||
+    /^(?:fc|fd|fe8|fe9|fea|feb)/.test(hostname);
+  if (
+    url.protocol !== "https:" ||
+    url.username ||
+    url.password ||
+    hostname === "localhost" ||
+    privateAddress ||
+    hostname.endsWith(".local")
+  ) {
+    return undefined;
+  }
+  return url.toString().replace(/\/+$/, "");
+}
+
 function base(setup: Setup) {
   const official = AI_GATEWAY_PROVIDERS.find((provider) => provider.id === setup.provider);
   const legacyBase = ["commandcode", "cerebras"].includes(setup.provider)
     ? DEFAULT_BASES[setup.provider]
     : undefined;
+  // Custom OpenAI-compatible deployments are validated against the saved endpoint.
+  const custom = publicHttpsTarget(setup.endpointUrl);
+  if (official && custom && custom !== official.baseUrl.replace(/\/+$/, "")) {
+    return custom;
+  }
   return (
     official?.baseUrl ||
     legacyBase ||
     setup.endpointUrl ||
     DEFAULT_BASES[setup.provider] ||
     ""
-  ).replace(/\/$/, "");
+  ).replace(/\/+$/, "");
 }
 
 async function checkedFetch(url: string, init: RequestInit, send: typeof fetch): Promise<Response> {

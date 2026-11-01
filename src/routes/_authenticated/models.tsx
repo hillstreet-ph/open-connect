@@ -64,6 +64,35 @@ const aliases = [
 ];
 const gatewayProviders = AI_GATEWAY_PROVIDER_IDS;
 
+const featuredModels = [
+  {
+    id: "gpt-4o",
+    name: "OpenAI GPT-4o",
+    tags: ["Chat", "Multi-Modal", "Tool Calling", "JSON Mode"],
+  },
+  {
+    id: "gpt-4o-mini",
+    name: "OpenAI GPT-4o mini",
+    tags: ["Chat", "Tool Calling", "JSON Mode", "Fast"],
+  },
+  {
+    id: "claude-sonnet",
+    name: "Anthropic Claude Sonnet",
+    tags: ["Chat", "Tool Calling", "Coding"],
+  },
+  { id: "gemini-flash", name: "Google Gemini Flash", tags: ["Chat", "Multi-Modal", "Fast"] },
+  { id: "grok-2", name: "xAI Grok 2", tags: ["Chat", "Tool Calling"] },
+  {
+    id: "deepseek-chat",
+    name: "DeepSeek Chat",
+    tags: ["Chat", "Tool Calling", "Coding", "JSON Mode"],
+  },
+  { id: "deepseek-reasoner", name: "DeepSeek Reasoner", tags: ["Chat", "Reasoning", "Coding"] },
+  { id: "open-connect/coding", name: "Managed coding alias", tags: ["Coding", "Tool Calling"] },
+  { id: "open-connect/reasoning", name: "Managed reasoning alias", tags: ["Reasoning"] },
+  { id: "open-connect/vision", name: "Managed vision alias", tags: ["Multi-Modal"] },
+];
+
 function copyToClipboard(value: string, label: string) {
   void navigator.clipboard?.writeText(value).then(
     () => toast.success(label + " copied to clipboard"),
@@ -83,7 +112,8 @@ function ModelsPage() {
   const configureFn = useServerFn(configureAppConnection);
   const testProviderFn = useServerFn(testAiProviderCredential);
   const providerTest = useMutation({
-    mutationFn: (input: { provider: string; api_key: string }) => testProviderFn({ data: input }),
+    mutationFn: (input: { provider: string; api_key: string; endpoint_url?: string }) =>
+      testProviderFn({ data: input }),
   });
   const signInFn = useServerFn(startAiProviderSignIn);
   const providerSignIn = useMutation({
@@ -255,6 +285,31 @@ function ModelsPage() {
       {modelsListOpen ? (
         <Card className="mt-3 shadow-panel">
           <CardContent className="space-y-3 pt-4">
+            <div>
+              <p className="mb-2 text-xs font-semibold">Featured models</p>
+              <div className="grid gap-1.5 sm:grid-cols-2">
+                {featuredModels.map((model) => (
+                  <div key={model.id} className="rounded-lg border border-border/70 px-2.5 py-2">
+                    <p className="break-all font-mono text-xs text-primary">{model.id}</p>
+                    <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                      {model.name}
+                    </p>
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {model.tags.map((tag) => (
+                        <Badge key={tag} variant="outline" className="text-[10px]">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              The complete catalog is dynamic: authenticated GET /v1/models returns the managed
+              aliases above plus every model available through your connected providers, free and
+              paid, in real time.
+            </p>
             <pre className="overflow-x-auto rounded-lg border border-border bg-muted/30 p-3 text-[11px] leading-relaxed">
               {`curl -sS https://open-connect.site/v1/models \\
   -H "Authorization: Bearer sk-oc-YOUR_KEY"`}
@@ -661,7 +716,11 @@ function ModelsPage() {
                         providerKey.trim().length < 8
                       }
                       onClick={() =>
-                        providerTest.mutate({ provider: provider.id, api_key: providerKey })
+                        providerTest.mutate({
+                          provider: provider.id,
+                          api_key: providerKey,
+                          endpoint_url: providerUrl || provider.baseUrl,
+                        })
                       }
                     >
                       {providerTest.isPending ? "Testing…" : "Test API key"}
@@ -717,6 +776,12 @@ function ModelsPage() {
       <p className="mt-3 text-xs text-muted-foreground">
         Provider keys are never returned to the browser after saving. Clients continue using only
         their scoped Open-Connect key and the shared `/v1` base URL.
+      </p>
+      <p className="mt-2 text-xs text-muted-foreground">
+        Custom deployments: point any provider card at your own OpenAI-compatible endpoint
+        (Together, DeepInfra, vLLM, LiteLLM, and others) by editing its base URL. Keys are validated
+        against that endpoint and gateway requests are routed to it with the saved credential.
+        Custom endpoints must be public HTTPS URLs.
       </p>
     </div>
   );

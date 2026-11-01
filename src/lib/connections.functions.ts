@@ -551,6 +551,16 @@ export const listAppConnections = createServerFn({ method: "GET" })
         ...(isModelGateway
           ? {
               gateway_ready: connection.status === "connected" && hasGatewayReference,
+              ...(metadata &&
+              typeof metadata === "object" &&
+              typeof (metadata as Record<string, unknown>)["endpoint_url"] === "string" &&
+              ((metadata as Record<string, unknown>)["endpoint_url"] as string).trim()
+                ? {
+                    endpoint_url: (
+                      (metadata as Record<string, unknown>)["endpoint_url"] as string
+                    ).trim(),
+                  }
+                : {}),
             }
           : {}),
       };
@@ -961,12 +971,16 @@ export const renameAppConnection = createServerFn({ method: "POST" })
 
 export const testAiProviderCredential = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((input: { provider: string; api_key: string }) => input)
+  .validator((input: { provider: string; api_key: string; endpoint_url?: string }) => input)
   .handler(async ({ data }) => {
     const provider = AI_GATEWAY_PROVIDERS.find((item) => item.id === data.provider);
     if (!provider) throw new Error("Unknown AI provider");
     const setup = normalizeConnectionSetup(
-      { provider: provider.id, api_key: data.api_key, endpoint_url: provider.baseUrl },
+      {
+        provider: provider.id,
+        api_key: data.api_key,
+        endpoint_url: data.endpoint_url?.trim() || provider.baseUrl,
+      },
       { provider: provider.id, display_name: provider.name, scopes: [], oauth: false },
     );
     const { validateConnectionCredential } = await import("@/lib/connection-validation.server");
