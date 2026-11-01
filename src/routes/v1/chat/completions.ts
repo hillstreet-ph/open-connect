@@ -63,15 +63,19 @@ export const Route = createFileRoute("/v1/chat/completions")({
             );
           }
           const upstreamByModel = new Map(autoRoutes.map((route) => [route.model, route.upstream]));
+          const autoTools = body["tools"] as unknown[] | undefined;
+          const autoTemperature = body["temperature"] as number | undefined;
+          const autoMaxTokens = body["max_tokens"] as number | undefined;
+          const autoRequest = {
+            messages: (body["messages"] as Array<Record<string, unknown>>) ?? [],
+            ...(autoTools !== undefined ? { tools: autoTools } : {}),
+            ...(autoTemperature !== undefined ? { temperature: autoTemperature } : {}),
+            ...(autoMaxTokens !== undefined ? { max_tokens: autoMaxTokens } : {}),
+          };
           try {
             const { model, result } = await routeOpenAutoChat({
               candidates: [...upstreamByModel.keys()].map((id) => ({ id })),
-              request: {
-                messages: (body["messages"] as Array<Record<string, unknown>>) ?? [],
-                tools: body["tools"] as unknown[] | undefined,
-                temperature: body["temperature"] as number | undefined,
-                max_tokens: body["max_tokens"] as number | undefined,
-              },
+              request: autoRequest,
               chat: async (modelId) => {
                 const upstream = upstreamByModel.get(modelId);
                 if (!upstream) {
