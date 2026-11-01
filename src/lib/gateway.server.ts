@@ -364,12 +364,11 @@ export async function resolveOpenAutoRoutes(upstreams: Upstream[]): Promise<Auto
     }),
   );
   return orderOpenAutoRoutes(
-    upstreams.flatMap((upstream, index) =>
-      catalogs[index]!.map((model) => ({ upstream, model })),
-    ),
+    upstreams.flatMap((upstream, index) => catalogs[index]!.map((model) => ({ upstream, model }))),
     isAutoFreeModel,
   );
 }
+
 export function resolveUpstream(): Upstream | null {
   return resolveUpstreams()[0] ?? null;
 }

@@ -134,7 +134,7 @@ export async function runOpenAutoRoutes<T extends { name: string }, R>(
   const ordered = orderOpenAutoRoutes(routes);
   const attempts: Array<{ model: string; status: number }> = [];
   for (const route of ordered) {
-    let status = 0;
+    let status: number;
     let value: R | undefined;
     try {
       const result = await attempt(route);

@@ -42,6 +42,7 @@ export const Route = createFileRoute("/v1/chat/completions")({
             : "open-connect/auto";
         const autoFree = isAutoFreeModel(requestedModel);
         const openAuto = isOpenAutoRequest(requestedModel);
+        const deadline = Date.now() + 35_000;
         const routes = openAuto
           ? await resolveOpenAutoRoutes(upstreams)
           : autoFree
@@ -61,7 +62,6 @@ export const Route = createFileRoute("/v1/chat/completions")({
 
         let lastError: { status: number; body: unknown } | null = null;
 
-        const deadline = Date.now() + 35_000;
         for (const route of routes) {
           if ((autoFree || openAuto) && !streaming && Date.now() >= deadline) break;
           const { upstream, model } = route;
