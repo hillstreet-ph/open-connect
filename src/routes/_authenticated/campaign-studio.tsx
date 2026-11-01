@@ -89,7 +89,7 @@ function CampaignStudioPage() {
               direction out.
             </p>
           </div>
-          <div className="hidden text-right font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground/80 sm:block">
+          <div className="hidden text-right font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground sm:block">
             Responses API
             <br />
             Image generation
@@ -180,7 +180,7 @@ function CampaignStudioPage() {
               </>
             )}
           </Button>
-          <p className="text-center text-[11px] text-muted-foreground/80">
+          <p className="text-center text-[11px] text-muted-foreground">
             Your API key stays on the server. Generation can take up to two minutes.
           </p>
         </form>
@@ -218,7 +218,7 @@ function EmptyState() {
       <h2 className="mt-2 max-w-md text-3xl font-semibold">
         Your campaign direction will assemble here.
       </h2>
-      <p className="mt-3 max-w-sm text-sm leading-6 text-muted-foreground/80">
+      <p className="mt-3 max-w-sm text-sm leading-6 text-muted-foreground">
         Complete the brief to generate strategy, copy variants, a launch checklist, and original
         campaign imagery.
       </p>
