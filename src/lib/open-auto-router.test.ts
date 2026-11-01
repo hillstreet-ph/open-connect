@@ -28,11 +28,10 @@ test("candidates are ordered free, paid, then subscription", () => {
     { id: "accounts/fire/models/metered-a" },
     { id: "accounts/fire/models/muse-glimmer-30b" },
   ]);
-  assert.deepEqual(ordered.map((model) => classifyOpenAutoTier(model.id)), [
-    "free",
-    "paid",
-    "subscription",
-  ]);
+  assert.deepEqual(
+    ordered.map((model) => classifyOpenAutoTier(model.id)),
+    ["free", "paid", "subscription"],
+  );
 });
 
 test("rate limits and server errors rotate; auth errors do not", () => {
