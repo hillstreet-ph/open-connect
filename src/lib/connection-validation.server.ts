@@ -259,6 +259,7 @@ export async function validateConnectionCredential(
       "xai",
       "mistral",
       "deepseek",
+      "fireworks",
       "litellm",
       "nvidia",
       "ollama_cloud",
