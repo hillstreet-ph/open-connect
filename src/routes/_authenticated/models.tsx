@@ -64,6 +64,69 @@ const aliases = [
 ];
 const gatewayProviders = AI_GATEWAY_PROVIDER_IDS;
 
+const gatewayTools = [
+  {
+    id: "openrouter:advisor",
+    name: "Advisor",
+    group: "Multi-model",
+    detail: "Consults a stronger advisor model mid-generation with the conversation so far.",
+  },
+  {
+    id: "openrouter:subagent",
+    name: "Subagent",
+    group: "Multi-model",
+    detail: "Delegates sub-tasks to a smaller, faster worker model with the task content.",
+  },
+  {
+    id: "openrouter:fusion",
+    name: "Fusion",
+    group: "Multi-model",
+    detail: "Runs a panel of models plus an analyst over the request.",
+  },
+  {
+    id: "openrouter:shell",
+    name: "Shell",
+    group: "Code execution",
+    detail: "Hosted shell for the Responses and Messages APIs, sandboxed container.",
+  },
+  {
+    id: "openrouter:bash",
+    name: "Bash",
+    group: "Code execution",
+    detail: "Runs model-authored shell commands in an isolated sandbox container.",
+  },
+  {
+    id: "openrouter:apply_patch",
+    name: "Apply Patch",
+    group: "Files and editing",
+    detail: "Proposes file edits as V4A diff patches for your application to apply.",
+  },
+  {
+    id: "openrouter:image_generation",
+    name: "Image Generation",
+    group: "Utilities",
+    detail: "Generates images from a model-supplied prompt, routed to an image model.",
+  },
+  {
+    id: "openrouter:datetime",
+    name: "Datetime",
+    group: "Utilities",
+    detail: "Gives the model the current date and time. Runs entirely on OpenRouter.",
+  },
+  {
+    id: "openrouter:tool_search",
+    name: "Tool Search",
+    group: "Utilities",
+    detail: "Loads your own tool definitions on demand instead of up front.",
+  },
+  {
+    id: "openrouter:experimental__search_models",
+    name: "Search Models",
+    group: "Utilities",
+    detail: "Searches the OpenRouter model catalog. Experimental.",
+  },
+];
+
 const featuredModels = [
   {
     id: "gpt-4o",
@@ -145,6 +208,7 @@ function ModelsPage() {
   const [modelsListOpen, setModelsListOpen] = useState(false);
   const [freeListOpen, setFreeListOpen] = useState(false);
   const [allModelsOpen, setAllModelsOpen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
   const disconnectFn = useServerFn(disconnectApp);
   const [connectionId, setConnectionId] = useState<string | null>(null);
   const [accountLabel, setAccountLabel] = useState("AI Gateway");
@@ -326,6 +390,49 @@ function ModelsPage() {
           </CardContent>
         </Card>
       ) : null}
+      <div className="mt-6 flex items-center justify-between gap-3">
+        <h2 className="text-base font-semibold">Gateway tools</h2>
+        <Button
+          size="sm"
+          variant="ghost"
+          aria-expanded={toolsOpen}
+          onClick={() => setToolsOpen((open) => !open)}
+        >
+          {toolsOpen ? (
+            <ChevronUp className="mr-1 size-4" />
+          ) : (
+            <ChevronDown className="mr-1 size-4" />
+          )}
+          {toolsOpen ? "Hide" : "Show"}
+        </Button>
+      </div>
+      {toolsOpen ? (
+        <Card className="mt-3 shadow-panel">
+          <CardContent className="space-y-3 pt-4">
+            <p className="text-xs text-muted-foreground">
+              Built-in tool calls available to models routed through the OpenRouter upstream. Tools
+              are grouped by capability and pass through the gateway like any other
+              OpenAI-compatible tool call.
+            </p>
+            <div className="grid gap-1.5 sm:grid-cols-2">
+              {gatewayTools.map((tool) => (
+                <div key={tool.id} className="rounded-lg border border-border/70 px-2.5 py-2">
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <p className="min-w-0 flex-1 truncate font-mono text-xs text-primary">
+                      {tool.id}
+                    </p>
+                    <Badge variant="outline" className="shrink-0 text-[10px]">
+                      {tool.group}
+                    </Badge>
+                  </div>
+                  <p className="mt-1 text-[11px] text-muted-foreground">{tool.detail}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
       <Card className="mt-6 shadow-panel" id="free-models">
         <CardHeader className="pb-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -477,7 +584,10 @@ function ModelsPage() {
                       key={model.id}
                       className="flex items-center justify-between gap-3 border-b px-3 py-2 last:border-b-0"
                     >
-                      <span className="break-all font-mono text-xs">{model.id}</span>
+                      <span className="min-w-0 flex-1 break-all font-mono text-xs">{model.id}</span>
+                      <Badge variant="outline" className="shrink-0 text-[10px]">
+                        {model.owner}
+                      </Badge>
                       <Badge
                         variant={model.free ? "secondary" : "outline"}
                         className="shrink-0 text-[10px]"
