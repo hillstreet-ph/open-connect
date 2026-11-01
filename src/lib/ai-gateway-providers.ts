@@ -27,6 +27,12 @@ export const AI_GATEWAY_PROVIDERS = [
   },
   { id: "groq", name: "Groq", baseUrl: "https://api.groq.com/openai/v1", official: true },
   {
+    id: "together",
+    name: "Together AI",
+    baseUrl: "https://api.together.xyz/v1",
+    official: true,
+  },
+  {
     id: "anthropic",
     name: "Anthropic / Claude",
     baseUrl: "https://api.anthropic.com/v1",
