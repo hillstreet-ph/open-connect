@@ -24,6 +24,20 @@ function carriesStatus(error: unknown): error is { status: number } {
 export const Route = createFileRoute("/v1/chat/completions")({
   server: {
     handlers: {
+      // The completions surface only accepts POST. Browsers and probes that
+      // send GET would otherwise fall through to the app 404 page, so answer
+      // with a machine-readable method error instead.
+      GET: async () =>
+        json(
+          {
+            error: {
+              message: "Method not allowed. Use POST for chat completions.",
+              type: "open_connect_error",
+              code: "method_not_allowed",
+            },
+          },
+          405,
+        ),
       POST: async ({ request }) => {
         const key = await authenticateKey(request);
         if (!key) {
