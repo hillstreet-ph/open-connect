@@ -1,6 +1,6 @@
 import { modelForUpstream } from "@/lib/model-provider-state";
 import { createFileRoute } from "@tanstack/react-router";
-import { routeOpenAutoChat } from "@/lib/open-auto-router";
+import { OpenAutoRotationError, routeOpenAutoChat } from "@/lib/open-auto-router";
 import {
   authenticateKey,
   gatewayError,
@@ -15,6 +15,11 @@ import {
 
 /** Open-Auto pyramid routing: free-first tiered selection across upstreams. */
 const OPEN_AUTO_MODEL_KEYS = new Set(["open-auto", "open-connect/open-auto"]);
+
+/** Errors that already carry a numeric upstream-style status are rethrown untouched. */
+function carriesStatus(error: unknown): error is { status: number } {
+  return typeof (error as { status?: unknown })?.status === "number";
+}
 
 export const Route = createFileRoute("/v1/chat/completions")({
   server: {
@@ -82,22 +87,31 @@ export const Route = createFileRoute("/v1/chat/completions")({
                   const unbound = new Error("No upstream bound for the selected model.");
                   throw Object.assign(unbound, { status: 400 });
                 }
-                const response = await fetch(`${upstream.baseUrl}/chat/completions`, {
-                  method: "POST",
-                  headers: upstream.headers,
-                  redirect: "manual",
-                  body: JSON.stringify({ ...body, model: modelId, stream: false }),
-                  signal: AbortSignal.timeout(30_000),
-                });
-                const payload = await response.json().catch(() => ({}));
-                if (!response.ok) {
-                  const message =
-                    (payload as { error?: { message?: string } })?.error?.message ??
-                    `Upstream returned HTTP ${response.status}.`;
-                  const failure = new Error(message);
-                  throw Object.assign(failure, { status: response.status });
+                try {
+                  const response = await fetch(`${upstream.baseUrl}/chat/completions`, {
+                    method: "POST",
+                    headers: upstream.headers,
+                    redirect: "manual",
+                    body: JSON.stringify({ ...body, model: modelId, stream: false }),
+                    signal: AbortSignal.timeout(30_000),
+                  });
+                  const payload = await response.json().catch(() => ({}));
+                  if (!response.ok) {
+                    const detail =
+                      (payload as { error?: { message?: string } })?.error?.message ??
+                      `Upstream returned HTTP ${response.status}.`;
+                    const message = `Upstream ${upstream.name} (model ${modelId}) returned HTTP ${response.status}: ${detail}`;
+                    const failure = new Error(message);
+                    throw Object.assign(failure, { status: response.status });
+                  }
+                  return payload;
+                } catch (error) {
+                  if (carriesStatus(error)) throw error;
+                  const timedOut = new Error(
+                    `Upstream ${upstream.name} (model ${modelId}) timed out or failed before responding.`,
+                  );
+                  throw Object.assign(timedOut, { status: 504 });
                 }
-                return payload;
               },
             });
             await logGatewayRequest({
@@ -112,6 +126,8 @@ export const Route = createFileRoute("/v1/chat/completions")({
             return json(result, 200);
           } catch (error) {
             const message = error instanceof Error ? error.message : "Open-Auto routing failed.";
+            const rotations = error instanceof OpenAutoRotationError ? error.rotations : [];
+            const lastRotation = rotations[rotations.length - 1];
             await logGatewayRequest({
               key,
               endpoint: "/v1/chat/completions",
@@ -119,10 +135,18 @@ export const Route = createFileRoute("/v1/chat/completions")({
               statusCode: 502,
               upstream: "open-auto",
             });
-            return json(
-              { error: { message, type: "open_connect_error", code: "open_auto_failed" } },
-              502,
-            );
+            const failure: Record<string, unknown> = {
+              message,
+              type: "open_connect_error",
+              code: "open_auto_failed",
+            };
+            if (lastRotation) {
+              failure["model"] = lastRotation.to;
+            }
+            if (rotations.length > 0) {
+              failure["rotations"] = rotations;
+            }
+            return json({ error: failure }, 502);
           }
         }
 
