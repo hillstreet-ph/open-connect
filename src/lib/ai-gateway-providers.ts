@@ -45,6 +45,18 @@ export const AI_GATEWAY_PROVIDERS = [
     official: true,
   },
   {
+    id: "deepinfra",
+    name: "DeepInfra",
+    baseUrl: "https://api.deepinfra.com/v1/openai",
+    official: true,
+  },
+  {
+    id: "qwen_cloud",
+    name: "Qwen Cloud",
+    baseUrl: "https://ap-southeast-1.maas.qwencloudapi.com/compatible-mode/v1",
+    official: true,
+  },
+  {
     id: "anthropic",
     name: "Anthropic / Claude",
     baseUrl: "https://api.anthropic.com/v1",
