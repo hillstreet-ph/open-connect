@@ -264,7 +264,9 @@ function CampaignBoard({ result, onReset }: { result: CampaignResult; onReset: (
               {result.concept.name}
             </h2>
             <p className="mt-5 text-lg leading-7 text-primary">{result.concept.promise}</p>
-            <p className="mt-4 text-sm leading-6 text-muted-foreground">{result.concept.direction}</p>
+            <p className="mt-4 text-sm leading-6 text-muted-foreground">
+              {result.concept.direction}
+            </p>
           </div>
           <div className="relative min-h-72 bg-muted">
             {result.images[0] ? (

@@ -254,8 +254,7 @@
 
   .campaign-empty {
     background:
-      linear-gradient(135deg, oklch(0.55 0.11 240 / 0.04), transparent 42%),
-      oklch(0.975 0.003 250);
+      linear-gradient(135deg, oklch(0.55 0.11 240 / 0.04), transparent 42%), oklch(0.975 0.003 250);
   }
 
   .campaign-kicker {
