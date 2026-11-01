@@ -152,8 +152,8 @@ export async function fetchFreeModelCatalog(
             .filter((item): item is { id: string; name?: string } =>
               Boolean(
                 item &&
-                  typeof item === "object" &&
-                  typeof (item as { id?: unknown }).id === "string",
+                typeof item === "object" &&
+                typeof (item as { id?: unknown }).id === "string",
               ),
             )
             .filter((item) => allowed.has(item.id))
