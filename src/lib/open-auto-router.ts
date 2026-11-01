@@ -146,26 +146,26 @@ export interface OpenAutoSubtaskResult<T> {
 /**
  * Hierarchical delegation: run independent subtasks in parallel, capped at
  * OPEN_AUTO_MAX_CONCURRENCY concurrent workers, and never let one failed
- * worker sink the batch.
+ * worker sink the batch. Synchronous worker throws are captured as
+ * individual failures so they cannot take down the whole batch.
  */
 export async function runOpenAutoWorkers<T>(
   subtasks: Array<() => Promise<T>>,
   concurrency = OPEN_AUTO_MAX_CONCURRENCY,
 ): Promise<OpenAutoSubtaskResult<T>[]> {
+  const limit = Math.max(1, Math.min(OPEN_AUTO_MAX_CONCURRENCY, Math.floor(concurrency) || 1));
   const results: OpenAutoSubtaskResult<T>[] = [];
-  for (let start = 0; start < subtasks.length; start += concurrency) {
-    const batch = subtasks.slice(start, start + concurrency);
-    const settled = await Promise.allSettled(batch.map((run) => run()));
+  for (let start = 0; start < subtasks.length; start += limit) {
+    const batch = subtasks.slice(start, start + limit);
+    const settled = await Promise.allSettled(batch.map(async (run) => run()));
     settled.forEach((outcome, offset) => {
       if (outcome.status === "fulfilled") {
         results.push({ index: start + offset, ok: true, value: outcome.value });
-      } else {
-        results.push({
-          index: start + offset,
-          ok: false,
-          error: String(outcome.reason).slice(0, 300),
-        });
+        return;
       }
+      const reason =
+        outcome.reason instanceof Error ? outcome.reason.message : String(outcome.reason);
+      results.push({ index: start + offset, ok: false, error: reason.slice(0, 300) });
     });
   }
   return results;

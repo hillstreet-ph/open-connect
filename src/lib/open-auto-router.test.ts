@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   classifyOpenAutoTier,
   isOpenAutoRotatableStatus,
+  OPEN_AUTO_MAX_CONCURRENCY,
   orderOpenAutoCandidates,
   routeOpenAutoChat,
   runOpenAutoWorkers,
@@ -95,7 +96,7 @@ test("authentication errors surface immediately without rotation", async () => {
   );
 });
 
-test("parallel workers fan out concurrently, capped, and failures do not sink the batch", async () => {
+test("parallel workers are capped and failures do not sink the batch", async () => {
   let running = 0;
   let peak = 0;
   const results = await runOpenAutoWorkers(
@@ -113,4 +114,33 @@ test("parallel workers fan out concurrently, capped, and failures do not sink th
   assert.equal(results.length, 10);
   assert.equal(results.filter((result) => result.ok).length, 9);
   assert.equal(results.find((result) => !result.ok)?.error, "worker failed");
+});
+
+test("worker concurrency is clamped to the Open-Auto maximum", async () => {
+  let running = 0;
+  let peak = 0;
+  await runOpenAutoWorkers(
+    Array.from({ length: 6 }, () => async () => {
+      running += 1;
+      peak = Math.max(peak, running);
+      await Promise.resolve();
+      running -= 1;
+      return true;
+    }),
+    64,
+  );
+  assert.ok(peak <= OPEN_AUTO_MAX_CONCURRENCY);
+});
+
+test("synchronous worker throws are captured as individual failures", async () => {
+  const results = await runOpenAutoWorkers([
+    async () => "a",
+    () => {
+      throw new Error("sync boom");
+    },
+    async () => "c",
+  ]);
+  assert.equal(results.length, 3);
+  assert.equal(results.filter((result) => result.ok).length, 2);
+  assert.equal(results.find((result) => !result.ok)?.error, "sync boom");
 });
