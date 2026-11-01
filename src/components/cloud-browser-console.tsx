@@ -34,11 +34,11 @@ type RunView = {
 };
 
 const STATUS_STYLE: Record<string, string> = {
-  RUNNING: "bg-red-600 text-white",
-  PENDING: "bg-amber-500 text-black",
-  COMPLETED: "bg-emerald-600 text-white",
-  FAILED: "bg-zinc-600 text-white",
-  CANCELLED: "bg-zinc-500 text-white",
+  RUNNING: "bg-destructive text-destructive-foreground",
+  PENDING: "bg-warning text-warning-foreground",
+  COMPLETED: "bg-success text-success-foreground",
+  FAILED: "bg-muted-foreground text-background",
+  CANCELLED: "bg-muted-foreground text-background",
 };
 
 function StatusBadge({ status }: { status: string }) {
@@ -302,7 +302,7 @@ export function CloudBrowserConsole({
                 </p>
               ) : null}
               {active?.requires_sign_in ? (
-                <div className="space-y-2 rounded-md border border-amber-500 p-3">
+                <div className="space-y-2 rounded-md border border-warning p-3">
                   <p>
                     This task reached a sign-in page. A completed diagnostic does not mean you are
                     authenticated.

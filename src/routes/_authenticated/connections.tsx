@@ -436,10 +436,10 @@ function ConnectionsPage() {
   }, [managedApp, managedConnectionId, mine.data]);
 
   function statusBadgeClass(status: string) {
-    if (status === "connected") return "border-emerald-500/40 bg-emerald-500/10 text-emerald-700";
-    if (status === "pending") return "border-amber-500/40 bg-amber-500/10 text-amber-700";
+    if (status === "connected") return "border-success/40 bg-success/10 text-success";
+    if (status === "pending") return "border-warning/40 bg-warning/10 text-warning";
     if (status === "error" || status === "degraded")
-      return "border-red-500/40 bg-red-500/10 text-red-700";
+      return "border-destructive/40 bg-destructive/10 text-destructive";
     return "";
   }
 
@@ -532,7 +532,7 @@ function ConnectionsPage() {
             <Button
               size="sm"
               variant="outline"
-              className="h-7 shrink-0 border-red-500/50 px-2 text-xs text-red-600 hover:bg-red-500/10 hover:text-red-700"
+              className="h-7 shrink-0 border-destructive/50 px-2 text-xs text-destructive hover:bg-destructive/10"
               disabled={uninstallMutation.isPending}
               title={`Remove all ${connections.length} account${connections.length === 1 ? "" : "s"} of ${first.display_name}`}
               onClick={() => uninstallMutation.mutate(connections.map((c) => c.id))}
@@ -984,7 +984,7 @@ function ConnectionsPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-7 shrink-0 border-red-500/50 px-2.5 text-xs text-red-600 hover:bg-red-500/10 hover:text-red-700"
+                        className="h-7 shrink-0 border-destructive/50 px-2.5 text-xs text-destructive hover:bg-destructive/10"
                         disabled={disconnectMutation.isPending}
                         onClick={() => disconnectMutation.mutate(c.id)}
                       >
