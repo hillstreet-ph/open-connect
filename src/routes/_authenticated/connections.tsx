@@ -436,10 +436,10 @@ function ConnectionsPage() {
   }, [managedApp, managedConnectionId, mine.data]);
 
   function statusBadgeClass(status: string) {
-    if (status === "connected") return "border-emerald-500/40 bg-emerald-500/10 text-emerald-400";
-    if (status === "pending") return "border-amber-500/40 bg-amber-500/10 text-amber-400";
+    if (status === "connected") return "border-emerald-500/40 bg-emerald-500/10 text-emerald-700";
+    if (status === "pending") return "border-amber-500/40 bg-amber-500/10 text-amber-700";
     if (status === "error" || status === "degraded")
-      return "border-red-500/40 bg-red-500/10 text-red-400";
+      return "border-red-500/40 bg-red-500/10 text-red-700";
     return "";
   }
 
@@ -532,7 +532,7 @@ function ConnectionsPage() {
             <Button
               size="sm"
               variant="outline"
-              className="h-7 shrink-0 border-red-500/50 px-2 text-xs text-red-400 hover:bg-red-500/10 hover:text-red-300"
+              className="h-7 shrink-0 border-red-500/50 px-2 text-xs text-red-600 hover:bg-red-500/10 hover:text-red-700"
               disabled={uninstallMutation.isPending}
               title={`Remove all ${connections.length} account${connections.length === 1 ? "" : "s"} of ${first.display_name}`}
               onClick={() => uninstallMutation.mutate(connections.map((c) => c.id))}
@@ -581,7 +581,7 @@ function ConnectionsPage() {
             <Button
               size="sm"
               variant="outline"
-              className="h-7 shrink-0 border-blue-600 bg-blue-700 px-2 text-xs text-white hover:bg-blue-800 hover:text-white focus-visible:ring-2 focus-visible:ring-blue-400"
+              className="h-7 shrink-0 border-primary/50 bg-primary/10 px-2 text-xs text-primary hover:bg-primary/20 hover:text-primary focus-visible:ring-2 focus-visible:ring-primary/40"
               disabled={connectMutation.isPending}
               title={
                 app.oauth && !app.oauth_ready
@@ -984,7 +984,7 @@ function ConnectionsPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-7 shrink-0 border-red-500/50 px-2.5 text-xs text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                        className="h-7 shrink-0 border-red-500/50 px-2.5 text-xs text-red-600 hover:bg-red-500/10 hover:text-red-700"
                         disabled={disconnectMutation.isPending}
                         onClick={() => disconnectMutation.mutate(c.id)}
                       >
@@ -1001,7 +1001,7 @@ function ConnectionsPage() {
             </p>
           )}
           <Button
-            className="bg-blue-700 text-white hover:bg-blue-800 hover:text-white"
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
             disabled={
               !managedApp ||
               connectMutation.isPending ||

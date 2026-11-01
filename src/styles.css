@@ -6,8 +6,9 @@
 
 /*
  * Open-Connect design system.
- * Dark-first "gateway" aesthetic: deep slate canvas, signal-cyan primary,
+ * Clean minimal light theme: near-white canvas, calm blue primary,
  * warm amber accent for verified/featured states. All colors are oklch tokens.
+ * The previous dark palette is preserved under the ".dark" variant.
  * Workspace shell follows Claude Design ops mockup structure (sidebar + matrix).
  */
 
@@ -64,6 +65,61 @@
 :root {
   --radius: 0.75rem;
 
+  --background: oklch(0.985 0.002 250);
+  --foreground: oklch(0.23 0.02 255);
+  --surface: oklch(1 0 0);
+  --surface-foreground: oklch(0.23 0.02 255);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.23 0.02 255);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.23 0.02 255);
+
+  --primary: oklch(0.55 0.11 240);
+  --primary-foreground: oklch(0.985 0.005 240);
+  --secondary: oklch(0.96 0.005 245);
+  --secondary-foreground: oklch(0.25 0.02 255);
+  --muted: oklch(0.965 0.004 245);
+  --muted-foreground: oklch(0.52 0.02 250);
+  --accent: oklch(0.8 0.13 80);
+  --accent-foreground: oklch(0.28 0.05 60);
+  --destructive: oklch(0.58 0.19 25);
+  --destructive-foreground: oklch(0.99 0.005 240);
+
+  --border: oklch(0.92 0.005 245);
+  --input: oklch(0.92 0.005 245);
+  --ring: oklch(0.55 0.11 240);
+
+  --chart-1: oklch(0.55 0.11 240);
+  --chart-2: oklch(0.72 0.12 75);
+  --chart-3: oklch(0.6 0.12 155);
+  --chart-4: oklch(0.6 0.12 300);
+  --chart-5: oklch(0.62 0.16 25);
+
+  --sidebar: oklch(0.99 0.002 250);
+  --sidebar-foreground: oklch(0.23 0.02 255);
+  --sidebar-primary: oklch(0.55 0.11 240);
+  --sidebar-primary-foreground: oklch(0.985 0.005 240);
+  --sidebar-accent: oklch(0.96 0.005 245);
+  --sidebar-accent-foreground: oklch(0.23 0.02 255);
+  --sidebar-border: oklch(0.92 0.005 245);
+  --sidebar-ring: oklch(0.55 0.11 240);
+
+  --gradient-hero:
+    radial-gradient(120% 100% at 50% -20%, oklch(0.9 0.03 235 / 0.5) 0%, transparent 60%),
+    linear-gradient(180deg, oklch(0.99 0.002 250) 0%, oklch(0.975 0.003 250) 100%);
+  --gradient-pillar: linear-gradient(
+    145deg,
+    oklch(0.55 0.11 240 / 0.06) 0%,
+    oklch(0.8 0.13 80 / 0.05) 100%
+  );
+  --shadow-glow:
+    0 0 0 1px oklch(0.55 0.11 240 / 0.2), 0 18px 60px -24px oklch(0.55 0.11 240 / 0.25);
+  --shadow-panel: 0 24px 60px -32px oklch(0.5 0.03 250 / 0.25);
+}
+
+.dark {
+  --radius: 0.75rem;
+
   --background: oklch(0.16 0.021 250);
   --foreground: oklch(0.96 0.006 240);
   --surface: oklch(0.21 0.024 250);
@@ -115,7 +171,6 @@
     0 0 0 1px oklch(0.79 0.135 190 / 0.25), 0 18px 60px -20px oklch(0.79 0.135 190 / 0.35);
   --shadow-panel: 0 24px 60px -32px oklch(0.1 0.02 250 / 0.9);
 }
-
 @layer base {
   * {
     border-color: var(--color-border);
@@ -166,8 +221,8 @@
 
 @utility grid-lines {
   background-image:
-    linear-gradient(to right, oklch(0.79 0.135 190 / 0.07) 1px, transparent 1px),
-    linear-gradient(to bottom, oklch(0.79 0.135 190 / 0.07) 1px, transparent 1px);
+    linear-gradient(to right, oklch(0.55 0.11 240 / 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, oklch(0.55 0.11 240 / 0.08) 1px, transparent 1px);
   background-size: 64px 64px;
 }
 
@@ -178,10 +233,10 @@
 @layer components {
   .campaign-canvas {
     background:
-      radial-gradient(circle at 92% 4%, oklch(0.78 0.13 82 / 0.08), transparent 26rem),
-      linear-gradient(oklch(0.72 0.08 195 / 0.035) 1px, transparent 1px),
-      linear-gradient(90deg, oklch(0.72 0.08 195 / 0.035) 1px, transparent 1px),
-      oklch(0.125 0.025 250);
+      radial-gradient(circle at 92% 4%, oklch(0.8 0.13 80 / 0.08), transparent 26rem),
+      linear-gradient(oklch(0.55 0.11 240 / 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, oklch(0.55 0.11 240 / 0.05) 1px, transparent 1px),
+      oklch(0.985 0.002 250);
     background-size:
       auto,
       34px 34px,
@@ -191,16 +246,16 @@
 
   .campaign-panel,
   .campaign-empty {
-    border: 1px solid oklch(0.9 0.02 220 / 0.12);
+    border: 1px solid oklch(0.92 0.005 245);
     border-radius: 0.35rem;
-    background: oklch(0.18 0.026 250 / 0.92);
-    box-shadow: 0 30px 80px -48px oklch(0.04 0.03 250);
+    background: oklch(1 0 0);
+    box-shadow: 0 30px 80px -48px oklch(0.5 0.03 250 / 0.35);
   }
 
   .campaign-empty {
     background:
-      linear-gradient(135deg, oklch(0.74 0.1 194 / 0.04), transparent 42%),
-      oklch(0.15 0.024 250 / 0.88);
+      linear-gradient(135deg, oklch(0.55 0.11 240 / 0.04), transparent 42%),
+      oklch(0.975 0.003 250);
   }
 
   .campaign-kicker {
@@ -208,7 +263,7 @@
     font-size: 0.625rem;
     font-weight: 600;
     letter-spacing: 0.2em;
-    color: oklch(0.76 0.11 192);
+    color: oklch(0.55 0.11 240);
   }
 
   .campaign-chip,
@@ -216,22 +271,22 @@
     display: inline-flex;
     align-items: center;
     gap: 0.3rem;
-    border: 1px solid oklch(0.9 0.02 220 / 0.12);
+    border: 1px solid oklch(0.92 0.005 245);
     border-radius: 999px;
     padding: 0.4rem 0.7rem;
     font-size: 0.72rem;
-    color: oklch(0.7 0.02 240);
+    color: oklch(0.45 0.02 250);
     transition: 160ms ease;
   }
 
   .campaign-chip:hover {
-    border-color: oklch(0.76 0.11 192 / 0.6);
-    color: white;
+    border-color: oklch(0.55 0.11 240 / 0.6);
+    color: oklch(0.23 0.02 255);
   }
   .campaign-chip-active {
-    border-color: oklch(0.76 0.11 192 / 0.7);
-    background: oklch(0.76 0.11 192 / 0.12);
-    color: oklch(0.9 0.07 192);
+    border-color: oklch(0.55 0.11 240 / 0.5);
+    background: oklch(0.55 0.11 240 / 0.08);
+    color: oklch(0.45 0.09 240);
   }
 
   .campaign-orbit {
@@ -239,20 +294,20 @@
     place-items: center;
     width: 5rem;
     height: 5rem;
-    border: 1px solid oklch(0.78 0.13 82 / 0.35);
+    border: 1px solid oklch(0.78 0.13 82 / 0.45);
     border-radius: 50%;
     box-shadow:
-      0 0 0 1rem oklch(0.78 0.13 82 / 0.035),
-      0 0 0 2rem oklch(0.76 0.11 192 / 0.02);
+      0 0 0 1rem oklch(0.8 0.13 80 / 0.06),
+      0 0 0 2rem oklch(0.55 0.11 240 / 0.04);
   }
 
   .campaign-shimmer {
     border-radius: 0.3rem;
     background: linear-gradient(
       100deg,
-      oklch(0.22 0.025 250) 20%,
-      oklch(0.3 0.035 245) 40%,
-      oklch(0.22 0.025 250) 60%
+      oklch(0.955 0.004 245) 20%,
+      oklch(0.925 0.006 245) 40%,
+      oklch(0.955 0.004 245) 60%
     );
     background-size: 220% 100%;
     animation: campaign-shimmer 1.7s infinite linear;
