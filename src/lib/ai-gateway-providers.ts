@@ -33,6 +33,18 @@ export const AI_GATEWAY_PROVIDERS = [
     official: true,
   },
   {
+    id: "novita",
+    name: "Novita AI",
+    baseUrl: "https://api.novita.ai/openai",
+    official: true,
+  },
+  {
+    id: "cohere",
+    name: "Cohere",
+    baseUrl: "https://api.cohere.com/compatibility/v1",
+    official: true,
+  },
+  {
     id: "anthropic",
     name: "Anthropic / Claude",
     baseUrl: "https://api.anthropic.com/v1",
