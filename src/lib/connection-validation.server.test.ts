@@ -71,7 +71,11 @@ test("compatible model providers validate custom OpenAI-compatible endpoints and
     ["huggingface", "https://router.huggingface.co/v1", "https://custom.example/v1/models"],
     ["groq", "https://api.groq.com/openai/v1", "https://custom.example/v1/models"],
     // Legacy preset providers keep their fixed canonical URL.
-    ["commandcode", "https://api.commandcode.ai/provider/v1", "https://api.commandcode.ai/provider/v1/models"],
+    [
+      "commandcode",
+      "https://api.commandcode.ai/provider/v1",
+      "https://api.commandcode.ai/provider/v1/models",
+    ],
   ];
   for (const [provider, canonical, endpoint] of cases) {
     // A saved custom public HTTPS endpoint is validated directly.
