@@ -565,6 +565,7 @@ function ModelsPage() {
                                 litellm: "LiteLLM",
                                 nvidia: "NVIDIA",
                                 ollama_cloud: "Ollama Cloud",
+                                fireworks: "Fireworks AI",
                               }[model.source]
                             }
                           </Badge>
