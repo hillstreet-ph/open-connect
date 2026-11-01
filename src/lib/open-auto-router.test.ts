@@ -29,10 +29,7 @@ test("route ordering is free first with paid and subscription as backups", () =>
     routes.map((route) => route.model),
     ["provider/free-model:free", "provider/paid-model", "subscription/reserved-a"],
   );
-  assert.deepEqual(
-    routes.map((route) => route.tier),
-    ["free", "paid", "subscription"],
-  );
+  assert.deepEqual(routes.map((route) => route.tier), ["free", "paid", "subscription"]);
 });
 
 test("open-auto aliases are recognized and everything else is a fixed model", () => {

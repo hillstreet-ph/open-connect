@@ -112,9 +112,7 @@ export const Route = createFileRoute("/v1/chat/completions")({
             if (!response.ok) {
               lastError = { status: response.status, body: result };
               // try the next route on 5xx / 404, and rotate for Open-Auto tiered routing
-              if (autoFree || openAuto || response.status >= 500 || response.status === 404) {
-                continue;
-              }
+              if (autoFree || openAuto || response.status >= 500 || response.status === 404) continue;
               await logGatewayRequest({
                 key,
                 endpoint: "/v1/chat/completions",

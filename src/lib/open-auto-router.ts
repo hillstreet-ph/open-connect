@@ -139,9 +139,7 @@ export async function runOpenAutoRoutes<T extends { name: string }, R>(
       status = 0;
     }
     attempts.push({ model: route.model, status });
-    if (status >= 200 && status < 400) {
-      return { route, value: value as R, attempts };
-    }
+    if (status >= 200 && status < 400) return { route, value: value as R, attempts };
     if (status !== 0 && !isOpenAutoRotationStatus(status)) break;
   }
   const attempted = attempts.map((entry) => entry.model + ":" + entry.status).join(", ");
