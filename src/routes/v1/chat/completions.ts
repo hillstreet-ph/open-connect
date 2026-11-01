@@ -9,8 +9,10 @@ import {
   isAutoFreeModel,
   resolveAutoFreeRoutes,
   resolveModelId,
+  resolveOpenAutoRoutes,
   resolveUserUpstreams,
 } from "@/lib/gateway.server";
+import { isOpenAutoRequest } from "@/lib/open-auto-router";
 
 export const Route = createFileRoute("/v1/chat/completions")({
   server: {
@@ -39,15 +41,18 @@ export const Route = createFileRoute("/v1/chat/completions")({
             ? (body["model"] as string).trim()
             : "open-connect/auto";
         const autoFree = isAutoFreeModel(requestedModel);
-        const routes = autoFree
-          ? await resolveAutoFreeRoutes(upstreams)
-          : upstreams.map((upstream) => ({
-              upstream,
-              model: modelForUpstream(resolveModelId(requestedModel), upstream.name),
-            }));
+        const openAuto = isOpenAutoRequest(requestedModel);
+        const routes = openAuto
+          ? await resolveOpenAutoRoutes(upstreams)
+          : autoFree
+            ? await resolveAutoFreeRoutes(upstreams)
+            : upstreams.map((upstream) => ({
+                upstream,
+                model: modelForUpstream(resolveModelId(requestedModel), upstream.name),
+              }));
         if (routes.length === 0) {
           return gatewayError(
-            "No connected OpenRouter free router or zero-cost LiteLLM model is available.",
+            "No connected free-tier or Open-Auto model route is available.",
             503,
             "free_models_unavailable",
           );
@@ -58,7 +63,7 @@ export const Route = createFileRoute("/v1/chat/completions")({
 
         const deadline = Date.now() + 35_000;
         for (const route of routes) {
-          if (autoFree && !streaming && Date.now() >= deadline) break;
+          if ((autoFree || openAuto) && !streaming && Date.now() >= deadline) break;
           const { upstream, model } = route;
           try {
             const response = await fetch(`${upstream.baseUrl}/chat/completions`, {
@@ -67,7 +72,7 @@ export const Route = createFileRoute("/v1/chat/completions")({
               redirect: "manual",
               body: JSON.stringify({ ...body, model }),
               signal: AbortSignal.timeout(
-                autoFree && !streaming
+                (autoFree || openAuto) && !streaming
                   ? Math.max(1, Math.min(12_000, deadline - Date.now()))
                   : 120_000,
               ),
@@ -106,8 +111,10 @@ export const Route = createFileRoute("/v1/chat/completions")({
 
             if (!response.ok) {
               lastError = { status: response.status, body: result };
-              // try next upstream on 5xx / 404 model
-              if (autoFree || response.status >= 500 || response.status === 404) continue;
+              // try the next route on 5xx / 404, and rotate for Open-Auto tiered routing
+              if (autoFree || openAuto || response.status >= 500 || response.status === 404) {
+                continue;
+              }
               await logGatewayRequest({
                 key,
                 endpoint: "/v1/chat/completions",

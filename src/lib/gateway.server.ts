@@ -15,10 +15,13 @@ import { COMPATIBLE_GATEWAY_PROVIDERS } from "./ai-gateway-providers.ts";
  *   LITELLM_MASTER_KEY OpenRouter sk-or-v1-… (or LiteLLM master key)
  *   OPENROUTER_API_KEY optional explicit OpenRouter key
  *   OPENROUTER_BASE_URL optional override
+ *   FIREWORKS_API_KEY  optional Fireworks AI platform key (OpenAI-compatible inference)
+ *   FIREWORKS_BASE_URL defaults to https://api.fireworks.ai/inference/v1
  */
 import { createHash } from "crypto";
 import { generateClientKey, isClientKey } from "./gateway-keys.ts";
 import { fetchFreeModelCatalog, isAutoFreeModel } from "./model-catalog";
+import { orderOpenAutoRoutes } from "./open-auto-router.ts";
 
 export const KEY_PREFIX = "oc_live_";
 
@@ -247,6 +250,25 @@ export function resolveUpstreams(): Upstream[] {
     }
   }
 
+  const fireworksKey = process.env["FIREWORKS_API_KEY"] || "";
+  const fireworksBase = stripTrailingSlash(
+    process.env["FIREWORKS_BASE_URL"] || "https://api.fireworks.ai/inference/v1",
+  );
+  if (fireworksKey) {
+    const id = `fireworks:${fireworksBase}`;
+    if (!seen.has(id)) {
+      seen.add(id);
+      list.push({
+        name: "fireworks",
+        baseUrl: fireworksBase,
+        headers: {
+          Authorization: `Bearer ${fireworksKey}`,
+          "Content-Type": "application/json",
+        },
+      });
+    }
+  }
+
   return list;
 }
 
@@ -314,6 +336,39 @@ export async function resolveAutoFreeRoutes(upstreams: Upstream[]): Promise<Auto
 }
 
 export { isAutoFreeModel };
+
+/**
+ * Detect every upstream catalog concurrently and order routes free first (Open-Auto).
+ * New upstream models appear automatically because catalogs are read at request time.
+ */
+export async function resolveOpenAutoRoutes(upstreams: Upstream[]): Promise<AutoFreeRoute[]> {
+  const catalogs = await Promise.all(
+    upstreams.map(async (upstream) => {
+      try {
+        const response = await fetch(`${upstream.baseUrl}/models`, {
+          headers: upstream.headers,
+          signal: AbortSignal.timeout(15_000),
+        });
+        if (!response.ok) return [] as string[];
+        const payload = (await response.json().catch(() => null)) as {
+          data?: { id?: string }[];
+        } | null;
+        const data = payload?.data;
+        if (!Array.isArray(data)) return [] as string[];
+        return data
+          .map((model) => (model && typeof model.id === "string" ? model.id : ""))
+          .filter((id) => id.length > 0);
+      } catch {
+        return [] as string[];
+      }
+    }),
+  );
+  return orderOpenAutoRoutes(
+    upstreams.flatMap((upstream, index) =>
+      catalogs[index]!.map((model) => ({ upstream, model })),
+    ),
+  );
+}
 export function resolveUpstream(): Upstream | null {
   return resolveUpstreams()[0] ?? null;
 }
