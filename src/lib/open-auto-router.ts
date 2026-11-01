@@ -75,10 +75,7 @@ export interface OpenAutoChatRequest {
 }
 
 /** Injectable chat call so tests run without network access or live keys. */
-export type OpenAutoChatFn = (
-  model: string,
-  request: OpenAutoChatRequest,
-) => Promise<unknown>;
+export type OpenAutoChatFn = (model: string, request: OpenAutoChatRequest) => Promise<unknown>;
 
 export class OpenAutoRotationError extends Error {
   rotations: OpenAutoRotationEvent[];
@@ -102,8 +99,11 @@ export async function routeOpenAutoChat(options: {
   capability?: string;
   onRotation?: (event: OpenAutoRotationEvent) => void;
 }): Promise<{ model: string; result: unknown }> {
-  const pool = options.capability
-    ? options.candidates.filter((model) => (model.capabilities ?? []).includes(options.capability!))
+  const requiredCapability = options.capability;
+  const pool = requiredCapability
+    ? options.candidates.filter((model) =>
+        (model.capabilities ?? []).includes(requiredCapability),
+      )
     : options.candidates;
   const ordered = orderOpenAutoCandidates(pool);
   if (ordered.length === 0) {

@@ -82,10 +82,7 @@ test("capability filtering restricts candidates before ordering", async () => {
 test("authentication errors surface immediately without rotation", async () => {
   await assert.rejects(
     routeOpenAutoChat({
-      candidates: [
-        { id: "accounts/fire/models/metered-a" },
-        { id: "accounts/fire/models/metered-b" },
-      ],
+      candidates: [{ id: "accounts/fire/models/metered-a" }, { id: "accounts/fire/models/metered-b" }],
       request: { messages: [] },
       chat: async () => {
         throw Object.assign(new Error("unauthorized"), { status: 401 });
