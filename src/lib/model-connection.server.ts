@@ -59,6 +59,17 @@ function endpointForLiteLlm(metadata: unknown): string {
   return url.toString().replace(/\/+$/, "");
 }
 
+/** Custom OpenAI-compatible deployments honor a saved endpoint when it differs from the catalog. */
+function customGatewayEndpoint(metadata: unknown, catalogBaseUrl: string): string {
+  if (!metadata || typeof metadata !== "object") return catalogBaseUrl;
+  const raw = (metadata as Record<string, unknown>)["endpoint_url"];
+  if (typeof raw !== "string" || !raw.trim()) return catalogBaseUrl;
+  if (raw.trim().replace(/\/+$/, "") === catalogBaseUrl.replace(/\/+$/, "")) {
+    return catalogBaseUrl;
+  }
+  return endpointForLiteLlm(metadata);
+}
+
 const COMPATIBLE_MODEL_ENDPOINTS: Record<string, string> = Object.fromEntries(
   COMPATIBLE_GATEWAY_PROVIDERS.map((provider) => [provider.id, provider.baseUrl]),
 );
@@ -94,14 +105,25 @@ export async function savedModelUpstreams(
       // A removed/stale account must not prevent the user's other accounts from working.
       continue;
     }
+    let upstreamBaseUrl: string;
+    if (connection.provider === "litellm") {
+      upstreamBaseUrl = endpointForLiteLlm(connection.metadata);
+    } else {
+      try {
+        upstreamBaseUrl = customGatewayEndpoint(
+          connection.metadata,
+          COMPATIBLE_MODEL_ENDPOINTS[
+            connection.provider as Exclude<SavedModelUpstream["name"], "litellm">
+          ]!,
+        );
+      } catch {
+        // An invalid custom endpoint must not block the user's other providers.
+        continue;
+      }
+    }
     configured.push({
       name: connection.provider as SavedModelUpstream["name"],
-      baseUrl:
-        connection.provider === "litellm"
-          ? endpointForLiteLlm(connection.metadata)
-          : COMPATIBLE_MODEL_ENDPOINTS[
-              connection.provider as Exclude<SavedModelUpstream["name"], "litellm">
-            ]!,
+      baseUrl: upstreamBaseUrl,
       headers: {
         Authorization: `Bearer ${credential}`,
         "Content-Type": "application/json",
