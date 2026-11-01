@@ -104,9 +104,7 @@ export async function routeOpenAutoChat(options: {
   capability?: string;
   onRotation?: (event: OpenAutoRotationEvent) => void;
 }): Promise<{ model: string; result: unknown }> {
-  const pool = options.candidates.filter((model) =>
-    matchesCapability(model, options.capability),
-  );
+  const pool = options.candidates.filter((model) => matchesCapability(model, options.capability));
   const ordered = orderOpenAutoCandidates(pool);
   if (ordered.length === 0) {
     throw new OpenAutoRotationError("No candidate models available for this request.", []);
