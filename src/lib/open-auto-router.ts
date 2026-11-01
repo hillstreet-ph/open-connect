@@ -61,6 +61,11 @@ export function isOpenAutoRotatableStatus(status: number): boolean {
   return status === 429 || status === 408 || status === 504 || status >= 500;
 }
 
+function matchesCapability(model: OpenAutoModel, capability: string | undefined): boolean {
+  if (!capability) return true;
+  return (model.capabilities ?? []).includes(capability);
+}
+
 export interface OpenAutoRotationEvent {
   from: string;
   to: string;
@@ -99,12 +104,9 @@ export async function routeOpenAutoChat(options: {
   capability?: string;
   onRotation?: (event: OpenAutoRotationEvent) => void;
 }): Promise<{ model: string; result: unknown }> {
-  const requiredCapability = options.capability;
-  const pool = requiredCapability
-    ? options.candidates.filter((model) =>
-        (model.capabilities ?? []).includes(requiredCapability),
-      )
-    : options.candidates;
+  const pool = options.candidates.filter((model) =>
+    matchesCapability(model, options.capability),
+  );
   const ordered = orderOpenAutoCandidates(pool);
   if (ordered.length === 0) {
     throw new OpenAutoRotationError("No candidate models available for this request.", []);
