@@ -72,6 +72,9 @@ export const MODEL_ALIASES: Record<string, string> = {
   "openrouter/free": "openrouter/free",
 
   // --- Open-Connect virtual (stable for agents) ---
+  "open-connect/high": "openai/gpt-4o",
+  "open-connect/deep": "openai/o3-mini",
+  "open-connect/wide": "openrouter/auto",
   "open-connect/fast": "openai/gpt-4o-mini",
   "open-connect/cheap": "openai/gpt-4o-mini",
   "open-connect/balanced": "openai/gpt-4o-mini",
@@ -89,6 +92,9 @@ export const MODEL_ALIASES: Record<string, string> = {
   "open-connect/embedding": "openai/text-embedding-3-small",
 
   // --- Short logical names (LiteLLM-style) ---
+  high: "openai/gpt-4o",
+  deep: "openai/o3-mini",
+  wide: "openrouter/auto",
   fast: "openai/gpt-4o-mini",
   cheap: "openai/gpt-4o-mini",
   balanced: "openai/gpt-4o-mini",
