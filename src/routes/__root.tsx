@@ -99,7 +99,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "Agent resources, secure app connections and a multi-provider AI model gateway behind one account, key and MCP URL.",
       },
       { name: "author", content: "Open-Connect" },
-      { name: "theme-color", content: "#f7f8fa" },
+      { name: "theme-color", content: "#0d1016" },
       { property: "og:title", content: "Open-Connect — Unified AI agent integration platform" },
       {
         property: "og:description",
@@ -133,7 +133,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <head>
         <HeadContent />
       </head>
