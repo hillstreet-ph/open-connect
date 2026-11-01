@@ -22,7 +22,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
         <AppSidebar />
         <SidebarInset className="min-h-0 min-w-0 overflow-hidden">
           <header className="relative z-20 flex min-h-14 shrink-0 items-center gap-2 border-b border-border/80 bg-background px-3 sm:gap-3 sm:px-4">
-            <SidebarTrigger className="-ml-1" title="Toggle sidebar (Ctrl/⌘ B)" />
+            <SidebarTrigger className="-ml-1 size-9" title="Toggle sidebar (Ctrl/⌘ B)" />
             <BackButton target={backTarget} />
             <div className="min-w-0 flex-1">
               <p className="truncate font-display text-sm font-semibold tracking-tight sm:text-base">
