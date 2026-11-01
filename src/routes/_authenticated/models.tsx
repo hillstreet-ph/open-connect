@@ -328,13 +328,13 @@ function ModelsPage() {
       </div>
 
       <Card className="mt-6 shadow-panel">
-        <CardHeader className="pb-2">
+        <CardHeader className="p-4 pb-2">
           <CardTitle className="text-base">Point any client here</CardTitle>
           <CardDescription>
             Open WebUI, LobeHub, Cursor, custom agents — same OpenAI-compatible API.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-2">
+        <CardContent className="space-y-2 p-4 pt-0">
           <div className="flex items-center gap-2 rounded-lg border border-border/70 bg-background/60 px-3 py-2 font-mono text-xs">
             <span className="min-w-0 flex-1 break-all">
               <span className="text-muted-foreground">Base URL </span>
@@ -378,7 +378,7 @@ function ModelsPage() {
       </div>
       {modelsListOpen ? (
         <Card className="mt-3 shadow-panel">
-          <CardContent className="space-y-3 pt-4">
+          <CardContent className="space-y-2 p-4 pt-0">
             <div>
               <p className="mb-2 text-xs font-semibold">Featured models</p>
               <div className="grid gap-1.5 sm:grid-cols-2">
@@ -438,7 +438,7 @@ function ModelsPage() {
       </div>
       {toolsOpen ? (
         <Card className="mt-3 shadow-panel">
-          <CardContent className="space-y-3 pt-4">
+          <CardContent className="space-y-2 p-4 pt-0">
             <p className="text-xs text-muted-foreground">
               Built-in tool calls available to models routed through the OpenRouter upstream. Tools
               are grouped by capability and pass through the gateway like any other
@@ -464,7 +464,7 @@ function ModelsPage() {
       ) : null}
 
       <Card className="mt-6 shadow-panel" id="free-models">
-        <CardHeader className="pb-3">
+        <CardHeader className="p-4 pb-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <CardTitle className="flex items-center gap-2 text-base">
@@ -495,7 +495,7 @@ function ModelsPage() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 pt-0">
           {modelTest.data ? (
             <p role="status" className="mb-3 text-xs text-success">
               Inference verified: {modelTest.data.model}
@@ -646,7 +646,7 @@ function ModelsPage() {
       </div>
       {aliasesOpen ? (
         <Card className="mt-3 shadow-panel">
-          <CardContent className="space-y-3 pt-4">
+          <CardContent className="space-y-2 p-4 pt-0">
             <p className="text-xs text-muted-foreground">
               Pyramid routing. Open-Auto is the default: it inspects the task prompt and tool
               request, picks the right model automatically, uses free models first, rotates when a
@@ -863,7 +863,7 @@ function ModelsPage() {
                     <Button
                       size="sm"
                       variant="outline"
-                      className="h-7 px-2.5 text-xs"
+                      className="h-6 px-2.5 text-xs"
                       disabled={
                         providerTest.isPending ||
                         configureMutation.isPending ||
@@ -881,7 +881,7 @@ function ModelsPage() {
                     </Button>
                     <Button
                       size="sm"
-                      className="h-7 px-2.5 text-xs"
+                      className="h-6 px-2.5 text-xs"
                       disabled={
                         providerTest.isPending ||
                         configureMutation.isPending ||
@@ -899,7 +899,7 @@ function ModelsPage() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-7 px-2.5 text-xs"
+                      className="h-6 px-2.5 text-xs"
                       disabled={providerTest.isPending}
                       onClick={() => {
                         setActiveProvider(null);

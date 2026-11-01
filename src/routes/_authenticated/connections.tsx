@@ -532,7 +532,7 @@ function ConnectionsPage() {
             <Button
               size="sm"
               variant="outline"
-              className="h-7 shrink-0 border-destructive/50 px-2 text-xs text-destructive hover:bg-destructive/10"
+              className="h-6 shrink-0 border-destructive/50 px-2 text-xs text-destructive hover:bg-destructive/10"
               disabled={uninstallMutation.isPending}
               title={`Remove all ${connections.length} account${connections.length === 1 ? "" : "s"} of ${first.display_name}`}
               onClick={() => uninstallMutation.mutate(connections.map((c) => c.id))}
@@ -581,7 +581,7 @@ function ConnectionsPage() {
             <Button
               size="sm"
               variant="outline"
-              className="h-7 shrink-0 border-primary/50 bg-primary/10 px-2 text-xs text-primary hover:bg-primary/20 hover:text-primary focus-visible:ring-2 focus-visible:ring-primary/40"
+              className="h-6 shrink-0 border-primary/50 bg-primary/10 px-2 text-xs text-primary hover:bg-primary/20 hover:text-primary focus-visible:ring-2 focus-visible:ring-primary/40"
               disabled={connectMutation.isPending}
               title={
                 app.oauth && !app.oauth_ready
@@ -857,7 +857,7 @@ function ConnectionsPage() {
       )}
 
       <Card className="mt-8 bg-pillar shadow-panel">
-        <CardHeader className="p-5">
+        <CardHeader className="p-4">
           <Badge variant="outline" className="w-fit border-primary/40 text-primary">
             <Lock className="mr-1 size-3" /> Credential boundary
           </Badge>
@@ -984,7 +984,7 @@ function ConnectionsPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-7 shrink-0 border-destructive/50 px-2.5 text-xs text-destructive hover:bg-destructive/10"
+                        className="h-6 shrink-0 border-destructive/50 px-2.5 text-xs text-destructive hover:bg-destructive/10"
                         disabled={disconnectMutation.isPending}
                         onClick={() => disconnectMutation.mutate(c.id)}
                       >

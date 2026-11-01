@@ -104,7 +104,7 @@ export function WorkforceDirectory({
   });
   return (
     <div className="space-y-6">
-      <header className="space-y-3 rounded-xl border bg-gradient-to-br from-primary/10 via-background to-background p-5 sm:p-8">
+      <header className="space-y-3 rounded-xl border bg-gradient-to-br from-primary/10 via-background to-background p-4 sm:p-6">
         <Badge variant="outline">
           <Shield className="mr-1 size-3" />
           Private AI workforce
@@ -116,6 +116,7 @@ export function WorkforceDirectory({
         </p>
         <div className="flex flex-wrap gap-2">
           <Button
+            size="sm"
             variant={departmentsView ? "outline" : "default"}
             onClick={() => setDepartmentsView(false)}
           >
@@ -123,6 +124,7 @@ export function WorkforceDirectory({
             Workforce
           </Button>
           <Button
+            size="sm"
             variant={departmentsView ? "default" : "outline"}
             onClick={() => setDepartmentsView(true)}
           >
@@ -130,6 +132,7 @@ export function WorkforceDirectory({
             Departments
           </Button>
           <Button
+            size="sm"
             variant="outline"
             disabled={!rows.data?.canManage}
             onClick={() => setBuilder("new")}
@@ -137,7 +140,7 @@ export function WorkforceDirectory({
             <Plus className="mr-2 size-4" />
             Agent Builder
           </Button>
-          <Button asChild variant="outline">
+          <Button asChild size="sm" variant="outline">
             <Link to="/connections">Connect apps</Link>
           </Button>
         </div>
@@ -203,7 +206,7 @@ export function WorkforceDirectory({
       )}
       {rows.data?.canManage && agents.length === 0 && (
         <div className="flex flex-wrap items-center gap-3 rounded-lg border p-4">
-          <Button disabled={install.isPending} onClick={() => install.mutate()}>
+          <Button size="sm" disabled={install.isPending} onClick={() => install.mutate()}>
             {install.isPending ? "Setting up…" : "Set up department templates"}
           </Button>
           <p className="text-xs text-muted-foreground">
@@ -217,8 +220,8 @@ export function WorkforceDirectory({
           {DEPARTMENTS.filter(
             (d) => !["business", "custom"].includes(d) || agents.some((a) => a.department === d),
           ).map((d) => (
-            <Card className="space-y-3 p-5" key={d}>
-              <Building2 className="size-6 text-primary" />
+            <Card className="space-y-2 p-4" key={d}>
+              <Building2 className="size-5 text-primary" />
               <h2 className="font-semibold">{title(d)}</h2>
               <p className="text-sm text-muted-foreground">
                 {agents.filter((a) => a.department === d).length} configured specialists ·{" "}
@@ -229,6 +232,7 @@ export function WorkforceDirectory({
                 activated
               </p>
               <Button
+                size="sm"
                 variant="outline"
                 onClick={() => {
                   setDepartment(d);
@@ -241,15 +245,15 @@ export function WorkforceDirectory({
           ))}
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {visible.map((a) => {
             const v = newest(a),
               c = v?.config;
             return (
-              <Card key={a.id} className="flex flex-col gap-3 p-5">
+              <Card key={a.id} className="flex flex-col gap-2 p-3">
                 <div className="flex items-center justify-between">
-                  <div className="rounded-xl bg-primary/10 p-3 text-primary">
-                    <Users className="size-7" />
+                  <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                    <Users className="size-5" />
                   </div>
                   <Badge variant="outline">
                     {!a.enabled ? "Disabled" : a.active_version_id ? "Activated" : "Draft"}
@@ -267,6 +271,7 @@ export function WorkforceDirectory({
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <Button
+                    size="sm"
                     variant="outline"
                     onClick={() =>
                       navigate({
@@ -278,6 +283,7 @@ export function WorkforceDirectory({
                     View specialist
                   </Button>
                   <Button
+                    size="sm"
                     disabled={!a.enabled || !a.active_version_id || start.isPending}
                     onClick={() => start.mutate(a.id)}
                   >
@@ -291,7 +297,7 @@ export function WorkforceDirectory({
         </div>
       )}
       {!rows.isLoading && !departmentsView && !visible.length && (
-        <p className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
+        <p className="rounded-lg border border-dashed p-6 text-center text-muted-foreground">
           No specialists match this view. Set up private templates or create a specialist.
         </p>
       )}

@@ -512,11 +512,11 @@ function SecretsPage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:py-10">
       <div className="flex items-center gap-3">
-        <span className="flex size-10 items-center justify-center rounded-lg bg-primary/15 text-primary">
-          <Lock className="size-5" />
+        <span className="flex size-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
+          <Lock className="size-4" />
         </span>
         <div>
-          <h1 className="text-3xl font-semibold">Credentials</h1>
+          <h1 className="text-2xl font-semibold">Credentials</h1>
           <p className="text-sm text-muted-foreground">
             Password-manager style vault for passwords, API keys, and copy-ready 2FA codes.
           </p>
@@ -525,7 +525,7 @@ function SecretsPage() {
 
       <CredentialImport existing={list.data ?? []} />
       <Card className="mt-8 overflow-hidden border-border/80 shadow-panel">
-        <CardHeader>
+        <CardHeader className="p-4">
           <CardTitle className="text-base">Add login or credential</CardTitle>
           <CardDescription>
             Store a password or key with an optional authenticator setup key in one encrypted item.
@@ -536,7 +536,7 @@ function SecretsPage() {
             revoke or rotate them.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 p-4 pt-0">
           <div className="space-y-2 rounded-xl border border-border/80 bg-muted/20 p-4">
             <Label htmlFor="secret-name">Title</Label>
             <Input
@@ -550,7 +550,7 @@ function SecretsPage() {
             <Label htmlFor="secret-type">Type</Label>
             <select
               id="secret-type"
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               value={secretType}
               onChange={(e) => setSecretType(e.target.value as SecretType)}
             >
@@ -711,6 +711,7 @@ function SecretsPage() {
             </div>
           </div>
           <Button
+            size="sm"
             onClick={() => createMutation.mutate()}
             disabled={createMutation.isPending || !name.trim() || !value.trim()}
           >
@@ -725,14 +726,14 @@ function SecretsPage() {
       </Card>
 
       <Card className="mt-6 shadow-panel">
-        <CardHeader>
+        <CardHeader className="p-4">
           <CardTitle className="text-base">Credential folders</CardTitle>
           <CardDescription>
             Group saved logins and keys. Sharing a folder gives selected projects metadata-only
             references to every credential inside; secret values remain private to you.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 p-4 pt-0">
           <div className="flex flex-col gap-2 sm:flex-row">
             <Input
               aria-label="New credential folder name"
@@ -742,7 +743,7 @@ function SecretsPage() {
               onChange={(event) => setNewFolderName(event.target.value)}
             />
             <Button
-              className="shrink-0"
+              className="h-8 shrink-0 px-3 text-xs"
               onClick={() => createFolderMutation.mutate()}
               disabled={!newFolderName.trim() || createFolderMutation.isPending}
             >
@@ -934,14 +935,14 @@ function SecretsPage() {
       </Card>
 
       <Card className="mt-6 shadow-panel">
-        <CardHeader>
+        <CardHeader className="p-4">
           <CardTitle className="text-base">Stored credentials</CardTitle>
           <CardDescription>
             Values and notes stay hidden and are not loaded until you explicitly reveal them, one
             item at a time. Revealed values and notes clear after 30 seconds.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 pt-0">
           <div className="mb-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -956,7 +957,7 @@ function SecretsPage() {
               aria-label="Filter credential type"
               value={typeFilter}
               onChange={(event) => setTypeFilter(event.target.value as SecretType | "all")}
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
             >
               <option value="all">All types</option>
               {TYPES.map((type) => (
@@ -969,7 +970,7 @@ function SecretsPage() {
               aria-label="Filter credential tag"
               value={tagFilter}
               onChange={(event) => setTagFilter(event.target.value)}
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
             >
               <option value="all">All tags</option>
               {availableTags.map((tag) => (
@@ -982,7 +983,7 @@ function SecretsPage() {
               aria-label="Filter credential project"
               value={projectFilter}
               onChange={(event) => setProjectFilter(event.target.value)}
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
             >
               <option value="all">All projects</option>
               {(projects.data ?? []).map((project) => (
@@ -995,7 +996,7 @@ function SecretsPage() {
               aria-label="Filter credential folder"
               value={folderFilter}
               onChange={(event) => setFolderFilter(event.target.value)}
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
             >
               <option value="all">All folders</option>
               {(folders.data ?? []).map((folder) => (
@@ -1051,7 +1052,7 @@ function SecretsPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="min-w-32 justify-center gap-1.5"
+                        className="min-w-28 justify-center gap-1.5"
                         onClick={() => beginEditingValue(row.id)}
                       >
                         <Pencil className="size-3.5" /> Edit value
@@ -1059,7 +1060,7 @@ function SecretsPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="min-w-32 justify-center gap-1.5"
+                        className="min-w-28 justify-center gap-1.5"
                         onClick={() => beginEditingOrganization(row)}
                       >
                         <Pencil className="size-3.5" /> Organize
@@ -1068,7 +1069,7 @@ function SecretsPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="min-w-32 justify-center gap-1.5"
+                          className="min-w-28 justify-center gap-1.5"
                           onClick={() => revealMutation.mutate(row.id)}
                           disabled={revealMutation.isPending}
                         >
@@ -1098,7 +1099,7 @@ function SecretsPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="min-w-32 justify-center gap-1.5"
+                            className="min-w-28 justify-center gap-1.5"
                             onClick={() => totpMutation.mutate(row.id)}
                             disabled={totpMutation.isPending}
                           >
