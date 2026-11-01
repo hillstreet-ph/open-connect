@@ -7,7 +7,7 @@ export type FreeModelEntry = {
   name: string | null;
 };
 
-import { FIREWORKS_FREE_MODEL_IDS } from "./fireworks-routing";
+import { FIREWORKS_FREE_MODEL_IDS } from "./fireworks-routing.ts";
 
 export type CatalogUpstream = {
   name: string;
