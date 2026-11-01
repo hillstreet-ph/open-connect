@@ -46,13 +46,8 @@ export async function getCloudflareAi(): Promise<AiBinding | null> {
   return ai && typeof ai.run === "function" ? ai : null;
 }
 
-export type CloudflareChatMessage = {
-  role: unknown;
-  content: unknown;
-};
-
 export type CloudflareChatRequest = {
-  messages: CloudflareChatMessage[];
+  messages: Array<Record<string, unknown>>;
   temperature?: number;
   max_tokens?: number;
 };
@@ -120,8 +115,8 @@ export async function runCloudflareChatCompletion(
   try {
     const payload = await ai.run(model, {
       messages: request.messages.map((message) => ({
-        role: typeof message.role === "string" ? message.role : "user",
-        content: textContent(message.content),
+        role: typeof message["role"] === "string" ? message["role"] : "user",
+        content: textContent(message["content"]),
       })),
       ...(request.temperature !== undefined ? { temperature: request.temperature } : {}),
       ...(request.max_tokens !== undefined ? { max_tokens: request.max_tokens } : {}),
