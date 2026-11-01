@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
-import { ChevronLeft, ChevronRight, PanelLeft } from "lucide-react";
+import { ChevronLeft, PanelLeft } from "lucide-react";
 
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
@@ -307,12 +307,10 @@ const SidebarRail = React.forwardRef<HTMLButtonElement, React.ComponentProps<"bu
         )}
         {...props}
       >
-        <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-sidebar-border bg-background p-0.5 text-sidebar-foreground opacity-0 shadow-sm transition-opacity duration-200 group-hover/rail:opacity-100 group-data-[collapsible=offcanvas]:hidden">
-          {collapsed ? (
-            <ChevronRight className="size-3.5" />
-          ) : (
-            <ChevronLeft className="size-3.5" />
-          )}
+        <span
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-sidebar-border bg-background p-0.5 text-sidebar-foreground opacity-0 shadow-sm transition-opacity duration-200 group-hover/rail:opacity-100 group-data-[collapsible=offcanvas]:hidden"
+        >
+          <ChevronLeft className="size-3.5 [[data-state=collapsed]_&]:rotate-180" />
         </span>
       </button>
     );
