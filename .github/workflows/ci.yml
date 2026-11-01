@@ -44,7 +44,16 @@ jobs:
       - name: Production health contract tests
         run: python3 scripts/validate_production_health_test.py
       - name: Strict TypeScript validation
-        run: bun run typecheck
+        run: |
+          set -o pipefail
+          bun run typecheck 2>&1 | tee /tmp/tsc-typecheck.log
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            printf '\n## Strict TypeScript validation output\n```\n' >> "$GITHUB_STEP_SUMMARY"
+            tail -n 120 /tmp/tsc-typecheck.log >> "$GITHUB_STEP_SUMMARY"
+            printf '```\n' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$status"
       - name: Production build
         env:
           VITE_SUPABASE_URL: https://huadtiuuoiriqrjpjxhr.supabase.co
