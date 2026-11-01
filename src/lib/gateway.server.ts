@@ -15,6 +15,8 @@ import { COMPATIBLE_GATEWAY_PROVIDERS } from "./ai-gateway-providers.ts";
  *   LITELLM_MASTER_KEY OpenRouter sk-or-v1-… (or LiteLLM master key)
  *   OPENROUTER_API_KEY optional explicit OpenRouter key
  *   OPENROUTER_BASE_URL optional override
+ *   FIREWORKS_API_KEY  optional Fireworks AI platform key (OpenAI-compatible inference)
+ *   FIREWORKS_BASE_URL defaults to https://api.fireworks.ai/inference/v1
  */
 import { createHash } from "crypto";
 import { generateClientKey, isClientKey } from "./gateway-keys.ts";
@@ -246,6 +248,26 @@ export function resolveUpstreams(): Upstream[] {
         baseUrl: liteBase,
         headers: {
           Authorization: `Bearer ${liteKey}`,
+          "Content-Type": "application/json",
+        },
+      });
+    }
+  }
+
+  // Optional Fireworks AI platform upstream (OpenAI-compatible inference).
+  const fireworksKey = process.env["FIREWORKS_API_KEY"] || "";
+  const fireworksBase = stripTrailingSlash(
+    process.env["FIREWORKS_BASE_URL"] || "https://api.fireworks.ai/inference/v1",
+  );
+  if (fireworksKey && fireworksBase.startsWith("https://")) {
+    const id = `fireworks:${fireworksBase}`;
+    if (!seen.has(id)) {
+      seen.add(id);
+      list.push({
+        name: "fireworks",
+        baseUrl: fireworksBase,
+        headers: {
+          Authorization: `Bearer ${fireworksKey}`,
           "Content-Type": "application/json",
         },
       });
