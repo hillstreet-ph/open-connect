@@ -449,12 +449,7 @@ function ModelsPage() {
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                disabled={modelTest.isPending}
-                onClick={() => modelTest.mutate()}
-                title="Send a short test through your connected free-model routes"
-              >
+              <Button size="sm" disabled={modelTest.isPending} onClick={() => modelTest.mutate()}>
                 {modelTest.isPending ? <Loader2 className="mr-1 size-3.5 animate-spin" /> : null}
                 Test
               </Button>
