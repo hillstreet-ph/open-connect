@@ -71,6 +71,12 @@ export const AI_GATEWAY_PROVIDERS = [
   { id: "xai", name: "xAI / Grok", baseUrl: "https://api.x.ai/v1", official: true },
   { id: "mistral", name: "Mistral", baseUrl: "https://api.mistral.ai/v1", official: true },
   { id: "deepseek", name: "DeepSeek", baseUrl: "https://api.deepseek.com/v1", official: true },
+  {
+    id: "fireworks",
+    name: "Fireworks AI",
+    baseUrl: "https://api.fireworks.ai/inference/v1",
+    official: true,
+  },
 ] as const;
 
 export const AI_GATEWAY_PROVIDER_IDS: ReadonlySet<string> = new Set(
