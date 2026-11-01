@@ -6,10 +6,10 @@
 
 /*
  * Open-Connect design system.
- * Clean minimal light theme: near-white canvas, calm blue primary,
+ * Dark modern developer theme: deep blue-black canvas, cyan primary accent,
  * warm amber accent for verified/featured states. All colors are oklch tokens.
- * The previous dark palette is preserved under the ".dark" variant.
- * Workspace shell follows Claude Design ops mockup structure (sidebar + matrix).
+ * The dark palette is the default presentation; the light palette is preserved
+ * under :root (when the .dark class is absent).
  * Semantic status tones (success / warning / destructive) are tokenized for light and dark.
  */
 
@@ -132,20 +132,20 @@
 .dark {
   --radius: 0.75rem;
 
-  --background: oklch(0.16 0.021 250);
+  --background: oklch(0.145 0.017 250);
   --foreground: oklch(0.96 0.006 240);
-  --surface: oklch(0.21 0.024 250);
+  --surface: oklch(0.185 0.02 250);
   --surface-foreground: oklch(0.96 0.006 240);
-  --card: oklch(0.2 0.023 250);
+  --card: oklch(0.18 0.02 250);
   --card-foreground: oklch(0.96 0.006 240);
-  --popover: oklch(0.21 0.024 250);
+  --popover: oklch(0.19 0.02 250);
   --popover-foreground: oklch(0.96 0.006 240);
 
   --primary: oklch(0.79 0.135 190);
   --primary-foreground: oklch(0.18 0.03 220);
-  --secondary: oklch(0.27 0.028 250);
+  --secondary: oklch(0.24 0.022 250);
   --secondary-foreground: oklch(0.94 0.008 240);
-  --muted: oklch(0.25 0.024 250);
+  --muted: oklch(0.23 0.022 250);
   --muted-foreground: oklch(0.7 0.02 245);
   --accent: oklch(0.82 0.15 78);
   --accent-foreground: oklch(0.2 0.03 250);
@@ -158,8 +158,8 @@
   --warning-foreground: oklch(0.2 0.04 60);
   --accent-strong: oklch(0.82 0.15 78);
 
-  --border: oklch(0.32 0.025 250);
-  --input: oklch(0.3 0.025 250);
+  --border: oklch(0.27 0.022 250);
+  --input: oklch(0.26 0.022 250);
   --ring: oklch(0.79 0.135 190);
 
   --chart-1: oklch(0.79 0.135 190);
@@ -168,18 +168,18 @@
   --chart-4: oklch(0.68 0.12 230);
   --chart-5: oklch(0.75 0.14 40);
 
-  --sidebar: oklch(0.14 0.022 250);
+  --sidebar: oklch(0.13 0.016 250);
   --sidebar-foreground: oklch(0.94 0.008 240);
   --sidebar-primary: oklch(0.79 0.135 190);
   --sidebar-primary-foreground: oklch(0.18 0.03 220);
-  --sidebar-accent: oklch(0.24 0.026 250);
+  --sidebar-accent: oklch(0.22 0.022 250);
   --sidebar-accent-foreground: oklch(0.96 0.008 240);
-  --sidebar-border: oklch(0.28 0.025 250);
+  --sidebar-border: oklch(0.25 0.022 250);
   --sidebar-ring: oklch(0.79 0.135 190);
 
   --gradient-hero:
     radial-gradient(120% 100% at 50% -20%, oklch(0.36 0.09 195 / 0.55) 0%, transparent 60%),
-    linear-gradient(180deg, oklch(0.18 0.024 250) 0%, oklch(0.16 0.021 250) 100%);
+    linear-gradient(180deg, oklch(0.17 0.019 250) 0%, oklch(0.145 0.017 250) 100%);
   --gradient-pillar: linear-gradient(
     145deg,
     oklch(0.79 0.135 190 / 0.14) 0%,
