@@ -321,9 +321,7 @@ SidebarTrigger.displayName = "SidebarTrigger";
 const SidebarRail = React.forwardRef<HTMLButtonElement, React.ComponentProps<"button">>(
   ({ className, ...props }, ref) => {
     const { toggleSidebar, state, width, setWidth, setResizing } = useSidebar();
-    const drag = React.useRef<{ startX: number; startWidth: number; moved: boolean } | null>(
-      null,
-    );
+    const drag = React.useRef<{ startX: number; startWidth: number; moved: boolean } | null>(null);
 
     // Click toggles the sidebar; dragging the handle resizes it side to side.
     const onPointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
