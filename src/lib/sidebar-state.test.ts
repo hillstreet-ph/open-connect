@@ -17,7 +17,7 @@ function withCookies(entries: Record<string, string>, run: () => void) {
   const store = new Map<string, string>(Object.entries(entries));
   globals.document = {
     get cookie() {
-      return [...store.entries()].map(([key, entry]) => `${key}=${entry}`).join("; "),
+      return [...store.entries()].map(([key, entry]) => `${key}=${entry}`).join("; ");
     },
   };
   try {

@@ -333,7 +333,8 @@ const SidebarRail = React.forwardRef<HTMLButtonElement, React.ComponentProps<"bu
       const current = drag.current;
       if (!current || state !== "expanded") return;
       // Left-side sidebars grow to the right, right-side ones to the left.
-      const direction = event.clientX < window.innerWidth / 2 ? 1 : -1;
+      const side = event.currentTarget.closest("[data-side]")?.getAttribute("data-side");
+      const direction = side === "right" ? -1 : 1;
       const delta = direction * (event.clientX - current.startX);
       if (!current.moved && Math.abs(delta) < 4) return;
       current.moved = true;
@@ -341,14 +342,25 @@ const SidebarRail = React.forwardRef<HTMLButtonElement, React.ComponentProps<"bu
       setWidth(current.startWidth + delta);
     };
 
+    const releasePointer = (event: React.PointerEvent<HTMLButtonElement>) => {
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+    };
+
     const onPointerUp = (event: React.PointerEvent<HTMLButtonElement>) => {
       const current = drag.current;
       drag.current = null;
       setResizing(false);
-      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-        event.currentTarget.releasePointerCapture(event.pointerId);
-      }
+      releasePointer(event);
       if (current && !current.moved) toggleSidebar();
+    };
+
+    // A cancelled gesture only cleans up; it never toggles the sidebar.
+    const onPointerCancel = (event: React.PointerEvent<HTMLButtonElement>) => {
+      drag.current = null;
+      setResizing(false);
+      releasePointer(event);
     };
 
     return (
@@ -361,7 +373,7 @@ const SidebarRail = React.forwardRef<HTMLButtonElement, React.ComponentProps<"bu
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
+        onPointerCancel={onPointerCancel}
         className={cn(
           "absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] hover:after:bg-sidebar-border group-data-[side=left]:-right-4 group-data-[side=right]:left-0 sm:flex",
           state === "expanded" ? "cursor-col-resize" : "cursor-pointer",
