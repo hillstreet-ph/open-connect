@@ -5,6 +5,7 @@ import { renderErrorPage } from "./lib/error-page";
 import { getMtlsMode, mtlsMetadataFields } from "./lib/mtls.server";
 import { OAUTH_SCOPES_SUPPORTED } from "./lib/oauth.server";
 import { runWithRuntimeEnv } from "./lib/runtime-env.server";
+import { aiGatewayMetadata, llmsTxt } from "./lib/ai-gateway-discovery";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -94,6 +95,21 @@ function handleWellKnown(request: Request): Response | null {
   ) {
     const resource = url.searchParams.get("resource") || `${ISSUER}/mcp`;
     return jsonResponse(oauthProtectedResourceMetadata(resource));
+  }
+
+  if (path === "/.well-known/ai-gateway") {
+    return jsonResponse(aiGatewayMetadata(ISSUER));
+  }
+
+  if (path === "/llms.txt") {
+    return new Response(llmsTxt(ISSUER), {
+      status: 200,
+      headers: {
+        "content-type": "text/plain; charset=utf-8",
+        "access-control-allow-origin": "*",
+        "cache-control": "no-store",
+      },
+    });
   }
 
   return null;
