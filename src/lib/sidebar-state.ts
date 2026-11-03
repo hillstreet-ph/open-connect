@@ -22,7 +22,6 @@ export function sidebarDefaultOpen(fallback = true): boolean {
   return match[1] === "true";
 }
 
-
 export const SIDEBAR_WIDTH_COOKIE_NAME = "sidebar_width";
 export const SIDEBAR_WIDTH_DEFAULT = 256;
 export const SIDEBAR_WIDTH_MIN = 200;
