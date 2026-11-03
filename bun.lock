@@ -5,7 +5,7 @@
     "": {
       "name": "tanstack_start_ts",
       "dependencies": {
-        "@browserbasehq/sdk": "2.22.0",
+        "@browserbasehq/sdk": "2.24.0",
         "@cfworker/json-schema": "^4.1.4",
         "@data-client/react": "0.18.1",
         "@data-client/rest": "0.18.2",
@@ -141,7 +141,7 @@
 
     "@babel/types": ["@babel/types@7.29.8", "", { "dependencies": { "@babel/helper-string-parser": "^7.29.7", "@babel/helper-validator-identifier": "^7.29.7" } }, "sha512-Vj1jF3cPfxg7OAfoI7QnVKLoILlm2JF9pnVHrX8qx7AHMiYWT+NDAA7jChlNgRS4WTLc/fD1lXLmPixluj+3Gg=="],
 
-    "@browserbasehq/sdk": ["@browserbasehq/sdk@2.22.0", "", { "dependencies": { "@types/node": "^18.11.18", "@types/node-fetch": "^2.6.4", "abort-controller": "^3.0.0", "agentkeepalive": "^4.2.1", "form-data-encoder": "1.7.2", "formdata-node": "^4.3.2", "node-fetch": "^2.6.7" } }, "sha512-fTXyRTpsdUb/LTT24iJnMM5Qwl+sdgFSMnV36APCH3MNswtPiTNB34cVwoHvZ1wR786SHumNd89I8NMRdcRZJA=="],
+    "@browserbasehq/sdk": ["@browserbasehq/sdk@2.24.0", "", { "dependencies": { "@types/node": "^18.11.18", "@types/node-fetch": "^2.6.4", "abort-controller": "^3.0.0", "agentkeepalive": "^4.2.1", "form-data-encoder": "1.7.2", "formdata-node": "^4.3.2", "node-fetch": "^2.6.7" } }, "sha512-v8yTJNUmdn2i4dWqu70EmIbpLChLexduul1SRMO+t+0U6NKA9nLNCynFP74y+r5lKFUpx6JLQkCjqeDOC1PpcA=="],
 
     "@cfworker/json-schema": ["@cfworker/json-schema@4.1.4", "", {}, "sha512-20rPE8EX0dSg6JGOVe31HpqsLYZTDSlcFJZA5mpZqQxcZ71vh/SXCMX+UuHO1mMcZBDKeb752z+3L8IWa+0Svg=="],
 

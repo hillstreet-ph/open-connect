@@ -47,7 +47,7 @@
     "test:login:db": "node scripts/test-login-activity-db.mjs"
   },
   "dependencies": {
-    "@browserbasehq/sdk": "2.22.0",
+    "@browserbasehq/sdk": "2.24.0",
     "@cfworker/json-schema": "^4.1.4",
     "@data-client/react": "0.18.1",
     "@data-client/rest": "0.18.2",
