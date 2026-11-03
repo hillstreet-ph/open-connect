@@ -98,7 +98,7 @@ export const GATEWAY_TOOLS_USAGE = [
   '  -H "Content-Type: application/json" \\',
   "  -d '{",
   '    "model": "open-connect/auto",',
-  '    "messages": [{ "role": "user", "content": "Summarize today'"'"'s AI news" }],',
+  '    "messages": [{ "role": "user", "content": "Summarize AI news" }],',
   '    "tools": [{ "type": "openrouter:web_search" }, { "type": "openrouter:datetime" }]',
   "  }'",
 ].join("\n");
