@@ -359,7 +359,6 @@ const SidebarRail = React.forwardRef<HTMLButtonElement, React.ComponentProps<"bu
 );
 SidebarRail.displayName = "SidebarRail";
 
-
 const SidebarResizeHandle = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div"> & { side?: "left" | "right" }
