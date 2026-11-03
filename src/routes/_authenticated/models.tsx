@@ -332,10 +332,7 @@ function ModelsPage() {
         key.
       </p>
 
-      <nav
-        aria-label="Gateway sections"
-        className="mt-6 flex gap-2 overflow-x-auto pb-1"
-      >
+      <nav aria-label="Gateway sections" className="mt-6 flex gap-2 overflow-x-auto pb-1">
         {sectionLinks.map((section) => (
           <a
             key={section.id}
@@ -485,14 +482,16 @@ function ModelsPage() {
                           className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 border-b px-3 py-2 last:border-b-0"
                         >
                           <button
-                          type="button"
-                          className="min-w-0 text-left"
-                          title="Tap to copy"
-                          onClick={() => copyToClipboard(model.id, "Model id")}
-                        >
-                          <span className="break-all font-mono text-xs">{model.id}</span>
-                        </button>
-                          <span className="hidden text-xs text-muted-foreground sm:block">{model.provider}</span>
+                            type="button"
+                            className="min-w-0 text-left"
+                            title="Tap to copy"
+                            onClick={() => copyToClipboard(model.id, "Model id")}
+                          >
+                            <span className="break-all font-mono text-xs">{model.id}</span>
+                          </button>
+                          <span className="hidden text-xs text-muted-foreground sm:block">
+                            {model.provider}
+                          </span>
                           <Badge variant="outline" className="text-[10px]">
                             {
                               {
@@ -627,10 +626,7 @@ function ModelsPage() {
           </CardContent>
         </Card>
       ) : null}
-      <div
-        id="gateway-tools"
-        className="mt-6 flex scroll-mt-16 items-center justify-between gap-3"
-      >
+      <div id="gateway-tools" className="mt-6 flex scroll-mt-16 items-center justify-between gap-3">
         <h2 className="text-base font-semibold">Gateway tools</h2>
         <Button
           size="sm"
@@ -673,10 +669,7 @@ function ModelsPage() {
         </Card>
       ) : null}
 
-      <div
-        id="model-aliases"
-        className="mt-6 flex scroll-mt-16 items-center justify-between gap-3"
-      >
+      <div id="model-aliases" className="mt-6 flex scroll-mt-16 items-center justify-between gap-3">
         <h2 className="text-base font-semibold">Model aliases</h2>
         <Button
           size="sm"
