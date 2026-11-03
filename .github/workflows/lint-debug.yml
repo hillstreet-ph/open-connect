@@ -1,0 +1,22 @@
+name: Lint debug
+
+on:
+  push:
+    branches: ["feat/sidebar-resize", "main"]
+
+jobs:
+  lint-debug:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install quietly
+        run: bun install --frozen-lockfile > /dev/null 2>&1
+      - name: Print lint errors
+        run: |
+          echo "=== lint start ==="
+          bun run lint 2>&1
+          echo "=== lint exit: $? ==="
