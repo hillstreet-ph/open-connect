@@ -186,6 +186,15 @@ const featuredModels = [
   { id: "open-connect/vision", name: "Managed vision alias", tags: ["Multi-Modal"] },
 ];
 
+const sectionLinks = [
+  { id: "client", label: "Point any client here" },
+  { id: "free-models", label: "Free models · Auto default" },
+  { id: "full-model-list", label: "Full model list" },
+  { id: "gateway-tools", label: "Gateway tools" },
+  { id: "model-aliases", label: "Model aliases" },
+  { id: "provider-credentials", label: "AI provider credentials" },
+];
+
 function copyToClipboard(value: string, label: string) {
   void navigator.clipboard?.writeText(value).then(
     () => toast.success(label + " copied to clipboard"),
@@ -323,11 +332,26 @@ function ModelsPage() {
         key.
       </p>
 
+      <nav
+        aria-label="Gateway sections"
+        className="mt-6 flex gap-2 overflow-x-auto pb-1"
+      >
+        {sectionLinks.map((section) => (
+          <a
+            key={section.id}
+            href={"#" + section.id}
+            className="shrink-0 rounded-full border border-border/70 bg-background/60 px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
+          >
+            {section.label}
+          </a>
+        ))}
+      </nav>
+
       <div className="mt-8">
         <ApiKeysCard modelOnly />
       </div>
 
-      <Card className="mt-6 shadow-panel">
+      <Card className="mt-6 scroll-mt-16 shadow-panel" id="client">
         <CardHeader className="p-4 pb-2">
           <CardTitle className="text-base">Point any client here</CardTitle>
           <CardDescription>
@@ -360,7 +384,7 @@ function ModelsPage() {
         </CardContent>
       </Card>
 
-      <Card className="mt-6 shadow-panel" id="free-models">
+      <Card className="mt-6 scroll-mt-16 shadow-panel" id="free-models">
         <CardHeader className="p-4 pb-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -416,7 +440,14 @@ function ModelsPage() {
           ) : (
             <>
               <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <Badge variant="secondary">Auto · open-connect/auto</Badge>
+                <Badge
+                  variant="secondary"
+                  className="cursor-pointer"
+                  title="Tap to copy"
+                  onClick={() => copyToClipboard("open-connect/auto", "Auto alias")}
+                >
+                  Auto · open-connect/auto
+                </Badge>
                 {(freeModels.data?.providers ?? []).map((provider) => (
                   <Badge key={provider} variant="outline">
                     {provider}
@@ -445,7 +476,7 @@ function ModelsPage() {
                     <div className="max-h-80 overflow-auto rounded-lg border border-border/70">
                       <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-3 border-b bg-muted/30 px-3 py-2 text-xs font-medium text-muted-foreground">
                         <span>Model</span>
-                        <span>Provider</span>
+                        <span className="hidden sm:block">Provider</span>
                         <span>Catalog</span>
                       </div>
                       {freeModels.data.models.map((model) => (
@@ -453,8 +484,15 @@ function ModelsPage() {
                           key={`${model.source}:${model.id}`}
                           className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 border-b px-3 py-2 last:border-b-0"
                         >
+                          <button
+                          type="button"
+                          className="min-w-0 text-left"
+                          title="Tap to copy"
+                          onClick={() => copyToClipboard(model.id, "Model id")}
+                        >
                           <span className="break-all font-mono text-xs">{model.id}</span>
-                          <span className="text-xs text-muted-foreground">{model.provider}</span>
+                        </button>
+                          <span className="hidden text-xs text-muted-foreground sm:block">{model.provider}</span>
                           <Badge variant="outline" className="text-[10px]">
                             {
                               {
@@ -505,7 +543,7 @@ function ModelsPage() {
                   {freeModels.data.allModels.map((model) => (
                     <div
                       key={model.id}
-                      className="flex items-center justify-between gap-3 border-b px-3 py-2 last:border-b-0"
+                      className="flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2 last:border-b-0"
                     >
                       <span className="min-w-0 flex-1 break-all font-mono text-xs">{model.id}</span>
                       <Badge variant="outline" className="shrink-0 text-[10px]">
@@ -526,7 +564,10 @@ function ModelsPage() {
         </CardContent>
       </Card>
 
-      <div className="mt-6 flex items-center justify-between gap-3">
+      <div
+        id="full-model-list"
+        className="mt-6 flex scroll-mt-16 items-center justify-between gap-3"
+      >
         <h2 className="text-base font-semibold">Full model list</h2>
         <Button
           size="sm"
@@ -586,7 +627,10 @@ function ModelsPage() {
           </CardContent>
         </Card>
       ) : null}
-      <div className="mt-6 flex items-center justify-between gap-3">
+      <div
+        id="gateway-tools"
+        className="mt-6 flex scroll-mt-16 items-center justify-between gap-3"
+      >
         <h2 className="text-base font-semibold">Gateway tools</h2>
         <Button
           size="sm"
@@ -629,7 +673,10 @@ function ModelsPage() {
         </Card>
       ) : null}
 
-      <div className="mt-6 flex items-center justify-between gap-3">
+      <div
+        id="model-aliases"
+        className="mt-6 flex scroll-mt-16 items-center justify-between gap-3"
+      >
         <h2 className="text-base font-semibold">Model aliases</h2>
         <Button
           size="sm"
@@ -675,7 +722,10 @@ function ModelsPage() {
         </Card>
       ) : null}
 
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+      <div
+        id="provider-credentials"
+        className="mt-6 flex flex-wrap scroll-mt-16 items-center justify-between gap-3"
+      >
         <h2 className="text-base font-semibold">AI provider credentials</h2>
         {user && isAdmin ? (
           <Button
