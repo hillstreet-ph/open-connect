@@ -14,6 +14,10 @@ test("gateway discovery metadata is complete and credential-free", () => {
   assert.ok(meta.aliases.includes("open-connect/auto"));
   assert.ok(meta.providers.some((provider) => provider.id === "openrouter"));
   assert.ok(meta.providers.some((provider) => provider.id === "fireworks"));
+  assert.ok(meta.server_tools.tools.some((tool) => tool.id === "openrouter:web_search"));
+  assert.ok(meta.server_tools.tools.some((tool) => tool.id === "openrouter:files"));
+  assert.equal(meta.alias_targets["open-connect/high"], "openai/gpt-4o");
+  assert.ok(meta.server_tools.usage.includes("open-connect.site/v1/chat/completions"));
   const serialized = JSON.stringify(meta);
   assert.ok(!serialized.includes("Bearer sk-oc-real"), "metadata must never embed credentials");
 });
@@ -25,4 +29,7 @@ test("llms.txt quick start references every discovery surface", () => {
   assert.ok(text.includes("https://open-connect.site/mcp"));
   assert.ok(text.includes("open-connect/auto"));
   for (const alias of AI_GATEWAY_ALIASES) assert.ok(text.includes(alias));
+  assert.ok(text.includes("openrouter:web_search"));
+  assert.ok(text.includes("openrouter:files"));
+  assert.ok(text.includes("openai/gpt-4o"));
 });
