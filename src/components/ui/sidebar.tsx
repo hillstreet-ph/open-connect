@@ -83,7 +83,8 @@ const SidebarProvider = React.forwardRef<
 
     // Restore the saved width after mount to avoid server/client mismatches.
     React.useEffect(() => {
-      setSidebarWidthState(sidebarWidthRem());
+      const id = window.setTimeout(() => setSidebarWidthState(sidebarWidthRem()), 0);
+      return () => window.clearTimeout(id);
     }, []);
 
     const setSidebarWidth = React.useCallback(
