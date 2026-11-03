@@ -85,9 +85,6 @@ const featuredModels = [
 const sectionLinks = [
   { id: "client", label: "Point any client here" },
   { id: "free-models", label: "Free models · Auto default" },
-  { id: "full-model-list", label: "Full model list" },
-  { id: "gateway-tools", label: "Gateway tools" },
-  { id: "model-aliases", label: "Model aliases" },
   { id: "provider-credentials", label: "AI provider credentials" },
 ];
 
@@ -291,6 +288,34 @@ function ModelsPage() {
               <span className="ml-2 text-muted-foreground">(create above)</span>
             </span>
           </div>
+          <div>
+            <p className="mb-2 text-xs font-semibold">Fetch the catalog from any client</p>
+            <div className="relative">
+              <pre className="overflow-x-auto rounded-lg border border-border bg-muted/30 p-3 pr-12 text-[11px] leading-relaxed">
+                {`curl -sS https://open-connect.site/v1/models \\
+  -H "Authorization: Bearer sk-oc-YOUR_KEY"`}
+              </pre>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="absolute right-1 top-1 h-6 px-2 text-[11px]"
+                title="Copy catalog request"
+                onClick={() =>
+                  copyToClipboard(
+                    'curl -sS https://open-connect.site/v1/models -H "Authorization: Bearer sk-oc-YOUR_KEY"',
+                    "Catalog request",
+                  )
+                }
+              >
+                <Copy className="size-3" />
+              </Button>
+            </div>
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              Authenticated GET /v1/models returns managed aliases plus every model from the
+              connected OpenRouter credential (OpenAI, Anthropic, Google, Meta, Mistral, DeepSeek,
+              xAI, …).
+            </p>
+          </div>
         </CardContent>
       </Card>
 
@@ -473,261 +498,244 @@ function ModelsPage() {
               ) : null}
             </div>
           ) : null}
-        </CardContent>
-      </Card>
+          <div className="mt-5" id="full-model-list">
+            <button
+              type="button"
+              aria-expanded={modelsListOpen}
+              onClick={() => setModelsListOpen((open) => !open)}
+              className="mb-2 flex w-full items-center gap-1.5 text-left text-sm font-semibold"
+            >
+              {modelsListOpen ? (
+                <ChevronUp className="size-4" />
+              ) : (
+                <ChevronDown className="size-4" />
+              )}
+              Full model list
+            </button>
+            {modelsListOpen ? (
+              <div className="space-y-3">
 
-      <div
-        id="full-model-list"
-        className="mt-6 flex scroll-mt-16 items-center justify-between gap-3"
-      >
-        <h2 className="text-base font-semibold">Full model list</h2>
-        <Button
-          size="sm"
-          variant="ghost"
-          aria-expanded={modelsListOpen}
-          onClick={() => setModelsListOpen((open) => !open)}
-        >
-          {modelsListOpen ? (
-            <ChevronUp className="mr-1 size-4" />
-          ) : (
-            <ChevronDown className="mr-1 size-4" />
-          )}
-          {modelsListOpen ? "Hide" : "Show"}
-        </Button>
-      </div>
-      {modelsListOpen ? (
-        <Card className="mt-3 shadow-panel">
-          <CardContent className="space-y-3 p-4 pt-0">
-            <div>
-              <p className="mb-2 text-xs font-semibold">Featured models</p>
-              <div className="grid gap-1.5 sm:grid-cols-2">
-                {featuredModels.map((model) => (
-                  <div key={model.id} className="rounded-lg border border-border/70 px-2.5 py-2">
-                    <button
-                      type="button"
-                      className="min-w-0 text-left"
-                      title="Tap to copy"
-                      onClick={() => copyToClipboard(model.id, "Model id")}
-                    >
-                      <span className="break-all font-mono text-xs text-primary">{model.id}</span>
-                    </button>
-                    <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                      {model.name}
-                    </p>
-                    <div className="mt-1.5 flex flex-wrap gap-1">
-                      {model.tags.map((tag) => (
-                        <Badge key={tag} variant="outline" className="text-[10px]">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            {user && catalogModels.length ? (
               <div>
-                <p className="mb-2 text-xs font-semibold">
-                  Live catalog · every model from your connected providers
-                </p>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Input
-                    aria-label="Search models"
-                    className="h-8 max-w-xs text-xs"
-                    value={modelQuery}
-                    onChange={(event) => setModelQuery(event.target.value)}
-                    placeholder="Search model id…"
-                  />
-                  <select
-                    aria-label="Filter models by owner"
-                    className="h-8 rounded-md border border-input bg-background px-2 text-xs"
-                    value={ownerFilter}
-                    onChange={(event) => setOwnerFilter(event.target.value)}
-                  >
-                    {catalogOwners.map((owner) => (
-                      <option key={owner} value={owner}>
-                        {owner === "all" ? "All owners" : owner}
-                      </option>
-                    ))}
-                  </select>
-                  <Button
-                    size="sm"
-                    variant={freeOnly ? "secondary" : "outline"}
-                    className="h-8 px-2.5 text-xs"
-                    aria-pressed={freeOnly}
-                    onClick={() => setFreeOnly((value) => !value)}
-                  >
-                    Free only
-                  </Button>
-                  <span className="text-xs text-muted-foreground">
-                    Showing {filteredModels.length} of {catalogModels.length} models
-                  </span>
-                </div>
-                <div className="mt-2 max-h-80 overflow-auto rounded-lg border border-border/70">
-                  {filteredModels.length ? (
-                    filteredModels.map((model) => (
-                      <div
-                        key={model.id}
-                        className="flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2 last:border-b-0"
+                <p className="mb-2 text-xs font-semibold">Featured models</p>
+                <div className="grid gap-1.5 sm:grid-cols-2">
+                  {featuredModels.map((model) => (
+                    <div key={model.id} className="rounded-lg border border-border/70 px-2.5 py-2">
+                      <button
+                        type="button"
+                        className="min-w-0 text-left"
+                        title="Tap to copy"
+                        onClick={() => copyToClipboard(model.id, "Model id")}
                       >
-                        <button
-                          type="button"
-                          className="min-w-0 flex-1 text-left"
-                          title="Tap to copy"
-                          onClick={() => copyToClipboard(model.id, "Model id")}
-                        >
-                          <span className="break-all font-mono text-xs">{model.id}</span>
-                        </button>
-                        <Badge variant="outline" className="shrink-0 text-[10px]">
-                          {model.owner}
-                        </Badge>
-                        <Badge
-                          variant={model.free ? "secondary" : "outline"}
-                          className="shrink-0 text-[10px]"
-                        >
-                          {model.free ? "Auto · free eligible" : "Provider pricing"}
-                        </Badge>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="px-3 py-2 text-xs text-muted-foreground">
-                      No models match the current filters.
-                    </p>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                Sign in to browse the live catalog: managed aliases plus every model from your
-                connected providers, free and paid, in real time.
-              </p>
-            )}
-            <div>
-              <p className="mb-2 text-xs font-semibold">Fetch the catalog from any client</p>
-              <pre className="overflow-x-auto rounded-lg border border-border bg-muted/30 p-3 text-[11px] leading-relaxed">
-                {`curl -sS https://open-connect.site/v1/models \\
-  -H "Authorization: Bearer sk-oc-YOUR_KEY"`}
-              </pre>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Authenticated GET /v1/models returns managed aliases plus every model from the
-              connected OpenRouter credential (OpenAI, Anthropic, Google, Meta, Mistral, DeepSeek,
-              xAI, …). Use the OpenAI-compatible provider setting and the base URL above. An
-              Open-Connect key works at this gateway, not directly at OpenAI or a separate LiteLLM
-              server. If LiteLLM reports token_not_found_in_db, verify the client base URL and
-              reconnect LiteLLM below using a key issued by that LiteLLM server. Renaming a key does
-              not register it there.
-            </p>
-          </CardContent>
-        </Card>
-      ) : null}
-      <div id="gateway-tools" className="mt-6 flex scroll-mt-16 items-center justify-between gap-3">
-        <h2 className="text-base font-semibold">Gateway tools</h2>
-        <Button
-          size="sm"
-          variant="ghost"
-          aria-expanded={toolsOpen}
-          onClick={() => setToolsOpen((open) => !open)}
-        >
-          {toolsOpen ? (
-            <ChevronUp className="mr-1 size-4" />
-          ) : (
-            <ChevronDown className="mr-1 size-4" />
-          )}
-          {toolsOpen ? "Hide" : "Show"}
-        </Button>
-      </div>
-      {toolsOpen ? (
-        <Card className="mt-3 shadow-panel">
-          <CardContent className="space-y-3 p-4 pt-0">
-            <p className="text-xs text-muted-foreground">
-              Server tools executed by the OpenRouter upstream, available to any model routed
-              through the gateway (beta). Add one or more to the request tools array; the model
-              decides when to call them and OpenRouter executes them server-side, so no client-side
-              implementation is needed.
-            </p>
-            <div className="grid gap-1.5 sm:grid-cols-2">
-              {GATEWAY_TOOLS.map((tool) => (
-                <div key={tool.id} className="rounded-lg border border-border/70 px-2.5 py-2">
-                  <div className="flex min-w-0 items-center gap-1.5">
-                    <p className="min-w-0 flex-1 truncate font-mono text-xs text-primary">
-                      {tool.id}
-                    </p>
-                    <Badge variant="outline" className="shrink-0 text-[10px]">
-                      {tool.group}
-                    </Badge>
-                  </div>
-                  <p className="mt-1 text-[11px] text-muted-foreground">{tool.detail}</p>
-                </div>
-              ))}
-            </div>
-            <div>
-              <p className="mb-2 text-xs font-semibold">Enable tools in a request</p>
-              <pre className="overflow-x-auto rounded-lg border border-border bg-muted/30 p-3 text-[11px] leading-relaxed">
-                {GATEWAY_TOOLS_USAGE}
-              </pre>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Server tools work alongside your own function tools in the same request and can run
-              natively on providers that support them. Tool usage appears in the response usage
-              object as server_tool_use_details.
-            </p>
-          </CardContent>
-        </Card>
-      ) : null}
-
-      <div id="model-aliases" className="mt-6 flex scroll-mt-16 items-center justify-between gap-3">
-        <h2 className="text-base font-semibold">Model aliases</h2>
-        <Button
-          size="sm"
-          variant="ghost"
-          aria-expanded={aliasesOpen}
-          onClick={() => setAliasesOpen((open) => !open)}
-        >
-          {aliasesOpen ? (
-            <ChevronUp className="mr-1 size-4" />
-          ) : (
-            <ChevronDown className="mr-1 size-4" />
-          )}
-          {aliasesOpen ? "Hide" : "Show"}
-        </Button>
-      </div>
-      {aliasesOpen ? (
-        <Card className="mt-3 shadow-panel">
-          <CardContent className="space-y-2 p-4 pt-0">
-            <p className="text-xs text-muted-foreground">
-              Pyramid routing. Open-Auto is the default: it inspects the task prompt and tool
-              request, picks the right model automatically, uses free models first, rotates when a
-              limit is hit, escalates to paid or subscription models for deep or professional work,
-              and can delegate to multiple models in parallel for faster execution. Specialist and
-              short aliases pin a specific route when you need full control. Each card shows the
-              exact model the alias routes to; tap any card to copy it.
-            </p>
-            {ALIAS_GROUPS.map((group) => (
-              <div key={group.tier}>
-                <p className="mb-2 text-xs font-semibold">{group.tier}</p>
-                <div className="grid gap-1.5 sm:grid-cols-2 xl:grid-cols-3">
-                  {group.items.map((item) => (
-                    <button
-                      key={item.alias}
-                      type="button"
-                      title="Tap to copy"
-                      className="rounded-lg border border-border/70 px-2.5 py-2 text-left transition-colors hover:border-primary/40"
-                      onClick={() => copyToClipboard(item.alias, "Alias")}
-                    >
-                      <p className="break-all font-mono text-xs text-primary">{item.alias}</p>
-                      <p className="mt-0.5 text-[11px] text-muted-foreground">{item.body}</p>
-                      <p className="mt-0.5 break-all font-mono text-[10px] text-muted-foreground/70">
-                        → {aliasTarget(item.alias)}
+                        <span className="break-all font-mono text-xs text-primary">{model.id}</span>
+                      </button>
+                      <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                        {model.name}
                       </p>
-                    </button>
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {model.tags.map((tag) => (
+                          <Badge key={tag} variant="outline" className="text-[10px]">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
-            ))}
-          </CardContent>
-        </Card>
-      ) : null}
+              {user && catalogModels.length ? (
+                <div>
+                  <p className="mb-2 text-xs font-semibold">
+                    Live catalog · every model from your connected providers
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Input
+                      aria-label="Search models"
+                      className="h-8 max-w-xs text-xs"
+                      value={modelQuery}
+                      onChange={(event) => setModelQuery(event.target.value)}
+                      placeholder="Search model id…"
+                    />
+                    <select
+                      aria-label="Filter models by owner"
+                      className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                      value={ownerFilter}
+                      onChange={(event) => setOwnerFilter(event.target.value)}
+                    >
+                      {catalogOwners.map((owner) => (
+                        <option key={owner} value={owner}>
+                          {owner === "all" ? "All owners" : owner}
+                        </option>
+                      ))}
+                    </select>
+                    <Button
+                      size="sm"
+                      variant={freeOnly ? "secondary" : "outline"}
+                      className="h-8 px-2.5 text-xs"
+                      aria-pressed={freeOnly}
+                      onClick={() => setFreeOnly((value) => !value)}
+                    >
+                      Free only
+                    </Button>
+                    <span className="text-xs text-muted-foreground">
+                      Showing {filteredModels.length} of {catalogModels.length} models
+                    </span>
+                  </div>
+                  <div className="mt-2 max-h-80 overflow-auto rounded-lg border border-border/70">
+                    {filteredModels.length ? (
+                      filteredModels.map((model) => (
+                        <div
+                          key={model.id}
+                          className="flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2 last:border-b-0"
+                        >
+                          <button
+                            type="button"
+                            className="min-w-0 flex-1 text-left"
+                            title="Tap to copy"
+                            onClick={() => copyToClipboard(model.id, "Model id")}
+                          >
+                            <span className="break-all font-mono text-xs">{model.id}</span>
+                          </button>
+                          <Badge variant="outline" className="shrink-0 text-[10px]">
+                            {model.owner}
+                          </Badge>
+                          <Badge
+                            variant={model.free ? "secondary" : "outline"}
+                            className="shrink-0 text-[10px]"
+                          >
+                            {model.free ? "Auto · free eligible" : "Provider pricing"}
+                          </Badge>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="px-3 py-2 text-xs text-muted-foreground">
+                        No models match the current filters.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Sign in to browse the live catalog: managed aliases plus every model from your
+                  connected providers, free and paid, in real time.
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground">
+              Use the OpenAI-compatible provider setting and the base URL above. An Open-Connect key
+              works at this gateway, not directly at OpenAI or a separate LiteLLM server. If LiteLLM
+              reports token_not_found_in_db, verify the client base URL and reconnect LiteLLM below
+              using a key issued by that LiteLLM server. Renaming a key does not register it there.
+                Open-Connect key works at this gateway, not directly at OpenAI or a separate LiteLLM
+                server. If LiteLLM reports token_not_found_in_db, verify the client base URL and
+                reconnect LiteLLM below using a key issued by that LiteLLM server. Renaming a key does
+                not register it there.
+              </p>
+              </div>
+            ) : null}
+          </div>
+          <div className="mt-5" id="gateway-tools">
+            <button
+              type="button"
+              aria-expanded={toolsOpen}
+              onClick={() => setToolsOpen((open) => !open)}
+              className="mb-2 flex w-full items-center gap-1.5 text-left text-sm font-semibold"
+            >
+              {toolsOpen ? (
+                <ChevronUp className="size-4" />
+              ) : (
+                <ChevronDown className="size-4" />
+              )}
+              Gateway tools
+            </button>
+            {toolsOpen ? (
+              <div className="space-y-3">
+
+              <p className="text-xs text-muted-foreground">
+                Server tools executed by the OpenRouter upstream, available to any model routed
+                through the gateway (beta). Add one or more to the request tools array; the model
+                decides when to call them and OpenRouter executes them server-side, so no client-side
+                implementation is needed.
+              </p>
+              <div className="grid gap-1.5 sm:grid-cols-2">
+                {GATEWAY_TOOLS.map((tool) => (
+                  <div key={tool.id} className="rounded-lg border border-border/70 px-2.5 py-2">
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <p className="min-w-0 flex-1 truncate font-mono text-xs text-primary">
+                        {tool.id}
+                      </p>
+                      <Badge variant="outline" className="shrink-0 text-[10px]">
+                        {tool.group}
+                      </Badge>
+                    </div>
+                    <p className="mt-1 text-[11px] text-muted-foreground">{tool.detail}</p>
+                  </div>
+                ))}
+              </div>
+              <div>
+                <p className="mb-2 text-xs font-semibold">Enable tools in a request</p>
+                <pre className="overflow-x-auto rounded-lg border border-border bg-muted/30 p-3 text-[11px] leading-relaxed">
+                  {GATEWAY_TOOLS_USAGE}
+                </pre>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Server tools work alongside your own function tools in the same request and can run
+                natively on providers that support them. Tool usage appears in the response usage
+                object as server_tool_use_details.
+              </p>
+              </div>
+            ) : null}
+          </div>
+          <div className="mt-5" id="model-aliases">
+            <button
+              type="button"
+              aria-expanded={aliasesOpen}
+              onClick={() => setAliasesOpen((open) => !open)}
+              className="mb-2 flex w-full items-center gap-1.5 text-left text-sm font-semibold"
+            >
+              {aliasesOpen ? (
+                <ChevronUp className="size-4" />
+              ) : (
+                <ChevronDown className="size-4" />
+              )}
+              Model aliases
+            </button>
+            {aliasesOpen ? (
+              <div className="space-y-2">
+
+              <p className="text-xs text-muted-foreground">
+                Pyramid routing. Open-Auto is the default: it inspects the task prompt and tool
+                request, picks the right model automatically, uses free models first, rotates when a
+                limit is hit, escalates to paid or subscription models for deep or professional work,
+                and can delegate to multiple models in parallel for faster execution. Specialist and
+                short aliases pin a specific route when you need full control. Each card shows the
+                exact model the alias routes to; tap any card to copy it.
+              </p>
+              {ALIAS_GROUPS.map((group) => (
+                <div key={group.tier}>
+                  <p className="mb-2 text-xs font-semibold">{group.tier}</p>
+                  <div className="grid gap-1.5 sm:grid-cols-2 xl:grid-cols-3">
+                    {group.items.map((item) => (
+                      <button
+                        key={item.alias}
+                        type="button"
+                        title="Tap to copy"
+                        className="rounded-lg border border-border/70 px-2.5 py-2 text-left transition-colors hover:border-primary/40"
+                        onClick={() => copyToClipboard(item.alias, "Alias")}
+                      >
+                        <p className="break-all font-mono text-xs text-primary">{item.alias}</p>
+                        <p className="mt-0.5 text-[11px] text-muted-foreground">{item.body}</p>
+                        <p className="mt-0.5 break-all font-mono text-[10px] text-muted-foreground/70">
+                          → {aliasTarget(item.alias)}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              </div>
+            ) : null}
+          </div>
+        </CardContent>
+      </Card>
 
       <div
         id="provider-credentials"
