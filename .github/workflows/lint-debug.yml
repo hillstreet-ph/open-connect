@@ -15,9 +15,13 @@ jobs:
           bun-version: latest
       - name: Install quietly
         run: bun install --frozen-lockfile > /dev/null 2>&1
-      - name: Print lint errors
+      - name: Report lint errors only
         continue-on-error: true
         run: |
-          bun run lint 2>&1 | grep -E "(error|warning)" | head -40 | while IFS= read -r line; do
-            echo "::error::${line//:/ ::}"
-          done
+          bun run lint 2>&1 | grep -E "  error  " | head -25 > /tmp/errors.txt || true
+          n=0
+          while IFS= read -r line; do
+            n=$((n+1))
+            echo "::error title=lint$n::$line"
+          done < /tmp/errors.txt
+          if [ "$n" -eq 0 ]; then echo "::error title=lint::NO ERRORS FOUND"; fi
