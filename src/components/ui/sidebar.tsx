@@ -43,6 +43,8 @@ type SidebarContextProps = {
   setSidebarWidth: (value: number | ((value: number) => number)) => void;
   isResizing: boolean;
   setIsResizing: (value: boolean) => void;
+  hoverExpanded: boolean;
+  setHoverExpanded: (value: boolean) => void;
 };
 
 const SidebarContext = React.createContext<SidebarContextProps | null>(null);
@@ -80,6 +82,7 @@ const SidebarProvider = React.forwardRef<
     const [openMobile, setOpenMobile] = React.useState(false);
     const [sidebarWidth, setSidebarWidthState] = React.useState(SIDEBAR_WIDTH_DEFAULT_REM);
     const [isResizing, setIsResizing] = React.useState(false);
+    const [hoverExpanded, setHoverExpanded] = React.useState(false);
 
     // Restore the saved width after mount to avoid server/client mismatches.
     React.useEffect(() => {
@@ -151,6 +154,8 @@ const SidebarProvider = React.forwardRef<
         setSidebarWidth,
         isResizing,
         setIsResizing,
+        hoverExpanded,
+        setHoverExpanded,
       }),
       [
         state,
@@ -163,6 +168,8 @@ const SidebarProvider = React.forwardRef<
         sidebarWidth,
         setSidebarWidth,
         isResizing,
+        hoverExpanded,
+        setHoverExpanded,
       ],
     );
 
@@ -199,7 +206,7 @@ const Sidebar = React.forwardRef<
   React.ComponentProps<"div"> & {
     side?: "left" | "right";
     variant?: "sidebar" | "floating" | "inset";
-    collapsible?: "offcanvas" | "icon" | "none";
+    collapsible?: "offcanvas" | "icon" | "none" | "hover";
   }
 >(
   (
@@ -213,7 +220,20 @@ const Sidebar = React.forwardRef<
     },
     ref,
   ) => {
-    const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
+    const { isMobile, state, openMobile, setOpenMobile, hoverExpanded, setHoverExpanded } =
+      useSidebar();
+
+    const isHoverMode = collapsible === "hover";
+    const showHoverOverlay = () => {
+      if (isHoverMode && state === "collapsed") {
+        setHoverExpanded(true);
+      }
+    };
+    const hideHoverOverlay = () => {
+      if (isHoverMode) {
+        setHoverExpanded(false);
+      }
+    };
 
     if (collapsible === "none") {
       return (
@@ -259,9 +279,17 @@ const Sidebar = React.forwardRef<
         ref={ref}
         className="group peer hidden text-sidebar-foreground md:block"
         data-state={state}
-        data-collapsible={state === "collapsed" ? collapsible : ""}
+        data-collapsible={
+          state === "collapsed" ? (isHoverMode ? (hoverExpanded ? "" : "icon") : collapsible) : ""
+        }
         data-variant={variant}
         data-side={side}
+        data-hover-sidebar={isHoverMode ? "true" : undefined}
+        data-hover-open={hoverExpanded ? "true" : undefined}
+        onMouseEnter={isHoverMode ? showHoverOverlay : undefined}
+        onMouseLeave={isHoverMode ? hideHoverOverlay : undefined}
+        onFocus={isHoverMode ? showHoverOverlay : undefined}
+        onBlur={isHoverMode ? hideHoverOverlay : undefined}
       >
         {/* This is what handles the sidebar gap on desktop */}
         <div
@@ -270,6 +298,7 @@ const Sidebar = React.forwardRef<
             "group-data-[collapsible=offcanvas]:w-0",
             "group-data-[side=right]:rotate-180",
             "group-data-[resizing=true]/sidebar-wrapper:transition-none",
+            "group-data-[hover-sidebar=true]:group-data-[state=collapsed]:w-(--sidebar-width-icon)",
             variant === "floating" || variant === "inset"
               ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4))]"
               : "group-data-[collapsible=icon]:w-(--sidebar-width-icon)",
@@ -286,6 +315,7 @@ const Sidebar = React.forwardRef<
               ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]"
               : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l",
             "group-data-[resizing=true]/sidebar-wrapper:transition-none",
+            "group-data-[hover-open=true]:z-30 group-data-[hover-open=true]:shadow-xl",
             className,
           )}
           {...props}
@@ -661,7 +691,7 @@ const SidebarMenuButton = React.forwardRef<
     ref,
   ) => {
     const Comp = asChild ? Slot : "button";
-    const { isMobile, state } = useSidebar();
+    const { isMobile, state, hoverExpanded } = useSidebar();
 
     const button = (
       <Comp
@@ -690,7 +720,7 @@ const SidebarMenuButton = React.forwardRef<
         <TooltipContent
           side="right"
           align="center"
-          hidden={state !== "collapsed" || isMobile}
+          hidden={state !== "collapsed" || isMobile || hoverExpanded}
           {...tooltip}
         />
       </Tooltip>
