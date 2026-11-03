@@ -696,9 +696,7 @@ function ModelsPage() {
             >
               {aliasesOpen ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
               Model aliases
-              <span className="text-xs font-normal text-muted-foreground">
-                ({aliasCount})
-              </span>
+              <span className="text-xs font-normal text-muted-foreground">({aliasCount})</span>
             </button>
             {aliasesOpen ? (
               <div className="space-y-2">
