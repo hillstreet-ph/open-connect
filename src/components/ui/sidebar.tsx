@@ -296,9 +296,7 @@ const Sidebar = React.forwardRef<
           >
             {children}
           </div>
-          {state === "expanded" && collapsible !== "none" ? (
-            <SidebarResizeHandle side={side} />
-          ) : null}
+          {state === "expanded" ? <SidebarResizeHandle side={side} /> : null}
         </div>
       </div>
     );
