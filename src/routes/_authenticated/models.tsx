@@ -173,6 +173,7 @@ function ModelsPage() {
       return !query || model.id.toLowerCase().includes(query);
     })
     .sort((a, b) => a.id.localeCompare(b.id));
+  const aliasCount = ALIAS_GROUPS.reduce((total, group) => total + group.items.length, 0);
 
   const reconnectProviders = new Set(
     AI_GATEWAY_PROVIDERS.filter(
@@ -511,6 +512,9 @@ function ModelsPage() {
                 <ChevronDown className="size-4" />
               )}
               Full model list
+              <span className="text-xs font-normal text-muted-foreground">
+                ({catalogModels.length})
+              </span>
             </button>
             {modelsListOpen ? (
               <div className="space-y-3">
@@ -642,6 +646,9 @@ function ModelsPage() {
             >
               {toolsOpen ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
               Gateway tools
+              <span className="text-xs font-normal text-muted-foreground">
+                ({GATEWAY_TOOLS.length})
+              </span>
             </button>
             {toolsOpen ? (
               <div className="space-y-3">
@@ -689,6 +696,9 @@ function ModelsPage() {
             >
               {aliasesOpen ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
               Model aliases
+              <span className="text-xs font-normal text-muted-foreground">
+                ({aliasCount})
+              </span>
             </button>
             {aliasesOpen ? (
               <div className="space-y-2">
