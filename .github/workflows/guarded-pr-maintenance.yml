@@ -37,7 +37,7 @@ jobs:
         with:
           script: |
             const pr = context.payload.pull_request;
-            const title = pr.title.match(/^Bump .+ from (\d+)\.(\d+)\.(\d+) to (\d+)\.(\d+)\.(\d+)$/i);
+            const title = pr.title.match(/^(?:[a-z]+(?:\([^)]*\))?: )?bump .+ from v?(\d+)\.(\d+)\.(\d+) to v?(\d+)\.(\d+)\.(\d+)$/i);
             if (!title || title[1] !== title[4] || title[2] !== title[5] || Number(title[6]) <= Number(title[3])) return;
             const files = await github.paginate(github.rest.pulls.listFiles, {...context.repo, pull_number:pr.number, per_page:100});
             if (!files.length || files.length > 10 || files.some(f=> !/(^|\/)(package\.json|package-lock\.json|bun\.lock|pnpm-lock\.yaml|yarn\.lock)$/.test(f.filename))) return;
