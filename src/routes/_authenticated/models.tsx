@@ -360,109 +360,6 @@ function ModelsPage() {
         </CardContent>
       </Card>
 
-      <div className="mt-6 flex items-center justify-between gap-3">
-        <h2 className="text-base font-semibold">Full model list</h2>
-        <Button
-          size="sm"
-          variant="ghost"
-          aria-expanded={modelsListOpen}
-          onClick={() => setModelsListOpen((open) => !open)}
-        >
-          {modelsListOpen ? (
-            <ChevronUp className="mr-1 size-4" />
-          ) : (
-            <ChevronDown className="mr-1 size-4" />
-          )}
-          {modelsListOpen ? "Hide" : "Show"}
-        </Button>
-      </div>
-      {modelsListOpen ? (
-        <Card className="mt-3 shadow-panel">
-          <CardContent className="space-y-2 p-4 pt-0">
-            <div>
-              <p className="mb-2 text-xs font-semibold">Featured models</p>
-              <div className="grid gap-1.5 sm:grid-cols-2">
-                {featuredModels.map((model) => (
-                  <div key={model.id} className="rounded-lg border border-border/70 px-2.5 py-2">
-                    <p className="break-all font-mono text-xs text-primary">{model.id}</p>
-                    <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-                      {model.name}
-                    </p>
-                    <div className="mt-1.5 flex flex-wrap gap-1">
-                      {model.tags.map((tag) => (
-                        <Badge key={tag} variant="outline" className="text-[10px]">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              The complete catalog is dynamic: authenticated GET /v1/models returns the managed
-              aliases above plus every model available through your connected providers, free and
-              paid, in real time.
-            </p>
-            <pre className="overflow-x-auto rounded-lg border border-border bg-muted/30 p-3 text-[11px] leading-relaxed">
-              {`curl -sS https://open-connect.site/v1/models \\
-  -H "Authorization: Bearer sk-oc-YOUR_KEY"`}
-            </pre>
-            <p className="text-xs text-muted-foreground">
-              Authenticated GET /v1/models returns managed aliases plus every model from the
-              connected OpenRouter credential (OpenAI, Anthropic, Google, Meta, Mistral, DeepSeek,
-              xAI, …). Use the OpenAI-compatible provider setting and the base URL above. An
-              Open-Connect key works at this gateway, not directly at OpenAI or a separate LiteLLM
-              server. If LiteLLM reports token_not_found_in_db, verify the client base URL and
-              reconnect LiteLLM below using a key issued by that LiteLLM server. Renaming a key does
-              not register it there.
-            </p>
-          </CardContent>
-        </Card>
-      ) : null}
-      <div className="mt-6 flex items-center justify-between gap-3">
-        <h2 className="text-base font-semibold">Gateway tools</h2>
-        <Button
-          size="sm"
-          variant="ghost"
-          aria-expanded={toolsOpen}
-          onClick={() => setToolsOpen((open) => !open)}
-        >
-          {toolsOpen ? (
-            <ChevronUp className="mr-1 size-4" />
-          ) : (
-            <ChevronDown className="mr-1 size-4" />
-          )}
-          {toolsOpen ? "Hide" : "Show"}
-        </Button>
-      </div>
-      {toolsOpen ? (
-        <Card className="mt-3 shadow-panel">
-          <CardContent className="space-y-2 p-4 pt-0">
-            <p className="text-xs text-muted-foreground">
-              Built-in tool calls available to models routed through the OpenRouter upstream. Tools
-              are grouped by capability and pass through the gateway like any other
-              OpenAI-compatible tool call.
-            </p>
-            <div className="grid gap-1.5 sm:grid-cols-2">
-              {gatewayTools.map((tool) => (
-                <div key={tool.id} className="rounded-lg border border-border/70 px-2.5 py-2">
-                  <div className="flex min-w-0 items-center gap-1.5">
-                    <p className="min-w-0 flex-1 truncate font-mono text-xs text-primary">
-                      {tool.id}
-                    </p>
-                    <Badge variant="outline" className="shrink-0 text-[10px]">
-                      {tool.group}
-                    </Badge>
-                  </div>
-                  <p className="mt-1 text-[11px] text-muted-foreground">{tool.detail}</p>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      ) : null}
-
       <Card className="mt-6 shadow-panel" id="free-models">
         <CardHeader className="p-4 pb-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -628,6 +525,109 @@ function ModelsPage() {
           ) : null}
         </CardContent>
       </Card>
+
+      <div className="mt-6 flex items-center justify-between gap-3">
+        <h2 className="text-base font-semibold">Full model list</h2>
+        <Button
+          size="sm"
+          variant="ghost"
+          aria-expanded={modelsListOpen}
+          onClick={() => setModelsListOpen((open) => !open)}
+        >
+          {modelsListOpen ? (
+            <ChevronUp className="mr-1 size-4" />
+          ) : (
+            <ChevronDown className="mr-1 size-4" />
+          )}
+          {modelsListOpen ? "Hide" : "Show"}
+        </Button>
+      </div>
+      {modelsListOpen ? (
+        <Card className="mt-3 shadow-panel">
+          <CardContent className="space-y-2 p-4 pt-0">
+            <div>
+              <p className="mb-2 text-xs font-semibold">Featured models</p>
+              <div className="grid gap-1.5 sm:grid-cols-2">
+                {featuredModels.map((model) => (
+                  <div key={model.id} className="rounded-lg border border-border/70 px-2.5 py-2">
+                    <p className="break-all font-mono text-xs text-primary">{model.id}</p>
+                    <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                      {model.name}
+                    </p>
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {model.tags.map((tag) => (
+                        <Badge key={tag} variant="outline" className="text-[10px]">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              The complete catalog is dynamic: authenticated GET /v1/models returns the managed
+              aliases above plus every model available through your connected providers, free and
+              paid, in real time.
+            </p>
+            <pre className="overflow-x-auto rounded-lg border border-border bg-muted/30 p-3 text-[11px] leading-relaxed">
+              {`curl -sS https://open-connect.site/v1/models \\
+  -H "Authorization: Bearer sk-oc-YOUR_KEY"`}
+            </pre>
+            <p className="text-xs text-muted-foreground">
+              Authenticated GET /v1/models returns managed aliases plus every model from the
+              connected OpenRouter credential (OpenAI, Anthropic, Google, Meta, Mistral, DeepSeek,
+              xAI, …). Use the OpenAI-compatible provider setting and the base URL above. An
+              Open-Connect key works at this gateway, not directly at OpenAI or a separate LiteLLM
+              server. If LiteLLM reports token_not_found_in_db, verify the client base URL and
+              reconnect LiteLLM below using a key issued by that LiteLLM server. Renaming a key does
+              not register it there.
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
+      <div className="mt-6 flex items-center justify-between gap-3">
+        <h2 className="text-base font-semibold">Gateway tools</h2>
+        <Button
+          size="sm"
+          variant="ghost"
+          aria-expanded={toolsOpen}
+          onClick={() => setToolsOpen((open) => !open)}
+        >
+          {toolsOpen ? (
+            <ChevronUp className="mr-1 size-4" />
+          ) : (
+            <ChevronDown className="mr-1 size-4" />
+          )}
+          {toolsOpen ? "Hide" : "Show"}
+        </Button>
+      </div>
+      {toolsOpen ? (
+        <Card className="mt-3 shadow-panel">
+          <CardContent className="space-y-2 p-4 pt-0">
+            <p className="text-xs text-muted-foreground">
+              Built-in tool calls available to models routed through the OpenRouter upstream. Tools
+              are grouped by capability and pass through the gateway like any other
+              OpenAI-compatible tool call.
+            </p>
+            <div className="grid gap-1.5 sm:grid-cols-2">
+              {gatewayTools.map((tool) => (
+                <div key={tool.id} className="rounded-lg border border-border/70 px-2.5 py-2">
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <p className="min-w-0 flex-1 truncate font-mono text-xs text-primary">
+                      {tool.id}
+                    </p>
+                    <Badge variant="outline" className="shrink-0 text-[10px]">
+                      {tool.group}
+                    </Badge>
+                  </div>
+                  <p className="mt-1 text-[11px] text-muted-foreground">{tool.detail}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div className="mt-6 flex items-center justify-between gap-3">
         <h2 className="text-base font-semibold">Model aliases</h2>
