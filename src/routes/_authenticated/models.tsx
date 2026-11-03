@@ -628,10 +628,7 @@ function ModelsPage() {
                   key works at this gateway, not directly at OpenAI or a separate LiteLLM server. If
                   LiteLLM reports token_not_found_in_db, verify the client base URL and reconnect
                   LiteLLM below using a key issued by that LiteLLM server. Renaming a key does not
-                  register it there. Open-Connect key works at this gateway, not directly at OpenAI
-                  or a separate LiteLLM server. If LiteLLM reports token_not_found_in_db, verify the
-                  client base URL and reconnect LiteLLM below using a key issued by that LiteLLM
-                  server. Renaming a key does not register it there.
+                  register it there.
                 </p>
               </div>
             ) : null}
