@@ -16,7 +16,8 @@ jobs:
       - name: Install quietly
         run: bun install --frozen-lockfile > /dev/null 2>&1
       - name: Print lint errors
+        continue-on-error: true
         run: |
-          echo "=== lint start ==="
-          bun run lint 2>&1
-          echo "=== lint exit: $? ==="
+          bun run lint 2>&1 | grep -E "(error|warning)" | head -40 | while IFS= read -r line; do
+            echo "::error::${line//:/ ::}"
+          done
