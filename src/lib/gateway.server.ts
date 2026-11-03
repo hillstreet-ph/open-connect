@@ -40,7 +40,6 @@ export type Upstream = {
   headers: Record<string, string>;
 };
 
-
 let freeRotateIdx = 0;
 
 /** Prefer OpenRouter official free auto-router; else round-robin pool. */
@@ -52,8 +51,6 @@ export function nextFreeModel(preferAutoRouter = true): string {
   freeRotateIdx += 1;
   return id;
 }
-
-
 
 export function resolveModelId(requested: string): string {
   const key = (requested || "").trim();

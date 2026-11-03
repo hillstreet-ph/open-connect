@@ -53,7 +53,6 @@ export const Route = createFileRoute("/_authenticated/models")({
 
 const gatewayProviders = AI_GATEWAY_PROVIDER_IDS;
 
-
 const featuredModels = [
   {
     id: "gpt-4o",
@@ -498,7 +497,7 @@ function ModelsPage() {
       </div>
       {modelsListOpen ? (
         <Card className="mt-3 shadow-panel">
-                    <CardContent className="space-y-3 p-4 pt-0">
+          <CardContent className="space-y-3 p-4 pt-0">
             <div>
               <p className="mb-2 text-xs font-semibold">Featured models</p>
               <div className="grid gap-1.5 sm:grid-cols-2">
@@ -616,8 +615,8 @@ function ModelsPage() {
               xAI, …). Use the OpenAI-compatible provider setting and the base URL above. An
               Open-Connect key works at this gateway, not directly at OpenAI or a separate LiteLLM
               server. If LiteLLM reports token_not_found_in_db, verify the client base URL and
-              reconnect LiteLLM below using a key issued by that LiteLLM server. Renaming a key
-              does not register it there.
+              reconnect LiteLLM below using a key issued by that LiteLLM server. Renaming a key does
+              not register it there.
             </p>
           </CardContent>
         </Card>
@@ -640,12 +639,12 @@ function ModelsPage() {
       </div>
       {toolsOpen ? (
         <Card className="mt-3 shadow-panel">
-                    <CardContent className="space-y-3 p-4 pt-0">
+          <CardContent className="space-y-3 p-4 pt-0">
             <p className="text-xs text-muted-foreground">
               Server tools executed by the OpenRouter upstream, available to any model routed
               through the gateway (beta). Add one or more to the request tools array; the model
-              decides when to call them and OpenRouter executes them server-side, so no
-              client-side implementation is needed.
+              decides when to call them and OpenRouter executes them server-side, so no client-side
+              implementation is needed.
             </p>
             <div className="grid gap-1.5 sm:grid-cols-2">
               {GATEWAY_TOOLS.map((tool) => (
@@ -669,9 +668,9 @@ function ModelsPage() {
               </pre>
             </div>
             <p className="text-xs text-muted-foreground">
-              Server tools work alongside your own function tools in the same request and can
-              run natively on providers that support them. Tool usage appears in the response
-              usage object as server_tool_use_details.
+              Server tools work alongside your own function tools in the same request and can run
+              natively on providers that support them. Tool usage appears in the response usage
+              object as server_tool_use_details.
             </p>
           </CardContent>
         </Card>
@@ -695,14 +694,14 @@ function ModelsPage() {
       </div>
       {aliasesOpen ? (
         <Card className="mt-3 shadow-panel">
-                    <CardContent className="space-y-2 p-4 pt-0">
+          <CardContent className="space-y-2 p-4 pt-0">
             <p className="text-xs text-muted-foreground">
               Pyramid routing. Open-Auto is the default: it inspects the task prompt and tool
-              request, picks the right model automatically, uses free models first, rotates when
-              a limit is hit, escalates to paid or subscription models for deep or professional
-              work, and can delegate to multiple models in parallel for faster execution.
-              Specialist and short aliases pin a specific route when you need full control. Each
-              card shows the exact model the alias routes to; tap any card to copy it.
+              request, picks the right model automatically, uses free models first, rotates when a
+              limit is hit, escalates to paid or subscription models for deep or professional work,
+              and can delegate to multiple models in parallel for faster execution. Specialist and
+              short aliases pin a specific route when you need full control. Each card shows the
+              exact model the alias routes to; tap any card to copy it.
             </p>
             {ALIAS_GROUPS.map((group) => (
               <div key={group.tier}>
