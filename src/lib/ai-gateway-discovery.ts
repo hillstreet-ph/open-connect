@@ -1,16 +1,8 @@
 import { AI_GATEWAY_PROVIDERS } from "./ai-gateway-providers.ts";
+import { AI_GATEWAY_ALIASES, aliasTarget } from "./model-aliases.ts";
+import { GATEWAY_TOOLS, GATEWAY_TOOLS_USAGE } from "./gateway-tools.ts";
 
-export const AI_GATEWAY_ALIASES = [
-  "open-connect/auto",
-  "open-connect/open-auto",
-  "open-connect/high",
-  "open-connect/deep",
-  "open-connect/wide",
-  "open-connect/fast",
-  "open-connect/coding",
-  "open-connect/reasoning",
-  "open-connect/vision",
-] as const;
+export { AI_GATEWAY_ALIASES };
 
 /**
  * Public, credential-free metadata so any AI agent pointed at Open-Connect can
@@ -40,6 +32,19 @@ export function aiGatewayMetadata(issuer: string) {
       resources: `${base}/api/v1/resources`,
     },
     aliases: [...AI_GATEWAY_ALIASES],
+    alias_targets: Object.fromEntries(
+      AI_GATEWAY_ALIASES.map((alias) => [alias, aliasTarget(alias)]),
+    ),
+    server_tools: {
+      note: "OpenRouter server tools (beta). Add one or more to the request tools array; the upstream executes them server-side for any routed model.",
+      usage: GATEWAY_TOOLS_USAGE,
+      tools: GATEWAY_TOOLS.map((tool) => ({
+        id: tool.id,
+        name: tool.name,
+        group: tool.group,
+        detail: tool.detail,
+      })),
+    },
     providers: AI_GATEWAY_PROVIDERS.map((provider) => ({
       id: provider.id,
       name: provider.name,
@@ -65,20 +70,32 @@ export function llmsTxt(issuer: string) {
     "",
     "## How to use",
     `- Chat: POST ${meta.endpoints.chat_completions} with "Authorization: Bearer sk-oc-..." and an OpenAI JSON body.`,
-    `- Models: GET ${meta.endpoints.models} with the same bearer key.`,
+    `- Models: GET ${meta.endpoints.models} with the same bearer key. Returns the managed aliases plus every model from your connected providers.`,
     `- Default model: ${meta.default_model} (free models first, automatic rotation and fallback).`,
     `- MCP tools: ${meta.endpoints.mcp} with OAuth discovery at ${meta.auth.oauth_authorization_server}.`,
     `- Health: ${meta.endpoints.health}.`,
     "",
     "## Model aliases",
-    meta.aliases.map((alias) => `- \`${alias}\``).join("\n"),
+    ...meta.aliases.map((alias) => \`- \`\${alias}\` → \`\${aliasTarget(alias)}\`\`),
+    "",
+    "## Gateway tools",
+    "OpenRouter server tools (beta) run on the upstream for any model routed through this gateway. Add them to the request tools array; the model decides when to call them and OpenRouter executes them server-side.",
+    ...meta.server_tools.tools.map(
+      (tool) => \`- \`\${tool.id}\` — \${tool.name} (\${tool.group}): \${tool.detail}\`,
+    ),
+    "",
+    "Example request:",
+    "",
+    "\`\`\`",
+    GATEWAY_TOOLS_USAGE,
+    "\`\`\`",
     "",
     "## Providers",
-    meta.providers.map((provider) => `- ${provider.name} (\`${provider.id}\`)`).join("\n"),
+    ...meta.providers.map((provider) => \`- \${provider.name} (\`\${provider.id}\`)\`),
     "",
     "## Links",
-    `- [AI Gateway](${meta.auth.api_key_url})`,
-    `- [Gateway discovery JSON](${base}/.well-known/ai-gateway)`,
+    \`- [AI Gateway](\${meta.auth.api_key_url})\`,
+    \`- [Gateway discovery JSON](\${base}/.well-known/ai-gateway)\`,
     "",
   ].join("\n");
 }
