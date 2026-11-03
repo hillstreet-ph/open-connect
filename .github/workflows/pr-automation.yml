@@ -24,7 +24,6 @@ permissions:
   contents: write
   pull-requests: write
   checks: read
-  workflows: write
 
 concurrency:
   group: pr-automation-${{ github.event.pull_request.number || 'scheduled' }}
@@ -33,7 +32,8 @@ concurrency:
 jobs:
   autofix:
     name: Auto-fix formatting and lint issues
-    if: github.event_name == 'pull_request'
+    # Same-repo PRs only: never push with repository credentials to a fork.
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -58,6 +58,8 @@ jobs:
       - name: Commit and push fixes
         env:
           AUTOMATION_TOKEN: ${{ secrets.AUTOMATION_TOKEN }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          REPOSITORY: ${{ github.repository }}
         run: |
           git config user.name "open-connect-autofixer[bot]"
           git config user.email "actions@users.noreply.github.com"
@@ -68,7 +70,7 @@ jobs:
           fi
           git commit -m "style: apply automatic formatting and lint fixes"
           if [ -n "$AUTOMATION_TOKEN" ]; then
-            git push "https://x-access-token:$AUTOMATION_TOKEN@github.com/${{ github.repository }}.git" HEAD:${{ github.event.pull_request.head.ref }}
+            git push "https://x-access-token:$AUTOMATION_TOKEN@github.com/$REPOSITORY.git" "HEAD:$HEAD_REF"
           else
             git push
           fi
@@ -83,7 +85,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.AUTOMATION_TOKEN || github.token }}
         run: |
-          for pr in $(gh pr list --repo "${{ github.repository }}" --state open --base main --json number --jq '.[].number'); do
+          # Skip drafts and anything an author has explicitly held back.
+          for pr in $(gh pr list --repo "${{ github.repository }}" --state open --base main --json number,isDraft,labels,title \
+            --jq '.[] | select(.isDraft | not) | select([.labels[].name | ascii_downcase] | index("do-not-merge") | not) | select(.title | test("do not merge|not production-ready"; "i") | not) | .number'); do
             echo "Processing PR #$pr"
             gh pr update-branch --repo "${{ github.repository }}" "$pr" || echo "Update skipped for #$pr (conflicts or up to date)"
             gh pr merge --repo "${{ github.repository }}" "$pr" --squash --auto --delete-branch || echo "Auto-merge not enabled for #$pr"
