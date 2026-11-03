@@ -48,7 +48,7 @@
   },
   "dependencies": {
     "@browserbasehq/sdk": "2.22.0",
-    "@cfworker/json-schema": "^4.1.1",
+    "@cfworker/json-schema": "^4.1.4",
     "@data-client/react": "0.18.1",
     "@data-client/rest": "0.18.2",
     "@hookform/resolvers": "^5.9.1",

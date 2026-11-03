@@ -6,7 +6,7 @@
       "name": "tanstack_start_ts",
       "dependencies": {
         "@browserbasehq/sdk": "2.22.0",
-        "@cfworker/json-schema": "^4.1.1",
+        "@cfworker/json-schema": "^4.1.4",
         "@data-client/react": "0.18.1",
         "@data-client/rest": "0.18.2",
         "@hookform/resolvers": "^5.9.1",
@@ -143,7 +143,7 @@
 
     "@browserbasehq/sdk": ["@browserbasehq/sdk@2.22.0", "", { "dependencies": { "@types/node": "^18.11.18", "@types/node-fetch": "^2.6.4", "abort-controller": "^3.0.0", "agentkeepalive": "^4.2.1", "form-data-encoder": "1.7.2", "formdata-node": "^4.3.2", "node-fetch": "^2.6.7" } }, "sha512-fTXyRTpsdUb/LTT24iJnMM5Qwl+sdgFSMnV36APCH3MNswtPiTNB34cVwoHvZ1wR786SHumNd89I8NMRdcRZJA=="],
 
-    "@cfworker/json-schema": ["@cfworker/json-schema@4.1.1", "", {}, "sha512-gAmrUZSGtKc3AiBL71iNWxDsyUC5uMaKKGdvzYsBoTW/xi42JQHl7eKV2OYzCUqvc+D2RCcf7EXY2iCyFIk6og=="],
+    "@cfworker/json-schema": ["@cfworker/json-schema@4.1.4", "", {}, "sha512-20rPE8EX0dSg6JGOVe31HpqsLYZTDSlcFJZA5mpZqQxcZ71vh/SXCMX+UuHO1mMcZBDKeb752z+3L8IWa+0Svg=="],
 
     "@data-client/core": ["@data-client/core@0.18.1", "", { "dependencies": { "@babel/runtime": "^7.20.0", "@data-client/normalizr": "^0.18.1", "flux-standard-action": "^2.1.1" } }, "sha512-PKDPMTQkxTg669ZXAKdIIlJuPazqk+vVo5Ljya3qDivbw9DDVv+C5kwqsxzs52mMFGsJDQ6Un8siar4IeweMXw=="],
 
