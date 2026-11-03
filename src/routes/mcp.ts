@@ -54,6 +54,7 @@ import {
 } from "@/lib/autonomous-control";
 import { streamableMcpResponse } from "@/lib/mcp-transport.server";
 import { calculateExpression } from "@/lib/calculator";
+import { WORK_TOOLS, WORK_TOOL_SCOPES, isWorkTool, runWorkTool } from "@/lib/mcp-work-tools.server";
 import { hasRole, type AppRole } from "@/lib/rbac";
 import {
   isRemoteMcpProvider,
@@ -1116,6 +1117,7 @@ const PLATFORM_TOOLS: McpTool[] = [
       openWorldHint: true,
     },
   },
+  ...(WORK_TOOLS as McpTool[]),
 ];
 
 async function loadRoles(userId: string): Promise<AppRole[]> {
@@ -1464,6 +1466,7 @@ const TOOL_SCOPES: Record<string, string> = {
   configure_connection: "control:write",
   sync_composio_accounts: "control:write",
   install_capability: "control:write",
+  ...WORK_TOOL_SCOPES,
 };
 
 function requiredToolScopes(name: string): string[] {
@@ -1945,6 +1948,16 @@ export const Route = createFileRoute("/mcp")({
                   : "Use an existing host tool or report the missing capability; do not assume a catalog entry is executable.",
               };
             }
+            result = { ...textResult(payload), structuredContent: payload };
+          } else if (isWorkTool(name)) {
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const payload = await runWorkTool(
+              supabaseAdmin,
+              { userId: key.userId, projectId: key.projectId },
+              name,
+              args,
+              (projectId) => assertProjectAccess(key, projectId),
+            );
             result = { ...textResult(payload), structuredContent: payload };
           } else if (name === "calculate") {
             const expression = String(args["expression"] ?? "");
