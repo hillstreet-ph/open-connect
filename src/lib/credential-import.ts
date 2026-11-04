@@ -1,14 +1,27 @@
 /**
  * Password-manager import: parses exports from Proton Pass (CSV or unencrypted ZIP/JSON),
- * Bitwarden (CSV or unencrypted JSON), 1Password CSV, LastPass CSV, Firefox CSV and
- * Chromium/Safari browser CSV into vault-ready items.
+ * Bitwarden (CSV or unencrypted JSON), 1Password, LastPass, Dashlane, NordPass, Keeper,
+ * RoboForm, Enpass, KeePass/KeePassXC (CSV or XML), Firefox and Chromium/Safari browser CSV
+ * into vault-ready items.
  *
  * Items hold secret values. Keep them in memory only: never log, cache, persist or render
  * `password`, `totp_secret` or `notes`. `summarizeImportItem` is the only safe display shape.
  */
 
 export type ImportSource =
-  "proton" | "bitwarden" | "1password" | "lastpass" | "firefox" | "browser" | "generic";
+  | "proton"
+  | "bitwarden"
+  | "1password"
+  | "lastpass"
+  | "firefox"
+  | "browser"
+  | "dashlane"
+  | "nordpass"
+  | "keeper"
+  | "roboform"
+  | "keepass"
+  | "enpass"
+  | "generic";
 
 export type ImportStatus = "ready" | "skipped" | "duplicate";
 
@@ -40,6 +53,12 @@ const SOURCE_LABEL: Record<ImportSource, string> = {
   lastpass: "LastPass",
   firefox: "Firefox",
   browser: "Browser",
+  dashlane: "Dashlane",
+  nordpass: "NordPass",
+  keeper: "Keeper",
+  roboform: "RoboForm",
+  keepass: "KeePass",
+  enpass: "Enpass",
   generic: "CSV",
 };
 
@@ -348,6 +367,12 @@ export function detectCsvSource(headers: string[]): ImportSource | null {
   if (has("loginuri", "loginusername", "loginpassword")) return "bitwarden";
   if (has("url", "username", "password", "extra", "grouping")) return "lastpass";
   if (has("url", "username", "password", "httprealm")) return "firefox";
+  if (has("group", "title", "username", "password", "url")) return "keepass";
+  if (has("password") && has("note") && has("category")) return "dashlane";
+  if (has("name", "loginurl", "password")) return "nordpass";
+  if (has("title", "login", "password")) return "keeper";
+  if (has("name", "url", "pass", "note")) return "roboform";
+  if (has("title", "url", "username", "password", "note")) return "enpass";
   if (has("title") && has("password") && (has("website") || has("url")) && has("username"))
     return names.includes("otpauth") ||
       names.includes("onetimepassword") ||
@@ -388,12 +413,12 @@ export function parseCredentialCsv(input: string): ImportItem[] {
     entry.name = read(row, "name", "title");
     entry.username = read(row, "username", "loginusername", "login");
     entry.email = read(row, "email", "emailaddress");
-    entry.password = read(row, "password", "loginpassword");
-    entry.totp = read(row, "totp", "logintotp", "otpauth", "onetimepassword", "otp");
-    entry.notes = read(row, "note", "notes", "extra");
-    entry.folder = read(row, "vault", "folder", "grouping", "tags");
+    entry.password = read(row, "password", "loginpassword", "pass");
+    entry.totp = read(row, "totp", "logintotp", "otpauth", "onetimepassword", "otp", "otpsecret");
+    entry.notes = read(row, "note", "notes", "extra", "additionaldata");
+    entry.folder = read(row, "vault", "folder", "grouping", "tags", "group", "category");
     entry.type = read(row, "type") || "login";
-    const urlCell = read(row, "url", "website", "loginuri", "origin", "uri");
+    const urlCell = read(row, "url", "website", "loginuri", "origin", "uri", "loginurl");
     entry.urls = source === "proton" ? splitUrls(urlCell) : urlCell.trim() ? [urlCell] : [];
     if (source === "lastpass" && urlCell.trim() === "http://sn") {
       entry.type = "note";
@@ -506,6 +531,45 @@ function parseFlatJson(data: JsonValue[]): ImportItem[] {
   });
 }
 
+const decodeXmlEntities = (value: string) =>
+  value
+    .replace(/&#(\d+);/g, (_, code: string) => String.fromCodePoint(Number(code)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, code: string) => String.fromCodePoint(parseInt(code, 16)))
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&amp;/g, "&");
+
+/** KeePass 2 / KeePassXC unencrypted XML export ("Raw XML" mode). */
+export function parseKeePassXml(input: string): ImportItem[] {
+  if (!/<KeePassFile[>\s]/i.test(input)) throw new Error("Not a KeePass XML export");
+  const items: ImportItem[] = [];
+  const entryBlocks = input.split(/<Entry[\s>]/).slice(1);
+  for (const block of entryBlocks) {
+    const end = block.indexOf("</Entry>");
+    const body = end < 0 ? block : block.slice(0, end);
+    const fields = new Map<string, string>();
+    const fieldPattern = /<String>\s*<Key>(.*?)<\/Key>\s*<Value[^>]*>([\s\S]*?)<\/Value>/g;
+    let match: RegExpExecArray | null;
+    while ((match = fieldPattern.exec(body)))
+      fields.set(decodeXmlEntities(match[1]!).trim().toLowerCase(), decodeXmlEntities(match[2]!));
+    if (!fields.size) continue;
+    const entry = emptyEntry();
+    entry.name = fields.get("title") ?? "";
+    entry.username = fields.get("username") ?? "";
+    entry.password = fields.get("password") ?? "";
+    entry.totp = fields.get("otp") ?? "";
+    entry.notes = fields.get("notes") ?? "";
+    entry.urls = [fields.get("url") ?? ""].filter(Boolean);
+    entry.type =
+      entry.password.length < 4 && entry.notes.trim().length >= 4 ? "note" : "login";
+    items.push(...toItems(entry, items.length + 1, "keepass"));
+  }
+  if (!items.length) throw new Error("No entries found in the KeePass XML export");
+  return items;
+}
+
 export function parseCredentialJson(input: string): ImportItem[] {
   let data: JsonValue;
   try {
@@ -593,6 +657,7 @@ export async function parseCredentialExport(
     };
   }
   if (extension === "json") return { items: parseCredentialJson(decode(bytes)), attachments: 0 };
+  if (extension === "xml") return { items: parseKeePassXml(decode(bytes)), attachments: 0 };
   return { items: parseCredentialCsv(decode(bytes)), attachments: 0 };
 }
 
