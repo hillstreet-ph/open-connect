@@ -3,9 +3,7 @@ import { PlaywrightBrowser } from "@/components/playwright-browser";
 import { CloudWorkspacePage } from "@/components/cloud-workspace-page";
 
 export const Route = createFileRoute("/_authenticated/cloud-browser")({
-  validateSearch: (
-    search: Record<string, unknown>,
-  ): { run?: string; provider?: string } => ({
+  validateSearch: (search: Record<string, unknown>): { run?: string; provider?: string } => ({
     ...(typeof search["run"] === "string" ? { run: search["run"] } : {}),
     ...(typeof search["provider"] === "string" ? { provider: search["provider"] } : {}),
   }),
@@ -36,4 +34,3 @@ function CloudBrowserPage() {
     </div>
   );
 }
-
