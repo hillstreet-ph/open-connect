@@ -171,3 +171,61 @@ test("native model providers require a valid model catalog response", async () =
     );
   }
 });
+
+test("generic endpoint validation verifies OpenAI-compatible catalogs for any provider", async () => {
+  const setup = normalizeConnectionSetup(
+    {
+      provider: "unknown_fixture",
+      api_key: "test-secret",
+      endpoint_url: "https://api.example.com/v1",
+    },
+    app("unknown_fixture"),
+  );
+  const result = await validateConnectionCredential(setup, async (url, init) => {
+    assert.equal(String(url), "https://api.example.com/v1/models");
+    assert.equal((init?.headers as Record<string, string>)["Authorization"], "Bearer test-secret");
+    return Response.json({ data: [{ id: "m1" }, { id: "m2" }] });
+  });
+  assert.equal(result.verified, true);
+  assert.match(result.detail, /2 models fetched/);
+});
+
+test("generic endpoint validation accepts Gemini-style model catalogs", async () => {
+  const setup = normalizeConnectionSetup(
+    {
+      provider: "unknown_fixture",
+      api_key: "test-secret",
+      endpoint_url: "https://api.example.com/v1",
+    },
+    app("unknown_fixture"),
+  );
+  const result = await validateConnectionCredential(setup, async () =>
+    Response.json({ models: [{ name: "m1" }] }),
+  );
+  assert.equal(result.verified, true);
+  assert.match(result.detail, /1 models fetched/);
+});
+
+test("generic endpoint validation rejects bad keys and degrades gracefully", async () => {
+  const setup = normalizeConnectionSetup(
+    {
+      provider: "unknown_fixture",
+      api_key: "test-secret",
+      endpoint_url: "https://api.example.com/v1",
+    },
+    app("unknown_fixture"),
+  );
+  await assert.rejects(
+    validateConnectionCredential(setup, async () => new Response(null, { status: 401 })),
+    /HTTP 401/,
+  );
+  const unreachable = await validateConnectionCredential(
+    setup,
+    async () => new Response(null, { status: 500 }),
+  );
+  assert.equal(unreachable.verified, false);
+  const noCatalog = await validateConnectionCredential(setup, async () =>
+    Response.json({ object: "list" }),
+  );
+  assert.equal(noCatalog.verified, false);
+});
