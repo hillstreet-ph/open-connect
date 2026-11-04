@@ -1,5 +1,6 @@
 import { Validator, type Schema } from "@cfworker/json-schema";
 import { beforeEach, expect, mock, test } from "bun:test";
+import { reviewedResourceFixture } from "./resource-review.fixture";
 
 let post: (args: { request: Request }) => Promise<Response>;
 let authenticated = true;
@@ -11,12 +12,12 @@ let managedReads = 0;
 const managedIdentityReads: string[] = [];
 let savedConnectionRows: Array<Record<string, unknown>> = [];
 const resource = {
+  ...reviewedResourceFixture(),
   slug: "fixture-approved-tool",
   name: "Approved fixture",
   description: null,
   resource_type: "tool",
   installation_type: "mcp",
-  installation_config: { review_state: "approved" },
   verified: true,
 };
 const tables: string[] = [];
@@ -374,7 +375,7 @@ beforeEach(() => {
   tables.length = 0;
   privateReads.length = 0;
   resource.verified = true;
-  resource.installation_config = { review_state: "approved" };
+  resource.installation_config = reviewedResourceFixture().installation_config;
   connectionProvider = "twilio";
   connectionReadOnly = false;
   connectionError = false;
@@ -777,8 +778,16 @@ test("unverified catalog entries remain ineligible for installation", async () =
   expect(tables).not.toContain("capability_installations");
 });
 
-test("verified resources with missing or quarantined review state cannot install", async () => {
-  for (const config of [{}, null, [], { review_state: "quarantined_metadata" }]) {
+test("verified resources without explicit execution and review evidence cannot install", async () => {
+  for (const config of [
+    {},
+    null,
+    [],
+    { review_state: "quarantined_metadata" },
+    { review_state: "approved" },
+    { review_state: "approved", executable: true },
+    { ...reviewedResourceFixture().installation_config, executable: "true" },
+  ]) {
     resource.installation_config = config as typeof resource.installation_config;
     await expect(call("install_capability", { resource_id: resource.slug })).rejects.toThrow(
       "cannot be installed",

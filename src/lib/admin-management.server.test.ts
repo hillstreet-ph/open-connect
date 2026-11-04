@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { reviewedResourceFixture } from "./resource-review.fixture.ts";
 import {
   adminAccess,
   manageResource,
@@ -52,9 +53,17 @@ test("content is bounded text and rejects credentials and unsafe filenames", () 
 
 // This fixture models owner/revision filters and records actual attempted side effects.
 function database(
-  options: { owner?: string; verified?: boolean; conflict?: boolean; readRevision?: string } = {},
+  options: {
+    owner?: string;
+    verified?: boolean;
+    conflict?: boolean;
+    readRevision?: string;
+    legacyApproval?: boolean;
+  } = {},
 ) {
   const row = {
+    ...reviewedResourceFixture(),
+    ...(options.legacyApproval ? { installation_config: { review_state: "approved" } } : {}),
     id,
     owner_id: options.owner ?? "owner",
     updated_at: options.readRevision ?? revision,
@@ -139,6 +148,16 @@ test("creates private owned drafts and rejects cross-owner mutations", async () 
 });
 
 test("publishing requires verification, explicit confirmation and matching revision", async () => {
+  const legacy = database({ verified: true, legacyApproval: true });
+  await assert.rejects(
+    manageResource(legacy.db, key, true, "set_resource_publication", {
+      ...args,
+      published: true,
+      confirm: true,
+    }),
+    /independent security and license review/,
+  );
+  assert.equal(legacy.writes.length, 0);
   await assert.rejects(
     manageResource(database().db, key, true, "set_resource_publication", {
       ...args,

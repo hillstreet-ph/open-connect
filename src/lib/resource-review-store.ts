@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { mergedReviewConfig } from "./resource-approval.ts";
+import { hasResourceReviewEvidence, mergedReviewConfig } from "./resource-approval.ts";
 import { reviewUpdate, type ReviewAction } from "./resource-review-bulk.ts";
 
 export type ReviewSnapshot = {
@@ -7,6 +7,8 @@ export type ReviewSnapshot = {
   verified: boolean;
   published: boolean;
   installation_config: unknown;
+  version?: string | null;
+  owner_id?: string | null;
   updated_at: string;
 };
 
@@ -22,6 +24,13 @@ export async function writeResourceReview(
   if (["verify", "publish", "verify_publish"].includes(action) && scan?.state === "blocked")
     throw new Error(
       "Resolve the blocked package findings and rescan before verification or publication",
+    );
+  if (
+    ["verify", "publish", "verify_publish"].includes(action) &&
+    !hasResourceReviewEvidence(resource)
+  )
+    throw new Error(
+      "Independent security and license review evidence must match this package version and SHA-256 before verification or publication",
     );
   const { data, error } = await client
     .from("resources")

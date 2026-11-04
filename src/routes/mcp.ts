@@ -4,7 +4,7 @@ import {
   oauthScopeChallenge,
 } from "@/lib/mcp-oauth-contract";
 import { AGENCY_CATEGORIES, agencyTemplate } from "@/lib/ai-agency";
-import { resourceReviewState, isResourceApproved } from "@/lib/resource-approval";
+import { resourceReviewState, isResourceExecutable } from "@/lib/resource-approval";
 import {
   adminAccess,
   manageResource,
@@ -92,6 +92,8 @@ type ResourceRow = {
   installation_type: string | null;
   installation_config: Record<string, unknown> | null;
   verified: boolean;
+  version: string | null;
+  owner_id: string | null;
 };
 
 function reviewState(resource: ResourceRow) {
@@ -99,7 +101,7 @@ function reviewState(resource: ResourceRow) {
 }
 
 function isExecutable(resource: ResourceRow) {
-  return isResourceApproved(resource);
+  return isResourceExecutable(resource);
 }
 
 type McpTool = {
@@ -1331,7 +1333,7 @@ async function getCatalog(force = false) {
     const { data, error } = await oauthDatabase()
       .from("resources")
       .select(
-        "id, slug, name, description, resource_type, installation_type, installation_config, verified",
+        "id, slug, name, description, resource_type, installation_type, installation_config, verified, version, owner_id",
       )
       .eq("published", true)
       .order("featured", { ascending: false })
@@ -1388,7 +1390,7 @@ async function findResourceByToolName(toolName: string): Promise<ResourceRow | n
   const { data } = await supabaseAdmin
     .from("resources")
     .select(
-      "id, slug, name, description, resource_type, installation_type, installation_config, verified",
+      "id, slug, name, description, resource_type, installation_type, installation_config, verified, version, owner_id",
     )
     .eq("published", true)
     .or(`slug.eq.${slugHyphen},slug.eq.${raw}`)
