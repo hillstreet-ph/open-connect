@@ -1,9 +1,6 @@
 import { openApiOperations } from "./openapi-connector.ts";
 import { normalizeAuthHeader } from "./connection-auth-header.ts";
-import {
-  AI_GATEWAY_PROVIDER_IDS,
-  AI_GATEWAY_PROVIDERS,
-} from "./ai-gateway-providers.ts";
+import { AI_GATEWAY_PROVIDER_IDS, AI_GATEWAY_PROVIDERS } from "./ai-gateway-providers.ts";
 import type { normalizeConnectionSetup } from "./connection-setup";
 import { isRemoteMcpProvider } from "./remote-mcp.ts";
 
