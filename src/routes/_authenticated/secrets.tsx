@@ -19,6 +19,7 @@ import {
   Search,
   Tag,
   Trash2,
+  Upload,
   UserRound,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -190,6 +191,8 @@ function SecretsPage() {
   const [showEditValue, setShowEditValue] = useState(false);
   // Credentials render collapsed by default; one row expands at a time to keep the page compact.
   const [expandedCredentialId, setExpandedCredentialId] = useState<string | null>(null);
+  // Section switcher: 1 Upload, 2 Credentials, 3 Folders.
+  const [section, setSection] = useState<"upload" | "credentials" | "folders">("credentials");
 
   const list = useQuery({
     queryKey: ["credential-secrets"],
@@ -526,914 +529,975 @@ function SecretsPage() {
         </div>
       </div>
 
-      <CredentialImport existing={list.data ?? []} />
-      <Card className="mt-8 overflow-hidden border-border/80 shadow-panel">
-        <CardHeader className="p-4">
-          <CardTitle className="text-base">Add login or credential</CardTitle>
-          <CardDescription>
-            Store a password or key with an optional authenticator setup key in one encrypted item.
-            Existing entries with the same name, type, account and website are checked before
-            creation. Vault storage checks formatting; it does not prove a credential works.
-            Validate API or MCP access through its supported Connections setup. Passwords use the
-            provider's sign-in flow. Reuse working credentials; this screen does not automatically
-            revoke or rotate them.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4 p-4 pt-0">
-          <div className="space-y-2 rounded-xl border border-border/80 bg-muted/20 p-4">
-            <Label htmlFor="secret-name">Title</Label>
-            <Input
-              id="secret-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="GitHub · production"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="secret-type">Type</Label>
-            <select
-              id="secret-type"
-              className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              value={secretType}
-              onChange={(e) => setSecretType(e.target.value as SecretType)}
-            >
-              {TYPES.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="overflow-hidden rounded-xl border border-border/80 bg-muted/20">
-            {typeDetails.loginFields ? (
-              <div className="relative border-b border-border/70 p-3 pl-12">
-                <Mail className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Label htmlFor="credential-email" className="sr-only">
-                  Email address
-                </Label>
-                <Input
-                  id="credential-email"
-                  type="email"
-                  value={emailAddress}
-                  onChange={(e) => setEmailAddress(e.target.value)}
-                  placeholder="Email address"
-                  className="border-0 bg-transparent shadow-none"
-                />
-              </div>
-            ) : null}
-            {typeDetails.loginFields ? (
-              <div className="relative border-b border-border/70 p-3 pl-12">
-                <UserRound className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Label htmlFor="credential-username" className="sr-only">
-                  Username
-                </Label>
-                <Input
-                  id="credential-username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Username"
-                  className="border-0 bg-transparent shadow-none"
-                />
-              </div>
-            ) : null}
-            <div className="relative border-b border-border/70 p-3 pl-12">
-              <KeyRound className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Label htmlFor="secret-value" className="sr-only">
-                {typeDetails.valueLabel}
-              </Label>
+      <div className="mt-6 grid gap-2 sm:grid-cols-3" role="group" aria-label="Vault sections">
+        <Button
+          type="button"
+          variant={section === "upload" ? "default" : "outline"}
+          className="h-auto flex-col items-start gap-0.5 py-2.5"
+          aria-pressed={section === "upload"}
+          onClick={() => setSection("upload")}
+        >
+          <span className="flex items-center gap-2 text-sm font-semibold">
+            <Upload className="size-4" /> 1 · Upload
+          </span>
+          <span className="text-left text-xs font-normal text-muted-foreground">
+            Import credentials from a file
+          </span>
+        </Button>
+        <Button
+          type="button"
+          variant={section === "credentials" ? "default" : "outline"}
+          className="h-auto flex-col items-start gap-0.5 py-2.5"
+          aria-pressed={section === "credentials"}
+          onClick={() => setSection("credentials")}
+        >
+          <span className="flex items-center gap-2 text-sm font-semibold">
+            <KeyRound className="size-4" /> 2 · Credentials
+          </span>
+          <span className="text-left text-xs font-normal text-muted-foreground">
+            Add and manage saved logins and keys
+          </span>
+        </Button>
+        <Button
+          type="button"
+          variant={section === "folders" ? "default" : "outline"}
+          className="h-auto flex-col items-start gap-0.5 py-2.5"
+          aria-pressed={section === "folders"}
+          onClick={() => setSection("folders")}
+        >
+          <span className="flex items-center gap-2 text-sm font-semibold">
+            <FolderKanban className="size-4" /> 3 · Folders
+          </span>
+          <span className="text-left text-xs font-normal text-muted-foreground">
+            Group and share credentials by folder
+          </span>
+        </Button>
+      </div>
+
+      {section === "upload" ? (
+        <div className="mt-6">
+          <CredentialImport existing={list.data ?? []} />
+        </div>
+      ) : null}
+
+      {section === "credentials" ? (
+        <Card className="mt-8 overflow-hidden border-border/80 shadow-panel">
+          <CardHeader className="p-4">
+            <CardTitle className="text-base">Add login or credential</CardTitle>
+            <CardDescription>
+              Store a password or key with an optional authenticator setup key in one encrypted
+              item. Existing entries with the same name, type, account and website are checked
+              before creation. Vault storage checks formatting; it does not prove a credential
+              works. Validate API or MCP access through its supported Connections setup. Passwords
+              use the provider's sign-in flow. Reuse working credentials; this screen does not
+              automatically revoke or rotate them.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 p-4 pt-0">
+            <div className="space-y-2 rounded-xl border border-border/80 bg-muted/20 p-4">
+              <Label htmlFor="secret-name">Title</Label>
               <Input
-                id="secret-value"
-                type={showValue ? "text" : "password"}
-                autoComplete="off"
-                value={value}
-                onChange={(e) => setValue(e.target.value)}
-                placeholder={typeDetails.placeholder}
-                className="pr-11 font-mono"
+                id="secret-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="GitHub · production"
               />
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                className="absolute right-1 top-1 size-8"
-                onClick={() => setShowValue((current) => !current)}
-                aria-label={showValue ? "Hide credential" : "Show credential"}
-              >
-                {showValue ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-              </Button>
             </div>
-            {secretType === "password" ? (
-              <div className="relative p-3 pl-12">
-                <Lock className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Label htmlFor="totp-secret" className="sr-only">
-                  2FA setup key
+            <div className="space-y-2">
+              <Label htmlFor="secret-type">Type</Label>
+              <select
+                id="secret-type"
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={secretType}
+                onChange={(e) => setSecretType(e.target.value as SecretType)}
+              >
+                {TYPES.map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="overflow-hidden rounded-xl border border-border/80 bg-muted/20">
+              {typeDetails.loginFields ? (
+                <div className="relative border-b border-border/70 p-3 pl-12">
+                  <Mail className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Label htmlFor="credential-email" className="sr-only">
+                    Email address
+                  </Label>
+                  <Input
+                    id="credential-email"
+                    type="email"
+                    value={emailAddress}
+                    onChange={(e) => setEmailAddress(e.target.value)}
+                    placeholder="Email address"
+                    className="border-0 bg-transparent shadow-none"
+                  />
+                </div>
+              ) : null}
+              {typeDetails.loginFields ? (
+                <div className="relative border-b border-border/70 p-3 pl-12">
+                  <UserRound className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Label htmlFor="credential-username" className="sr-only">
+                    Username
+                  </Label>
+                  <Input
+                    id="credential-username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Username"
+                    className="border-0 bg-transparent shadow-none"
+                  />
+                </div>
+              ) : null}
+              <div className="relative border-b border-border/70 p-3 pl-12">
+                <KeyRound className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Label htmlFor="secret-value" className="sr-only">
+                  {typeDetails.valueLabel}
                 </Label>
                 <Input
-                  id="totp-secret"
-                  type="password"
+                  id="secret-value"
+                  type={showValue ? "text" : "password"}
                   autoComplete="off"
-                  value={totpSecret}
-                  onChange={(e) => setTotpSecret(e.target.value)}
-                  placeholder="2FA secret key (TOTP) · optional"
-                  className="border-0 bg-transparent font-mono shadow-none"
+                  value={value}
+                  onChange={(e) => setValue(e.target.value)}
+                  placeholder={typeDetails.placeholder}
+                  className="pr-11 font-mono"
                 />
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="absolute right-1 top-1 size-8"
+                  onClick={() => setShowValue((current) => !current)}
+                  aria-label={showValue ? "Hide credential" : "Show credential"}
+                >
+                  {showValue ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </Button>
               </div>
-            ) : null}
-          </div>
-          <p className="text-xs text-muted-foreground">
-            For 2FA, paste the manual Base32 setup key—not the current six-digit code. Passwords and
-            TOTP seeds are encrypted separately in Vault.
-          </p>
-          <div className="relative rounded-xl border border-border/80 bg-muted/20 p-3 pl-12">
-            <Globe className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Label htmlFor="credential-website" className="sr-only">
-              Website
-            </Label>
-            <Input
-              id="credential-website"
-              type="url"
-              value={website}
-              onChange={(e) => setWebsite(e.target.value)}
-              placeholder="Website"
-              className="border-0 bg-transparent shadow-none"
-            />
-          </div>
-          <div className="relative rounded-xl border border-border/80 bg-muted/20 p-3 pl-12">
-            <Tag className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Label htmlFor="credential-tags" className="sr-only">
-              Custom tags
-            </Label>
-            <Input
-              id="credential-tags"
-              value={tags}
-              onChange={(event) => setTags(event.target.value)}
-              placeholder="Tags separated by commas · production, supabase"
-              className="border-0 bg-transparent shadow-none"
-            />
-          </div>
-          <div className="relative rounded-xl border border-border/80 bg-muted/20 p-3 pl-12">
-            <FileText className="absolute left-4 top-5 size-4 text-muted-foreground" />
-            <Label htmlFor="credential-notes" className="sr-only">
-              Notes
-            </Label>
-            <Textarea
-              id="credential-notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Notes"
-              className="min-h-20 resize-y border-0 bg-transparent shadow-none"
-            />
-          </div>
-          <div className="space-y-2 rounded-xl border border-border/80 bg-muted/20 p-4">
-            <div className="flex items-center gap-2">
-              <FolderKanban className="size-4 text-muted-foreground" />
-              <Label>Assign to projects</Label>
+              {secretType === "password" ? (
+                <div className="relative p-3 pl-12">
+                  <Lock className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Label htmlFor="totp-secret" className="sr-only">
+                    2FA setup key
+                  </Label>
+                  <Input
+                    id="totp-secret"
+                    type="password"
+                    autoComplete="off"
+                    value={totpSecret}
+                    onChange={(e) => setTotpSecret(e.target.value)}
+                    placeholder="2FA secret key (TOTP) · optional"
+                    className="border-0 bg-transparent font-mono shadow-none"
+                  />
+                </div>
+              ) : null}
             </div>
             <p className="text-xs text-muted-foreground">
-              Optional. The credential is stored once and projects receive only a secure reference.
+              For 2FA, paste the manual Base32 setup key—not the current six-digit code. Passwords
+              and TOTP seeds are encrypted separately in Vault.
             </p>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {(projects.data ?? []).map((project) => (
-                <label
-                  key={project.id}
-                  className="flex items-center gap-2 rounded-lg border p-2 text-sm"
-                >
-                  <input
-                    type="checkbox"
-                    checked={projectIds.includes(project.id)}
-                    onChange={(event) =>
-                      setProjectIds((current) =>
-                        event.target.checked
-                          ? [...current, project.id]
-                          : current.filter((id) => id !== project.id),
-                      )
-                    }
-                  />
-                  <span className="truncate">{project.name}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-          <Button
-            size="sm"
-            onClick={() => createMutation.mutate()}
-            disabled={createMutation.isPending || !name.trim() || !value.trim()}
-          >
-            {createMutation.isPending ? (
-              <Loader2 className="mr-2 size-4 animate-spin" />
-            ) : (
-              <Lock className="mr-2 size-4" />
-            )}
-            Save {typeDetails.label.toLowerCase()}
-          </Button>
-        </CardContent>
-      </Card>
-
-      <Card className="mt-6 shadow-panel">
-        <CardHeader className="p-4">
-          <CardTitle className="text-base">Credential folders</CardTitle>
-          <CardDescription>
-            Group saved logins and keys. Sharing a folder gives selected projects metadata-only
-            references to every credential inside; secret values remain private to you.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4 p-4 pt-0">
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Input
-              aria-label="New credential folder name"
-              placeholder="e.g. Production accounts"
-              maxLength={80}
-              value={newFolderName}
-              onChange={(event) => setNewFolderName(event.target.value)}
-            />
-            <Button
-              className="h-8 shrink-0 px-3 text-xs"
-              onClick={() => createFolderMutation.mutate()}
-              disabled={!newFolderName.trim() || createFolderMutation.isPending}
-            >
-              {createFolderMutation.isPending ? (
-                <Loader2 className="mr-2 size-4 animate-spin" />
-              ) : (
-                <FolderKanban className="mr-2 size-4" />
-              )}
-              Create folder
-            </Button>
-          </div>
-          {folders.isLoading ? <Skeleton className="h-20 w-full" /> : null}
-          {!folders.isLoading && (folders.data ?? []).length === 0 ? (
-            <p className="rounded-lg border border-dashed px-3 py-4 text-sm text-muted-foreground">
-              No folders yet. Create one, then choose credentials and projects with Manage.
-            </p>
-          ) : null}
-          <div className="space-y-3">
-            {(folders.data ?? []).map((folder) => {
-              const members = (list.data ?? []).filter((row) =>
-                folder.credential_ids.includes(row.id),
-              );
-              return (
-                <div key={folder.id} className="rounded-xl border border-border/80 p-3">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <FolderKanban className="size-4 text-primary" />
-                        <p className="font-medium">{folder.name}</p>
-                        <Badge variant="secondary">{members.length} credentials</Badge>
-                      </div>
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {members.map((credential) => (
-                          <Badge key={credential.id} variant="outline">
-                            {credential.name}
-                          </Badge>
-                        ))}
-                        {members.length === 0 ? (
-                          <span className="text-xs text-muted-foreground">Empty folder</span>
-                        ) : null}
-                      </div>
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {folder.projects.map((project) => (
-                          <Badge key={project.id} variant="secondary">
-                            <FolderKanban className="mr-1 size-3" />
-                            {project.name}
-                          </Badge>
-                        ))}
-                        {folder.projects.length === 0 ? (
-                          <span className="text-xs text-muted-foreground">
-                            Not shared with projects
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-                    <div className="flex gap-1.5">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-1.5"
-                        onClick={() =>
-                          editingFolderId === folder.id
-                            ? setEditingFolderId(null)
-                            : beginEditingFolder(folder)
-                        }
-                      >
-                        <Pencil className="size-3.5" />
-                        {editingFolderId === folder.id ? "Close" : "Manage"}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        aria-label={`Delete folder ${folder.name}`}
-                        onClick={() => setPendingDeleteFolder({ id: folder.id, name: folder.name })}
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                  {editingFolderId === folder.id ? (
-                    <div className="mt-4 space-y-4 rounded-lg border border-border bg-muted/20 p-3">
-                      <div className="space-y-1.5">
-                        <Label htmlFor={`folder-name-${folder.id}`}>Folder name</Label>
-                        <Input
-                          id={`folder-name-${folder.id}`}
-                          maxLength={80}
-                          value={editFolderName}
-                          onChange={(event) => setEditFolderName(event.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Credentials in this folder</Label>
-                        <div className="max-h-56 space-y-1 overflow-y-auto rounded-lg border bg-background p-2">
-                          {(list.data ?? []).length === 0 ? (
-                            <p className="p-2 text-xs text-muted-foreground">
-                              Add credentials to your vault first.
-                            </p>
-                          ) : (
-                            (list.data ?? []).map((credential) => (
-                              <label
-                                key={credential.id}
-                                className="flex items-center gap-2 rounded-md p-2 text-sm hover:bg-muted/50"
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={editFolderCredentialIds.includes(credential.id)}
-                                  onChange={(event) =>
-                                    setEditFolderCredentialIds((current) =>
-                                      event.target.checked
-                                        ? [...new Set([...current, credential.id])]
-                                        : current.filter((id) => id !== credential.id),
-                                    )
-                                  }
-                                />
-                                <span className="min-w-0 truncate">{credential.name}</span>
-                                <span className="ml-auto shrink-0 text-xs text-muted-foreground">
-                                  {TYPE_DETAILS[credential.secret_type as SecretType]?.label ??
-                                    credential.secret_type}
-                                </span>
-                              </label>
-                            ))
-                          )}
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Share folder with projects</Label>
-                        <div className="grid gap-2 sm:grid-cols-2">
-                          {(projects.data ?? []).map((project) => (
-                            <label
-                              key={project.id}
-                              className="flex items-center gap-2 rounded-lg border bg-background p-2 text-sm"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={editFolderProjectIds.includes(project.id)}
-                                onChange={(event) =>
-                                  setEditFolderProjectIds((current) =>
-                                    event.target.checked
-                                      ? [...new Set([...current, project.id])]
-                                      : current.filter((id) => id !== project.id),
-                                  )
-                                }
-                              />
-                              <span className="truncate">{project.name}</span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Projects see credential names and types only. They cannot reveal passwords,
-                        keys, or 2FA seeds.
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          size="sm"
-                          onClick={() =>
-                            updateFolderMutation.mutate({
-                              id: folder.id,
-                              name: editFolderName,
-                              credentialIds: editFolderCredentialIds,
-                              projectIds: editFolderProjectIds,
-                            })
-                          }
-                          disabled={
-                            !editFolderName.trim() || updateFolderMutation.isPending || !list.data
-                          }
-                        >
-                          {updateFolderMutation.isPending ? (
-                            <Loader2 className="mr-2 size-4 animate-spin" />
-                          ) : null}
-                          Save folder
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setEditingFolderId(null)}
-                          disabled={updateFolderMutation.isPending}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="mt-6 shadow-panel">
-        <CardHeader className="p-4">
-          <CardTitle className="text-base">Stored credentials</CardTitle>
-          <CardDescription>
-            Values and notes stay hidden and are not loaded until you explicitly reveal them, one
-            item at a time. Revealed values and notes clear after 30 seconds.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-4 pt-0">
-          <div className="mb-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <div className="relative rounded-xl border border-border/80 bg-muted/20 p-3 pl-12">
+              <Globe className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Label htmlFor="credential-website" className="sr-only">
+                Website
+              </Label>
               <Input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search credentials"
-                className="pl-9"
+                id="credential-website"
+                type="url"
+                value={website}
+                onChange={(e) => setWebsite(e.target.value)}
+                placeholder="Website"
+                className="border-0 bg-transparent shadow-none"
               />
             </div>
-            <select
-              aria-label="Filter credential type"
-              value={typeFilter}
-              onChange={(event) => setTypeFilter(event.target.value as SecretType | "all")}
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-            >
-              <option value="all">All types</option>
-              {TYPES.map((type) => (
-                <option key={type.value} value={type.value}>
-                  {type.label}
-                </option>
-              ))}
-            </select>
-            <select
-              aria-label="Filter credential tag"
-              value={tagFilter}
-              onChange={(event) => setTagFilter(event.target.value)}
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-            >
-              <option value="all">All tags</option>
-              {availableTags.map((tag) => (
-                <option key={tag} value={tag}>
-                  {tag}
-                </option>
-              ))}
-            </select>
-            <select
-              aria-label="Filter credential project"
-              value={projectFilter}
-              onChange={(event) => setProjectFilter(event.target.value)}
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-            >
-              <option value="all">All projects</option>
-              {(projects.data ?? []).map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))}
-            </select>
-            <select
-              aria-label="Filter credential folder"
-              value={folderFilter}
-              onChange={(event) => setFolderFilter(event.target.value)}
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-            >
-              <option value="all">All folders</option>
-              {(folders.data ?? []).map((folder) => (
-                <option key={folder.id} value={folder.id}>
-                  {folder.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          {list.isLoading ? (
-            <Skeleton className="h-20 w-full" />
-          ) : visibleCredentials.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              {(list.data ?? []).length === 0 ? "No credentials yet." : "No matching credentials."}
-            </p>
-          ) : (
-            <div className="max-h-[36rem] space-y-2 overflow-y-auto pr-1">
-              {pagedCredentials.map((row) => (
-                <li key={row.id} className="rounded-xl border border-border px-4 py-3">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate font-medium">{row.name}</p>
-                      {row.email_address || row.username ? (
-                        <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                          {row.email_address || row.username}
-                        </p>
-                      ) : null}
-                      <div className="mt-1 flex flex-wrap gap-1">
-                        <Badge variant="secondary" className="text-xs">
-                          {TYPE_DETAILS[row.secret_type as SecretType]?.label ?? row.secret_type}
-                        </Badge>
-                      </div>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="gap-1.5"
-                      aria-expanded={expandedCredentialId === row.id}
-                      aria-label={
-                        expandedCredentialId === row.id
-                          ? `Hide details for ${row.name}`
-                          : `Show details for ${row.name}`
+            <div className="relative rounded-xl border border-border/80 bg-muted/20 p-3 pl-12">
+              <Tag className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Label htmlFor="credential-tags" className="sr-only">
+                Custom tags
+              </Label>
+              <Input
+                id="credential-tags"
+                value={tags}
+                onChange={(event) => setTags(event.target.value)}
+                placeholder="Tags separated by commas · production, supabase"
+                className="border-0 bg-transparent shadow-none"
+              />
+            </div>
+            <div className="relative rounded-xl border border-border/80 bg-muted/20 p-3 pl-12">
+              <FileText className="absolute left-4 top-5 size-4 text-muted-foreground" />
+              <Label htmlFor="credential-notes" className="sr-only">
+                Notes
+              </Label>
+              <Textarea
+                id="credential-notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Notes"
+                className="min-h-20 resize-y border-0 bg-transparent shadow-none"
+              />
+            </div>
+            <div className="space-y-2 rounded-xl border border-border/80 bg-muted/20 p-4">
+              <div className="flex items-center gap-2">
+                <FolderKanban className="size-4 text-muted-foreground" />
+                <Label>Assign to projects</Label>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Optional. The credential is stored once and projects receive only a secure
+                reference.
+              </p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {(projects.data ?? []).map((project) => (
+                  <label
+                    key={project.id}
+                    className="flex items-center gap-2 rounded-lg border p-2 text-sm"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={projectIds.includes(project.id)}
+                      onChange={(event) =>
+                        setProjectIds((current) =>
+                          event.target.checked
+                            ? [...current, project.id]
+                            : current.filter((id) => id !== project.id),
+                        )
                       }
-                      onClick={() =>
-                        setExpandedCredentialId((current) => (current === row.id ? null : row.id))
-                      }
-                    >
-                      <ChevronDown
-                        className={
-                          expandedCredentialId === row.id
-                            ? "size-3.5 rotate-180 transition-transform"
-                            : "size-3.5 transition-transform"
-                        }
-                      />
-                      {expandedCredentialId === row.id ? "Hide" : "Details"}
-                    </Button>
-                  </div>
-                  {expandedCredentialId === row.id ? (
-                    <>
-                      <div className="mt-3 flex flex-wrap gap-1">
-                        {(row.tags ?? []).map((tag: string) => (
-                          <Badge key={tag} variant="outline" className="text-xs">
-                            #{tag}
-                          </Badge>
-                        ))}
-                        {(row.projects ?? []).map((project: { id: string; name: string }) => (
-                          <Badge key={project.id} variant="outline" className="text-xs">
-                            <FolderKanban className="mr-1 size-3" />
-                            {project.name}
-                          </Badge>
-                        ))}
-                        {(folders.data ?? [])
-                          .filter((folder) => folder.credential_ids.includes(row.id))
-                          .map((folder) => (
-                            <Badge key={folder.id} variant="secondary" className="text-xs">
-                              {folder.name}
+                    />
+                    <span className="truncate">{project.name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => createMutation.mutate()}
+              disabled={createMutation.isPending || !name.trim() || !value.trim()}
+            >
+              {createMutation.isPending ? (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              ) : (
+                <Lock className="mr-2 size-4" />
+              )}
+              Save {typeDetails.label.toLowerCase()}
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {section === "folders" ? (
+        <Card className="mt-6 shadow-panel">
+          <CardHeader className="p-4">
+            <CardTitle className="text-base">Credential folders</CardTitle>
+            <CardDescription>
+              Group saved logins and keys. Sharing a folder gives selected projects metadata-only
+              references to every credential inside; secret values remain private to you.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 p-4 pt-0">
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input
+                aria-label="New credential folder name"
+                placeholder="e.g. Production accounts"
+                maxLength={80}
+                value={newFolderName}
+                onChange={(event) => setNewFolderName(event.target.value)}
+              />
+              <Button
+                className="h-8 shrink-0 px-3 text-xs"
+                onClick={() => createFolderMutation.mutate()}
+                disabled={!newFolderName.trim() || createFolderMutation.isPending}
+              >
+                {createFolderMutation.isPending ? (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                ) : (
+                  <FolderKanban className="mr-2 size-4" />
+                )}
+                Create folder
+              </Button>
+            </div>
+            {folders.isLoading ? <Skeleton className="h-20 w-full" /> : null}
+            {!folders.isLoading && (folders.data ?? []).length === 0 ? (
+              <p className="rounded-lg border border-dashed px-3 py-4 text-sm text-muted-foreground">
+                No folders yet. Create one, then choose credentials and projects with Manage.
+              </p>
+            ) : null}
+            <div className="space-y-3">
+              {(folders.data ?? []).map((folder) => {
+                const members = (list.data ?? []).filter((row) =>
+                  folder.credential_ids.includes(row.id),
+                );
+                return (
+                  <div key={folder.id} className="rounded-xl border border-border/80 p-3">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <FolderKanban className="size-4 text-primary" />
+                          <p className="font-medium">{folder.name}</p>
+                          <Badge variant="secondary">{members.length} credentials</Badge>
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {members.map((credential) => (
+                            <Badge key={credential.id} variant="outline">
+                              {credential.name}
                             </Badge>
                           ))}
+                          {members.length === 0 ? (
+                            <span className="text-xs text-muted-foreground">Empty folder</span>
+                          ) : null}
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {folder.projects.map((project) => (
+                            <Badge key={project.id} variant="secondary">
+                              <FolderKanban className="mr-1 size-3" />
+                              {project.name}
+                            </Badge>
+                          ))}
+                          {folder.projects.length === 0 ? (
+                            <span className="text-xs text-muted-foreground">
+                              Not shared with projects
+                            </span>
+                          ) : null}
+                        </div>
                       </div>
-                      <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                      <div className="flex gap-1.5">
                         <Button
                           size="sm"
                           variant="outline"
-                          className="min-w-28 justify-center gap-1.5"
-                          onClick={() => beginEditingValue(row.id)}
+                          className="gap-1.5"
+                          onClick={() =>
+                            editingFolderId === folder.id
+                              ? setEditingFolderId(null)
+                              : beginEditingFolder(folder)
+                          }
                         >
-                          <Pencil className="size-3.5" /> Edit value
+                          <Pencil className="size-3.5" />
+                          {editingFolderId === folder.id ? "Close" : "Manage"}
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="min-w-28 justify-center gap-1.5"
-                          onClick={() => beginEditingOrganization(row)}
-                        >
-                          <Pencil className="size-3.5" /> Organize
-                        </Button>
-                        {!revealedValues[row.id] ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="min-w-28 justify-center gap-1.5"
-                            onClick={() => revealMutation.mutate(row.id)}
-                            disabled={revealMutation.isPending}
-                          >
-                            <Eye className="size-3.5" /> Reveal
-                          </Button>
-                        ) : null}
-                        {row.has_totp ? (
-                          totpCodes[row.id] ? (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="gap-1.5 font-mono"
-                              aria-label={`Copy 2FA code for ${row.name}`}
-                              onClick={() => copyTotp(row.id, totpCodes[row.id]!.code)}
-                            >
-                              {copiedId === row.id ? (
-                                <Check className="size-3.5" />
-                              ) : (
-                                <Clipboard className="size-3.5" />
-                              )}
-                              {totpCodes[row.id]!.code}
-                              <span className="font-sans text-[10px] text-muted-foreground">
-                                {totpCodes[row.id]!.seconds}s
-                              </span>
-                            </Button>
-                          ) : (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="min-w-28 justify-center gap-1.5"
-                              onClick={() => totpMutation.mutate(row.id)}
-                              disabled={totpMutation.isPending}
-                            >
-                              <KeyRound className="size-3.5" /> Show 2FA code
-                            </Button>
-                          )
-                        ) : null}
                         <Button
                           size="sm"
                           variant="ghost"
-                          aria-label={`Delete ${row.name}`}
-                          onClick={() => setPendingDelete({ id: row.id, name: row.name })}
-                          disabled={deleteMutation.isPending}
+                          aria-label={`Delete folder ${folder.name}`}
+                          onClick={() =>
+                            setPendingDeleteFolder({ id: folder.id, name: folder.name })
+                          }
                         >
                           <Trash2 className="size-3.5" />
                         </Button>
                       </div>
-                      {revealedValues[row.id] ? (
-                        <div className="mt-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
-                          <Label
-                            htmlFor={`revealed-${row.id}`}
-                            className="text-xs text-muted-foreground"
-                          >
-                            {TYPE_DETAILS[row.secret_type as SecretType]?.valueLabel ??
-                              "Secret value"}
-                          </Label>
-                          <div className="mt-1 flex gap-2">
-                            <Input
-                              id={`revealed-${row.id}`}
-                              readOnly
-                              value={revealedValues[row.id]}
-                              className="min-w-0 font-mono"
-                            />
-                            <Button
-                              size="icon"
-                              variant="outline"
-                              aria-label={`Copy credential value for ${row.name}`}
-                              onClick={() => copyCredential(row.id, revealedValues[row.id]!)}
-                            >
-                              {copiedId === row.id ? (
-                                <Check className="size-4" />
-                              ) : (
-                                <Clipboard className="size-4" />
-                              )}
-                            </Button>
-                            <Button
-                              size="icon"
-                              variant="outline"
-                              aria-label={`Hide credential value for ${row.name}`}
-                              onClick={() =>
-                                setRevealedValues((previous) => {
-                                  const next = { ...previous };
-                                  delete next[row.id];
-                                  return next;
-                                })
-                              }
-                            >
-                              <EyeOff className="size-4" />
-                            </Button>
-                          </div>
-                          <p className="mt-2 text-[11px] text-muted-foreground">
-                            This is the exact value stored in Vault. It will hide automatically
-                            after 30 seconds.
-                          </p>
+                    </div>
+                    {editingFolderId === folder.id ? (
+                      <div className="mt-4 space-y-4 rounded-lg border border-border bg-muted/20 p-3">
+                        <div className="space-y-1.5">
+                          <Label htmlFor={`folder-name-${folder.id}`}>Folder name</Label>
+                          <Input
+                            id={`folder-name-${folder.id}`}
+                            maxLength={80}
+                            value={editFolderName}
+                            onChange={(event) => setEditFolderName(event.target.value)}
+                          />
                         </div>
-                      ) : null}
-                      {editingValueId === row.id ? (
-                        <div className="mt-3 space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
-                          <div>
-                            <p className="text-sm font-medium">Replace encrypted value</p>
-                            <p className="text-xs text-muted-foreground">
-                              Enter the replacement. The current value is never loaded into this
-                              form.
-                            </p>
+                        <div className="space-y-2">
+                          <Label>Credentials in this folder</Label>
+                          <div className="max-h-56 space-y-1 overflow-y-auto rounded-lg border bg-background p-2">
+                            {(list.data ?? []).length === 0 ? (
+                              <p className="p-2 text-xs text-muted-foreground">
+                                Add credentials to your vault first.
+                              </p>
+                            ) : (
+                              (list.data ?? []).map((credential) => (
+                                <label
+                                  key={credential.id}
+                                  className="flex items-center gap-2 rounded-md p-2 text-sm hover:bg-muted/50"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={editFolderCredentialIds.includes(credential.id)}
+                                    onChange={(event) =>
+                                      setEditFolderCredentialIds((current) =>
+                                        event.target.checked
+                                          ? [...new Set([...current, credential.id])]
+                                          : current.filter((id) => id !== credential.id),
+                                      )
+                                    }
+                                  />
+                                  <span className="min-w-0 truncate">{credential.name}</span>
+                                  <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+                                    {TYPE_DETAILS[credential.secret_type as SecretType]?.label ??
+                                      credential.secret_type}
+                                  </span>
+                                </label>
+                              ))
+                            )}
                           </div>
-                          <div className="space-y-1.5">
-                            <Label htmlFor={`edit-value-${row.id}`}>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Share folder with projects</Label>
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            {(projects.data ?? []).map((project) => (
+                              <label
+                                key={project.id}
+                                className="flex items-center gap-2 rounded-lg border bg-background p-2 text-sm"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={editFolderProjectIds.includes(project.id)}
+                                  onChange={(event) =>
+                                    setEditFolderProjectIds((current) =>
+                                      event.target.checked
+                                        ? [...new Set([...current, project.id])]
+                                        : current.filter((id) => id !== project.id),
+                                    )
+                                  }
+                                />
+                                <span className="truncate">{project.name}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Projects see credential names and types only. They cannot reveal
+                          passwords, keys, or 2FA seeds.
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() =>
+                              updateFolderMutation.mutate({
+                                id: folder.id,
+                                name: editFolderName,
+                                credentialIds: editFolderCredentialIds,
+                                projectIds: editFolderProjectIds,
+                              })
+                            }
+                            disabled={
+                              !editFolderName.trim() || updateFolderMutation.isPending || !list.data
+                            }
+                          >
+                            {updateFolderMutation.isPending ? (
+                              <Loader2 className="mr-2 size-4 animate-spin" />
+                            ) : null}
+                            Save folder
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setEditingFolderId(null)}
+                            disabled={updateFolderMutation.isPending}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {section === "credentials" ? (
+        <Card className="mt-6 shadow-panel">
+          <CardHeader className="p-4">
+            <CardTitle className="text-base">Stored credentials</CardTitle>
+            <CardDescription>
+              Values and notes stay hidden and are not loaded until you explicitly reveal them, one
+              item at a time. Revealed values and notes clear after 30 seconds.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 pt-0">
+            <div className="mb-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search credentials"
+                  className="pl-9"
+                />
+              </div>
+              <select
+                aria-label="Filter credential type"
+                value={typeFilter}
+                onChange={(event) => setTypeFilter(event.target.value as SecretType | "all")}
+                className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+              >
+                <option value="all">All types</option>
+                {TYPES.map((type) => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
+                ))}
+              </select>
+              <select
+                aria-label="Filter credential tag"
+                value={tagFilter}
+                onChange={(event) => setTagFilter(event.target.value)}
+                className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+              >
+                <option value="all">All tags</option>
+                {availableTags.map((tag) => (
+                  <option key={tag} value={tag}>
+                    {tag}
+                  </option>
+                ))}
+              </select>
+              <select
+                aria-label="Filter credential project"
+                value={projectFilter}
+                onChange={(event) => setProjectFilter(event.target.value)}
+                className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+              >
+                <option value="all">All projects</option>
+                {(projects.data ?? []).map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
+              <select
+                aria-label="Filter credential folder"
+                value={folderFilter}
+                onChange={(event) => setFolderFilter(event.target.value)}
+                className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+              >
+                <option value="all">All folders</option>
+                {(folders.data ?? []).map((folder) => (
+                  <option key={folder.id} value={folder.id}>
+                    {folder.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {list.isLoading ? (
+              <Skeleton className="h-20 w-full" />
+            ) : visibleCredentials.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                {(list.data ?? []).length === 0
+                  ? "No credentials yet."
+                  : "No matching credentials."}
+              </p>
+            ) : (
+              <div className="max-h-[36rem] space-y-2 overflow-y-auto pr-1">
+                {pagedCredentials.map((row) => (
+                  <li key={row.id} className="rounded-xl border border-border px-4 py-3">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">{row.name}</p>
+                        {row.email_address || row.username ? (
+                          <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                            {row.email_address || row.username}
+                          </p>
+                        ) : null}
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          <Badge variant="secondary" className="text-xs">
+                            {TYPE_DETAILS[row.secret_type as SecretType]?.label ?? row.secret_type}
+                          </Badge>
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1.5"
+                        aria-expanded={expandedCredentialId === row.id}
+                        aria-label={
+                          expandedCredentialId === row.id
+                            ? `Hide details for ${row.name}`
+                            : `Show details for ${row.name}`
+                        }
+                        onClick={() =>
+                          setExpandedCredentialId((current) => (current === row.id ? null : row.id))
+                        }
+                      >
+                        <ChevronDown
+                          className={
+                            expandedCredentialId === row.id
+                              ? "size-3.5 rotate-180 transition-transform"
+                              : "size-3.5 transition-transform"
+                          }
+                        />
+                        {expandedCredentialId === row.id ? "Hide" : "Details"}
+                      </Button>
+                    </div>
+                    {expandedCredentialId === row.id ? (
+                      <>
+                        <div className="mt-3 flex flex-wrap gap-1">
+                          {(row.tags ?? []).map((tag: string) => (
+                            <Badge key={tag} variant="outline" className="text-xs">
+                              #{tag}
+                            </Badge>
+                          ))}
+                          {(row.projects ?? []).map((project: { id: string; name: string }) => (
+                            <Badge key={project.id} variant="outline" className="text-xs">
+                              <FolderKanban className="mr-1 size-3" />
+                              {project.name}
+                            </Badge>
+                          ))}
+                          {(folders.data ?? [])
+                            .filter((folder) => folder.credential_ids.includes(row.id))
+                            .map((folder) => (
+                              <Badge key={folder.id} variant="secondary" className="text-xs">
+                                {folder.name}
+                              </Badge>
+                            ))}
+                        </div>
+                        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="min-w-28 justify-center gap-1.5"
+                            onClick={() => beginEditingValue(row.id)}
+                          >
+                            <Pencil className="size-3.5" /> Edit value
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="min-w-28 justify-center gap-1.5"
+                            onClick={() => beginEditingOrganization(row)}
+                          >
+                            <Pencil className="size-3.5" /> Organize
+                          </Button>
+                          {!revealedValues[row.id] ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="min-w-28 justify-center gap-1.5"
+                              onClick={() => revealMutation.mutate(row.id)}
+                              disabled={revealMutation.isPending}
+                            >
+                              <Eye className="size-3.5" /> Reveal
+                            </Button>
+                          ) : null}
+                          {row.has_totp ? (
+                            totpCodes[row.id] ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-1.5 font-mono"
+                                aria-label={`Copy 2FA code for ${row.name}`}
+                                onClick={() => copyTotp(row.id, totpCodes[row.id]!.code)}
+                              >
+                                {copiedId === row.id ? (
+                                  <Check className="size-3.5" />
+                                ) : (
+                                  <Clipboard className="size-3.5" />
+                                )}
+                                {totpCodes[row.id]!.code}
+                                <span className="font-sans text-[10px] text-muted-foreground">
+                                  {totpCodes[row.id]!.seconds}s
+                                </span>
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="min-w-28 justify-center gap-1.5"
+                                onClick={() => totpMutation.mutate(row.id)}
+                                disabled={totpMutation.isPending}
+                              >
+                                <KeyRound className="size-3.5" /> Show 2FA code
+                              </Button>
+                            )
+                          ) : null}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            aria-label={`Delete ${row.name}`}
+                            onClick={() => setPendingDelete({ id: row.id, name: row.name })}
+                            disabled={deleteMutation.isPending}
+                          >
+                            <Trash2 className="size-3.5" />
+                          </Button>
+                        </div>
+                        {revealedValues[row.id] ? (
+                          <div className="mt-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
+                            <Label
+                              htmlFor={`revealed-${row.id}`}
+                              className="text-xs text-muted-foreground"
+                            >
                               {TYPE_DETAILS[row.secret_type as SecretType]?.valueLabel ??
                                 "Secret value"}
                             </Label>
-                            <div className="flex gap-2">
+                            <div className="mt-1 flex gap-2">
                               <Input
-                                id={`edit-value-${row.id}`}
-                                type={showEditValue ? "text" : "password"}
-                                autoComplete="new-password"
-                                value={editValue}
-                                onChange={(event) => setEditValue(event.target.value)}
-                                placeholder="Enter new value"
+                                id={`revealed-${row.id}`}
+                                readOnly
+                                value={revealedValues[row.id]}
                                 className="min-w-0 font-mono"
                               />
                               <Button
-                                type="button"
-                                size="sm"
+                                size="icon"
                                 variant="outline"
-                                onClick={() => setShowEditValue((current) => !current)}
+                                aria-label={`Copy credential value for ${row.name}`}
+                                onClick={() => copyCredential(row.id, revealedValues[row.id]!)}
                               >
-                                {showEditValue ? "Hide" : "Show"}
+                                {copiedId === row.id ? (
+                                  <Check className="size-4" />
+                                ) : (
+                                  <Clipboard className="size-4" />
+                                )}
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="outline"
+                                aria-label={`Hide credential value for ${row.name}`}
+                                onClick={() =>
+                                  setRevealedValues((previous) => {
+                                    const next = { ...previous };
+                                    delete next[row.id];
+                                    return next;
+                                  })
+                                }
+                              >
+                                <EyeOff className="size-4" />
                               </Button>
                             </div>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            <Button
-                              size="sm"
-                              onClick={() => valueMutation.mutate()}
-                              disabled={editValue.length < 4 || valueMutation.isPending}
-                            >
-                              {valueMutation.isPending ? (
-                                <Loader2 className="mr-2 size-4 animate-spin" />
-                              ) : null}
-                              Save new value
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => {
-                                setEditingValueId(null);
-                                setEditValue("");
-                                setShowEditValue(false);
-                              }}
-                              disabled={valueMutation.isPending}
-                            >
-                              Cancel
-                            </Button>
-                          </div>
-                        </div>
-                      ) : null}
-                      {editingCredentialId === row.id ? (
-                        <div className="mt-3 space-y-3 rounded-lg border border-border bg-muted/20 p-3">
-                          <div>
-                            <p className="text-sm font-medium">Edit organization</p>
-                            <p className="text-xs text-muted-foreground">
-                              Add or remove project access without duplicating or changing the Vault
-                              secret.
+                            <p className="mt-2 text-[11px] text-muted-foreground">
+                              This is the exact value stored in Vault. It will hide automatically
+                              after 30 seconds.
                             </p>
                           </div>
-                          <div className="space-y-1.5">
-                            <Label htmlFor={`edit-tags-${row.id}`}>Tags</Label>
-                            <Input
-                              id={`edit-tags-${row.id}`}
-                              value={editTags}
-                              onChange={(event) => setEditTags(event.target.value)}
-                              placeholder="production, supabase"
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label htmlFor={`edit-notes-${row.id}`}>Notes</Label>
-                            {editNotesLoaded ? (
-                              <Textarea
-                                id={`edit-notes-${row.id}`}
-                                value={editNotes}
-                                onChange={(event) => setEditNotes(event.target.value)}
-                                placeholder="Notes"
-                                className="min-h-20"
-                              />
-                            ) : (
-                              <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed bg-background p-2 text-xs text-muted-foreground">
-                                <Lock className="size-3.5" />
-                                <span>
-                                  {row.has_notes
-                                    ? "Notes are hidden and will be kept unchanged."
-                                    : "No notes saved."}
-                                </span>
+                        ) : null}
+                        {editingValueId === row.id ? (
+                          <div className="mt-3 space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
+                            <div>
+                              <p className="text-sm font-medium">Replace encrypted value</p>
+                              <p className="text-xs text-muted-foreground">
+                                Enter the replacement. The current value is never loaded into this
+                                form.
+                              </p>
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label htmlFor={`edit-value-${row.id}`}>
+                                {TYPE_DETAILS[row.secret_type as SecretType]?.valueLabel ??
+                                  "Secret value"}
+                              </Label>
+                              <div className="flex gap-2">
+                                <Input
+                                  id={`edit-value-${row.id}`}
+                                  type={showEditValue ? "text" : "password"}
+                                  autoComplete="new-password"
+                                  value={editValue}
+                                  onChange={(event) => setEditValue(event.target.value)}
+                                  placeholder="Enter new value"
+                                  className="min-w-0 font-mono"
+                                />
                                 <Button
                                   type="button"
                                   size="sm"
                                   variant="outline"
-                                  className="ml-auto"
-                                  onClick={() =>
-                                    row.has_notes
-                                      ? revealNotesMutation.mutate({ id: row.id, forEdit: true })
-                                      : setEditNotesLoaded(true)
-                                  }
-                                  disabled={revealNotesMutation.isPending}
+                                  onClick={() => setShowEditValue((current) => !current)}
                                 >
-                                  {row.has_notes ? "Load notes to edit" : "Add notes"}
+                                  {showEditValue ? "Hide" : "Show"}
                                 </Button>
                               </div>
-                            )}
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Assigned projects</Label>
-                            <div className="grid gap-2 sm:grid-cols-2">
-                              {(projects.data ?? []).map((project) => (
-                                <label
-                                  key={project.id}
-                                  className="flex items-center gap-2 rounded-lg border bg-background p-2 text-sm"
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={editProjectIds.includes(project.id)}
-                                    onChange={(event) =>
-                                      setEditProjectIds((current) =>
-                                        event.target.checked
-                                          ? [...new Set([...current, project.id])]
-                                          : current.filter((id) => id !== project.id),
-                                      )
-                                    }
-                                  />
-                                  <span className="truncate">{project.name}</span>
-                                </label>
-                              ))}
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              <Button
+                                size="sm"
+                                onClick={() => valueMutation.mutate()}
+                                disabled={editValue.length < 4 || valueMutation.isPending}
+                              >
+                                {valueMutation.isPending ? (
+                                  <Loader2 className="mr-2 size-4 animate-spin" />
+                                ) : null}
+                                Save new value
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  setEditingValueId(null);
+                                  setEditValue("");
+                                  setShowEditValue(false);
+                                }}
+                                disabled={valueMutation.isPending}
+                              >
+                                Cancel
+                              </Button>
                             </div>
                           </div>
-                          <div className="flex flex-wrap gap-2">
-                            <Button
-                              size="sm"
-                              onClick={() => organizationMutation.mutate()}
-                              disabled={organizationMutation.isPending}
-                            >
-                              {organizationMutation.isPending ? (
-                                <Loader2 className="mr-2 size-4 animate-spin" />
-                              ) : null}
-                              Save organization
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => {
-                                setEditingCredentialId(null);
-                                setEditNotes("");
-                                setEditNotesLoaded(false);
-                              }}
-                              disabled={organizationMutation.isPending}
-                            >
-                              Cancel
-                            </Button>
+                        ) : null}
+                        {editingCredentialId === row.id ? (
+                          <div className="mt-3 space-y-3 rounded-lg border border-border bg-muted/20 p-3">
+                            <div>
+                              <p className="text-sm font-medium">Edit organization</p>
+                              <p className="text-xs text-muted-foreground">
+                                Add or remove project access without duplicating or changing the
+                                Vault secret.
+                              </p>
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label htmlFor={`edit-tags-${row.id}`}>Tags</Label>
+                              <Input
+                                id={`edit-tags-${row.id}`}
+                                value={editTags}
+                                onChange={(event) => setEditTags(event.target.value)}
+                                placeholder="production, supabase"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label htmlFor={`edit-notes-${row.id}`}>Notes</Label>
+                              {editNotesLoaded ? (
+                                <Textarea
+                                  id={`edit-notes-${row.id}`}
+                                  value={editNotes}
+                                  onChange={(event) => setEditNotes(event.target.value)}
+                                  placeholder="Notes"
+                                  className="min-h-20"
+                                />
+                              ) : (
+                                <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed bg-background p-2 text-xs text-muted-foreground">
+                                  <Lock className="size-3.5" />
+                                  <span>
+                                    {row.has_notes
+                                      ? "Notes are hidden and will be kept unchanged."
+                                      : "No notes saved."}
+                                  </span>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    className="ml-auto"
+                                    onClick={() =>
+                                      row.has_notes
+                                        ? revealNotesMutation.mutate({ id: row.id, forEdit: true })
+                                        : setEditNotesLoaded(true)
+                                    }
+                                    disabled={revealNotesMutation.isPending}
+                                  >
+                                    {row.has_notes ? "Load notes to edit" : "Add notes"}
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Assigned projects</Label>
+                              <div className="grid gap-2 sm:grid-cols-2">
+                                {(projects.data ?? []).map((project) => (
+                                  <label
+                                    key={project.id}
+                                    className="flex items-center gap-2 rounded-lg border bg-background p-2 text-sm"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={editProjectIds.includes(project.id)}
+                                      onChange={(event) =>
+                                        setEditProjectIds((current) =>
+                                          event.target.checked
+                                            ? [...new Set([...current, project.id])]
+                                            : current.filter((id) => id !== project.id),
+                                        )
+                                      }
+                                    />
+                                    <span className="truncate">{project.name}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              <Button
+                                size="sm"
+                                onClick={() => organizationMutation.mutate()}
+                                disabled={organizationMutation.isPending}
+                              >
+                                {organizationMutation.isPending ? (
+                                  <Loader2 className="mr-2 size-4 animate-spin" />
+                                ) : null}
+                                Save organization
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  setEditingCredentialId(null);
+                                  setEditNotes("");
+                                  setEditNotesLoaded(false);
+                                }}
+                                disabled={organizationMutation.isPending}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
                           </div>
-                        </div>
-                      ) : null}
-                      {row.website || row.has_notes ? (
-                        <div className="mt-3 border-t border-border/70 pt-3 text-xs text-muted-foreground">
-                          {row.website ? <p className="truncate">{row.website}</p> : null}
-                          {row.has_notes ? (
-                            revealedNotes[row.id] !== undefined ? (
-                              <div className="mt-2 rounded-lg border border-primary/30 bg-primary/5 p-2">
-                                <div className="flex items-center justify-between gap-2">
-                                  <span className="font-medium text-foreground">Notes</span>
+                        ) : null}
+                        {row.website || row.has_notes ? (
+                          <div className="mt-3 border-t border-border/70 pt-3 text-xs text-muted-foreground">
+                            {row.website ? <p className="truncate">{row.website}</p> : null}
+                            {row.has_notes ? (
+                              revealedNotes[row.id] !== undefined ? (
+                                <div className="mt-2 rounded-lg border border-primary/30 bg-primary/5 p-2">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="font-medium text-foreground">Notes</span>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="gap-1.5"
+                                      aria-label={`Hide notes for ${row.name}`}
+                                      onClick={() => clearRevealedNotes(row.id)}
+                                    >
+                                      <EyeOff className="size-3.5" /> Hide
+                                    </Button>
+                                  </div>
+                                  <p className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap break-words font-mono text-[11px]">
+                                    {revealedNotes[row.id]}
+                                  </p>
+                                  <p className="mt-1 text-[10px]">
+                                    Hides automatically after 30 seconds.
+                                  </p>
+                                </div>
+                              ) : (
+                                <div className="mt-1 flex items-center gap-2">
+                                  <FileText className="size-3.5" />
+                                  <span>Notes hidden</span>
                                   <Button
                                     size="sm"
                                     variant="ghost"
                                     className="gap-1.5"
-                                    aria-label={`Hide notes for ${row.name}`}
-                                    onClick={() => clearRevealedNotes(row.id)}
+                                    aria-label={`Reveal notes for ${row.name}`}
+                                    onClick={() =>
+                                      revealNotesMutation.mutate({ id: row.id, forEdit: false })
+                                    }
+                                    disabled={revealNotesMutation.isPending}
                                   >
-                                    <EyeOff className="size-3.5" /> Hide
+                                    <Eye className="size-3.5" /> Reveal notes
                                   </Button>
                                 </div>
-                                <p className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap break-words font-mono text-[11px]">
-                                  {revealedNotes[row.id]}
-                                </p>
-                                <p className="mt-1 text-[10px]">
-                                  Hides automatically after 30 seconds.
-                                </p>
-                              </div>
-                            ) : (
-                              <div className="mt-1 flex items-center gap-2">
-                                <FileText className="size-3.5" />
-                                <span>Notes hidden</span>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="gap-1.5"
-                                  aria-label={`Reveal notes for ${row.name}`}
-                                  onClick={() =>
-                                    revealNotesMutation.mutate({ id: row.id, forEdit: false })
-                                  }
-                                  disabled={revealNotesMutation.isPending}
-                                >
-                                  <Eye className="size-3.5" /> Reveal notes
-                                </Button>
-                              </div>
-                            )
-                          ) : null}
-                        </div>
-                      ) : null}
-                    </>
-                  ) : null}
-                </li>
-              ))}
-            </div>
-          )}
-          {!list.isLoading && visibleCredentials.length > 0 ? (
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-              <span>
-                Showing {pagedCredentials.length} of {visibleCredentials.length}
-                {visibleCredentials.length !== (list.data ?? []).length
-                  ? ` matching (${(list.data ?? []).length} total)`
-                  : ""}
-              </span>
-              {pagedCredentials.length < visibleCredentials.length ? (
-                <Button size="sm" variant="outline" onClick={showMoreCredentials}>
-                  Show{" "}
-                  {Math.min(
-                    CREDENTIALS_PAGE_SIZE,
-                    visibleCredentials.length - pagedCredentials.length,
-                  )}{" "}
-                  more
-                </Button>
-              ) : null}
-            </div>
-          ) : null}
-        </CardContent>
-      </Card>
+                              )
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </>
+                    ) : null}
+                  </li>
+                ))}
+              </div>
+            )}
+            {!list.isLoading && visibleCredentials.length > 0 ? (
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                <span>
+                  Showing {pagedCredentials.length} of {visibleCredentials.length}
+                  {visibleCredentials.length !== (list.data ?? []).length
+                    ? ` matching (${(list.data ?? []).length} total)`
+                    : ""}
+                </span>
+                {pagedCredentials.length < visibleCredentials.length ? (
+                  <Button size="sm" variant="outline" onClick={showMoreCredentials}>
+                    Show{" "}
+                    {Math.min(
+                      CREDENTIALS_PAGE_SIZE,
+                      visibleCredentials.length - pagedCredentials.length,
+                    )}{" "}
+                    more
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <AlertDialog
         open={Boolean(pendingDelete)}
