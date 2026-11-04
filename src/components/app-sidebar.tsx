@@ -1,6 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   Globe,
+  Monitor,
   Terminal,
   Smartphone,
   Boxes,
@@ -66,6 +67,7 @@ const CLOUD: Item[] = [
   { to: "/cloud-sandbox", label: "Sandbox", icon: Boxes },
   { to: "/cloud-phone", label: "Cloud Phone", icon: Smartphone },
   { to: "/cloud-browser", label: "Cloud Browser", icon: Globe },
+  { to: "/cloud-computer", label: "Cloud Computer", icon: Monitor },
   { to: "/cloud-terminal", label: "Cloud Terminal", icon: Terminal },
 ];
 
