@@ -1,4 +1,8 @@
-import { isResourceApproved, resourceReviewState } from "./resource-approval.ts";
+import {
+  hasResourceReviewEvidence,
+  isResourceApproved,
+  resourceReviewState,
+} from "./resource-approval.ts";
 export const REVIEW_ACTIONS = [
   "verify",
   "unverify",
@@ -56,7 +60,14 @@ export function reviewUpdate(action: ReviewAction): { verified?: boolean; publis
  * the target state are skipped so the count reflects real changes.
  */
 export function planBulkReview<
-  T extends { id: string; verified: boolean; published: boolean; installation_config?: unknown },
+  T extends {
+    id: string;
+    verified: boolean;
+    published: boolean;
+    installation_config?: unknown;
+    version?: string | null;
+    owner_id?: string | null;
+  },
 >(
   resources: T[],
   action: ReviewAction,
@@ -74,6 +85,13 @@ export function planBulkReview<
     }
     if (action === "publish" && !isResourceApproved(resource)) {
       skipped.push({ id: resource.id, reason: "not_verified" });
+      continue;
+    }
+    if (
+      ["verify", "publish", "verify_publish"].includes(action) &&
+      !hasResourceReviewEvidence(resource)
+    ) {
+      skipped.push({ id: resource.id, reason: "missing_review_evidence" });
       continue;
     }
     const target = reviewUpdate(action);
