@@ -712,13 +712,18 @@ test("public homepage removes Marketplace header navigation while preserving wor
   assert.ok(!project.includes("Back to projects"));
 });
 
-test("cloud computer is available from the single browser workspace", () => {
+test("cloud computer is a separate cloud workspace destination", () => {
   const cloud = appCategories.find((category) => category.id === "cloud");
   assert.ok(cloud?.items.some((item) => item.to === "/cloud-browser"));
-  assert.ok(!cloud?.items.some((item) => item.to === "/cloud-computer"));
-  const oldRoute = readFileSync(
+  assert.ok(cloud?.items.some((item) => item.to === "/cloud-computer"));
+  assert.equal(
+    cloud?.items.findIndex((item) => item.to === "/cloud-computer"),
+    cloud?.items.findIndex((item) => item.to === "/cloud-browser") + 1,
+  );
+  const route = readFileSync(
     path.resolve(process.cwd(), "src/routes/_authenticated/cloud-computer.tsx"),
     "utf8",
   );
-  assert.match(oldRoute, /redirect\(\{ to: "\/cloud-browser", search: \{ mode: "computer" \}/);
+  assert.match(route, /kind="computer"/);
+  assert.doesNotMatch(route, /redirect/);
 });
