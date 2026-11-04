@@ -246,15 +246,18 @@ export async function validateConnectionCredential(
       ok?: boolean;
       result?: { id?: number; username?: string };
     } | null;
+    const identity = payload?.result;
     if (
       payload?.ok !== true ||
-      !Number.isSafeInteger(payload.result?.id) ||
-      payload.result!.id! <= 0
+      !identity ||
+      typeof identity.id !== "number" ||
+      !Number.isSafeInteger(identity.id) ||
+      identity.id <= 0
     )
       throw new Error("Telegram did not validate the bot token.");
     return {
       verified: true,
-      accountId: payload.result.username ?? String(payload.result.id ?? ""),
+      accountId: identity.username ?? String(identity.id),
       detail: "Telegram bot verified with a read-only getMe request.",
     };
   }
