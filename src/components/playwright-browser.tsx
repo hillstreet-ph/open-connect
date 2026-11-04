@@ -70,19 +70,10 @@ export function PlaywrightBrowser({
   }, [active, onActiveChange]);
   return (
     <section className="space-y-4 rounded-xl border p-5">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="font-semibold">Playwright MCP</h2>
-        <Button
-          variant="outline"
-          disabled={catalog.isFetching || execution.isPending || agent.isPending}
-          onClick={() => void catalog.refetch()}
-        >
-          Refresh connection
-        </Button>
-      </div>
       <p className="text-sm text-muted-foreground">
-        One browser engine for every task. Your session stays separate from other users and closes
-        after 15 minutes without activity. Close the browser when finished.
+        A natural browser for general use: your own profile with saved logins, live view, snapshot
+        and recording. Sessions stay separate between users and close after 15 minutes without
+        activity.
       </p>
       {catalog.isSuccess ? (
         <p className="text-xs text-muted-foreground">
@@ -91,8 +82,19 @@ export function PlaywrightBrowser({
             : "Temporary session: sign-ins are cleared after the worker session ends."}
         </p>
       ) : null}
-      {catalog.isLoading ? <p role="status">Connecting to Playwright…</p> : null}
-      {catalog.isError ? <p role="alert">{catalog.error.message}</p> : null}
+      {catalog.isLoading ? <p role="status">Opening your browser…</p> : null}
+      {catalog.isError ? (
+        <div role="alert" className="space-y-2">
+          <p>{catalog.error.message}</p>
+          <Button
+            variant="outline"
+            disabled={catalog.isFetching}
+            onClick={() => void catalog.refetch()}
+          >
+            Try again
+          </Button>
+        </div>
+      ) : null}
       {catalog.isSuccess ? (
         <>
           {catalog.data.liveViewEnabled ? (

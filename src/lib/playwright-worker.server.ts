@@ -22,9 +22,11 @@ async function workerRpc(owner: string, payload: Record<string, unknown>) {
       "X-Browser-Owner": owner,
     },
     body: JSON.stringify(payload),
-    redirect: "error",
+    redirect: "manual",
     signal: AbortSignal.timeout(90000),
   });
+  if (response.status >= 300 && response.status < 400)
+    throw new Error("Playwright worker endpoint redirected. Verify the worker URL.");
   if (response.status === 409) {
     const problem = await response.json().catch(() => ({}));
     if (problem.error === "task_cancelled") throw new PlaywrightTaskCancelledError();

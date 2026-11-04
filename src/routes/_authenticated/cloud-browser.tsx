@@ -19,12 +19,12 @@ function CloudBrowserPage() {
       <header>
         <h1 className="text-2xl font-semibold">Cloud Browser</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          One combined workspace: Playwright browser sessions with saved profiles and AI agents,
-          together with provider computer-use desktop tools.
+          One combined workspace: your browser with saved profile logins, live view, snapshots,
+          recording and AI agents, together with provider computer-use desktop tools.
         </p>
       </header>
-      <section aria-label="Playwright browser automation" className="space-y-4">
-        <h2 className="text-lg font-semibold">Browser · Playwright</h2>
+      <section aria-label="Browser automation" className="space-y-4">
+        <h2 className="text-lg font-semibold">Cloud browser</h2>
         <PlaywrightBrowser />
       </section>
       <section aria-label="Computer use" className="space-y-4">
