@@ -421,11 +421,7 @@ function SecretsPage() {
     setEditFolderProjectIds(folder.project_ids);
   }
 
-  function toggleFolderCredential(
-    folder: CredentialFolder,
-    credentialId: string,
-    member: boolean,
-  ) {
+  function toggleFolderCredential(folder: CredentialFolder, credentialId: string, member: boolean) {
     updateFolderMutation.mutate({
       id: folder.id,
       name: folder.name,

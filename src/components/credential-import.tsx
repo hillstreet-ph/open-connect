@@ -184,20 +184,21 @@ export function CredentialImport({ existing }: { existing: ExistingCredentialIde
         </CardTitle>
         <CardDescription>
           Supports Proton Pass (ZIP or CSV), Bitwarden (CSV or unencrypted JSON), 1Password,
-          LastPass, Dashlane, NordPass, KeePass / KeePassXC, Enpass and RoboForm CSV, plus
-          Chrome, Edge, Brave, Firefox and Safari password CSV. Files are read in
-          your browser; only the items you import are sent to your encrypted Vault. Logins keep
-          their email, username, website, notes and 2FA (TOTP) keys. Passkeys cannot be moved
-          between password managers: rows that had passkeys are marked so you can create new ones.
-          Hidden custom fields are saved as an encrypted companion note. Delete the export file
-          after importing.
+          LastPass, Dashlane, NordPass, KeePass / KeePassXC, Enpass and RoboForm CSV, plus Chrome,
+          Edge, Brave, Firefox and Safari password CSV. Files are read in your browser; only the
+          items you import are sent to your encrypted Vault. Logins keep their email, username,
+          website, notes and 2FA (TOTP) keys. Passkeys cannot be moved between password managers:
+          rows that had passkeys are marked so you can create new ones. Hidden custom fields are
+          saved as an encrypted companion note. Delete the export file after importing.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <Label htmlFor="credential-import-file">Export file (CSV, ZIP or JSON, up to 10 MB)</Label>
         <div
           className={`flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-6 text-center transition-colors ${
-            busy ? "border-muted opacity-60" : "border-border hover:border-primary/50 hover:bg-muted/30"
+            busy
+              ? "border-muted opacity-60"
+              : "border-border hover:border-primary/50 hover:bg-muted/30"
           }`}
           onDragOver={(event) => {
             if (!busy) event.preventDefault();
