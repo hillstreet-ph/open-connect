@@ -183,10 +183,7 @@ test("generic endpoint validation verifies OpenAI-compatible catalogs for any pr
   );
   const result = await validateConnectionCredential(setup, async (url, init) => {
     assert.equal(String(url), "https://api.example.com/v1/models");
-    assert.equal(
-      (init?.headers as Record<string, string>)["Authorization"],
-      "Bearer test-secret",
-    );
+    assert.equal((init?.headers as Record<string, string>)["Authorization"], "Bearer test-secret");
     return Response.json({ data: [{ id: "m1" }, { id: "m2" }] });
   });
   assert.equal(result.verified, true);
