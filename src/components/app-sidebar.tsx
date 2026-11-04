@@ -80,7 +80,7 @@ const CONNECTIONS: Item[] = [
   { to: "/connections", label: "Connectors", icon: Plug },
   { to: "/secrets", label: "Credentials", icon: LockKeyhole },
   { to: "/models", label: "AI Gateway", icon: Sparkles },
-  { to: "/ai-agency", label: "AI Agency", icon: UsersRound },
+  { to: "/ai-factory", label: "AI Factory", icon: UsersRound },
 ];
 
 function NavGroup({ label, items, pathname }: { label: string; items: Item[]; pathname: string }) {
