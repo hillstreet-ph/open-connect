@@ -103,7 +103,7 @@ export function CredentialImport({ existing }: { existing: ExistingCredentialIde
         setError(
           /Encrypted|Password-protected|Unsupported|Not a ZIP|no supported/.test(message)
             ? `${message}.`
-            : "Unable to read this file. Export as CSV, ZIP or unencrypted JSON (UTF-8).",
+            : "Unable to read this file. Export as CSV, ZIP, unencrypted JSON or XML (UTF-8).",
         );
     } finally {
       if (current === generation.current) setBusy(false);
@@ -183,21 +183,24 @@ export function CredentialImport({ existing }: { existing: ExistingCredentialIde
           <Upload className="h-4 w-4" /> Import from a password manager or browser
         </CardTitle>
         <CardDescription>
-          Supports Proton Pass (ZIP or CSV), Bitwarden (CSV or unencrypted JSON), 1Password CSV,
-          LastPass CSV and Chrome, Edge, Brave, Firefox or Safari password CSV. Files are read in
-          your browser; only the items you import are sent to your encrypted Vault. Logins keep
-          their email, username, website, notes and 2FA (TOTP) keys. Passkeys cannot be moved
-          between password managers: rows that had passkeys are marked so you can create new ones.
-          Hidden custom fields are saved as an encrypted companion note. Delete the export file
-          after importing.
+          Imports from every major password manager and browser: Proton Pass (ZIP, CSV or
+          JSON), Bitwarden (CSV or unencrypted JSON), 1Password (CSV), LastPass (CSV), Dashlane
+          (CSV), NordPass (CSV), Keeper (CSV), RoboForm (CSV), Enpass (CSV), KeePass and KeePassXC
+          (unencrypted XML), and Chrome, Edge, Brave, Firefox or Safari password CSV. Any other
+          CSV or JSON file with URL, username and password columns is read with a generic mapper.
+          Files are parsed in your browser; only the items you import are sent to your encrypted
+          Vault. Logins keep their email, username, website, notes and 2FA (TOTP) keys. Passkeys
+          cannot be moved between password managers: rows that had passkeys are marked so you can
+          create new ones. Hidden custom fields are saved as an encrypted companion note. Delete
+          the export file after importing.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Label htmlFor="credential-import-file">Export file (CSV, ZIP or JSON, up to 10 MB)</Label>
+        <Label htmlFor="credential-import-file">Export file (CSV, ZIP, JSON or XML, up to 10 MB)</Label>
         <Input
           id="credential-import-file"
           type="file"
-          accept=".csv,.zip,.json,text/csv,application/zip,application/json,application/vnd.ms-excel,application/octet-stream"
+          accept=".csv,.zip,.json,.xml,text/csv,application/zip,application/json,text/xml,application/xml,application/octet-stream"
           disabled={busy}
           onChange={(event) => {
             void load(event.currentTarget.files?.[0]);
