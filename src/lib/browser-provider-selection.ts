@@ -8,7 +8,7 @@ export const BROWSER_PROVIDERS = [
   { id: "browserbase", name: "Browserbase", description: "Manual cloud browser sessions." },
   {
     id: "playwright",
-    name: "Playwright MCP",
+    name: "Playwright",
     description: "Snapshots, forms, clicks, screenshots and tabs through a connected worker.",
   },
   {
