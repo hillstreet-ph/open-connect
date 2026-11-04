@@ -268,7 +268,9 @@ export async function validateConnectionCredential(
         { headers: { ...bearer, Accept: "application/json" } },
         send,
       )
-    ).json().catch(() => null)) as { user?: { id?: number } } | null;
+    )
+      .json()
+      .catch(() => null)) as { user?: { id?: number } } | null;
     if (!payload?.user) throw new Error("Hubstaff did not validate the access token.");
     return {
       verified: true,
