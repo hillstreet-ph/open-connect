@@ -70,14 +70,20 @@ function base(setup: Setup) {
   ).replace(/\/+$/, "");
 }
 
-async function checkedFetch(url: string, init: RequestInit, send: typeof fetch): Promise<Response> {
+async function checkedFetch(
+  url: string,
+  init: RequestInit,
+  send: typeof fetch,
+  acceptedStatuses: readonly number[] = [],
+): Promise<Response> {
   const response = await send(url, {
     ...init,
     cache: "no-store",
     redirect: "manual",
     signal: AbortSignal.timeout(12_000),
   });
-  if (!response.ok) throw new Error(`Provider validation failed (HTTP ${response.status}).`);
+  if (!response.ok && !acceptedStatuses.includes(response.status))
+    throw new Error(`Provider validation failed (HTTP ${response.status}).`);
   return response;
 }
 
@@ -280,11 +286,20 @@ export async function validateConnectionCredential(
   }
 
   if (setup.provider === "stripe") {
-    await checkedFetch(
+    const response = await checkedFetch(
       "https://api.stripe.com/v1/customers?limit=1",
       { headers: { ...bearer, Accept: "application/json" } },
       send,
+      [403],
     );
+    // Restricted keys may authorize other resources without Customer read access.
+    // A permission denial cannot establish credential validity or tool access.
+    if (response.status === 403)
+      return {
+        verified: false,
+        detail:
+          "Credential stored; Stripe Customer read access was denied. Connection remains unverified.",
+      };
     return {
       verified: true,
       detail: "Stripe key verified with a read-only customer list request.",

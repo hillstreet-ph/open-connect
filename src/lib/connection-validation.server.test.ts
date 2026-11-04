@@ -10,6 +10,47 @@ const app = (provider: string) => ({
   oauth: false,
 });
 
+test("Stripe restricted keys remain unverified without Customer read access", async () => {
+  const setup = normalizeConnectionSetup(
+    { provider: "stripe", api_key: "rk_test_fixture" },
+    app("stripe"),
+  );
+  let calls = 0;
+  const result = await validateConnectionCredential(setup, async (url, init) => {
+    calls++;
+    assert.equal(String(url), "https://api.stripe.com/v1/customers?limit=1");
+    assert.equal(new Headers(init?.headers).get("Authorization"), "Bearer rk_test_fixture");
+    assert.equal(init?.redirect, "manual");
+    assert.equal(init?.cache, "no-store");
+    assert.ok(init?.signal);
+    return new Response(null, { status: 403 });
+  });
+  assert.equal(calls, 1);
+  assert.equal(result.verified, false);
+  assert.match(result.detail, /remains unverified/);
+});
+
+test("Stripe authentication, redirect, rate-limit and service failures still reject", async () => {
+  const setup = normalizeConnectionSetup(
+    { provider: "stripe", api_key: "rk_test_fixture" },
+    app("stripe"),
+  );
+  for (const status of [401, 302, 429, 500]) {
+    await assert.rejects(
+      validateConnectionCredential(setup, async () => new Response(null, { status })),
+      new RegExp(`HTTP ${status}`),
+    );
+  }
+});
+
+test("other providers do not accept permission denials", async () => {
+  const setup = normalizeConnectionSetup({ provider: "e2b", api_key: "e2b_fixture" }, app("e2b"));
+  await assert.rejects(
+    validateConnectionCredential(setup, async () => new Response(null, { status: 403 })),
+    /HTTP 403/,
+  );
+});
+
 test("validates a custom MCP server with initialize", async () => {
   const setup = normalizeConnectionSetup(
     { provider: "custom_mcp", endpoint_url: "https://mcp.example/mcp", api_key: "test-secret" },
