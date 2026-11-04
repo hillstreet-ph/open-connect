@@ -37,7 +37,7 @@ export const AGENCY_TEMPLATES: AgencyTeamDraft[] = registry.teams.map((team) =>
 export function agencyTemplate(category: unknown) {
   const id = z.enum(AGENCY_CATEGORIES).parse(category);
   const template = AGENCY_TEMPLATES.find((team) => team.category === id);
-  if (!template) throw new Error("Choose an available AI Agency category.");
+  if (!template) throw new Error("Choose an available AI Factory category.");
   return template;
 }
 
@@ -61,7 +61,7 @@ export function agencyCategoryLabel(category: string) {
 
 export function agencyRunTranscript(run: AgencyRun) {
   return [
-    `AI Agency · ${run.evidence.team_name ?? "Team"}`,
+    `AI Factory · ${run.evidence.team_name ?? "Team"}`,
     `Goal: ${run.goal}`,
     "Team outputs are proposals. No external actions have been executed.",
     ...(run.evidence.workers ?? []).map(
