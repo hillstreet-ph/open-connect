@@ -171,3 +171,54 @@ test("native model providers require a valid model catalog response", async () =
     );
   }
 });
+
+test("native tool providers validate with read-only requests", async () => {
+  const cases = [
+    {
+      provider: "telegram",
+      key: "123456789:AAExample_token_value_1234567890",
+      url: "https://api.telegram.org/bot123456789:AAExample_token_value_1234567890/getMe",
+      body: { ok: true, result: { id: 1, username: "fixture_bot" } },
+      accountId: "fixture_bot",
+    },
+    {
+      provider: "e2b",
+      key: "e2b_fixture_key",
+      url: "https://api.e2b.dev/sandboxes?limit=1",
+      body: { sandboxes: [] },
+    },
+    {
+      provider: "hubstaff_admin",
+      key: "hubstaff_fixture_token",
+      url: "https://api.hubstaff.com/v2/users/me",
+      body: { user: { id: 42 } },
+      accountId: "42",
+    },
+    {
+      provider: "stripe",
+      key: "sk_test_fixture_key",
+      url: "https://api.stripe.com/v1/customers?limit=1",
+      body: { object: "list", data: [] },
+    },
+  ];
+  for (const item of cases) {
+    const setup = normalizeConnectionSetup(
+      { provider: item.provider, api_key: item.key },
+      app(item.provider),
+    );
+    const result = await validateConnectionCredential(setup, async (url) => {
+      assert.equal(String(url), item.url);
+      return Response.json(item.body);
+    });
+    assert.equal(result.verified, true);
+    if (item.accountId) assert.equal(result.accountId, item.accountId);
+  }
+  const telegramSetup = normalizeConnectionSetup(
+    { provider: "telegram", api_key: "not-a-bot-token" },
+    app("telegram"),
+  );
+  await assert.rejects(
+    validateConnectionCredential(telegramSetup, async () => Response.json({})),
+    /bot token/,
+  );
+});

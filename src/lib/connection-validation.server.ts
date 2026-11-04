@@ -228,6 +228,67 @@ export async function validateConnectionCredential(
     return { verified: true, accountId: payload.data.me._id, detail: "Zeabur identity verified" };
   }
 
+  if (setup.provider === "telegram") {
+    if (!/^\d{1,20}:[A-Za-z0-9_-]{20,256}$/.test(setup.apiKey))
+      throw new Error("Telegram requires a bot token in the format 123456:ABC-DEF…");
+    const response = await checkedFetch(
+      `https://api.telegram.org/bot${setup.apiKey}/getMe`,
+      { headers: { Accept: "application/json" } },
+      send,
+    );
+    const payload = (await response.json().catch(() => null)) as {
+      ok?: boolean;
+      result?: { id?: number; username?: string };
+    } | null;
+    if (payload?.ok !== true || !payload.result)
+      throw new Error("Telegram did not validate the bot token.");
+    return {
+      verified: true,
+      accountId: payload.result.username ?? String(payload.result.id ?? ""),
+      detail: "Telegram bot verified with a read-only getMe request.",
+    };
+  }
+
+  if (setup.provider === "e2b") {
+    await checkedFetch(
+      "https://api.e2b.dev/sandboxes?limit=1",
+      { headers: { "x-api-key": setup.apiKey, Accept: "application/json" } },
+      send,
+    );
+    return {
+      verified: true,
+      detail: "E2B key verified with a read-only sandbox list request.",
+    };
+  }
+
+  if (setup.provider === "hubstaff_admin") {
+    const payload = (await (
+      await checkedFetch(
+        "https://api.hubstaff.com/v2/users/me",
+        { headers: { ...bearer, Accept: "application/json" } },
+        send,
+      )
+    ).json().catch(() => null)) as { user?: { id?: number } } | null;
+    if (!payload?.user) throw new Error("Hubstaff did not validate the access token.");
+    return {
+      verified: true,
+      accountId: payload.user.id ? String(payload.user.id) : undefined,
+      detail: "Hubstaff access verified with a read-only profile request.",
+    };
+  }
+
+  if (setup.provider === "stripe") {
+    await checkedFetch(
+      "https://api.stripe.com/v1/customers?limit=1",
+      { headers: { ...bearer, Accept: "application/json" } },
+      send,
+    );
+    return {
+      verified: true,
+      detail: "Stripe key verified with a read-only customer list request.",
+    };
+  }
+
   if (setup.provider === "anthropic") {
     const response = await checkedFetch(
       `${base(setup)}/models`,
@@ -265,5 +326,9 @@ export async function validateConnectionCredential(
     return { verified: true, detail: `API key verified; ${payload.data.length} models fetched.` };
   }
 
-  return { verified: false, detail: "Credential stored; provider validation is not available yet" };
+  return {
+    verified: false,
+    detail:
+      "Credential stored; this provider has no read-only validation endpoint, so it will be verified on first use.",
+  };
 }
