@@ -35,7 +35,7 @@ export const AI_GATEWAY_PROVIDERS = [
   {
     id: "novita",
     name: "Novita AI",
-    baseUrl: "https://api.novita.ai/openai",
+    baseUrl: "https://api.novita.ai/openai/v1",
     official: true,
   },
   {
@@ -53,7 +53,7 @@ export const AI_GATEWAY_PROVIDERS = [
   {
     id: "qwen_cloud",
     name: "Qwen Cloud",
-    baseUrl: "https://ap-southeast-1.maas.qwencloudapi.com/compatible-mode/v1",
+    baseUrl: "https://maas.qwencloudapi.com/compatible-mode/v1",
     official: true,
   },
   {

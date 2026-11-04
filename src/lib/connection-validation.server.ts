@@ -25,6 +25,34 @@ const DEFAULT_BASES: Record<string, string> = {
   deepseek: "https://api.deepseek.com/v1",
 };
 
+/**
+ * OpenAI-compatible model providers validated against their /models catalog.
+ * Every AI gateway provider must appear here or in a dedicated validation
+ * branch above so a stored credential always reaches "connected" status and
+ * stays usable through /v1.
+ */
+export const OPENAI_COMPATIBLE_VALIDATED_PROVIDERS: readonly string[] = [
+  "openrouter",
+  "openai",
+  "xai",
+  "mistral",
+  "deepseek",
+  "fireworks",
+  "litellm",
+  "nvidia",
+  "ollama_cloud",
+  "groq",
+  "cerebras",
+  "kilo",
+  "commandcode",
+  "huggingface",
+  "together",
+  "novita",
+  "cohere",
+  "deepinfra",
+  "qwen_cloud",
+];
+
 function publicHttpsTarget(raw: string | null | undefined): string | undefined {
   if (!raw || !raw.trim()) return undefined;
   let url: URL;
@@ -252,24 +280,7 @@ export async function validateConnectionCredential(
     return { verified: true, detail: `API key verified; ${payload.models.length} models fetched.` };
   }
 
-  if (
-    [
-      "openrouter",
-      "openai",
-      "xai",
-      "mistral",
-      "deepseek",
-      "fireworks",
-      "litellm",
-      "nvidia",
-      "ollama_cloud",
-      "groq",
-      "cerebras",
-      "kilo",
-      "commandcode",
-      "huggingface",
-    ].includes(setup.provider)
-  ) {
+  if (OPENAI_COMPATIBLE_VALIDATED_PROVIDERS.includes(setup.provider)) {
     const providerBase = base(setup);
     if (!providerBase) throw new Error("Provider base URL is required for validation.");
     const response = await checkedFetch(`${providerBase}/models`, { headers: bearer }, send);

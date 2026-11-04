@@ -2,6 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { normalizeConnectionSetup } from "./connection-setup.ts";
 import { validateConnectionCredential } from "./connection-validation.server.ts";
+import { OPENAI_COMPATIBLE_VALIDATED_PROVIDERS } from "./connection-validation.server.ts";
+import {
+  AI_GATEWAY_PROVIDERS,
+  COMPATIBLE_GATEWAY_PROVIDERS,
+} from "./ai-gateway-providers.ts";
 
 const app = (provider: string) => ({
   provider,
@@ -69,6 +74,15 @@ test("compatible model providers validate custom OpenAI-compatible endpoints and
   const cases = [
     ["kilo", "https://ai-gateway.kilo.ai/api/v1", "https://custom.example/v1/models"],
     ["huggingface", "https://router.huggingface.co/v1", "https://custom.example/v1/models"],
+    ["together", "https://api.together.xyz/v1", "https://custom.example/v1/models"],
+    ["novita", "https://api.novita.ai/openai/v1", "https://custom.example/v1/models"],
+    ["cohere", "https://api.cohere.com/compatibility/v1", "https://custom.example/v1/models"],
+    ["deepinfra", "https://api.deepinfra.com/v1/openai", "https://custom.example/v1/models"],
+    [
+      "qwen_cloud",
+      "https://maas.qwencloudapi.com/compatible-mode/v1",
+      "https://custom.example/v1/models",
+    ],
     ["groq", "https://api.groq.com/openai/v1", "https://custom.example/v1/models"],
     // Legacy preset providers keep their fixed canonical URL.
     [
@@ -169,5 +183,19 @@ test("native model providers require a valid model catalog response", async () =
       validateConnectionCredential(setup, async () => new Response("<html>login</html>")),
       /valid model catalog/,
     );
+  }
+});
+
+test("every AI gateway provider has credential validation coverage", () => {
+  const dedicated = new Set(["google", "anthropic"]);
+  for (const provider of COMPATIBLE_GATEWAY_PROVIDERS) {
+    assert.ok(
+      dedicated.has(provider.id) || OPENAI_COMPATIBLE_VALIDATED_PROVIDERS.includes(provider.id),
+      `provider ${provider.id} must validate stored credentials`,
+    );
+  }
+  for (const provider of AI_GATEWAY_PROVIDERS) {
+    assert.ok(provider.baseUrl.startsWith("https://"), `${provider.id} must use HTTPS`);
+    assert.ok(!provider.baseUrl.endsWith("/"), `${provider.id} base URL must not end with /`);
   }
 });
