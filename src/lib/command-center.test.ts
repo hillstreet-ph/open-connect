@@ -143,7 +143,7 @@ test("compact widget links to real destinations and reflects worker permissions 
   assert.match(w.status.textContent, /Auto discovery · Auto On/);
   assert.deepEqual(
     w.grid.children.map((c) => c.attrs["href"]),
-    ["/library", "/connections", "/secrets", "/models", "/resources", "/ai-agency"].map(
+    ["/library", "/connections", "/secrets", "/models", "/resources", "/ai-factory"].map(
       (p) => "https://open-connect.site" + p,
     ),
   );
