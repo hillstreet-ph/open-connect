@@ -184,17 +184,18 @@ export function CredentialImport({ existing }: { existing: ExistingCredentialIde
         </CardTitle>
         <CardDescription>
           Supports Proton Pass (ZIP or CSV), Bitwarden (CSV or unencrypted JSON), 1Password,
-          LastPass, Dashlane, NordPass, Keeper, RoboForm, Enpass, KeePass / KeePassXC (CSV or
-          XML) and Chrome, Edge, Brave, Firefox or Safari password CSV. Files are read in your
-          browser; only the items you import are sent to your encrypted Vault. Logins keep
-          their email, username, website, notes and 2FA (TOTP) keys. Passkeys cannot be moved
-          between password managers: rows that had passkeys are marked so you can create new ones.
-          Hidden custom fields are saved as an encrypted companion note. Delete the export file
-          after importing.
+          LastPass, Dashlane, NordPass, Keeper, RoboForm, Enpass, KeePass / KeePassXC (CSV or XML)
+          and Chrome, Edge, Brave, Firefox or Safari password CSV. Files are read in your browser;
+          only the items you import are sent to your encrypted Vault. Logins keep their email,
+          username, website, notes and 2FA (TOTP) keys. Passkeys cannot be moved between password
+          managers: rows that had passkeys are marked so you can create new ones. Hidden custom
+          fields are saved as an encrypted companion note. Delete the export file after importing.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Label htmlFor="credential-import-file">Export file (CSV, ZIP, JSON or XML, up to 10 MB)</Label>
+        <Label htmlFor="credential-import-file">
+          Export file (CSV, ZIP, JSON or XML, up to 10 MB)
+        </Label>
         <Input
           id="credential-import-file"
           type="file"

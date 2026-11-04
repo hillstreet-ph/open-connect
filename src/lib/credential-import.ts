@@ -562,8 +562,7 @@ export function parseKeePassXml(input: string): ImportItem[] {
     entry.totp = fields.get("otp") ?? "";
     entry.notes = fields.get("notes") ?? "";
     entry.urls = [fields.get("url") ?? ""].filter(Boolean);
-    entry.type =
-      entry.password.length < 4 && entry.notes.trim().length >= 4 ? "note" : "login";
+    entry.type = entry.password.length < 4 && entry.notes.trim().length >= 4 ? "note" : "login";
     items.push(...toItems(entry, items.length + 1, "keepass"));
   }
   if (!items.length) throw new Error("No entries found in the KeePass XML export");
