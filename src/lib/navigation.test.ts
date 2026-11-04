@@ -725,4 +725,14 @@ test("cloud computer is a separate cloud workspace destination", () => {
   );
   assert.match(route, /kind="computer"/);
   assert.doesNotMatch(route, /redirect/);
+  assert.match(route, /CloudComputerManager/);
+  const browserRoute = readFileSync(
+    path.resolve(process.cwd(), "src/routes/_authenticated/cloud-browser.tsx"),
+    "utf8",
+  );
+  assert.doesNotMatch(browserRoute, /CloudComputerManager/);
+  assert.match(browserRoute, /PlaywrightBrowser/);
+  assert.match(browserRoute, /kind="computer"/);
+  assert.doesNotMatch(browserRoute, /search=\{\{ mode: "computer"/);
+  assert.doesNotMatch(browserRoute, /mode === "computer"/);
 });
