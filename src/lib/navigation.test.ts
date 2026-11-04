@@ -716,10 +716,9 @@ test("cloud computer is a separate cloud workspace destination", () => {
   const cloud = appCategories.find((category) => category.id === "cloud");
   assert.ok(cloud?.items.some((item) => item.to === "/cloud-browser"));
   assert.ok(cloud?.items.some((item) => item.to === "/cloud-computer"));
-  assert.equal(
-    cloud?.items.findIndex((item) => item.to === "/cloud-computer"),
-    cloud?.items.findIndex((item) => item.to === "/cloud-browser") + 1,
-  );
+  const computerIndex = cloud?.items.findIndex((item) => item.to === "/cloud-computer") ?? -1;
+  const browserIndex = cloud?.items.findIndex((item) => item.to === "/cloud-browser") ?? -1;
+  assert.equal(computerIndex, browserIndex + 1);
   const route = readFileSync(
     path.resolve(process.cwd(), "src/routes/_authenticated/cloud-computer.tsx"),
     "utf8",
