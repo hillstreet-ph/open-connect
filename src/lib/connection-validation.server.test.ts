@@ -3,10 +3,7 @@ import test from "node:test";
 import { normalizeConnectionSetup } from "./connection-setup.ts";
 import { validateConnectionCredential } from "./connection-validation.server.ts";
 import { OPENAI_COMPATIBLE_VALIDATED_PROVIDERS } from "./connection-validation.server.ts";
-import {
-  AI_GATEWAY_PROVIDERS,
-  COMPATIBLE_GATEWAY_PROVIDERS,
-} from "./ai-gateway-providers.ts";
+import { AI_GATEWAY_PROVIDERS, COMPATIBLE_GATEWAY_PROVIDERS } from "./ai-gateway-providers.ts";
 
 const app = (provider: string) => ({
   provider,
