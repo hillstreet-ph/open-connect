@@ -205,7 +205,7 @@ test("initializes the bridge, preserves zero counts, and renders values as text"
   assert.equal(w.grid.children[1]!.children[1]!.textContent, "0");
   assert.deepEqual(
     w.grid.children.map((c) => c.children[0]!.textContent),
-    ["Resources", "Connections", "Credentials", "AI Gateway", "Marketplace", "AI Agency"],
+    ["Resources", "Connections", "Credentials", "AI Gateway", "Marketplace", "AI Factory"],
   );
   assert.equal(w.grid.children[2]!.children[1]!.textContent, "Not granted");
   w.send({ content: [{ type: "text", text: "bad JSON" }] });
