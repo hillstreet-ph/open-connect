@@ -402,10 +402,10 @@ test("Discover keeps Marketplace and Resources while resource types stay in the 
   );
 });
 
-test("Connections keeps Connectors, Credentials, AI Gateway, and AI Agency", () => {
+test("Connections keeps Connectors, Credentials, AI Gateway, and AI Factory", () => {
   assert.deepEqual(
     appCategories.find((group) => group.id === "connections")?.items.map((item) => item.label),
-    ["Connectors", "Credentials", "AI Gateway", "AI Agency"],
+    ["Connectors", "Credentials", "AI Gateway", "AI Factory"],
   );
 });
 
