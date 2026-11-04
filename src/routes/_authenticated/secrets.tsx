@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import {
   Check,
+  ChevronDown,
   Clipboard,
   Eye,
   EyeOff,
@@ -187,6 +188,8 @@ function SecretsPage() {
   const [editingValueId, setEditingValueId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [showEditValue, setShowEditValue] = useState(false);
+  // Credentials render collapsed by default; one row expands at a time to keep the page compact.
+  const [expandedCredentialId, setExpandedCredentialId] = useState<string | null>(null);
 
   const list = useQuery({
     queryKey: ["credential-secrets"],
@@ -1013,7 +1016,7 @@ function SecretsPage() {
               {(list.data ?? []).length === 0 ? "No credentials yet." : "No matching credentials."}
             </p>
           ) : (
-            <ul className="space-y-2">
+            <div className="max-h-[36rem] space-y-2 overflow-y-auto pr-1">
               {pagedCredentials.map((row) => (
                 <li key={row.id} className="rounded-xl border border-border px-4 py-3">
                   <div className="flex flex-wrap items-start justify-between gap-3">
@@ -1028,6 +1031,37 @@ function SecretsPage() {
                         <Badge variant="secondary" className="text-xs">
                           {TYPE_DETAILS[row.secret_type as SecretType]?.label ?? row.secret_type}
                         </Badge>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5"
+                      aria-expanded={expandedCredentialId === row.id}
+                      aria-label={
+                        expandedCredentialId === row.id
+                          ? `Hide details for ${row.name}`
+                          : `Show details for ${row.name}`
+                      }
+                      onClick={() =>
+                        setExpandedCredentialId((current) =>
+                          current === row.id ? null : row.id,
+                        )
+                      }
+                    >
+                      <ChevronDown
+                        className={
+                          expandedCredentialId === row.id
+                            ? "size-3.5 rotate-180 transition-transform"
+                            : "size-3.5 transition-transform"
+                        }
+                      />
+                      {expandedCredentialId === row.id ? "Hide" : "Details"}
+                    </Button>
+                  </div>
+                  {expandedCredentialId === row.id ? (
+                    <>
+                      <div className="mt-3 flex flex-wrap gap-1">
                         {(row.tags ?? []).map((tag: string) => (
                           <Badge key={tag} variant="outline" className="text-xs">
                             #{tag}
@@ -1047,8 +1081,7 @@ function SecretsPage() {
                             </Badge>
                           ))}
                       </div>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-1.5">
+                      <div className="mt-3 flex flex-wrap items-center gap-1.5">
                       <Button
                         size="sm"
                         variant="outline"
@@ -1116,8 +1149,7 @@ function SecretsPage() {
                       >
                         <Trash2 className="size-3.5" />
                       </Button>
-                    </div>
-                  </div>
+                      </div>
                   {revealedValues[row.id] ? (
                     <div className="mt-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
                       <Label
@@ -1374,9 +1406,11 @@ function SecretsPage() {
                       ) : null}
                     </div>
                   ) : null}
+                    </>
+                  ) : null}
                 </li>
               ))}
-            </ul>
+            </div>
           )}
           {!list.isLoading && visibleCredentials.length > 0 ? (
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
