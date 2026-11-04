@@ -337,15 +337,56 @@ export async function validateConnectionCredential(
     const providerBase = base(setup);
     if (!providerBase) throw new Error("Provider base URL is required for validation.");
     const response = await checkedFetch(`${providerBase}/models`, { headers: bearer }, send);
-    const payload = (await response.json().catch(() => null)) as { data?: unknown } | null;
-    if (!Array.isArray(payload?.data))
+    const detail = catalogDetail(await response.json().catch(() => null));
+    if (!detail)
       throw new Error("Provider did not return a valid model catalog. Check its API endpoint.");
-    return { verified: true, detail: `API key verified; ${payload.data.length} models fetched.` };
+    return { verified: true, detail };
   }
 
-  return {
-    verified: false,
-    detail:
-      "Credential stored; this provider has no read-only validation endpoint, so it will be verified on first use.",
-  };
+  // Best-effort validation for every remaining provider: a public HTTPS
+  // endpoint is probed with a read-only model catalog request, so a stored
+  // credential never silently stays unverified when the provider can answer.
+  const genericBase = publicHttpsTarget(setup.endpointUrl);
+  if (!genericBase) {
+    return {
+      verified: false,
+      detail:
+        "Credential stored; add the provider's public HTTPS API endpoint to enable automatic validation.",
+    };
+  }
+  const genericHeaders =
+    setup.authType === "api_key"
+      ? { [normalizeAuthHeader(setup.authHeader)]: setup.apiKey }
+      : bearer;
+  try {
+    const response = await checkedFetch(`${genericBase}/models`, { headers: genericHeaders }, send);
+    const detail = catalogDetail(await response.json().catch(() => null));
+    if (!detail)
+      return {
+        verified: false,
+        detail:
+          "Credential stored; the endpoint responded without a model catalog, so the key stays unverified.",
+      };
+    return { verified: true, detail };
+  } catch (error) {
+    const status = (error as Error).message.match(/HTTP (\d+)/)?.[1];
+    if (status === "401" || status === "403") throw error;
+    return {
+      verified: false,
+      detail:
+        "Credential stored; the endpoint did not answer the validation request, so the key stays unverified.",
+    };
+  }
+}
+
+/** Read the model count out of an OpenAI-style or Gemini-style catalog response. */
+function catalogDetail(payload: unknown): string | null {
+  if (!payload || typeof payload !== "object") return null;
+  const record = payload as { data?: unknown; models?: unknown };
+  const catalog = Array.isArray(record.data)
+    ? record.data
+    : Array.isArray(record.models)
+      ? record.models
+      : null;
+  return catalog ? `API key verified; ${catalog.length} models fetched.` : null;
 }
