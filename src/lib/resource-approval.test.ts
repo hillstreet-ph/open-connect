@@ -10,7 +10,11 @@ import {
 import { reviewedResourceFixture } from "./resource-review.fixture.ts";
 
 test("execution requires explicit authorization and independent version-bound reviews", () => {
-  const approved = { ...reviewedResourceFixture(), verified: true };
+  const approved = {
+    ...reviewedResourceFixture(),
+    verified: true,
+    owner_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  };
   assert.equal(isResourceExecutable(approved), true);
   assert.equal(
     isResourceExecutable({ verified: true, installation_config: { review_state: "approved" } }),
@@ -31,6 +35,7 @@ test("execution requires explicit authorization and independent version-bound re
       { version: "old-version" },
       { content_sha256: "b".repeat(64) },
       { reviewer_id: approved.owner_id },
+      { reviewer_id: approved.owner_id.toUpperCase() },
       { reviewer_id: "" },
       { reviewed_at: "not-a-date" },
       { evidence_url: "" },

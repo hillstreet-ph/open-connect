@@ -41,7 +41,7 @@ export function hasResourceReviewEvidence(resource: ReviewableResource): boolean
       review["content_sha256"] === digest &&
       typeof reviewer === "string" &&
       /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(reviewer) &&
-      reviewer !== resource.owner_id &&
+      reviewer.toLowerCase() !== resource.owner_id?.toLowerCase() &&
       typeof reviewedAt === "string" &&
       /^\d{4}-\d{2}-\d{2}T/.test(reviewedAt) &&
       Number.isFinite(Date.parse(reviewedAt)) &&
