@@ -23,8 +23,8 @@ function CloudComputerPage() {
         <CloudComputerManager />
       </div>
       <p className="text-sm text-muted-foreground">
-        Computer tools use the selected provider connection. Its desktop and files are separate
-        from your Playwright browser session.
+        Computer tools use the selected provider connection. Its desktop and files are separate from
+        your Playwright browser session.
       </p>
       <CloudWorkspacePage kind="computer" embedded />
     </div>
