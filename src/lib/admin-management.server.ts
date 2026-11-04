@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { hasResourceReviewEvidence, isResourceApproved } from "./resource-approval.ts";
 
 export class ResourceManagementError extends Error {}
 
@@ -180,7 +181,7 @@ export async function manageResource(
   const { id, expected } = identity(args);
   const { data: resource, error: readError } = await db
     .from("resources")
-    .select("id,updated_at,verified,published")
+    .select("id,updated_at,verified,published,version,owner_id,installation_config")
     .eq("id", id)
     .eq("owner_id", key.userId)
     .maybeSingle();
@@ -227,9 +228,12 @@ export async function manageResource(
       throw new ResourceManagementError("Unsupported publication field.");
     if (typeof args["published"] !== "boolean" || args["confirm"] !== true)
       throw new ResourceManagementError("Publication changes require published and confirm=true.");
-    if (args["published"] && !resource.verified)
+    if (
+      args["published"] &&
+      (!isResourceApproved(resource) || !hasResourceReviewEvidence(resource))
+    )
       throw new ResourceManagementError(
-        "Complete the separate resource security review before publishing.",
+        "Complete independent security and license review for this package version and SHA-256 before publishing.",
       );
     update = { published: args["published"] };
   } else throw new ResourceManagementError("Unsupported resource operation.");

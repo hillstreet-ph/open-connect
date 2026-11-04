@@ -58,7 +58,7 @@ export const updateResourceReview = createServerFn({ method: "POST" })
 
     const { data: resource, error: readError } = await supabaseAdmin
       .from("resources")
-      .select("id, verified, published, installation_config, updated_at")
+      .select("id, verified, published, installation_config, updated_at, version, owner_id")
       .eq("id", data.id)
       .maybeSingle();
     if (readError) throw new Error(readError.message);
@@ -93,11 +93,13 @@ export const bulkUpdateResourceReview = createServerFn({ method: "POST" })
       published: boolean;
       installation_config: unknown;
       updated_at: string;
+      version: string | null;
+      owner_id: string | null;
     }[] = [];
     for (const ids of chunk(data.ids, ID_CHUNK)) {
       const { data: rows, error } = await supabaseAdmin
         .from("resources")
-        .select("id, verified, published, installation_config, updated_at")
+        .select("id, verified, published, installation_config, updated_at, version, owner_id")
         .in("id", ids);
       if (error) throw new Error(error.message);
       found.push(...(rows ?? []));
@@ -124,6 +126,9 @@ export const bulkUpdateResourceReview = createServerFn({ method: "POST" })
       updated,
       skipped_conflict: skippedConflict,
       skipped_not_verified: plan.skipped.filter((s) => s.reason === "not_verified").length,
+      skipped_missing_review_evidence: plan.skipped.filter(
+        (s) => s.reason === "missing_review_evidence",
+      ).length,
       skipped_unchanged: plan.skipped.filter((s) => s.reason === "already_done").length,
       missing,
     };

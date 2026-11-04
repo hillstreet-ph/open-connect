@@ -351,7 +351,6 @@ export const importResourceUrl = createServerFn({ method: "POST" })
         filename: url.pathname.split("/").pop() || "website.md",
       });
     const deadline = Date.now() + 40000;
-    let publishedCount = 0;
     for (const source of importSources) {
       if (Date.now() > deadline) {
         results.push({
@@ -463,36 +462,10 @@ export const importResourceUrl = createServerFn({ method: "POST" })
           }
           throw new Error("Private draft could not be saved");
         }
-        let status = previous.data ? "update-candidate" : "draft";
-        let detail: string | undefined;
-        if (scan.findings.length === 0) {
-          const publication = await db
-            .from("resources")
-            .update({
-              verified: true,
-              published: true,
-              installation_config: {
-                ...config,
-                review_state: "approved",
-                labels: [
-                  detected.resource_type,
-                  "imported",
-                  "auto-published",
-                  ...(previous.data ? ["update-candidate"] : []),
-                ],
-              },
-            })
-            .eq("id", inserted.data.id)
-            .select("id")
-            .maybeSingle();
-          if (publication.error) {
-            detail = "Auto-publish was rejected. The draft stays private for review.";
-          } else {
-            status = "published";
-            detail = "Live in Marketplace for all signed-in users.";
-            publishedCount += 1;
-          }
-        }
+        // A static scan never grants independent security or license approval.
+        const status = previous.data ? "update-candidate" : "draft";
+        const detail =
+          "Private draft saved. Complete independent security and license review before publication.";
         results.push({ name, status, id: inserted.data.id, detail });
       } catch (error) {
         results.push({
@@ -502,5 +475,5 @@ export const importResourceUrl = createServerFn({ method: "POST" })
         });
       }
     }
-    return { results, publication_performed: publishedCount > 0, antivirus: "not_run" };
+    return { results, publication_performed: false, antivirus: "not_run" };
   });
