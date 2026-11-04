@@ -529,47 +529,48 @@ function SecretsPage() {
         </div>
       </div>
 
-      <div className="mt-6 grid gap-2 sm:grid-cols-3" role="group" aria-label="Vault sections">
+      <div
+        role="group"
+        aria-label="Vault sections"
+        className="mt-6 grid grid-cols-3 gap-2 rounded-xl border border-border/80 bg-muted/20 p-2 shadow-panel sm:gap-3 sm:p-3"
+      >
         <Button
           type="button"
-          variant={section === "upload" ? "default" : "outline"}
-          className="h-auto flex-col items-start gap-0.5 py-2.5"
+          variant={section === "upload" ? "default" : "ghost"}
+          className="h-full min-h-16 flex-col justify-center gap-1 rounded-lg px-2 py-3 text-center sm:min-h-20 sm:gap-1.5 sm:px-3 "
           aria-pressed={section === "upload"}
           onClick={() => setSection("upload")}
         >
-          <span className="flex items-center gap-2 text-sm font-semibold">
-            <Upload className="size-4" /> 1 · Upload
-          </span>
-          <span className="text-left text-xs font-normal text-muted-foreground">
-            Import credentials from a file
+          <Upload className="size-5 shrink-0" />
+          <span className="text-xs font-semibold leading-tight sm:text-sm">1 · Upload</span>
+          <span className="hidden text-[11px] leading-tight font-normal opacity-80 sm:block">
+            Import from a file
           </span>
         </Button>
         <Button
           type="button"
-          variant={section === "credentials" ? "default" : "outline"}
-          className="h-auto flex-col items-start gap-0.5 py-2.5"
+          variant={section === "credentials" ? "default" : "ghost"}
+          className="h-full min-h-16 flex-col justify-center gap-1 rounded-lg px-2 py-3 text-center sm:min-h-20 sm:gap-1.5 sm:px-3 "
           aria-pressed={section === "credentials"}
           onClick={() => setSection("credentials")}
         >
-          <span className="flex items-center gap-2 text-sm font-semibold">
-            <KeyRound className="size-4" /> 2 · Credentials
-          </span>
-          <span className="text-left text-xs font-normal text-muted-foreground">
-            Add and manage saved logins and keys
+          <KeyRound className="size-5 shrink-0" />
+          <span className="text-xs font-semibold leading-tight sm:text-sm">2 · Credentials</span>
+          <span className="hidden text-[11px] leading-tight font-normal opacity-80 sm:block">
+            Add and manage logins
           </span>
         </Button>
         <Button
           type="button"
-          variant={section === "folders" ? "default" : "outline"}
-          className="h-auto flex-col items-start gap-0.5 py-2.5"
+          variant={section === "folders" ? "default" : "ghost"}
+          className="h-full min-h-16 flex-col justify-center gap-1 rounded-lg px-2 py-3 text-center sm:min-h-20 sm:gap-1.5 sm:px-3 "
           aria-pressed={section === "folders"}
           onClick={() => setSection("folders")}
         >
-          <span className="flex items-center gap-2 text-sm font-semibold">
-            <FolderKanban className="size-4" /> 3 · Folders
-          </span>
-          <span className="text-left text-xs font-normal text-muted-foreground">
-            Group and share credentials by folder
+          <FolderKanban className="size-5 shrink-0" />
+          <span className="text-xs font-semibold leading-tight sm:text-sm">3 · Folders</span>
+          <span className="hidden text-[11px] leading-tight font-normal opacity-80 sm:block">
+            Group and share
           </span>
         </Button>
       </div>
