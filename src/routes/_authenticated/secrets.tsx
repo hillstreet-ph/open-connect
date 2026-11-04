@@ -1044,9 +1044,7 @@ function SecretsPage() {
                           : `Show details for ${row.name}`
                       }
                       onClick={() =>
-                        setExpandedCredentialId((current) =>
-                          current === row.id ? null : row.id,
-                        )
+                        setExpandedCredentialId((current) => (current === row.id ? null : row.id))
                       }
                     >
                       <ChevronDown
@@ -1082,330 +1080,332 @@ function SecretsPage() {
                           ))}
                       </div>
                       <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="min-w-28 justify-center gap-1.5"
-                        onClick={() => beginEditingValue(row.id)}
-                      >
-                        <Pencil className="size-3.5" /> Edit value
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="min-w-28 justify-center gap-1.5"
-                        onClick={() => beginEditingOrganization(row)}
-                      >
-                        <Pencil className="size-3.5" /> Organize
-                      </Button>
-                      {!revealedValues[row.id] ? (
                         <Button
                           size="sm"
                           variant="outline"
                           className="min-w-28 justify-center gap-1.5"
-                          onClick={() => revealMutation.mutate(row.id)}
-                          disabled={revealMutation.isPending}
+                          onClick={() => beginEditingValue(row.id)}
                         >
-                          <Eye className="size-3.5" /> Reveal
+                          <Pencil className="size-3.5" /> Edit value
                         </Button>
-                      ) : null}
-                      {row.has_totp ? (
-                        totpCodes[row.id] ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="gap-1.5 font-mono"
-                            aria-label={`Copy 2FA code for ${row.name}`}
-                            onClick={() => copyTotp(row.id, totpCodes[row.id]!.code)}
-                          >
-                            {copiedId === row.id ? (
-                              <Check className="size-3.5" />
-                            ) : (
-                              <Clipboard className="size-3.5" />
-                            )}
-                            {totpCodes[row.id]!.code}
-                            <span className="font-sans text-[10px] text-muted-foreground">
-                              {totpCodes[row.id]!.seconds}s
-                            </span>
-                          </Button>
-                        ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="min-w-28 justify-center gap-1.5"
+                          onClick={() => beginEditingOrganization(row)}
+                        >
+                          <Pencil className="size-3.5" /> Organize
+                        </Button>
+                        {!revealedValues[row.id] ? (
                           <Button
                             size="sm"
                             variant="outline"
                             className="min-w-28 justify-center gap-1.5"
-                            onClick={() => totpMutation.mutate(row.id)}
-                            disabled={totpMutation.isPending}
+                            onClick={() => revealMutation.mutate(row.id)}
+                            disabled={revealMutation.isPending}
                           >
-                            <KeyRound className="size-3.5" /> Show 2FA code
+                            <Eye className="size-3.5" /> Reveal
                           </Button>
-                        )
-                      ) : null}
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        aria-label={`Delete ${row.name}`}
-                        onClick={() => setPendingDelete({ id: row.id, name: row.name })}
-                        disabled={deleteMutation.isPending}
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
-                      </div>
-                  {revealedValues[row.id] ? (
-                    <div className="mt-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
-                      <Label
-                        htmlFor={`revealed-${row.id}`}
-                        className="text-xs text-muted-foreground"
-                      >
-                        {TYPE_DETAILS[row.secret_type as SecretType]?.valueLabel ?? "Secret value"}
-                      </Label>
-                      <div className="mt-1 flex gap-2">
-                        <Input
-                          id={`revealed-${row.id}`}
-                          readOnly
-                          value={revealedValues[row.id]}
-                          className="min-w-0 font-mono"
-                        />
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          aria-label={`Copy credential value for ${row.name}`}
-                          onClick={() => copyCredential(row.id, revealedValues[row.id]!)}
-                        >
-                          {copiedId === row.id ? (
-                            <Check className="size-4" />
-                          ) : (
-                            <Clipboard className="size-4" />
-                          )}
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          aria-label={`Hide credential value for ${row.name}`}
-                          onClick={() =>
-                            setRevealedValues((previous) => {
-                              const next = { ...previous };
-                              delete next[row.id];
-                              return next;
-                            })
-                          }
-                        >
-                          <EyeOff className="size-4" />
-                        </Button>
-                      </div>
-                      <p className="mt-2 text-[11px] text-muted-foreground">
-                        This is the exact value stored in Vault. It will hide automatically after 30
-                        seconds.
-                      </p>
-                    </div>
-                  ) : null}
-                  {editingValueId === row.id ? (
-                    <div className="mt-3 space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
-                      <div>
-                        <p className="text-sm font-medium">Replace encrypted value</p>
-                        <p className="text-xs text-muted-foreground">
-                          Enter the replacement. The current value is never loaded into this form.
-                        </p>
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor={`edit-value-${row.id}`}>
-                          {TYPE_DETAILS[row.secret_type as SecretType]?.valueLabel ??
-                            "Secret value"}
-                        </Label>
-                        <div className="flex gap-2">
-                          <Input
-                            id={`edit-value-${row.id}`}
-                            type={showEditValue ? "text" : "password"}
-                            autoComplete="new-password"
-                            value={editValue}
-                            onChange={(event) => setEditValue(event.target.value)}
-                            placeholder="Enter new value"
-                            className="min-w-0 font-mono"
-                          />
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setShowEditValue((current) => !current)}
-                          >
-                            {showEditValue ? "Hide" : "Show"}
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          size="sm"
-                          onClick={() => valueMutation.mutate()}
-                          disabled={editValue.length < 4 || valueMutation.isPending}
-                        >
-                          {valueMutation.isPending ? (
-                            <Loader2 className="mr-2 size-4 animate-spin" />
-                          ) : null}
-                          Save new value
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            setEditingValueId(null);
-                            setEditValue("");
-                            setShowEditValue(false);
-                          }}
-                          disabled={valueMutation.isPending}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    </div>
-                  ) : null}
-                  {editingCredentialId === row.id ? (
-                    <div className="mt-3 space-y-3 rounded-lg border border-border bg-muted/20 p-3">
-                      <div>
-                        <p className="text-sm font-medium">Edit organization</p>
-                        <p className="text-xs text-muted-foreground">
-                          Add or remove project access without duplicating or changing the Vault
-                          secret.
-                        </p>
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor={`edit-tags-${row.id}`}>Tags</Label>
-                        <Input
-                          id={`edit-tags-${row.id}`}
-                          value={editTags}
-                          onChange={(event) => setEditTags(event.target.value)}
-                          placeholder="production, supabase"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor={`edit-notes-${row.id}`}>Notes</Label>
-                        {editNotesLoaded ? (
-                          <Textarea
-                            id={`edit-notes-${row.id}`}
-                            value={editNotes}
-                            onChange={(event) => setEditNotes(event.target.value)}
-                            placeholder="Notes"
-                            className="min-h-20"
-                          />
-                        ) : (
-                          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed bg-background p-2 text-xs text-muted-foreground">
-                            <Lock className="size-3.5" />
-                            <span>
-                              {row.has_notes
-                                ? "Notes are hidden and will be kept unchanged."
-                                : "No notes saved."}
-                            </span>
+                        ) : null}
+                        {row.has_totp ? (
+                          totpCodes[row.id] ? (
                             <Button
-                              type="button"
                               size="sm"
                               variant="outline"
-                              className="ml-auto"
-                              onClick={() =>
-                                row.has_notes
-                                  ? revealNotesMutation.mutate({ id: row.id, forEdit: true })
-                                  : setEditNotesLoaded(true)
-                              }
-                              disabled={revealNotesMutation.isPending}
+                              className="gap-1.5 font-mono"
+                              aria-label={`Copy 2FA code for ${row.name}`}
+                              onClick={() => copyTotp(row.id, totpCodes[row.id]!.code)}
                             >
-                              {row.has_notes ? "Load notes to edit" : "Add notes"}
+                              {copiedId === row.id ? (
+                                <Check className="size-3.5" />
+                              ) : (
+                                <Clipboard className="size-3.5" />
+                              )}
+                              {totpCodes[row.id]!.code}
+                              <span className="font-sans text-[10px] text-muted-foreground">
+                                {totpCodes[row.id]!.seconds}s
+                              </span>
                             </Button>
-                          </div>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Assigned projects</Label>
-                        <div className="grid gap-2 sm:grid-cols-2">
-                          {(projects.data ?? []).map((project) => (
-                            <label
-                              key={project.id}
-                              className="flex items-center gap-2 rounded-lg border bg-background p-2 text-sm"
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="min-w-28 justify-center gap-1.5"
+                              onClick={() => totpMutation.mutate(row.id)}
+                              disabled={totpMutation.isPending}
                             >
-                              <input
-                                type="checkbox"
-                                checked={editProjectIds.includes(project.id)}
-                                onChange={(event) =>
-                                  setEditProjectIds((current) =>
-                                    event.target.checked
-                                      ? [...new Set([...current, project.id])]
-                                      : current.filter((id) => id !== project.id),
-                                  )
-                                }
-                              />
-                              <span className="truncate">{project.name}</span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          size="sm"
-                          onClick={() => organizationMutation.mutate()}
-                          disabled={organizationMutation.isPending}
-                        >
-                          {organizationMutation.isPending ? (
-                            <Loader2 className="mr-2 size-4 animate-spin" />
-                          ) : null}
-                          Save organization
-                        </Button>
+                              <KeyRound className="size-3.5" /> Show 2FA code
+                            </Button>
+                          )
+                        ) : null}
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => {
-                            setEditingCredentialId(null);
-                            setEditNotes("");
-                            setEditNotesLoaded(false);
-                          }}
-                          disabled={organizationMutation.isPending}
+                          aria-label={`Delete ${row.name}`}
+                          onClick={() => setPendingDelete({ id: row.id, name: row.name })}
+                          disabled={deleteMutation.isPending}
                         >
-                          Cancel
+                          <Trash2 className="size-3.5" />
                         </Button>
                       </div>
-                    </div>
-                  ) : null}
-                  {row.website || row.has_notes ? (
-                    <div className="mt-3 border-t border-border/70 pt-3 text-xs text-muted-foreground">
-                      {row.website ? <p className="truncate">{row.website}</p> : null}
-                      {row.has_notes ? (
-                        revealedNotes[row.id] !== undefined ? (
-                          <div className="mt-2 rounded-lg border border-primary/30 bg-primary/5 p-2">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="font-medium text-foreground">Notes</span>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="gap-1.5"
-                                aria-label={`Hide notes for ${row.name}`}
-                                onClick={() => clearRevealedNotes(row.id)}
-                              >
-                                <EyeOff className="size-3.5" /> Hide
-                              </Button>
-                            </div>
-                            <p className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap break-words font-mono text-[11px]">
-                              {revealedNotes[row.id]}
-                            </p>
-                            <p className="mt-1 text-[10px]">
-                              Hides automatically after 30 seconds.
+                      {revealedValues[row.id] ? (
+                        <div className="mt-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
+                          <Label
+                            htmlFor={`revealed-${row.id}`}
+                            className="text-xs text-muted-foreground"
+                          >
+                            {TYPE_DETAILS[row.secret_type as SecretType]?.valueLabel ??
+                              "Secret value"}
+                          </Label>
+                          <div className="mt-1 flex gap-2">
+                            <Input
+                              id={`revealed-${row.id}`}
+                              readOnly
+                              value={revealedValues[row.id]}
+                              className="min-w-0 font-mono"
+                            />
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              aria-label={`Copy credential value for ${row.name}`}
+                              onClick={() => copyCredential(row.id, revealedValues[row.id]!)}
+                            >
+                              {copiedId === row.id ? (
+                                <Check className="size-4" />
+                              ) : (
+                                <Clipboard className="size-4" />
+                              )}
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              aria-label={`Hide credential value for ${row.name}`}
+                              onClick={() =>
+                                setRevealedValues((previous) => {
+                                  const next = { ...previous };
+                                  delete next[row.id];
+                                  return next;
+                                })
+                              }
+                            >
+                              <EyeOff className="size-4" />
+                            </Button>
+                          </div>
+                          <p className="mt-2 text-[11px] text-muted-foreground">
+                            This is the exact value stored in Vault. It will hide automatically
+                            after 30 seconds.
+                          </p>
+                        </div>
+                      ) : null}
+                      {editingValueId === row.id ? (
+                        <div className="mt-3 space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
+                          <div>
+                            <p className="text-sm font-medium">Replace encrypted value</p>
+                            <p className="text-xs text-muted-foreground">
+                              Enter the replacement. The current value is never loaded into this
+                              form.
                             </p>
                           </div>
-                        ) : (
-                          <div className="mt-1 flex items-center gap-2">
-                            <FileText className="size-3.5" />
-                            <span>Notes hidden</span>
+                          <div className="space-y-1.5">
+                            <Label htmlFor={`edit-value-${row.id}`}>
+                              {TYPE_DETAILS[row.secret_type as SecretType]?.valueLabel ??
+                                "Secret value"}
+                            </Label>
+                            <div className="flex gap-2">
+                              <Input
+                                id={`edit-value-${row.id}`}
+                                type={showEditValue ? "text" : "password"}
+                                autoComplete="new-password"
+                                value={editValue}
+                                onChange={(event) => setEditValue(event.target.value)}
+                                placeholder="Enter new value"
+                                className="min-w-0 font-mono"
+                              />
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setShowEditValue((current) => !current)}
+                              >
+                                {showEditValue ? "Hide" : "Show"}
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => valueMutation.mutate()}
+                              disabled={editValue.length < 4 || valueMutation.isPending}
+                            >
+                              {valueMutation.isPending ? (
+                                <Loader2 className="mr-2 size-4 animate-spin" />
+                              ) : null}
+                              Save new value
+                            </Button>
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="gap-1.5"
-                              aria-label={`Reveal notes for ${row.name}`}
-                              onClick={() =>
-                                revealNotesMutation.mutate({ id: row.id, forEdit: false })
-                              }
-                              disabled={revealNotesMutation.isPending}
+                              onClick={() => {
+                                setEditingValueId(null);
+                                setEditValue("");
+                                setShowEditValue(false);
+                              }}
+                              disabled={valueMutation.isPending}
                             >
-                              <Eye className="size-3.5" /> Reveal notes
+                              Cancel
                             </Button>
                           </div>
-                        )
+                        </div>
                       ) : null}
-                    </div>
-                  ) : null}
+                      {editingCredentialId === row.id ? (
+                        <div className="mt-3 space-y-3 rounded-lg border border-border bg-muted/20 p-3">
+                          <div>
+                            <p className="text-sm font-medium">Edit organization</p>
+                            <p className="text-xs text-muted-foreground">
+                              Add or remove project access without duplicating or changing the Vault
+                              secret.
+                            </p>
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label htmlFor={`edit-tags-${row.id}`}>Tags</Label>
+                            <Input
+                              id={`edit-tags-${row.id}`}
+                              value={editTags}
+                              onChange={(event) => setEditTags(event.target.value)}
+                              placeholder="production, supabase"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label htmlFor={`edit-notes-${row.id}`}>Notes</Label>
+                            {editNotesLoaded ? (
+                              <Textarea
+                                id={`edit-notes-${row.id}`}
+                                value={editNotes}
+                                onChange={(event) => setEditNotes(event.target.value)}
+                                placeholder="Notes"
+                                className="min-h-20"
+                              />
+                            ) : (
+                              <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed bg-background p-2 text-xs text-muted-foreground">
+                                <Lock className="size-3.5" />
+                                <span>
+                                  {row.has_notes
+                                    ? "Notes are hidden and will be kept unchanged."
+                                    : "No notes saved."}
+                                </span>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  className="ml-auto"
+                                  onClick={() =>
+                                    row.has_notes
+                                      ? revealNotesMutation.mutate({ id: row.id, forEdit: true })
+                                      : setEditNotesLoaded(true)
+                                  }
+                                  disabled={revealNotesMutation.isPending}
+                                >
+                                  {row.has_notes ? "Load notes to edit" : "Add notes"}
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Assigned projects</Label>
+                            <div className="grid gap-2 sm:grid-cols-2">
+                              {(projects.data ?? []).map((project) => (
+                                <label
+                                  key={project.id}
+                                  className="flex items-center gap-2 rounded-lg border bg-background p-2 text-sm"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={editProjectIds.includes(project.id)}
+                                    onChange={(event) =>
+                                      setEditProjectIds((current) =>
+                                        event.target.checked
+                                          ? [...new Set([...current, project.id])]
+                                          : current.filter((id) => id !== project.id),
+                                      )
+                                    }
+                                  />
+                                  <span className="truncate">{project.name}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => organizationMutation.mutate()}
+                              disabled={organizationMutation.isPending}
+                            >
+                              {organizationMutation.isPending ? (
+                                <Loader2 className="mr-2 size-4 animate-spin" />
+                              ) : null}
+                              Save organization
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setEditingCredentialId(null);
+                                setEditNotes("");
+                                setEditNotesLoaded(false);
+                              }}
+                              disabled={organizationMutation.isPending}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ) : null}
+                      {row.website || row.has_notes ? (
+                        <div className="mt-3 border-t border-border/70 pt-3 text-xs text-muted-foreground">
+                          {row.website ? <p className="truncate">{row.website}</p> : null}
+                          {row.has_notes ? (
+                            revealedNotes[row.id] !== undefined ? (
+                              <div className="mt-2 rounded-lg border border-primary/30 bg-primary/5 p-2">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="font-medium text-foreground">Notes</span>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="gap-1.5"
+                                    aria-label={`Hide notes for ${row.name}`}
+                                    onClick={() => clearRevealedNotes(row.id)}
+                                  >
+                                    <EyeOff className="size-3.5" /> Hide
+                                  </Button>
+                                </div>
+                                <p className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap break-words font-mono text-[11px]">
+                                  {revealedNotes[row.id]}
+                                </p>
+                                <p className="mt-1 text-[10px]">
+                                  Hides automatically after 30 seconds.
+                                </p>
+                              </div>
+                            ) : (
+                              <div className="mt-1 flex items-center gap-2">
+                                <FileText className="size-3.5" />
+                                <span>Notes hidden</span>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="gap-1.5"
+                                  aria-label={`Reveal notes for ${row.name}`}
+                                  onClick={() =>
+                                    revealNotesMutation.mutate({ id: row.id, forEdit: false })
+                                  }
+                                  disabled={revealNotesMutation.isPending}
+                                >
+                                  <Eye className="size-3.5" /> Reveal notes
+                                </Button>
+                              </div>
+                            )
+                          ) : null}
+                        </div>
+                      ) : null}
                     </>
                   ) : null}
                 </li>
