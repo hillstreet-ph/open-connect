@@ -8,7 +8,19 @@
  */
 
 export type ImportSource =
-  "proton" | "bitwarden" | "1password" | "lastpass" | "firefox" | "browser" | "generic";
+  | "proton"
+  | "bitwarden"
+  | "1password"
+  | "lastpass"
+  | "dashlane"
+  | "nordpass"
+  | "keeper"
+  | "roboform"
+  | "enpass"
+  | "keepass"
+  | "firefox"
+  | "browser"
+  | "generic";
 
 export type ImportStatus = "ready" | "skipped" | "duplicate";
 
@@ -38,6 +50,12 @@ const SOURCE_LABEL: Record<ImportSource, string> = {
   bitwarden: "Bitwarden",
   "1password": "1Password",
   lastpass: "LastPass",
+  dashlane: "Dashlane",
+  nordpass: "NordPass",
+  keeper: "Keeper",
+  roboform: "RoboForm",
+  enpass: "Enpass",
+  keepass: "KeePass",
   firefox: "Firefox",
   browser: "Browser",
   generic: "CSV",
@@ -348,6 +366,11 @@ export function detectCsvSource(headers: string[]): ImportSource | null {
   if (has("loginuri", "loginusername", "loginpassword")) return "bitwarden";
   if (has("url", "username", "password", "extra", "grouping")) return "lastpass";
   if (has("url", "username", "password", "httprealm")) return "firefox";
+  if (has("username", "password", "url", "category")) return "dashlane";
+  if (has("title", "login", "password", "loginurl")) return "keeper";
+  if (has("name", "url", "user", "pass")) return "roboform";
+  if (has("title", "url", "username", "password", "totp")) return "enpass";
+  if (has("username", "password", "url", "note")) return "nordpass";
   if (has("title") && has("password") && (has("website") || has("url")) && has("username"))
     return names.includes("otpauth") ||
       names.includes("onetimepassword") ||
@@ -386,14 +409,22 @@ export function parseCredentialCsv(input: string): ImportItem[] {
     if (!row.some((cell) => cell.trim())) return;
     const entry = emptyEntry();
     entry.name = read(row, "name", "title");
-    entry.username = read(row, "username", "loginusername", "login");
+    entry.username = read(row, "username", "loginusername", "login", "user");
     entry.email = read(row, "email", "emailaddress");
-    entry.password = read(row, "password", "loginpassword");
-    entry.totp = read(row, "totp", "logintotp", "otpauth", "onetimepassword", "otp");
+    entry.password = read(row, "password", "loginpassword", "pass");
+    entry.totp = read(
+      row,
+      "totp",
+      "logintotp",
+      "otpauth",
+      "onetimepassword",
+      "otpsecret",
+      "otp",
+    );
     entry.notes = read(row, "note", "notes", "extra");
-    entry.folder = read(row, "vault", "folder", "grouping", "tags");
+    entry.folder = read(row, "vault", "folder", "grouping", "tags", "category");
     entry.type = read(row, "type") || "login";
-    const urlCell = read(row, "url", "website", "loginuri", "origin", "uri");
+    const urlCell = read(row, "url", "website", "loginuri", "origin", "uri", "loginurl");
     entry.urls = source === "proton" ? splitUrls(urlCell) : urlCell.trim() ? [urlCell] : [];
     if (source === "lastpass" && urlCell.trim() === "http://sn") {
       entry.type = "note";
@@ -523,6 +554,42 @@ export function parseCredentialJson(input: string): ImportItem[] {
   throw new Error("Unsupported JSON export");
 }
 
+/** KeePass / KeePassXC unencrypted XML export (Entry elements with Key/Value strings). */
+function parseKeePassXml(input: string): ImportItem[] {
+  const doc = new DOMParser().parseFromString(input, "application/xml");
+  if (doc.querySelector("parsererror")) throw new Error("Unsupported XML export");
+  const groupOf = new Map<Element, string>();
+  doc.querySelectorAll("Group").forEach((group) => {
+    const name = group.querySelector(":scope > Name")?.textContent?.trim() ?? "";
+    group.querySelectorAll(":scope > Entry").forEach((entry) => groupOf.set(entry, name));
+  });
+  const entries = [...doc.getElementsByTagName("Entry")];
+  if (entries.length > MAX_ROWS) throw new Error("Too many rows");
+  return entries.flatMap((node, index) => {
+    const fields = new Map<string, string>();
+    for (const strNode of [...node.getElementsByTagName("String")]) {
+      const key = strNode.getElementsByTagName("Key")[0]?.textContent?.trim().toLowerCase() ?? "";
+      const value = strNode.getElementsByTagName("Value")[0]?.textContent ?? "";
+      if (key && value) fields.set(key, value);
+    }
+    const entry = emptyEntry();
+    entry.type = "login";
+    entry.name = fields.get("title") ?? fields.get("name") ?? "";
+    entry.username = fields.get("username") ?? fields.get("login") ?? "";
+    entry.password = fields.get("password") ?? "";
+    entry.totp = fields.get("otp") ?? fields.get("totp") ?? "";
+    entry.notes = fields.get("notes") ?? "";
+    const url = fields.get("url") ?? fields.get("webs") ?? "";
+    entry.urls = url.trim() ? [url] : [];
+    entry.folder = groupOf.get(node) ?? "";
+    if (entry.notes.toLowerCase().startsWith("otpauth://") && !entry.totp) {
+      entry.totp = entry.notes;
+      entry.notes = "";
+    }
+    return toItems(entry, index + 1, "keepass");
+  });
+}
+
 /** Minimal ZIP reader (stored + deflate) for password-manager exports. */
 export async function readZipEntries(bytes: Uint8Array): Promise<Map<string, Uint8Array>> {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -592,6 +659,7 @@ export async function parseCredentialExport(
       attachments: entries.size - 1,
     };
   }
+  if (extension === "xml") return { items: parseKeePassXml(decode(bytes)), attachments: 0 };
   if (extension === "json") return { items: parseCredentialJson(decode(bytes)), attachments: 0 };
   return { items: parseCredentialCsv(decode(bytes)), attachments: 0 };
 }
