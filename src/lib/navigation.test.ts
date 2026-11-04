@@ -731,5 +731,6 @@ test("cloud computer is a separate cloud workspace destination", () => {
     "utf8",
   );
   assert.doesNotMatch(browserRoute, /CloudComputerManager/);
-  assert.match(browserRoute, /to: "\/cloud-computer"/);
+  assert.match(browserRoute, /PlaywrightBrowser/);
+  assert.match(browserRoute, /kind="computer"/);
 });
