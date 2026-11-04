@@ -183,8 +183,9 @@ export function CredentialImport({ existing }: { existing: ExistingCredentialIde
           <Upload className="h-4 w-4" /> Import from a password manager or browser
         </CardTitle>
         <CardDescription>
-          Supports Proton Pass (ZIP or CSV), Bitwarden (CSV or unencrypted JSON), 1Password CSV,
-          LastPass CSV and Chrome, Edge, Brave, Firefox or Safari password CSV. Files are read in
+          Supports Proton Pass (ZIP or CSV), Bitwarden (CSV or unencrypted JSON), 1Password,
+          LastPass, Dashlane, NordPass, KeePass / KeePassXC, Enpass and RoboForm CSV, plus
+          Chrome, Edge, Brave, Firefox and Safari password CSV. Files are read in
           your browser; only the items you import are sent to your encrypted Vault. Logins keep
           their email, username, website, notes and 2FA (TOTP) keys. Passkeys cannot be moved
           between password managers: rows that had passkeys are marked so you can create new ones.
@@ -194,16 +195,55 @@ export function CredentialImport({ existing }: { existing: ExistingCredentialIde
       </CardHeader>
       <CardContent className="space-y-4">
         <Label htmlFor="credential-import-file">Export file (CSV, ZIP or JSON, up to 10 MB)</Label>
-        <Input
-          id="credential-import-file"
-          type="file"
-          accept=".csv,.zip,.json,text/csv,application/zip,application/json,application/vnd.ms-excel,application/octet-stream"
-          disabled={busy}
-          onChange={(event) => {
-            void load(event.currentTarget.files?.[0]);
-            event.currentTarget.value = "";
+        <div
+          className={`flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-6 text-center transition-colors ${
+            busy ? "border-muted opacity-60" : "border-border hover:border-primary/50 hover:bg-muted/30"
+          }`}
+          onDragOver={(event) => {
+            if (!busy) event.preventDefault();
           }}
-        />
+          onDrop={(event) => {
+            event.preventDefault();
+            if (!busy) void load(event.dataTransfer.files?.[0]);
+          }}
+        >
+          <Upload className="size-6 text-muted-foreground" aria-hidden="true" />
+          <p className="text-sm font-medium">Drag and drop your export file here</p>
+          <p className="text-xs text-muted-foreground">
+            or use the file picker below. Files never leave your browser until you choose Import.
+          </p>
+          <Input
+            id="credential-import-file"
+            type="file"
+            accept=".csv,.zip,.json,text/csv,application/zip,application/json,application/vnd.ms-excel,application/octet-stream"
+            className="max-w-sm text-xs"
+            disabled={busy}
+            onChange={(event) => {
+              void load(event.currentTarget.files?.[0]);
+              event.currentTarget.value = "";
+            }}
+          />
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {[
+            "Proton Pass",
+            "Bitwarden",
+            "1Password",
+            "LastPass",
+            "Dashlane",
+            "NordPass",
+            "KeePass / KeePassXC",
+            "Enpass",
+            "RoboForm",
+            "Chrome · Edge · Brave",
+            "Firefox",
+            "Safari / iCloud Keychain",
+          ].map((manager) => (
+            <Badge key={manager} variant="outline" className="text-xs">
+              {manager}
+            </Badge>
+          ))}
+        </div>
         {busy && progress === null && (
           <p role="status" className="flex items-center gap-2 text-sm">
             <Loader2 className="h-4 w-4 animate-spin" /> Reading export…
