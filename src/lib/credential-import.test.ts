@@ -84,6 +84,77 @@ test("Proton CSV: logins with vault, http, notes and 2FA import instead of needi
   assert.equal(by("Card").status, "skipped");
 });
 
+test("detects additional password-manager export formats", () => {
+  assert.equal(
+    detectCsvSource("Group,Title,Username,Password,URL,Notes,TOTP,Icon".split(",")),
+    "keepass",
+  );
+  assert.equal(
+    detectCsvSource("title,url,username,password,note,category,otpSecret".split(",")),
+    "dashlane",
+  );
+  assert.equal(
+    detectCsvSource("name,login_url,password,additional_data,note,updated_at".split(",")),
+    "nordpass",
+  );
+  assert.equal(detectCsvSource("title,login,password,login_url,notes".split(",")), "keeper");
+  assert.equal(detectCsvSource("name,url,pass,note".split(",")), "roboform");
+  assert.equal(
+    detectCsvSource("Title,URL,Username,Password,Note,Modified Time".split(",")),
+    "enpass",
+  );
+});
+
+test("Dashlane, NordPass, Keeper, RoboForm and Enpass CSV rows map to vault items", () => {
+  const dashlane = parseCredentialCsv(
+    "title,url,username,password,note,category,otpSecret\nBank,https://bank.example,alice,fixture-pass,,Finance,",
+  );
+  assert.equal(dashlane[0]!.source, "dashlane");
+  assert.equal(dashlane[0]!.status, "ready");
+  assert.deepEqual(dashlane[0]!.tags, ["imported", "dashlane", "finance"]);
+  const nordpass = parseCredentialCsv(
+    "name,login_url,password,additional_data,note\nNord,https://nord.example,fixture-pass,extra,note text",
+  );
+  assert.equal(nordpass[0]!.source, "nordpass");
+  assert.equal(nordpass[0]!.website, "https://nord.example/");
+  const keeper = parseCredentialCsv(
+    "title,login,password,login_url,notes\nKeep,keep-user,fixture-pass,https://keep.example,note",
+  );
+  assert.equal(keeper[0]!.source, "keeper");
+  assert.equal(keeper[0]!.username, "keep-user");
+  const robo = parseCredentialCsv(
+    "name,url,pass,note\nRobo,https://robo.example,fixture-pass,hello there",
+  );
+  assert.equal(robo[0]!.source, "roboform");
+  assert.equal(robo[0]!.password, "fixture-pass");
+  const enpass = parseCredentialCsv(
+    "Title,URL,Username,Password,Note,Modified Time\nEnp,https://enpass.example,e-user,fixture-pass,note",
+  );
+  assert.equal(enpass[0]!.source, "enpass");
+  assert.equal(enpass[0]!.status, "ready");
+});
+
+test("KeePass XML export maps logins and notes", async () => {
+  const xml =
+    "<KeePassFile><Root><Group><Name>Vault</Name>" +
+    "<Entry><String><Key>Title</Key><Value>GitHub</Value></String><String><Key>UserName</Key><Value>octo</Value></String><String><Key>Password</Key><Value>fixture-pass</Value></String><String><Key>URL</Key><Value>https://github.com</Value></String><String><Key>OTP</Key><Value>" +
+    SEED +
+    "</Value></String></Entry>" +
+    "<Entry><String><Key>Title</Key><Value>Codes</Value></String><String><Key>Password</Key><Value>ab</Value></String><String><Key>Notes</Key><Value>recovery codes live here</Value></String></Entry>" +
+    "</Group></Root></KeePassFile>";
+  const items = await parseCredentialFile("keep.xml", new TextEncoder().encode(xml));
+  assert.equal(items[0]!.source, "keepass");
+  assert.equal(items[0]!.username, "octo");
+  assert.equal(items[0]!.website, "https://github.com/");
+  assert.equal(items[0]!.totp_secret, SEED);
+  assert.equal(items[1]!.secret_type, "other");
+  assert.equal(items[1]!.password, "recovery codes live here");
+  await assert.rejects(
+    parseCredentialFile("bad.xml", new TextEncoder().encode("<html/>")),
+    /KeePass/,
+  );
+});
+
 test("TOTP parsing matches the vault generator limits", () => {
   assert.equal(totpSeed(`otpauth://totp/x?secret=${SEED.toLowerCase()}`), SEED);
   assert.equal(totpSeed("jbsw y3dp ehpk 3pxp"), SEED);
