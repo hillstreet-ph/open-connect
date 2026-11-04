@@ -10,6 +10,47 @@ const app = (provider: string) => ({
   oauth: false,
 });
 
+test("Stripe restricted keys remain unverified without Customer read access", async () => {
+  const setup = normalizeConnectionSetup(
+    { provider: "stripe", api_key: "rk_test_fixture" },
+    app("stripe"),
+  );
+  let calls = 0;
+  const result = await validateConnectionCredential(setup, async (url, init) => {
+    calls++;
+    assert.equal(String(url), "https://api.stripe.com/v1/customers?limit=1");
+    assert.equal(new Headers(init?.headers).get("Authorization"), "Bearer rk_test_fixture");
+    assert.equal(init?.redirect, "manual");
+    assert.equal(init?.cache, "no-store");
+    assert.ok(init?.signal);
+    return new Response(null, { status: 403 });
+  });
+  assert.equal(calls, 1);
+  assert.equal(result.verified, false);
+  assert.match(result.detail, /remains unverified/);
+});
+
+test("Stripe authentication, redirect, rate-limit and service failures still reject", async () => {
+  const setup = normalizeConnectionSetup(
+    { provider: "stripe", api_key: "rk_test_fixture" },
+    app("stripe"),
+  );
+  for (const status of [401, 302, 429, 500]) {
+    await assert.rejects(
+      validateConnectionCredential(setup, async () => new Response(null, { status })),
+      new RegExp(`HTTP ${status}`),
+    );
+  }
+});
+
+test("other providers do not accept permission denials", async () => {
+  const setup = normalizeConnectionSetup({ provider: "e2b", api_key: "e2b_fixture" }, app("e2b"));
+  await assert.rejects(
+    validateConnectionCredential(setup, async () => new Response(null, { status: 403 })),
+    /HTTP 403/,
+  );
+});
+
 test("validates a custom MCP server with initialize", async () => {
   const setup = normalizeConnectionSetup(
     { provider: "custom_mcp", endpoint_url: "https://mcp.example/mcp", api_key: "test-secret" },
@@ -168,6 +209,135 @@ test("native model providers require a valid model catalog response", async () =
     await assert.rejects(
       validateConnectionCredential(setup, async () => new Response("<html>login</html>")),
       /valid model catalog/,
+    );
+  }
+});
+
+test("Cohere validates through its authenticated native model catalog", async () => {
+  const setup = normalizeConnectionSetup(
+    { provider: "cohere", api_key: "cohere-fixture-key" },
+    app("cohere"),
+  );
+  const result = await validateConnectionCredential(setup, async (url, init) => {
+    assert.equal(String(url), "https://api.cohere.com/v1/models");
+    assert.equal(new Headers(init?.headers).get("Authorization"), "Bearer cohere-fixture-key");
+    assert.equal(init?.method ?? "GET", "GET");
+    return Response.json({ models: [{ name: "command-a" }] });
+  });
+  assert.equal(result.verified, true);
+  assert.match(result.detail, /1 models fetched/);
+  await assert.rejects(
+    validateConnectionCredential(setup, async () => new Response(null, { status: 401 })),
+    /HTTP 401/,
+  );
+  await assert.rejects(
+    validateConnectionCredential(setup, async () => Response.json({ data: [] })),
+    /valid model catalog/,
+  );
+});
+
+test("Novita never verifies a credential from its public catalog", async () => {
+  for (const endpoint of [undefined, "https://api.novita.ai/openai/v1"]) {
+    const setup = normalizeConnectionSetup(
+      {
+        provider: "novita",
+        api_key: "definitely-invalid-key",
+        ...(endpoint ? { endpoint_url: endpoint } : {}),
+      },
+      app("novita"),
+    );
+    let requests = 0;
+    const result = await validateConnectionCredential(setup, async () => {
+      requests++;
+      return Response.json({ data: [{ id: "public-model" }] });
+    });
+    assert.equal(result.verified, false);
+    assert.equal(requests, 0, "neither public catalog nor paid inference can validate this key");
+    assert.match(result.detail, /public model catalog cannot verify/);
+  }
+});
+
+test("Cohere and Novita retain separately hosted compatible endpoint validation", async () => {
+  for (const provider of ["cohere", "novita"]) {
+    const setup = normalizeConnectionSetup(
+      { provider, api_key: "custom-fixture-key", endpoint_url: "https://custom.example/v1" },
+      app(provider),
+    );
+    const result = await validateConnectionCredential(setup, async (url, init) => {
+      assert.equal(String(url), "https://custom.example/v1/models");
+      assert.equal(new Headers(init?.headers).get("Authorization"), "Bearer custom-fixture-key");
+      return Response.json({ data: [{ id: "private-model" }] });
+    });
+    assert.equal(result.verified, true);
+  }
+});
+
+test("native tool providers validate with read-only requests", async () => {
+  const cases = [
+    {
+      provider: "telegram",
+      key: "123456789:AAExample_token_value_1234567890",
+      url: "https://api.telegram.org/bot123456789:AAExample_token_value_1234567890/getMe",
+      body: { ok: true, result: { id: 1, username: "fixture_bot" } },
+      accountId: "fixture_bot",
+    },
+    {
+      provider: "e2b",
+      key: "e2b_fixture_key",
+      url: "https://api.e2b.dev/sandboxes?limit=1",
+      body: [],
+    },
+    {
+      provider: "hubstaff_admin",
+      key: "hubstaff_fixture_token",
+      url: "https://api.hubstaff.com/v2/users/me",
+      body: { user: { id: 42 } },
+      accountId: "42",
+    },
+    {
+      provider: "stripe",
+      key: "sk_test_fixture_key",
+      url: "https://api.stripe.com/v1/customers?limit=1",
+      body: { object: "list", data: [] },
+    },
+  ];
+  for (const item of cases) {
+    const setup = normalizeConnectionSetup(
+      { provider: item.provider, api_key: item.key },
+      app(item.provider),
+    );
+    const result = await validateConnectionCredential(setup, async (url) => {
+      assert.equal(String(url), item.url);
+      return Response.json(item.body);
+    });
+    assert.equal(result.verified, true);
+    if (item.accountId) assert.equal(result.accountId, item.accountId);
+  }
+  const telegramSetup = normalizeConnectionSetup(
+    { provider: "telegram", api_key: "not-a-bot-token" },
+    app("telegram"),
+  );
+  await assert.rejects(
+    validateConnectionCredential(telegramSetup, async () => Response.json({})),
+    /bot token/,
+  );
+});
+
+test("native tool validators reject malformed successful responses", async () => {
+  for (const provider of ["telegram", "e2b", "hubstaff_admin", "stripe"]) {
+    const setup = normalizeConnectionSetup(
+      {
+        provider,
+        api_key:
+          provider === "telegram" ? "123456789:AAExample_token_value_1234567890" : "fixture-token",
+      },
+      app(provider),
+    );
+    for (const body of [{}, { ok: true, result: {} }, { user: {} }, { object: "list" }]) {
+      await assert.rejects(validateConnectionCredential(setup, async () => Response.json(body)));
+    }
+    await assert.rejects(
+      validateConnectionCredential(setup, async () => new Response("<html>login</html>")),
     );
   }
 });
