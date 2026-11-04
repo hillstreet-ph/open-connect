@@ -58,11 +58,11 @@ test("a clean public import remains a private unverified draft without a publica
     context: { userId: "fixture-owner", supabase: { from: () => query } },
   });
   expect(writes).toHaveLength(1);
-  expect(writes[0]?.verified).toBe(false);
-  expect(writes[0]?.published).toBe(false);
-  const config = writes[0]?.installation_config as Record<string, unknown>;
-  expect(config.review_state).toBe("pending_security_review");
-  expect((config.scan_report as { findings: unknown[] }).findings).toEqual([]);
+  expect(writes[0]?.["verified"]).toBe(false);
+  expect(writes[0]?.["published"]).toBe(false);
+  const config = writes[0]?.["installation_config"] as Record<string, unknown>;
+  expect(config["review_state"]).toBe("pending_security_review");
+  expect((config["scan_report"] as { findings: unknown[] }).findings).toEqual([]);
   expect(publicationWrites).toBe(0);
   expect(result.publication_performed).toBe(false);
   expect(result.results).toEqual([expect.objectContaining({ status: "draft" })]);
