@@ -19,6 +19,7 @@ import {
   Search,
   Tag,
   Trash2,
+  Upload,
   UserRound,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -190,6 +191,8 @@ function SecretsPage() {
   const [showEditValue, setShowEditValue] = useState(false);
   // Credentials render collapsed by default; one row expands at a time to keep the page compact.
   const [expandedCredentialId, setExpandedCredentialId] = useState<string | null>(null);
+  // Section switcher: 1 Upload, 2 Credentials, 3 Folders.
+  const [section, setSection] = useState<"upload" | "credentials" | "folders">("credentials");
 
   const list = useQuery({
     queryKey: ["credential-secrets"],
@@ -526,7 +529,58 @@ function SecretsPage() {
         </div>
       </div>
 
-      <CredentialImport existing={list.data ?? []} />
+      <div className="mt-6 grid gap-2 sm:grid-cols-3" role="group" aria-label="Vault sections">
+        <Button
+          type="button"
+          variant={section === "upload" ? "default" : "outline"}
+          className="h-auto flex-col items-start gap-0.5 py-2.5"
+          aria-pressed={section === "upload"}
+          onClick={() => setSection("upload")}
+        >
+          <span className="flex items-center gap-2 text-sm font-semibold">
+            <Upload className="size-4" /> 1 · Upload
+          </span>
+          <span className="text-left text-xs font-normal text-muted-foreground">
+            Import credentials from a file
+          </span>
+        </Button>
+        <Button
+          type="button"
+          variant={section === "credentials" ? "default" : "outline"}
+          className="h-auto flex-col items-start gap-0.5 py-2.5"
+          aria-pressed={section === "credentials"}
+          onClick={() => setSection("credentials")}
+        >
+          <span className="flex items-center gap-2 text-sm font-semibold">
+            <KeyRound className="size-4" /> 2 · Credentials
+          </span>
+          <span className="text-left text-xs font-normal text-muted-foreground">
+            Add and manage saved logins and keys
+          </span>
+        </Button>
+        <Button
+          type="button"
+          variant={section === "folders" ? "default" : "outline"}
+          className="h-auto flex-col items-start gap-0.5 py-2.5"
+          aria-pressed={section === "folders"}
+          onClick={() => setSection("folders")}
+        >
+          <span className="flex items-center gap-2 text-sm font-semibold">
+            <FolderKanban className="size-4" /> 3 · Folders
+          </span>
+          <span className="text-left text-xs font-normal text-muted-foreground">
+            Group and share credentials by folder
+          </span>
+        </Button>
+      </div>
+
+      {section === "upload" ? (
+        <div className="mt-6">
+          <CredentialImport existing={list.data ?? []} />
+        </div>
+      ) : null}
+
+      {section === "credentials" ? (
       <Card className="mt-8 overflow-hidden border-border/80 shadow-panel">
         <CardHeader className="p-4">
           <CardTitle className="text-base">Add login or credential</CardTitle>
@@ -727,7 +781,9 @@ function SecretsPage() {
           </Button>
         </CardContent>
       </Card>
+      ) : null}
 
+      {section === "folders" ? (
       <Card className="mt-6 shadow-panel">
         <CardHeader className="p-4">
           <CardTitle className="text-base">Credential folders</CardTitle>
@@ -936,7 +992,9 @@ function SecretsPage() {
           </div>
         </CardContent>
       </Card>
+      ) : null}
 
+      {section === "credentials" ? (
       <Card className="mt-6 shadow-panel">
         <CardHeader className="p-4">
           <CardTitle className="text-base">Stored credentials</CardTitle>
@@ -1434,6 +1492,7 @@ function SecretsPage() {
           ) : null}
         </CardContent>
       </Card>
+      ) : null}
 
       <AlertDialog
         open={Boolean(pendingDelete)}
