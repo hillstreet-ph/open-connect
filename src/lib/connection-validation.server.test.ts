@@ -285,7 +285,7 @@ test("native tool providers validate with read-only requests", async () => {
       provider: "e2b",
       key: "e2b_fixture_key",
       url: "https://api.e2b.dev/sandboxes?limit=1",
-      body: { sandboxes: [] },
+      body: [],
     },
     {
       provider: "hubstaff_admin",
@@ -321,6 +321,25 @@ test("native tool providers validate with read-only requests", async () => {
     validateConnectionCredential(telegramSetup, async () => Response.json({})),
     /bot token/,
   );
+});
+
+test("native tool validators reject malformed successful responses", async () => {
+  for (const provider of ["telegram", "e2b", "hubstaff_admin", "stripe"]) {
+    const setup = normalizeConnectionSetup(
+      {
+        provider,
+        api_key:
+          provider === "telegram" ? "123456789:AAExample_token_value_1234567890" : "fixture-token",
+      },
+      app(provider),
+    );
+    for (const body of [{}, { ok: true, result: {} }, { user: {} }, { object: "list" }]) {
+      await assert.rejects(validateConnectionCredential(setup, async () => Response.json(body)));
+    }
+    await assert.rejects(
+      validateConnectionCredential(setup, async () => new Response("<html>login</html>")),
+    );
+  }
 });
 
 test("generic endpoint validation verifies OpenAI-compatible catalogs for any provider", async () => {

@@ -246,7 +246,11 @@ export async function validateConnectionCredential(
       ok?: boolean;
       result?: { id?: number; username?: string };
     } | null;
-    if (payload?.ok !== true || !payload.result)
+    if (
+      payload?.ok !== true ||
+      !Number.isSafeInteger(payload.result?.id) ||
+      payload.result!.id! <= 0
+    )
       throw new Error("Telegram did not validate the bot token.");
     return {
       verified: true,
@@ -256,11 +260,13 @@ export async function validateConnectionCredential(
   }
 
   if (setup.provider === "e2b") {
-    await checkedFetch(
+    const response = await checkedFetch(
       "https://api.e2b.dev/sandboxes?limit=1",
       { headers: { "x-api-key": setup.apiKey, Accept: "application/json" } },
       send,
     );
+    const payload: unknown = await response.json().catch(() => null);
+    if (!Array.isArray(payload)) throw new Error("E2B did not return a valid sandbox list.");
     return {
       verified: true,
       detail: "E2B key verified with a read-only sandbox list request.",
@@ -277,10 +283,11 @@ export async function validateConnectionCredential(
     )
       .json()
       .catch(() => null)) as { user?: { id?: number } } | null;
-    if (!payload?.user) throw new Error("Hubstaff did not validate the access token.");
+    if (!Number.isSafeInteger(payload?.user?.id) || payload!.user!.id! <= 0)
+      throw new Error("Hubstaff did not validate the access token.");
     return {
       verified: true,
-      accountId: payload.user.id ? String(payload.user.id) : undefined,
+      accountId: String(payload!.user!.id),
       detail: "Hubstaff access verified with a read-only profile request.",
     };
   }
@@ -300,6 +307,12 @@ export async function validateConnectionCredential(
         detail:
           "Credential stored; Stripe Customer read access was denied. Connection remains unverified.",
       };
+    const payload = (await response.json().catch(() => null)) as {
+      object?: unknown;
+      data?: unknown;
+    } | null;
+    if (payload?.object !== "list" || !Array.isArray(payload.data))
+      throw new Error("Stripe did not return a valid customer list.");
     return {
       verified: true,
       detail: "Stripe key verified with a read-only customer list request.",
