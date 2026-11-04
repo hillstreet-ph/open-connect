@@ -421,6 +421,17 @@ function SecretsPage() {
     setEditFolderProjectIds(folder.project_ids);
   }
 
+  function toggleFolderCredential(folder: CredentialFolder, credentialId: string, member: boolean) {
+    updateFolderMutation.mutate({
+      id: folder.id,
+      name: folder.name,
+      credentialIds: member
+        ? [...new Set([...folder.credential_ids, credentialId])]
+        : folder.credential_ids.filter((id) => id !== credentialId),
+      projectIds: folder.project_ids,
+    });
+  }
+
   function beginEditingValue(id: string) {
     setEditingValueId(id);
     setEditValue("");
@@ -1142,6 +1153,48 @@ function SecretsPage() {
                                 {folder.name}
                               </Badge>
                             ))}
+                        </div>
+                        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                          <span className="text-xs text-muted-foreground">Folders:</span>
+                          {(folders.data ?? [])
+                            .filter((folder) => folder.credential_ids.includes(row.id))
+                            .map((folder) => (
+                              <Badge key={folder.id} variant="secondary" className="gap-1 text-xs">
+                                {folder.name}
+                                <button
+                                  type="button"
+                                  aria-label={`Remove ${row.name} from folder ${folder.name}`}
+                                  className="text-muted-foreground hover:text-foreground"
+                                  onClick={() => toggleFolderCredential(folder, row.id, false)}
+                                >
+                                  ×
+                                </button>
+                              </Badge>
+                            ))}
+                          {(folders.data ?? []).some(
+                            (folder) => !folder.credential_ids.includes(row.id),
+                          ) ? (
+                            <select
+                              aria-label={`Add ${row.name} to a folder`}
+                              className="h-7 rounded-md border border-input bg-background px-2 text-xs"
+                              value=""
+                              onChange={(event) => {
+                                const folder = (folders.data ?? []).find(
+                                  (candidate) => candidate.id === event.target.value,
+                                );
+                                if (folder) toggleFolderCredential(folder, row.id, true);
+                              }}
+                            >
+                              <option value="">Add to folder…</option>
+                              {(folders.data ?? [])
+                                .filter((folder) => !folder.credential_ids.includes(row.id))
+                                .map((folder) => (
+                                  <option key={folder.id} value={folder.id}>
+                                    {folder.name}
+                                  </option>
+                                ))}
+                            </select>
+                          ) : null}
                         </div>
                         <div className="mt-3 flex flex-wrap items-center gap-1.5">
                           <Button
