@@ -330,6 +330,31 @@ export async function validateConnectionCredential(
     return { verified: true, detail: `API key verified; ${payload.models.length} models fetched.` };
   }
 
+  // Cohere's compatibility API has no model-list contract. Its native endpoint
+  // authenticates the same key and returns `models`, not OpenAI's `data`.
+  // https://docs.cohere.com/v2/reference/list-models
+  if (setup.provider === "cohere" && new URL(base(setup)).origin === "https://api.cohere.com") {
+    const response = await checkedFetch(
+      "https://api.cohere.com/v1/models",
+      { headers: bearer },
+      send,
+    );
+    const payload = (await response.json().catch(() => null)) as { models?: unknown } | null;
+    if (!Array.isArray(payload?.models))
+      throw new Error("Provider did not return a valid model catalog.");
+    return { verified: true, detail: `API key verified; ${payload.models.length} models fetched.` };
+  }
+
+  // Novita's model catalog is public and can succeed with an invalid bearer key.
+  // Do not spend inference or mislabel catalog discovery as credential validation.
+  // A separately hosted compatible deployment retains its own catalog contract.
+  if (setup.provider === "novita" && new URL(base(setup)).origin === "https://api.novita.ai")
+    return {
+      verified: false,
+      detail:
+        "Credential stored; Novita's public model catalog cannot verify API keys. Authenticated inference has not been tested.",
+    };
+
   if (
     AI_GATEWAY_PROVIDER_IDS.has(setup.provider) ||
     ["litellm", "cerebras", "commandcode"].includes(setup.provider)

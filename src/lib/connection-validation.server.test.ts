@@ -213,6 +213,65 @@ test("native model providers require a valid model catalog response", async () =
   }
 });
 
+test("Cohere validates through its authenticated native model catalog", async () => {
+  const setup = normalizeConnectionSetup(
+    { provider: "cohere", api_key: "cohere-fixture-key" },
+    app("cohere"),
+  );
+  const result = await validateConnectionCredential(setup, async (url, init) => {
+    assert.equal(String(url), "https://api.cohere.com/v1/models");
+    assert.equal(new Headers(init?.headers).get("Authorization"), "Bearer cohere-fixture-key");
+    assert.equal(init?.method ?? "GET", "GET");
+    return Response.json({ models: [{ name: "command-a" }] });
+  });
+  assert.equal(result.verified, true);
+  assert.match(result.detail, /1 models fetched/);
+  await assert.rejects(
+    validateConnectionCredential(setup, async () => new Response(null, { status: 401 })),
+    /HTTP 401/,
+  );
+  await assert.rejects(
+    validateConnectionCredential(setup, async () => Response.json({ data: [] })),
+    /valid model catalog/,
+  );
+});
+
+test("Novita never verifies a credential from its public catalog", async () => {
+  for (const endpoint of [undefined, "https://api.novita.ai/openai/v1"]) {
+    const setup = normalizeConnectionSetup(
+      {
+        provider: "novita",
+        api_key: "definitely-invalid-key",
+        ...(endpoint ? { endpoint_url: endpoint } : {}),
+      },
+      app("novita"),
+    );
+    let requests = 0;
+    const result = await validateConnectionCredential(setup, async () => {
+      requests++;
+      return Response.json({ data: [{ id: "public-model" }] });
+    });
+    assert.equal(result.verified, false);
+    assert.equal(requests, 0, "neither public catalog nor paid inference can validate this key");
+    assert.match(result.detail, /public model catalog cannot verify/);
+  }
+});
+
+test("Cohere and Novita retain separately hosted compatible endpoint validation", async () => {
+  for (const provider of ["cohere", "novita"]) {
+    const setup = normalizeConnectionSetup(
+      { provider, api_key: "custom-fixture-key", endpoint_url: "https://custom.example/v1" },
+      app(provider),
+    );
+    const result = await validateConnectionCredential(setup, async (url, init) => {
+      assert.equal(String(url), "https://custom.example/v1/models");
+      assert.equal(new Headers(init?.headers).get("Authorization"), "Bearer custom-fixture-key");
+      return Response.json({ data: [{ id: "private-model" }] });
+    });
+    assert.equal(result.verified, true);
+  }
+});
+
 test("native tool providers validate with read-only requests", async () => {
   const cases = [
     {
