@@ -1,12 +1,10 @@
-import { NotificationChannels } from "@/components/notification-channels";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useState } from "react";
-import { Bot, Copy, Loader2, MessageCircle } from "lucide-react";
+import { Bot, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { ApiKeysCard } from "@/components/api-keys-card";
+import { AuthorizedAppsCard } from "@/components/authorized-apps-card";
 import { OAuthIntegrationsCard } from "@/components/oauth-integrations-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,95 +16,59 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  configureTelegramIntegration,
-  deleteInboundIntegration,
-  listInboundIntegrations,
-} from "@/lib/inbound-integrations.functions";
+import { cn } from "@/lib/utils";
 
-const integrationSections = ["api-key", "oauth-apps", "apps"] as const;
-type IntegrationSection = (typeof integrationSections)[number];
+const developerSections = ["api-key", "oauth-apps", "authorized-apps"] as const;
+type DeveloperSection = (typeof developerSections)[number];
 
-function parseIntegrationSection(value: unknown): IntegrationSection {
-  return typeof value === "string" && integrationSections.includes(value as IntegrationSection)
-    ? (value as IntegrationSection)
+const SECTION_LABELS: Record<DeveloperSection, string> = {
+  "api-key": "Personal tokens",
+  "oauth-apps": "OAuth apps",
+  "authorized-apps": "Authorized apps",
+};
+
+const SECTION_DESCRIPTIONS: Record<DeveloperSection, string> = {
+  "api-key":
+    "Scoped tokens for scripts and clients that use bearer authentication, plus the MCP endpoint.",
+  "oauth-apps":
+    "Apps you build that offer “Sign in with Open-Connect”. Register one to get a client ID and client secret.",
+  "authorized-apps": "Apps you have allowed to access your account. Revoke access at any time.",
+};
+
+function parseDeveloperSection(value: unknown): DeveloperSection | "apps" {
+  if (value === "apps") return "apps";
+  return typeof value === "string" && developerSections.includes(value as DeveloperSection)
+    ? (value as DeveloperSection)
     : "api-key";
 }
 
 export const Route = createFileRoute("/_authenticated/integrations")({
   validateSearch: (search: Record<string, unknown>) => ({
-    section: parseIntegrationSection(search["section"]),
+    section: parseDeveloperSection(search["section"]),
   }),
+  // Telegram and notification channels moved to Settings → Integrations.
+  beforeLoad: ({ search }) => {
+    if (search.section === "apps") throw redirect({ to: "/settings", hash: "integrations" });
+  },
   head: () => ({
     meta: [
-      { title: "Integrations — Open-Connect" },
+      { title: "Developer — Open-Connect" },
       {
         name: "description",
-        content:
-          "Manage Personal Tokens, OAuth integrations, and app integrations for Open-Connect.",
+        content: "Personal tokens, OAuth apps, and authorized apps for Open-Connect.",
       },
     ],
   }),
-  component: IntegrationsPage,
+  component: DeveloperPage,
 });
 
 const MCP_ENDPOINT = "https://open-connect.site/mcp";
 
-function IntegrationsPage() {
+function DeveloperPage() {
   const { user } = useAuth();
-  const { section } = Route.useSearch();
-  const sectionTitles: Record<IntegrationSection, string> = {
-    "api-key": "Personal Token",
-    "oauth-apps": "OAuth integrations",
-    apps: "Apps",
-  };
-  const queryClient = useQueryClient();
-  const listFn = useServerFn(listInboundIntegrations);
-  const configureFn = useServerFn(configureTelegramIntegration);
-  const disconnectFn = useServerFn(deleteInboundIntegration);
+  const search = Route.useSearch();
+  const section: DeveloperSection = search.section === "apps" ? "api-key" : search.section;
   const [mcpOpen, setMcpOpen] = useState(false);
-  const [telegramOpen, setTelegramOpen] = useState(false);
-  const [botLabel, setBotLabel] = useState("");
-  const [botToken, setBotToken] = useState("");
-
-  const connections = useQuery({
-    queryKey: ["inbound-integrations"],
-    queryFn: () => listFn({}),
-    enabled: Boolean(user) && section === "apps",
-  });
-
-  const telegramItems = (connections.data ?? []).filter((item) => item.provider === "telegram");
-
-  const saveTelegram = useMutation({
-    mutationFn: () =>
-      configureFn({
-        data: {
-          display_name: botLabel.trim() || "Telegram bot",
-          token: botToken,
-        },
-      }),
-    onSuccess: () => {
-      toast.success("Telegram bot verified and saved securely");
-      setBotLabel("");
-      setBotToken("");
-      setTelegramOpen(false);
-      void queryClient.invalidateQueries({ queryKey: ["inbound-integrations"] });
-    },
-    onError: (error) =>
-      toast.error(error instanceof Error ? error.message : "Could not set up Telegram"),
-  });
-
-  const removeTelegram = useMutation({
-    mutationFn: (id: string) => disconnectFn({ data: { id } }),
-    onSuccess: () => {
-      toast.success("Telegram integration removed");
-      void queryClient.invalidateQueries({ queryKey: ["inbound-integrations"] });
-    },
-    onError: (error) =>
-      toast.error(error instanceof Error ? error.message : "Could not remove Telegram"),
-  });
 
   async function copyEndpoint() {
     try {
@@ -118,149 +80,99 @@ function IntegrationsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-10 px-4 py-10 sm:px-6 sm:py-14">
+    <div className="mx-auto max-w-6xl space-y-8 px-4 py-10 sm:px-6 sm:py-14">
       <header>
         <Badge variant="outline" className="border-primary/40 text-primary">
-          Open-Connect · integrations
+          Open-Connect · developer
         </Badge>
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-          <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-            {sectionTitles[section]}
-          </h1>
-        </div>
+        <h1 className="mt-4 font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+          Developer
+        </h1>
         <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-          Connect external AI clients, MCP clients, and Telegram into Open-Connect. Each integration
-          setup belongs to your account. Connectors are for external accounts Open-Connect uses; AI
-          models and resource catalogs are managed separately.
+          {SECTION_DESCRIPTIONS[section]} To connect Open-Connect to another app with your own OAuth
+          client ID and secret, add a connector in{" "}
+          <Link to="/connections" className="underline">
+            Connections
+          </Link>
+          .
         </p>
+        <nav aria-label="Developer sections" className="mt-6 flex flex-wrap gap-2">
+          {developerSections.map((value) => (
+            <Link
+              key={value}
+              to="/integrations"
+              search={{ section: value }}
+              aria-current={section === value ? "page" : undefined}
+              className={cn(
+                "rounded-full border px-4 py-1.5 text-sm transition-colors",
+                section === value
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-accent",
+              )}
+            >
+              {SECTION_LABELS[value]}
+            </Link>
+          ))}
+        </nav>
       </header>
 
-      <section id="apps" hidden={section !== "apps"} className="scroll-mt-6">
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold">Apps</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Set up bots for notifications and alerts. This is an Open-Connect integration, separate
-            from app connectors.
-          </p>
-        </div>
-        <Card className="shadow-panel">
-          <CardHeader className="p-5">
-            <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <MessageCircle className="size-5" />
-            </div>
-            <CardTitle className="mt-3 text-base">Telegram bot</CardTitle>
-            <CardDescription>
-              Your bot token is stored securely for your account and is never displayed to
-              collaborators.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 px-5 pb-5">
-            <div className="space-y-2">
-              {telegramItems.length ? (
-                telegramItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 text-sm"
-                  >
-                    <span>
-                      {item.display_name || "Telegram"} · {item.status.replaceAll("_", " ")}
-                    </span>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={removeTelegram.isPending}
-                      onClick={() => removeTelegram.mutate(item.id)}
-                    >
-                      Remove
-                    </Button>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  No Telegram bot is connected to this account.
-                </p>
-              )}
-            </div>
-            {user ? (
-              <Button size="sm" onClick={() => setTelegramOpen(true)}>
-                <MessageCircle className="mr-2 size-4" />
-                Set up Telegram
-              </Button>
-            ) : (
-              <Button asChild size="sm">
-                <Link to="/auth">Sign in</Link>
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-        {user && section === "apps" ? (
-          <div className="mt-6">
-            <NotificationChannels userId={user.id} />
-          </div>
-        ) : null}
-      </section>
-
       {user ? (
-        <section id="api-key" hidden={section !== "api-key"} className="scroll-mt-6">
-          <div className="mb-4">
-            <p className="mt-1 text-sm text-muted-foreground">
-              Create and revoke scoped Personal Tokens for clients that use bearer authentication.
-            </p>
-          </div>
-          <ApiKeysCard />
-          <Card className="shadow-panel">
-            <CardHeader className="p-5">
-              <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <Bot className="size-5" />
-              </div>
-              <CardTitle className="mt-3 text-base">Open-Connect MCP endpoint</CardTitle>
-              <CardDescription>
-                Compatible clients connect here and receive only the capabilities allowed for your
-                account and project access.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 px-5 pb-5">
-              <div className="flex flex-wrap items-center gap-2">
-                <code className="min-w-0 flex-1 break-all rounded-md bg-muted px-3 py-2 text-sm">
-                  {MCP_ENDPOINT}
-                </code>
-                <Button variant="outline" size="sm" onClick={() => void copyEndpoint()}>
-                  <Copy className="mr-2 size-4" />
-                  Copy URL
-                </Button>
-              </div>
-              <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                <Badge variant="secondary">OAuth supported</Badge>
-                <Badge variant="secondary">Bearer key supported</Badge>
-                <span className="self-center">
-                  OAuth clients sign in and approve in their client.
-                </span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" onClick={() => setMcpOpen(true)}>
-                  Client setup instructions
-                </Button>
-                <Button asChild variant="outline" size="sm">
-                  <Link to="/integrations" search={{ section: "oauth-apps" }}>
-                    Register an OAuth integration
-                  </Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </section>
+        <>
+          <section id="api-key" hidden={section !== "api-key"} className="scroll-mt-6 space-y-6">
+            <ApiKeysCard />
+            <Card className="shadow-panel">
+              <CardHeader className="p-5">
+                <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <Bot className="size-5" />
+                </div>
+                <CardTitle className="mt-3 text-base">Open-Connect MCP endpoint</CardTitle>
+                <CardDescription>
+                  Compatible clients connect here and receive only the capabilities allowed for your
+                  account and project access.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 px-5 pb-5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <code className="min-w-0 flex-1 break-all rounded-md bg-muted px-3 py-2 text-sm">
+                    {MCP_ENDPOINT}
+                  </code>
+                  <Button variant="outline" size="sm" onClick={() => void copyEndpoint()}>
+                    <Copy className="mr-2 size-4" />
+                    Copy URL
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                  <Badge variant="secondary">OAuth supported</Badge>
+                  <Badge variant="secondary">Bearer key supported</Badge>
+                  <span className="self-center">
+                    OAuth clients sign in and approve in their client.
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setMcpOpen(true)}>
+                    Client setup instructions
+                  </Button>
+                  <Button asChild variant="outline" size="sm">
+                    <Link to="/integrations" search={{ section: "oauth-apps" }}>
+                      Register an OAuth integration
+                    </Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </section>
+          <section id="oauth-apps" hidden={section !== "oauth-apps"} className="scroll-mt-6">
+            {section === "oauth-apps" ? <OAuthIntegrationsCard /> : null}
+          </section>
+          <section
+            id="authorized-apps"
+            hidden={section !== "authorized-apps"}
+            className="scroll-mt-6"
+          >
+            {section === "authorized-apps" ? <AuthorizedAppsCard /> : null}
+          </section>
+        </>
       ) : null}
-
-      {user ? (
-        <section id="oauth-apps" hidden={section !== "oauth-apps"} className="scroll-mt-6">
-          {section === "oauth-apps" ? <OAuthIntegrationsCard /> : null}
-        </section>
-      ) : null}
-
-      <p className="text-xs text-muted-foreground">
-        Integrations belong to the signed-in account by default. Grant project access explicitly.
-        Connector accounts, model provider keys, and resource catalog entries remain separate.
-      </p>
 
       <Dialog open={mcpOpen} onOpenChange={setMcpOpen}>
         <DialogContent className="sm:max-w-lg">
@@ -282,57 +194,6 @@ function IntegrationsPage() {
             <Button variant="outline" onClick={() => void copyEndpoint()}>
               <Copy className="mr-2 size-4" />
               Copy endpoint
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        open={telegramOpen}
-        onOpenChange={(open) => {
-          setTelegramOpen(open);
-          if (!open) {
-            setBotToken("");
-            setBotLabel("");
-          }
-        }}
-      >
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Set up Telegram</DialogTitle>
-            <DialogDescription>
-              Create a bot with Telegram’s BotFather, then add its token here. The token is stored
-              in the secure credential vault.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="telegram-label">Bot name</Label>
-              <Input
-                id="telegram-label"
-                value={botLabel}
-                onChange={(event) => setBotLabel(event.target.value)}
-                placeholder="Support bot"
-                autoComplete="off"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="telegram-token">Bot token</Label>
-              <Input
-                id="telegram-token"
-                type="password"
-                value={botToken}
-                onChange={(event) => setBotToken(event.target.value)}
-                placeholder="Paste token from BotFather"
-                autoComplete="new-password"
-              />
-            </div>
-            <Button
-              className="w-full"
-              disabled={saveTelegram.isPending || botToken.trim().length < 8}
-              onClick={() => saveTelegram.mutate()}
-            >
-              {saveTelegram.isPending ? "Verifying and saving…" : "Save Telegram integration"}
             </Button>
           </div>
         </DialogContent>

@@ -68,7 +68,7 @@ test("new MCP connections default to a bearer credential while saved auth choice
   for (const saved of ["none", "bearer", "api_key", "personal_access_token"])
     assert.equal(defaultConnectorAuth("http", saved), saved);
   assert.equal(defaultConnectorAuth("http", "oauth"), "bearer");
-  assert.equal(authForProtocol("openapi", "oauth"), "bearer");
+  assert.equal(authForProtocol("openapi", "oauth"), "oauth");
   assert.equal(authForProtocol("openapi", "api_key"), "api_key");
   assert.equal(authForProtocol("http", "oauth"), "oauth");
 });

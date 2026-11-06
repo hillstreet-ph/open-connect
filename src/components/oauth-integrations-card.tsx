@@ -365,8 +365,8 @@ export function OAuthIntegrationsCard() {
           <DialogHeader>
             <DialogTitle>Revoke {confirmRevoke?.client_name}?</DialogTitle>
             <DialogDescription>
-              The app can no longer start sign-in or exchange codes. Tokens it already obtained stay
-              listed under Personal Tokens as “OAuth: {confirmRevoke?.client_name}” — revoke those
+              The app can no longer start sign-in or exchange codes. Access it already obtained is
+              listed under Developer → Authorized apps as “{confirmRevoke?.client_name}”; revoke it
               there too. This cannot be undone.
             </DialogDescription>
           </DialogHeader>

@@ -180,13 +180,9 @@ export function NotificationChannels({ userId }: { userId: string }) {
               {!bots.isLoading && !bots.isError && !telegramBots.length ? (
                 <p className="text-sm text-muted-foreground">
                   First{" "}
-                  <Link
-                    to="/integrations"
-                    search={{ section: "apps" }}
-                    className="text-primary underline"
-                  >
-                    set up a Telegram bot in Apps
-                  </Link>
+                  <a href="#telegram-bot" className="text-primary underline">
+                    set up a Telegram bot
+                  </a>
                   .
                 </p>
               ) : null}

@@ -83,8 +83,9 @@ export function ApiKeysCard({ modelOnly = false }: { modelOnly?: boolean }) {
       toast.error(error instanceof Error ? error.message : "Could not create key"),
   });
 
+  // OAuth grants are listed under Developer → Authorized apps, not as personal tokens.
   const visibleKeys = (keys.data ?? []).filter(
-    (key) => key.key_prefix.startsWith("sk-oc-") === modelOnly,
+    (key) => key.key_prefix.startsWith("sk-oc-") === modelOnly && !key.oauth_grant,
   );
 
   const revokeMutation = useMutation({

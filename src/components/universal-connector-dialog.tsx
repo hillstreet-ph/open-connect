@@ -7,6 +7,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { configureAppConnection } from "@/lib/connections.functions";
+import { beginCustomOAuth } from "@/lib/custom-oauth.functions";
+import {
+  OAUTH_APP_PRESETS,
+  OUTBOUND_OAUTH_REDIRECT_URL,
+  type TokenAuthMethod,
+} from "@/lib/oauth-app-presets";
 import { refreshConnectorCapabilities } from "@/lib/connector-capabilities.functions";
 import { openApiOperations } from "@/lib/openapi-connector";
 import { Button } from "@/components/ui/button";
@@ -71,15 +77,75 @@ function ConnectorForm({
     [header, setHeader] = useState(String(initial?.metadata["auth_header"] || "X-API-Key")),
     [secret, setSecret] = useState(""),
     [icon, setIcon] = useState(String(initial?.metadata["icon_data"] || "")),
-    [schema, setSchema] = useState<unknown>(initial?.metadata["openapi"]);
+    [schema, setSchema] = useState<unknown>(initial?.metadata["openapi"]),
+    [oauthPreset, setOauthPreset] = useState(""),
+    [clientId, setClientId] = useState(String(initial?.metadata["oauth_client_id"] || "")),
+    [clientSecret, setClientSecret] = useState(""),
+    [issuer, setIssuer] = useState(String(initial?.metadata["oauth_issuer"] || "")),
+    [authorizeUrl, setAuthorizeUrl] = useState(""),
+    [tokenUrl, setTokenUrl] = useState(""),
+    [tokenAuthMethod, setTokenAuthMethod] = useState<TokenAuthMethod>("client_secret_basic"),
+    [scope, setScope] = useState("");
   const file = useRef<HTMLInputElement>(null),
     iconFile = useRef<HTMLInputElement>(null);
   const client = useQueryClient();
   const loadSchema = useServerFn(loadPluginSchema);
+  const startOAuth = useServerFn(beginCustomOAuth);
+  const preset = OAUTH_APP_PRESETS.find((item) => item.id === oauthPreset);
+  const usesManualEndpoints = Boolean(authorizeUrl.trim() || tokenUrl.trim());
+  const oauthReady =
+    auth !== "oauth" ||
+    (protocol !== "openapi" && !clientId.trim()) ||
+    (clientId.trim() &&
+      (usesManualEndpoints ? authorizeUrl.trim() && tokenUrl.trim() : issuer.trim()));
+  function applyOAuthPreset(id: string) {
+    setOauthPreset(id);
+    const next = OAUTH_APP_PRESETS.find((item) => item.id === id);
+    if (!next) return;
+    setIssuer(next.issuer ?? "");
+    setAuthorizeUrl(next.authorizationEndpoint ?? "");
+    setTokenUrl(next.tokenEndpoint ?? "");
+    setTokenAuthMethod(next.tokenAuthMethod);
+    setScope(next.scopes);
+    if (!name.trim()) setName(next.name);
+  }
   const save = useServerFn(configureAppConnection),
     discover = useServerFn(refreshConnectorCapabilities);
   const mutation = useMutation({
     mutationFn: async () => {
+      if (auth === "oauth") {
+        const started = await startOAuth({
+          data: {
+            provider: protocol === "openapi" ? "custom_api" : "custom_mcp",
+            display_name: name,
+            description,
+            account_label: label,
+            endpoint_url: endpoint,
+            transport: protocol,
+            openapi: schema,
+            icon_data: icon,
+            api_key: "",
+            ...(initial?.id ? { connection_id: initial.id } : {}),
+            ...(clientId.trim()
+              ? {
+                  client_id: clientId.trim(),
+                  ...(clientSecret.trim() ? { client_secret: clientSecret.trim() } : {}),
+                  ...(usesManualEndpoints
+                    ? {
+                        authorization_endpoint: authorizeUrl.trim(),
+                        token_endpoint: tokenUrl.trim(),
+                        token_auth_method: tokenAuthMethod,
+                      }
+                    : { issuer: issuer.trim() }),
+                }
+              : {}),
+            ...(scope.trim() ? { scope: scope.trim() } : {}),
+          },
+        });
+        setClientSecret("");
+        window.location.assign(started.authorization_url);
+        return null;
+      }
       const input = {
         provider: protocol === "openapi" ? "custom_api" : "custom_mcp",
         display_name: name,
@@ -105,7 +171,8 @@ function ConnectorForm({
       );
       return result;
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
+      if (result === null) return;
       setSecret("");
       void client.invalidateQueries({ queryKey: ["app-connections"] });
       toast.success("Connection saved; discovered capabilities are available in its account card");
@@ -306,6 +373,159 @@ function ConnectorForm({
             </p>
           )}
         </div>
+        <div className="space-y-2">
+          <Label htmlFor="universal-auth">Sign-in method</Label>
+          <select
+            id="universal-auth"
+            className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+            value={auth}
+            onChange={(e) => setAuth(e.target.value)}
+          >
+            <option value="bearer">Access token (Bearer)</option>
+            <option value="api_key">API key in a custom header</option>
+            <option value="oauth">OAuth sign-in (your client ID &amp; secret)</option>
+            <option value="none">No authentication</option>
+          </select>
+        </div>
+        {auth === "oauth" && (
+          <div className="space-y-3 rounded-lg border p-3">
+            <div className="space-y-2">
+              <Label htmlFor="oauth-preset">OAuth app</Label>
+              <select
+                id="oauth-preset"
+                className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                value={oauthPreset}
+                onChange={(e) => applyOAuthPreset(e.target.value)}
+              >
+                <option value="">Custom provider</option>
+                {OAUTH_APP_PRESETS.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+              {preset ? (
+                <p className="text-xs text-muted-foreground">
+                  {preset.hint}{" "}
+                  <a
+                    className="underline"
+                    href={preset.registerUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Open {preset.name} OAuth apps
+                  </a>{" "}
+                  ·{" "}
+                  <a className="underline" href={preset.docsUrl} target="_blank" rel="noreferrer">
+                    Docs
+                  </a>
+                </p>
+              ) : null}
+            </div>
+            <div className="space-y-1">
+              <Label>Redirect URL to register with the provider</Label>
+              <div className="flex items-center gap-2">
+                <code className="min-w-0 flex-1 break-all rounded-md bg-muted px-2 py-1 text-xs">
+                  {OUTBOUND_OAUTH_REDIRECT_URL}
+                </code>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    void navigator.clipboard
+                      .writeText(OUTBOUND_OAUTH_REDIRECT_URL)
+                      .then(() => toast.success("Redirect URL copied"))
+                      .catch(() => toast.error("Could not copy"))
+                  }
+                >
+                  Copy
+                </Button>
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="oauth-client-id">Client ID</Label>
+                <Input
+                  id="oauth-client-id"
+                  value={clientId}
+                  autoComplete="off"
+                  onChange={(e) => setClientId(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="oauth-client-secret">Client secret</Label>
+                <Input
+                  id="oauth-client-secret"
+                  type="password"
+                  autoComplete="new-password"
+                  value={clientSecret}
+                  onChange={(e) => setClientSecret(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="oauth-issuer">Issuer URL (providers with OAuth discovery)</Label>
+              <Input
+                id="oauth-issuer"
+                type="url"
+                value={issuer}
+                placeholder="https://auth.example.com"
+                onChange={(e) => setIssuer(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="oauth-authorize">Authorization URL</Label>
+                <Input
+                  id="oauth-authorize"
+                  type="url"
+                  value={authorizeUrl}
+                  placeholder="https://example.com/oauth/authorize"
+                  onChange={(e) => setAuthorizeUrl(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="oauth-token">Token URL</Label>
+                <Input
+                  id="oauth-token"
+                  type="url"
+                  value={tokenUrl}
+                  placeholder="https://example.com/oauth/token"
+                  onChange={(e) => setTokenUrl(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="oauth-scope">Scopes</Label>
+                <Input
+                  id="oauth-scope"
+                  value={scope}
+                  placeholder="space-separated"
+                  onChange={(e) => setScope(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="oauth-token-auth">Client authentication</Label>
+                <select
+                  id="oauth-token-auth"
+                  className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  value={tokenAuthMethod}
+                  onChange={(e) => setTokenAuthMethod(e.target.value as TokenAuthMethod)}
+                >
+                  <option value="client_secret_basic">HTTP Basic (client_secret_basic)</option>
+                  <option value="client_secret_post">Form body (client_secret_post)</option>
+                </select>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Uses the authorization-code flow with PKCE. The client secret and tokens are stored in
+              the credential vault and refreshed automatically. MCP servers that support dynamic
+              registration can leave the client ID empty.
+            </p>
+          </div>
+        )}
         {auth === "api_key" && (
           <div className="space-y-2">
             <Label htmlFor="universal-header">Credential header</Label>
@@ -316,7 +536,7 @@ function ConnectorForm({
             />
           </div>
         )}
-        {auth !== "none" && (
+        {auth !== "none" && auth !== "oauth" && (
           <div className="space-y-2">
             <Label htmlFor="universal-secret">Credential / token</Label>
             <Input
@@ -343,11 +563,16 @@ function ConnectorForm({
             !name.trim() ||
             !endpoint.trim() ||
             (protocol === "openapi" && !schema) ||
-            (auth !== "none" && secret.trim().length < 8)
+            (auth !== "none" && auth !== "oauth" && secret.trim().length < 8) ||
+            !oauthReady
           }
           onClick={() => mutation.mutate()}
         >
-          {mutation.isPending ? "Connecting…" : "Connect & discover"}
+          {mutation.isPending
+            ? "Connecting…"
+            : auth === "oauth"
+              ? "Continue to sign in"
+              : "Connect & discover"}
         </Button>
         <Button asChild variant="link">
           <Link to="/studio">Create or upload a connector plugin in Studio</Link>
