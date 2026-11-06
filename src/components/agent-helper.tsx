@@ -377,25 +377,22 @@ function AgentHelperPanel({
           </button>
         </header>
         <nav className="flex flex-wrap gap-2 border-b px-3 py-2" aria-label="Copilot mode">
-          {["ask", "work", "browser"].map((item) => (
-            <button
-              key={item}
-              type="button"
-              disabled={busy || fileBusy}
-              aria-pressed={mode === item}
-              className={
-                "rounded border px-3 py-1 text-xs " +
-                (mode === item ? "bg-primary text-primary-foreground" : "hover:bg-muted")
-              }
-              onClick={() => {
-                setMode(item as CopilotMode);
-                setHistoryOpen(false);
-                if (item === "browser") setBrowserOpened(true);
-              }}
-            >
-              {item === "ask" ? "Ask" : item === "work" ? "Work" : "Browser task"}
-            </button>
-          ))}
+          <button
+            type="button"
+            disabled={busy || fileBusy}
+            aria-pressed={mode === "browser"}
+            className={
+              "rounded border px-3 py-1 text-xs " +
+              (mode === "browser" ? "bg-primary text-primary-foreground" : "hover:bg-muted")
+            }
+            onClick={() => {
+              setMode("browser");
+              setHistoryOpen(false);
+              setBrowserOpened(true);
+            }}
+          >
+            Browser task
+          </button>
           {mode === "work" ? (
             <button
               type="button"
@@ -583,8 +580,9 @@ function AgentHelperPanel({
               <div className="rounded-xl border bg-muted p-4 text-sm">
                 <h3 className="font-medium">What would you like to do?</h3>
                 <p className="mt-2 text-muted-foreground">
-                  Ask a question, search saved memory and knowledge, or attach documents. Switch to
-                  Work for autonomous multi-step execution, or Browser task to run a website prompt.
+                  Ask a question, search saved memory and knowledge, or attach documents. Turn on
+                  the Work switch beside the message box for autonomous multi-step execution, or
+                  Browser task to run a website prompt.
                 </p>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
                   {(openers.length
@@ -671,6 +669,52 @@ function AgentHelperPanel({
               onBusyChange={setFileBusy}
             />
             <div className="flex items-end gap-2">
+              <div
+                className="flex flex-col items-center gap-1 pb-1"
+                role="group"
+                aria-label="Copilot mode"
+              >
+                <span
+                  className={
+                    "text-[10px] font-medium " +
+                    (mode === "work" ? "text-muted-foreground" : "text-primary")
+                  }
+                >
+                  Ask
+                </span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={mode === "work"}
+                  aria-label="Work mode"
+                  title="Turn on Work mode for autonomous execution"
+                  disabled={busy || fileBusy}
+                  className={
+                    "relative h-6 w-11 shrink-0 rounded-full transition-colors " +
+                    (mode === "work" ? "bg-primary" : "bg-muted-foreground/30")
+                  }
+                  onClick={() => {
+                    setMode(mode === "work" ? "ask" : "work");
+                    setHistoryOpen(false);
+                  }}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={
+                      "absolute top-0.5 size-5 rounded-full bg-background shadow transition-all " +
+                      (mode === "work" ? "left-[22px]" : "left-0.5")
+                    }
+                  />
+                </button>
+                <span
+                  className={
+                    "text-[10px] font-medium " +
+                    (mode === "work" ? "text-primary" : "text-muted-foreground")
+                  }
+                >
+                  Work
+                </span>
+              </div>
               <textarea
                 ref={composer}
                 rows={2}
