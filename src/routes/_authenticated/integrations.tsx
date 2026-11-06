@@ -28,11 +28,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  developerSection,
-  developerSections,
-  type DeveloperSection,
-} from "@/lib/settings-navigation";
+import { developerSection, type DeveloperSection } from "@/lib/settings-navigation";
 import { cn } from "@/lib/utils";
 
 type SectionMeta = { label: string; title: string; description: string; icon: LucideIcon };
