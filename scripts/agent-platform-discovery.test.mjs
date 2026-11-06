@@ -115,3 +115,59 @@ test("identical fork manifests collapse to upstream with both source references"
   assert.equal(deduplicatePlatformCandidates([...upstream, ...fork])[0].sourceId, "official");
   assert.equal(deduplicatePlatformCandidates([{ sourceId: "other" }, ...fork]).length, 3);
 });
+
+test("platform collection surfaces the upstream IP restriction without retrying or falling back", async () => {
+  const { collectPlatformSource } = await import("./agent-platform-discovery.mjs");
+  const requests = [];
+  await assert.rejects(
+    () =>
+      collectPlatformSource(
+        { id: "mistral-vibe-resources", repository: "mistralai/mistral-vibe" },
+        {
+          headers: { Authorization: "Bearer fixture-token" },
+          fetch: async (url, options) => {
+            requests.push({ url, options });
+            return requests.length === 1
+              ? Response.json({ ...repo, full_name: "mistralai/mistral-vibe" })
+              : Response.json(
+                  {
+                    message: "Organization IP allow list blocks this runner.",
+                    unrelated: "private-sentinel",
+                  },
+                  { status: 403 },
+                );
+          },
+        },
+      ),
+    (error) => {
+      assert.match(error.message, /mistral-vibe-resources.*HTTP 403.*Organization IP allow list/);
+      assert.doesNotMatch(error.message, /fixture-token|private-sentinel/);
+      return true;
+    },
+  );
+  assert.equal(requests.length, 2);
+  assert.equal(
+    requests[1].url,
+    "https://api.github.com/repos/mistralai/mistral-vibe/git/trees/main?recursive=1",
+  );
+  assert.equal(requests[1].options.redirect, "error");
+});
+
+test("platform collection validates the complete tree before yielding review candidates", async () => {
+  const { collectPlatformSource } = await import("./agent-platform-discovery.mjs");
+  const source = {
+    id: "openai-agent-skills",
+    repository: "openai/skills",
+    trust: "official_upstream",
+  };
+  const responses = [Response.json(repo), Response.json(tree)];
+  const rows = await collectPlatformSource(source, { fetch: async () => responses.shift() });
+  assert.equal(rows.length, 2);
+  assert.equal(rows[0].reviewState, "pending_license_review");
+  assert.equal(rows[0].metadata.blob_sha, "blob1");
+  const truncated = [Response.json(repo), Response.json({ ...tree, truncated: true })];
+  await assert.rejects(
+    () => collectPlatformSource(source, { fetch: async () => truncated.shift() }),
+    /incomplete/,
+  );
+});

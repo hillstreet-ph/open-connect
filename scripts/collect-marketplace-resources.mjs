@@ -2,10 +2,9 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import {
-  platformCandidates,
+  collectPlatformSource,
   mergePlatformSnapshot,
   deduplicatePlatformCandidates,
-  platformEndpoint,
 } from "./agent-platform-discovery.mjs";
 import {
   deduplicateCandidates,
@@ -250,21 +249,7 @@ async function collectFirecrawlSource(source) {
 async function collectSource(source) {
   if (!isSourceEnabled(source)) return [];
   if (source.adapter === "github_resource_tree") {
-    const endpoint = platformEndpoint(source);
-    const get = async (path) => {
-      const response = await fetch(`${endpoint}${path}`, {
-        headers: headers(),
-        signal: AbortSignal.timeout(20_000),
-        redirect: "error",
-      });
-      if (!response.ok) throw new Error(`${source.id}: GitHub HTTP ${response.status}`);
-      return response.json();
-    };
-    const repository = await get("");
-    const tree = await get(
-      `/git/trees/${encodeURIComponent(repository.default_branch)}?recursive=1`,
-    );
-    return platformCandidates(source, repository, tree);
+    return collectPlatformSource(source, { headers: headers() });
   }
   if (source.adapter === "github_repository_search") return collectGitHubSource(source);
   if (source.adapter === "firecrawl_crawl") return collectFirecrawlSource(source);
@@ -295,6 +280,7 @@ if (fromCatalog) {
     } catch (error) {
       const message = error instanceof Error ? error.message : "collector failed";
       failures.push({ sourceId: source.id, error: message });
+      console.error(JSON.stringify({ sourceId: source.id, error: message }));
       if (error?.code === "FIRECRAWL_CREDITS" || error?.code === "FIRECRAWL_CONFIG") {
         stopFirecrawl = true;
       }

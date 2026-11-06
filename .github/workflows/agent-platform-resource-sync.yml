@@ -32,8 +32,6 @@ jobs:
         run: node --experimental-strip-types scripts/collect-marketplace-resources.mjs --agent-platforms --write-catalog
       - name: Report source collection failures
         if: failure()
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
         run: |
           node --input-type=module <<'JS'
           import { readFile } from "node:fs/promises";
@@ -41,17 +39,6 @@ jobs:
           try {
             const report = JSON.parse(await readFile(path, "utf8"));
             console.log(JSON.stringify({ coverage: report.coverage, failures: report.failures }, null, 2));
-            if (report.failures?.some(item => item.sourceId === "mistral-vibe-resources")) {
-              for (const path of ["", "/git/trees/main?recursive=1"]) {
-                const response = await fetch("https://api.github.com/repos/mistralai/mistral-vibe" + path, {
-                  headers: { Accept: "application/vnd.github+json", Authorization: `Bearer ${process.env.GITHUB_TOKEN}`, "User-Agent": "open-connect-marketplace-collector/1.0" },
-                  redirect: "error",
-                  signal: AbortSignal.timeout(20000),
-                });
-                const data = await response.json();
-                console.log(JSON.stringify({ path, status: response.status, message: data.message, rate_remaining: response.headers.get("x-ratelimit-remaining") }));
-              }
-            }
           } catch {
             console.log("No source collection evidence was written.");
           }
