@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { summarizeDeveloperAccess, type TokenRow } from "./developer-access.ts";
+import {
+  isPersonalKeyContext,
+  summarizeDeveloperAccess,
+  type TokenRow,
+} from "./developer-access.ts";
 
 const token = (over: Partial<TokenRow>): TokenRow => ({
   id: "t",
@@ -109,4 +113,40 @@ test("never returns secret material or notification destinations", () => {
     "key_hash",
   ])
     assert.ok(!json.includes(leak), "leaked " + leak);
+});
+
+test("only personal keys may read account-wide developer access", () => {
+  const none = { organizationId: null, workspaceId: null, projectId: null };
+  assert.equal(isPersonalKeyContext(none), true);
+  assert.equal(isPersonalKeyContext({ ...none, organizationId: "org" }), false);
+  assert.equal(isPersonalKeyContext({ ...none, workspaceId: "ws" }), false);
+  assert.equal(isPersonalKeyContext({ ...none, projectId: "proj" }), false);
+});
+
+test("revoked tokens are excluded and revoked OAuth apps are labelled", () => {
+  const out = summarizeDeveloperAccess({
+    tokens: [
+      token({ id: "live" }),
+      token({ id: "gone", revoked_at: "2026-11-02T00:00:00Z" }),
+      token({ id: "gone-grant", name: "OAuth: Claude", revoked_at: "2026-11-02T00:00:00Z" }),
+    ],
+    oauthApps: [
+      {
+        client_id: "oc_cli_r",
+        client_name: "Old app",
+        redirect_uris: [],
+        created_at: "x",
+        secret_rotated_at: null,
+        revoked_at: "2026-11-03T00:00:00Z",
+      },
+    ],
+    webhooks: [],
+    channels: [],
+  });
+  assert.deepEqual(
+    out.personal_tokens.map((t) => t.id),
+    ["live"],
+  );
+  assert.equal(out.authorized_apps.length, 0);
+  assert.equal(out.oauth_apps[0]!.status, "revoked");
 });

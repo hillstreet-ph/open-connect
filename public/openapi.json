@@ -15,7 +15,7 @@
       "post": {
         "operationId": "readOpenConnect",
         "summary": "Discover and inspect Open-Connect resources",
-        "description": "Run a non-consequential Open-Connect discovery, inspection, recommendation, or planning action. Call list_connections before recommending an operation that needs a provider connection.",
+        "description": "Run a non-consequential Open-Connect discovery, inspection, recommendation, or planning action. Call list_connections before recommending an operation that needs a provider connection. list_credential_metadata and list_developer_access additionally require the secrets:read scope; list_developer_access also requires a personal credential (not one restricted to an organization, workspace, or project). Both return metadata only, never secret values.",
         "x-openai-isConsequential": false,
         "security": [
           {

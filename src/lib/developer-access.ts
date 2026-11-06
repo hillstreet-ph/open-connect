@@ -6,6 +6,18 @@
  * (webhook URLs can embed credentials). Writes that mint or reveal secrets stay
  * in the signed-in web UI, where the user sees the secret once.
  */
+/**
+ * Developer access is account-wide, so only personal keys may read it. Keys
+ * restricted to an organization, workspace, or project are rejected.
+ */
+export function isPersonalKeyContext(key: {
+  organizationId: string | null;
+  workspaceId: string | null;
+  projectId: string | null;
+}): boolean {
+  return !key.organizationId && !key.workspaceId && !key.projectId;
+}
+
 export type TokenRow = {
   id: string;
   name: string;

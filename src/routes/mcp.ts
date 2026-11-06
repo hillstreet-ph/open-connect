@@ -2056,8 +2056,16 @@ export const Route = createFileRoute("/mcp")({
             const payload = matchBrowserCredentials(data ?? [], args["origin"], args["account"]);
             result = { ...textResult(payload), structuredContent: payload };
           } else if (name === "list_developer_access") {
+            const { isPersonalKeyContext, summarizeDeveloperAccess } =
+              await import("@/lib/developer-access");
+            // Account-wide metadata: never readable through an org/workspace/project-scoped key.
+            if (!isPersonalKeyContext(key))
+              return gatewayError(
+                "Developer access requires a personal context.",
+                403,
+                "insufficient_scope",
+              );
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-            const { summarizeDeveloperAccess } = await import("@/lib/developer-access");
             // Tables added after the generated types; queried untyped, always scoped to the key owner.
             const db = supabaseAdmin as unknown as import("@supabase/supabase-js").SupabaseClient;
             const [tokens, oauthApps, webhooks, channels] = await Promise.all([
