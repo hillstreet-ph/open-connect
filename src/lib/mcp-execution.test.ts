@@ -550,6 +550,41 @@ test("developer access rejects bounded keys before account-wide reads", async ()
   }
 });
 
+test("TinyFish cloud browser tools are listed and refuse bounded keys before any credential read", async () => {
+  scopes = ["mcp:connect", "tools:invoke", "connections:read"];
+  const listed = await post({
+    request: new Request("https://fixture.invalid/mcp", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json, text/event-stream",
+      },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
+    }),
+  });
+  const names = ((await listed.json()).result.tools as { name: string }[]).map((t) => t.name);
+  for (const name of [
+    "cloud_browser_search",
+    "cloud_browser_fetch",
+    "cloud_browser_run",
+    "cloud_browser_get_run",
+    "cloud_browser_cancel_run",
+  ])
+    expect(names).toContain(name);
+  for (const boundary of [
+    { organizationId: "fixture-org" },
+    { workspaceId: "fixture-workspace" },
+    { projectId: "fixture-project" },
+  ]) {
+    keyBoundary = boundary;
+    tables.length = 0;
+    credentialReads.length = 0;
+    await expect(call("cloud_browser_search", { query: "news" })).rejects.toThrow("personal key");
+    expect(tables).not.toContain("app_connections");
+    expect(credentialReads).toEqual([]);
+  }
+});
+
 test("Composio preview performs owned-account reads without import or project writes", async () => {
   scopes = ["mcp:connect", "connections:read"];
   const response = await call("preview_composio_sync");

@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { CloudBrowserConsole } from "@/components/cloud-browser-console";
+import { CloudBrowserSearch } from "@/components/cloud-browser-search";
 
 /**
  * One cloud browser for general use, powered by TinyFish: prompt tasks with live
@@ -45,6 +46,7 @@ function CloudBrowserPage() {
           })
         }
       />
+      <CloudBrowserSearch />
       <p className="text-sm text-muted-foreground">
         Need a full desktop instead of a browser?{" "}
         <Link to="/cloud-computer" className="underline">
