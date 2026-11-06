@@ -18,6 +18,32 @@ export function platformEndpoint(source) {
   return endpoint;
 }
 
+export async function collectPlatformSource(source, options = {}) {
+  const endpoint = platformEndpoint(source);
+  const fetchSource = options.fetch ?? fetch;
+  const get = async (path) => {
+    const response = await fetchSource(`${endpoint}${path}`, {
+      headers: options.headers,
+      signal: AbortSignal.timeout(20_000),
+      redirect: "error",
+    });
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null);
+      const message =
+        typeof payload?.message === "string"
+          ? payload.message.replace(/[\r\n]/g, " ").slice(0, 500)
+          : "";
+      throw new Error(
+        `${source.id}: GitHub HTTP ${response.status}${message ? `: ${message}` : ""}`,
+      );
+    }
+    return response.json();
+  };
+  const repository = await get("");
+  const tree = await get(`/git/trees/${encodeURIComponent(repository.default_branch)}?recursive=1`);
+  return platformCandidates(source, repository, tree);
+}
+
 // Discovery reads Git object metadata only. It never downloads or executes packages.
 export function platformCandidates(source, repository, tree) {
   if (tree.truncated) throw new Error(`${source.id}: incomplete GitHub tree`);
