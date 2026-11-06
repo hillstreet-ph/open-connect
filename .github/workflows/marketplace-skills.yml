@@ -84,7 +84,6 @@ jobs:
           PY
 
   publish-first-party:
-    name: ClawHub publish (first-party skills)
     needs: validate
     uses: openclaw/clawhub/.github/workflows/skill-publish.yml@main
     with:
@@ -98,10 +97,8 @@ jobs:
       clawhub_token: ${{ secrets.CLAWHUB_TOKEN }}
 
   publish-vendor-root:
-    name: ClawHub publish (vendored root skills)
     needs: validate
     if: ${{ inputs.skill_path == '' }}
-    continue-on-error: true
     uses: openclaw/clawhub/.github/workflows/skill-publish.yml@main
     with:
       root: skills/vendor
@@ -113,10 +110,8 @@ jobs:
       clawhub_token: ${{ secrets.CLAWHUB_TOKEN }}
 
   publish-vendor-openclaw-skills:
-    name: ClawHub publish (vendored OpenClaw skills)
     needs: validate
     if: ${{ inputs.skill_path == '' }}
-    continue-on-error: true
     uses: openclaw/clawhub/.github/workflows/skill-publish.yml@main
     with:
       root: skills/vendor/openclaw/skills
@@ -128,10 +123,8 @@ jobs:
       clawhub_token: ${{ secrets.CLAWHUB_TOKEN }}
 
   publish-vendor-openclaw-agents:
-    name: ClawHub publish (vendored OpenClaw agents)
     needs: validate
     if: ${{ inputs.skill_path == '' }}
-    continue-on-error: true
     uses: openclaw/clawhub/.github/workflows/skill-publish.yml@main
     with:
       root: skills/vendor/openclaw/agents
@@ -143,10 +136,8 @@ jobs:
       clawhub_token: ${{ secrets.CLAWHUB_TOKEN }}
 
   publish-vendor-openhands:
-    name: ClawHub publish (vendored OpenHands extensions)
     needs: validate
     if: ${{ inputs.skill_path == '' }}
-    continue-on-error: true
     uses: openclaw/clawhub/.github/workflows/skill-publish.yml@main
     with:
       root: skills/vendor/openhands-extensions
