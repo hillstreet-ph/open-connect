@@ -1,0 +1,54 @@
+# StackHawk HawkScan configuration for Open-Connect.
+# Unauthenticated DAST against the public surface. API keys come from HAWK_API_KEY
+# (never committed). Override the target with APP_HOST / APP_ENV.
+#
+# Assumptions (recorded per scan-planning guidance):
+# - Target is production (https://open-connect.site); the worker cannot run locally
+#   without Supabase credentials and Cloudflare bindings.
+# - Endpoints that create or mutate records are excluded so active payloads never
+#   write to the production database: dynamic client registration, the OAuth token
+#   exchange, incoming webhooks, the write action, chat completions (billable),
+#   the internal scheduler, and the MCP JSON-RPC endpoint (tool calls can mutate).
+app:
+  applicationId: ${APP_ID:16258902-295d-472d-8eb6-290287d1d740}
+  env: ${APP_ENV:Production}
+  host: ${APP_HOST:https://open-connect.site}
+  openApiConf:
+    filePath: public/openapi.json
+  excludePaths:
+    - "/oauth/register.*"
+    - "/oauth/token.*"
+    - "/api/webhooks/.*"
+    - "/api/v1/actions/write.*"
+    - "/api/internal/.*"
+    - "/v1/chat/.*"
+    - "/mcp.*"
+    - "/assets/.*"
+    - "/ai-factory/.*"
+
+hawk:
+  spider:
+    base: true
+    maxDurationMinutes: 5
+    seedPaths:
+      - /
+      - /login
+      - /explore
+      - /resources
+      - /oauth/authorize
+      - /.well-known/oauth-authorization-server
+      - /.well-known/oauth-protected-resource
+      - /api/v1/health
+      - /v1/models
+  scan:
+    maxDurationMinutes: 30
+    crashDetection:
+      action: WARN
+
+tags:
+  - name: _STACKHAWK_AGENT
+    value: ${HAWK_AGENT:none}
+  - name: _STACKHAWK_GIT_COMMIT_SHA
+    value: ${COMMIT_SHA:none}
+  - name: _STACKHAWK_GIT_BRANCH
+    value: ${BRANCH_NAME:none}

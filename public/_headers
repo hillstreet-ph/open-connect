@@ -1,0 +1,7 @@
+# Cloudflare Pages static-asset headers. Worker responses (SSR, API, MCP) get the
+# same baseline from src/lib/security-headers.ts.
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+  X-Frame-Options: SAMEORIGIN
