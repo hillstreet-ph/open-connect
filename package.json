@@ -45,7 +45,9 @@
     "test:playwright": "node --test services/playwright-worker/*.test.mjs",
     "test:workforce:browser": "bun scripts/test-workforce-browser.mjs",
     "test:workforce:db": "node scripts/test-workforce-db.mjs",
-    "test:login:db": "node scripts/test-login-activity-db.mjs"
+    "test:login:db": "node scripts/test-login-activity-db.mjs",
+    "test:roster:smoke": "python3 scripts/validate_ai_factory_roster.py",
+    "test:roster:contract": "python3 scripts/validate_ai_factory_roster_test.py"
   },
   "dependencies": {
     "@browserbasehq/sdk": "2.24.0",
