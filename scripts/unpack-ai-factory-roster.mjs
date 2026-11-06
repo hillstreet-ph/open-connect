@@ -47,6 +47,30 @@ rmSync(target, { recursive: true, force: true });
 renameSync(staging, target);
 
 /**
+ * The roster's cross-page links are relative (`teams.html`, `niches.html`, ...),
+ * and those pages are static files that must resolve at their own URLs. If the
+ * archive ever ships without one of them, the deployed site would answer with
+ * the app's SPA shell instead of the page — failing loudly here keeps that from
+ * shipping silently.
+ */
+const REQUIRED_PAGES = [
+  "index.html",
+  "teams.html",
+  "niches.html",
+  "playbooks.html",
+  "hub.html",
+  "studio.html",
+  "connectors.html",
+  "command-center.html",
+  "registry.html",
+];
+const missing = REQUIRED_PAGES.filter((page) => !existsSync(join(target, page)));
+if (missing.length > 0) {
+  console.error(`[ai-factory] roster bundle is missing pages: ${missing.join(", ")}`);
+  process.exit(1);
+}
+
+/**
  * Make every roster page reachable at its own clean URL.
  *
  * The roster links between pages with relative hrefs (`teams.html`,
@@ -65,19 +89,34 @@ const pages = readdirSync(target)
   .filter((name) => name.endsWith(".html"))
   .map((name) => name.slice(0, -".html".length));
 
-for (const page of pages) {
-  const pageDir = join(target, page);
-  mkdirSync(pageDir, { recursive: true });
-
-  let html = readFileSync(join(target, `${page}.html`), "utf8");
-
-  // Point the roster's own cross-page links at each page's clean URL. Without
-  // this every nav click takes a 308 hop (`/teams.html` -> `/teams`) instead of
-  // resolving directly, and the extensionless form is the canonical one.
+/**
+ * Point the roster's own cross-page links at each page's clean URL. Without
+ * this every nav click takes a 308 hop (`/teams.html` -> `/teams`) instead of
+ * resolving directly, and the extensionless form is the canonical one.
+ */
+function rewritePageLinks(html) {
   for (const other of pages) {
     const clean = other === "index" ? "" : other;
     html = html.replaceAll(`href="${other}.html"`, `href="/ai-factory/roster/${clean}"`);
   }
+  return html;
+}
+
+for (const page of pages) {
+  const source = join(target, `${page}.html`);
+  let html = rewritePageLinks(readFileSync(source, "utf8"));
+
+  // `index.html` already serves `/ai-factory/roster/` as the directory index, so
+  // it needs no `<page>/index.html` twin. Emitting one would create a stray
+  // `/ai-factory/roster/index/` URL that duplicates the roster root. Its links
+  // are still rewritten in place above.
+  if (page === "index") {
+    writeFileSync(source, html);
+    continue;
+  }
+
+  const pageDir = join(target, page);
+  mkdirSync(pageDir, { recursive: true });
 
   if (!html.includes(BASE_HREF)) {
     if (!html.includes("<head>")) {
@@ -94,5 +133,5 @@ for (const page of pages) {
 
 console.log(
   `[ai-factory] roster unpacked to public/ai-factory/roster ` +
-    `(${pages.length} pages, each served at /ai-factory/roster/<page>)`,
+    `(${pages.length} pages verified, each served at /ai-factory/roster/<page>)`,
 );
