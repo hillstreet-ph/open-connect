@@ -533,6 +533,23 @@ test("control decisions reject non-admins and bounded keys before approval write
   }
 });
 
+test("developer access rejects bounded keys before account-wide reads", async () => {
+  scopes = ["mcp:connect", "secrets:read"];
+  for (const boundary of [
+    { organizationId: "fixture-org" },
+    { workspaceId: "fixture-workspace" },
+    { projectId: "fixture-project" },
+  ]) {
+    keyBoundary = boundary;
+    tables.length = 0;
+    const response = await call("list_developer_access");
+    await expectAccessDenied(response);
+    expect(JSON.stringify(await response.json())).toContain("personal context");
+    for (const table of ["api_keys", "oauth_clients", "incoming_webhooks", "notification_channels"])
+      expect(tables).not.toContain(table);
+  }
+});
+
 test("Composio preview performs owned-account reads without import or project writes", async () => {
   scopes = ["mcp:connect", "connections:read"];
   const response = await call("preview_composio_sync");
