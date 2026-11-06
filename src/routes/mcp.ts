@@ -3,7 +3,7 @@ import {
   PROFILE_SCHEMA,
   oauthScopeChallenge,
 } from "@/lib/mcp-oauth-contract";
-import { AGENCY_CATEGORIES, agencyTemplate } from "@/lib/ai-agency";
+import { FACTORY_CATEGORIES, factoryTemplate } from "@/lib/ai-factory";
 import { resourceReviewState, isResourceExecutable } from "@/lib/resource-approval";
 import {
   adminAccess,
@@ -461,7 +461,7 @@ const PLATFORM_TOOLS: McpTool[] = [
     inputSchema: {
       type: "object",
       properties: {
-        category: { type: "string", enum: [...AGENCY_CATEGORIES] },
+        category: { type: "string", enum: [...FACTORY_CATEGORIES] },
         goal: { type: "string", minLength: 1, maxLength: 4000 },
         context: { type: "string", maxLength: 24000 },
       },
@@ -2566,7 +2566,7 @@ export const Route = createFileRoute("/mcp")({
               await import("@/lib/gateway.server");
             const input = validateTeamInput(args);
             const roles =
-              args["category"] !== undefined ? agencyTemplate(args["category"]).roles : undefined;
+              args["category"] !== undefined ? factoryTemplate(args["category"]).roles : undefined;
             const routes = await resolveAutoFreeRoutes(
               await resolveUserUpstreams(key.userId, false),
             );

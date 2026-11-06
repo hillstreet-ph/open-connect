@@ -1,3 +1,4 @@
+import { factorySearch } from "@/lib/ai-factory-navigation";
 import { WorkforceDirectory } from "@/components/workforce-directory";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -7,22 +8,22 @@ import { Archive, Loader2, Play, Plus, UsersRound } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import {
-  AGENCY_CATEGORIES,
-  AGENCY_TEMPLATES,
-  agencyRoles,
-  agencyCategoryLabel,
-  agencyRunTranscript,
-  type AgencyTeam,
-  type AgencyTeamDraft,
-} from "@/lib/ai-agency";
+  FACTORY_CATEGORIES,
+  FACTORY_TEMPLATES,
+  factoryRoles,
+  factoryCategoryLabel,
+  factoryRunTranscript,
+  type FactoryTeam,
+  type FactoryTeamDraft,
+} from "@/lib/ai-factory";
 import {
-  listAgencyTeams,
-  saveAgencyTeam,
-  archiveAgencyTeam,
-  agencyReadiness,
-  listAgencyRuns,
-  runAgencyTeam,
-} from "@/lib/ai-agency.functions";
+  listFactoryTeams,
+  saveFactoryTeam,
+  archiveFactoryTeam,
+  factoryReadiness,
+  listFactoryRuns,
+  runFactoryTeam,
+} from "@/lib/ai-factory.functions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -31,28 +32,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/_authenticated/ai-factory")({
-  validateSearch: (
-    input: Record<string, unknown>,
-  ): { agent?: string; chat?: string; project?: string; view?: "teams" } => {
-    const result: { agent?: string; chat?: string; project?: string; view?: "teams" } = {};
-    for (const key of ["agent", "chat", "project"] as const)
-      if (typeof input[key] === "string" && /^[0-9a-f-]{36}$/i.test(input[key] as string))
-        result[key] = input[key] as string;
-    if (input["view"] === "teams") result.view = "teams";
-    return result;
-  },
+  validateSearch: factorySearch,
   head: () => ({
     meta: [{ title: "AI Factory — Open-Connect" }, { name: "robots", content: "noindex" }],
   }),
-  component: AgencyPage,
+  component: FactoryPage,
 });
-const emptyDraft: AgencyTeamDraft = {
+const emptyDraft: FactoryTeamDraft = {
   name: "",
   category: "development",
   description: "",
   roles: ["Software Architect", "Developer", "QA Reviewer"],
 };
-function AgencyPage() {
+function FactoryPage() {
   const { user } = useAuth();
   const search = Route.useSearch();
   const navigate = useNavigate();
@@ -75,7 +67,7 @@ function AgencyPage() {
         </Button>
       </div>
       {search.view === "teams" ? (
-        <AgencyWorkspace key={user?.id ?? "signed-out"} userId={user?.id} />
+        <FactoryWorkspace key={user?.id ?? "signed-out"} userId={user?.id} />
       ) : (
         <WorkforceDirectory
           key={user?.id ?? "signed-out"}
@@ -86,48 +78,48 @@ function AgencyPage() {
     </div>
   );
 }
-function AgencyWorkspace({ userId }: { userId: string | undefined }) {
+function FactoryWorkspace({ userId }: { userId: string | undefined }) {
   const qc = useQueryClient();
-  const list = useServerFn(listAgencyTeams),
-    save = useServerFn(saveAgencyTeam),
-    archive = useServerFn(archiveAgencyTeam),
-    readiness = useServerFn(agencyReadiness),
-    history = useServerFn(listAgencyRuns),
-    run = useServerFn(runAgencyTeam);
-  const [draft, setDraft] = useState<AgencyTeamDraft>(emptyDraft);
+  const list = useServerFn(listFactoryTeams),
+    save = useServerFn(saveFactoryTeam),
+    archive = useServerFn(archiveFactoryTeam),
+    readiness = useServerFn(factoryReadiness),
+    history = useServerFn(listFactoryRuns),
+    run = useServerFn(runFactoryTeam);
+  const [draft, setDraft] = useState<FactoryTeamDraft>(emptyDraft);
   const [roleText, setRoleText] = useState(emptyDraft.roles.join("\n"));
-  const rolesValidation = agencyRoles.safeParse(
+  const rolesValidation = factoryRoles.safeParse(
     roleText
       .split("\n")
       .map((role) => role.trim())
       .filter(Boolean),
   );
-  const [editing, setEditing] = useState<AgencyTeam | null>(null);
+  const [editing, setEditing] = useState<FactoryTeam | null>(null);
   const [category, setCategory] = useState("all");
   const [showArchived, setShowArchived] = useState(false);
   const [selectedId, setSelectedId] = useState("");
   const [goal, setGoal] = useState(""),
     [context, setContext] = useState("");
   const teams = useQuery({
-    queryKey: ["agency-teams", userId, category, showArchived],
+    queryKey: ["factory-teams", userId, category, showArchived],
     queryFn: () =>
       list({ data: { archived: showArchived, ...(category === "all" ? {} : { category }) } }),
     enabled: !!userId,
   });
   const models = useQuery({
-    queryKey: ["agency-readiness", userId],
+    queryKey: ["factory-readiness", userId],
     queryFn: () => readiness({}),
     enabled: !!userId,
     staleTime: 60000,
   });
   const runs = useQuery({
-    queryKey: ["agency-runs", userId, selectedId],
+    queryKey: ["factory-runs", userId, selectedId],
     queryFn: () => history({ data: { teamId: selectedId } }),
     enabled: !!userId && !!selectedId,
     refetchInterval: 15000,
   });
   const selected = teams.data?.find((team) => team.id === selectedId);
-  const refreshTeams = () => qc.invalidateQueries({ queryKey: ["agency-teams", userId] });
+  const refreshTeams = () => qc.invalidateQueries({ queryKey: ["factory-teams", userId] });
   const saveMutation = useMutation({
     mutationFn: () =>
       save({
@@ -158,7 +150,7 @@ function AgencyWorkspace({ userId }: { userId: string | undefined }) {
     },
   });
   const archiveMutation = useMutation({
-    mutationFn: (team: AgencyTeam) =>
+    mutationFn: (team: FactoryTeam) =>
       archive({
         data: { id: team.id, archived: !team.archived, expectedUpdatedAt: team.updated_at },
       }),
@@ -180,9 +172,9 @@ function AgencyWorkspace({ userId }: { userId: string | undefined }) {
           : "Some team roles were unavailable. Review the saved results.",
       ),
     onError: (e) => toast.error(e instanceof Error ? e.message : "Team request failed"),
-    onSettled: () => void qc.invalidateQueries({ queryKey: ["agency-runs", userId, selectedId] }),
+    onSettled: () => void qc.invalidateQueries({ queryKey: ["factory-runs", userId, selectedId] }),
   });
-  const loadDraft = (team: AgencyTeamDraft, current: AgencyTeam | null = null) => {
+  const loadDraft = (team: FactoryTeamDraft, current: FactoryTeam | null = null) => {
     setDraft({
       name: team.name,
       category: team.category,
@@ -216,12 +208,12 @@ function AgencyWorkspace({ userId }: { userId: string | undefined }) {
           free-provider rate limits apply.
         </p>
       </header>
-      <section aria-labelledby="agency-templates" className="space-y-3">
-        <h2 id="agency-templates" className="font-semibold">
+      <section aria-labelledby="factory-templates" className="space-y-3">
+        <h2 id="factory-templates" className="font-semibold">
           Start with a team template
         </h2>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {AGENCY_TEMPLATES.map((team) => (
+          {FACTORY_TEMPLATES.map((team) => (
             <button
               type="button"
               key={team.category}
@@ -229,7 +221,7 @@ function AgencyWorkspace({ userId }: { userId: string | undefined }) {
               disabled={runMutation.isPending}
               onClick={() => loadDraft(team)}
             >
-              <Badge variant="outline">{agencyCategoryLabel(team.category)}</Badge>
+              <Badge variant="outline">{factoryCategoryLabel(team.category)}</Badge>
               <span className="block text-sm font-semibold">{team.name}</span>
               <span className="block text-xs text-muted-foreground">{team.description}</span>
               <span className="block text-xs text-muted-foreground">{team.roles.join(" · ")}</span>
@@ -241,9 +233,9 @@ function AgencyWorkspace({ userId }: { userId: string | undefined }) {
         <h2 className="font-semibold">{editing ? "Edit team" : "Create a private team"}</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="agency-name">Team name</Label>
+            <Label htmlFor="factory-name">Team name</Label>
             <Input
-              id="agency-name"
+              id="factory-name"
               maxLength={100}
               value={draft.name}
               onChange={(e) => setDraft({ ...draft, name: e.target.value })}
@@ -251,35 +243,35 @@ function AgencyWorkspace({ userId }: { userId: string | undefined }) {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="agency-category">Category</Label>
+            <Label htmlFor="factory-category">Category</Label>
             <select
-              id="agency-category"
+              id="factory-category"
               className="h-10 w-full rounded-md border bg-background px-3 text-sm"
               value={draft.category}
               onChange={(e) =>
-                setDraft({ ...draft, category: e.target.value as AgencyTeamDraft["category"] })
+                setDraft({ ...draft, category: e.target.value as FactoryTeamDraft["category"] })
               }
             >
-              {AGENCY_CATEGORIES.map((value) => (
+              {FACTORY_CATEGORIES.map((value) => (
                 <option key={value} value={value}>
-                  {agencyCategoryLabel(value)}
+                  {factoryCategoryLabel(value)}
                 </option>
               ))}
             </select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="agency-description">Team purpose</Label>
+            <Label htmlFor="factory-description">Team purpose</Label>
             <Textarea
-              id="agency-description"
+              id="factory-description"
               maxLength={2000}
               value={draft.description}
               onChange={(e) => setDraft({ ...draft, description: e.target.value })}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="agency-roles">Agent roles, one per line</Label>
+            <Label htmlFor="factory-roles">Agent roles, one per line</Label>
             <Textarea
-              id="agency-roles"
+              id="factory-roles"
               maxLength={500}
               value={roleText}
               onChange={(e) => setRoleText(e.target.value)}
@@ -316,9 +308,9 @@ function AgencyWorkspace({ userId }: { userId: string | undefined }) {
           ) : null}
         </div>
       </Card>
-      <section className="space-y-3" aria-labelledby="agency-saved">
+      <section className="space-y-3" aria-labelledby="factory-saved">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 id="agency-saved" className="font-semibold">
+          <h2 id="factory-saved" className="font-semibold">
             Your teams
           </h2>
           <div className="flex flex-wrap items-center gap-3">
@@ -333,9 +325,9 @@ function AgencyWorkspace({ userId }: { userId: string | undefined }) {
               }}
             >
               <option value="all">All categories</option>
-              {AGENCY_CATEGORIES.map((value) => (
+              {FACTORY_CATEGORIES.map((value) => (
                 <option key={value} value={value}>
-                  {agencyCategoryLabel(value)}
+                  {factoryCategoryLabel(value)}
                 </option>
               ))}
             </select>
@@ -375,7 +367,7 @@ function AgencyWorkspace({ userId }: { userId: string | undefined }) {
             >
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="min-w-0 font-semibold [overflow-wrap:anywhere]">{team.name}</h3>
-                <Badge variant="outline">{agencyCategoryLabel(team.category)}</Badge>
+                <Badge variant="outline">{factoryCategoryLabel(team.category)}</Badge>
                 {team.archived ? <Badge variant="secondary">Archived</Badge> : null}
               </div>
               <p className="text-sm text-muted-foreground [overflow-wrap:anywhere]">
@@ -447,9 +439,9 @@ function AgencyWorkspace({ userId }: { userId: string | undefined }) {
           </Button>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="agency-goal">Team goal</Label>
+          <Label htmlFor="factory-goal">Team goal</Label>
           <Textarea
-            id="agency-goal"
+            id="factory-goal"
             maxLength={4000}
             value={goal}
             disabled={runMutation.isPending}
@@ -458,9 +450,9 @@ function AgencyWorkspace({ userId }: { userId: string | undefined }) {
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="agency-context">Context to share with the team</Label>
+          <Label htmlFor="factory-context">Context to share with the team</Label>
           <Textarea
-            id="agency-context"
+            id="factory-context"
             maxLength={24000}
             value={context}
             disabled={runMutation.isPending}
@@ -492,8 +484,8 @@ function AgencyWorkspace({ userId }: { userId: string | undefined }) {
         </Button>
       </Card>
       {selectedId ? (
-        <section className="space-y-3" aria-labelledby="agency-history">
-          <h2 id="agency-history" className="font-semibold">
+        <section className="space-y-3" aria-labelledby="factory-history">
+          <h2 id="factory-history" className="font-semibold">
             Private team history
           </h2>
           {runs.isPending ? <p role="status">Loading history…</p> : null}
@@ -532,7 +524,7 @@ function AgencyWorkspace({ userId }: { userId: string | undefined }) {
                   className="mt-3"
                   onClick={async () => {
                     try {
-                      await navigator.clipboard.writeText(agencyRunTranscript(item));
+                      await navigator.clipboard.writeText(factoryRunTranscript(item));
                       toast.success("Team outputs copied");
                     } catch {
                       toast.error("Copy is unavailable. Select the outputs below to copy them.");

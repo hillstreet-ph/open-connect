@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createClient } from "@supabase/supabase-js";
-import { finishAgencyProposalRun } from "./ai-agency-run-store.server.ts";
+import { finishFactoryProposalRun } from "./ai-factory-run-store.server.ts";
 
 for (const state of ["succeeded", "failed"] as const) {
-  test(`Agency ${state} finalization is conditional on owner, executor and running state`, async () => {
+  test(`Factory ${state} finalization is conditional on owner, executor and running state`, async () => {
     let request: URL | undefined;
     let body: Record<string, unknown> = {};
     const db = createClient("https://example.supabase.co", "synthetic-key", {
@@ -19,7 +19,7 @@ for (const state of ["succeeded", "failed"] as const) {
         },
       },
     });
-    await finishAgencyProposalRun(db, "owner-1", "run-1", state, {
+    await finishFactoryProposalRun(db, "owner-1", "run-1", state, {
       workers: [],
       executor: "untrusted",
       execution_performed: true,
@@ -38,7 +38,7 @@ for (const state of ["succeeded", "failed"] as const) {
 }
 
 for (const scenario of ["no matching run", "database error"] as const) {
-  test(`Agency rejects unverified completion: ${scenario}`, async () => {
+  test(`Factory rejects unverified completion: ${scenario}`, async () => {
     const db = createClient("https://example.supabase.co", "synthetic-key", {
       auth: { persistSession: false, autoRefreshToken: false },
       global: {
@@ -55,7 +55,7 @@ for (const scenario of ["no matching run", "database error"] as const) {
       },
     });
     await assert.rejects(
-      finishAgencyProposalRun(db, "owner-1", "run-1", "succeeded", {}),
+      finishFactoryProposalRun(db, "owner-1", "run-1", "succeeded", {}),
       (error: Error) =>
         /no completion was verified/.test(error.message) &&
         !error.message.includes("sensitive internal detail"),

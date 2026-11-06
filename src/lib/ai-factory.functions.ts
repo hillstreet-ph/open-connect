@@ -2,29 +2,29 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { AGENCY_CATEGORIES, agencyTeamInput, type AgencyRun } from "@/lib/ai-agency";
+import { FACTORY_CATEGORIES, factoryTeamInput, type FactoryRun } from "@/lib/ai-factory";
 import { validateTeamInput, runFreeAgentTeam, requestTeamWorker } from "@/lib/agent-team";
 
-export const listAgencyTeams = createServerFn({ method: "GET" })
+export const listFactoryTeams = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) =>
     z
       .object({
-        category: z.enum(AGENCY_CATEGORIES).optional(),
+        category: z.enum(FACTORY_CATEGORIES).optional(),
         archived: z.boolean().default(false),
       })
       .parse(input ?? {}),
   )
   .handler(async ({ data, context }) => {
-    const { listOwnedAgencyTeams } = await import("@/lib/ai-agency.server");
-    return listOwnedAgencyTeams(context.supabase as SupabaseClient, context.userId, data);
+    const { listOwnedFactoryTeams } = await import("@/lib/ai-factory.server");
+    return listOwnedFactoryTeams(context.supabase as SupabaseClient, context.userId, data);
   });
-export const saveAgencyTeam = createServerFn({ method: "POST" })
+export const saveFactoryTeam = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) =>
     z
       .object({
-        team: agencyTeamInput,
+        team: factoryTeamInput,
         id: z.uuid().optional(),
         expectedUpdatedAt: z.iso.datetime({ offset: true }).optional(),
       })
@@ -32,10 +32,10 @@ export const saveAgencyTeam = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const { saveOwnedAgencyTeam } = await import("@/lib/ai-agency.server");
-    return saveOwnedAgencyTeam(context.supabase as SupabaseClient, context.userId, data);
+    const { saveOwnedFactoryTeam } = await import("@/lib/ai-factory.server");
+    return saveOwnedFactoryTeam(context.supabase as SupabaseClient, context.userId, data);
   });
-export const archiveAgencyTeam = createServerFn({ method: "POST" })
+export const archiveFactoryTeam = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) =>
     z
@@ -59,7 +59,7 @@ export const archiveAgencyTeam = createServerFn({ method: "POST" })
     if (error || !row) throw new Error("Team changed or could not be updated. Refresh and retry.");
     return { ok: true };
   });
-export const agencyReadiness = createServerFn({ method: "GET" })
+export const factoryReadiness = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { resolveAutoFreeRoutes, resolveUserUpstreams } = await import("@/lib/gateway.server");
@@ -69,7 +69,7 @@ export const agencyReadiness = createServerFn({ method: "GET" })
       providers: [...new Set(routes.map((route) => route.upstream.name))],
     };
   });
-export const listAgencyRuns = createServerFn({ method: "GET" })
+export const listFactoryRuns = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => z.object({ teamId: z.uuid() }).parse(input))
   .handler(async ({ data, context }) => {
@@ -82,9 +82,9 @@ export const listAgencyRuns = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false })
       .limit(20);
     if (error) throw new Error("Could not load private team history.");
-    return (rows ?? []) as AgencyRun[];
+    return (rows ?? []) as FactoryRun[];
   });
-export const runAgencyTeam = createServerFn({ method: "POST" })
+export const runFactoryTeam = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) =>
     z
@@ -93,8 +93,8 @@ export const runAgencyTeam = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const { ownedActiveAgencyTeam } = await import("@/lib/ai-agency.server");
-    const team = await ownedActiveAgencyTeam(
+    const { ownedActiveFactoryTeam } = await import("@/lib/ai-factory.server");
+    const team = await ownedActiveFactoryTeam(
       context.supabase as SupabaseClient,
       context.userId,
       data.teamId,
@@ -104,7 +104,7 @@ export const runAgencyTeam = createServerFn({ method: "POST" })
     if (!routes.length)
       throw new Error("Connect an available free model provider in AI Gateway first.");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { finishAgencyProposalRun } = await import("@/lib/ai-agency-run-store.server");
+    const { finishFactoryProposalRun } = await import("@/lib/ai-factory-run-store.server");
     const db = supabaseAdmin as SupabaseClient;
     const id = crypto.randomUUID();
     const evidence = {
@@ -136,7 +136,7 @@ export const runAgencyTeam = createServerFn({ method: "POST" })
         team.roles,
       );
     } catch {
-      await finishAgencyProposalRun(db, context.userId, id, "failed", {
+      await finishFactoryProposalRun(db, context.userId, id, "failed", {
         ...evidence,
         error: "The team request was interrupted. Completion is unverified.",
       });
@@ -145,7 +145,7 @@ export const runAgencyTeam = createServerFn({ method: "POST" })
     const state = result.workers.every((worker) => worker.status === "completed")
       ? "succeeded"
       : "failed";
-    await finishAgencyProposalRun(db, context.userId, id, state, {
+    await finishFactoryProposalRun(db, context.userId, id, state, {
       ...evidence,
       workers: result.workers,
     });
