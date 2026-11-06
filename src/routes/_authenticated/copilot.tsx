@@ -10,6 +10,11 @@ function CopilotPage() {
 }
 
 export const Route = createFileRoute("/_authenticated/copilot")({
-  head: () => ({ title: "Copilot" }),
+  head: () => ({
+    meta: [
+      { title: "Copilot — Open-Connect" },
+      { name: "robots", content: "noindex" },
+    ],
+  }),
   component: CopilotPage,
 });
