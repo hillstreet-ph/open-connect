@@ -1,7 +1,19 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Archive, Brain, CopyX, Loader2, Pin, PinOff, Plus, Search, Trash2 } from "lucide-react";
+import {
+  Archive,
+  Brain,
+  CopyX,
+  Download,
+  Loader2,
+  Pin,
+  PinOff,
+  Plus,
+  Search,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -76,6 +88,165 @@ async function extractText(file: File) {
   return `Uploaded file: ${file.name} (${file.type || "application/octet-stream"}, ${file.size} bytes)`;
 }
 
+type KnowledgeExportRow = {
+  id: string;
+  title: string;
+  content: string;
+  source_type: string;
+  source_url: string | null;
+  tags: string[] | null;
+};
+
+function downloadKnowledgeFile(name: string, content: string, mimeType: string) {
+  const url = URL.createObjectURL(new Blob([content], { type: mimeType }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function knowledgeToCsv(rows: KnowledgeExportRow[]) {
+  const escape = (value: string) => '"' + value.split('"').join('""') + '"';
+  const header = ["title", "content", "source_type", "source_url", "tags"].map(escape).join(",");
+  const body = rows
+    .map((row) =>
+      [row.title, row.content, row.source_type, row.source_url ?? "", (row.tags ?? []).join(";")]
+        .map((value) => escape(String(value ?? "")))
+        .join(","),
+    )
+    .join("\n");
+  return header + "\n" + body;
+}
+
+function knowledgeToMarkdown(rows: KnowledgeExportRow[]) {
+  return rows
+    .map((row) => {
+      const lines = [
+        "## " + row.title,
+        row.content,
+        row.source_url ? "Source: " + row.source_url : "",
+        (row.tags ?? []).length ? "Tags: " + (row.tags ?? []).join(", ") : "",
+      ];
+      return lines.filter((line) => line.length > 0).join("\n\n");
+    })
+    .join("\n\n");
+}
+
+type ImportedKnowledge = {
+  title: string;
+  content: string;
+  source_type?: string | undefined;
+  source_url?: string | undefined;
+  tags?: string[] | undefined;
+};
+
+function parseCsvLine(line: string) {
+  const fields: string[] = [];
+  let field = "";
+  let quoted = false;
+  for (let i = 0; i < line.length; i++) {
+    const character = line[i];
+    if (quoted) {
+      if (character === '"' && line[i + 1] === '"') {
+        field += '"';
+        i++;
+      } else if (character === '"') {
+        quoted = false;
+      } else {
+        field += character;
+      }
+    } else if (character === '"') {
+      quoted = true;
+    } else if (character === ",") {
+      fields.push(field);
+      field = "";
+    } else {
+      field += character;
+    }
+  }
+  fields.push(field);
+  return fields;
+}
+
+function parseImportedRecord(item: Record<string, unknown>): ImportedKnowledge {
+  return {
+    title: typeof item["title"] === "string" ? item["title"].trim() : "",
+    content: typeof item["content"] === "string" ? item["content"].trim() : "",
+    source_type: typeof item["source_type"] === "string" ? item["source_type"] : undefined,
+    source_url: typeof item["source_url"] === "string" ? item["source_url"] : undefined,
+    tags: Array.isArray(item["tags"])
+      ? (item["tags"] as unknown[]).filter((tag): tag is string => typeof tag === "string")
+      : undefined,
+  };
+}
+
+async function parseKnowledgeImport(file: File): Promise<ImportedKnowledge[]> {
+  const name = file.name.toLowerCase();
+  if (name.endsWith(".json")) {
+    const parsed: unknown = JSON.parse(await file.text());
+    const list = Array.isArray(parsed)
+      ? parsed
+      : typeof parsed === "object" && parsed !== null
+        ? [parsed]
+        : [];
+    return (list as Array<Record<string, unknown>>)
+      .map(parseImportedRecord)
+      .filter((item) => item.title && item.content);
+  }
+  const text = await file.text();
+  if (name.endsWith(".csv")) {
+    const lines = text.split(/\r?\n/).filter((line) => line.trim().length > 0);
+    if (!lines.length) return [];
+    const header = parseCsvLine(lines[0] ?? "").map((value) => value.trim().toLowerCase());
+    const titleIndex = header.indexOf("title");
+    const contentIndex = header.indexOf("content");
+    const sourceTypeIndex = header.indexOf("source_type");
+    const sourceUrlIndex = header.indexOf("source_url");
+    const tagsIndex = header.indexOf("tags");
+    return lines
+      .slice(1)
+      .map((line) => {
+        const fields = parseCsvLine(line);
+        return {
+          title: (fields[titleIndex] ?? "").trim(),
+          content: (fields[contentIndex] ?? "").trim(),
+          source_type: sourceTypeIndex >= 0 ? (fields[sourceTypeIndex] ?? "").trim() : undefined,
+          source_url: sourceUrlIndex >= 0 ? (fields[sourceUrlIndex] ?? "").trim() : undefined,
+          tags:
+            tagsIndex >= 0 && (fields[tagsIndex] ?? "").trim()
+              ? (fields[tagsIndex] ?? "")
+                  .split(";")
+                  .map((tag) => tag.trim())
+                  .filter(Boolean)
+              : undefined,
+        };
+      })
+      .filter((item) => item.title && item.content);
+  }
+  if (/\.md$|\.markdown$|\.txt$/.test(name)) {
+    const sections = text.split(/\n(?=## )/g).filter((section) => section.trim().length > 0);
+    if (sections.length > 1 || text.trim().startsWith("## ")) {
+      return sections
+        .map((section) => {
+          const heading = section.split("\n")[0] ?? "";
+          const title = heading.replace(/^##\s*/, "").trim();
+          const content = section.split("\n").slice(1).join("\n").trim();
+          return { title, content, source_type: "note" as const };
+        })
+        .filter((item) => item.title && item.content);
+    }
+    return [
+      {
+        title: file.name.replace(/\.[^.]+$/, "").trim(),
+        content: text.trim(),
+        source_type: "note" as const,
+      },
+    ].filter((item) => item.content);
+  }
+  throw new Error("Import supports .json, .md, .markdown, .txt, and .csv files");
+}
+
 function ProjectSelect({
   value,
   onChange,
@@ -136,6 +307,7 @@ export function MemoryKnowledgePage({
   const [knowledgeFile, setKnowledgeFile] = useState<File | null>(null);
   const memoryFileRef = useRef<HTMLInputElement>(null);
   const knowledgeFileRef = useRef<HTMLInputElement>(null);
+  const importFileRef = useRef<HTMLInputElement>(null);
 
   async function uploadFile(file: File, kind: "memory" | "knowledge"): Promise<UploadedFile> {
     if (file.size > MAX_FILE_BYTES) throw new Error("Files must be 10 MB or smaller");
@@ -289,6 +461,76 @@ export function MemoryKnowledgePage({
     onError: (error) =>
       toast.error(error instanceof Error ? error.message : "Duplicate cleanup failed"),
   });
+
+  const importKnowledgeMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const items = await parseKnowledgeImport(file);
+      if (!items.length) throw new Error("No importable records were found in this file");
+      let imported = 0;
+      for (const item of items.slice(0, 200)) {
+        try {
+          await addKnowledge({
+            data: {
+              title: item.title.slice(0, 160),
+              content: item.content,
+              sourceType: (item.source_type &&
+              SOURCE_TYPES.includes(item.source_type as KnowledgeSourceType)
+                ? item.source_type
+                : "note") as KnowledgeSourceType,
+              sourceUrl: item.source_url,
+              projectId: projectId || undefined,
+              tags: (item.tags ?? []).join(", "),
+            },
+          });
+          imported += 1;
+        } catch {
+          // Skip records that fail validation and continue importing the rest.
+        }
+      }
+      return imported;
+    },
+    onSuccess: (imported) => {
+      toast.success("Imported " + imported + " knowledge " + (imported === 1 ? "item" : "items"));
+      void qc.invalidateQueries({ queryKey: ["knowledge"] });
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : "Import failed"),
+  });
+
+  const knowledgeRows: KnowledgeExportRow[] = (knowledge.data ?? []).map((item) => ({
+    id: item.id,
+    title: item.title,
+    content: item.content,
+    source_type: item.source_type,
+    source_url: item.source_url,
+    tags: item.tags,
+  }));
+
+  function exportKnowledge(format: "json" | "markdown" | "csv") {
+    if (!knowledgeRows.length) {
+      toast.error("Nothing to export in this scope");
+      return;
+    }
+    const stamp = new Date().toISOString().slice(0, 10);
+    if (format === "json") {
+      downloadKnowledgeFile(
+        "open-connect-knowledge-" + stamp + ".json",
+        JSON.stringify(knowledgeRows, null, 2),
+        "application/json",
+      );
+    } else if (format === "markdown") {
+      downloadKnowledgeFile(
+        "open-connect-knowledge-" + stamp + ".md",
+        knowledgeToMarkdown(knowledgeRows),
+        "text/markdown",
+      );
+    } else {
+      downloadKnowledgeFile(
+        "open-connect-knowledge-" + stamp + ".csv",
+        knowledgeToCsv(knowledgeRows),
+        "text/csv",
+      );
+    }
+  }
 
   return (
     <div
@@ -635,6 +877,47 @@ export function MemoryKnowledgePage({
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Search title and content…"
                 />
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button variant="outline" onClick={() => exportKnowledge("json")}>
+                  <Download className="size-4" />
+                  Export JSON
+                </Button>
+                <Button variant="outline" onClick={() => exportKnowledge("markdown")}>
+                  <Download className="size-4" />
+                  Export Markdown
+                </Button>
+                <Button variant="outline" onClick={() => exportKnowledge("csv")}>
+                  <Download className="size-4" />
+                  Export CSV
+                </Button>
+                <input
+                  ref={importFileRef}
+                  type="file"
+                  accept=".json,.md,.markdown,.txt,.csv"
+                  hidden
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    event.target.value = "";
+                    if (file) importKnowledgeMutation.mutate(file);
+                  }}
+                />
+                <Button
+                  variant="outline"
+                  disabled={importKnowledgeMutation.isPending}
+                  onClick={() => importFileRef.current?.click()}
+                >
+                  {importKnowledgeMutation.isPending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Upload className="size-4" />
+                  )}
+                  Import
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  Import accepts JSON, Markdown, text, and CSV · Exports the current scope and
+                  search results
+                </span>
               </div>
               <div className="grid gap-3 lg:grid-cols-2">
                 {knowledge.isLoading ? (

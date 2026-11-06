@@ -47,6 +47,7 @@ export const appCategories: NavCategory[] = [
     label: "Work",
     items: [
       { to: "/studio", label: "Studio" },
+      { to: "/copilot", label: "Copilot" },
       { to: "/tasks", label: "Task" },
       { to: "/schedule", label: "Schedules" },
       { to: "/automations", label: "Automations" },

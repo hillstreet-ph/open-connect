@@ -45,24 +45,22 @@ test("chat saves validate owner-independent data boundaries and revision require
     false,
   );
 });
-test("text uploads are decoded and redacted, executable and binary uploads are rejected", async () => {
+test("text uploads are decoded and redacted, binary uploads become reference metadata", async () => {
   const result = await extractAgentAttachment(
     "notes.txt",
     new TextEncoder().encode("Hello\napi_key=private-secret"),
   );
   assert.equal(result.kind, "text");
   assert.ok(!result.text.includes("private-secret"));
-  await assert.rejects(
-    extractAgentAttachment("file.exe", new Uint8Array([77, 90])),
-    /Supported files/,
-  );
+  const executable = await extractAgentAttachment("file.exe", new Uint8Array([77, 90, 0, 1]));
+  assert.equal(executable.kind, "file");
+  assert.match(executable.text, /Reference file: file.exe/);
+  const binary = await extractAgentAttachment("binary.txt", new Uint8Array([255, 254, 0]));
+  assert.equal(binary.kind, "file");
+  assert.match(binary.text, /Reference file: binary.txt/);
   await assert.rejects(
     extractAgentAttachment("fake.pdf", new TextEncoder().encode("not pdf")),
     /not a valid PDF/,
-  );
-  await assert.rejects(
-    extractAgentAttachment("binary.txt", new Uint8Array([255, 254, 0])),
-    /UTF-8/,
   );
 });
 
