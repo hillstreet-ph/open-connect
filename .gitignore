@@ -44,3 +44,6 @@ supabase/.temp/
 
 # Agent working notes
 .openhands/
+
+# Generated at build time from scripts/ai-factory-roster.zip
+public/ai-factory/roster
