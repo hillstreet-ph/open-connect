@@ -40,7 +40,7 @@ export async function runAgentHelper(options: {
   maxWrites?: number;
 }) {
   const maxSteps = Math.max(1, options.maxSteps ?? 4);
-  const maxWrites = Math.max(1, options.maxWrites ?? 1);
+  const maxWrites = Math.max(1, options.maxWrites ?? 1); // Ask mode: 1 write. Work mode with Auto execute: up to 3.
   let reply = options.first;
   const messages = [...options.messages];
   let action: { name: AgentHelperToolName; result: Record<string, unknown> } | null = null;
