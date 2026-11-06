@@ -3413,8 +3413,30 @@ export type Database = {
           user_agent: string | null;
         }[];
       };
+      oc_create_oauth_integration: {
+        Args: { p_name: string; p_redirect_uris: string[] };
+        Returns: Json;
+      };
+      oc_exchange_oauth_code_client: {
+        Args: {
+          p_client_id: string;
+          p_client_secret: string | null;
+          p_code: string;
+          p_redirect_uri: string;
+          p_resource: string;
+          p_verifier: string;
+        };
+        Returns: Json;
+      };
+      oc_list_oauth_integrations: { Args: never; Returns: Json };
       oc_register_oauth_client: {
         Args: { p_name: string; p_redirect_uris: string[] };
+        Returns: Json;
+      };
+      oc_revoke_oauth_integration: { Args: { p_client_id: string }; Returns: boolean };
+      oc_rotate_oauth_integration_secret: { Args: { p_client_id: string }; Returns: Json };
+      oc_update_oauth_integration: {
+        Args: { p_client_id: string; p_name: string; p_redirect_uris: string[] };
         Returns: Json;
       };
       oc_revoke_login_session: { Args: { p_session_id: string }; Returns: boolean };

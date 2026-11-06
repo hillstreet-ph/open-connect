@@ -7,6 +7,7 @@ import { Bot, Copy, Loader2, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { ApiKeysCard } from "@/components/api-keys-card";
+import { OAuthIntegrationsCard } from "@/components/oauth-integrations-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,7 +26,7 @@ import {
   listInboundIntegrations,
 } from "@/lib/inbound-integrations.functions";
 
-const integrationSections = ["api-key", "apps"] as const;
+const integrationSections = ["api-key", "oauth-apps", "apps"] as const;
 type IntegrationSection = (typeof integrationSections)[number];
 
 function parseIntegrationSection(value: unknown): IntegrationSection {
@@ -43,7 +44,8 @@ export const Route = createFileRoute("/_authenticated/integrations")({
       { title: "Integrations — Open-Connect" },
       {
         name: "description",
-        content: "Manage Personal Tokens and app integrations for Open-Connect.",
+        content:
+          "Manage Personal Tokens, OAuth integrations, and app integrations for Open-Connect.",
       },
     ],
   }),
@@ -57,6 +59,7 @@ function IntegrationsPage() {
   const { section } = Route.useSearch();
   const sectionTitles: Record<IntegrationSection, string> = {
     "api-key": "Personal Token",
+    "oauth-apps": "OAuth integrations",
     apps: "Apps",
   };
   const queryClient = useQueryClient();
@@ -233,11 +236,24 @@ function IntegrationsPage() {
                   OAuth clients sign in and approve in their client.
                 </span>
               </div>
-              <Button variant="outline" size="sm" onClick={() => setMcpOpen(true)}>
-                Client setup instructions
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" onClick={() => setMcpOpen(true)}>
+                  Client setup instructions
+                </Button>
+                <Button asChild variant="outline" size="sm">
+                  <Link to="/integrations" search={{ section: "oauth-apps" }}>
+                    Register an OAuth integration
+                  </Link>
+                </Button>
+              </div>
             </CardContent>
           </Card>
+        </section>
+      ) : null}
+
+      {user ? (
+        <section id="oauth-apps" hidden={section !== "oauth-apps"} className="scroll-mt-6">
+          {section === "oauth-apps" ? <OAuthIntegrationsCard /> : null}
         </section>
       ) : null}
 
