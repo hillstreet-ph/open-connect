@@ -1,10 +1,19 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { PlaywrightBrowser } from "@/components/playwright-browser";
-import { CloudWorkspacePage } from "@/components/cloud-workspace-page";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { CloudBrowserConsole } from "@/components/cloud-browser-console";
 
+/**
+ * One cloud browser for general use, powered by TinyFish: prompt tasks with live
+ * view, saved sign-in profiles, direct control, and run history. Desktop
+ * computer use lives on /cloud-computer. `provider` is still accepted so links
+ * from the earlier multi-provider page keep working; it no longer switches
+ * providers.
+ */
 export const Route = createFileRoute("/_authenticated/cloud-browser")({
-  validateSearch: (search: Record<string, unknown>): { run?: string; provider?: string } => ({
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { run?: string; mode?: "direct"; provider?: string } => ({
     ...(typeof search["run"] === "string" ? { run: search["run"] } : {}),
+    ...(search["mode"] === "direct" ? { mode: "direct" as const } : {}),
     ...(typeof search["provider"] === "string" ? { provider: search["provider"] } : {}),
   }),
   head: () => ({
@@ -14,23 +23,35 @@ export const Route = createFileRoute("/_authenticated/cloud-browser")({
 });
 
 function CloudBrowserPage() {
+  const search = Route.useSearch();
+  const navigate = useNavigate({ from: "/cloud-browser" });
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6">
       <header>
         <h1 className="text-2xl font-semibold">Cloud Browser</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          One combined workspace: your browser with saved profile logins, live view, snapshots,
-          recording and AI agents, together with provider computer-use desktop tools.
+          A real cloud Chrome powered by TinyFish. Describe a task and watch it live, take direct
+          control, and reuse saved sign-ins. The same browser is available to Claude and ChatGPT
+          through open-connect.site/mcp.
         </p>
       </header>
-      <section aria-label="Browser automation" className="space-y-4">
-        <h2 className="text-lg font-semibold">Cloud browser</h2>
-        <PlaywrightBrowser />
-      </section>
-      <section aria-label="Computer use" className="space-y-4">
-        <h2 className="text-lg font-semibold">Computer use</h2>
-        <CloudWorkspacePage kind="computer" embedded />
-      </section>
+      <CloudBrowserConsole
+        {...(search.run ? { runId: search.run } : {})}
+        initialMode={search.mode}
+        onSelectRun={(run) =>
+          void navigate({
+            search: ({ run: _previous, ...rest }) => (run ? { ...rest, run } : rest),
+            replace: true,
+          })
+        }
+      />
+      <p className="text-sm text-muted-foreground">
+        Need a full desktop instead of a browser?{" "}
+        <Link to="/cloud-computer" className="underline">
+          Open Cloud Computer
+        </Link>
+        .
+      </p>
     </div>
   );
 }
