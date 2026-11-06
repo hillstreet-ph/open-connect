@@ -34,7 +34,7 @@ async function discoverConnectionCapabilities(
   db: SupabaseClient,
   userId: string,
   row: ConnectionRow,
-): Promise<"saved" | "activated" | "skipped">> {
+): Promise<"saved" | "activated" | "skipped"> {
   if (!["connected", "degraded"].includes(row.status)) return "skipped";
   const metadata = row.metadata ?? {};
   let snapshot: Record<string, unknown>;
@@ -145,7 +145,8 @@ export const autoSyncConnectorCapabilities = createServerFn({ method: "POST" })
     );
     const refreshed = results.filter(
       (result) =>
-        result.status === "fulfilled" && (result.value === "saved" || result.value === "activated"),
+        result.status === "fulfilled" &&
+        (result.value === "saved" || result.value === "activated"),
     ).length;
     return {
       refreshed,
