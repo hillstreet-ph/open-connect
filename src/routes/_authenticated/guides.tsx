@@ -224,12 +224,12 @@ function GuidesPage() {
         <CardContent className="space-y-4 px-5 pb-5">
           <div className="flex flex-wrap gap-2">
             <Button asChild size="sm" variant="outline">
-              <Link to="/settings" hash="integrations">
-                Open webhook settings
+              <Link to="/integrations" search={{ section: "webhooks" }}>
+                Open webhooks
               </Link>
             </Button>
             <Button asChild size="sm" variant="outline">
-              <Link to="/settings" hash="integrations">
+              <Link to="/integrations" search={{ section: "apps" }}>
                 Set up a Telegram bot
               </Link>
             </Button>

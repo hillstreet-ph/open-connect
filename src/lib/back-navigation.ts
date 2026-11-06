@@ -11,8 +11,6 @@ function canonical(pathname: string) {
 /** Main workspace destinations use the sidebar. Nested/utility pages have one parent link. */
 export function workspaceBackTarget(pathname: string, hash = ""): BackTarget | null {
   const path = canonical(pathname);
-  if (path === "/integrations")
-    return { to: "/settings", hash: "integrations", label: "Back to settings" };
   if (path === "/settings")
     return hash && hash !== "profile" && hash !== "#profile"
       ? { to: "/settings", label: "Back to settings" }
@@ -25,7 +23,7 @@ export function workspaceBackTarget(pathname: string, hash = ""): BackTarget | n
   }
   if (path.startsWith("/projects/")) return { to: "/projects", label: "Back to projects" };
   if (path.startsWith("/admin/")) return { to: "/admin", label: "Back to administration" };
-  if (["/admin", "/guides", "/campaign-studio", "/api-keys"].includes(path))
+  if (["/admin", "/guides", "/campaign-studio", "/api-keys", "/integrations"].includes(path))
     return { to: "/dashboard", label: "Back to workspace" };
   return null;
 }
