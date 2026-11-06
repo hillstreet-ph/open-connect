@@ -132,12 +132,13 @@ export const autoSyncConnectorCapabilities = createServerFn({ method: "POST" })
     const all = (rows ?? []) as unknown as ConnectionRow[];
     const stale = all.filter((row) => capabilitiesAge(row.metadata ?? {}) > CAPABILITY_STALE_MS);
     const results = await Promise.allSettled(
-      stale.slice(0, data.limit).map((row) => discoverConnectionCapabilities(db, context.userId, row)),
+      stale
+        .slice(0, data.limit)
+        .map((row) => discoverConnectionCapabilities(db, context.userId, row)),
     );
     const refreshed = results.filter(
       (result) =>
-        result.status === "fulfilled" &&
-        (result.value === "saved" || result.value === "activated"),
+        result.status === "fulfilled" && (result.value === "saved" || result.value === "activated"),
     ).length;
     return {
       refreshed,
