@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
-import { PanelLeft } from "lucide-react";
+import { ChevronsLeftRight, PanelLeft } from "lucide-react";
 
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
@@ -17,7 +17,14 @@ import {
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { writeSidebarOpen } from "@/lib/sidebar-state";
+import {
+  SIDEBAR_WIDTH_DEFAULT_REM,
+  SIDEBAR_WIDTH_MAX_REM,
+  SIDEBAR_WIDTH_MIN_REM,
+  sidebarWidthRem,
+  writeSidebarOpen,
+  writeSidebarWidth,
+} from "@/lib/sidebar-state";
 
 const SIDEBAR_WIDTH = "16rem";
 const SIDEBAR_WIDTH_MOBILE = "18rem";
@@ -32,6 +39,12 @@ type SidebarContextProps = {
   setOpenMobile: (open: boolean) => void;
   isMobile: boolean;
   toggleSidebar: () => void;
+  sidebarWidth: number;
+  setSidebarWidth: (value: number | ((value: number) => number)) => void;
+  isResizing: boolean;
+  setIsResizing: (value: boolean) => void;
+  hoverExpanded: boolean;
+  setHoverExpanded: (value: boolean) => void;
 };
 
 const SidebarContext = React.createContext<SidebarContextProps | null>(null);
@@ -67,6 +80,25 @@ const SidebarProvider = React.forwardRef<
   ) => {
     const isMobile = useIsMobile();
     const [openMobile, setOpenMobile] = React.useState(false);
+    const [sidebarWidth, setSidebarWidthState] = React.useState(SIDEBAR_WIDTH_DEFAULT_REM);
+    const [isResizing, setIsResizing] = React.useState(false);
+    const [hoverExpanded, setHoverExpanded] = React.useState(false);
+
+    // Restore the saved width after mount to avoid server/client mismatches.
+    React.useEffect(() => {
+      const id = window.setTimeout(() => setSidebarWidthState(sidebarWidthRem()), 0);
+      return () => window.clearTimeout(id);
+    }, []);
+
+    const setSidebarWidth = React.useCallback(
+      (value: number | ((value: number) => number)) => {
+        const next = typeof value === "function" ? value(sidebarWidth) : value;
+        const clamped = Math.min(SIDEBAR_WIDTH_MAX_REM, Math.max(SIDEBAR_WIDTH_MIN_REM, next));
+        setSidebarWidthState(clamped);
+        writeSidebarWidth(clamped);
+      },
+      [sidebarWidth],
+    );
 
     // This is the internal state of the sidebar.
     // We use openProp and setOpenProp for control from outside the component.
@@ -118,17 +150,37 @@ const SidebarProvider = React.forwardRef<
         openMobile,
         setOpenMobile,
         toggleSidebar,
+        sidebarWidth,
+        setSidebarWidth,
+        isResizing,
+        setIsResizing,
+        hoverExpanded,
+        setHoverExpanded,
       }),
-      [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar],
+      [
+        state,
+        open,
+        setOpen,
+        isMobile,
+        openMobile,
+        setOpenMobile,
+        toggleSidebar,
+        sidebarWidth,
+        setSidebarWidth,
+        isResizing,
+        hoverExpanded,
+        setHoverExpanded,
+      ],
     );
 
     return (
       <SidebarContext.Provider value={contextValue}>
         <TooltipProvider delayDuration={0}>
           <div
+            data-resizing={isResizing ? "true" : undefined}
             style={
               {
-                "--sidebar-width": SIDEBAR_WIDTH,
+                "--sidebar-width": `${sidebarWidth}rem`,
                 "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
                 ...style,
               } as React.CSSProperties
@@ -154,7 +206,7 @@ const Sidebar = React.forwardRef<
   React.ComponentProps<"div"> & {
     side?: "left" | "right";
     variant?: "sidebar" | "floating" | "inset";
-    collapsible?: "offcanvas" | "icon" | "none";
+    collapsible?: "offcanvas" | "icon" | "none" | "hover";
   }
 >(
   (
@@ -168,7 +220,20 @@ const Sidebar = React.forwardRef<
     },
     ref,
   ) => {
-    const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
+    const { isMobile, state, openMobile, setOpenMobile, hoverExpanded, setHoverExpanded } =
+      useSidebar();
+
+    const isHoverMode = collapsible === "hover";
+    const showHoverOverlay = () => {
+      if (isHoverMode && state === "collapsed") {
+        setHoverExpanded(true);
+      }
+    };
+    const hideHoverOverlay = () => {
+      if (isHoverMode) {
+        setHoverExpanded(false);
+      }
+    };
 
     if (collapsible === "none") {
       return (
@@ -214,9 +279,17 @@ const Sidebar = React.forwardRef<
         ref={ref}
         className="group peer hidden text-sidebar-foreground md:block"
         data-state={state}
-        data-collapsible={state === "collapsed" ? collapsible : ""}
+        data-collapsible={
+          state === "collapsed" ? (isHoverMode ? (hoverExpanded ? "" : "icon") : collapsible) : ""
+        }
         data-variant={variant}
         data-side={side}
+        data-hover-sidebar={isHoverMode ? "true" : undefined}
+        data-hover-open={hoverExpanded ? "true" : undefined}
+        onMouseEnter={isHoverMode ? showHoverOverlay : undefined}
+        onMouseLeave={isHoverMode ? hideHoverOverlay : undefined}
+        onFocus={isHoverMode ? showHoverOverlay : undefined}
+        onBlur={isHoverMode ? hideHoverOverlay : undefined}
       >
         {/* This is what handles the sidebar gap on desktop */}
         <div
@@ -224,6 +297,8 @@ const Sidebar = React.forwardRef<
             "relative w-(--sidebar-width) bg-transparent transition-[width] duration-200 ease-linear",
             "group-data-[collapsible=offcanvas]:w-0",
             "group-data-[side=right]:rotate-180",
+            "group-data-[resizing=true]/sidebar-wrapper:transition-none",
+            "group-data-[hover-sidebar=true]:group-data-[state=collapsed]:w-(--sidebar-width-icon)",
             variant === "floating" || variant === "inset"
               ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4))]"
               : "group-data-[collapsible=icon]:w-(--sidebar-width-icon)",
@@ -239,6 +314,8 @@ const Sidebar = React.forwardRef<
             variant === "floating" || variant === "inset"
               ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]"
               : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l",
+            "group-data-[resizing=true]/sidebar-wrapper:transition-none",
+            "group-data-[hover-open=true]:z-30 group-data-[hover-open=true]:shadow-xl",
             className,
           )}
           {...props}
@@ -249,6 +326,7 @@ const Sidebar = React.forwardRef<
           >
             {children}
           </div>
+          {state === "expanded" ? <SidebarResizeHandle side={side} /> : null}
         </div>
       </div>
     );
@@ -299,8 +377,8 @@ const SidebarRail = React.forwardRef<HTMLButtonElement, React.ComponentProps<"bu
           "[[data-side=left]_&]:cursor-w-resize [[data-side=right]_&]:cursor-e-resize",
           "[[data-side=left][data-state=collapsed]_&]:cursor-e-resize [[data-side=right][data-state=collapsed]_&]:cursor-w-resize",
           "group-data-[collapsible=offcanvas]:translate-x-0 group-data-[collapsible=offcanvas]:after:left-full group-data-[collapsible=offcanvas]:hover:bg-sidebar",
-          "[[data-side=left][data-collapsible=offcanvas]_&]:-right-2",
-          "[[data-side=right][data-collapsible=offcanvas]_&]:-left-2",
+          "[[data-side=left][data-collapsible=offcanvas]_&]:-right-4",
+          "[[data-side=right][data-collapsible=offcanvas]_&]:-left-4",
           className,
         )}
         {...props}
@@ -309,6 +387,77 @@ const SidebarRail = React.forwardRef<HTMLButtonElement, React.ComponentProps<"bu
   },
 );
 SidebarRail.displayName = "SidebarRail";
+
+const SidebarResizeHandle = React.forwardRef<
+  HTMLDivElement,
+  React.ComponentProps<"div"> & { side?: "left" | "right" }
+>(({ className, side = "left", ...props }, ref) => {
+  const { open, sidebarWidth, setSidebarWidth, setIsResizing } = useSidebar();
+
+  if (!open) return null;
+
+  const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const startX = event.clientX;
+    const startWidth = sidebarWidth;
+    setIsResizing(true);
+
+    const onMove = (moveEvent: PointerEvent) => {
+      const delta = moveEvent.clientX - startX;
+      const next = side === "left" ? startWidth + delta / 16 : startWidth - delta / 16;
+      setSidebarWidth(next);
+    };
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      document.body.style.removeProperty("cursor");
+      setIsResizing(false);
+    };
+    document.body.style.setProperty("cursor", "col-resize");
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  };
+
+  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const step = event.shiftKey ? 4 : 1;
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      setSidebarWidth(side === "left" ? (width) => width - step : (width) => width + step);
+    } else if (event.key === "ArrowRight") {
+      event.preventDefault();
+      setSidebarWidth(side === "left" ? (width) => width + step : (width) => width - step);
+    }
+  };
+
+  return (
+    <div
+      ref={ref}
+      data-sidebar="resize"
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Resize sidebar"
+      aria-valuemin={SIDEBAR_WIDTH_MIN_REM}
+      aria-valuemax={SIDEBAR_WIDTH_MAX_REM}
+      aria-valuenow={Math.round(sidebarWidth)}
+      tabIndex={0}
+      title="Drag to resize · Double-click to reset"
+      onPointerDown={onPointerDown}
+      onDoubleClick={() => setSidebarWidth(SIDEBAR_WIDTH_DEFAULT_REM)}
+      onKeyDown={onKeyDown}
+      className={cn(
+        "absolute inset-y-0 z-30 hidden w-1.5 cursor-col-resize touch-none after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] after:-translate-x-1/2 outline-none ring-sidebar-ring hover:after:bg-sidebar-border focus-visible:ring-2 sm:flex",
+        "group-data-[side=left]:-right-3 group-data-[side=right]:-left-3",
+        className,
+      )}
+      {...props}
+    >
+      <span className="absolute left-1/2 top-1/2 flex size-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-sidebar-border bg-background text-muted-foreground shadow-sm">
+        <ChevronsLeftRight className="size-3.5" />
+      </span>
+    </div>
+  );
+});
+SidebarResizeHandle.displayName = "SidebarResizeHandle";
 
 const SidebarInset = React.forwardRef<HTMLDivElement, React.ComponentProps<"main">>(
   ({ className, ...props }, ref) => {
@@ -542,7 +691,7 @@ const SidebarMenuButton = React.forwardRef<
     ref,
   ) => {
     const Comp = asChild ? Slot : "button";
-    const { isMobile, state } = useSidebar();
+    const { isMobile, state, hoverExpanded } = useSidebar();
 
     const button = (
       <Comp
@@ -571,7 +720,7 @@ const SidebarMenuButton = React.forwardRef<
         <TooltipContent
           side="right"
           align="center"
-          hidden={state !== "collapsed" || isMobile}
+          hidden={state !== "collapsed" || isMobile || hoverExpanded}
           {...tooltip}
         />
       </Tooltip>
@@ -735,6 +884,7 @@ export {
   SidebarMenuSubItem,
   SidebarProvider,
   SidebarRail,
+  SidebarResizeHandle,
   SidebarSeparator,
   SidebarTrigger,
   useSidebar,

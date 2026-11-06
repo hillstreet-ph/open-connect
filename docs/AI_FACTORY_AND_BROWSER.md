@@ -1,15 +1,15 @@
-# AI Agency and Cloud Browser
+# AI Factory and Cloud Browser
 
-## AI Agency
+## AI Factory
 
-Connections contains Connectors, Credentials, AI Gateway and AI Agency. The
+Connections contains Connectors, Credentials, AI Gateway and AI Factory. The
 canonical private-team implementation from PR #450 is retained, including team
 creation/editing, 2–6 distinct roles, reversible archive/restore, optimistic edit
 checks, free-model readiness and owner-isolated run history. Its existing database
-migration is retained unchanged. See [AI Agency](AI_AGENCY.md).
+migration is retained unchanged. See [AI Factory](AI_FACTORY.md).
 
 The six templates (Development, Business, Marketing, Research, Operations and
-Custom) come from `config/ai-agency.registry.json`. Custom teams can represent
+Custom) come from `config/ai-factory.registry.json`. Custom teams can represent
 support, data or other work using their own names and roles. MCP `run_agent_team`
 accepts an optional template `category`, with the same scopes and personal-context
 restriction. Existing clients omitting it retain Planner/Builder/Reviewer roles.
@@ -17,7 +17,7 @@ Workers produce proposals; browser and external actions use connected tools.
 
 History uses the existing `autonomous_runs` table. There is no second chat-history
 mirror or second credential store. Outputs can be copied from private run history.
-PR #453 reconciles the earlier Agency work with browser consolidation in one route.
+PR #453 reconciles the earlier AI Factory work with browser consolidation in one route.
 
 ## Browser consolidation
 

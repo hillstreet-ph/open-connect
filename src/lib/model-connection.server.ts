@@ -8,7 +8,7 @@ export type SavedModelConnection = {
 };
 
 export type SavedModelUpstream = {
-  name: (typeof COMPATIBLE_GATEWAY_PROVIDERS)[number]["id"] | "litellm";
+  name: (typeof COMPATIBLE_GATEWAY_PROVIDERS)[number]["id"] | "litellm" | "cloudflare";
   baseUrl: string;
   headers: Record<string, string>;
 };
@@ -41,7 +41,7 @@ function endpointForLiteLlm(metadata: unknown): string {
   }
   const hostname = url.hostname.toLowerCase().replace(/^\[|\]$/g, "");
   const privateAddress =
-    /^(?:0\.|10\.|127\.|169\.254\.|192\.168\.|172\.(?:1[6-9]|2\d|3[01])\.)/.test(hostname) ||
+    /^(?:0\.|10\.|127\.|169\.254\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(hostname) ||
     hostname === "::1" ||
     /^(?:fc|fd|fe8|fe9|fea|feb)/.test(hostname);
   if (
@@ -113,7 +113,7 @@ export async function savedModelUpstreams(
         upstreamBaseUrl = customGatewayEndpoint(
           connection.metadata,
           COMPATIBLE_MODEL_ENDPOINTS[
-            connection.provider as Exclude<SavedModelUpstream["name"], "litellm">
+            connection.provider as Exclude<SavedModelUpstream["name"], "litellm" | "cloudflare">
           ]!,
         );
       } catch {

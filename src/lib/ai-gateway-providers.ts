@@ -27,6 +27,36 @@ export const AI_GATEWAY_PROVIDERS = [
   },
   { id: "groq", name: "Groq", baseUrl: "https://api.groq.com/openai/v1", official: true },
   {
+    id: "together",
+    name: "Together AI",
+    baseUrl: "https://api.together.xyz/v1",
+    official: true,
+  },
+  {
+    id: "novita",
+    name: "Novita AI",
+    baseUrl: "https://api.novita.ai/openai",
+    official: true,
+  },
+  {
+    id: "cohere",
+    name: "Cohere",
+    baseUrl: "https://api.cohere.com/compatibility/v1",
+    official: true,
+  },
+  {
+    id: "deepinfra",
+    name: "DeepInfra",
+    baseUrl: "https://api.deepinfra.com/v1/openai",
+    official: true,
+  },
+  {
+    id: "qwen_cloud",
+    name: "Qwen Cloud",
+    baseUrl: "https://ap-southeast-1.maas.qwencloudapi.com/compatible-mode/v1",
+    official: true,
+  },
+  {
     id: "anthropic",
     name: "Anthropic / Claude",
     baseUrl: "https://api.anthropic.com/v1",
@@ -41,6 +71,12 @@ export const AI_GATEWAY_PROVIDERS = [
   { id: "xai", name: "xAI / Grok", baseUrl: "https://api.x.ai/v1", official: true },
   { id: "mistral", name: "Mistral", baseUrl: "https://api.mistral.ai/v1", official: true },
   { id: "deepseek", name: "DeepSeek", baseUrl: "https://api.deepseek.com/v1", official: true },
+  {
+    id: "fireworks",
+    name: "Fireworks AI",
+    baseUrl: "https://api.fireworks.ai/inference/v1",
+    official: true,
+  },
 ] as const;
 
 export const AI_GATEWAY_PROVIDER_IDS: ReadonlySet<string> = new Set(

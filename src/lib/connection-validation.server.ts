@@ -1,6 +1,6 @@
 import { openApiOperations } from "./openapi-connector.ts";
 import { normalizeAuthHeader } from "./connection-auth-header.ts";
-import { AI_GATEWAY_PROVIDERS } from "./ai-gateway-providers.ts";
+import { AI_GATEWAY_PROVIDER_IDS, AI_GATEWAY_PROVIDERS } from "./ai-gateway-providers.ts";
 import type { normalizeConnectionSetup } from "./connection-setup";
 import { isRemoteMcpProvider } from "./remote-mcp.ts";
 
@@ -70,14 +70,20 @@ function base(setup: Setup) {
   ).replace(/\/+$/, "");
 }
 
-async function checkedFetch(url: string, init: RequestInit, send: typeof fetch): Promise<Response> {
+async function checkedFetch(
+  url: string,
+  init: RequestInit,
+  send: typeof fetch,
+  acceptedStatuses: readonly number[] = [],
+): Promise<Response> {
   const response = await send(url, {
     ...init,
     cache: "no-store",
     redirect: "manual",
     signal: AbortSignal.timeout(12_000),
   });
-  if (!response.ok) throw new Error(`Provider validation failed (HTTP ${response.status}).`);
+  if (!response.ok && !acceptedStatuses.includes(response.status))
+    throw new Error(`Provider validation failed (HTTP ${response.status}).`);
   return response;
 }
 
@@ -228,6 +234,94 @@ export async function validateConnectionCredential(
     return { verified: true, accountId: payload.data.me._id, detail: "Zeabur identity verified" };
   }
 
+  if (setup.provider === "telegram") {
+    if (!/^\d{1,20}:[A-Za-z0-9_-]{20,256}$/.test(setup.apiKey))
+      throw new Error("Telegram requires a bot token in the format 123456:ABC-DEF…");
+    const response = await checkedFetch(
+      `https://api.telegram.org/bot${setup.apiKey}/getMe`,
+      { headers: { Accept: "application/json" } },
+      send,
+    );
+    const payload = (await response.json().catch(() => null)) as {
+      ok?: boolean;
+      result?: { id?: number; username?: string };
+    } | null;
+    const identity = payload?.result;
+    if (
+      payload?.ok !== true ||
+      !identity ||
+      typeof identity.id !== "number" ||
+      !Number.isSafeInteger(identity.id) ||
+      identity.id <= 0
+    )
+      throw new Error("Telegram did not validate the bot token.");
+    return {
+      verified: true,
+      accountId: identity.username ?? String(identity.id),
+      detail: "Telegram bot verified with a read-only getMe request.",
+    };
+  }
+
+  if (setup.provider === "e2b") {
+    const response = await checkedFetch(
+      "https://api.e2b.dev/sandboxes?limit=1",
+      { headers: { "x-api-key": setup.apiKey, Accept: "application/json" } },
+      send,
+    );
+    const payload: unknown = await response.json().catch(() => null);
+    if (!Array.isArray(payload)) throw new Error("E2B did not return a valid sandbox list.");
+    return {
+      verified: true,
+      detail: "E2B key verified with a read-only sandbox list request.",
+    };
+  }
+
+  if (setup.provider === "hubstaff_admin") {
+    const payload = (await (
+      await checkedFetch(
+        "https://api.hubstaff.com/v2/users/me",
+        { headers: { ...bearer, Accept: "application/json" } },
+        send,
+      )
+    )
+      .json()
+      .catch(() => null)) as { user?: { id?: number } } | null;
+    if (!Number.isSafeInteger(payload?.user?.id) || payload!.user!.id! <= 0)
+      throw new Error("Hubstaff did not validate the access token.");
+    return {
+      verified: true,
+      accountId: String(payload!.user!.id),
+      detail: "Hubstaff access verified with a read-only profile request.",
+    };
+  }
+
+  if (setup.provider === "stripe") {
+    const response = await checkedFetch(
+      "https://api.stripe.com/v1/customers?limit=1",
+      { headers: { ...bearer, Accept: "application/json" } },
+      send,
+      [403],
+    );
+    // Restricted keys may authorize other resources without Customer read access.
+    // A permission denial cannot establish credential validity or tool access.
+    if (response.status === 403)
+      return {
+        verified: false,
+        detail:
+          "Credential stored; Stripe Customer read access was denied. Connection remains unverified.",
+      };
+    const payload = (await response.json().catch(() => null)) as {
+      object?: unknown;
+      data?: unknown;
+    } | null;
+    if (payload?.object !== "list" || !Array.isArray(payload.data))
+      throw new Error("Stripe did not return a valid customer list.");
+    return {
+      verified: true,
+      detail: "Stripe key verified with a read-only customer list request.",
+    };
+  }
+
   if (setup.provider === "anthropic") {
     const response = await checkedFetch(
       `${base(setup)}/models`,
@@ -252,31 +346,88 @@ export async function validateConnectionCredential(
     return { verified: true, detail: `API key verified; ${payload.models.length} models fetched.` };
   }
 
+  // Cohere's compatibility API has no model-list contract. Its native endpoint
+  // authenticates the same key and returns `models`, not OpenAI's `data`.
+  // https://docs.cohere.com/v2/reference/list-models
+  if (setup.provider === "cohere" && new URL(base(setup)).origin === "https://api.cohere.com") {
+    const response = await checkedFetch(
+      "https://api.cohere.com/v1/models",
+      { headers: bearer },
+      send,
+    );
+    const payload = (await response.json().catch(() => null)) as { models?: unknown } | null;
+    if (!Array.isArray(payload?.models))
+      throw new Error("Provider did not return a valid model catalog.");
+    return { verified: true, detail: `API key verified; ${payload.models.length} models fetched.` };
+  }
+
+  // Novita's model catalog is public and can succeed with an invalid bearer key.
+  // Do not spend inference or mislabel catalog discovery as credential validation.
+  // A separately hosted compatible deployment retains its own catalog contract.
+  if (setup.provider === "novita" && new URL(base(setup)).origin === "https://api.novita.ai")
+    return {
+      verified: false,
+      detail:
+        "Credential stored; Novita's public model catalog cannot verify API keys. Authenticated inference has not been tested.",
+    };
+
   if (
-    [
-      "openrouter",
-      "openai",
-      "xai",
-      "mistral",
-      "deepseek",
-      "litellm",
-      "nvidia",
-      "ollama_cloud",
-      "groq",
-      "cerebras",
-      "kilo",
-      "commandcode",
-      "huggingface",
-    ].includes(setup.provider)
+    AI_GATEWAY_PROVIDER_IDS.has(setup.provider) ||
+    ["litellm", "cerebras", "commandcode"].includes(setup.provider)
   ) {
     const providerBase = base(setup);
     if (!providerBase) throw new Error("Provider base URL is required for validation.");
     const response = await checkedFetch(`${providerBase}/models`, { headers: bearer }, send);
-    const payload = (await response.json().catch(() => null)) as { data?: unknown } | null;
-    if (!Array.isArray(payload?.data))
+    const detail = catalogDetail(await response.json().catch(() => null));
+    if (!detail)
       throw new Error("Provider did not return a valid model catalog. Check its API endpoint.");
-    return { verified: true, detail: `API key verified; ${payload.data.length} models fetched.` };
+    return { verified: true, detail };
   }
 
-  return { verified: false, detail: "Credential stored; provider validation is not available yet" };
+  // Best-effort validation for every remaining provider: a public HTTPS
+  // endpoint is probed with a read-only model catalog request, so a stored
+  // credential never silently stays unverified when the provider can answer.
+  const genericBase = publicHttpsTarget(setup.endpointUrl);
+  if (!genericBase) {
+    return {
+      verified: false,
+      detail:
+        "Credential stored; add the provider's public HTTPS API endpoint to enable automatic validation.",
+    };
+  }
+  const genericHeaders =
+    setup.authType === "api_key"
+      ? { [normalizeAuthHeader(setup.authHeader)]: setup.apiKey }
+      : bearer;
+  try {
+    const response = await checkedFetch(`${genericBase}/models`, { headers: genericHeaders }, send);
+    const detail = catalogDetail(await response.json().catch(() => null));
+    if (!detail)
+      return {
+        verified: false,
+        detail:
+          "Credential stored; the endpoint responded without a model catalog, so the key stays unverified.",
+      };
+    return { verified: true, detail };
+  } catch (error) {
+    const status = (error as Error).message.match(/HTTP (\d+)/)?.[1];
+    if (status === "401" || status === "403") throw error;
+    return {
+      verified: false,
+      detail:
+        "Credential stored; the endpoint did not answer the validation request, so the key stays unverified.",
+    };
+  }
+}
+
+/** Read the model count out of an OpenAI-style or Gemini-style catalog response. */
+function catalogDetail(payload: unknown): string | null {
+  if (!payload || typeof payload !== "object") return null;
+  const record = payload as { data?: unknown; models?: unknown };
+  const catalog = Array.isArray(record.data)
+    ? record.data
+    : Array.isArray(record.models)
+      ? record.models
+      : null;
+  return catalog ? `API key verified; ${catalog.length} models fetched.` : null;
 }

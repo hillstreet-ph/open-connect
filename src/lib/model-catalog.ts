@@ -1,4 +1,6 @@
-export type FreeModelSource = "openrouter" | "litellm" | "nvidia" | "ollama_cloud";
+import { FIREWORKS_FREE_MODEL_IDS } from "./fireworks-routing.ts";
+
+export type FreeModelSource = "openrouter" | "litellm" | "nvidia" | "ollama_cloud" | "fireworks";
 
 export type FreeModelEntry = {
   id: string;
@@ -121,7 +123,7 @@ export async function fetchFreeModelCatalog(
           ? [`${upstream.baseUrl.replace(/\/+$/, "")}/models`]
           : upstream.name === "litellm"
             ? modelInfoUrls(upstream.baseUrl)
-            : ["nvidia", "ollama_cloud"].includes(upstream.name)
+            : ["nvidia", "ollama_cloud", "fireworks"].includes(upstream.name)
               ? [`${upstream.baseUrl.replace(/\/+$/, "")}/models`]
               : [];
       for (const url of paths) {
@@ -138,7 +140,11 @@ export async function fetchFreeModelCatalog(
           if (upstream.name === "openrouter") return openRouterFreeModels(payload);
           if (upstream.name === "litellm") return liteLlmFreeModels(payload);
           const allowed =
-            upstream.name === "nvidia" ? NVIDIA_FREE_ENDPOINT_MODELS : OLLAMA_CLOUD_FREE_MODELS;
+            upstream.name === "nvidia"
+              ? NVIDIA_FREE_ENDPOINT_MODELS
+              : upstream.name === "fireworks"
+                ? FIREWORKS_FREE_MODEL_IDS
+                : OLLAMA_CLOUD_FREE_MODELS;
           const data =
             payload && typeof payload === "object" ? (payload as { data?: unknown }).data : null;
           if (!Array.isArray(data)) return [];
@@ -157,7 +163,7 @@ export async function fetchFreeModelCatalog(
                 providerFromModelId(item.id) === "unknown"
                   ? upstream.name
                   : providerFromModelId(item.id),
-              source: upstream.name as "nvidia" | "ollama_cloud",
+              source: upstream.name as "nvidia" | "ollama_cloud" | "fireworks",
               name: typeof item.name === "string" ? item.name : null,
             }));
         } catch {

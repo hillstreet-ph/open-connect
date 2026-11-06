@@ -239,7 +239,7 @@ export function ApiKeysCard({ modelOnly = false }: { modelOnly?: boolean }) {
                               {key.active && !key.revoked_at ? (
                                 <Badge
                                   variant="secondary"
-                                  className="border-transparent bg-emerald-500/15 text-[10px] text-emerald-600 dark:text-emerald-400"
+                                  className="border-transparent bg-success/15 text-[10px] text-success"
                                 >
                                   Active
                                 </Badge>

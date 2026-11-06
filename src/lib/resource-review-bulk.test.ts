@@ -6,6 +6,7 @@ import {
   planBulkReview,
   reviewUpdate,
 } from "./resource-review-bulk.ts";
+import { reviewedResourceFixture } from "./resource-review.fixture.ts";
 
 const A = "11111111-1111-4111-8111-111111111111";
 const B = "22222222-2222-4222-8222-222222222222";
@@ -37,9 +38,9 @@ test("unverify always unpublishes; verify_publish sets both", () => {
 
 test("publish skips unverified resources and no-ops", () => {
   const rows = [
-    { id: A, verified: false, published: false },
-    { id: B, verified: true, published: false, installation_config: { review_state: "approved" } },
-    { id: C, verified: true, published: true, installation_config: { review_state: "approved" } },
+    { ...reviewedResourceFixture(), id: A, verified: false, published: false },
+    { ...reviewedResourceFixture(), id: B, verified: true, published: false },
+    { ...reviewedResourceFixture(), id: C, verified: true, published: true },
   ];
   assert.deepEqual(planBulkReview(rows, "publish"), {
     apply: [B],
@@ -53,8 +54,20 @@ test("publish skips unverified resources and no-ops", () => {
   assert.deepEqual(planBulkReview(rows, "unpublish").apply, [C]);
 });
 
+test("bulk promotion cannot convert legacy labels into evidence", () => {
+  const rows = [
+    { id: A, verified: true, published: true, installation_config: { review_state: "approved" } },
+  ];
+  for (const action of ["verify", "publish", "verify_publish"] as const) {
+    assert.deepEqual(planBulkReview(rows, action), {
+      apply: [],
+      skipped: [{ id: A, reason: "missing_review_evidence" }],
+    });
+  }
+});
+
 test("verified but pending rows need explicit approval; publish cannot approve", () => {
   const rows = [{ id: A, verified: true, published: false }];
-  assert.deepEqual(planBulkReview(rows, "verify").apply, [A]);
+  assert.deepEqual(planBulkReview(rows, "verify").apply, []);
   assert.deepEqual(planBulkReview(rows, "publish").apply, []);
 });

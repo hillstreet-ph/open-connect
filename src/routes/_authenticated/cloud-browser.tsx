@@ -1,16 +1,11 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { PlaywrightBrowser } from "@/components/playwright-browser";
 import { CloudWorkspacePage } from "@/components/cloud-workspace-page";
-import { CloudComputerManager } from "@/components/cloud-computer-manager";
 
 export const Route = createFileRoute("/_authenticated/cloud-browser")({
-  validateSearch: (
-    search: Record<string, unknown>,
-  ): { run?: string; mode?: "direct" | "computer"; provider?: string } => ({
+  validateSearch: (search: Record<string, unknown>): { run?: string; provider?: string } => ({
     ...(typeof search["run"] === "string" ? { run: search["run"] } : {}),
-    ...(search["mode"] === "computer" || search["mode"] === "direct"
-      ? { mode: search["mode"] }
-      : {}),
+    ...(typeof search["provider"] === "string" ? { provider: search["provider"] } : {}),
   }),
   head: () => ({
     meta: [{ title: "Cloud Browser — Open-Connect" }, { name: "robots", content: "noindex" }],
@@ -19,49 +14,23 @@ export const Route = createFileRoute("/_authenticated/cloud-browser")({
 });
 
 function CloudBrowserPage() {
-  const { mode } = Route.useSearch();
-  const computer = mode === "computer";
   return (
-    <div className="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:px-6">
+    <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6">
       <header>
         <h1 className="text-2xl font-semibold">Cloud Browser</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Run browser tasks and access connected computer tools from one workspace.
+          One combined workspace: your browser with saved profile logins, live view, snapshots,
+          recording and AI agents, together with provider computer-use desktop tools.
         </p>
       </header>
-      <nav aria-label="Cloud workspace" className="flex flex-wrap gap-2">
-        <Link
-          to="/cloud-browser"
-          search={{}}
-          aria-current={!computer ? "page" : undefined}
-          className={`rounded-md border px-4 py-2 text-sm ${!computer ? "border-primary bg-primary/10" : "hover:bg-muted"}`}
-        >
-          Browser
-        </Link>
-        <Link
-          to="/cloud-browser"
-          search={{ mode: "computer" }}
-          aria-current={computer ? "page" : undefined}
-          className={`rounded-md border px-4 py-2 text-sm ${computer ? "border-primary bg-primary/10" : "hover:bg-muted"}`}
-        >
-          Computer tools
-        </Link>
-      </nav>
-      <div hidden={computer}>
+      <section aria-label="Browser automation" className="space-y-4">
+        <h2 className="text-lg font-semibold">Cloud browser</h2>
         <PlaywrightBrowser />
-      </div>
-      <div hidden={!computer} className="space-y-4">
-        {computer && (
-          <div className="mx-auto max-w-2xl">
-            <CloudComputerManager />
-          </div>
-        )}
-        <p className="text-sm text-muted-foreground">
-          Computer tools use the selected provider connection. Its desktop and files are separate
-          from your Playwright browser session.
-        </p>
+      </section>
+      <section aria-label="Computer use" className="space-y-4">
+        <h2 className="text-lg font-semibold">Computer use</h2>
         <CloudWorkspacePage kind="computer" embedded />
-      </div>
+      </section>
     </div>
   );
 }

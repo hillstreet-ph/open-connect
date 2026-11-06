@@ -1,6 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   Globe,
+  Monitor,
   Terminal,
   Smartphone,
   Boxes,
@@ -66,6 +67,7 @@ const CLOUD: Item[] = [
   { to: "/cloud-sandbox", label: "Sandbox", icon: Boxes },
   { to: "/cloud-phone", label: "Cloud Phone", icon: Smartphone },
   { to: "/cloud-browser", label: "Cloud Browser", icon: Globe },
+  { to: "/cloud-computer", label: "Cloud Computer", icon: Monitor },
   { to: "/cloud-terminal", label: "Cloud Terminal", icon: Terminal },
 ];
 
@@ -78,7 +80,7 @@ const CONNECTIONS: Item[] = [
   { to: "/connections", label: "Connectors", icon: Plug },
   { to: "/secrets", label: "Credentials", icon: LockKeyhole },
   { to: "/models", label: "AI Gateway", icon: Sparkles },
-  { to: "/ai-agency", label: "AI Agency", icon: UsersRound },
+  { to: "/ai-factory", label: "AI Factory", icon: UsersRound },
 ];
 
 function NavGroup({ label, items, pathname }: { label: string; items: Item[]; pathname: string }) {
@@ -120,7 +122,7 @@ export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { can } = useRoles();
   return (
-    <Sidebar collapsible="icon" className="border-sidebar-border">
+    <Sidebar collapsible="hover" className="border-sidebar-border">
       <SidebarHeader className="gap-1 border-b border-sidebar-border px-2 py-2">
         <WorkspaceSwitcher />
       </SidebarHeader>

@@ -1,6 +1,6 @@
 # Private Workforce Directory and Registry
 
-Open AI Agency → Workforce Directory. Existing teams and their two-to-six-role proposal runner remain under **Existing teams & proposal runs**. Their IDs, roles and run history are retained. Specialist chats do not create a durable autonomous workforce or invoke external provider actions.
+Open AI Factory → Workforce Directory. Existing teams and their two-to-six-role proposal runner remain under **Existing teams & proposal runs**. Their IDs, roles and run history are retained. Specialist chats do not create a durable autonomous workforce or invoke external provider actions.
 
 ## Set up your workspace
 
@@ -8,7 +8,7 @@ Choose Personal or an accessible project. Personal specialists belong to one reg
 
 Choose **Set up department templates** to create ten private department leads and seven Engineering specialist drafts. Repeating setup retains existing identities and configuration versions. Owned agent resources are linked as additional private review drafts by resource ID, never copied or published. For project setup, a private source must already be assigned to that project.
 
-Engineering keeps the existing Software Architect, Developer and QA Reviewer roles and adds Frontend, DevOps, Security and Technical Writing. Equivalent roles reuse normalized canonical identities from `config/ai-agency.engineering.json`. The proposed Mobile Engineer definition in that file remains untouched and is not silently substituted into the approved seven-role roster. The existing Development team ID is recorded when the exact owned team can be reconciled. No eight-person roster is pushed through the legacy six-role runner.
+Engineering keeps the existing Software Architect, Developer and QA Reviewer roles and adds Frontend, DevOps, Security and Technical Writing. Equivalent roles reuse normalized canonical identities from `config/ai-factory.engineering.json`. The proposed Mobile Engineer definition in that file remains untouched and is not silently substituted into the approved seven-role roster. The existing Development team ID is recorded when the exact owned team can be reconciled. No eight-person roster is pushed through the legacy six-role runner.
 
 ## Configure, activate and launch
 

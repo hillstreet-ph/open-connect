@@ -17,11 +17,11 @@ export function ResourceUrlImport() {
     onSuccess: (data) => {
       void client.invalidateQueries({ queryKey: ["resources-review-queue"] });
       void client.invalidateQueries({ queryKey: ["my-resources"] });
-      const published = data.results.filter((r) => r.status === "published");
+      const drafts = data.results.filter((r) => ["draft", "update-candidate"].includes(r.status));
       toast.success(
-        published.length > 0
-          ? `Import complete. ${published.length} resource(s) published to Marketplace.`
-          : "Import complete. Nothing new was published.",
+        drafts.length > 0
+          ? `Import complete. ${drafts.length} private draft(s) ready for review.`
+          : "Import complete. No new drafts were saved.",
       );
     },
     onError: (e) => toast.error(e.message),
@@ -31,7 +31,7 @@ export function ResourceUrlImport() {
       <CardHeader>
         <CardTitle className="text-base">Import website or GitHub resources</CardTitle>
         <CardDescription>
-          Download every detected resource and publish it to Marketplace.
+          Save detected resources as private drafts for review before publication.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -50,14 +50,14 @@ export function ResourceUrlImport() {
             disabled={mutation.isPending || !url.trim()}
             onClick={() => mutation.mutate()}
           >
-            {mutation.isPending ? "Fetching & publishing…" : "Import & publish"}
+            {mutation.isPending ? "Importing drafts…" : "Import drafts"}
           </Button>
         </div>
         <div className="space-y-1 text-xs text-muted-foreground">
           <p>Static checks screen archives, secrets and executable payloads.</p>
           <p>They are not an antivirus verdict.</p>
           <p>Imports never execute code or overwrite a published version.</p>
-          <p>Blocked or flagged imports stay private for review.</p>
+          <p>All imports require independent security and license review before publication.</p>
         </div>
         {mutation.data?.results.map((r, i) => (
           <div
@@ -67,12 +67,12 @@ export function ResourceUrlImport() {
             <Badge
               className={
                 r.status === "blocked" || r.status === "failed"
-                  ? "border-red-500/40 bg-red-500/15 text-red-300"
+                  ? "border-destructive/40 bg-destructive/15 text-destructive"
                   : r.status === "published"
-                    ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
+                    ? "border-success/40 bg-success/15 text-success"
                     : r.status === "duplicate"
-                      ? "border-violet-500/40 bg-violet-500/15 text-violet-300"
-                      : "border-amber-500/40 bg-amber-500/15 text-amber-300"
+                      ? "border-chart-4/40 bg-chart-4/15 text-chart-4"
+                      : "border-warning/40 bg-warning/15 text-warning"
               }
             >
               {r.status}

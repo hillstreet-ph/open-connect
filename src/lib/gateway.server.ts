@@ -15,10 +15,20 @@ import { COMPATIBLE_GATEWAY_PROVIDERS } from "./ai-gateway-providers.ts";
  *   LITELLM_MASTER_KEY OpenRouter sk-or-v1-… (or LiteLLM master key)
  *   OPENROUTER_API_KEY optional explicit OpenRouter key
  *   OPENROUTER_BASE_URL optional override
+ *   FIREWORKS_API_KEY  optional Fireworks AI platform key (OpenAI-compatible inference)
+ *   FIREWORKS_BASE_URL defaults to https://api.fireworks.ai/inference/v1
  */
 import { createHash } from "crypto";
 import { generateClientKey, isClientKey } from "./gateway-keys.ts";
+import { FREE_MODEL_POOL, MANAGED_MODEL_IDS, MODEL_ALIASES } from "./model-aliases.ts";
+
+export { FREE_MODEL_POOL, MANAGED_MODEL_IDS, MODEL_ALIASES };
 import { fetchFreeModelCatalog, isAutoFreeModel } from "./model-catalog";
+import {
+  CLOUDFLARE_AI_BASE_URL,
+  CLOUDFLARE_AI_FREE_MODELS,
+  CLOUDFLARE_AI_UPSTREAM_NAME,
+} from "./cloudflare-ai.server";
 
 export const KEY_PREFIX = "oc_live_";
 
@@ -29,26 +39,6 @@ export type Upstream = {
   baseUrl: string;
   headers: Record<string, string>;
 };
-
-/** OpenRouter :free models — rotate for open-connect/free-rotate */
-export const FREE_MODEL_POOL: string[] = [
-  "openrouter/free",
-  "google/gemma-4-31b-it:free",
-  "google/gemma-4-26b-a4b-it:free",
-  "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-  "nvidia/nemotron-3-super-120b-a12b:free",
-  "nvidia/nemotron-3.5-lightning:free",
-  "liquid/lfm-2.5-2.6b:free",
-  "thinkingmachines/inkling:free",
-  "thinkingmachines/inkling-small:free",
-  "poolside/laguna-s-2.1:free",
-  "poolside/laguna-xs-2.1:free",
-  "cohere/north-mini-code:free",
-  "nex-agi/nex-n2.5-mini:free",
-  "nex-agi/nex-n2.5-pro:free",
-  "inclusionai/ling-3.0-flash-sante:free",
-  "inclusionai/ling-3.0-flash-fin:free",
-];
 
 let freeRotateIdx = 0;
 
@@ -61,93 +51,6 @@ export function nextFreeModel(preferAutoRouter = true): string {
   freeRotateIdx += 1;
   return id;
 }
-
-export const MODEL_ALIASES: Record<string, string> = {
-  // Free tier (OpenRouter)
-  auto: "openrouter/free",
-  "open-connect/auto": "openrouter/free",
-  "open-connect/free": "openrouter/free",
-  "open-connect/auto-free": "openrouter/free",
-  free: "openrouter/free",
-  "openrouter/free": "openrouter/free",
-
-  // --- Open-Connect virtual (stable for agents) ---
-  "open-connect/fast": "openai/gpt-4o-mini",
-  "open-connect/cheap": "openai/gpt-4o-mini",
-  "open-connect/balanced": "openai/gpt-4o-mini",
-  "open-connect/reasoning": "openai/gpt-4o",
-  "open-connect/coding": "openai/gpt-4o",
-  "open-connect/vision": "openai/gpt-4o",
-  "open-connect/claude": "anthropic/claude-sonnet-4",
-  "open-connect/claude-fast": "anthropic/claude-3-haiku",
-  "open-connect/gemini": "google/gemini-2.5-flash",
-  "open-connect/gemini-pro": "google/gemini-2.5-pro",
-  "open-connect/grok": "x-ai/grok-2-1212",
-  "open-connect/llama": "meta-llama/llama-3.3-70b-instruct",
-  "open-connect/deepseek": "deepseek/deepseek-chat",
-  "open-connect/mistral": "mistralai/mistral-large",
-  "open-connect/embedding": "openai/text-embedding-3-small",
-
-  // --- Short logical names (LiteLLM-style) ---
-  fast: "openai/gpt-4o-mini",
-  cheap: "openai/gpt-4o-mini",
-  balanced: "openai/gpt-4o-mini",
-  reasoning: "openai/gpt-4o",
-  coding: "openai/gpt-4o",
-  vision: "openai/gpt-4o",
-  embedding: "openai/text-embedding-3-small",
-
-  // --- OpenAI ---
-  "gpt-4o": "openai/gpt-4o",
-  "gpt-4o-mini": "openai/gpt-4o-mini",
-  "gpt-4.1": "openai/gpt-4.1",
-  "gpt-4.1-mini": "openai/gpt-4.1-mini",
-  "gpt-4.1-nano": "openai/gpt-4.1-nano",
-  o1: "openai/o1",
-  "o1-mini": "openai/o1-mini",
-  "o3-mini": "openai/o3-mini",
-  "openai/gpt-4o": "openai/gpt-4o",
-  "openai/gpt-4o-mini": "openai/gpt-4o-mini",
-  "openai/gpt-4.1": "openai/gpt-4.1",
-  "openai/o1": "openai/o1",
-  "openai/text-embedding-3-small": "openai/text-embedding-3-small",
-  "openai/text-embedding-3-large": "openai/text-embedding-3-large",
-
-  // --- Anthropic / Claude ---
-  "claude-sonnet": "anthropic/claude-sonnet-4",
-  "claude-sonnet-4": "anthropic/claude-sonnet-4",
-  "claude-3.5-sonnet": "anthropic/claude-3.5-sonnet",
-  "claude-3-opus": "anthropic/claude-3-opus",
-  "claude-3-haiku": "anthropic/claude-3-haiku",
-  "claude-opus": "anthropic/claude-3-opus",
-  "claude-haiku": "anthropic/claude-3-haiku",
-  "anthropic/claude-sonnet-4": "anthropic/claude-sonnet-4",
-  "anthropic/claude-3.5-sonnet": "anthropic/claude-3.5-sonnet",
-  "anthropic/claude-3-opus": "anthropic/claude-3-opus",
-  "anthropic/claude-3-haiku": "anthropic/claude-3-haiku",
-
-  // --- Google / Gemini ---
-  "gemini-2.5-flash": "google/gemini-2.5-flash",
-  "gemini-2.5-pro": "google/gemini-2.5-pro",
-  "gemini-flash": "google/gemini-2.5-flash",
-  "gemini-pro": "google/gemini-2.5-pro",
-  "google/gemini-2.5-flash": "google/gemini-2.5-flash",
-  "google/gemini-2.5-pro": "google/gemini-2.5-pro",
-
-  // --- Meta / DeepSeek / Mistral / xAI ---
-  "llama-3.3-70b": "meta-llama/llama-3.3-70b-instruct",
-  "meta-llama/llama-3.3-70b-instruct": "meta-llama/llama-3.3-70b-instruct",
-  "deepseek-chat": "deepseek/deepseek-chat",
-  "deepseek/deepseek-chat": "deepseek/deepseek-chat",
-  "mistral-large": "mistralai/mistral-large",
-  "mistralai/mistral-large": "mistralai/mistral-large",
-  "grok-2": "x-ai/grok-2-1212",
-  "x-ai/grok-2-1212": "x-ai/grok-2-1212",
-};
-
-export const MANAGED_MODEL_IDS: string[] = Array.from(
-  new Set([...Object.keys(MODEL_ALIASES), ...Object.values(MODEL_ALIASES), ...FREE_MODEL_POOL]),
-);
 
 export function resolveModelId(requested: string): string {
   const key = (requested || "").trim();
@@ -237,6 +140,38 @@ export function resolveUpstreams(): Upstream[] {
     }
   }
 
+  // Optional Fireworks AI platform upstream (OpenAI-compatible inference).
+  const fireworksKey = process.env["FIREWORKS_API_KEY"] || "";
+  const fireworksBase = stripTrailingSlash(
+    process.env["FIREWORKS_BASE_URL"] || "https://api.fireworks.ai/inference/v1",
+  );
+  if (fireworksKey && fireworksBase.startsWith("https://")) {
+    const id = `fireworks:${fireworksBase}`;
+    if (!seen.has(id)) {
+      seen.add(id);
+      list.push({
+        name: "fireworks",
+        baseUrl: fireworksBase,
+        headers: {
+          Authorization: `Bearer ${fireworksKey}`,
+          "Content-Type": "application/json",
+        },
+      });
+    }
+  }
+
+  // Credential-free platform fallback: the Workers AI binding needs no API
+  // key, so Open-Auto free-first routing works on every deployment without
+  // stored secrets.
+  const cloudflareId = `cloudflare:${CLOUDFLARE_AI_BASE_URL}`;
+  if (!seen.has(cloudflareId)) {
+    list.push({
+      name: CLOUDFLARE_AI_UPSTREAM_NAME,
+      baseUrl: CLOUDFLARE_AI_BASE_URL,
+      headers: {},
+    });
+  }
+
   return list;
 }
 
@@ -287,6 +222,9 @@ const autoFreeCatalogCache = new Map<string, { expiresAt: number; ids: string[] 
 /** Build free-only fallback routes from the current user's connected model gateways. */
 export async function resolveAutoFreeRoutes(upstreams: Upstream[]): Promise<AutoFreeRoute[]> {
   return collectAutoFreeRoutes(upstreams, async (upstream) => {
+    if (upstream.name === CLOUDFLARE_AI_UPSTREAM_NAME) {
+      return [...CLOUDFLARE_AI_FREE_MODELS];
+    }
     const cacheKey = createHash("sha256")
       .update(`${upstream.name}\n${upstream.baseUrl}\n${upstream.headers["Authorization"] ?? ""}`)
       .digest("hex");
@@ -406,6 +344,13 @@ export async function fetchMergedModelCatalog(configured?: Upstream[]): Promise<
   await Promise.all(
     upstreams.map(async (u) => {
       names.push(u.name);
+      if (u.name === CLOUDFLARE_AI_UPSTREAM_NAME) {
+        providers.add(u.name);
+        for (const id of CLOUDFLARE_AI_FREE_MODELS) {
+          ids.add(id);
+        }
+        return;
+      }
       try {
         const response = await fetch(`${u.baseUrl}/models`, {
           headers: u.headers,

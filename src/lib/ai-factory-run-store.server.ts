@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-/** Complete only the caller's still-running Agency proposal; never overwrite a terminal run. */
-export async function finishAgencyProposalRun(
+/** Complete only the caller's still-running Factory proposal; never overwrite a terminal run. */
+export async function finishFactoryProposalRun(
   db: SupabaseClient,
   userId: string,
   id: string,

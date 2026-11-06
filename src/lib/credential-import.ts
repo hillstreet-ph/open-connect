@@ -1,14 +1,24 @@
 /**
  * Password-manager import: parses exports from Proton Pass (CSV or unencrypted ZIP/JSON),
- * Bitwarden (CSV or unencrypted JSON), 1Password CSV, LastPass CSV, Firefox CSV and
- * Chromium/Safari browser CSV into vault-ready items.
+ * Bitwarden (CSV or unencrypted JSON), 1Password CSV, LastPass CSV, Dashlane, NordPass,
+ * KeePass/KeePassXC, Enpass and RoboForm CSV, Firefox CSV and Chromium/Safari browser CSV into
+ * vault-ready items.
  *
  * Items hold secret values. Keep them in memory only: never log, cache, persist or render
  * `password`, `totp_secret` or `notes`. `summarizeImportItem` is the only safe display shape.
  */
 
 export type ImportSource =
-  "proton" | "bitwarden" | "1password" | "lastpass" | "firefox" | "browser" | "generic";
+  | "proton"
+  | "bitwarden"
+  | "1password"
+  | "lastpass"
+  | "firefox"
+  | "dashlane"
+  | "nordpass"
+  | "keepass"
+  | "browser"
+  | "generic";
 
 export type ImportStatus = "ready" | "skipped" | "duplicate";
 
@@ -39,6 +49,9 @@ const SOURCE_LABEL: Record<ImportSource, string> = {
   "1password": "1Password",
   lastpass: "LastPass",
   firefox: "Firefox",
+  dashlane: "Dashlane",
+  nordpass: "NordPass",
+  keepass: "KeePass",
   browser: "Browser",
   generic: "CSV",
 };
@@ -348,6 +361,12 @@ export function detectCsvSource(headers: string[]): ImportSource | null {
   if (has("loginuri", "loginusername", "loginpassword")) return "bitwarden";
   if (has("url", "username", "password", "extra", "grouping")) return "lastpass";
   if (has("url", "username", "password", "httprealm")) return "firefox";
+  // KeePass / KeePassXC CSV (Group, Title, Username, Password, URL, Notes, TOTP).
+  if (has("group") && has("title") && has("password")) return "keepass";
+  // NordPass CSV (name, url, username, password, note, folder).
+  if (has("name", "url", "username", "password", "folder")) return "nordpass";
+  // Dashlane / Enpass CSV (title, url, username, password, note).
+  if (has("title", "url", "username", "password", "note")) return "dashlane";
   if (has("title") && has("password") && (has("website") || has("url")) && has("username"))
     return names.includes("otpauth") ||
       names.includes("onetimepassword") ||
@@ -391,7 +410,7 @@ export function parseCredentialCsv(input: string): ImportItem[] {
     entry.password = read(row, "password", "loginpassword");
     entry.totp = read(row, "totp", "logintotp", "otpauth", "onetimepassword", "otp");
     entry.notes = read(row, "note", "notes", "extra");
-    entry.folder = read(row, "vault", "folder", "grouping", "tags");
+    entry.folder = read(row, "vault", "folder", "grouping", "category", "group", "tags");
     entry.type = read(row, "type") || "login";
     const urlCell = read(row, "url", "website", "loginuri", "origin", "uri");
     entry.urls = source === "proton" ? splitUrls(urlCell) : urlCell.trim() ? [urlCell] : [];

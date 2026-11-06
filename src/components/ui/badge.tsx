@@ -28,19 +28,19 @@ export interface BadgeProps
 function labelTone(label: unknown) {
   if (typeof label !== "string") return "";
   if (/blocked|failed|malware|quarantin|broken/i.test(label))
-    return "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300";
+    return "border-destructive/30 bg-destructive/10 text-destructive";
   if (
     /verified|connected|approved|ready|complete/i.test(label) &&
     !/unverified|disconnected/.test(label)
   )
-    return "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300";
+    return "border-success/30 bg-success/10 text-success";
   if (/pending|review|unverified|update|warning/i.test(label))
-    return "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300";
+    return "border-warning/30 bg-warning/10 text-warning";
   const colors = [
-    "border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-300",
-    "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300",
-    "border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-700 dark:text-fuchsia-300",
-    "border-teal-500/30 bg-teal-500/10 text-teal-700 dark:text-teal-300",
+    "border-chart-4/30 bg-chart-4/10 text-chart-4",
+    "border-chart-1/30 bg-chart-1/10 text-chart-1",
+    "border-chart-2/30 bg-chart-2/10 text-chart-2",
+    "border-chart-3/30 bg-chart-3/10 text-chart-3",
   ];
   return colors[
     [...label.toLowerCase()].reduce((sum, c) => sum + c.charCodeAt(0), 0) % colors.length

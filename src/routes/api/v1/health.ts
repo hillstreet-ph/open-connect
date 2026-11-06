@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { getCloudflareAi } from "@/lib/cloudflare-ai.server";
 import { json, resolveUpstream, resolveUpstreams } from "@/lib/gateway.server";
 import { kvHealth } from "@/lib/kv.server";
 
@@ -34,6 +35,10 @@ export const Route = createFileRoute("/api/v1/health")({
             binding: "OC_KV",
             bound: kv.bound,
             writable: kv.writable,
+          },
+          cloudflare_ai: {
+            binding: "OC_AI",
+            bound: (await getCloudflareAi()) !== null,
           },
           databricks: {
             configured:

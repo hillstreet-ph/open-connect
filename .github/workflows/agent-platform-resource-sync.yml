@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   collect:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -30,6 +30,19 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: node --experimental-strip-types scripts/collect-marketplace-resources.mjs --agent-platforms --write-catalog
+      - name: Report source collection failures
+        if: failure()
+        run: |
+          node --input-type=module <<'JS'
+          import { readFile } from "node:fs/promises";
+          const path = "audit-results/marketplace/candidates.json";
+          try {
+            const report = JSON.parse(await readFile(path, "utf8"));
+            console.log(JSON.stringify({ coverage: report.coverage, failures: report.failures }, null, 2));
+          } catch {
+            console.log("No source collection evidence was written.");
+          }
+          JS
       - name: Validate generated catalog
         run: node --test scripts/agent-platform-discovery.test.mjs && npm run marketplace:validate
       - name: Create or update catalog review pull request

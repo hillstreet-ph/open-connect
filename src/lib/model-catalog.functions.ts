@@ -15,9 +15,18 @@ export const listFreeModels = createServerFn({ method: "GET" })
         "Routes through verified free OpenRouter, NVIDIA, Ollama Cloud, and LiteLLM models.",
       providers: upstreams.map((upstream) => upstream.name),
       models: freeModels,
-      allModels: catalog.ids.map((id) => ({
-        id,
-        free: freeModels.some((model) => model.id === id),
-      })),
+      allModels: catalog.ids.map((id) => {
+        const slash = id.indexOf("/");
+        const owner = id.startsWith("open-connect/")
+          ? "open-connect"
+          : slash > 0
+            ? id.slice(0, slash)
+            : "upstream";
+        return {
+          id,
+          owner,
+          free: freeModels.some((model) => model.id === id),
+        };
+      }),
     };
   });

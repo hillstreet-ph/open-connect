@@ -22,7 +22,7 @@ function AgentsPage() {
   return (
     <div className="space-y-6">
       <section
-        className="mx-auto max-w-3xl space-y-3 rounded-xl border p-4 sm:p-6"
+        className="mx-auto max-w-6xl space-y-3 rounded-xl border p-4 sm:p-6"
         aria-labelledby="browser-agent-heading"
       >
         <h1 id="browser-agent-heading" className="text-xl font-semibold">

@@ -48,6 +48,9 @@ try {
     [
       "supabase/migrations/20261026072124_mcp_oauth_resource_binding.sql",
       "supabase/migrations/20261030120000_oauth_loopback_redirects.sql",
+      "supabase/tests/platform_timestamp_fixture.sql",
+      "supabase/migrations/20261104165157_harden_platform_timestamp_search_path.sql",
+      "supabase/tests/platform_timestamp_search_path.sql",
       "supabase/tests/admin_oauth_consent.sql",
       "supabase/tests/mcp_oauth_resource_binding.sql",
       // Applied after the legacy suites: it revokes the unauthenticated exchanges they cover.

@@ -177,7 +177,7 @@ function SettingsPage() {
   });
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-14">
+    <div className="mx-auto max-w-6xl px-4 py-6 sm:py-10">
       <AccountLinkCallbackNotice />
       <h1 className="text-3xl font-semibold">Settings</h1>
       <p className="mt-2 text-sm text-muted-foreground">

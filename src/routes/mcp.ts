@@ -3,8 +3,8 @@ import {
   PROFILE_SCHEMA,
   oauthScopeChallenge,
 } from "@/lib/mcp-oauth-contract";
-import { AGENCY_CATEGORIES, agencyTemplate } from "@/lib/ai-agency";
-import { resourceReviewState, isResourceApproved } from "@/lib/resource-approval";
+import { FACTORY_CATEGORIES, factoryTemplate } from "@/lib/ai-factory";
+import { resourceReviewState, isResourceExecutable } from "@/lib/resource-approval";
 import {
   adminAccess,
   manageResource,
@@ -54,6 +54,7 @@ import {
 } from "@/lib/autonomous-control";
 import { streamableMcpResponse } from "@/lib/mcp-transport.server";
 import { calculateExpression } from "@/lib/calculator";
+import { WORK_TOOLS, WORK_TOOL_SCOPES, isWorkTool, runWorkTool } from "@/lib/mcp-work-tools.server";
 import { hasRole, type AppRole } from "@/lib/rbac";
 import {
   isRemoteMcpProvider,
@@ -91,6 +92,8 @@ type ResourceRow = {
   installation_type: string | null;
   installation_config: Record<string, unknown> | null;
   verified: boolean;
+  version: string | null;
+  owner_id: string | null;
 };
 
 function reviewState(resource: ResourceRow) {
@@ -98,7 +101,7 @@ function reviewState(resource: ResourceRow) {
 }
 
 function isExecutable(resource: ResourceRow) {
-  return isResourceApproved(resource);
+  return isResourceExecutable(resource);
 }
 
 type McpTool = {
@@ -458,7 +461,7 @@ const PLATFORM_TOOLS: McpTool[] = [
     inputSchema: {
       type: "object",
       properties: {
-        category: { type: "string", enum: [...AGENCY_CATEGORIES] },
+        category: { type: "string", enum: [...FACTORY_CATEGORIES] },
         goal: { type: "string", minLength: 1, maxLength: 4000 },
         context: { type: "string", maxLength: 24000 },
       },
@@ -1116,6 +1119,7 @@ const PLATFORM_TOOLS: McpTool[] = [
       openWorldHint: true,
     },
   },
+  ...(WORK_TOOLS as McpTool[]),
 ];
 
 async function loadRoles(userId: string): Promise<AppRole[]> {
@@ -1329,7 +1333,7 @@ async function getCatalog(force = false) {
     const { data, error } = await oauthDatabase()
       .from("resources")
       .select(
-        "id, slug, name, description, resource_type, installation_type, installation_config, verified",
+        "id, slug, name, description, resource_type, installation_type, installation_config, verified, version, owner_id",
       )
       .eq("published", true)
       .order("featured", { ascending: false })
@@ -1386,7 +1390,7 @@ async function findResourceByToolName(toolName: string): Promise<ResourceRow | n
   const { data } = await supabaseAdmin
     .from("resources")
     .select(
-      "id, slug, name, description, resource_type, installation_type, installation_config, verified",
+      "id, slug, name, description, resource_type, installation_type, installation_config, verified, version, owner_id",
     )
     .eq("published", true)
     .or(`slug.eq.${slugHyphen},slug.eq.${raw}`)
@@ -1464,6 +1468,7 @@ const TOOL_SCOPES: Record<string, string> = {
   configure_connection: "control:write",
   sync_composio_accounts: "control:write",
   install_capability: "control:write",
+  ...WORK_TOOL_SCOPES,
 };
 
 function requiredToolScopes(name: string): string[] {
@@ -1945,6 +1950,16 @@ export const Route = createFileRoute("/mcp")({
                   : "Use an existing host tool or report the missing capability; do not assume a catalog entry is executable.",
               };
             }
+            result = { ...textResult(payload), structuredContent: payload };
+          } else if (isWorkTool(name)) {
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const payload = await runWorkTool(
+              supabaseAdmin,
+              { userId: key.userId, projectId: key.projectId },
+              name,
+              args,
+              (projectId) => assertProjectAccess(key, projectId),
+            );
             result = { ...textResult(payload), structuredContent: payload };
           } else if (name === "calculate") {
             const expression = String(args["expression"] ?? "");
@@ -2551,7 +2566,7 @@ export const Route = createFileRoute("/mcp")({
               await import("@/lib/gateway.server");
             const input = validateTeamInput(args);
             const roles =
-              args["category"] !== undefined ? agencyTemplate(args["category"]).roles : undefined;
+              args["category"] !== undefined ? factoryTemplate(args["category"]).roles : undefined;
             const routes = await resolveAutoFreeRoutes(
               await resolveUserUpstreams(key.userId, false),
             );
