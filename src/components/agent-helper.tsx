@@ -63,7 +63,14 @@ function AgentHelperPanel({
     [historyOpen, setHistoryOpen] = useState(false);
   const [capabilitiesOpen, setCapabilitiesOpen] = useState(false);
   const [mode, setMode] = useState<CopilotMode>("ask");
-  const [autoExecute, setAutoExecute] = useState(true);
+  const [autoExecute, setAutoExecute] = useState(() => {
+    if (typeof window === "undefined") return true;
+    try {
+      return window.localStorage.getItem("copilot-auto-execute") !== "off";
+    } catch {
+      return true;
+    }
+  });
   const [openers, setOpeners] = useState<string[]>([]);
   const [nextSteps, setNextSteps] = useState<string[]>([]);
   const [enhancing, setEnhancing] = useState(false);
@@ -132,14 +139,6 @@ function AgentHelperPanel({
     };
   }, [user.id]);
 
-  useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem("copilot-auto-execute");
-      if (saved !== null) setAutoExecute(saved === "on");
-    } catch {
-      /* preferences stay local when storage is unavailable */
-    }
-  }, []);
   useEffect(() => {
     try {
       window.localStorage.setItem("copilot-auto-execute", autoExecute ? "on" : "off");
