@@ -15,6 +15,10 @@ const READS = new Set([
   "list_tasks",
   "list_schedules",
   "list_automations",
+  "list_knowledge",
+  "list_library_resources",
+  "list_workforce_agents",
+  "list_gateway_models",
 ]);
 const WRITES = AGENT_HELPER_WRITE_TOOLS;
 type Reply = {
@@ -23,7 +27,7 @@ type Reply = {
   toolCalls: AgentHelperToolCall[];
 };
 
-/** Bounded lookups followed by at most one write. Never retry a completed action. */
+/** Bounded lookups followed by a bounded write allowance. Never retry a completed action. */
 export async function runAgentHelper(options: {
   first: Reply;
   messages: Record<string, unknown>[];
@@ -32,24 +36,30 @@ export async function runAgentHelper(options: {
     name: AgentHelperToolName,
     args: Record<string, unknown>,
   ) => Promise<Record<string, unknown>>;
+  maxSteps?: number;
+  maxWrites?: number;
 }) {
+  const maxSteps = Math.max(1, options.maxSteps ?? 4);
+  const maxWrites = Math.max(1, options.maxWrites ?? 1);
   let reply = options.first;
   const messages = [...options.messages];
   let action: { name: AgentHelperToolName; result: Record<string, unknown> } | null = null;
-  let wrote = false;
+  let writes = 0;
   const fallback = () => ({
     reply: action
       ? describeAgentHelperToolResult(action.name, action.result)
       : "I couldn't complete that request. Please ask for one internal action at a time.",
     action,
   });
-  for (let step = 0; step <= 4; step++) {
+  for (let step = 0; step <= maxSteps; step++) {
     if (!reply.toolCalls.length)
       return reply.content ? { reply: reply.content.slice(0, 5000), action } : fallback();
-    if (step === 4 || wrote || reply.toolCalls.length !== 1) return fallback();
     const call = reply.toolCalls[0]!;
     const name = call?.function?.name as AgentHelperToolName;
-    if (!READS.has(name) && !WRITES.has(name)) return fallback();
+    const isWrite = WRITES.has(name);
+    if (!READS.has(name) && !isWrite) return fallback();
+    if (step === maxSteps || writes >= maxWrites || reply.toolCalls.length !== 1)
+      return fallback();
     let result: Record<string, unknown>;
     try {
       result = await options.execute(name, parseAgentHelperArguments(call.function.arguments));
@@ -68,16 +78,19 @@ export async function runAgentHelper(options: {
     // A model must never turn a failed or ambiguous action into a success claim.
     if (result["error"]) return fallback();
     // Even a failed write consumes this turn's write allowance.
-    wrote = WRITES.has(name);
-    // A completed write is reported from its receipt, never rewritten by a model.
-    if (wrote) return fallback();
+    if (isWrite) writes++;
+    // The final completed write is reported from its receipt, never rewritten by a model.
+    if (isWrite && writes >= maxWrites) return fallback();
     messages.push(reply.message ?? { role: "assistant", tool_calls: [call] }, {
       role: "tool",
       tool_call_id: call.id,
       content: JSON.stringify(result),
     });
     try {
-      reply = await options.requestNext(messages, !wrote && !result["error"] && step < 3);
+      reply = await options.requestNext(
+        messages,
+        writes < maxWrites && !result["error"] && step < maxSteps - 1,
+      );
     } catch {
       return fallback();
     }
