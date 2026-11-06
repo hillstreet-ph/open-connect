@@ -7,6 +7,7 @@ import { OAUTH_SCOPES_SUPPORTED } from "./lib/oauth.server";
 import { TOKEN_ENDPOINT_AUTH_METHODS } from "./lib/oauth-client-auth";
 import { runWithRuntimeEnv } from "./lib/runtime-env.server";
 import { aiGatewayMetadata, llmsTxt } from "./lib/ai-gateway-discovery";
+import { isRosterPath, rosterPageCandidates } from "./lib/ai-factory-roster-assets";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -141,6 +142,47 @@ function isH3SwallowedErrorBody(body: string): boolean {
 }
 
 /**
+ * Serve the AI Factory roster's static pages from the asset layer.
+ *
+ * The roster is a self-contained static site shipped under
+ * `/ai-factory/roster/`. Only exact file paths resolve on their own, so the
+ * extensionless URL for each page (`/ai-factory/roster/teams`) reached the app
+ * router and 404'd. Resolving the page file here gives every roster page real
+ * HTML at its own URL while leaving every non-roster path to the SPA.
+ *
+ * Returns `null` when the request is not a roster page or when no page file
+ * matches, so the caller falls through to normal routing untouched.
+ */
+async function handleRosterAsset(request: Request, env: unknown): Promise<Response | null> {
+  if (request.method !== "GET" && request.method !== "HEAD") return null;
+
+  const url = new URL(request.url);
+  if (!isRosterPath(url.pathname)) return null;
+
+  const candidates = rosterPageCandidates(url.pathname);
+  if (candidates.length === 0) return null;
+
+  const assets = (env as { ASSETS?: { fetch: (request: Request) => Promise<Response> } })?.ASSETS;
+  if (!assets) return null;
+
+  for (const candidate of candidates) {
+    let response = await assets.fetch(
+      new Request(new URL(candidate, url.origin).toString(), request),
+    );
+    // The asset layer redirects `/page.html` to `/page`; follow that once so the
+    // explicit-.html form (old bookmarks) serves the page too.
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get("location");
+      if (!location) continue;
+      response = await assets.fetch(new Request(new URL(location, url.origin).toString(), request));
+    }
+    if (response.status === 200) return response;
+  }
+
+  return null;
+}
+
+/**
  * Unhandled gateway failures must stay machine-readable. The MCP route dispatches
  * tools whose handlers throw curated, safe Error messages; without this net every
  * such throw surfaced as an HTML 500 page that JSON-RPC clients cannot parse
@@ -214,6 +256,9 @@ export default {
       return await runWithRuntimeEnv(env, async () => {
         const wellKnown = handleWellKnown(request);
         if (wellKnown) return wellKnown;
+
+        const rosterAsset = await handleRosterAsset(request, env);
+        if (rosterAsset) return rosterAsset;
 
         const handler = await getServerEntry();
         const response = await handler.fetch(request, env, ctx);
