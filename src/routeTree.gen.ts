@@ -20,6 +20,7 @@ import { Route as ResourcesRouteImport } from './routes/resources'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedAgentsRouteImport } from './routes/_authenticated/agents'
 import { Route as AuthenticatedAiAgencyRouteImport } from './routes/_authenticated/ai-agency'
+import { Route as AuthenticatedAiFactoryRouteImport } from './routes/_authenticated/ai-factory'
 import { Route as AuthenticatedApiKeysRouteImport } from './routes/_authenticated/api-keys'
 import { Route as AuthenticatedAutomationsRouteImport } from './routes/_authenticated/automations'
 import { Route as AuthenticatedCampaignStudioRouteImport } from './routes/_authenticated/campaign-studio'
@@ -122,8 +123,16 @@ const AuthenticatedAgentsRoute = AuthenticatedAgentsRouteImport.update({
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAiAgencyRoute = AuthenticatedAiAgencyRouteImport.update({
+const AuthenticatedAiFactoryRoute = AuthenticatedAiFactoryRouteImport.update({
   id: '/ai-agency',
+  id: '/ai-factory',
   path: '/ai-agency',
+  path: '/ai-factory',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAiFactoryRoute = AuthenticatedAiFactoryRouteImport.update({
+  id: '/ai-factory',
+  path: '/ai-factory',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedApiKeysRoute = AuthenticatedApiKeysRouteImport.update({
@@ -406,6 +415,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRoute
   '/agents': typeof AuthenticatedAgentsRoute
   '/ai-agency': typeof AuthenticatedAiAgencyRoute
+  '/ai-factory': typeof AuthenticatedAiFactoryRoute
   '/api-keys': typeof AuthenticatedApiKeysRoute
   '/automations': typeof AuthenticatedAutomationsRoute
   '/campaign-studio': typeof AuthenticatedCampaignStudioRoute
@@ -469,6 +479,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminRoute
   '/agents': typeof AuthenticatedAgentsRoute
   '/ai-agency': typeof AuthenticatedAiAgencyRoute
+  '/ai-factory': typeof AuthenticatedAiFactoryRoute
   '/api-keys': typeof AuthenticatedApiKeysRoute
   '/automations': typeof AuthenticatedAutomationsRoute
   '/campaign-studio': typeof AuthenticatedCampaignStudioRoute
@@ -534,6 +545,7 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/agents': typeof AuthenticatedAgentsRoute
   '/_authenticated/ai-agency': typeof AuthenticatedAiAgencyRoute
+  '/_authenticated/ai-factory': typeof AuthenticatedAiFactoryRoute
   '/_authenticated/api-keys': typeof AuthenticatedApiKeysRoute
   '/_authenticated/automations': typeof AuthenticatedAutomationsRoute
   '/_authenticated/campaign-studio': typeof AuthenticatedCampaignStudioRoute
@@ -599,6 +611,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/agents'
     | '/ai-agency'
+    | '/ai-factory'
     | '/api-keys'
     | '/automations'
     | '/campaign-studio'
@@ -662,6 +675,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/agents'
     | '/ai-agency'
+    | '/ai-factory'
     | '/api-keys'
     | '/automations'
     | '/campaign-studio'
@@ -726,6 +740,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/agents'
     | '/_authenticated/ai-agency'
+    | '/_authenticated/ai-factory'
     | '/_authenticated/api-keys'
     | '/_authenticated/automations'
     | '/_authenticated/campaign-studio'
@@ -877,10 +892,22 @@ declare module '@tanstack/react-router' {
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/ai-agency': {
+    '/_authenticated/ai-factory': {
       id: '/_authenticated/ai-agency'
+      id: '/_authenticated/ai-factory'
       path: '/ai-agency'
+      path: '/ai-factory'
       fullPath: '/ai-agency'
+      fullPath: '/ai-factory'
       preLoaderRoute: typeof AuthenticatedAiAgencyRouteImport
+      preLoaderRoute: typeof AuthenticatedAiFactoryRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/ai-factory': {
+      id: '/_authenticated/ai-factory'
+      path: '/ai-factory'
+      fullPath: '/ai-factory'
+      preLoaderRoute: typeof AuthenticatedAiFactoryRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/api-keys': {
@@ -1275,6 +1302,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedAgentsRoute: typeof AuthenticatedAgentsRoute
   AuthenticatedAiAgencyRoute: typeof AuthenticatedAiAgencyRoute
+  AuthenticatedAiFactoryRoute: typeof AuthenticatedAiFactoryRoute
   AuthenticatedApiKeysRoute: typeof AuthenticatedApiKeysRoute
   AuthenticatedAutomationsRoute: typeof AuthenticatedAutomationsRoute
   AuthenticatedCampaignStudioRoute: typeof AuthenticatedCampaignStudioRoute
@@ -1316,6 +1344,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedAgentsRoute: AuthenticatedAgentsRoute,
   AuthenticatedAiAgencyRoute: AuthenticatedAiAgencyRoute,
+  AuthenticatedAiFactoryRoute: AuthenticatedAiFactoryRoute,
   AuthenticatedApiKeysRoute: AuthenticatedApiKeysRoute,
   AuthenticatedAutomationsRoute: AuthenticatedAutomationsRoute,
   AuthenticatedCampaignStudioRoute: AuthenticatedCampaignStudioRoute,
