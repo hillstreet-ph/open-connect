@@ -115,7 +115,11 @@ export function NotificationInbox() {
         </div>
         <div className="flex items-center justify-between border-t p-3 text-xs">
           <span className="text-muted-foreground">Latest 50 · refreshes every 30s</span>
-          <Link to="/settings" hash="integrations" className="text-primary hover:underline">
+          <Link
+            to="/integrations"
+            search={{ section: "apps" }}
+            className="text-primary hover:underline"
+          >
             Notification settings
           </Link>
         </div>

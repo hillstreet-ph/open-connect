@@ -1,4 +1,23 @@
-const settingsTabs = ["profile", "security", "data", "integrations"] as const;
+const settingsTabs = ["profile", "security", "data"] as const;
+
+/** One hub for developer access and integrations (Settings keeps personal tabs only). */
+export const developerSections = [
+  "api-key",
+  "oauth-apps",
+  "authorized-apps",
+  "webhooks",
+  "apps",
+] as const;
+export type DeveloperSection = (typeof developerSections)[number];
+export function developerSection(value: unknown): DeveloperSection {
+  return typeof value === "string" && developerSections.includes(value as DeveloperSection)
+    ? (value as DeveloperSection)
+    : "api-key";
+}
+/** Old Settings → Integrations deep links move to the hub's Webhooks section. */
+export function legacySettingsRedirect(hash: string): DeveloperSection | null {
+  return hash.replace(/^#/, "") === "integrations" ? "webhooks" : null;
+}
 export function settingsTabList(): readonly string[] {
   return settingsTabs;
 }
