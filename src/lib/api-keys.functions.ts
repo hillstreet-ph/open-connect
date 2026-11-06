@@ -21,7 +21,7 @@ export const listApiKeys = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("api_keys")
       .select(
-        "id, name, key_prefix, scopes, access_profile, organization_id, workspace_id, project_id, last_used_at, revoked_at, expires_at, created_at",
+        "id, name, key_prefix, scopes, access_profile, organization_id, workspace_id, project_id, last_used_at, revoked_at, expires_at, created_at, oauth_resource",
       )
       .is("revoked_at", null)
       .order("created_at", { ascending: false });
@@ -29,6 +29,8 @@ export const listApiKeys = createServerFn({ method: "GET" })
     return (data ?? []).map((key) => ({
       ...key,
       active: !key.revoked_at && (!key.expires_at || Date.parse(key.expires_at) > Date.now()),
+      // Issued by the OAuth consent flow to an app, not created by the user.
+      oauth_grant: Boolean(key.oauth_resource) || key.name.startsWith("OAuth: "),
     }));
   });
 

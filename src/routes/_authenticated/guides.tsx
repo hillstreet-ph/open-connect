@@ -37,13 +37,13 @@ const userGuideSections = [
     title: "MCP client setup",
     body: "Point Claude, Cursor, Hermes, or any MCP client at the Open-Connect gateway with a scoped key.",
     steps: [
-      "Open Integrations > Personal Token and create a scoped API key that includes mcp:connect.",
+      "Open Developer > Personal tokens and create a scoped token that includes mcp:connect.",
       "Set MCP URL to https://open-connect.site/mcp",
       "Add header Authorization: Bearer oc_live_…",
       "Call tools/list to see marketplace and platform tools.",
     ],
     href: "/integrations",
-    hrefLabel: "Open Integrations",
+    hrefLabel: "Open Developer",
   },
   {
     id: "oauth",
@@ -56,7 +56,7 @@ const userGuideSections = [
       "Sign in to Open-Connect and approve the requested scopes; OAuth clients do not need an API key",
     ],
     href: "/integrations",
-    hrefLabel: "Integrations overview",
+    hrefLabel: "OAuth apps",
   },
   {
     id: "connections",
@@ -229,7 +229,7 @@ function GuidesPage() {
               </Link>
             </Button>
             <Button asChild size="sm" variant="outline">
-              <Link to="/integrations" search={{ section: "apps" }}>
+              <Link to="/settings" hash="integrations">
                 Set up a Telegram bot
               </Link>
             </Button>

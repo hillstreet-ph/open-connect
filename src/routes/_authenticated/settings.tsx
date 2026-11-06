@@ -2,7 +2,7 @@ import { NotificationChannels } from "@/components/notification-channels";
 import { createFileRoute, useLocation } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
-import { KeyRound, Loader2, MessageCircle, Save, Trash2, Upload } from "lucide-react";
+import { KeyRound, Loader2, Save, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ProfileAvatarBadge } from "@/components/user-menu";
@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataControlsPanel } from "@/components/data-controls-panel";
 import { IncomingWebhooks } from "@/components/incoming-webhooks";
+import { TelegramIntegrationCard } from "@/components/telegram-integration-card";
 import {
   ConnectedAccountsPanel,
   AccountLinkCallbackNotice,
@@ -341,24 +342,24 @@ function SettingsPage() {
         <TabsContent value="integrations" className="space-y-4">
           <IncomingWebhooks userId={user.id} />
           <NotificationChannels userId={user.id} />
-          <div className="grid gap-4 md:grid-cols-2">
-            <a
-              href="/integrations?section=apps"
-              className="block rounded-xl border bg-card p-5 shadow-panel transition-colors hover:bg-accent/40"
-            >
-              <div className="flex items-start gap-3">
-                <div className="rounded-lg bg-primary/10 p-2 text-primary">
-                  <MessageCircle className="size-4" />
-                </div>
-                <div>
-                  <h2 className="font-medium">Apps</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Connect account-owned apps such as Telegram and manage their credentials.
-                  </p>
-                </div>
+          <TelegramIntegrationCard />
+          <a
+            href="/integrations"
+            className="block rounded-xl border bg-card p-5 shadow-panel transition-colors hover:bg-accent/40"
+          >
+            <div className="flex items-start gap-3">
+              <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                <KeyRound className="size-4" />
               </div>
-            </a>
-          </div>
+              <div>
+                <h2 className="font-medium">Developer</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Personal tokens, OAuth apps with client ID and secret, and apps you have
+                  authorized.
+                </p>
+              </div>
+            </div>
+          </a>
         </TabsContent>
       </Tabs>
     </div>

@@ -92,14 +92,20 @@ test("connection surfaces remain internal and separate from Marketplace", () => 
     path.join(sourceRoot, "routes/_authenticated/integrations.tsx"),
     "utf8",
   );
+  // Developer page: tokens, OAuth apps you build, and apps you authorized.
   assert.ok(integrations.includes("<ApiKeysCard />"));
-  assert.ok(integrations.includes("setTelegramOpen(true)"));
-  assert.ok(integrations.includes("inbound-integrations.functions"));
+  assert.ok(integrations.includes("<OAuthIntegrationsCard />"));
+  assert.ok(integrations.includes("<AuthorizedAppsCard />"));
   assert.ok(!integrations.includes("universal-connector-dialog"));
   assert.ok(!integrations.includes("Remote MCP servers"));
-  for (const section of ['id="api-key"', 'id="apps"']) {
-    assert.ok(integrations.includes(section), "Missing integration section " + section);
+  for (const section of ['id="api-key"', 'id="oauth-apps"', 'id="authorized-apps"']) {
+    assert.ok(integrations.includes(section), "Missing developer section " + section);
   }
+  // Telegram and notifications live only in Settings → Integrations (no duplicate).
+  assert.ok(!integrations.includes("TelegramIntegrationCard"));
+  assert.ok(!integrations.includes("NotificationChannels"));
+  assert.ok(!integrations.includes('id="apps"'));
+  assert.ok(integrations.includes('to: "/settings", hash: "integrations"'));
   assert.ok(!integrations.includes("ai-agents"), "AI Agents section should stay removed");
 
   const inboundMigration = readFileSync(
@@ -158,10 +164,11 @@ test("Settings keeps only personal tabs and duplicates no sidebar destinations",
     assert.ok(!settings.includes(`title="${title}"`), "Settings repeats card " + title);
   }
 
-  // Settings links to Apps; Custom MCP is removed from Integrations.
-  for (const section of ["apps"]) {
-    assert.ok(settings.includes('href="/integrations?section=' + section + '"'));
-  }
+  // Settings owns Telegram and notifications and links to Developer once.
+  assert.ok(settings.includes("<TelegramIntegrationCard />"));
+  assert.ok(settings.includes("<NotificationChannels"));
+  assert.ok(settings.includes('href="/integrations"'));
+  assert.ok(!settings.includes('href="/integrations?section=apps"'));
   assert.ok(!settings.includes('href="/integrations?section=custom-mcp"'));
   assert.ok(!settings.includes('href="/integrations?section=api-key"'));
   assert.ok(!settings.includes('href="/integrations?section=ai-agents"'));
