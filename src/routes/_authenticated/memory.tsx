@@ -136,9 +136,9 @@ function knowledgeToMarkdown(rows: KnowledgeExportRow[]) {
 type ImportedKnowledge = {
   title: string;
   content: string;
-  source_type?: string;
-  source_url?: string;
-  tags?: string[];
+  source_type?: string | undefined;
+  source_url?: string | undefined;
+  tags?: string[] | undefined;
 };
 
 function parseCsvLine(line: string) {
