@@ -2,10 +2,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-function legacyBrowserDisabled() {
-  return true;
-}
-
 type ProfileDomain = { domain: string; cookie_count?: number };
 
 function profileDomains(profile: object): Array<{ domain: string; cookies: number }> {
@@ -76,8 +72,6 @@ export const startCloudBrowserRun = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data, context }) => {
-    if (legacyBrowserDisabled())
-      throw new Error("Cloud Browser now uses Playwright. Open /cloud-browser.");
     const { cloudBrowserClient } = await import("@/lib/tinyfish.server");
     const { normalizeStartRun, startRunWithLiveView } = await import("@/lib/tinyfish");
     const { client } = await cloudBrowserClient(context.userId);
@@ -98,8 +92,6 @@ export const getCloudBrowserRun = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator(z.object({ runId: z.string().min(1).max(128) }))
   .handler(async ({ data, context }) => {
-    if (legacyBrowserDisabled())
-      throw new Error("Cloud Browser now uses Playwright. Open /cloud-browser.");
     const { cloudBrowserClient } = await import("@/lib/tinyfish.server");
     const { summarizeRun } = await import("@/lib/tinyfish");
     const { client } = await cloudBrowserClient(context.userId);
@@ -110,8 +102,6 @@ export const cancelCloudBrowserRun = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator(z.object({ runId: z.string().min(1).max(128) }))
   .handler(async ({ data, context }) => {
-    if (legacyBrowserDisabled())
-      throw new Error("Cloud Browser now uses Playwright. Open /cloud-browser.");
     const { cloudBrowserClient } = await import("@/lib/tinyfish.server");
     const { client } = await cloudBrowserClient(context.userId);
     await client.cancelRun(data.runId);
@@ -123,8 +113,6 @@ export const getCloudBrowserProfile = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator(z.object({ profileId: z.string().regex(/^[A-Za-z0-9_-]{1,128}$/) }))
   .handler(async ({ data, context }) => {
-    if (legacyBrowserDisabled())
-      throw new Error("Cloud Browser now uses Playwright. Open /cloud-browser.");
     const { cloudBrowserClient } = await import("@/lib/tinyfish.server");
     const { client } = await cloudBrowserClient(context.userId);
     const profile = await client.getProfile(data.profileId);
@@ -144,8 +132,6 @@ export const saveCloudBrowserProfile = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data, context }) => {
-    if (legacyBrowserDisabled())
-      throw new Error("Cloud Browser now uses Playwright. Open /cloud-browser.");
     const { cloudBrowserClient } = await import("@/lib/tinyfish.server");
     const { client } = await cloudBrowserClient(context.userId);
     const input = { name: data.name, set_as_default: data.set_as_default };
@@ -167,8 +153,6 @@ export const createDirectCloudBrowser = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data, context }) => {
-    if (legacyBrowserDisabled())
-      throw new Error("Cloud Browser now uses Playwright. Open /cloud-browser.");
     const { cloudBrowserClient } = await import("@/lib/tinyfish.server");
     const { browserNavigationUrl } = await import("@/lib/browser-control");
     const { client } = await cloudBrowserClient(context.userId);
@@ -196,8 +180,6 @@ export const finishDirectCloudBrowser = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data, context }) => {
-    if (legacyBrowserDisabled())
-      throw new Error("Cloud Browser now uses Playwright. Open /cloud-browser.");
     const { cloudBrowserClient } = await import("@/lib/tinyfish.server");
     const { client } = await cloudBrowserClient(context.userId);
     if (data.save && !data.profileId)
@@ -222,4 +204,47 @@ export const finishDirectCloudBrowser = createServerFn({ method: "POST" })
     }
     await client.closeBrowserSession(data.sessionId);
     return { closed: true, saved: false, domainsUpdated: [], domainsFailed: [] };
+  });
+
+/** Live web search through the signed-in user's own TinyFish connection. */
+export const searchCloudBrowserWeb = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator(
+    z.object({
+      query: z.string().min(1).max(500),
+      domain_type: z.enum(["web", "news"]).optional(),
+      location: z.string().max(2).optional(),
+      language: z.string().max(5).optional(),
+    }),
+  )
+  .handler(async ({ data, context }) => {
+    const { cloudBrowserClient } = await import("@/lib/tinyfish.server");
+    const { normalizeWebSearch } = await import("@/lib/tinyfish");
+    const { client } = await cloudBrowserClient(context.userId);
+    const result = await client.search(normalizeWebSearch(data));
+    return {
+      query: result.query,
+      results: (result.results ?? []).map((item) => ({
+        position: item.position,
+        title: item.title,
+        url: item.url,
+        snippet: item.snippet,
+        site: item.site_name ?? null,
+        date: item.date ?? null,
+      })),
+    };
+  });
+
+/** Read one public page as Markdown through the user's TinyFish connection. */
+export const fetchCloudBrowserPage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator(z.object({ url: z.string().url().max(2048) }))
+  .handler(async ({ data, context }) => {
+    const { cloudBrowserClient } = await import("@/lib/tinyfish.server");
+    const { normalizeWebFetch, summarizeFetch } = await import("@/lib/tinyfish");
+    const { client } = await cloudBrowserClient(context.userId);
+    const summary = summarizeFetch(await client.fetchUrls(normalizeWebFetch({ urls: [data.url] })));
+    const page = summary.results[0];
+    if (!page) throw new Error(summary.errors[0]?.error ?? "The page could not be read.");
+    return page;
   });

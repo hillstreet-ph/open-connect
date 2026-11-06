@@ -750,6 +750,7 @@ test("cloud computer is a separate cloud workspace destination", () => {
   assert.doesNotMatch(browserRoute, /CloudComputerManager/);
   // One cloud browser for general use: TinyFish console only, no provider switcher.
   assert.match(browserRoute, /CloudBrowserConsole/);
+  assert.match(browserRoute, /CloudBrowserSearch/);
   assert.doesNotMatch(browserRoute, /PlaywrightBrowser/);
   assert.doesNotMatch(browserRoute, /CloudBrowserSwitcher/);
   assert.doesNotMatch(browserRoute, /kind="computer"/);

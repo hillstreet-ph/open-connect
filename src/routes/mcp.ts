@@ -699,6 +699,123 @@ const PLATFORM_TOOLS: McpTool[] = [
     },
   },
   {
+    name: "cloud_browser_search",
+    description:
+      "Search the live web with the user's own TinyFish connection and get structured results (title, url, snippet, site, date). Use domain_type news for current events. Read a result's full page with cloud_browser_fetch.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        query: { type: "string", minLength: 1, maxLength: 500 },
+        location: { type: "string", description: "Two-letter country code, e.g. US." },
+        language: { type: "string", description: "Language code, e.g. en." },
+        domain_type: { type: "string", enum: ["web", "news", "research_paper"] },
+        include_domains: { type: "string", description: "Comma-separated domains to keep." },
+        exclude_domains: { type: "string", description: "Comma-separated domains to drop." },
+        recency_minutes: { type: "integer", minimum: 1, maximum: 5256000 },
+        page: { type: "integer", minimum: 0, maximum: 10 },
+      },
+      required: ["query"],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+  },
+  {
+    name: "cloud_browser_fetch",
+    description:
+      "Read up to 10 public web pages through the user's TinyFish connection and return clean Markdown (or HTML), title and description. Renders JavaScript-heavy pages. Long pages are truncated. Private and local addresses are rejected.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        urls: { type: "array", items: { type: "string" }, minItems: 1, maxItems: 10 },
+        format: { type: "string", enum: ["markdown", "html"] },
+        links: { type: "boolean", description: "Also return outbound links." },
+        fresh: { type: "boolean", description: "Bypass cached copies." },
+      },
+      required: ["urls"],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+  },
+  {
+    name: "cloud_browser_run",
+    description:
+      "Use this when a task needs a real web browser: open a site, use saved sign-ins, click, fill forms, or read pages behind a login. Starts the user's Open-Connect cloud browser (TinyFish Chrome) with their saved Browser Context Profile by default and returns immediately with run_id, a live streaming_url, and view_url on open-connect.site. Poll cloud_browser_get_run every 15-30s until terminal. Never put passwords in the goal.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        url: { type: "string", description: "Starting URL, e.g. https://example.com" },
+        goal: { type: "string", description: "Plain-language task for the browser agent." },
+        use_profile: {
+          type: "boolean",
+          description: "Use saved sign-ins (default true). false starts a fresh browser.",
+        },
+        profile_id: { type: "string", description: "Specific Browser Context Profile id." },
+        stealth: { type: "boolean", description: "Anti-detection browser for protected sites." },
+        proxy_country_code: { type: "string", description: "Two-letter proxy exit country." },
+        max_duration_seconds: { type: "integer", minimum: 30, maximum: 3600 },
+      },
+      required: ["url", "goal"],
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
+    _meta: WIDGET_META,
+  },
+  {
+    name: "cloud_browser_get_run",
+    description:
+      "Check a cloud browser run: status, live streaming_url while running, recent actions, and the final result.",
+    inputSchema: {
+      type: "object",
+      properties: { run_id: { type: "string" } },
+      required: ["run_id"],
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+    _meta: WIDGET_META,
+  },
+  {
+    name: "cloud_browser_list_runs",
+    description:
+      "List recent cloud browser runs (newest first), including runs started from open-connect.site or other agents.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        limit: { type: "integer", minimum: 1, maximum: 50 },
+        status: {
+          type: "string",
+          enum: ["PENDING", "RUNNING", "COMPLETED", "FAILED", "CANCELLED"],
+        },
+      },
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+  },
+  {
+    name: "cloud_browser_cancel_run",
+    description: "Stop a running cloud browser run when the user asks to stop it.",
+    inputSchema: {
+      type: "object",
+      properties: { run_id: { type: "string" } },
+      required: ["run_id"],
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true,
+    },
+    _meta: { ui: { visibility: ["model", "app"] }, "openai/widgetAccessible": true },
+  },
+  {
+    name: "cloud_browser_profiles",
+    description:
+      "List the user's saved Browser Context Profiles and, for the default profile, which sites have saved sign-ins (cookie counts only; never cookie values).",
+    inputSchema: { type: "object", properties: {} },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+  },
+  {
     name: "cloud_browser_tools",
     description:
       "List supported Playwright browser actions and their argument schemas. One engine, isolated session per authenticated user. No alternate browser fallback.",
@@ -1275,6 +1392,99 @@ function textResult(payload: unknown) {
   };
 }
 
+const TINYFISH_TOOLS = new Set([
+  "cloud_browser_search",
+  "cloud_browser_fetch",
+  "cloud_browser_run",
+  "cloud_browser_get_run",
+  "cloud_browser_list_runs",
+  "cloud_browser_cancel_run",
+  "cloud_browser_profiles",
+]);
+
+/** Cloud browser (TinyFish) tools run with the caller's own TinyFish key from the vault. */
+async function handleTinyFishTool(userId: string, name: string, args: Record<string, unknown>) {
+  const { cloudBrowserClient, cloudBrowserViewUrl, CloudBrowserNotConnectedError } =
+    await import("@/lib/tinyfish.server");
+  const tf = await import("@/lib/tinyfish");
+  let client: import("@/lib/tinyfish").TinyFishClient;
+  try {
+    ({ client } = await cloudBrowserClient(userId));
+  } catch (error) {
+    if (error instanceof CloudBrowserNotConnectedError) {
+      const payload = {
+        status: "not_connected",
+        code: error.code,
+        message: error.message,
+        setup_url: "https://open-connect.site/connections",
+      };
+      return { ...textResult(payload), structuredContent: payload, isError: true };
+    }
+    throw error;
+  }
+  const withView = <T extends { run_id: string }>(run: T) => ({
+    ...run,
+    view_url: cloudBrowserViewUrl(run.run_id),
+  });
+  let payload: unknown;
+  if (name === "cloud_browser_search") {
+    const searched = await client.search(tf.normalizeWebSearch(args));
+    payload = {
+      query: searched.query,
+      page: searched.page ?? 0,
+      results: (searched.results ?? []).map((item) => ({
+        position: item.position,
+        title: item.title,
+        url: item.url,
+        snippet: item.snippet,
+        ...(item.site_name ? { site: item.site_name } : {}),
+        ...(item.date ? { date: item.date } : {}),
+      })),
+    };
+  } else if (name === "cloud_browser_fetch") {
+    payload = tf.summarizeFetch(await client.fetchUrls(tf.normalizeWebFetch(args)));
+  } else if (name === "cloud_browser_run") {
+    payload = withView(await tf.startRunWithLiveView(client, tf.normalizeStartRun(args)));
+  } else if (name === "cloud_browser_get_run") {
+    payload = withView(tf.summarizeRun(await client.getRun(tf.assertRunId(args["run_id"]))));
+  } else if (name === "cloud_browser_list_runs") {
+    const status = String(args["status"] ?? "");
+    const listed = await client.listRuns({
+      limit: Math.min(Number(args["limit"] ?? 10) || 10, 50),
+      ...(["PENDING", "RUNNING", "COMPLETED", "FAILED", "CANCELLED"].includes(status)
+        ? { status: status as import("@/lib/tinyfish").TinyFishRunStatus }
+        : {}),
+    });
+    payload = {
+      runs: (listed.data ?? []).map((run) => withView(tf.summarizeRun(run))),
+      view_url: cloudBrowserViewUrl(),
+    };
+  } else if (name === "cloud_browser_cancel_run") {
+    const runId = tf.assertRunId(args["run_id"]);
+    await client.cancelRun(runId);
+    payload = withView(tf.summarizeRun(await client.getRun(runId)));
+  } else if (name === "cloud_browser_profiles") {
+    const { profiles } = await client.listProfiles();
+    const preferred = profiles.find((profile) => profile.is_default) ?? profiles[0];
+    const detail = preferred ? await client.getProfile(preferred.id).catch(() => null) : null;
+    payload = {
+      profiles: profiles.map((profile) => ({
+        id: profile.id,
+        name: profile.name,
+        is_default: profile.is_default === true,
+        saved_sites: profile.domain_count ?? 0,
+      })),
+      default_profile_sites: (detail?.domains ?? []).map((domain) => ({
+        domain: domain.domain,
+        cookies: domain.cookie_count ?? 0,
+      })),
+    };
+  } else {
+    throw new Error("Unknown cloud browser tool.");
+  }
+  return { ...textResult(payload), structuredContent: payload };
+}
+
 function executionUnavailable(operation: "invoke" | "install", resource: ResourceRow) {
   return {
     ...textResult({
@@ -1458,6 +1668,13 @@ const TOOL_SCOPES: Record<string, string> = {
   cloud_browser_tools: "connections:read",
   cloud_browser_call: "tools:invoke",
   cloud_browser_cancel_task: "tools:invoke",
+  cloud_browser_search: "tools:invoke",
+  cloud_browser_fetch: "tools:invoke",
+  cloud_browser_run: "tools:invoke",
+  cloud_browser_get_run: "connections:read",
+  cloud_browser_list_runs: "connections:read",
+  cloud_browser_cancel_run: "tools:invoke",
+  cloud_browser_profiles: "connections:read",
   e2b_health: "connections:read",
   e2b_list_sandboxes: "connections:read",
   e2b_create_sandbox: "tools:invoke",
@@ -2365,6 +2582,12 @@ export const Route = createFileRoute("/mcp")({
               ...textResult(connectionResult),
               ...(connectionResult.isError ? { isError: true } : {}),
             };
+          } else if (TINYFISH_TOOLS.has(name)) {
+            // The TinyFish key is the caller's personal credential: never usable from
+            // an organization-, workspace- or project-bounded key.
+            if (key.projectId || key.workspaceId || key.organizationId)
+              throw new Error("Cloud Browser currently requires a personal key.");
+            result = await handleTinyFishTool(key.userId, name, args);
           } else if (name === "cloud_browser_cancel_task") {
             if (key.projectId || key.workspaceId || key.organizationId)
               throw new Error("Cloud Browser currently requires a personal key.");
