@@ -1,0 +1,158 @@
+name: Marketplace skill publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Preview only. When true, no publish mutation is performed.
+        required: false
+        type: boolean
+        default: true
+      owner:
+        description: ClawHub owner/publisher handle for org publishing.
+        required: false
+        type: string
+        default: hillstreet-ph
+      categories:
+        description: Comma-separated ClawHub category slugs applied to every skill published by this run.
+        required: false
+        type: string
+        default: integrations,automation,operations
+      topics:
+        description: Comma-separated ClawHub topics applied to every skill published by this run.
+        required: false
+        type: string
+        default: open-connect,workspace,agentic
+      skill_path:
+        description: Optional path to one skill folder. When set, only this skill is processed.
+        required: false
+        type: string
+        default: ''
+
+permissions: {}
+
+jobs:
+  validate:
+    name: Validate marketplace skill metadata
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate SKILL.md frontmatter and skills.sh.json
+        run: |
+          python3 - <<'PY'
+          import json
+          import re
+          import sys
+          from pathlib import Path
+
+          errors = []
+          skills = []
+          for skill_md in sorted(Path("skills").rglob("SKILL.md")):
+              folder = skill_md.parent
+              text = skill_md.read_text(encoding="utf-8-sig")
+              match = re.match(r"^---\r?\n([\s\S]*?)\r?\n---", text)
+              if not match:
+                  errors.append(f"{skill_md}: missing YAML frontmatter")
+                  continue
+              frontmatter = match.group(1)
+              name = (re.search(r"^name:\s*(.+)$", frontmatter, re.M) or [None, ""])[1].strip().strip(""'")
+              description = (re.search(r"^description:\s*(.+)$", frontmatter, re.M) or [None, ""])[1].strip().strip(""'")
+              if not name:
+                  errors.append(f"{skill_md}: missing name")
+              elif not re.match(r"^[a-z][a-z0-9_-]*$", name):
+                  errors.append(f"{skill_md}: invalid skill name: {name}")
+              if not description:
+                  errors.append(f"{skill_md}: missing description")
+              skills.append(folder.name)
+
+          sidecar = Path("skills.sh.json")
+          if sidecar.is_file():
+              data = json.loads(sidecar.read_text(encoding="utf-8"))
+              for group in data.get("groupings", []):
+                  for member in group.get("skills", []):
+                      if member not in skills:
+                          errors.append(f"skills.sh.json references unknown skill: {member}")
+
+          print(f"Validated {len(skills)} skills: {', '.join(skills)}")
+          if errors:
+              for error in errors:
+                  print(f"::error::{error}")
+              sys.exit(1)
+          PY
+
+  publish-first-party:
+    name: ClawHub publish (first-party skills)
+    needs: validate
+    uses: openclaw/clawhub/.github/workflows/skill-publish.yml@main
+    with:
+      root: skills
+      dry_run: ${{ inputs.dry_run }}
+      owner: ${{ inputs.owner }}
+      categories: ${{ inputs.categories }}
+      topics: ${{ inputs.topics }}
+      skill_path: ${{ inputs.skill_path }}
+    secrets:
+      clawhub_token: ${{ secrets.CLAWHUB_TOKEN }}
+
+  publish-vendor-root:
+    name: ClawHub publish (vendored root skills)
+    needs: validate
+    if: ${{ inputs.skill_path == '' }}
+    continue-on-error: true
+    uses: openclaw/clawhub/.github/workflows/skill-publish.yml@main
+    with:
+      root: skills/vendor
+      dry_run: ${{ inputs.dry_run }}
+      owner: ${{ inputs.owner }}
+      categories: ${{ inputs.categories }}
+      topics: ${{ inputs.topics }}
+    secrets:
+      clawhub_token: ${{ secrets.CLAWHUB_TOKEN }}
+
+  publish-vendor-openclaw-skills:
+    name: ClawHub publish (vendored OpenClaw skills)
+    needs: validate
+    if: ${{ inputs.skill_path == '' }}
+    continue-on-error: true
+    uses: openclaw/clawhub/.github/workflows/skill-publish.yml@main
+    with:
+      root: skills/vendor/openclaw/skills
+      dry_run: ${{ inputs.dry_run }}
+      owner: ${{ inputs.owner }}
+      categories: ${{ inputs.categories }}
+      topics: ${{ inputs.topics }}
+    secrets:
+      clawhub_token: ${{ secrets.CLAWHUB_TOKEN }}
+
+  publish-vendor-openclaw-agents:
+    name: ClawHub publish (vendored OpenClaw agents)
+    needs: validate
+    if: ${{ inputs.skill_path == '' }}
+    continue-on-error: true
+    uses: openclaw/clawhub/.github/workflows/skill-publish.yml@main
+    with:
+      root: skills/vendor/openclaw/agents
+      dry_run: ${{ inputs.dry_run }}
+      owner: ${{ inputs.owner }}
+      categories: ${{ inputs.categories }}
+      topics: ${{ inputs.topics }}
+    secrets:
+      clawhub_token: ${{ secrets.CLAWHUB_TOKEN }}
+
+  publish-vendor-openhands:
+    name: ClawHub publish (vendored OpenHands extensions)
+    needs: validate
+    if: ${{ inputs.skill_path == '' }}
+    continue-on-error: true
+    uses: openclaw/clawhub/.github/workflows/skill-publish.yml@main
+    with:
+      root: skills/vendor/openhands-extensions
+      dry_run: ${{ inputs.dry_run }}
+      owner: ${{ inputs.owner }}
+      categories: ${{ inputs.categories }}
+      topics: ${{ inputs.topics }}
+    secrets:
+      clawhub_token: ${{ secrets.CLAWHUB_TOKEN }}
