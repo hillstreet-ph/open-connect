@@ -7,7 +7,10 @@ import {
   UniversalConnectorDialog,
   type ConnectorInitial,
 } from "@/components/universal-connector-dialog";
-import { refreshConnectorCapabilities } from "@/lib/connector-capabilities.functions";
+import {
+  autoSyncConnectorCapabilities,
+  refreshConnectorCapabilities,
+} from "@/lib/connector-capabilities.functions";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -229,6 +232,18 @@ function ConnectionsPage() {
       if (stale.length) void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
     })();
   }, [user, mine.data, refreshCapabilities, queryClient]);
+  const autoSyncCapabilities = useServerFn(autoSyncConnectorCapabilities);
+  const autoSyncedUser = useRef<string | null>(null);
+  useEffect(() => {
+    if (!user || autoSyncedUser.current === user.id) return;
+    autoSyncedUser.current = user.id;
+    void autoSyncCapabilities({ data: {} })
+      .then((result) => {
+        if (result.refreshed > 0)
+          void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
+      })
+      .catch(() => undefined);
+  }, [user, autoSyncCapabilities, queryClient]);
   const connectMutation = useMutation({
     mutationFn: (input: string | { provider: string; connection_id: string }) =>
       connectFn({ data: typeof input === "string" ? { provider: input } : input }),
