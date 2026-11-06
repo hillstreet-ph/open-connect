@@ -38,7 +38,6 @@ try {
     "/resources",
     "/resources?resource=auto",
     "/ai-factory",
-    "/ai-factory",
     "/ai-agency",
     "/ai-factory?category=business",
     "/cloud-browser",

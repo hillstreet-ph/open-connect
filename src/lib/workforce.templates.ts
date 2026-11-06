@@ -1,4 +1,4 @@
-import engineering from "../../config/ai-agency.engineering.json" with { type: "json" };
+import engineering from "../../config/ai-factory.engineering.json" with { type: "json" };
 import { workforceConfig, type WorkforceConfig } from "./workforce.ts";
 const leads = [
   ["engineering", "open-agentDev", "Software Engineering Lead"],

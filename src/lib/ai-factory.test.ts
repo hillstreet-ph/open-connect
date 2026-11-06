@@ -1,31 +1,31 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createClient } from "@supabase/supabase-js";
-import { AGENCY_CATEGORIES, AGENCY_TEMPLATES, agencyTeamInput } from "./ai-agency.ts";
+import { FACTORY_CATEGORIES, FACTORY_TEMPLATES, factoryTeamInput } from "./ai-factory.ts";
 import {
-  listOwnedAgencyTeams,
-  saveOwnedAgencyTeam,
-  ownedActiveAgencyTeam,
-} from "./ai-agency.server.ts";
+  listOwnedFactoryTeams,
+  saveOwnedFactoryTeam,
+  ownedActiveFactoryTeam,
+} from "./ai-factory.server.ts";
 import { runFreeAgentTeam, validateTeamInput } from "./agent-team.ts";
 
-test("agency templates cover each category with bounded unique agent roles", () => {
+test("factory templates cover each category with bounded unique agent roles", () => {
   assert.deepEqual(
-    AGENCY_TEMPLATES.map((t) => t.category),
-    [...AGENCY_CATEGORIES],
+    FACTORY_TEMPLATES.map((t) => t.category),
+    [...FACTORY_CATEGORIES],
   );
-  for (const template of AGENCY_TEMPLATES) agencyTeamInput.parse(template);
-  const base = AGENCY_TEMPLATES[0]!;
+  for (const template of FACTORY_TEMPLATES) factoryTeamInput.parse(template);
+  const base = FACTORY_TEMPLATES[0]!;
   for (const roles of [
     ["Developer"],
     ["Reviewer", "reviewer"],
     Array(7).fill("Agent"),
     ["Planner", "Role\nInjected"],
   ])
-    assert.equal(agencyTeamInput.safeParse({ ...base, roles }).success, false);
+    assert.equal(factoryTeamInput.safeParse({ ...base, roles }).success, false);
 });
 test("category-specific teams run each selected role and preserve proposal-only behavior", async () => {
-  const roles = AGENCY_TEMPLATES[1]!.roles;
+  const roles = FACTORY_TEMPLATES[1]!.roles;
   const called: string[] = [];
   const routes = [
     {
@@ -58,7 +58,7 @@ test("category-specific teams run each selected role and preserve proposal-only 
   assert.equal(partial.workers[0]?.status, "unavailable");
   assert.equal(partial.workers[1]?.status, "completed");
 });
-test("agency REST writes bind owner and version and reject stale edits and duplicate names", async () => {
+test("factory REST writes bind owner and version and reject stale edits and duplicate names", async () => {
   let url: URL | undefined;
   let body: Record<string, unknown> = {};
   let mode = "ok";
@@ -79,10 +79,10 @@ test("agency REST writes bind owner and version and reject stale edits and dupli
       },
     },
   });
-  const team = AGENCY_TEMPLATES[0]!;
-  await saveOwnedAgencyTeam(db, "owner-1", { team });
+  const team = FACTORY_TEMPLATES[0]!;
+  await saveOwnedFactoryTeam(db, "owner-1", { team });
   assert.equal(body["user_id"], "owner-1");
-  await saveOwnedAgencyTeam(db, "owner-1", {
+  await saveOwnedFactoryTeam(db, "owner-1", {
     team,
     id: "team-1",
     expectedUpdatedAt: "2026-10-26T00:00:00Z",
@@ -92,7 +92,7 @@ test("agency REST writes bind owner and version and reject stale edits and dupli
   assert.equal(body["user_id"], undefined);
   mode = "stale";
   await assert.rejects(
-    saveOwnedAgencyTeam(db, "owner-1", {
+    saveOwnedFactoryTeam(db, "owner-1", {
       team,
       id: "team-1",
       expectedUpdatedAt: "2026-10-26T00:00:00Z",
@@ -100,7 +100,7 @@ test("agency REST writes bind owner and version and reject stale edits and dupli
     /Team changed/,
   );
   mode = "duplicate";
-  await assert.rejects(saveOwnedAgencyTeam(db, "owner-1", { team }), /already have a team/);
+  await assert.rejects(saveOwnedFactoryTeam(db, "owner-1", { team }), /already have a team/);
 });
 test("owned team queries exclude foreign and archived teams before running", async () => {
   const requests: URL[] = [];
@@ -113,21 +113,21 @@ test("owned team queries exclude foreign and archived teams before running", asy
       },
     },
   });
-  await listOwnedAgencyTeams(db, "owner", { category: "business", archived: false });
+  await listOwnedFactoryTeams(db, "owner", { category: "business", archived: false });
   assert.equal(requests[0]?.searchParams.get("user_id"), "eq.owner");
   assert.equal(requests[0]?.searchParams.get("category"), "eq.business");
   assert.equal(requests[0]?.searchParams.get("archived"), "eq.false");
-  await assert.rejects(ownedActiveAgencyTeam(db, "owner", "team-1"), /active team/);
+  await assert.rejects(ownedActiveFactoryTeam(db, "owner", "team-1"), /active team/);
   assert.equal(requests[1]?.searchParams.get("archived"), "eq.false");
   assert.equal(requests[1]?.searchParams.get("user_id"), "eq.owner");
 });
 
 test("MCP category selection uses the canonical templates and rejects unknown categories", async () => {
-  const { agencyTemplate, agencyRunTranscript } = await import("./ai-agency.ts");
-  assert.deepEqual(agencyTemplate("business").roles, AGENCY_TEMPLATES[1]!.roles);
-  assert.throws(() => agencyTemplate("untrusted-admin-team"));
+  const { factoryTemplate, factoryRunTranscript } = await import("./ai-factory.ts");
+  assert.deepEqual(factoryTemplate("business").roles, FACTORY_TEMPLATES[1]!.roles);
+  assert.throws(() => factoryTemplate("untrusted-admin-team"));
   assert.match(
-    agencyRunTranscript({
+    factoryRunTranscript({
       id: "run",
       state: "failed",
       goal: "Review",

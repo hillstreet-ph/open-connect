@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { agencyTeamInput, type AgencyTeam } from "./ai-agency.ts";
-export async function listOwnedAgencyTeams(
+import { factoryTeamInput, type FactoryTeam } from "./ai-factory.ts";
+export async function listOwnedFactoryTeams(
   db: SupabaseClient,
   userId: string,
   filters: { category?: string | undefined; archived?: boolean | undefined } = {},
@@ -14,15 +14,15 @@ export async function listOwnedAgencyTeams(
     .limit(100);
   if (filters.category) query = query.eq("category", filters.category);
   const { data, error } = await query;
-  if (error) throw new Error("Could not load your AI Agency teams.");
-  return (data ?? []) as AgencyTeam[];
+  if (error) throw new Error("Could not load your AI Factory teams.");
+  return (data ?? []) as FactoryTeam[];
 }
-export async function saveOwnedAgencyTeam(
+export async function saveOwnedFactoryTeam(
   db: SupabaseClient,
   userId: string,
   input: { team: unknown; id?: string | undefined; expectedUpdatedAt?: string | undefined },
 ) {
-  const team = agencyTeamInput.parse(input.team);
+  const team = factoryTeamInput.parse(input.team);
   const now = new Date().toISOString();
   const query = input.id
     ? db
@@ -39,7 +39,7 @@ export async function saveOwnedAgencyTeam(
   if (!data) throw new Error("Team changed. Reload it before saving again.");
   return data as { id: string };
 }
-export async function ownedActiveAgencyTeam(db: SupabaseClient, userId: string, id: string) {
+export async function ownedActiveFactoryTeam(db: SupabaseClient, userId: string, id: string) {
   const { data, error } = await db
     .from("ai_agency_teams")
     .select("id,name,category,description,roles,archived,updated_at")
@@ -48,6 +48,6 @@ export async function ownedActiveAgencyTeam(db: SupabaseClient, userId: string, 
     .eq("archived", false)
     .maybeSingle();
   if (error || !data) throw new Error("Choose an active team that belongs to your account.");
-  agencyTeamInput.parse(data);
-  return data as AgencyTeam;
+  factoryTeamInput.parse(data);
+  return data as FactoryTeam;
 }
