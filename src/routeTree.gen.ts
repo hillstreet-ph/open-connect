@@ -123,11 +123,8 @@ const AuthenticatedAgentsRoute = AuthenticatedAgentsRouteImport.update({
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAiAgencyRoute = AuthenticatedAiAgencyRouteImport.update({
-const AuthenticatedAiFactoryRoute = AuthenticatedAiFactoryRouteImport.update({
   id: '/ai-agency',
-  id: '/ai-factory',
   path: '/ai-agency',
-  path: '/ai-factory',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedAiFactoryRoute = AuthenticatedAiFactoryRouteImport.update({
@@ -892,15 +889,10 @@ declare module '@tanstack/react-router' {
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/ai-agency': {
-    '/_authenticated/ai-factory': {
       id: '/_authenticated/ai-agency'
-      id: '/_authenticated/ai-factory'
       path: '/ai-agency'
-      path: '/ai-factory'
       fullPath: '/ai-agency'
-      fullPath: '/ai-factory'
       preLoaderRoute: typeof AuthenticatedAiAgencyRouteImport
-      preLoaderRoute: typeof AuthenticatedAiFactoryRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/ai-factory': {
