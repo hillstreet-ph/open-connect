@@ -1,8 +1,7 @@
-import { NotificationChannels } from "@/components/notification-channels";
 import { createFileRoute, useLocation } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
-import { KeyRound, Loader2, MessageCircle, Save, Trash2, Upload } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { KeyRound, Loader2, Save, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ProfileAvatarBadge } from "@/components/user-menu";
@@ -13,13 +12,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataControlsPanel } from "@/components/data-controls-panel";
-import { IncomingWebhooks } from "@/components/incoming-webhooks";
 import {
   ConnectedAccountsPanel,
   AccountLinkCallbackNotice,
 } from "@/components/connected-accounts-panel";
 import { LoginActivityPanel } from "@/components/login-activity-panel";
-import { settingsTab } from "@/lib/settings-navigation";
+import { legacySettingsRedirect, settingsTab } from "@/lib/settings-navigation";
 import { profileDraftValue } from "@/lib/react-compat";
 
 export const Route = createFileRoute("/_authenticated/settings")({
@@ -46,6 +44,12 @@ function SettingsPage() {
   const location = useLocation();
   const navigate = Route.useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
+  // Integrations moved to the Developer & integrations hub; keep old links working.
+  const legacySection = legacySettingsRedirect(location.hash);
+  useEffect(() => {
+    if (legacySection)
+      void navigate({ to: "/integrations", search: { section: legacySection }, replace: true });
+  }, [legacySection, navigate]);
   const [nameDraft, setNameDraft] = useState<{ userId: string; value: string } | null>(null);
   const [avatarDraft, setAvatarDraft] = useState<{ userId: string; value: string } | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -181,7 +185,8 @@ function SettingsPage() {
       <AccountLinkCallbackNotice />
       <h1 className="text-3xl font-semibold">Settings</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Manage your profile, workspace access, connected apps, data, and security.
+        Manage your profile, security, and data. Tokens, OAuth apps, webhooks, and notifications
+        live in Developer &amp; integrations.
       </p>
 
       <Tabs
@@ -198,7 +203,6 @@ function SettingsPage() {
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="security">Security & login</TabsTrigger>
           <TabsTrigger value="data">Data Controls</TabsTrigger>
-          <TabsTrigger value="integrations">Integrations</TabsTrigger>
         </TabsList>
         <TabsContent value="profile">
           <Card className="shadow-panel">
@@ -337,28 +341,6 @@ function SettingsPage() {
         </TabsContent>
         <TabsContent value="data">
           <DataControlsPanel />
-        </TabsContent>
-        <TabsContent value="integrations" className="space-y-4">
-          <IncomingWebhooks userId={user.id} />
-          <NotificationChannels userId={user.id} />
-          <div className="grid gap-4 md:grid-cols-2">
-            <a
-              href="/integrations?section=apps"
-              className="block rounded-xl border bg-card p-5 shadow-panel transition-colors hover:bg-accent/40"
-            >
-              <div className="flex items-start gap-3">
-                <div className="rounded-lg bg-primary/10 p-2 text-primary">
-                  <MessageCircle className="size-4" />
-                </div>
-                <div>
-                  <h2 className="font-medium">Apps</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Connect account-owned apps such as Telegram and manage their credentials.
-                  </p>
-                </div>
-              </div>
-            </a>
-          </div>
         </TabsContent>
       </Tabs>
     </div>

@@ -44,6 +44,19 @@ const emptyDraft: FactoryTeamDraft = {
   description: "",
   roles: ["Software Architect", "Developer", "QA Reviewer"],
 };
+function RosterFrame() {
+  return (
+    <div className="overflow-hidden rounded-xl border bg-card">
+      <iframe
+        title="AI Factory roster, teams and playbooks"
+        src="/ai-factory/roster/"
+        className="h-[calc(100vh-13rem)] min-h-[640px] w-full"
+        loading="lazy"
+      />
+    </div>
+  );
+}
+
 function FactoryPage() {
   const { user } = useAuth();
   const search = Route.useSearch();
@@ -65,8 +78,17 @@ function FactoryPage() {
         >
           Existing teams & proposal runs
         </Button>
+        <Button
+          size="sm"
+          variant={search.view === "roster" ? "default" : "outline"}
+          onClick={() => void navigate({ to: "/ai-factory", search: { view: "roster" } })}
+        >
+          Roster & playbooks
+        </Button>
       </div>
-      {search.view === "teams" ? (
+      {search.view === "roster" ? (
+        <RosterFrame />
+      ) : search.view === "teams" ? (
         <FactoryWorkspace key={user?.id ?? "signed-out"} userId={user?.id} />
       ) : (
         <WorkforceDirectory

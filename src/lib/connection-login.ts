@@ -64,8 +64,9 @@ export function defaultConnectorAuth(_protocol: string, saved?: unknown): string
   return "bearer";
 }
 
-export function authForProtocol(protocol: string, auth: string): string {
-  return protocol === "openapi" && auth === "oauth" ? "bearer" : auth;
+/** Every protocol supports OAuth: MCP via discovery, OpenAPI via the user's own OAuth app. */
+export function authForProtocol(_protocol: string, auth: string): string {
+  return auth;
 }
 
 export function connectionUsesBrowserLogin(account: {

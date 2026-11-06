@@ -2,7 +2,14 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
-import { adminTab, settingsTab, settingsTabList } from "./settings-navigation.ts";
+import {
+  adminTab,
+  developerSection,
+  developerSections,
+  legacySettingsRedirect,
+  settingsTab,
+  settingsTabList,
+} from "./settings-navigation.ts";
 import { isAppPath } from "./shell.ts";
 import {
   appCategories,
@@ -92,14 +99,20 @@ test("connection surfaces remain internal and separate from Marketplace", () => 
     path.join(sourceRoot, "routes/_authenticated/integrations.tsx"),
     "utf8",
   );
+  // Developer page: tokens, OAuth apps you build, and apps you authorized.
   assert.ok(integrations.includes("<ApiKeysCard />"));
-  assert.ok(integrations.includes("setTelegramOpen(true)"));
-  assert.ok(integrations.includes("inbound-integrations.functions"));
+  assert.ok(integrations.includes("<OAuthIntegrationsCard />"));
+  assert.ok(integrations.includes("<AuthorizedAppsCard />"));
   assert.ok(!integrations.includes("universal-connector-dialog"));
   assert.ok(!integrations.includes("Remote MCP servers"));
-  for (const section of ['id="api-key"', 'id="apps"']) {
-    assert.ok(integrations.includes(section), "Missing integration section " + section);
+  // One hub: access (tokens, OAuth apps, authorized apps) and integrations
+  // (webhooks, Telegram + notification channels). Nothing is repeated in Settings.
+  for (const section of developerSections) {
+    assert.ok(integrations.includes(`id="${section}"`), "Missing hub section " + section);
   }
+  assert.ok(integrations.includes("<IncomingWebhooks"));
+  assert.ok(integrations.includes("<TelegramIntegrationCard />"));
+  assert.ok(integrations.includes("<NotificationChannels"));
   assert.ok(!integrations.includes("ai-agents"), "AI Agents section should stay removed");
 
   const inboundMigration = readFileSync(
@@ -129,11 +142,15 @@ test("Settings keeps only personal tabs and duplicates no sidebar destinations",
   assert.ok(!userMenu.includes('to="/api-keys"'));
 
   // Settings keeps personal tabs only, in this order.
-  assert.deepEqual(settingsTabList(), ["profile", "security", "data", "integrations"]);
-  assert.ok(
-    settings.indexOf('value="data">Data Controls') <
-      settings.indexOf('value="integrations">Integrations'),
-  );
+  assert.deepEqual(settingsTabList(), ["profile", "security", "data"]);
+  assert.ok(!settings.includes('value="integrations"'));
+  for (const component of ["IncomingWebhooks", "NotificationChannels", "TelegramIntegrationCard"])
+    assert.ok(!settings.includes(component), "Settings duplicates " + component);
+  // Old #integrations links land on the hub.
+  assert.equal(legacySettingsRedirect("#integrations"), "webhooks");
+  assert.equal(legacySettingsRedirect("#profile"), null);
+  assert.equal(developerSection("apps"), "apps");
+  assert.equal(developerSection("bogus"), "api-key");
 
   // Every destination that already has a sidebar entry must not be repeated as a Settings card.
   for (const route of [
@@ -158,10 +175,8 @@ test("Settings keeps only personal tabs and duplicates no sidebar destinations",
     assert.ok(!settings.includes(`title="${title}"`), "Settings repeats card " + title);
   }
 
-  // Settings links to Apps; Custom MCP is removed from Integrations.
-  for (const section of ["apps"]) {
-    assert.ok(settings.includes('href="/integrations?section=' + section + '"'));
-  }
+  // Integrations live only in the Developer & integrations hub.
+  assert.ok(!settings.includes('href="/integrations?section=apps"'));
   assert.ok(!settings.includes('href="/integrations?section=custom-mcp"'));
   assert.ok(!settings.includes('href="/integrations?section=api-key"'));
   assert.ok(!settings.includes('href="/integrations?section=ai-agents"'));
@@ -684,9 +699,8 @@ test("back navigation uses parents, clears section routes and stays absent on ma
   assert.equal(publicBackTarget("/"), null);
   assert.equal(publicBackTarget("/dashboard/"), null);
   assert.deepEqual(workspaceBackTarget("/integrations/"), {
-    to: "/settings",
-    hash: "integrations",
-    label: "Back to settings",
+    to: "/dashboard",
+    label: "Back to workspace",
   });
   assert.equal(workspaceBackTarget("/settings", "data")?.to, "/settings");
   assert.equal(workspaceBackTarget("/settings")?.to, "/dashboard");

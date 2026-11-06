@@ -71,7 +71,7 @@ export async function sendNotification(
         body: JSON.stringify({
           chat_id: destination.destination,
           ...(destination.topic_id ? { message_thread_id: destination.topic_id } : {}),
-          text: `${event.title}\n${event.body}\nhttps://open-connect.site/settings#integrations`,
+          text: `${event.title}\n${event.body}\nhttps://open-connect.site/integrations?section=apps`,
           protect_content: true,
           link_preview_options: { is_disabled: true },
         }),

@@ -146,6 +146,7 @@ export type Database = {
           key_prefix: string;
           last_used_at: string | null;
           name: string;
+          oauth_resource: string | null;
           organization_id: string | null;
           project_id: string | null;
           revoked_at: string | null;
@@ -162,6 +163,7 @@ export type Database = {
           key_prefix: string;
           last_used_at?: string | null;
           name: string;
+          oauth_resource?: string | null;
           organization_id?: string | null;
           project_id?: string | null;
           revoked_at?: string | null;
@@ -178,6 +180,7 @@ export type Database = {
           key_prefix?: string;
           last_used_at?: string | null;
           name?: string;
+          oauth_resource?: string | null;
           organization_id?: string | null;
           project_id?: string | null;
           revoked_at?: string | null;

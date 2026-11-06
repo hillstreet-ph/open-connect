@@ -6,7 +6,12 @@ import { oauthProvider, type OAuthBundle } from "./custom-oauth.server";
 import { publicFetch } from "./public-fetch.server";
 import { normalizeConnectionSetup, type ConnectionSetupInput } from "./connection-setup";
 import { normalizeRemoteMcpEndpoint } from "./remote-mcp";
-const callback = "https://open-connect.site/custom-oauth-callback";
+import {
+  manualAuthorizationServerMetadata,
+  OUTBOUND_OAUTH_REDIRECT_URL,
+  type TokenAuthMethod,
+} from "./oauth-app-presets";
+const callback = OUTBOUND_OAUTH_REDIRECT_URL;
 async function hash(value: string) {
   return Array.from(
     new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value))),
@@ -21,6 +26,9 @@ export const beginCustomOAuth = createServerFn({ method: "POST" })
         client_id?: string;
         client_secret?: string;
         issuer?: string;
+        authorization_endpoint?: string;
+        token_endpoint?: string;
+        token_auth_method?: TokenAuthMethod;
         scope?: string;
       },
     ) => input,
@@ -48,12 +56,36 @@ export const beginCustomOAuth = createServerFn({ method: "POST" })
     const state = crypto.randomUUID() + crypto.randomUUID();
     const bundle: OAuthBundle = { endpoint: setup.endpointUrl, transport: setup.transport };
     if (data.client_id) {
-      if (!data.issuer)
-        throw new Error("Provide the registered client's issuer URL to bind its credentials");
-      const issuer = normalizeRemoteMcpEndpoint("custom_mcp", data.issuer);
-      const metadata = await discoverOAuthMetadata(new URL(issuer), {}, publicFetch);
-      if (!metadata) throw new Error("Issuer does not publish supported OAuth metadata");
-      bundle.discovery = { authorizationServerUrl: issuer, authorizationServerMetadata: metadata };
+      let issuer: string;
+      if (data.authorization_endpoint || data.token_endpoint) {
+        // Providers without RFC 8414 discovery (for example Airtable): use the
+        // endpoints from the provider's OAuth documentation.
+        const metadata = manualAuthorizationServerMetadata({
+          authorization_endpoint: data.authorization_endpoint ?? "",
+          token_endpoint: data.token_endpoint ?? "",
+          ...(data.token_auth_method ? { token_auth_method: data.token_auth_method } : {}),
+          ...(data.scope ? { scope: data.scope } : {}),
+        });
+        normalizeRemoteMcpEndpoint("custom_mcp", metadata.authorization_endpoint);
+        normalizeRemoteMcpEndpoint("custom_mcp", metadata.token_endpoint);
+        issuer = metadata.issuer;
+        bundle.discovery = {
+          authorizationServerUrl: issuer,
+          authorizationServerMetadata: metadata as never,
+        };
+      } else {
+        if (!data.issuer)
+          throw new Error(
+            "Provide the provider's issuer URL, or its authorization and token URLs, to bind the client credentials",
+          );
+        issuer = normalizeRemoteMcpEndpoint("custom_mcp", data.issuer);
+        const metadata = await discoverOAuthMetadata(new URL(issuer), {}, publicFetch);
+        if (!metadata) throw new Error("Issuer does not publish supported OAuth metadata");
+        bundle.discovery = {
+          authorizationServerUrl: issuer,
+          authorizationServerMetadata: metadata,
+        };
+      }
       bundle.client = {
         client_id: data.client_id,
         issuer,

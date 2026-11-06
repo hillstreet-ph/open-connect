@@ -43,6 +43,11 @@ jobs:
         run: python3 scripts/update-marketplace-branch.test.py
       - name: Production health contract tests
         run: python3 scripts/validate_production_health_test.py
+      - name: AI Factory roster smoke contract tests
+        # Offline: exercises the roster smoke test's markers, SPA-shell
+        # detection and retry policy against stubs. No network, so it can
+        # never make this required check flaky.
+        run: python3 scripts/validate_ai_factory_roster_test.py
       - name: Strict TypeScript validation
         run: bun run typecheck
       - name: Production build
@@ -101,6 +106,27 @@ jobs:
               });
             }
 
+  roster-smoke:
+    name: AI Factory roster smoke (live)
+    # Runs on every pull request and after every merge to main. Deliberately a
+    # separate job from `validate`: the required "Build & validate" status is
+    # published from `needs.validate.result`, so a brief production outage can
+    # never turn that required check red. The script itself retries transient
+    # failures (connection errors, timeouts, 5xx, 429) with exponential backoff
+    # and only fails on a real, reproducible regression.
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Roster pages, assets and legacy .html URLs
+        run: |
+          python3 scripts/validate_ai_factory_roster.py \
+            --base-url https://open-connect.site \
+            --attempts 5 \
+            --timeout 20 \
+            --backoff 3
+
   smoke-production:
     name: Production smoke (post-merge)
     runs-on: ubuntu-latest
@@ -143,3 +169,13 @@ jobs:
             echo "$p -> $effective_url $code"
             test "$code" = "200"
           done
+      - name: AI Factory roster pages
+        # The roster is static HTML, not an SPA route, and has regressed twice
+        # (exact-path 404s, then a 308/307 canonicalization loop). Assert each
+        # page's own HTML, not just its status code.
+        run: |
+          python3 scripts/validate_ai_factory_roster.py \
+            --base-url https://open-connect.site \
+            --attempts 5 \
+            --timeout 20 \
+            --backoff 3

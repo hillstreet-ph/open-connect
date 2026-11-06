@@ -2,7 +2,7 @@ export type FactorySearch = {
   agent?: string;
   chat?: string;
   project?: string;
-  view?: "teams";
+  view?: "teams" | "roster";
 };
 
 /** Share validated selections between canonical navigation and old bookmarks. */
@@ -12,6 +12,6 @@ export function factorySearch(input: Record<string, unknown>): FactorySearch {
     const value = input[key];
     if (typeof value === "string" && /^[0-9a-f-]{36}$/i.test(value)) result[key] = value;
   }
-  if (input["view"] === "teams") result.view = "teams";
+  if (input["view"] === "teams" || input["view"] === "roster") result.view = input["view"];
   return result;
 }
