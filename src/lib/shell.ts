@@ -37,6 +37,7 @@ export const APP_ROUTE_PREFIXES = [
   "/cloud-terminal",
   "/cloud-computer",
   "/connections",
+  "/copilot",
   "/models",
   "/integrations",
   "/campaign-studio",

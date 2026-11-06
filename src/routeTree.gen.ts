@@ -31,6 +31,7 @@ import { Route as AuthenticatedCloudPhoneRouteImport } from './routes/_authentic
 import { Route as AuthenticatedCloudSandboxRouteImport } from './routes/_authenticated/cloud-sandbox'
 import { Route as AuthenticatedCloudTerminalRouteImport } from './routes/_authenticated/cloud-terminal'
 import { Route as AuthenticatedConnectionsRouteImport } from './routes/_authenticated/connections'
+import { Route as AuthenticatedCopilotRouteImport } from './routes/_authenticated/copilot'
 import { Route as AuthenticatedCustomOauthCallbackRouteImport } from './routes/_authenticated/custom-oauth-callback'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedGuidesRouteImport } from './routes/_authenticated/guides'
@@ -189,6 +190,11 @@ const AuthenticatedConnectionsRoute =
     path: '/connections',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedCopilotRoute = AuthenticatedCopilotRouteImport.update({
+  id: '/copilot',
+  path: '/copilot',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedCustomOauthCallbackRoute =
   AuthenticatedCustomOauthCallbackRouteImport.update({
     id: '/custom-oauth-callback',
@@ -423,6 +429,7 @@ export interface FileRoutesByFullPath {
   '/cloud-sandbox': typeof AuthenticatedCloudSandboxRoute
   '/cloud-terminal': typeof AuthenticatedCloudTerminalRoute
   '/connections': typeof AuthenticatedConnectionsRouteWithChildren
+  '/copilot': typeof AuthenticatedCopilotRoute
   '/custom-oauth-callback': typeof AuthenticatedCustomOauthCallbackRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/guides': typeof AuthenticatedGuidesRoute
@@ -487,6 +494,7 @@ export interface FileRoutesByTo {
   '/cloud-sandbox': typeof AuthenticatedCloudSandboxRoute
   '/cloud-terminal': typeof AuthenticatedCloudTerminalRoute
   '/connections': typeof AuthenticatedConnectionsRouteWithChildren
+  '/copilot': typeof AuthenticatedCopilotRoute
   '/custom-oauth-callback': typeof AuthenticatedCustomOauthCallbackRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/guides': typeof AuthenticatedGuidesRoute
@@ -553,6 +561,7 @@ export interface FileRoutesById {
   '/_authenticated/cloud-sandbox': typeof AuthenticatedCloudSandboxRoute
   '/_authenticated/cloud-terminal': typeof AuthenticatedCloudTerminalRoute
   '/_authenticated/connections': typeof AuthenticatedConnectionsRouteWithChildren
+  '/_authenticated/copilot': typeof AuthenticatedCopilotRoute
   '/_authenticated/custom-oauth-callback': typeof AuthenticatedCustomOauthCallbackRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/guides': typeof AuthenticatedGuidesRoute
@@ -619,6 +628,7 @@ export interface FileRouteTypes {
     | '/cloud-sandbox'
     | '/cloud-terminal'
     | '/connections'
+    | '/copilot'
     | '/custom-oauth-callback'
     | '/dashboard'
     | '/guides'
@@ -683,6 +693,7 @@ export interface FileRouteTypes {
     | '/cloud-sandbox'
     | '/cloud-terminal'
     | '/connections'
+    | '/copilot'
     | '/custom-oauth-callback'
     | '/dashboard'
     | '/guides'
@@ -748,6 +759,7 @@ export interface FileRouteTypes {
     | '/_authenticated/cloud-sandbox'
     | '/_authenticated/cloud-terminal'
     | '/_authenticated/connections'
+    | '/_authenticated/copilot'
     | '/_authenticated/custom-oauth-callback'
     | '/_authenticated/dashboard'
     | '/_authenticated/guides'
@@ -970,6 +982,13 @@ declare module '@tanstack/react-router' {
       path: '/connections'
       fullPath: '/connections'
       preLoaderRoute: typeof AuthenticatedConnectionsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/copilot': {
+      id: '/_authenticated/copilot'
+      path: '/copilot'
+      fullPath: '/copilot'
+      preLoaderRoute: typeof AuthenticatedCopilotRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/custom-oauth-callback': {
@@ -1305,6 +1324,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCloudSandboxRoute: typeof AuthenticatedCloudSandboxRoute
   AuthenticatedCloudTerminalRoute: typeof AuthenticatedCloudTerminalRoute
   AuthenticatedConnectionsRoute: typeof AuthenticatedConnectionsRouteWithChildren
+  AuthenticatedCopilotRoute: typeof AuthenticatedCopilotRoute
   AuthenticatedCustomOauthCallbackRoute: typeof AuthenticatedCustomOauthCallbackRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedGuidesRoute: typeof AuthenticatedGuidesRoute
@@ -1347,6 +1367,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCloudSandboxRoute: AuthenticatedCloudSandboxRoute,
   AuthenticatedCloudTerminalRoute: AuthenticatedCloudTerminalRoute,
   AuthenticatedConnectionsRoute: AuthenticatedConnectionsRouteWithChildren,
+  AuthenticatedCopilotRoute: AuthenticatedCopilotRoute,
   AuthenticatedCustomOauthCallbackRoute: AuthenticatedCustomOauthCallbackRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedGuidesRoute: AuthenticatedGuidesRoute,

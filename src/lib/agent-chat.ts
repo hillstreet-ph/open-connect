@@ -9,7 +9,7 @@ export const attachmentSchema = z.object({
     .int()
     .min(1)
     .max(4 * 1024 * 1024),
-  kind: z.enum(["text", "pdf"]),
+  kind: z.enum(["text", "pdf", "file"]),
 });
 export const chatMessageSchema = z.object({
   role: z.enum(["user", "assistant"]),
