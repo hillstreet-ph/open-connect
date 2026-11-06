@@ -133,7 +133,11 @@ test("static discovery advertises only implemented OAuth grants", async () => {
   assert.ok(metadata.scopes_supported.includes("memory:read"));
   assert.ok(metadata.scopes_supported.includes("knowledge:read"));
   assert.deepEqual(metadata.scopes_supported, [...OAUTH_SCOPES]);
-  assert.deepEqual(metadata.token_endpoint_auth_methods_supported, ["none"]);
+  assert.deepEqual(metadata.token_endpoint_auth_methods_supported, [
+    "none",
+    "client_secret_basic",
+    "client_secret_post",
+  ]);
   assert.equal(metadata.logo_uri, "https://open-connect.site/open-connect-mark.png");
 });
 

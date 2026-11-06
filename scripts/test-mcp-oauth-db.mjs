@@ -42,11 +42,17 @@ try {
   const input =
     files.map((path) => readFileSync(path, "utf8")).join("\n") +
     "\nALTER TABLE public.api_keys ADD COLUMN last_used_at timestamptz;\n" +
+    "ALTER TABLE public.oauth_clients ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();\n" +
+    "CREATE TABLE auth.users(id uuid PRIMARY KEY);\n" +
+    "INSERT INTO auth.users SELECT DISTINCT user_id FROM public.user_roles;\n" +
     [
       "supabase/migrations/20261026072124_mcp_oauth_resource_binding.sql",
       "supabase/migrations/20261030120000_oauth_loopback_redirects.sql",
       "supabase/tests/admin_oauth_consent.sql",
       "supabase/tests/mcp_oauth_resource_binding.sql",
+      // Applied after the legacy suites: it revokes the unauthenticated exchanges they cover.
+      "supabase/migrations/20261106120000_oauth_registered_integrations.sql",
+      "supabase/tests/oauth_registered_integrations.sql",
     ]
       .map((path) => readFileSync(path, "utf8"))
       .join("\n");
@@ -55,7 +61,7 @@ try {
     input,
   );
   console.log(
-    "Disposable PostgreSQL: administrator consent, PKCE, single-use codes and resource binding passed.",
+    "Disposable PostgreSQL: administrator consent, PKCE, single-use codes, resource binding and confidential integrations passed.",
   );
 } finally {
   spawnSync("docker", ["rm", "--force", container], { stdio: "ignore" });

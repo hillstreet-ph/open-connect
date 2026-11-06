@@ -2,6 +2,7 @@ import { oauthResource } from "@/lib/mcp-oauth-contract";
 import { createFileRoute } from "@tanstack/react-router";
 import { oauthDatabase } from "@/lib/oauth-client.server";
 import { gateMtls } from "@/lib/mtls.server";
+import { resolveClientAuth } from "@/lib/oauth-client-auth";
 const headers = {
   "content-type": "application/json",
   "access-control-allow-origin": "*",
@@ -10,6 +11,11 @@ const headers = {
 };
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers });
+const invalidClient = () =>
+  new Response(
+    JSON.stringify({ error: "invalid_client", error_description: "Client authentication failed." }),
+    { status: 401, headers: { ...headers, "www-authenticate": 'Basic realm="open-connect"' } },
+  );
 export const Route = createFileRoute("/oauth/token")({
   server: {
     handlers: {
@@ -34,24 +40,42 @@ export const Route = createFileRoute("/oauth/token")({
           if (p["grant_type"] !== "authorization_code")
             return json({ error: "unsupported_grant_type" }, 400);
           if (
-            ["code", "code_verifier", "client_id", "redirect_uri"].some(
-              (k) => typeof p[k] !== "string" || !p[k],
-            )
+            ["code", "code_verifier", "redirect_uri"].some((k) => typeof p[k] !== "string" || !p[k])
           )
             return json({ error: "invalid_request" }, 400);
+          const client = resolveClientAuth(request.headers.get("authorization"), p);
+          if (!client.ok)
+            return client.error === "invalid_client"
+              ? invalidClient()
+              : json({ error: "invalid_request" }, 400);
           let resource: string;
           try {
             resource = oauthResource(p["resource"]);
           } catch {
             return json({ error: "invalid_target" }, 400);
           }
-          const { data, error } = await oauthDatabase().rpc("oc_exchange_oauth_code_resource", {
+          const db = oauthDatabase();
+          let { data, error } = await db.rpc("oc_exchange_oauth_code_client", {
             p_resource: resource,
-            p_code: p["code"],
-            p_verifier: p["code_verifier"],
-            p_client_id: p["client_id"],
-            p_redirect_uri: p["redirect_uri"],
+            p_code: p["code"] as string,
+            p_verifier: p["code_verifier"] as string,
+            p_client_id: client.clientId,
+            p_redirect_uri: p["redirect_uri"] as string,
+            p_client_secret: client.clientSecret,
           });
+          // Rollout guard: before the integrations migration exists, public
+          // clients keep using the previous exchange. Secrets are never accepted
+          // on this path because the old function cannot verify them.
+          if (error?.code === "PGRST202" && !client.clientSecret) {
+            ({ data, error } = await db.rpc("oc_exchange_oauth_code_resource", {
+              p_resource: resource,
+              p_code: p["code"] as string,
+              p_verifier: p["code_verifier"] as string,
+              p_client_id: client.clientId,
+              p_redirect_uri: p["redirect_uri"] as string,
+            }));
+          }
+          if (error?.message?.includes("invalid_client")) return invalidClient();
           return error
             ? json(
                 {
