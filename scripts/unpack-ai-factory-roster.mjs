@@ -121,42 +121,31 @@ for (const page of pages) {
   const source = join(target, `${page}.html`);
   const html = injectBaseHref(rewritePageLinks(readFileSync(source, "utf8")), page);
 
-  // Rewrite the page in place: the `.html` file is what the `_redirects`
-  // 200-rewrite below serves, so it must carry the base href itself.
   writeFileSync(source, html);
 
-  // `index.html` already serves `/ai-factory/roster/` as the directory index, so
-  // it needs no `<page>/index.html` twin. Emitting one would create a stray
-  // `/ai-factory/roster/index/` URL that duplicates the roster root.
+  // `index.html` already serves `/ai-factory/roster/` as the directory index.
   if (page === "index") continue;
 
-  const pageDir = join(target, page);
-  mkdirSync(pageDir, { recursive: true });
-  writeFileSync(join(pageDir, "index.html"), html);
+  // Emit an *extensionless* copy beside the `.html` file.
+  //
+  // Cloudflare Pages canonicalizes `.html` paths at the asset layer, before the
+  // worker runs: `/teams.html` -> 308 `/teams`, and `/teams/` -> 307 `/teams`.
+  // Both land on `/teams`, which had no file, so every roster page 404'd into
+  // the SPA shell. A file literally named `teams` is an exact asset match, so
+  // `/teams` is served directly with no redirect hop at all — and the `.html`
+  // and trailing-slash forms both canonicalize onto it.
+  writeFileSync(join(target, page), html);
 }
 
 /**
- * Cloudflare Pages rewrites `/page.html` -> `/page` (308) and `/page/` ->
- * `/page` (307) at the asset layer, *before* the worker runs, so a directory
- * index alone can never be reached: the trailing slash is stripped first and
- * the extensionless URL has no file. A `200` rewrite in `_redirects` is applied
- * before that asset resolution, so it serves the page's real HTML at its clean
- * URL without a redirect hop.
+ * Clean URLs are served by the worker, not by a redirect rule.
+ *
+ * This app deploys as a Worker with static assets, where `_redirects` is ignored
+ * and the asset layer canonicalizes `.html` paths before the worker runs. The
+ * worker resolves each page explicitly in `src/server.ts` (`handleRosterAsset`),
+ * and `scripts/patch-cloudflare-assets.mjs` sets `html_handling: "none"` so the
+ * asset layer stops rewriting those paths. Nothing to emit here.
  */
-const redirects = pages
-  .flatMap((page) => {
-    const target = `/ai-factory/roster/${page}.html`;
-    // The roster root is already the directory index; only the extensionless
-    // form needs a rewrite, and `/ai-factory/roster//` would be a malformed rule.
-    if (page === "index") return [`/ai-factory/roster /ai-factory/roster/index.html 200`];
-    return [
-      `/ai-factory/roster/${page} ${target} 200`,
-      `/ai-factory/roster/${page}/ ${target} 200`,
-    ];
-  })
-  .join("\n");
-
-writeFileSync(join(root, "public", "_redirects"), `${redirects}\n`);
 
 console.log(
   `[ai-factory] roster unpacked to public/ai-factory/roster ` +
