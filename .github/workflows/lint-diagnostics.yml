@@ -1,6 +1,7 @@
 name: Lint diagnostics
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - feat/connector-auto-capabilities
