@@ -55,10 +55,7 @@ test("text uploads are decoded and redacted, binary uploads become reference met
   const executable = await extractAgentAttachment("file.exe", new Uint8Array([77, 90]));
   assert.equal(executable.kind, "file");
   assert.match(executable.text, /Reference file: file.exe/);
-  const binary = await extractAgentAttachment(
-    "binary.txt",
-    new Uint8Array([255, 254, 0]),
-  );
+  const binary = await extractAgentAttachment("binary.txt", new Uint8Array([255, 254, 0]));
   assert.equal(binary.kind, "file");
   assert.match(binary.text, /Reference file: binary.txt/);
   await assert.rejects(
