@@ -49,7 +49,7 @@ function RosterFrame() {
     <div className="overflow-hidden rounded-xl border bg-card">
       <iframe
         title="AI Factory roster, teams and playbooks"
-        src="/ai-factory/roster/index.html"
+        src="/ai-factory/roster/"
         className="h-[calc(100vh-13rem)] min-h-[640px] w-full"
         loading="lazy"
       />
