@@ -5,6 +5,7 @@ const READ_ACTIONS = [
   "list_personal_resources",
   "list_workspace_projects",
   "list_credential_metadata",
+  "list_developer_access",
   "list_connection_tools",
   "e2b_health",
   "e2b_list_sandboxes",

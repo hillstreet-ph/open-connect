@@ -598,6 +598,17 @@ const PLATFORM_TOOLS: McpTool[] = [
     },
   },
   {
+    name: "list_developer_access",
+    description:
+      "Read the Developer page: personal tokens, OAuth apps you registered, apps authorized to access this account, incoming webhooks, and notification channels. Metadata only; token values, client secrets, webhook secrets, and notification destinations are never returned.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
+  },
+  {
     name: "match_browser_credentials",
     outputSchema: BROWSER_CREDENTIAL_MATCH_OUTPUT_SCHEMA,
     description:
@@ -1435,6 +1446,7 @@ const TOOL_SCOPES: Record<string, string> = {
   list_my_knowledge: "knowledge:read",
   list_workspace_projects: "resources:read",
   list_credential_metadata: "secrets:read",
+  list_developer_access: "secrets:read",
   match_browser_credentials: "secrets:read",
   calculate: "mcp:connect",
   list_connections: "connections:read",
@@ -2043,6 +2055,51 @@ export const Route = createFileRoute("/mcp")({
               throw new Error("Too many credential records to establish an unambiguous match.");
             const payload = matchBrowserCredentials(data ?? [], args["origin"], args["account"]);
             result = { ...textResult(payload), structuredContent: payload };
+          } else if (name === "list_developer_access") {
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const { summarizeDeveloperAccess } = await import("@/lib/developer-access");
+            // Tables added after the generated types; queried untyped, always scoped to the key owner.
+            const db = supabaseAdmin as unknown as import("@supabase/supabase-js").SupabaseClient;
+            const [tokens, oauthApps, webhooks, channels] = await Promise.all([
+              supabaseAdmin
+                .from("api_keys")
+                .select(
+                  "id,name,key_prefix,scopes,access_profile,oauth_resource,last_used_at,expires_at,revoked_at,created_at",
+                )
+                .eq("user_id", key.userId)
+                .is("revoked_at", null)
+                .order("created_at", { ascending: false })
+                .limit(500),
+              db
+                .from("oauth_clients")
+                .select(
+                  "client_id,client_name,redirect_uris,created_at,secret_rotated_at,revoked_at",
+                )
+                .eq("owner_user_id", key.userId)
+                .order("created_at", { ascending: false })
+                .limit(100),
+              db
+                .from("incoming_webhooks")
+                .select("id,name,created_at")
+                .eq("user_id", key.userId)
+                .order("created_at", { ascending: false })
+                .limit(200),
+              db
+                .from("notification_channels")
+                .select("id,kind,name,enabled,created_at")
+                .eq("user_id", key.userId)
+                .order("created_at", { ascending: false })
+                .limit(200),
+            ]);
+            const failed = [tokens, oauthApps, webhooks, channels].find((r) => r.error);
+            if (failed?.error) throw new Error("Developer access could not be read.");
+            const payload = summarizeDeveloperAccess({
+              tokens: (tokens.data ?? []) as never,
+              oauthApps: (oauthApps.data ?? []) as never,
+              webhooks: webhooks.data ?? [],
+              channels: channels.data ?? [],
+            });
+            result = textResult(payload);
           } else if (name === "list_credential_metadata") {
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
             const { data, error } = await supabaseAdmin
