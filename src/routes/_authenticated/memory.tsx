@@ -108,18 +108,10 @@ function downloadKnowledgeFile(name: string, content: string, mimeType: string) 
 
 function knowledgeToCsv(rows: KnowledgeExportRow[]) {
   const escape = (value: string) => '"' + value.split('"').join('""') + '"';
-  const header = ["title", "content", "source_type", "source_url", "tags"]
-    .map(escape)
-    .join(",");
+  const header = ["title", "content", "source_type", "source_url", "tags"].map(escape).join(",");
   const body = rows
     .map((row) =>
-      [
-        row.title,
-        row.content,
-        row.source_type,
-        row.source_url ?? "",
-        (row.tags ?? []).join(";"),
-      ]
+      [row.title, row.content, row.source_type, row.source_url ?? "", (row.tags ?? []).join(";")]
         .map((value) => escape(String(value ?? "")))
         .join(","),
     )
@@ -481,11 +473,10 @@ export function MemoryKnowledgePage({
             data: {
               title: item.title.slice(0, 160),
               content: item.content,
-              sourceType: (
-                item.source_type && SOURCE_TYPES.includes(item.source_type as KnowledgeSourceType)
-                  ? item.source_type
-                  : "note"
-              ) as KnowledgeSourceType,
+              sourceType: (item.source_type &&
+              SOURCE_TYPES.includes(item.source_type as KnowledgeSourceType)
+                ? item.source_type
+                : "note") as KnowledgeSourceType,
               sourceUrl: item.source_url,
               projectId: projectId || undefined,
               tags: (item.tags ?? []).join(", "),

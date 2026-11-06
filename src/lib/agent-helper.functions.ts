@@ -46,7 +46,6 @@ const WORK_PROMPT_CONFIRM = [
 const ENHANCE_SYSTEM_PROMPT =
   "You are a prompt enhancement assistant for Open-Connect Copilot. Rewrite the user draft into one clear, self-contained request. Keep the user intent and language. Add the specific details, context, and expected outcome the request needs, without inventing facts the user did not provide. Return only the improved prompt text with no preamble, quotes, or explanations. Keep it under 1200 characters.";
 
-
 const TOOLS = [
   {
     type: "function",
@@ -797,7 +796,6 @@ export const askAgentHelper = createServerFn({ method: "POST" })
       throw error;
     }
   });
-
 
 export const enhanceCopilotPrompt = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

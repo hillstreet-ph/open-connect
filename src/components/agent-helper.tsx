@@ -644,9 +644,9 @@ function AgentHelperPanel({
                     type="button"
                     className="block w-full rounded border bg-background p-2 text-left text-xs"
                     onClick={() => {
-                    setDraft(step);
-                    composer.current?.focus();
-                  }}
+                      setDraft(step);
+                      composer.current?.focus();
+                    }}
                   >
                     {step}
                   </button>

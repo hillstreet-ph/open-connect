@@ -79,10 +79,7 @@ export const suggestCopilotPrompts = createServerFn({ method: "POST" })
       /* fall back to curated suggestions when knowledge is unavailable */
     }
     try {
-      const memory = await context.supabase
-        .from("memory_records")
-        .select("content")
-        .limit(20);
+      const memory = await context.supabase.from("memory_records").select("content").limit(20);
       for (const row of (memory.data ?? []) as Array<Record<string, unknown>>) {
         const content = typeof row["content"] === "string" ? row["content"] : "";
         const label = content.replace(/\s+/g, " ").trim().slice(0, 60);
