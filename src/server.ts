@@ -4,6 +4,7 @@ import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 import { getMtlsMode, mtlsMetadataFields } from "./lib/mtls.server";
 import { OAUTH_SCOPES_SUPPORTED } from "./lib/oauth.server";
+import { TOKEN_ENDPOINT_AUTH_METHODS } from "./lib/oauth-client-auth";
 import { runWithRuntimeEnv } from "./lib/runtime-env.server";
 import { aiGatewayMetadata, llmsTxt } from "./lib/ai-gateway-discovery";
 
@@ -35,7 +36,7 @@ function oauthAuthorizationServerMetadata() {
     grant_types_supported: ["authorization_code"],
     code_challenge_methods_supported: ["S256"],
     ...mtlsMetadataFields(mtlsEnabled),
-    token_endpoint_auth_methods_supported: ["none"],
+    token_endpoint_auth_methods_supported: [...TOKEN_ENDPOINT_AUTH_METHODS],
     logo_uri: `${ISSUER}/open-connect-mark.png`,
     scopes_supported: [...OAUTH_SCOPES_SUPPORTED],
     service_documentation: `${ISSUER}/integrations`,

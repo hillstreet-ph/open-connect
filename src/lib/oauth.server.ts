@@ -183,7 +183,7 @@ export function oauthMetadata() {
     response_types_supported: ["code"],
     grant_types_supported: ["authorization_code"],
     code_challenge_methods_supported: [PKCE_METHOD_S256],
-    token_endpoint_auth_methods_supported: ["none"],
+    token_endpoint_auth_methods_supported: ["none", "client_secret_basic", "client_secret_post"],
     scopes_supported: [...OAUTH_SCOPES_SUPPORTED],
     service_documentation: `${ISSUER}/integrations`,
   };
