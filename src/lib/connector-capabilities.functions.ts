@@ -19,7 +19,7 @@ const CONNECTION_COLUMNS =
   "id,user_id,provider,display_name,status,metadata,updated_at,credential_reference,scopes";
 
 function capabilitiesAge(metadata: Record<string, unknown>) {
-  const capabilities = metadata.capabilities as { checked_at?: string } | undefined;
+  const capabilities = metadata["capabilities"] as { checked_at?: string } | undefined;
   const checkedAt = Date.parse(String(capabilities?.checked_at || ""));
   if (!capabilities || !Number.isFinite(checkedAt)) return Infinity;
   return Date.now() - checkedAt;
@@ -34,13 +34,13 @@ async function discoverConnectionCapabilities(
   db: SupabaseClient,
   userId: string,
   row: ConnectionRow,
-): Promise<"saved" | "activated" | "skipped"> {
+): Promise<"saved" | "activated" | "skipped">> {
   if (!["connected", "degraded"].includes(row.status)) return "skipped";
   const metadata = row.metadata ?? {};
   let snapshot: Record<string, unknown>;
   if (row.provider === "custom_api") {
     const { openApiOperations } = await import("./openapi-connector");
-    const api = openApiOperations(metadata.openapi as never);
+    const api = openApiOperations(metadata["openapi"] as never);
     snapshot = {
       server: { name: api.title },
       tools: api.tools,
@@ -49,10 +49,12 @@ async function discoverConnectionCapabilities(
       checked_at: new Date().toISOString(),
       catalog_scope: "complete",
     };
-  } else if (String(metadata.mode) === "custom_mcp" || row.provider === "custom_mcp") {
+  } else if (String(metadata["mode"]) === "custom_mcp" || row.provider === "custom_mcp") {
     const { materializeCustomMcpConnection } = await import("./custom-mcp.server");
     const { fetchMcpSnapshot } = await import("./mcp-client.server");
-    const connection = await materializeCustomMcpConnection(row);
+    const connection = await materializeCustomMcpConnection(
+      row as Parameters<typeof materializeCustomMcpConnection>[0],
+    );
     snapshot = await fetchMcpSnapshot(
       connection.endpoint,
       connection.headers,
@@ -70,9 +72,14 @@ async function discoverConnectionCapabilities(
       catalog_scope: "tools_only",
     };
   }
-  if (metadata.auth_type === "oauth") {
+  if (metadata["auth_type"] === "oauth") {
     const { activateOAuthConnection } = await import("./oauth-activation.server");
-    await activateOAuthConnection(db, userId, row, snapshot);
+    await activateOAuthConnection(
+      db,
+      userId,
+      row as Parameters<typeof activateOAuthConnection>[2],
+      snapshot,
+    );
     return "activated";
   }
   const { error: saveError } = await db
