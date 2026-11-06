@@ -143,7 +143,7 @@ test("compact widget links to real destinations and reflects worker permissions 
   assert.match(w.status.textContent, /Auto discovery · Auto On/);
   assert.deepEqual(
     w.grid.children.map((c) => c.attrs["href"]),
-    ["/library", "/connections", "/secrets", "/models", "/resources", "/ai-agency"].map(
+    ["/library", "/connections", "/secrets", "/models", "/resources", "/ai-factory"].map(
       (p) => "https://open-connect.site" + p,
     ),
   );
@@ -205,7 +205,7 @@ test("initializes the bridge, preserves zero counts, and renders values as text"
   assert.equal(w.grid.children[1]!.children[1]!.textContent, "0");
   assert.deepEqual(
     w.grid.children.map((c) => c.children[0]!.textContent),
-    ["Resources", "Connections", "Credentials", "AI Gateway", "Marketplace", "AI Agency"],
+    ["Resources", "Connections", "Credentials", "AI Gateway", "Marketplace", "AI Factory"],
   );
   assert.equal(w.grid.children[2]!.children[1]!.textContent, "Not granted");
   w.send({ content: [{ type: "text", text: "bad JSON" }] });

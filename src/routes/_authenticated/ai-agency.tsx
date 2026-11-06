@@ -42,7 +42,7 @@ export const Route = createFileRoute("/_authenticated/ai-agency")({
     return result;
   },
   head: () => ({
-    meta: [{ title: "AI Agency — Open-Connect" }, { name: "robots", content: "noindex" }],
+    meta: [{ title: "AI Factory — Open-Connect" }, { name: "robots", content: "noindex" }],
   }),
   component: AgencyPage,
 });
@@ -196,7 +196,7 @@ function AgencyWorkspace({ userId }: { userId: string | undefined }) {
     <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
       <header className="space-y-2">
         <h1 className="flex items-center gap-2 text-2xl font-semibold">
-          <UsersRound className="size-6 text-primary" /> AI Agency
+          <UsersRound className="size-6 text-primary" /> AI Factory
         </h1>
         <p className="max-w-3xl text-sm text-muted-foreground">
           Build private AI teams for development, business, research and everyday operations. Each

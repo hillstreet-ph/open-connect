@@ -1,6 +1,6 @@
 # Private Workforce Directory and Registry
 
-Open AI Agency → Workforce Directory. Existing teams and their two-to-six-role proposal runner remain under **Existing teams & proposal runs**. Their IDs, roles and run history are retained. Specialist chats do not create a durable autonomous workforce or invoke external provider actions.
+Open AI Factory → Workforce Directory. Existing teams and their two-to-six-role proposal runner remain under **Existing teams & proposal runs**. Their IDs, roles and run history are retained. Specialist chats do not create a durable autonomous workforce or invoke external provider actions.
 
 ## Set up your workspace
 

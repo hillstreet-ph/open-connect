@@ -37,8 +37,10 @@ try {
     "/models",
     "/resources",
     "/resources?resource=auto",
+    "/ai-factory",
+    "/ai-factory",
     "/ai-agency",
-    "/ai-agency?category=business",
+    "/ai-factory?category=business",
     "/cloud-browser",
   ]) {
     const response = await fetch(`${origin}${path}`, { signal: AbortSignal.timeout(30000) });
