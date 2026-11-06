@@ -166,16 +166,18 @@ async function handleRosterAsset(request: Request, env: unknown): Promise<Respon
   if (!assets) return null;
 
   for (const candidate of candidates) {
-    let response = await assets.fetch(
-      new Request(new URL(candidate, url.origin).toString(), request),
+    // Fetch the page file as a *subresource*, not as a navigation. Cloudflare's
+    // asset layer canonicalizes navigation requests for `.html` files
+    // (`/teams.html` -> 308 `/teams`, `/teams/index.html` -> 308 `/teams/`), and
+    // the trailing-slash form then 307s back to the extensionless URL that has
+    // no file — the exact loop that made these pages unreachable. A
+    // non-navigation `Accept` header serves the file bytes directly.
+    const response = await assets.fetch(
+      new Request(new URL(candidate, url.origin).toString(), {
+        method: "GET",
+        headers: { accept: "*/*" },
+      }),
     );
-    // The asset layer redirects `/page.html` to `/page`; follow that once so the
-    // explicit-.html form (old bookmarks) serves the page too.
-    if (response.status >= 300 && response.status < 400) {
-      const location = response.headers.get("location");
-      if (!location) continue;
-      response = await assets.fetch(new Request(new URL(location, url.origin).toString(), request));
-    }
     if (response.status === 200) return response;
   }
 

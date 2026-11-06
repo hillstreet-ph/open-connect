@@ -102,34 +102,50 @@ function rewritePageLinks(html) {
   return html;
 }
 
+/**
+ * Inject `<base href="/ai-factory/roster/">` so the page's relative hrefs/srcs
+ * (`assets/`, `images/`, `data/`) resolve from the roster root no matter which
+ * URL the page is served at — `/teams`, `/teams/`, `/teams.html` or
+ * `/teams/index.html`.
+ */
+function injectBaseHref(html, page) {
+  if (html.includes(BASE_HREF)) return html;
+  if (!html.includes("<head>")) {
+    console.error(`[ai-factory] ${page}.html has no <head>; cannot inject base href`);
+    process.exit(1);
+  }
+  return html.replace("<head>", `<head>\n${BASE_HREF}`);
+}
+
 for (const page of pages) {
   const source = join(target, `${page}.html`);
-  let html = rewritePageLinks(readFileSync(source, "utf8"));
+  const html = injectBaseHref(rewritePageLinks(readFileSync(source, "utf8")), page);
 
-  // `index.html` already serves `/ai-factory/roster/` as the directory index, so
-  // it needs no `<page>/index.html` twin. Emitting one would create a stray
-  // `/ai-factory/roster/index/` URL that duplicates the roster root. Its links
-  // are still rewritten in place above.
-  if (page === "index") {
-    writeFileSync(source, html);
-    continue;
-  }
+  writeFileSync(source, html);
 
-  const pageDir = join(target, page);
-  mkdirSync(pageDir, { recursive: true });
+  // `index.html` already serves `/ai-factory/roster/` as the directory index.
+  if (page === "index") continue;
 
-  if (!html.includes(BASE_HREF)) {
-    if (!html.includes("<head>")) {
-      console.error(`[ai-factory] ${page}.html has no <head>; cannot inject base href`);
-      process.exit(1);
-    }
-    // Relative srcs (`assets/`, `images/`, `data/`) must still resolve from the
-    // roster root once the page is served from `<page>/index.html`.
-    html = html.replace("<head>", `<head>\n${BASE_HREF}`);
-  }
-
-  writeFileSync(join(pageDir, "index.html"), html);
+  // Emit an *extensionless* copy beside the `.html` file.
+  //
+  // Cloudflare Pages canonicalizes `.html` paths at the asset layer, before the
+  // worker runs: `/teams.html` -> 308 `/teams`, and `/teams/` -> 307 `/teams`.
+  // Both land on `/teams`, which had no file, so every roster page 404'd into
+  // the SPA shell. A file literally named `teams` is an exact asset match, so
+  // `/teams` is served directly with no redirect hop at all — and the `.html`
+  // and trailing-slash forms both canonicalize onto it.
+  writeFileSync(join(target, page), html);
 }
+
+/**
+ * Clean URLs are served by the worker, not by a redirect rule.
+ *
+ * This app deploys as a Worker with static assets, where `_redirects` is ignored
+ * and the asset layer canonicalizes `.html` paths before the worker runs. The
+ * worker resolves each page explicitly in `src/server.ts` (`handleRosterAsset`),
+ * and `scripts/patch-cloudflare-assets.mjs` sets `html_handling: "none"` so the
+ * asset layer stops rewriting those paths. Nothing to emit here.
+ */
 
 console.log(
   `[ai-factory] roster unpacked to public/ai-factory/roster ` +
