@@ -8,6 +8,7 @@ import { TOKEN_ENDPOINT_AUTH_METHODS } from "./lib/oauth-client-auth";
 import { runWithRuntimeEnv } from "./lib/runtime-env.server";
 import { aiGatewayMetadata, llmsTxt } from "./lib/ai-gateway-discovery";
 import { isRosterPath, rosterPageCandidates } from "./lib/ai-factory-roster-assets";
+import { withSecurityHeaders } from "./lib/security-headers";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -255,20 +256,22 @@ export default {
     const rpcBodyClone =
       request.method === "POST" && url.pathname === "/mcp" ? request.clone() : null;
     try {
-      return await runWithRuntimeEnv(env, async () => {
-        const wellKnown = handleWellKnown(request);
-        if (wellKnown) return wellKnown;
+      return withSecurityHeaders(
+        await runWithRuntimeEnv(env, async () => {
+          const wellKnown = handleWellKnown(request);
+          if (wellKnown) return wellKnown;
 
-        const rosterAsset = await handleRosterAsset(request, env);
-        if (rosterAsset) return rosterAsset;
+          const rosterAsset = await handleRosterAsset(request, env);
+          if (rosterAsset) return rosterAsset;
 
-        const handler = await getServerEntry();
-        const response = await handler.fetch(request, env, ctx);
-        return await normalizeCatastrophicSsrResponse(response);
-      });
+          const handler = await getServerEntry();
+          const response = await handler.fetch(request, env, ctx);
+          return await normalizeCatastrophicSsrResponse(response);
+        }),
+      );
     } catch (error) {
       console.error(error);
-      return structuredFailureResponse(request, error, rpcBodyClone);
+      return withSecurityHeaders(await structuredFailureResponse(request, error, rpcBodyClone));
     }
   },
 };
