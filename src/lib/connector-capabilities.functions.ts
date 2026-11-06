@@ -145,8 +145,7 @@ export const autoSyncConnectorCapabilities = createServerFn({ method: "POST" })
     );
     const refreshed = results.filter(
       (result) =>
-        result.status === "fulfilled" &&
-        (result.value === "saved" || result.value === "activated"),
+        result.status === "fulfilled" && (result.value === "saved" || result.value === "activated"),
     ).length;
     return {
       refreshed,
