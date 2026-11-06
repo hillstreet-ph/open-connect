@@ -298,11 +298,7 @@ select a.id, 1, v.config
 from (values
 `);
 
-compact.push(
-  agents
-    .map((a) => `  (${q(a.slug)}, ${j(agentConfig(a))})`)
-    .join(",\n"),
-);
+compact.push(agents.map((a) => `  (${q(a.slug)}, ${j(agentConfig(a))})`).join(",\n"));
 
 compact.push(`
 ) as v(slug, config)
