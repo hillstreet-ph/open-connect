@@ -37,4 +37,31 @@ try {
 
 rmSync(target, { recursive: true, force: true });
 renameSync(staging, target);
-console.log("[ai-factory] roster unpacked to public/ai-factory/roster");
+
+/**
+ * The roster's cross-page links are relative (`teams.html`, `niches.html`, ...),
+ * and those pages are static files that must resolve at their own URLs. If the
+ * archive ever ships without one of them, the deployed site would answer with
+ * the app's SPA shell instead of the page — failing loudly here keeps that from
+ * shipping silently.
+ */
+const REQUIRED_PAGES = [
+  "index.html",
+  "teams.html",
+  "niches.html",
+  "playbooks.html",
+  "hub.html",
+  "studio.html",
+  "connectors.html",
+  "command-center.html",
+  "registry.html",
+];
+const missing = REQUIRED_PAGES.filter((page) => !existsSync(join(target, page)));
+if (missing.length > 0) {
+  console.error(`[ai-factory] roster bundle is missing pages: ${missing.join(", ")}`);
+  process.exit(1);
+}
+
+console.log(
+  `[ai-factory] roster unpacked to public/ai-factory/roster (${REQUIRED_PAGES.length} pages verified)`,
+);
