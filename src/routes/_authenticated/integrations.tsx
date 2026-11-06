@@ -33,7 +33,7 @@ import {
   developerSections,
   type DeveloperSection,
 } from "@/lib/settings-navigation";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type SectionMeta = { label: string; title: string; description: string; icon: LucideIcon };
 
@@ -143,80 +143,80 @@ function DeveloperPage() {
             );
           })}
         </TabsList>
-      </Tabs>
 
-      <div className="mt-6">
-        <div className="min-w-0 space-y-6">
-          <div>
-            <h2 className="text-xl font-semibold">{meta.title}</h2>
-            <p className="mt-1 max-w-3xl text-sm text-muted-foreground">{meta.description}</p>
+        <div className="mt-6">
+          <div className="min-w-0 space-y-6">
+            <div>
+              <h2 className="text-xl font-semibold">{meta.title}</h2>
+              <p className="mt-1 max-w-3xl text-sm text-muted-foreground">{meta.description}</p>
+            </div>
+            {user ? (
+              <>
+                <TabsContent value="api-key" className="mt-0 space-y-6">
+                  <ApiKeysCard />
+                  <Card className="shadow-panel">
+                    <CardHeader className="p-5">
+                      <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <Bot className="size-5" />
+                      </div>
+                      <CardTitle className="mt-3 text-base">Open-Connect MCP endpoint</CardTitle>
+                      <CardDescription>
+                        Compatible clients connect here and receive only the capabilities allowed
+                        for your account and project access.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4 px-5 pb-5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <code className="min-w-0 flex-1 break-all rounded-md bg-muted px-3 py-2 text-sm">
+                          {MCP_ENDPOINT}
+                        </code>
+                        <Button variant="outline" size="sm" onClick={() => void copyEndpoint()}>
+                          <Copy className="mr-2 size-4" />
+                          Copy URL
+                        </Button>
+                      </div>
+                      <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                        <Badge variant="secondary">OAuth supported</Badge>
+                        <Badge variant="secondary">Bearer key supported</Badge>
+                        <span className="self-center">
+                          OAuth clients sign in and approve in their client.
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setMcpOpen(true)}>
+                          Client setup instructions
+                        </Button>
+                        <Button asChild variant="outline" size="sm">
+                          <Link to="/integrations" search={{ section: "oauth-apps" }}>
+                            Build an app with OAuth
+                          </Link>
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                <TabsContent value="oauth-apps" className="mt-0">
+                  {section === "oauth-apps" ? <OAuthIntegrationsCard /> : null}
+                </TabsContent>
+                <TabsContent value="authorized-apps" className="mt-0">
+                  {section === "authorized-apps" ? <AuthorizedAppsCard /> : null}
+                </TabsContent>
+                <TabsContent value="webhooks" className="mt-0">
+                  {section === "webhooks" ? <IncomingWebhooks userId={user.id} /> : null}
+                </TabsContent>
+                <TabsContent value="apps" className="mt-0 space-y-6">
+                  {section === "apps" ? (
+                    <>
+                      <TelegramIntegrationCard />
+                      <NotificationChannels userId={user.id} />
+                    </>
+                  ) : null}
+                </TabsContent>
+              </>
+            ) : null}
           </div>
-          {user ? (
-            <>
-              <section id="api-key" hidden={section !== "api-key"} className="space-y-6">
-                <ApiKeysCard />
-                <Card className="shadow-panel">
-                  <CardHeader className="p-5">
-                    <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                      <Bot className="size-5" />
-                    </div>
-                    <CardTitle className="mt-3 text-base">Open-Connect MCP endpoint</CardTitle>
-                    <CardDescription>
-                      Compatible clients connect here and receive only the capabilities allowed for
-                      your account and project access.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4 px-5 pb-5">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <code className="min-w-0 flex-1 break-all rounded-md bg-muted px-3 py-2 text-sm">
-                        {MCP_ENDPOINT}
-                      </code>
-                      <Button variant="outline" size="sm" onClick={() => void copyEndpoint()}>
-                        <Copy className="mr-2 size-4" />
-                        Copy URL
-                      </Button>
-                    </div>
-                    <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                      <Badge variant="secondary">OAuth supported</Badge>
-                      <Badge variant="secondary">Bearer key supported</Badge>
-                      <span className="self-center">
-                        OAuth clients sign in and approve in their client.
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Button variant="outline" size="sm" onClick={() => setMcpOpen(true)}>
-                        Client setup instructions
-                      </Button>
-                      <Button asChild variant="outline" size="sm">
-                        <Link to="/integrations" search={{ section: "oauth-apps" }}>
-                          Build an app with OAuth
-                        </Link>
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </section>
-              <section id="oauth-apps" hidden={section !== "oauth-apps"}>
-                {section === "oauth-apps" ? <OAuthIntegrationsCard /> : null}
-              </section>
-              <section id="authorized-apps" hidden={section !== "authorized-apps"}>
-                {section === "authorized-apps" ? <AuthorizedAppsCard /> : null}
-              </section>
-              <section id="webhooks" hidden={section !== "webhooks"}>
-                {section === "webhooks" ? <IncomingWebhooks userId={user.id} /> : null}
-              </section>
-              <section id="apps" hidden={section !== "apps"} className="space-y-6">
-                {section === "apps" ? (
-                  <>
-                    <TelegramIntegrationCard />
-                    <NotificationChannels userId={user.id} />
-                  </>
-                ) : null}
-              </section>
-            </>
-          ) : null}
         </div>
-      </div>
+      </Tabs>
 
       <Dialog open={mcpOpen} onOpenChange={setMcpOpen}>
         <DialogContent className="sm:max-w-lg">
