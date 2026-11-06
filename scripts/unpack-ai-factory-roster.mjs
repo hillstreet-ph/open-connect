@@ -102,34 +102,61 @@ function rewritePageLinks(html) {
   return html;
 }
 
+/**
+ * Inject `<base href="/ai-factory/roster/">` so the page's relative hrefs/srcs
+ * (`assets/`, `images/`, `data/`) resolve from the roster root no matter which
+ * URL the page is served at — `/teams`, `/teams/`, `/teams.html` or
+ * `/teams/index.html`.
+ */
+function injectBaseHref(html, page) {
+  if (html.includes(BASE_HREF)) return html;
+  if (!html.includes("<head>")) {
+    console.error(`[ai-factory] ${page}.html has no <head>; cannot inject base href`);
+    process.exit(1);
+  }
+  return html.replace("<head>", `<head>\n${BASE_HREF}`);
+}
+
 for (const page of pages) {
   const source = join(target, `${page}.html`);
-  let html = rewritePageLinks(readFileSync(source, "utf8"));
+  const html = injectBaseHref(rewritePageLinks(readFileSync(source, "utf8")), page);
+
+  // Rewrite the page in place: the `.html` file is what the `_redirects`
+  // 200-rewrite below serves, so it must carry the base href itself.
+  writeFileSync(source, html);
 
   // `index.html` already serves `/ai-factory/roster/` as the directory index, so
   // it needs no `<page>/index.html` twin. Emitting one would create a stray
-  // `/ai-factory/roster/index/` URL that duplicates the roster root. Its links
-  // are still rewritten in place above.
-  if (page === "index") {
-    writeFileSync(source, html);
-    continue;
-  }
+  // `/ai-factory/roster/index/` URL that duplicates the roster root.
+  if (page === "index") continue;
 
   const pageDir = join(target, page);
   mkdirSync(pageDir, { recursive: true });
-
-  if (!html.includes(BASE_HREF)) {
-    if (!html.includes("<head>")) {
-      console.error(`[ai-factory] ${page}.html has no <head>; cannot inject base href`);
-      process.exit(1);
-    }
-    // Relative srcs (`assets/`, `images/`, `data/`) must still resolve from the
-    // roster root once the page is served from `<page>/index.html`.
-    html = html.replace("<head>", `<head>\n${BASE_HREF}`);
-  }
-
   writeFileSync(join(pageDir, "index.html"), html);
 }
+
+/**
+ * Cloudflare Pages rewrites `/page.html` -> `/page` (308) and `/page/` ->
+ * `/page` (307) at the asset layer, *before* the worker runs, so a directory
+ * index alone can never be reached: the trailing slash is stripped first and
+ * the extensionless URL has no file. A `200` rewrite in `_redirects` is applied
+ * before that asset resolution, so it serves the page's real HTML at its clean
+ * URL without a redirect hop.
+ */
+const redirects = pages
+  .flatMap((page) => {
+    const target = `/ai-factory/roster/${page}.html`;
+    // The roster root is already the directory index; only the extensionless
+    // form needs a rewrite, and `/ai-factory/roster//` would be a malformed rule.
+    if (page === "index") return [`/ai-factory/roster /ai-factory/roster/index.html 200`];
+    return [
+      `/ai-factory/roster/${page} ${target} 200`,
+      `/ai-factory/roster/${page}/ ${target} 200`,
+    ];
+  })
+  .join("\n");
+
+writeFileSync(join(root, "public", "_redirects"), `${redirects}\n`);
 
 console.log(
   `[ai-factory] roster unpacked to public/ai-factory/roster ` +
