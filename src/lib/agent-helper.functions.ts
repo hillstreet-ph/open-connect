@@ -238,8 +238,7 @@ const TOOLS = [
     type: "function",
     function: {
       name: "list_knowledge",
-      description:
-        "List the signed-in user's saved Knowledge entries, excluding archived items.",
+      description: "List the signed-in user's saved Knowledge entries, excluding archived items.",
       parameters: { type: "object", properties: {}, additionalProperties: false },
     },
   },
@@ -716,9 +715,7 @@ async function executeInternalTool(
     }
     case "list_gateway_models": {
       const { resolveAutoFreeRoutes, resolveUserUpstreams } = await import("@/lib/gateway.server");
-      const routes = await resolveAutoFreeRoutes(
-        await resolveUserUpstreams(context.userId, false),
-      );
+      const routes = await resolveAutoFreeRoutes(await resolveUserUpstreams(context.userId, false));
       return {
         models: routes.map((route) => ({
           model: route.model,
@@ -830,8 +827,7 @@ async function executeInternalTool(
         .eq("user_id", context.userId)
         .eq("slug", librarySlug)
         .maybeSingle();
-      if (libraryError || !library)
-        throw new Error("Your personal Library could not be loaded.");
+      if (libraryError || !library) throw new Error("Your personal Library could not be loaded.");
       const { data: resource, error: resourceError } = await db
         .from("resources")
         .select("id,name,slug")

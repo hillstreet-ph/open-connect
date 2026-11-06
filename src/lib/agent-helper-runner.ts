@@ -58,8 +58,7 @@ export async function runAgentHelper(options: {
     const name = call?.function?.name as AgentHelperToolName;
     const isWrite = WRITES.has(name);
     if (!READS.has(name) && !isWrite) return fallback();
-    if (step === maxSteps || writes >= maxWrites || reply.toolCalls.length !== 1)
-      return fallback();
+    if (step === maxSteps || writes >= maxWrites || reply.toolCalls.length !== 1) return fallback();
     let result: Record<string, unknown>;
     try {
       result = await options.execute(name, parseAgentHelperArguments(call.function.arguments));
