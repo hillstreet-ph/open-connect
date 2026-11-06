@@ -10,12 +10,18 @@ import {
   Maximize2,
   Minimize2,
   Download,
+  Wand2,
+  Zap,
 } from "lucide-react";
 import { helperActionQueryKeys } from "@/lib/agent-helper-policy";
 import { HelperCapabilities } from "@/components/helper-capabilities";
 import { BrowserAgentChat } from "@/components/browser-agent-chat";
 import { AgentAttachments } from "@/components/agent-attachments";
-import { askAgentHelper } from "@/lib/agent-helper.functions";
+import { askAgentHelper, enhanceCopilotPrompt } from "@/lib/agent-helper.functions";
+import {
+  suggestCopilotNextSteps,
+  suggestCopilotPrompts,
+} from "@/lib/copilot-suggestions.functions";
 import {
   listAgentChats,
   getAgentChat,
@@ -28,17 +34,39 @@ import { useAuth } from "@/hooks/use-auth";
 import { redactDataText } from "@/lib/data-controls";
 
 type Cursor = { at: string; id: string } | null;
+type CopilotMode = "ask" | "work" | "browser";
+
 export function AgentHelper() {
   const { user } = useAuth();
   return user && !user.is_anonymous ? <AgentHelperPanel key={user.id} user={user} /> : null;
 }
-function AgentHelperPanel({ user }: { user: { id: string } }) {
+
+export function CopilotChatPage() {
+  const { user } = useAuth();
+  return user && !user.is_anonymous ? (
+    <AgentHelperPanel key={user.id} user={user} variant="page" />
+  ) : (
+    <p className="text-sm text-muted-foreground">Sign in to use Copilot.</p>
+  );
+}
+
+function AgentHelperPanel({
+  user,
+  variant = "bubble",
+}: {
+  user: { id: string };
+  variant?: "bubble" | "page";
+}) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false),
     [expanded, setExpanded] = useState(false),
     [historyOpen, setHistoryOpen] = useState(false);
   const [capabilitiesOpen, setCapabilitiesOpen] = useState(false);
-  const [mode, setMode] = useState<"workspace" | "browser">("workspace");
+  const [mode, setMode] = useState<CopilotMode>("ask");
+  const [autoExecute, setAutoExecute] = useState(true);
+  const [openers, setOpeners] = useState<string[]>([]);
+  const [nextSteps, setNextSteps] = useState<string[]>([]);
+  const [enhancing, setEnhancing] = useState(false);
   const [browserOpened, setBrowserOpened] = useState(false),
     [browserRunId, setBrowserRunId] = useState<string>();
   const [savedBrowserPrompt, setSavedBrowserPrompt] = useState<string>();
@@ -57,6 +85,7 @@ function AgentHelperPanel({ user }: { user: { id: string } }) {
     [renameTitle, setRenameTitle] = useState("");
   const revision = useRef<number | null>(null),
     sending = useRef(false),
+    openersLoaded = useRef(false),
     transcript = useRef<HTMLDivElement>(null),
     composer = useRef<HTMLTextAreaElement>(null),
     launcher = useRef<HTMLButtonElement>(null);
@@ -66,6 +95,9 @@ function AgentHelperPanel({ user }: { user: { id: string } }) {
     saveFn = useServerFn(saveAgentChat),
     deleteFn = useServerFn(deleteAgentChat),
     renameFn = useServerFn(renameAgentChat);
+  const suggestOpeners = useServerFn(suggestCopilotPrompts),
+    suggestNext = useServerFn(suggestCopilotNextSteps),
+    enhanceFn = useServerFn(enhanceCopilotPrompt);
   const history = useInfiniteQuery({
     queryKey: ["agent-chat-history", user?.id, search],
     enabled: Boolean(user && open && historyOpen),
@@ -85,6 +117,7 @@ function AgentHelperPanel({ user }: { user: { id: string } }) {
     setDraft("");
     setFiles([]);
     setError("");
+    setNextSteps([]);
     setHistoryOpen(false);
     if (mode === "browser" && !browserActive) {
       setBrowserRunId(undefined);
@@ -100,13 +133,53 @@ function AgentHelperPanel({ user }: { user: { id: string } }) {
   }, [user.id]);
 
   useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem("copilot-auto-execute");
+      if (saved !== null) setAutoExecute(saved === "on");
+    } catch {
+      /* preferences stay local when storage is unavailable */
+    }
+  }, []);
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("copilot-auto-execute", autoExecute ? "on" : "off");
+    } catch {
+      /* preferences stay local when storage is unavailable */
+    }
+  }, [autoExecute]);
+
+  useEffect(() => {
+    if (!open || mode === "browser" || historyOpen || openersLoaded.current) return;
+    openersLoaded.current = true;
+    suggestOpeners({ data: {} })
+      .then((result) => setOpeners((result.suggestions ?? []).slice(0, 4)))
+      .catch(() => setOpeners([]));
+  }, [open, mode, historyOpen]);
+
+  useEffect(() => {
     if (transcript.current) transcript.current.scrollTop = transcript.current.scrollHeight;
   }, [messages, busy, open]);
   useEffect(() => {
-    if (open && mode === "workspace" && !historyOpen) composer.current?.focus();
+    if (open && mode !== "browser" && !historyOpen) composer.current?.focus();
   }, [open, mode, historyOpen]);
   const report = (failure: unknown) =>
     setError(failure instanceof Error ? failure.message : "Action could not be completed.");
+  async function enhance() {
+    const prompt = draft.trim();
+    if (prompt.length < 3 || busy || fileBusy || enhancing) return;
+    setEnhancing(true);
+    setError("");
+    try {
+      const result = await enhanceFn({
+        data: { prompt, mode: mode === "work" ? "work" : "ask" },
+      });
+      if (result.prompt) setDraft(result.prompt);
+    } catch (failure) {
+      report(failure);
+    } finally {
+      setEnhancing(false);
+    }
+  }
   async function send(event: FormEvent) {
     event.preventDefault();
     const content = draft.trim() || (files.length ? "Summarize the attached files." : "");
@@ -114,6 +187,7 @@ function AgentHelperPanel({ user }: { user: { id: string } }) {
     sending.current = true;
     setBusy(true);
     setError("");
+    setNextSteps([]);
     const owner = user.id,
       id = chatId ?? crypto.randomUUID();
     const next = [
@@ -141,9 +215,15 @@ function AgentHelperPanel({ user }: { user: { id: string } }) {
       setFiles([]);
       refreshHistory();
       let reply: string;
+      let performedAction = "";
       try {
-        const response = await askAgentHelper({ data: { messages: next.slice(-10) } });
+        const askData =
+          mode === "work"
+            ? { messages: next.slice(-10), mode: "work", auto_execute: autoExecute }
+            : { messages: next.slice(-10) };
+        const response = await askAgentHelper({ data: askData });
         reply = response.reply;
+        performedAction = response.action?.name ?? "";
         if (account.current !== owner) return;
         if (response.action && !(response.action.result as Record<string, unknown>)["error"]) {
           for (const key of helperActionQueryKeys(response.action.name)) {
@@ -159,6 +239,9 @@ function AgentHelperPanel({ user }: { user: { id: string } }) {
       if (account.current !== owner) return;
       const finished = [...next, { role: "assistant" as const, content: reply }];
       setMessages(finished);
+      suggestNext({ data: { reply, action: performedAction } })
+        .then((result) => setNextSteps((result.suggestions ?? []).slice(0, 3)))
+        .catch(() => setNextSteps([]));
       const final = await saveFn({
         data: {
           id,
@@ -194,13 +277,14 @@ function AgentHelperPanel({ user }: { user: { id: string } }) {
           (row.messages as ChatMessage[]).find((message) => message.role === "user")?.content,
         );
       } else {
-        setMode("workspace");
+        setMode("ask");
         setChatId(row.id);
         revision.current = row.revision;
         setMessages(row.messages as ChatMessage[]);
         setTitle(row.title);
         setDraft("");
         setFiles([]);
+        setNextSteps([]);
       }
       setHistoryOpen(false);
     } catch (failure) {
@@ -209,9 +293,20 @@ function AgentHelperPanel({ user }: { user: { id: string } }) {
       setBusy(false);
     }
   }
+  const sectionClass =
+    variant === "page"
+      ? "flex h-full min-h-0 w-full flex-col overflow-hidden rounded-2xl border bg-background shadow-2xl"
+      : "mb-3 flex flex-col overflow-hidden rounded-2xl border bg-background shadow-2xl " +
+        (expanded
+          ? "h-[min(48rem,calc(100dvh-6rem))] w-[min(56rem,calc(100vw-2rem))]"
+          : "h-[min(40rem,calc(100dvh-6rem))] w-[min(26rem,calc(100vw-2rem))]");
   return (
     <div
-      className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-30 sm:right-5"
+      className={
+        variant === "page"
+          ? "flex h-full min-h-0 flex-col"
+          : "fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-30 sm:right-5"
+      }
       onKeyDown={(event) => {
         if (event.key === "Escape" && open) {
           event.stopPropagation();
@@ -221,18 +316,22 @@ function AgentHelperPanel({ user }: { user: { id: string } }) {
       }}
     >
       <section
-        hidden={!open}
-        style={!open ? { display: "none" } : undefined}
+        hidden={!open && variant === "bubble"}
+        style={!open && variant === "bubble" ? { display: "none" } : undefined}
         id="agent-helper-chat"
         role="dialog"
-        aria-label="Agent-Helper chat"
-        className={`mb-3 flex flex-col overflow-hidden rounded-2xl border bg-background shadow-2xl ${expanded ? "h-[min(48rem,calc(100dvh-6rem))] w-[min(56rem,calc(100vw-2rem))]" : "h-[min(40rem,calc(100dvh-6rem))] w-[min(26rem,calc(100vw-2rem))]"}`}
+        aria-label="Copilot chat"
+        className={sectionClass}
       >
         <header className="flex items-center gap-1 border-b px-3 py-2">
           <div className="min-w-0 flex-1">
-            <h2 className="text-sm font-semibold">Agent-Helper</h2>
+            <h2 className="text-sm font-semibold">Copilot</h2>
             <p className="truncate text-xs text-muted-foreground">
-              {mode === "browser" ? "Browser task" : title}
+              {mode === "browser"
+                ? "Browser task"
+                : mode === "work"
+                  ? "Work mode" + (autoExecute ? " · Auto execute" : "")
+                  : title}
               {busy ? " · Working…" : ""}
             </p>
           </div>
@@ -256,17 +355,19 @@ function AgentHelperPanel({ user }: { user: { id: string } }) {
           >
             <Plus className="size-4" />
           </button>
+          {variant === "bubble" ? (
+            <button
+              type="button"
+              aria-label={expanded ? "Reduce chat" : "Expand chat"}
+              className="rounded p-2 hover:bg-muted"
+              onClick={() => setExpanded(!expanded)}
+            >
+              {expanded ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+            </button>
+          ) : null}
           <button
             type="button"
-            aria-label={expanded ? "Reduce chat" : "Expand chat"}
-            className="rounded p-2 hover:bg-muted"
-            onClick={() => setExpanded(!expanded)}
-          >
-            {expanded ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
-          </button>
-          <button
-            type="button"
-            aria-label="Close Agent-Helper"
+            aria-label="Close Copilot"
             className="rounded p-2 hover:bg-muted"
             onClick={() => {
               setOpen(false);
@@ -276,23 +377,42 @@ function AgentHelperPanel({ user }: { user: { id: string } }) {
             <X className="size-4" />
           </button>
         </header>
-        <nav className="flex gap-2 border-b px-3 py-2" aria-label="Agent mode">
-          {(["workspace", "browser"] as const).map((item) => (
+        <nav className="flex flex-wrap gap-2 border-b px-3 py-2" aria-label="Copilot mode">
+          {["ask", "work", "browser"].map((item) => (
             <button
               key={item}
               type="button"
               disabled={busy || fileBusy}
               aria-pressed={mode === item}
-              className={`rounded border px-3 py-1 text-xs ${mode === item ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+              className={
+                "rounded border px-3 py-1 text-xs " +
+                (mode === item ? "bg-primary text-primary-foreground" : "hover:bg-muted")
+              }
               onClick={() => {
-                setMode(item);
+                setMode(item as CopilotMode);
                 setHistoryOpen(false);
                 if (item === "browser") setBrowserOpened(true);
               }}
             >
-              {item === "workspace" ? "Workspace" : "Browser task"}
+              {item === "ask" ? "Ask" : item === "work" ? "Work" : "Browser task"}
             </button>
           ))}
+          {mode === "work" ? (
+            <button
+              type="button"
+              aria-pressed={autoExecute}
+              title="Execute requested actions without asking for confirmation"
+              className={
+                "ml-auto flex items-center gap-1 rounded border px-2 py-1 text-xs " +
+                (autoExecute ? "bg-primary text-primary-foreground" : "hover:bg-muted")
+              }
+              disabled={busy || fileBusy}
+              onClick={() => setAutoExecute((value) => !value)}
+            >
+              <Zap className="size-3" />
+              Auto execute
+            </button>
+          ) : null}
           <button
             type="button"
             aria-expanded={capabilitiesOpen}
@@ -306,7 +426,7 @@ function AgentHelperPanel({ user }: { user: { id: string } }) {
         {capabilitiesOpen ? (
           <HelperCapabilities
             onPrompt={(prompt) => {
-              setMode("workspace");
+              setMode("ask");
               setHistoryOpen(false);
               setDraft(prompt);
               setCapabilitiesOpen(false);
@@ -423,7 +543,7 @@ function AgentHelperPanel({ user }: { user: { id: string } }) {
                           );
                           const link = document.createElement("a");
                           link.href = url;
-                          link.download = `chat-${row.id}.json`;
+                          link.download = "chat-" + row.id + ".json";
                           link.click();
                           setTimeout(() => URL.revokeObjectURL(url), 1000);
                         } catch (failure) {
@@ -452,7 +572,7 @@ function AgentHelperPanel({ user }: { user: { id: string } }) {
         ) : null}
         <div
           className="min-h-0 flex-1 flex-col"
-          style={{ display: !historyOpen && mode === "workspace" ? "flex" : "none" }}
+          style={{ display: !historyOpen && mode !== "browser" ? "flex" : "none" }}
         >
           <div
             ref={transcript}
@@ -464,16 +584,19 @@ function AgentHelperPanel({ user }: { user: { id: string } }) {
               <div className="rounded-xl border bg-muted p-4 text-sm">
                 <h3 className="font-medium">What would you like to do?</h3>
                 <p className="mt-2 text-muted-foreground">
-                  Ask a question, search saved memory and knowledge, attach documents, or manage
-                  workspace tasks. Select Browser task to execute a website prompt.
+                  Ask a question, search saved memory and knowledge, or attach documents. Switch to
+                  Work for autonomous multi-step execution, or Browser task to run a website prompt.
                 </p>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  {[
-                    "What can you do in this workspace?",
-                    "Find an Airtable skill",
-                    "List my recent tasks",
-                    "Search my saved context for Open-Connect",
-                  ].map((starter) => (
+                  {(openers.length
+                    ? openers
+                    : [
+                        "What can you do in this workspace?",
+                        "Find an Airtable skill",
+                        "List my recent tasks",
+                        "Search my saved context for Open-Connect",
+                      ]
+                  ).map((starter) => (
                     <button
                       type="button"
                       key={starter}
@@ -489,10 +612,13 @@ function AgentHelperPanel({ user }: { user: { id: string } }) {
             {messages.map((message, index) => (
               <div
                 key={index}
-                className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                className={"flex " + (message.role === "user" ? "justify-end" : "justify-start")}
               >
                 <div
-                  className={`max-w-[92%] whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm ${message.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"}`}
+                  className={
+                    "max-w-[92%] whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm " +
+                    (message.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted")
+                  }
                 >
                   {message.content}
                   {message.attachments?.map((file, i) => (
@@ -508,6 +634,24 @@ function AgentHelperPanel({ user }: { user: { id: string } }) {
               <p role="status" className="text-sm text-muted-foreground">
                 Working…
               </p>
+            ) : null}
+            {!busy && nextSteps.length ? (
+              <div className="space-y-1 rounded-xl border bg-muted p-3">
+                <p className="text-xs font-medium">Suggested next steps</p>
+                {nextSteps.map((step) => (
+                  <button
+                    key={step}
+                    type="button"
+                    className="block w-full rounded border bg-background p-2 text-left text-xs"
+                    onClick={() => {
+                    setDraft(step);
+                    composer.current?.focus();
+                  }}
+                  >
+                    {step}
+                  </button>
+                ))}
+              </div>
             ) : null}
           </div>
           <form onSubmit={(event) => void send(event)} className="space-y-2 border-t p-3">
@@ -534,8 +678,12 @@ function AgentHelperPanel({ user }: { user: { id: string } }) {
                 maxLength={2000}
                 disabled={busy || fileBusy}
                 value={draft}
-                aria-label="Message Agent-Helper"
-                placeholder="Ask anything about your workspace…"
+                aria-label="Message Copilot"
+                placeholder={
+                  mode === "work"
+                    ? "Describe the task for Copilot to execute…"
+                    : "Ask anything about your workspace…"
+                }
                 className="max-h-32 min-h-10 flex-1 resize-y rounded-xl border bg-background p-2 text-sm"
                 onChange={(event) => setDraft(event.target.value)}
                 onKeyDown={(event) => {
@@ -546,6 +694,16 @@ function AgentHelperPanel({ user }: { user: { id: string } }) {
                 }}
               />
               <button
+                type="button"
+                aria-label="Enhance prompt"
+                title="Enhance prompt with more detail"
+                disabled={busy || fileBusy || enhancing || draft.trim().length < 3}
+                className="rounded-xl border p-3 hover:bg-muted disabled:opacity-50"
+                onClick={() => void enhance()}
+              >
+                <Wand2 className="size-4" />
+              </button>
+              <button
                 type="submit"
                 disabled={busy || fileBusy || (!draft.trim() && !files.length)}
                 aria-label="Send message"
@@ -555,8 +713,8 @@ function AgentHelperPanel({ user }: { user: { id: string } }) {
               </button>
             </div>
             <p className="text-[10px] text-muted-foreground">
-              Saved privately to your account. Replies use your connected free models and the latest
-              10 messages. Delete chats from History.
+              Saved privately to your account. Work mode executes your requested actions
+              automatically when Auto execute is on. Delete chats from History.
             </p>
           </form>
         </div>
@@ -579,18 +737,24 @@ function AgentHelperPanel({ user }: { user: { id: string } }) {
           ) : null}
         </div>
       </section>
-      <button
-        type="button"
-        ref={launcher}
-        onClick={() => setOpen(!open)}
-        aria-label={open ? "Close Agent-Helper chat" : "Open Agent-Helper chat"}
-        aria-expanded={open}
-        aria-controls="agent-helper-chat"
-        className="flex h-12 items-center gap-2 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-lg"
-      >
-        <MessageCircle className="size-5" />
-        Agent-Helper
-      </button>
+      {variant === "bubble" ? (
+        <button
+          type="button"
+          ref={launcher}
+          onClick={() => setOpen(!open)}
+          aria-label={open ? "Close Copilot chat" : "Open Copilot chat"}
+          aria-expanded={open}
+          aria-controls="agent-helper-chat"
+          title="Copilot"
+          className="relative flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xl transition hover:scale-105"
+        >
+          <MessageCircle className="size-6" />
+          <span
+            aria-hidden="true"
+            className="absolute bottom-0.5 right-0.5 size-3 rounded-full border-2 border-background bg-emerald-500"
+          />
+        </button>
+      ) : null}
     </div>
   );
 }
