@@ -99,10 +99,9 @@ test("official method badges derive from the available connection methods", () =
     connectionMethodBadges({ provider: "telegram", available_methods: ["api_key"] }),
     ["API key / token"],
   );
-  assert.deepEqual(
-    connectionMethodBadges({ provider: "custom_mcp", available_methods: ["mcp"] }),
-    ["MCP"],
-  );
+  assert.deepEqual(connectionMethodBadges({ provider: "custom_mcp", available_methods: ["mcp"] }), [
+    "MCP",
+  ]);
   assert.deepEqual(
     connectionMethodBadges({ provider: "google_sheets", available_methods: ["oauth"] }),
     ["OAuth sign-in"],

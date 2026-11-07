@@ -955,9 +955,9 @@ function ConnectionsPage() {
               {managedApp?.display_name} accounts
             </DialogTitle>
             <DialogDescription>
-              Manage each account separately. Adding an account keeps your existing
-              connections. Apps that officially support both methods offer a provider
-              sign-in and an API key or token.
+              Manage each account separately. Adding an account keeps your existing connections.
+              Apps that officially support both methods offer a provider sign-in and an API key or
+              token.
             </DialogDescription>
           </DialogHeader>
           {managedConnections.length > 0 ? (
