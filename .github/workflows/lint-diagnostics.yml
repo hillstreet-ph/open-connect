@@ -11,6 +11,7 @@ on:
 
 permissions:
   actions: read
+  checks: read
   contents: write
 
 jobs:
@@ -27,6 +28,14 @@ jobs:
           {
             echo "=== annotations for run $RUN_ID ==="
             gh api "repos/$REPO/actions/runs/$RUN_ID/attempts/1/annotations" || echo "annotations call failed"
+            echo "=== jobs for run $RUN_ID ==="
+            gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" || echo "jobs call failed"
+            echo "=== check run annotations ==="
+            cs=$(gh api "repos/$REPO/actions/runs/$RUN_ID" --jq .check_suite_id)
+            for cr in $(gh api "repos/$REPO/check-suites/$cs/check-runs" --jq '.[].id'); do
+              echo "--- check run $cr ---"
+              gh api "repos/$REPO/check-runs/$cr/annotations" || echo "cr annotations failed"
+            done
             echo "=== run attempt detail ==="
             gh api "repos/$REPO/actions/runs/$RUN_ID" || echo "run call failed"
           } > diag-output.txt 2>&1
