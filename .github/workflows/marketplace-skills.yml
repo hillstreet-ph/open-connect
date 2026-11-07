@@ -46,25 +46,45 @@ jobs:
           import sys
           from pathlib import Path
 
+          roots = [
+              Path("skills"),
+              Path("skills/vendor"),
+              Path("skills/vendor/openclaw/skills"),
+              Path("skills/vendor/openclaw/agents"),
+              Path("skills/vendor/openhands-extensions"),
+          ]
           errors = []
           skills = []
-          for skill_md in sorted(Path("skills").rglob("SKILL.md")):
-              folder = skill_md.parent
-              text = skill_md.read_text(encoding="utf-8-sig")
-              match = re.match(r"^---\r?\n([\s\S]*?)\r?\n---", text)
-              if not match:
-                  errors.append(f"{skill_md}: missing YAML frontmatter")
+          seen = set()
+          for root in roots:
+              if not root.is_dir():
+                  errors.append(f"publish root missing from repository: {root}")
                   continue
-              frontmatter = match.group(1)
-              name = (re.search(r"^name:\s*(.+)$", frontmatter, re.M) or [None, ""])[1].strip().strip(chr(34) + chr(39))
-              description = (re.search(r"^description:\s*(.+)$", frontmatter, re.M) or [None, ""])[1].strip().strip(chr(34) + chr(39))
-              if not name:
-                  errors.append(f"{skill_md}: missing name")
-              elif not re.match(r"^[a-z][a-z0-9_-]*$", name):
-                  errors.append(f"{skill_md}: invalid skill name: {name}")
-              if not description:
-                  errors.append(f"{skill_md}: missing description")
-              skills.append(folder.name)
+              for child in sorted(root.iterdir()):
+                  skill_md = child / "SKILL.md"
+                  if not (child.is_dir() and skill_md.is_file()):
+                      continue
+                  resolved = skill_md.resolve()
+                  if resolved in seen:
+                      continue
+                  seen.add(resolved)
+                  text = skill_md.read_text(encoding="utf-8-sig")
+                  match = re.match(r"^---\r?\n([\s\S]*?)\r?\n---", text)
+                  if not match:
+                      errors.append(f"{skill_md}: missing YAML frontmatter")
+                      continue
+                  frontmatter = match.group(1)
+                  found = re.search(r"^name:\s*(.+)$", frontmatter, re.M)
+                  name = found.group(1).strip().strip(chr(34) + chr(39)) if found else ""
+                  found = re.search(r"^description:\s*(.+)$", frontmatter, re.M)
+                  description = found.group(1).strip().strip(chr(34) + chr(39)) if found else ""
+                  if not name:
+                      errors.append(f"{skill_md}: missing name")
+                  elif not re.match(r"^[a-z0-9][a-z0-9_-]*$", name):
+                      errors.append(f"{skill_md}: invalid skill name: {name}")
+                  if not description:
+                      errors.append(f"{skill_md}: missing description")
+                  skills.append(child.name)
 
           sidecar = Path("skills.sh.json")
           if sidecar.is_file():
@@ -74,7 +94,7 @@ jobs:
                       if member not in skills:
                           errors.append(f"skills.sh.json references unknown skill: {member}")
 
-          print(f"Validated {len(skills)} skills: {', '.join(skills)}")
+          print(f"Validated {len(skills)} publishable skills: {', '.join(skills)}")
           if errors:
               for error in errors:
                   print(f"::error::{error}")
