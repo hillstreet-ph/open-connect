@@ -41,3 +41,5 @@ This catalog is generated from the operator's install requests and is inert unti
 Failed validation runs do not change any entry state; entries stay inert metadata until each review completes.
 
 Requests are recorded verbatim, including redundant and duplicate lines, before consolidation.
+
+Consolidated entries keep the slug of their first occurrence.
