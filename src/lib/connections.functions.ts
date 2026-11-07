@@ -394,6 +394,53 @@ export const listConnectionCatalog = createServerFn({ method: "GET" }).handler(a
 export const listAppConnections = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    // Composio is the connector manager: hosted sign-ins and dashboard
+    // authorizations import automatically when the user's connections are
+    // listed, without a manual sync step. Best-effort and user-scoped.
+    try {
+      if (process.env["COMPOSIO_API_KEY"]?.trim()) {
+        const { autoSyncDue, buildSyncCatalog } = await import("@/lib/composio-auto-sync.server");
+        if (autoSyncDue(context.userId)) {
+          const { listOwnedManagedConnections, listComposioToolkits } =
+            await import("@/lib/managed-connectors.server");
+          const [accounts, toolkits] = await Promise.all([
+            listOwnedManagedConnections(context.userId),
+            listComposioToolkits(),
+          ]);
+          const saved: Array<{
+            provider: string;
+            provider_account_id: string | null;
+            credential_reference: string | null;
+          }> = [];
+          for (let offset = 0; ; offset += 200) {
+            const { data: page, error: pageError } = await context.supabase
+              .from("app_connections")
+              .select("provider,provider_account_id,credential_reference")
+              .eq("user_id", context.userId)
+              .order("id")
+              .range(offset, offset + 199);
+            if (pageError) break;
+            saved.push(...(page ?? []));
+            if ((page?.length ?? 0) < 200) break;
+          }
+          const plan = composioImportBatches(
+            context.userId,
+            accounts,
+            saved,
+            buildSyncCatalog(CATALOG, toolkits),
+          );
+          for (const records of plan.batches) {
+            const { error: insertError } = await context.supabase
+              .from("app_connections")
+              .insert(records);
+            // 23505 means another sync already imported these accounts.
+            if (insertError && insertError.code !== "23505") break;
+          }
+        }
+      }
+    } catch {
+      // Automatic broker sync is best-effort; the admin sync remains available.
+    }
     const { data, error } = await context.supabase
       .from("app_connections")
       .select(

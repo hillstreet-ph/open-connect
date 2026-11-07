@@ -38,3 +38,16 @@ See docs/KNOWN_ISSUES.md — hub-internal open-tgate-mcp connection returns 500 
 - Zeabur MCP is now fully working end to end through the hub. A self-hosted MCP bridge (Cloudflare Worker zeabur-mcp-bridge, https://zeabur-mcp-bridge.tanauancharles1.workers.dev/mcp) exposes three tools (zeabur_graphql, zeabur_me, zeabur_projects) backed by the Zeabur public GraphQL API. The hub connections Zeabur MCP (custom_zeabur_mcp), zeabur (custom_zeabur) and Zeabur Bridge (custom_zeabur_bridge) were re-pointed at this endpoint with vault-backed bearer credentials; live tool calls verified (zeabur_me returned the authenticated account, and a redeploy of the open-connect service was triggered through the bridge).
 - open-teleset is now fully working end to end through the hub. The canonical remote MCP endpoint is https://app.open-teleset.site/mcp (Bearer, ott_ API key). The hub connection open-teleset (custom_open_teleset) uses it; live tool call verified (authenticated_identity returned the administrator identity).
 - The remaining Composio custom-toolkit sync failures are dashboard-only edits: update each custom toolkit entry URL to the bridge endpoint above (including /mcp) with the matching bearer token, then retry tool sync. Custom MCP registration has no public API.
+
+
+## Automatic broker sync (2026-11-07)
+
+Composio is the manager of hosted connectors, and synchronization is now automatic. When a signed-in user opens the connections view, Open-Connect performs a best-effort, user-scoped import of that user's new ACTIVE Composio connected accounts (see src/lib/composio-auto-sync.server.ts and the listAppConnections handler in src/lib/connections.functions.ts):
+
+- One automatic pass per user per 5-minute interval, so normal navigation cannot amplify broker usage.
+- Only accounts the broker confirms as owned and ACTIVE are imported, using the same record shape as the manual sync (broker: composio, mode: managed_oauth, credentials kept inside the broker).
+- Inserts are idempotent: accounts already present are skipped, and a concurrent import (unique-violation 23505) is tolerated rather than retried.
+- Failures are non-fatal: the listing still renders, and the explicit admin sync (syncComposioConnections) remains available for organization-wide reconciliation.
+- The automatic pass is skipped entirely when COMPOSIO_API_KEY is not configured, so environments without the broker keep today's behavior.
+
+The natural sign-in flow is unchanged and now completes without manual steps: Sign in with <App> starts the Composio-hosted OAuth authorization, the user approves the provider permissions, and returning to /connections verifies the pending account automatically.
