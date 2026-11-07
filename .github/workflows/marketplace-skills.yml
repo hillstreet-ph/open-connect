@@ -33,6 +33,11 @@ on:
         required: false
         type: boolean
         default: false
+      clawhub_token:
+        description: Optional ClawHub API token for this run. Falls back to the CLAWHUB_TOKEN repository secret when empty.
+        required: false
+        type: string
+        default: ''
 
 jobs:
   validate:
@@ -120,7 +125,7 @@ jobs:
       topics: ${{ inputs.topics }}
       skill_path: ${{ inputs.skill_path }}
     secrets:
-      clawhub_token: ${{ secrets.CLAWHUB_TOKEN }}
+      clawhub_token: ${{ inputs.clawhub_token || secrets.CLAWHUB_TOKEN }}
 
   publish-vendor-root:
     needs: validate
@@ -136,7 +141,7 @@ jobs:
       categories: ${{ inputs.categories }}
       topics: ${{ inputs.topics }}
     secrets:
-      clawhub_token: ${{ secrets.CLAWHUB_TOKEN }}
+      clawhub_token: ${{ inputs.clawhub_token || secrets.CLAWHUB_TOKEN }}
 
   publish-vendor-openclaw:
     name: Publish vendored OpenClaw skills and agents
@@ -156,7 +161,7 @@ jobs:
       - name: Authenticate ClawHub
         run: clawhub login --token "$CLAWHUB_TOKEN"
         env:
-          CLAWHUB_TOKEN: ${{ secrets.CLAWHUB_TOKEN }}
+          CLAWHUB_TOKEN: ${{ inputs.clawhub_token || secrets.CLAWHUB_TOKEN }}
       - name: Publish vendored OpenClaw skills and agents
         env:
           DRY_RUN: ${{ inputs.dry_run }}
@@ -209,4 +214,4 @@ jobs:
       categories: ${{ inputs.categories }}
       topics: ${{ inputs.topics }}
     secrets:
-      clawhub_token: ${{ secrets.CLAWHUB_TOKEN }}
+      clawhub_token: ${{ inputs.clawhub_token || secrets.CLAWHUB_TOKEN }}

@@ -71,3 +71,12 @@ hermes skills publish skills/open-connect-control --to github --repo hillstreet-
 ## Optional OpenHands skills
 
 The vendored `skills/vendor/openhands-extensions/uv` skill is rejected by the ClawHub publish CLI in its current form, so the `publish-vendor-openhands` job only runs when the dispatch input `include_openhands` is enabled. To retry it later, run "Marketplace skill publish" with `include_openhands` on (or use `skill_path: skills/vendor/openhands-extensions/uv`); the exact ClawHub error is printed in that job log.
+
+## Providing the ClawHub token
+
+Real publishing requires a ClawHub API token. Two options exist:
+
+1. Repository secret (recommended): add the token under Settings, Secrets and variables, Actions as CLAWHUB_TOKEN. All publish jobs then work with no further input.
+2. Dispatch input: run "Marketplace skill publish" and fill the optional clawhub_token input. The value is used for that run only and is never printed in logs; the workflow falls back to the repository secret when the input is empty.
+
+The token is never committed to the repository. GitHub dispatch inputs are visible only to users with write access to the repository.
