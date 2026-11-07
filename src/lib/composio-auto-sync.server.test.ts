@@ -39,9 +39,12 @@ test("curated catalog entries win over toolkit labels and both are merged", () =
 
 test("empty inputs and duplicate slugs stay bounded and deterministic", () => {
   assert.deepEqual(buildSyncCatalog([], []), []);
-  const catalog = buildSyncCatalog([], [
-    { slug: "same", name: "first" },
-    { slug: "same", name: "second" },
-  ]);
+  const catalog = buildSyncCatalog(
+    [],
+    [
+      { slug: "same", name: "first" },
+      { slug: "same", name: "second" },
+    ],
+  );
   assert.deepEqual(catalog, [{ slug: "same", name: "second" }]);
 });

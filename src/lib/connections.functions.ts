@@ -399,13 +399,10 @@ export const listAppConnections = createServerFn({ method: "GET" })
     // listed, without a manual sync step. Best-effort and user-scoped.
     try {
       if (process.env["COMPOSIO_API_KEY"]?.trim()) {
-        const { autoSyncDue, buildSyncCatalog } = await import(
-          "@/lib/composio-auto-sync.server"
-        );
+        const { autoSyncDue, buildSyncCatalog } = await import("@/lib/composio-auto-sync.server");
         if (autoSyncDue(context.userId)) {
-          const { listOwnedManagedConnections, listComposioToolkits } = await import(
-            "@/lib/managed-connectors.server"
-          );
+          const { listOwnedManagedConnections, listComposioToolkits } =
+            await import("@/lib/managed-connectors.server");
           const [accounts, toolkits] = await Promise.all([
             listOwnedManagedConnections(context.userId),
             listComposioToolkits(),
