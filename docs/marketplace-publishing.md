@@ -52,8 +52,7 @@ Publishing is automated through the [marketplace skill publish workflow](../.git
 3. Set the owner to the ClawHub publisher handle (`hillstreet-ph`) when publishing to an organization owner.
 4. Categories and topics apply to every skill in the run; use skill_path to publish a single skill.
 
-Vendored skills whose slugs already exist on ClawHub under another owner will be reported in the run output and skipped by the registry; the first-party publish job is unaffected.
-ClawHub reserves certain slug namespaces: the slug 'clawhub' outright, and any slug starting with 'openclaw-' or ending with '-clawd'. Because the registry derives the publish slug from the folder name, the vendored publish job passes an explicit override slug for those folders ('oc-' prefix, for example 'oc-testing'; 'oc-clawhub'; 'discord-clawd-agent'). Repository folder names and SKILL.md frontmatter stay unchanged, so Hermes installs and the vendored catalog are unaffected.
+Most vendored OpenClaw skill slugs (sag, tmux, notion, github, and similar) are already published on ClawHub by their upstream authors, so the registry rejects duplicate slugs. Every skill under skills/vendor/openclaw/skills therefore publishes under an explicit 'oc-' slug prefix (oc-sag, oc-tmux, oc-clawhub, and so on), which keeps the entries owned by hillstreet-ph without touching upstream listings. ClawHub also reserves certain slug namespaces ('clawhub' outright, any slug starting with 'openclaw-', and slugs ending with '-clawd'), which the same override handles. Vendored OpenClaw agents keep their folder-name slugs because none of them collide. Repository folder names and SKILL.md frontmatter stay unchanged, so Hermes installs and the vendored catalog are unaffected.
 
 
 ### Validation
