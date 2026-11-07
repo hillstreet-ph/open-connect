@@ -8,7 +8,12 @@ import {
   startRunWithLiveView,
   summarizeRun,
   requiresBrowserSignIn,
+  normalizeWebSearch,
+  normalizeWebFetch,
+  summarizeFetch,
   TINYFISH_BROWSER_API,
+  TINYFISH_FETCH_API,
+  TINYFISH_SEARCH_API,
   type TinyFishRun,
 } from "./tinyfish";
 import { CLOUD_BROWSER_FRAME_DOMAINS, CLOUD_BROWSER_WIDGET_HTML } from "./cloud-browser-widget";
@@ -345,3 +350,91 @@ function widgetScript(): string {
   if (!script) throw new Error("Widget script missing");
   return script;
 }
+
+describe("web search and fetch", () => {
+  test("search validates input and sends only the API key header to the search host", async () => {
+    expect(() => normalizeWebSearch({ query: "  " })).toThrow("Enter a search query");
+    expect(() => normalizeWebSearch({ query: "x", location: "usa" })).toThrow("two-letter");
+    expect(() => normalizeWebSearch({ query: "x", recency_minutes: 0 })).toThrow("recency");
+    expect(() => normalizeWebSearch({ query: "x", page: 11 })).toThrow("page");
+    const input = normalizeWebSearch({
+      query: "World Cup",
+      location: "us",
+      language: "en",
+      domain_type: "news",
+      include_domains: "fifa.com, bbc.com",
+      unknown: "dropped",
+    });
+    expect(input).toEqual({
+      query: "World Cup",
+      location: "US",
+      language: "en",
+      domain_type: "news",
+      include_domains: "fifa.com,bbc.com",
+    });
+    const { send, calls } = mockFetch({
+      [TINYFISH_SEARCH_API]: () => ({
+        query: "World Cup",
+        results: [{ position: 1, title: "News", url: "https://fifa.com", snippet: "s" }],
+      }),
+    });
+    const result = await createTinyFishClient(KEY, send).search(input);
+    expect(result.results[0]?.url).toBe("https://fifa.com");
+    const url = new URL(calls[0]!.url);
+    expect(url.origin).toBe(TINYFISH_SEARCH_API);
+    expect(url.searchParams.get("query")).toBe("World Cup");
+    expect(url.searchParams.get("domain_type")).toBe("news");
+    expect((calls[0]!.init.headers as Record<string, string>)["X-API-Key"]).toBe(KEY);
+  });
+
+  test("fetch accepts public http(s) URLs only and bounds the batch", async () => {
+    expect(() => normalizeWebFetch({ urls: [] })).toThrow("at least one");
+    expect(() => normalizeWebFetch({ urls: Array(11).fill("https://a.com") })).toThrow(
+      "at most 10",
+    );
+    for (const bad of [
+      "ftp://a.com",
+      "http://localhost:3000",
+      "http://127.0.0.1",
+      "http://10.0.0.2",
+      "http://192.168.1.1",
+      "http://169.254.169.254/latest",
+      "http://[::1]/",
+      "https://user:pass@a.com",
+    ])
+      expect(() => normalizeWebFetch({ urls: [bad] })).toThrow();
+    expect(normalizeWebFetch({ url: "https://a.com/x", fresh: true })).toEqual({
+      urls: ["https://a.com/x"],
+      format: "markdown",
+      ttl: 0,
+    });
+    const { send, calls } = mockFetch({
+      [TINYFISH_FETCH_API]: () => ({
+        results: [{ url: "https://a.com/x", text: "hi" }],
+        errors: [],
+      }),
+    });
+    await createTinyFishClient(KEY, send).fetchUrls(
+      normalizeWebFetch({ urls: ["https://a.com/x"] }),
+    );
+    expect(calls[0]!.init.method).toBe("POST");
+    expect(JSON.parse(String(calls[0]!.init.body))).toEqual({
+      urls: ["https://a.com/x"],
+      format: "markdown",
+    });
+  });
+
+  test("fetched text is truncated and errors are normalised", () => {
+    const summary = summarizeFetch(
+      {
+        results: [{ url: "https://a.com", text: "x".repeat(50), title: "A" }],
+        errors: [{ url: "https://b.com", message: "timeout" }],
+      },
+      10,
+    );
+    expect(summary.results[0]!.truncated).toBe(true);
+    expect(summary.results[0]!.text.startsWith("xxxxxxxxxx")).toBe(true);
+    expect(summary.results[0]!.final_url).toBe("https://a.com");
+    expect(summary.errors).toEqual([{ url: "https://b.com", error: "timeout" }]);
+  });
+});

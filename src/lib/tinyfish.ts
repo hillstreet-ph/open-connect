@@ -1,10 +1,12 @@
 /**
  * TinyFish Web Agent REST client (https://docs.tinyfish.ai). Pure and
  * fetch-injectable so it runs in tests and on the server. The API key is only
- * ever sent to agent.tinyfish.ai in the X-API-Key header.
+ * ever sent to TinyFish API hosts (*.tinyfish.ai) in the X-API-Key header.
  */
 export const TINYFISH_API = "https://agent.tinyfish.ai";
 export const TINYFISH_BROWSER_API = "https://api.browser.tinyfish.ai";
+export const TINYFISH_SEARCH_API = "https://api.search.tinyfish.ai";
+export const TINYFISH_FETCH_API = "https://api.fetch.tinyfish.ai";
 
 export const TINYFISH_PROVIDERS = ["tinyfish", "custom_tinyfish_mcp"] as const;
 
@@ -181,6 +183,163 @@ export function summarizeRun(run: TinyFishRun) {
   };
 }
 
+export type WebSearchInput = {
+  query: string;
+  location?: string;
+  language?: string;
+  domain_type?: "web" | "news" | "research_paper";
+  include_domains?: string;
+  exclude_domains?: string;
+  recency_minutes?: number;
+  page?: number;
+};
+
+export type WebSearchResult = {
+  position: number;
+  title: string;
+  url: string;
+  snippet: string;
+  site_name?: string;
+  date?: string;
+};
+
+const COUNTRY = /^[A-Z]{2}$/;
+const LANGUAGE = /^[a-z]{2}(?:-[A-Za-z]{2})?$/;
+const DOMAIN_LIST = /^[a-z0-9.-]+(?:,[a-z0-9.-]+){0,19}$/;
+
+/** Validate and normalise a TinyFish Search request; unknown fields are dropped. */
+export function normalizeWebSearch(input: Record<string, unknown>): WebSearchInput {
+  const query = String(input["query"] ?? "").trim();
+  if (!query) throw new Error("Enter a search query.");
+  if (query.length > 500) throw new Error("Search query must be 500 characters or fewer.");
+  const out: WebSearchInput = { query };
+  const location = String(input["location"] ?? "")
+    .trim()
+    .toUpperCase();
+  if (location) {
+    if (!COUNTRY.test(location)) throw new Error("Location must be a two-letter country code.");
+    out.location = location;
+  }
+  const language = String(input["language"] ?? "").trim();
+  if (language) {
+    if (!LANGUAGE.test(language)) throw new Error("Language must be a code such as en or pt-BR.");
+    out.language = language;
+  }
+  const domainType = input["domain_type"];
+  if (domainType === "web" || domainType === "news" || domainType === "research_paper")
+    out.domain_type = domainType;
+  for (const field of ["include_domains", "exclude_domains"] as const) {
+    const value = String(input[field] ?? "")
+      .toLowerCase()
+      .replace(/\s+/g, "");
+    if (!value) continue;
+    if (!DOMAIN_LIST.test(value)) throw new Error(`${field} must be comma-separated domains.`);
+    out[field] = value;
+  }
+  if (input["recency_minutes"] !== undefined && input["recency_minutes"] !== null) {
+    const minutes = Math.trunc(Number(input["recency_minutes"]));
+    if (!Number.isFinite(minutes) || minutes < 1 || minutes > 5_256_000)
+      throw new Error("recency_minutes must be between 1 and 5256000.");
+    out.recency_minutes = minutes;
+  }
+  if (input["page"] !== undefined && input["page"] !== null) {
+    const page = Math.trunc(Number(input["page"]));
+    if (!Number.isFinite(page) || page < 0 || page > 10) throw new Error("page must be 0-10.");
+    out.page = page;
+  }
+  return out;
+}
+
+export function webSearchQuery(input: WebSearchInput): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(input))
+    if (value !== undefined && value !== "") params.set(key, String(value));
+  return params.toString();
+}
+
+export type WebFetchInput = {
+  urls: string[];
+  format: "markdown" | "html";
+  links?: boolean;
+  ttl?: number;
+};
+
+/** Public http(s) URLs only; TinyFish also rejects private/metadata targets server-side. */
+export function normalizeWebFetch(input: Record<string, unknown>): WebFetchInput {
+  const raw = Array.isArray(input["urls"])
+    ? input["urls"]
+    : input["url"] !== undefined
+      ? [input["url"]]
+      : [];
+  if (raw.length === 0) throw new Error("Provide at least one URL.");
+  if (raw.length > 10) throw new Error("Fetch at most 10 URLs at a time.");
+  const urls = raw.map((value) => {
+    let url: URL;
+    try {
+      url = new URL(String(value ?? "").trim());
+    } catch {
+      throw new Error("Each URL must be a valid http(s) URL.");
+    }
+    if (url.protocol !== "https:" && url.protocol !== "http:")
+      throw new Error("Each URL must use http or https.");
+    if (url.username || url.password) throw new Error("URLs must not contain credentials.");
+    const host = url.hostname.toLowerCase();
+    if (
+      host === "localhost" ||
+      host.endsWith(".localhost") ||
+      host.endsWith(".internal") ||
+      /^(?:127|10|0)\./.test(host) ||
+      /^192\.168\./.test(host) ||
+      /^172\.(?:1[6-9]|2\d|3[01])\./.test(host) ||
+      /^169\.254\./.test(host) ||
+      host.startsWith("[")
+    )
+      throw new Error("Private and local addresses cannot be fetched.");
+    return url.toString();
+  });
+  const out: WebFetchInput = { urls, format: input["format"] === "html" ? "html" : "markdown" };
+  if (input["links"] === true) out.links = true;
+  if (input["fresh"] === true) out.ttl = 0;
+  return out;
+}
+
+export type WebFetchResult = {
+  url: string;
+  final_url?: string;
+  title?: string | null;
+  description?: string | null;
+  text?: string | null;
+  links?: string[];
+};
+
+/** Bound fetched page text so MCP results stay within client limits. */
+export function summarizeFetch(
+  payload: {
+    results?: WebFetchResult[];
+    errors?: Array<{ url?: string; error?: string; message?: string }>;
+  },
+  maxChars = 20_000,
+) {
+  return {
+    results: (payload.results ?? []).map((result) => {
+      const text = typeof result.text === "string" ? result.text : "";
+      return {
+        url: result.url,
+        final_url: result.final_url ?? result.url,
+        title: result.title ?? null,
+        description: result.description ?? null,
+        text: text.length > maxChars ? `${text.slice(0, maxChars)}\n\n[truncated]` : text,
+        truncated: text.length > maxChars,
+        ...(result.links ? { links: result.links.slice(0, 200) } : {}),
+      };
+    }),
+    errors: (payload.errors ?? []).map((error) => ({
+      url: error.url ?? null,
+      error: error.error ?? error.message ?? "fetch_failed",
+    })),
+  };
+}
+
 export function createTinyFishClient(apiKey: string, send: typeof fetch = fetch) {
   if (!apiKey || apiKey.length < 8) throw new Error("TinyFish API key is not configured.");
   async function request<T>(
@@ -276,6 +435,18 @@ export function createTinyFishClient(apiKey: string, send: typeof fetch = fetch)
       >(`/v1/profiles/${encodeURIComponent(id)}`);
     },
     getWallet: () => request<Record<string, unknown>>("/v1/wallet"),
+    search: (input: WebSearchInput) =>
+      request<{ query: string; results: WebSearchResult[]; total_results?: number; page?: number }>(
+        `/?${webSearchQuery(input)}`,
+        {},
+        TINYFISH_SEARCH_API,
+        30_000,
+      ),
+    fetchUrls: (input: WebFetchInput) =>
+      request<{
+        results?: WebFetchResult[];
+        errors?: Array<{ url?: string; error?: string; message?: string }>;
+      }>("", { method: "POST", body: JSON.stringify(input) }, TINYFISH_FETCH_API, 120_000),
     createBrowserSession: (input: { url?: string; timeout_seconds?: number }) =>
       request<{ session_id: string; cdp_url?: string; base_url?: string }>(
         "/",
