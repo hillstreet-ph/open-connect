@@ -110,7 +110,7 @@ test("canonical URLs follow the documented resolution rules", () => {
       );
     }
   }
-  assert.ok(registry.resolution.clawhub_registry, "resolution rules must be documented");
+  assert.ok(registry.resolution["clawhub_registry"], "resolution rules must be documented");
 });
 
 test("duplicate install requests are consolidated into one catalog entry", () => {
