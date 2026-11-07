@@ -77,6 +77,13 @@ const COMPATIBLE_MODEL_ENDPOINTS: Record<string, string> = Object.fromEntries(
 
 const ANTHROPIC_CATALOG_BASE = "https://api.anthropic.com/v1";
 
+/** Claude subscription (OAuth) accounts are routed through the Anthropic OpenAI-compatible layer. */
+function isSubscriptionConnection(metadata: unknown): boolean {
+  if (!metadata || typeof metadata !== "object") return false;
+  const record = metadata as Record<string, unknown>;
+  return record["mode"] === "oauth_subscription" && record["subscription"] === true;
+}
+
 /** Resolve connected OpenAI-compatible model providers for this user only. */
 export async function savedModelUpstreams(
   userId: string,
@@ -100,8 +107,11 @@ export async function savedModelUpstreams(
       continue;
     }
     // The native Anthropic API is not OpenAI-compatible; only a saved custom
-    // endpoint (a router or proxy serving Claude) can serve /v1 requests.
-    if (connection.provider === "anthropic") {
+    // endpoint (a router or proxy serving Claude) or a Claude subscription
+    // account (routed through the Anthropic OpenAI-compatible layer) can
+    // serve /v1 requests.
+    const subscriptionAccount = isSubscriptionConnection(connection.metadata);
+    if (connection.provider === "anthropic" && !subscriptionAccount) {
       try {
         if (
           customGatewayEndpoint(connection.metadata, ANTHROPIC_CATALOG_BASE) ===
@@ -129,6 +139,8 @@ export async function savedModelUpstreams(
     let upstreamBaseUrl: string;
     if (connection.provider === "litellm") {
       upstreamBaseUrl = endpointForLiteLlm(connection.metadata);
+    } else if (connection.provider === "anthropic" && subscriptionAccount) {
+      upstreamBaseUrl = ANTHROPIC_CATALOG_BASE;
     } else if (connection.provider === "anthropic") {
       try {
         upstreamBaseUrl = customGatewayEndpoint(connection.metadata, ANTHROPIC_CATALOG_BASE);
@@ -156,6 +168,10 @@ export async function savedModelUpstreams(
         Authorization: `Bearer ${credential}`,
         "Content-Type": "application/json",
         ...(connection.provider === "openrouter" ? { "X-Title": "Open-Connect" } : {}),
+        // Claude subscription OAuth tokens require the Anthropic OAuth beta header.
+        ...(connection.provider === "anthropic" && subscriptionAccount
+          ? { "anthropic-beta": "oauth-2025-04-20" }
+          : {}),
       },
     });
   }

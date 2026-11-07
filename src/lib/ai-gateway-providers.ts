@@ -89,6 +89,24 @@ export const AI_GATEWAY_PROVIDERS = [
     official: true,
   },
   {
+    id: "dashscope",
+    name: "Alibaba Cloud Model Studio",
+    baseUrl: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+    official: true,
+  },
+  {
+    id: "yolo_auto",
+    name: "Yolo-Auto (Qwen3.8)",
+    baseUrl: "https://yolo-auto.com/v1",
+    official: true,
+  },
+  {
+    id: "siliconflow",
+    name: "SiliconFlow",
+    baseUrl: "https://api.siliconflow.com/v1",
+    official: true,
+  },
+  {
     id: "litellm",
     name: "Custom (OpenAI-compatible)",
     baseUrl: "",
