@@ -33,3 +33,7 @@ creating a second curated row.
 `src/lib/openclaw-install-requests.test.ts` enforces the registry invariants in CI:
 unique `open-oc-` slugs, exact install-command syntax, documented source resolution,
 HTTPS-only canonical URLs, metadata-only policy flags, and consolidated duplicates.
+
+## Review gate
+
+This catalog is generated from the operator's install requests and is inert until each entry passes license verification and security review.
