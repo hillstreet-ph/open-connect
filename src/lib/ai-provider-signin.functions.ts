@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 /**
@@ -79,10 +80,8 @@ function decodeJwtPayload(token: string): Record<string, unknown> {
   }
 }
 
-type PendingContext = { userId: string; supabase: any };
-
 async function upsertPendingRow(
-  context: PendingContext,
+  context: { userId: string; supabase: SupabaseClient },
   provider: SignInProvider,
   config: SignInConfig,
   metadata: Record<string, unknown>,
@@ -113,7 +112,10 @@ async function upsertPendingRow(
   if (error) throw new Error(error.message);
 }
 
-async function findPendingRow(context: PendingContext, provider: SignInProvider) {
+async function findPendingRow(
+  context: { userId: string; supabase: SupabaseClient },
+  provider: SignInProvider,
+) {
   const { data: pending, error } = await context.supabase
     .from("app_connections")
     .select("id,metadata,credential_reference")
@@ -132,7 +134,7 @@ async function findPendingRow(context: PendingContext, provider: SignInProvider)
 }
 
 async function storeSubscriptionAccount(
-  context: PendingContext,
+  context: { userId: string; supabase: SupabaseClient },
   provider: SignInProvider,
   config: SignInConfig,
   pending: NonNullable<Awaited<ReturnType<typeof findPendingRow>>>,
