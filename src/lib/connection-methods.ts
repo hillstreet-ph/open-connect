@@ -66,3 +66,6 @@ export function availableConnectionMethods(input: {
   if (keyMethod) methods.push("api_key");
   return methods;
 }
+
+// Apps that officially accept API keys or tokens expose them as an equal, first-class
+// alternative to hosted sign-in, so users are never locked into a single method.
