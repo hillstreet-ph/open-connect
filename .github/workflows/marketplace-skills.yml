@@ -33,6 +33,11 @@ on:
         required: false
         type: boolean
         default: false
+      only_remaining:
+        description: Publish only the five vendored skills whose first real publish failed (oc-blucli, oc-clawhub, oc-eightctl, oc-nano-pdf, oc-openai-whisper).
+        required: false
+        type: boolean
+        default: false
       clawhub_token:
         description: Optional ClawHub API token for this run. Falls back to the CLAWHUB_TOKEN repository secret when empty.
         required: false
@@ -113,6 +118,7 @@ jobs:
 
   publish-first-party:
     needs: validate
+    if: ${{ !inputs.only_remaining }}
     permissions:
       contents: read
       id-token: write
@@ -129,7 +135,7 @@ jobs:
 
   publish-vendor-root:
     needs: validate
-    if: ${{ inputs.skill_path == '' }}
+    if: ${{ inputs.skill_path == '' && !inputs.only_remaining }}
     permissions:
       contents: read
       id-token: write
@@ -146,7 +152,7 @@ jobs:
   publish-vendor-openclaw:
     name: Publish vendored OpenClaw skills and agents
     needs: validate
-    if: ${{ inputs.skill_path == '' }}
+    if: ${{ inputs.skill_path == '' && !inputs.only_remaining }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -204,9 +210,56 @@ jobs:
           done
           exit "$fail"
 
+  publish-remaining-new-entries:
+    name: Publish remaining new vendored skills
+    needs: validate
+    if: ${{ inputs.only_remaining }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install ClawHub CLI
+        run: npm install -g clawhub
+      - name: Authenticate ClawHub
+        run: clawhub login --token "$CLAWHUB_TOKEN"
+        env:
+          CLAWHUB_TOKEN: ${{ inputs.clawhub_token || secrets.CLAWHUB_TOKEN }}
+      - name: Publish remaining new vendored skills
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+          OWNER: ${{ inputs.owner }}
+          CATEGORIES: ${{ inputs.categories }}
+          TOPICS: ${{ inputs.topics }}
+        run: |
+          set -uo pipefail
+          fail=0
+          for name in blucli clawhub eightctl nano-pdf openai-whisper; do
+            dir="skills/vendor/openclaw/skills/$name"
+            slug="oc-$name"
+            args=(--slug "$slug" --owner "$OWNER" --categories "$CATEGORIES" --topics "$TOPICS" --json --source-repo hillstreet-ph/open-connect --source-commit "$GITHUB_SHA" --source-path "$dir")
+            if [ "$DRY_RUN" = "true" ]; then
+              args+=(--dry-run)
+            fi
+            echo "Publishing $dir as $slug"
+            if out=$(clawhub skill publish "$dir" "${args[@]}" 2>&1); then
+              echo "$out"
+            else
+              echo "$out" || true
+              flat="${out//$'\n'/ | }"
+              echo "::error::Publish failed for $slug: $flat"
+              fail=1
+            fi
+          done
+          exit "$fail"
+
   publish-vendor-openhands:
     needs: validate
-    if: ${{ inputs.skill_path == '' && inputs.include_openhands }}
+    if: ${{ inputs.skill_path == '' && inputs.include_openhands && !inputs.only_remaining }}
     permissions:
       contents: read
       id-token: write
