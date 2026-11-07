@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   authForProtocol,
   connectionLogin,
+  connectionMethodBadges,
   defaultConnectorAuth,
   connectionUsesBrowserLogin,
   connectionReconnectReady,
@@ -87,4 +88,24 @@ test("custom MCP OAuth reconnect uses its own discovery instead of catalog OAuth
     connectionReconnectReady({ provider: "cloudflare", browser_login: false }, false),
     true,
   );
+});
+
+test("official method badges derive from the available connection methods", () => {
+  assert.deepEqual(
+    connectionMethodBadges({ provider: "github", available_methods: ["oauth", "api_key"] }),
+    ["OAuth sign-in", "API key / token"],
+  );
+  assert.deepEqual(
+    connectionMethodBadges({ provider: "telegram", available_methods: ["api_key"] }),
+    ["API key / token"],
+  );
+  assert.deepEqual(
+    connectionMethodBadges({ provider: "custom_mcp", available_methods: ["mcp"] }),
+    ["MCP"],
+  );
+  assert.deepEqual(
+    connectionMethodBadges({ provider: "google_sheets", available_methods: ["oauth"] }),
+    ["OAuth sign-in"],
+  );
+  assert.deepEqual(connectionMethodBadges({ provider: "unknown" }), []);
 });
