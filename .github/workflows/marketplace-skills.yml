@@ -38,11 +38,6 @@ on:
         required: false
         type: boolean
         default: false
-      clawhub_token:
-        description: Optional ClawHub API token for this run. Falls back to the CLAWHUB_TOKEN repository secret when empty.
-        required: false
-        type: string
-        default: ''
 
 jobs:
   validate:
