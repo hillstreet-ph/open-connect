@@ -26,7 +26,7 @@ jobs:
         run: |
           {
             echo "# lint"
-            bun run lint 2>&1 | tail -c 4000 || true
+            bunx eslint . --quiet 2>&1 | tail -c 4000 || true
             echo ""
             echo "# typecheck"
             bun run typecheck 2>&1 | tail -c 3000 || true
