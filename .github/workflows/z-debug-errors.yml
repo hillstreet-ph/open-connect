@@ -1,7 +1,7 @@
 name: Z debug lint errors
 
 on:
-  push:
+  workflow_dispatch:
 
 permissions:
   contents: write

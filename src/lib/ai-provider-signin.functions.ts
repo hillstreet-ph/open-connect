@@ -212,7 +212,7 @@ async function storeSubscriptionAccount(
       .eq("status", "pending");
   }
   const oldSecretId = matching?.credential_reference?.match(
-    /^credential:\/\/[^\/]+\/([0-9a-f-]{36})$/i,
+    /^credential:\/\/[^/]+\/([0-9a-f-]{36})$/i,
   )?.[1];
   if (oldSecretId && oldSecretId !== secretId) {
     await context.supabase.rpc("delete_credential_secret", { p_id: oldSecretId });
