@@ -37,3 +37,5 @@ HTTPS-only canonical URLs, metadata-only policy flags, and consolidated duplicat
 ## Review gate
 
 This catalog is generated from the operator's install requests and is inert until each entry passes license verification and security review.
+
+Failed validation runs do not change any entry state; entries stay inert metadata until each review completes.
