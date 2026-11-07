@@ -28,6 +28,11 @@ on:
         required: false
         type: string
         default: ''
+      include_openhands:
+        description: Also publish skills/vendor/openhands-extensions. Off by default because the vendored uv skill is rejected by ClawHub in its current form.
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   validate:
@@ -167,7 +172,7 @@ jobs:
 
   publish-vendor-openhands:
     needs: validate
-    if: ${{ inputs.skill_path == '' }}
+    if: ${{ inputs.skill_path == '' && inputs.include_openhands }}
     permissions:
       contents: read
       id-token: write
