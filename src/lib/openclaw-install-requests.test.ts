@@ -73,7 +73,7 @@ test("every requested package records an exact openclaw install command", () => 
       `unknown source type: ${pkg.slug}`,
     );
     assert.equal(pkg.canonical_url === null, pkg.source_type === "openclaw_registry_package_name");
-    if (pkg.canonical_url) assert.match(pkg.canonical_url, /^https:///, `non-HTTPS url: ${pkg.slug}`);
+    if (pkg.canonical_url) assert.ok(pkg.canonical_url.startsWith("https://"), `non-HTTPS url: ${pkg.slug}`);
     assert.ok(
       ["low", "medium", "high", "critical"].includes(pkg.risk),
       `unknown risk: ${pkg.slug}`,
