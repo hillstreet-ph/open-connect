@@ -37,6 +37,12 @@ type Registry = {
     consolidated_into: string;
     reason: string;
   }>;
+  publisher_requests: Array<{
+    source_ref: string;
+    canonical_url: string;
+    state: string;
+    review_reason: string;
+  }>;
 };
 
 const registry = JSON.parse(
@@ -111,6 +117,32 @@ test("canonical URLs follow the documented resolution rules", () => {
     }
   }
   assert.ok(registry.resolution["clawhub_registry"], "resolution rules must be documented");
+});
+
+test("publisher page requests stay metadata-only and resolve at review", () => {
+  assert.ok(registry.publisher_requests.length >= 3, "expected the publisher page batch");
+  for (const request of registry.publisher_requests) {
+    assert.match(
+      request.source_ref,
+      /^[a-z0-9][a-z0-9-]*$/,
+      `bad publisher ref: ${request.source_ref}`,
+    );
+    assert.equal(
+      request.canonical_url,
+      `https://clawhub.ai/${request.source_ref}`,
+      `unresolved publisher page: ${request.source_ref}`,
+    );
+    assert.equal(
+      request.state,
+      "review_required",
+      `request must start in review: ${request.source_ref}`,
+    );
+    assert.ok(request.review_reason.length > 0, `missing review reason: ${request.source_ref}`);
+  }
+  assert.ok(
+    registry.resolution["clawhub_publisher"],
+    "publisher resolution rule must be documented",
+  );
 });
 
 test("duplicate install requests are consolidated into one catalog entry", () => {
