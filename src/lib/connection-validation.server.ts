@@ -322,7 +322,13 @@ export async function validateConnectionCredential(
     };
   }
 
-  if (setup.provider === "anthropic") {
+  // Native Anthropic validation applies only to the official API. A custom base
+  // URL on the Claude card is an OpenAI-compatible router or proxy and falls
+  // through to the OpenAI-compatible catalog probe below.
+  if (
+    setup.provider === "anthropic" &&
+    new URL(base(setup)).origin === "https://api.anthropic.com"
+  ) {
     const response = await checkedFetch(
       `${base(setup)}/models`,
       { headers: { "x-api-key": setup.apiKey, "anthropic-version": "2023-06-01" } },

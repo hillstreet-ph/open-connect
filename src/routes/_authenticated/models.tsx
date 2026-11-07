@@ -817,8 +817,9 @@ function ModelsPage() {
               </div>
               {provider.id === "anthropic" ? (
                 <p className="text-[11px] text-muted-foreground">
-                  Native Anthropic credential validation. Use an OpenAI-compatible router for Claude
-                  chat through /v1.
+                  Official base URL uses native Anthropic validation. Point the card at a custom
+                  OpenAI-compatible router or proxy serving Claude and it is validated and routed
+                  through /v1.
                 </p>
               ) : null}
               {provider.id === "openai" || provider.id === "anthropic" ? (
