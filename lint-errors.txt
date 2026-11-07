@@ -1,0 +1,10 @@
+# lint
+
+/home/runner/work/open-connect/open-connect/src/lib/ai-provider-signin.functions.ts
+  215:24  error  Unnecessary escape character: \/  no-useless-escape
+
+✖ 1 problem (1 error, 0 warnings)
+
+
+# typecheck
+$ tsc --noEmit
