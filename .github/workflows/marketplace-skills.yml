@@ -174,7 +174,7 @@ jobs:
           slug_for() {
             case "$1" in
               openclaw-*) printf 'oc-%s' "${1#openclaw-}" ;;
-              clawhub) printf 'oc-clawhub' ;;
+              clawhub) printf 'oc-clawhub-publisher' ;;
               discord-clawd) printf 'discord-clawd-agent' ;;
               *) printf '%s' "$1" ;;
             esac
