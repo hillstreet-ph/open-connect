@@ -52,7 +52,7 @@ export function toolkitConnectionMethods(authMethods: readonly string[]): Connec
 export function availableConnectionMethods(input: {
   provider: string;
   connectionMethod: string;
-  authMethods?: readonly string[];
+  authMethods?: readonly string[] | undefined;
 }): ConnectionMethodId[] {
   const provider = input.provider;
   if (provider === "custom_mcp") return ["mcp"];
