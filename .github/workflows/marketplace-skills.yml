@@ -138,37 +138,62 @@ jobs:
     secrets:
       clawhub_token: ${{ secrets.CLAWHUB_TOKEN }}
 
-  publish-vendor-openclaw-skills:
+  publish-vendor-openclaw:
+    name: Publish vendored OpenClaw skills and agents
     needs: validate
     if: ${{ inputs.skill_path == '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
     permissions:
       contents: read
-      id-token: write
-    uses: openclaw/clawhub/.github/workflows/skill-publish.yml@main
-    with:
-      root: skills/vendor/openclaw/skills
-      dry_run: ${{ inputs.dry_run }}
-      owner: ${{ inputs.owner }}
-      categories: ${{ inputs.categories }}
-      topics: ${{ inputs.topics }}
-    secrets:
-      clawhub_token: ${{ secrets.CLAWHUB_TOKEN }}
-
-  publish-vendor-openclaw-agents:
-    needs: validate
-    if: ${{ inputs.skill_path == '' }}
-    permissions:
-      contents: read
-      id-token: write
-    uses: openclaw/clawhub/.github/workflows/skill-publish.yml@main
-    with:
-      root: skills/vendor/openclaw/agents
-      dry_run: ${{ inputs.dry_run }}
-      owner: ${{ inputs.owner }}
-      categories: ${{ inputs.categories }}
-      topics: ${{ inputs.topics }}
-    secrets:
-      clawhub_token: ${{ secrets.CLAWHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install ClawHub CLI
+        run: npm install -g clawhub
+      - name: Authenticate ClawHub
+        run: clawhub login --token "$CLAWHUB_TOKEN"
+        env:
+          CLAWHUB_TOKEN: ${{ secrets.CLAWHUB_TOKEN }}
+      - name: Publish vendored OpenClaw skills and agents
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+          OWNER: ${{ inputs.owner }}
+          CATEGORIES: ${{ inputs.categories }}
+          TOPICS: ${{ inputs.topics }}
+        run: |
+          set -uo pipefail
+          fail=0
+          slug_for() {
+            case "$1" in
+              openclaw-*) printf 'oc-%s' "${1#openclaw-}" ;;
+              clawhub) printf 'oc-clawhub' ;;
+              discord-clawd) printf 'discord-clawd-agent' ;;
+              *) printf '%s' "$1" ;;
+            esac
+          }
+          publish() {
+            local dir="$1" slug
+            slug="$(slug_for "$(basename "$dir")")"
+            local args=(--slug "$slug" --owner "$OWNER" --categories "$CATEGORIES" --topics "$TOPICS" --json --source-repo hillstreet-ph/open-connect --source-commit "$GITHUB_SHA" --source-path "$dir")
+            if [ "$DRY_RUN" = "true" ]; then
+              args+=(--dry-run)
+            fi
+            echo "Publishing $dir as $slug"
+            if ! clawhub skill publish "$dir" "${args[@]}"; then
+              echo "::error::ClawHub publish failed for $dir (slug $slug)"
+              fail=1
+            fi
+          }
+          for root in skills/vendor/openclaw/skills skills/vendor/openclaw/agents; do
+            for dir in "$root"/*/; do
+              [ -f "${dir}SKILL.md" ] || continue
+              publish "${dir%/}"
+            done
+          done
+          exit "$fail"
 
   publish-vendor-openhands:
     needs: validate

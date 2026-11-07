@@ -30,7 +30,7 @@ openclaw skills install @hillstreet-ph/<skill-slug>
 
 ## Publish to ClawHub
 
-Publishing is automated through the [marketplace skill publish workflow](../.github/workflows/marketplace-skills.yml), which wraps ClawHub's official reusable skill-publish workflow. It covers every skill folder in this repository:
+Publishing is automated through the [marketplace skill publish workflow](../.github/workflows/marketplace-skills.yml). First-party and vendored root skills go through ClawHub's official reusable skill-publish workflow; the vendored OpenClaw folders are published by a dedicated job that drives the ClawHub CLI directly. It covers every skill folder in this repository:
 
 1. `skills/` root: the seven first-party Open-Connect skills.
 2. `skills/vendor/`: vendored root skills (nexu-open-design, openrouter-models).
@@ -53,6 +53,8 @@ Publishing is automated through the [marketplace skill publish workflow](../.git
 4. Categories and topics apply to every skill in the run; use skill_path to publish a single skill.
 
 Vendored skills whose slugs already exist on ClawHub under another owner will be reported in the run output and skipped by the registry; the first-party publish job is unaffected.
+ClawHub reserves certain slug namespaces: the slug 'clawhub' outright, and any slug starting with 'openclaw-' or ending with '-clawd'. Because the registry derives the publish slug from the folder name, the vendored publish job passes an explicit override slug for those folders ('oc-' prefix, for example 'oc-testing'; 'oc-clawhub'; 'discord-clawd-agent'). Repository folder names and SKILL.md frontmatter stay unchanged, so Hermes installs and the vendored catalog are unaffected.
+
 
 ### Validation
 
