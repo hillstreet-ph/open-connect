@@ -48,5 +48,6 @@ Composio is the manager of hosted connectors, and synchronization is now automat
 - Only accounts the broker confirms as owned and ACTIVE are imported, using the same record shape as the manual sync (broker: composio, mode: managed_oauth, credentials kept inside the broker).
 - Inserts are idempotent: accounts already present are skipped, and a concurrent import (unique-violation 23505) is tolerated rather than retried.
 - Failures are non-fatal: the listing still renders, and the explicit admin sync (syncComposioConnections) remains available for organization-wide reconciliation.
+- The automatic pass is skipped entirely when COMPOSIO_API_KEY is not configured, so environments without the broker keep today's behavior.
 
 The natural sign-in flow is unchanged and now completes without manual steps: Sign in with <App> starts the Composio-hosted OAuth authorization, the user approves the provider permissions, and returning to /connections verifies the pending account automatically.
