@@ -188,10 +188,7 @@ export async function resolveUserUpstreams(
     .from("app_connections")
     .select("provider,status,credential_reference,metadata")
     .eq("user_id", userId)
-    .in("provider", [
-      ...COMPATIBLE_GATEWAY_PROVIDERS.map((provider) => provider.id),
-      "anthropic",
-    ])
+    .in("provider", [...COMPATIBLE_GATEWAY_PROVIDERS.map((provider) => provider.id), "anthropic"])
     .eq("status", "connected")
     .order("created_at", { ascending: false });
   if (connectionError) throw new Error("Unable to read model connection.");

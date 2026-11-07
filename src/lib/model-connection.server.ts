@@ -9,10 +9,7 @@ export type SavedModelConnection = {
 
 export type SavedModelUpstream = {
   name:
-    | (typeof COMPATIBLE_GATEWAY_PROVIDERS)[number]["id"]
-    | "litellm"
-    | "anthropic"
-    | "cloudflare";
+    (typeof COMPATIBLE_GATEWAY_PROVIDERS)[number]["id"] | "litellm" | "anthropic" | "cloudflare";
   baseUrl: string;
   headers: Record<string, string>;
 };

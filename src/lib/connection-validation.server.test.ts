@@ -402,7 +402,11 @@ test("generic endpoint validation rejects bad keys and degrades gracefully", asy
 
 test("Claude custom OpenAI-compatible endpoints validate with a bearer catalog probe", async () => {
   const setup = normalizeConnectionSetup(
-    { provider: "anthropic", api_key: "router-fixture-key", endpoint_url: "https://custom.example/v1" },
+    {
+      provider: "anthropic",
+      api_key: "router-fixture-key",
+      endpoint_url: "https://custom.example/v1",
+    },
     app("anthropic"),
   );
   const result = await validateConnectionCredential(setup, async (url, init) => {
