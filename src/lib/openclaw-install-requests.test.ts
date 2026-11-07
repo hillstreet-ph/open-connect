@@ -67,13 +67,17 @@ test("every requested package records an exact openclaw install command", () => 
       `install command mismatch: ${pkg.slug}`,
     );
     assert.ok(
-      ["clawhub_registry", "openclaw_registry_package_name", "github_repository", "skills_sh"].includes(
-        pkg.source_type,
-      ),
+      [
+        "clawhub_registry",
+        "openclaw_registry_package_name",
+        "github_repository",
+        "skills_sh",
+      ].includes(pkg.source_type),
       `unknown source type: ${pkg.slug}`,
     );
     assert.equal(pkg.canonical_url === null, pkg.source_type === "openclaw_registry_package_name");
-    if (pkg.canonical_url) assert.ok(pkg.canonical_url.startsWith("https://"), `non-HTTPS url: ${pkg.slug}`);
+    if (pkg.canonical_url)
+      assert.ok(pkg.canonical_url.startsWith("https://"), `non-HTTPS url: ${pkg.slug}`);
     assert.ok(
       ["low", "medium", "high", "critical"].includes(pkg.risk),
       `unknown risk: ${pkg.slug}`,
@@ -113,7 +117,10 @@ test("duplicate install requests are consolidated into one catalog entry", () =>
   const byRef = new Map<string, Package>();
   for (const pkg of registry.packages) byRef.set(pkg.source_ref, pkg);
   for (const duplicate of registry.duplicate_requests) {
-    assert.ok(duplicate.occurrences >= 2, `duplicate must occur at least twice: ${duplicate.source_ref}`);
+    assert.ok(
+      duplicate.occurrences >= 2,
+      `duplicate must occur at least twice: ${duplicate.source_ref}`,
+    );
     assert.equal(duplicate.reason, "duplicate_request_consolidated");
     const canonical = byRef.get(duplicate.source_ref);
     assert.ok(canonical, `missing consolidated entry for ${duplicate.source_ref}`);
