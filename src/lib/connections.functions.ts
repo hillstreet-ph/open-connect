@@ -10,6 +10,7 @@ import {
 import { AI_GATEWAY_PROVIDERS } from "@/lib/ai-gateway-providers";
 import { hasRole, type AppRole } from "@/lib/rbac";
 import { composioImportBatches } from "@/lib/composio-sync";
+import { availableConnectionMethods } from "@/lib/connection-methods";
 import {
   connectionIdentity,
   connectionAuthType,
@@ -385,6 +386,11 @@ export const listConnectionCatalog = createServerFn({ method: "GET" }).handler(a
       oauth: method !== "api_key",
       oauth_supported: method !== "api_key" && (method === "native_oauth" || oauthCapable),
       connection_method: method,
+      available_methods: availableConnectionMethods({
+        provider: item.provider,
+        connectionMethod: method,
+        authMethods: toolkit?.authMethods,
+      }),
       oauth_ready:
         method === "native_oauth" ? githubReady : method === "managed_oauth" ? ready : false,
     };
