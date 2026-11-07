@@ -1,0 +1,25 @@
+name: z-debug-errors
+on: push
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+        continue-on-error: true
+      - name: lint
+        run: |
+          bun run lint 2>&1 | tee /tmp/lint.log | grep '  error  ' || true
+          grep '  error  ' /tmp/lint.log | while IFS= read -r line; do echo "::error title=lint::$line"; done
+        continue-on-error: true
+      - name: typecheck
+        run: |
+          bun run typecheck 2>&1 | tee /tmp/tc.log | grep 'error TS' || true
+          grep 'error TS' /tmp/tc.log | while IFS= read -r line; do echo "::error title=type::$line"; done
+        continue-on-error: true
+      - name: tests
+        run: |
+          bun run test:control 2>&1 | tee /tmp/test.log | tail -200 || true
+          grep -E '(FAIL|✗|failed|Error:)' /tmp/test.log | head -40 | while IFS= read -r line; do echo "::error title=test::$line"; done
+        continue-on-error: true
