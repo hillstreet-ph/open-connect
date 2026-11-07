@@ -65,3 +65,7 @@ No submission is required for the tap: the repository is already installable thr
 ```bash
 hermes skills publish skills/open-connect-control --to github --repo hillstreet-ph/open-connect
 ```
+
+## Optional OpenHands skills
+
+The vendored `skills/vendor/openhands-extensions/uv` skill is rejected by the ClawHub publish CLI in its current form, so the `publish-vendor-openhands` job only runs when the dispatch input `include_openhands` is enabled. To retry it later, run "Marketplace skill publish" with `include_openhands` on (or use `skill_path: skills/vendor/openhands-extensions/uv`); the exact ClawHub error is printed in that job log.
