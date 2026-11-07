@@ -56,8 +56,8 @@ jobs:
                   errors.append(f"{skill_md}: missing YAML frontmatter")
                   continue
               frontmatter = match.group(1)
-              name = (re.search(r"^name:\s*(.+)$", frontmatter, re.M) or [None, ""])[1].strip().strip(""'")
-              description = (re.search(r"^description:\s*(.+)$", frontmatter, re.M) or [None, ""])[1].strip().strip(""'")
+              name = (re.search(r"^name:\s*(.+)$", frontmatter, re.M) or [None, ""])[1].strip().strip(chr(34) + chr(39))
+              description = (re.search(r"^description:\s*(.+)$", frontmatter, re.M) or [None, ""])[1].strip().strip(chr(34) + chr(39))
               if not name:
                   errors.append(f"{skill_md}: missing name")
               elif not re.match(r"^[a-z][a-z0-9_-]*$", name):
