@@ -340,6 +340,165 @@ export function summarizeFetch(
   };
 }
 
+// ---------- Research, Monitor and Datasets (agent.tinyfish.ai) ----------
+
+export type ResearchStatus =
+  "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "CANCELLED" | "TIMED_OUT";
+export const TERMINAL_RESEARCH_STATUSES: readonly ResearchStatus[] = [
+  "COMPLETED",
+  "FAILED",
+  "CANCELLED",
+  "TIMED_OUT",
+];
+export type ResearchRun = {
+  research_run_id: string;
+  status: ResearchStatus;
+  query: string;
+  deep_result?: { result?: string; citations?: string[]; termination_reason?: string } | null;
+  quick_result_summary?: string | null;
+  created_at?: string;
+  completed_at?: string | null;
+};
+
+const RESEARCH_ID = /^[A-Za-z0-9_-]{1,128}$/;
+const UUIDISH = /^[A-Za-z0-9-]{1,64}$/;
+
+export function assertResearchId(value: unknown): string {
+  const id = String(value ?? "").trim();
+  if (!RESEARCH_ID.test(id)) throw new Error("Invalid research run id.");
+  return id;
+}
+export function assertResourceId(value: unknown, label = "id"): string {
+  const id = String(value ?? "").trim();
+  if (!UUIDISH.test(id)) throw new Error(`Invalid ${label}.`);
+  return id;
+}
+
+export function normalizeResearch(input: Record<string, unknown>) {
+  const query = String(input["query"] ?? "").trim();
+  if (!query) throw new Error("Enter a research question.");
+  if (query.length > 10_000)
+    throw new Error("Research questions are limited to 10,000 characters.");
+  const mode = input["mode"] === "max" ? "max" : "deep";
+  const language = String(input["output_language"] ?? "").trim();
+  if (language && !LANGUAGE.test(language))
+    throw new Error("output_language must be a code such as en.");
+  return { query, mode, ...(language ? { output_language: language } : {}) } as {
+    query: string;
+    mode: "deep" | "max";
+    output_language?: string;
+  };
+}
+
+export function summarizeResearch(run: ResearchRun) {
+  return {
+    research_run_id: run.research_run_id,
+    status: run.status,
+    terminal: TERMINAL_RESEARCH_STATUSES.includes(run.status),
+    query: run.query,
+    report: run.deep_result?.result ?? run.quick_result_summary ?? null,
+    citations: run.deep_result?.citations ?? [],
+    termination_reason: run.deep_result?.termination_reason ?? null,
+    created_at: run.created_at ?? null,
+    completed_at: run.completed_at ?? null,
+  };
+}
+
+export type Monitor = {
+  id: string;
+  name: string | null;
+  type: "fetch" | "search";
+  config: Record<string, unknown>;
+  schedule_cron: string;
+  status: "active" | "paused" | string;
+  last_error?: string | null;
+  webhook_url?: string | null;
+  created_at?: string;
+};
+
+const CRON = /^(?:CRON_TZ=[A-Za-z_]+(?:\/[A-Za-z_+-]+)*\s+)?(?:\S+\s+){4}\S+$/;
+
+function publicHttpUrl(value: unknown, label: string): string {
+  const [url] = normalizeWebFetch({ urls: [value] }).urls;
+  if (!url) throw new Error(`${label} is required.`);
+  return url;
+}
+
+/** Page monitors watch one URL; topic monitors re-run a search. */
+export function normalizeMonitor(input: Record<string, unknown>) {
+  const type = input["type"] === "search" ? "search" : input["type"] === "fetch" ? "fetch" : null;
+  if (!type) throw new Error("Choose a page (fetch) or topic (search) monitor.");
+  const schedule = String(input["schedule_cron"] ?? "").trim();
+  if (!CRON.test(schedule)) throw new Error("schedule_cron must be a five-field cron expression.");
+  const config =
+    type === "fetch"
+      ? { url: publicHttpUrl(input["url"], "Page URL"), format: "markdown" }
+      : (() => {
+          const query = String(input["query"] ?? "").trim();
+          if (!query || query.length > 500) throw new Error("Enter a topic query (max 500 chars).");
+          return { query, recency_minutes: 1440, result_limit: 5 };
+        })();
+  const name = String(input["name"] ?? "")
+    .trim()
+    .slice(0, 100);
+  const purpose = String(input["purpose"] ?? "")
+    .trim()
+    .slice(0, 2000);
+  const webhook = String(input["webhook_url"] ?? "").trim();
+  return {
+    type,
+    config,
+    schedule_cron: schedule,
+    ...(name ? { name } : {}),
+    ...(purpose ? { purpose } : {}),
+    ...(webhook ? { webhook_url: publicHttpUrl(webhook, "Webhook URL") } : {}),
+  };
+}
+
+export type Dataset = {
+  id: string;
+  name: string;
+  status: string;
+  target_rows: number;
+  row_count: number;
+  run?: {
+    id: string;
+    status: string;
+    started_at?: string;
+    finished_at?: string;
+    error?: unknown;
+  } | null;
+  created_at?: string;
+  spec?: { columns?: Array<{ name: string; label?: string; type: string }> };
+};
+
+export function normalizeDataset(input: Record<string, unknown>) {
+  const prompt = String(input["prompt"] ?? "").trim();
+  if (prompt.length < 3 || prompt.length > 15_000)
+    throw new Error("Describe the dataset in 3 to 15,000 characters.");
+  const rows = Math.trunc(Number(input["target_rows"] ?? 25));
+  if (!Number.isFinite(rows) || rows < 1 || rows > 250)
+    throw new Error("target_rows must be 1-250.");
+  return { prompt, target_rows: rows };
+}
+
+export function summarizeDataset(dataset: Dataset) {
+  return {
+    id: dataset.id,
+    name: dataset.name,
+    status: dataset.status,
+    row_count: dataset.row_count,
+    target_rows: dataset.target_rows,
+    run_status: dataset.run?.status ?? null,
+    created_at: dataset.created_at ?? null,
+    columns: (dataset.spec?.columns ?? []).map((column) => ({
+      name: column.name,
+      label: column.label ?? column.name,
+      type: column.type,
+    })),
+  };
+}
+
 export function createTinyFishClient(apiKey: string, send: typeof fetch = fetch) {
   if (!apiKey || apiKey.length < 8) throw new Error("TinyFish API key is not configured.");
   async function request<T>(
@@ -442,6 +601,77 @@ export function createTinyFishClient(apiKey: string, send: typeof fetch = fetch)
         TINYFISH_SEARCH_API,
         30_000,
       ),
+    startResearch: (input: ReturnType<typeof normalizeResearch>) =>
+      request<{ research_run_id: string | null; error: unknown }>(
+        "/v1/automation/run-research-async",
+        { method: "POST", body: JSON.stringify(input) },
+        TINYFISH_API,
+        60_000,
+      ),
+    listResearch: (limit = 20) =>
+      request<{ data: ResearchRun[] }>(
+        `/v1/research-run?limit=${Math.min(Math.max(Math.trunc(limit), 1), 100)}`,
+      ),
+    getResearch: (id: string) =>
+      request<ResearchRun>(`/v1/research-run/${encodeURIComponent(assertResearchId(id))}`),
+    cancelResearch: (id: string) =>
+      request<unknown>(`/v1/research-run/${encodeURIComponent(assertResearchId(id))}/cancel`, {
+        method: "POST",
+      }),
+    listMonitors: () => request<{ monitors: Monitor[] }>("/v1/monitors"),
+    createMonitor: (input: ReturnType<typeof normalizeMonitor>) =>
+      request<{ monitor: Monitor; run?: unknown }>(
+        "/v1/monitors",
+        { method: "POST", body: JSON.stringify(input) },
+        TINYFISH_API,
+        120_000,
+      ),
+    setMonitorStatus: (id: string, status: "active" | "paused") =>
+      request<Monitor>(`/v1/monitors/${encodeURIComponent(assertResourceId(id, "monitor id"))}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+      }),
+    runMonitor: (id: string) =>
+      request<unknown>(
+        `/v1/monitors/${encodeURIComponent(assertResourceId(id, "monitor id"))}/runs`,
+        { method: "POST" },
+        TINYFISH_API,
+        120_000,
+      ),
+    deleteMonitor: (id: string) =>
+      request<unknown>(`/v1/monitors/${encodeURIComponent(assertResourceId(id, "monitor id"))}`, {
+        method: "DELETE",
+      }),
+    listDatasets: (limit = 20) =>
+      request<{ data: Dataset[] }>(
+        `/v1/datasets?limit=${Math.min(Math.max(Math.trunc(limit), 1), 100)}`,
+      ),
+    createDataset: (input: ReturnType<typeof normalizeDataset>) =>
+      request<Dataset>(
+        "/v1/datasets",
+        { method: "POST", body: JSON.stringify(input) },
+        TINYFISH_API,
+        90_000,
+      ),
+    getDataset: (id: string) =>
+      request<Dataset>(`/v1/datasets/${encodeURIComponent(assertResourceId(id, "dataset id"))}`),
+    datasetRows: (id: string, limit = 100) =>
+      request<{
+        columns: Array<{ name: string; label?: string; type: string }>;
+        rows: Array<{ _id: string; data: Record<string, unknown> }>;
+        truncated?: boolean;
+      }>(
+        `/v1/datasets/${encodeURIComponent(assertResourceId(id, "dataset id"))}/rows?limit=${Math.min(Math.max(Math.trunc(limit), 1), 500)}`,
+      ),
+    populateDataset: (id: string) =>
+      request<Dataset>(
+        `/v1/datasets/${encodeURIComponent(assertResourceId(id, "dataset id"))}/populate`,
+        { method: "POST", body: "{}" },
+      ),
+    deleteDataset: (id: string) =>
+      request<unknown>(`/v1/datasets/${encodeURIComponent(assertResourceId(id, "dataset id"))}`, {
+        method: "DELETE",
+      }),
     fetchUrls: (input: WebFetchInput) =>
       request<{
         results?: WebFetchResult[];
