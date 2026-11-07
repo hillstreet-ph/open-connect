@@ -1,7 +1,10 @@
 import { modelProviderState } from "@/lib/model-provider-state";
 import { ApiKeysCard } from "@/components/api-keys-card";
 import { testFreeModel } from "@/lib/model-check.functions";
-import { startAiProviderSignIn } from "@/lib/ai-provider-signin.functions";
+import {
+  completeAiProviderSignIn,
+  startAiProviderSignIn,
+} from "@/lib/ai-provider-signin.functions";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -15,7 +18,7 @@ import {
   List,
   Loader2,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { BrandLogo } from "@/components/brand-logo";
 import { useAuth } from "@/hooks/use-auth";
@@ -110,15 +113,57 @@ function ModelsPage() {
     mutationFn: (input: { provider: string; api_key: string; endpoint_url?: string }) =>
       testProviderFn({ data: input }),
   });
+  const [signInPanel, setSignInPanel] = useState<{
+    provider: string;
+    url: string;
+    mode: string;
+    userCode: string | null;
+    state: string;
+  } | null>(null);
+  const [signInCode, setSignInCode] = useState("");
   const signInFn = useServerFn(startAiProviderSignIn);
+  const completeSignInFn = useServerFn(completeAiProviderSignIn);
+  const completeSignIn = useMutation({
+    mutationFn: (input: { provider: string; code?: string; state?: string }) =>
+      completeSignInFn({ data: input }),
+    onSuccess: (result) => {
+      if (result && (result as { status?: string }).status === "pending") return;
+      toast.success("Subscription account connected");
+      setSignInPanel(null);
+      setSignInCode("");
+      void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
+      void queryClient.invalidateQueries({ queryKey: ["free-model-catalog"] });
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Subscription sign-in failed"),
+  });
   const providerSignIn = useMutation({
     mutationFn: (provider: string) => signInFn({ data: { provider } }),
     onSuccess: (result) => {
       window.open(result.authorization_url, "_blank", "noopener");
+      completeSignIn.reset();
+      setSignInCode("");
+      setSignInPanel({
+        provider: result.provider,
+        url: result.authorization_url,
+        mode: result.mode,
+        userCode: result.user_code,
+        state: result.state ?? "",
+      });
     },
     onError: (error) =>
       toast.error(error instanceof Error ? error.message : "Subscription sign-in unavailable"),
   });
+  useEffect(() => {
+    if (signInPanel?.provider !== "openai" || completeSignIn.isPending) return;
+    if (completeSignIn.isSuccess) return;
+    const timer = window.setTimeout(
+      () => completeSignIn.mutate({ provider: "openai" }),
+      5000,
+    );
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signInPanel, completeSignIn.isPending, completeSignIn.isSuccess]);
   const { isAdmin } = useRoles();
   const syncComposioFn = useServerFn(syncComposioConnections);
   const composioSync = useMutation({
@@ -824,9 +869,80 @@ function ModelsPage() {
               ) : null}
               {provider.id === "openai" || provider.id === "anthropic" ? (
                 <p className="text-[11px] text-muted-foreground">
-                  Sign in uses your ChatGPT / Claude subscription once the provider OAuth app is
-                  configured. API key accounts stay fully supported.
+                  Sign in with your ChatGPT or Claude subscription. ChatGPT uses a one-time device
+                  code (enable device-code sign-in in your ChatGPT security settings); Claude shows
+                  a one-time code after you authorize. API key accounts stay fully supported.
                 </p>
+              ) : null}
+              {signInPanel?.provider === provider.id ? (
+                <div className="space-y-2 border-t border-border/70 pt-2">
+                  <p className="text-[11px] text-muted-foreground">
+                    {signInPanel.provider === "openai"
+                      ? "Device sign-in started. Enter this one-time code at auth.openai.com/codex/device and authorize with your ChatGPT account; this panel checks automatically every few seconds."
+                      : "Authorization opened in a new tab. Claude shows a one-time code after you authorize; paste it below to finish."}
+                  </p>
+                  {signInPanel.userCode ? (
+                    <button
+                      type="button"
+                      className="w-full rounded-lg border border-border/70 bg-background/60 px-3 py-2 font-mono text-xs text-primary"
+                      title="Tap to copy"
+                      onClick={() => copyToClipboard(signInPanel.userCode ?? "", "Device code")}
+                    >
+                      {signInPanel.userCode}
+                    </button>
+                  ) : null}
+                  {signInPanel.provider === "anthropic" ? (
+                    <>
+                      <Input
+                        aria-label="Claude one-time code"
+                        className="h-8 font-mono text-xs"
+                        value={signInCode}
+                        autoComplete="off"
+                        onChange={(event) => setSignInCode(event.target.value)}
+                        placeholder="Paste the one-time code from Claude"
+                      />
+                      <Button
+                        size="sm"
+                        className="h-6 px-2.5 text-xs"
+                        disabled={completeSignIn.isPending || signInCode.trim().length < 4}
+                        onClick={() =>
+                          completeSignIn.mutate({
+                            provider: "anthropic",
+                            code: signInCode.trim(),
+                            state: signInPanel.state,
+                          })
+                        }
+                      >
+                        {completeSignIn.isPending ? "Verifying…" : "Complete sign-in"}
+                      </Button>
+                    </>
+                  ) : (
+                    <p className="text-[11px] text-muted-foreground" role="status">
+                      {completeSignIn.isPending
+                        ? "Checking authorization…"
+                        : "Waiting for authorization…"}
+                    </p>
+                  )}
+                  {completeSignIn.error ? (
+                    <p role="alert" className="text-[11px] text-destructive">
+                      {completeSignIn.error instanceof Error
+                        ? completeSignIn.error.message
+                        : "Sign-in failed"}
+                    </p>
+                  ) : null}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 px-2.5 text-xs"
+                    onClick={() => {
+                      setSignInPanel(null);
+                      setSignInCode("");
+                      completeSignIn.reset();
+                    }}
+                  >
+                    Cancel sign-in
+                  </Button>
+                </div>
               ) : null}
               {providerState.accounts.length ? (
                 <div className="space-y-1.5">
