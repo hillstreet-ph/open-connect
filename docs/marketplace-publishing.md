@@ -53,6 +53,8 @@ Publishing is automated through the [marketplace skill publish workflow](../.git
 4. Categories and topics apply to every skill in the run; use skill_path to publish a single skill.
 
 Vendored skills whose slugs already exist on ClawHub under another owner will be reported in the run output and skipped by the registry; the first-party publish job is unaffected.
+ClawHub additionally reserves certain slug namespaces: 'clawhub' outright, and any slug starting with 'openclaw-' or ending with '-clawd'. Vendored folders whose original names fall inside those namespaces are therefore stored under publish-safe names: the vendored clawhub skill lives at 'oc-clawhub', and the affected vendored agents carry an 'oc-' prefix (for example 'oc-testing', 'oc-debugging') or the 'discord-clawd-agent' name. Frontmatter names are unchanged, so Hermes installs are unaffected.
+
 
 ### Validation
 
