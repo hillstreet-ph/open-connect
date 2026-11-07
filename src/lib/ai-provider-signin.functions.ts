@@ -124,9 +124,11 @@ async function findPendingRow(context: PendingContext, provider: SignInProvider)
     .contains("metadata", { mode: "oauth_subscription" })
     .maybeSingle();
   if (error) throw new Error(error.message);
-  return (pending ?? null) as
-    | { id: string; metadata: Record<string, unknown> | null; credential_reference: string | null }
-    | null;
+  return (pending ?? null) as {
+    id: string;
+    metadata: Record<string, unknown> | null;
+    credential_reference: string | null;
+  } | null;
 }
 
 async function storeSubscriptionAccount(
@@ -141,7 +143,9 @@ async function storeSubscriptionAccount(
   },
 ) {
   const scopes =
-    config.flow === "code_paste" ? [...config.scopes] : ["openid", "profile", "email", "offline_access"];
+    config.flow === "code_paste"
+      ? [...config.scopes]
+      : ["openid", "profile", "email", "offline_access"];
   const { data: matching, error: matchError } = await context.supabase
     .from("app_connections")
     .select("id,provider_account_id,credential_reference")
@@ -383,7 +387,11 @@ export const completeAiProviderSignIn = createServerFn({ method: "POST" })
           signal: AbortSignal.timeout(12_000),
         });
         if (profile.ok) {
-          const userinfo = (await profile.json()) as { sub?: string; email?: string; name?: string };
+          const userinfo = (await profile.json()) as {
+            sub?: string;
+            email?: string;
+            name?: string;
+          };
           identity = {
             id: userinfo.sub ?? "",
             email: userinfo.email ?? null,

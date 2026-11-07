@@ -157,10 +157,7 @@ function ModelsPage() {
   useEffect(() => {
     if (signInPanel?.provider !== "openai" || completeSignIn.isPending) return;
     if (completeSignIn.isSuccess) return;
-    const timer = window.setTimeout(
-      () => completeSignIn.mutate({ provider: "openai" }),
-      5000,
-    );
+    const timer = window.setTimeout(() => completeSignIn.mutate({ provider: "openai" }), 5000);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [signInPanel, completeSignIn.isPending, completeSignIn.isSuccess]);
