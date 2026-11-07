@@ -21,7 +21,8 @@
     "clawhub_registry": "owner/name resolves to https://clawhub.ai/<owner>/plugins|skills/<name>.",
     "openclaw_registry_package_name": "Unqualified package name (@latest) has no verified publisher URL; resolve from the OpenClaw registry at review time.",
     "github_repository": "@file:owner/repo resolves to the upstream GitHub repository.",
-    "skills_sh": "skills-sh:path resolves to https://skills.sh/<path>."
+    "skills_sh": "skills-sh:path resolves to https://skills.sh/<path>.",
+    "clawhub_publisher": "clawhub.ai/<owner> publisher page; package name and kind must be resolved from the publisher catalog at review time."
   },
   "packages": [
     {
@@ -1079,6 +1080,42 @@
       "risk": "critical",
       "state": "review_required",
       "review_reason": "Browser or desktop control requires isolation and security review."
+    },
+    {
+      "slug": "open-oc-plugin-openclaw-parallel-plugin",
+      "kind": "plugin",
+      "install_command": "openclaw plugins install openclaw/parallel-plugin",
+      "source_ref": "openclaw/parallel-plugin",
+      "source_type": "clawhub_registry",
+      "canonical_url": "https://clawhub.ai/openclaw/plugins/parallel-plugin",
+      "license": null,
+      "risk": "high",
+      "state": "review_required",
+      "review_reason": "Orchestrates other agents or sessions; permission-boundary review required."
+    },
+    {
+      "slug": "open-oc-plugin-openclaw-duckduckgo-plugin",
+      "kind": "plugin",
+      "install_command": "openclaw plugins install openclaw/duckduckgo-plugin",
+      "source_ref": "openclaw/duckduckgo-plugin",
+      "source_type": "clawhub_registry",
+      "canonical_url": "https://clawhub.ai/openclaw/plugins/duckduckgo-plugin",
+      "license": null,
+      "risk": "medium",
+      "state": "review_required",
+      "review_reason": "Metadata-only catalog entry; license and security review required before install."
+    },
+    {
+      "slug": "open-oc-plugin-martian-engineering-lossless-claw",
+      "kind": "plugin",
+      "install_command": "openclaw plugins install martian-engineering/lossless-claw",
+      "source_ref": "martian-engineering/lossless-claw",
+      "source_type": "clawhub_registry",
+      "canonical_url": "https://clawhub.ai/martian-engineering/plugins/lossless-claw",
+      "license": null,
+      "risk": "medium",
+      "state": "review_required",
+      "review_reason": "Metadata-only catalog entry; license and security review required before install."
     }
   ],
   "duplicate_requests": [
@@ -1103,5 +1140,25 @@
   ],
   "notes": [
     "wlshlad85/superpowers is already curated as open-superpowers-dev-workflow in config/curated-resources.registry.json; the request is recorded here and deduplicated against that entry during review."
+  ],
+  "publisher_requests": [
+    {
+      "source_ref": "nvidia",
+      "canonical_url": "https://clawhub.ai/nvidia",
+      "state": "review_required",
+      "review_reason": "Publisher page reference without a package name; package selection and publisher identity verification required at review."
+    },
+    {
+      "source_ref": "martian-engineering",
+      "canonical_url": "https://clawhub.ai/martian-engineering",
+      "state": "review_required",
+      "review_reason": "Publisher page reference without a package name; package selection and publisher identity verification required at review."
+    },
+    {
+      "source_ref": "tinyfish",
+      "canonical_url": "https://clawhub.ai/tinyfish",
+      "state": "review_required",
+      "review_reason": "Publisher page reference without a package name; package selection and publisher identity verification required at review."
+    }
   ]
 }
