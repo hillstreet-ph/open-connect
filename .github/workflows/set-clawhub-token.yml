@@ -1,0 +1,24 @@
+name: Set ClawHub token secret
+
+on:
+  workflow_dispatch:
+    inputs:
+      token_value:
+        description: Value to store as the CLAWHUB_TOKEN repository secret
+        required: true
+        type: string
+
+permissions:
+  secrets: write
+
+jobs:
+  set-secret:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Store repository secret
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TOKEN_VALUE: ${{ inputs.token_value }}
+        run: |
+          printf '%s' "$TOKEN_VALUE" | gh secret set CLAWHUB_TOKEN --repo hillstreet-ph/open-connect
