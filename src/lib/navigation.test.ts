@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import { cloudBrowserSection, cloudBrowserSections } from "./cloud-browser-sections.ts";
 import {
   adminTab,
   developerSection,
@@ -751,6 +752,18 @@ test("cloud computer is a separate cloud workspace destination", () => {
   // One cloud browser for general use: TinyFish console only, no provider switcher.
   assert.match(browserRoute, /CloudBrowserConsole/);
   assert.match(browserRoute, /CloudBrowserSearch/);
+  for (const panel of [
+    "CloudBrowserFetch",
+    "CloudBrowserResearch",
+    "CloudBrowserMonitors",
+    "CloudBrowserDatasets",
+    "CloudBrowserProfilesPanel",
+  ])
+    assert.match(browserRoute, new RegExp(panel));
+  for (const section of cloudBrowserSections)
+    assert.match(browserRoute, new RegExp(`<TabsContent value="${section}"`));
+  assert.equal(cloudBrowserSection("monitor"), "monitor");
+  assert.equal(cloudBrowserSection("bogus"), "agent");
   assert.doesNotMatch(browserRoute, /PlaywrightBrowser/);
   assert.doesNotMatch(browserRoute, /CloudBrowserSwitcher/);
   assert.doesNotMatch(browserRoute, /kind="computer"/);

@@ -569,6 +569,12 @@ test("TinyFish cloud browser tools are listed and refuse bounded keys before any
     "cloud_browser_run",
     "cloud_browser_get_run",
     "cloud_browser_cancel_run",
+    "cloud_browser_research_start",
+    "cloud_browser_research_get",
+    "cloud_browser_monitors",
+    "cloud_browser_monitor_create",
+    "cloud_browser_dataset_create",
+    "cloud_browser_dataset_rows",
   ])
     expect(names).toContain(name);
   for (const boundary of [
