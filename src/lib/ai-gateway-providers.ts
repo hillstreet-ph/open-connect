@@ -12,7 +12,12 @@ export const AI_GATEWAY_PROVIDERS = [
     baseUrl: "https://integrate.api.nvidia.com/v1",
     official: true,
   },
-  { id: "ollama_cloud", name: "Ollama Cloud", baseUrl: "https://ollama.com/v1", official: false },
+  {
+    id: "ollama_cloud",
+    name: "Ollama Cloud",
+    baseUrl: "https://ollama.com/v1",
+    official: false,
+  },
   {
     id: "kilo",
     name: "Kilo Code Gateway",
@@ -75,6 +80,12 @@ export const AI_GATEWAY_PROVIDERS = [
     id: "fireworks",
     name: "Fireworks AI",
     baseUrl: "https://api.fireworks.ai/inference/v1",
+    official: true,
+  },
+  {
+    id: "lmstudio",
+    name: "LM Studio",
+    baseUrl: "https://api.lmstudio.ai/v1",
     official: true,
   },
 ] as const;
