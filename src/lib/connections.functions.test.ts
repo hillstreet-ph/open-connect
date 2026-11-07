@@ -165,7 +165,7 @@ test("AI Gateway providers accept provider API credentials through the gateway r
     const setup = normalizeConnectionSetup(
       {
         provider: provider.id,
-        endpoint_url: provider.baseUrl,
+        endpoint_url: provider.baseUrl || "https://custom-gateway.example.com/v1",
         api_key: "provider-secret-for-test",
         auth_type: "api_key",
       },
