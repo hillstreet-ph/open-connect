@@ -21,6 +21,7 @@ upstream skills and curated resources.
 | `openclaw_registry_package_name` | unqualified `name@latest`    | none; resolve the publisher at review time        |
 | `github_repository`            | `@file:`owner/repo``          | `https://github.com/<owner>/<repo>`                |
 | `skills_sh`                    | `skills-sh:<path>`           | `https://skills.sh/<path>`                       |
+| `clawhub_publisher`            | `clawhub.ai/<owner>`         | `https://clawhub.ai/<owner>`; resolve the package at review |
 
 Duplicate requests are consolidated into a single catalog entry and recorded in
 the registry's `duplicate_requests` section so the original request count stays
@@ -43,3 +44,14 @@ Failed validation runs do not change any entry state; entries stay inert metadat
 Requests are recorded verbatim, including redundant and duplicate lines, before consolidation.
 
 Consolidated entries keep the slug of their first occurrence.
+
+
+## Follow-up batch (2026-11-07)
+
+A second operator batch added three plugin requests with exact install commands
+(`openclaw/parallel-plugin`, `openclaw/duckduckgo-plugin`,
+`martian-engineering/lossless-claw`) and three ClawHub publisher page references
+(`clawhub.ai/nvidia`, `clawhub.ai/martian-engineering`, `clawhub.ai/tinyfish`).
+Publisher page references carry no package name, so they are cataloged in the
+registry's `publisher_requests` section as `review_required` and must have
+their package, kind, and publisher identity resolved before review.
