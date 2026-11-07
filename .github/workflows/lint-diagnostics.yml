@@ -44,20 +44,30 @@ jobs:
             fi
             if [ -n "$JOB_ID" ]; then
               echo "=== logs for job $JOB_ID ==="
-              curl -sL -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/$REPO/actions/jobs/$JOB_ID/logs"
-              echo "curl exit: $?"
+              for i in 1 2 3 4 5; do
+                curl -sL --max-time 60 -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/$REPO/actions/jobs/$JOB_ID/logs" -o joblog.txt
+                if ! grep -q "BlobNotFound" joblog.txt && [ -s joblog.txt ]; then
+                  cat joblog.txt
+                  break
+                fi
+                echo "attempt $i: log not ready"
+                sleep 20
+              done
+              rm -f joblog.txt
             fi
             if [ -n "$RUN_ID" ]; then
               echo "=== jobs for run $RUN_ID ==="
               gh api "repos/$REPO/actions/runs/$RUN_ID/jobs"
+              echo "=== annotations for run $RUN_ID ==="
+              gh api "repos/$REPO/actions/runs/$RUN_ID/attempts/1/annotations"
             fi
-          } > diag-output.txt 2>&1
+          } > diag-latest.txt 2>&1
           if ! gh api "repos/$REPO/git/ref/heads/lint-output" > /dev/null 2>&1; then
             gh api -X POST "repos/$REPO/git/refs" -f ref="refs/heads/lint-output" -f sha="$SHA" > /dev/null
           fi
-          sha=$(gh api "repos/$REPO/contents/diag-output.txt?ref=lint-output" --jq .sha 2>/dev/null || true)
+          sha=$(gh api "repos/$REPO/contents/diag-latest.txt?ref=lint-output" --jq .sha 2>/dev/null || true)
           if [ -n "$sha" ]; then
-            gh api -X PUT "repos/$REPO/contents/diag-output.txt" -f message="diag update" -f content="$(base64 -w0 diag-output.txt)" -f branch="lint-output" -f sha="$sha" > /dev/null || true
+            gh api -X PUT "repos/$REPO/contents/diag-latest.txt" -f message="diag update" -f content="$(base64 -w0 diag-latest.txt)" -f branch="lint-output" -f sha="$sha"
           else
-            gh api -X PUT "repos/$REPO/contents/diag-output.txt" -f message="diag create" -f content="$(base64 -w0 diag-output.txt)" -f branch="lint-output" > /dev/null || true
+            gh api -X PUT "repos/$REPO/contents/diag-latest.txt" -f message="diag create" -f content="$(base64 -w0 diag-latest.txt)" -f branch="lint-output"
           fi
