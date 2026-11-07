@@ -180,8 +180,12 @@ jobs:
             esac
           }
           publish() {
-            local dir="$1" slug
-            slug="$(slug_for "$(basename "$dir")")"
+            local dir="$1" root="$2" slug
+            if [ "$root" = "skills/vendor/openclaw/skills" ]; then
+              slug="oc-$(basename "$dir")"
+            else
+              slug="$(slug_for "$(basename "$dir")")"
+            fi
             local args=(--slug "$slug" --owner "$OWNER" --categories "$CATEGORIES" --topics "$TOPICS" --json --source-repo hillstreet-ph/open-connect --source-commit "$GITHUB_SHA" --source-path "$dir")
             if [ "$DRY_RUN" = "true" ]; then
               args+=(--dry-run)
@@ -195,7 +199,7 @@ jobs:
           for root in skills/vendor/openclaw/skills skills/vendor/openclaw/agents; do
             for dir in "$root"/*/; do
               [ -f "${dir}SKILL.md" ] || continue
-              publish "${dir%/}"
+              publish "${dir%/}" "$root"
             done
           done
           exit "$fail"
