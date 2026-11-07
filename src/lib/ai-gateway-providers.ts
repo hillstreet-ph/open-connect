@@ -88,6 +88,12 @@ export const AI_GATEWAY_PROVIDERS = [
     baseUrl: "https://api.lmstudio.ai/v1",
     official: true,
   },
+  {
+    id: "litellm",
+    name: "Custom (OpenAI-compatible)",
+    baseUrl: "",
+    official: false,
+  },
 ] as const;
 
 export const AI_GATEWAY_PROVIDER_IDS: ReadonlySet<string> = new Set(
