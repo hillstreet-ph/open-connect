@@ -28,6 +28,11 @@ on:
         required: false
         type: string
         default: ''
+      clawhub_token:
+        description: Optional ClawHub API token override. Falls back to the CLAWHUB_TOKEN repository secret when empty.
+        required: false
+        type: string
+        default: ''
       include_openhands:
         description: Also publish skills/vendor/openhands-extensions. Off by default because the vendored uv skill is rejected by ClawHub in its current form.
         required: false
