@@ -8,6 +8,11 @@ on:
         required: false
         type: string
         default: ''
+      job_id:
+        description: Optional job id whose logs should be dumped
+        required: false
+        type: string
+        default: ''
 
 permissions:
   actions: read
@@ -23,21 +28,18 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPO: hillstreet-ph/open-connect
           RUN_ID: ${{ inputs.run_id }}
+          JOB_ID: ${{ inputs.job_id }}
           SHA: ${{ github.sha }}
         run: |
           {
-            echo "=== annotations for run $RUN_ID ==="
-            gh api "repos/$REPO/actions/runs/$RUN_ID/attempts/1/annotations" || echo "annotations call failed"
-            echo "=== jobs for run $RUN_ID ==="
-            gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" || echo "jobs call failed"
-            echo "=== check run annotations ==="
-            cs=$(gh api "repos/$REPO/actions/runs/$RUN_ID" --jq .check_suite_id)
-            for cr in $(gh api "repos/$REPO/check-suites/$cs/check-runs" --jq '.[].id'); do
-              echo "--- check run $cr ---"
-              gh api "repos/$REPO/check-runs/$cr/annotations" || echo "cr annotations failed"
-            done
-            echo "=== run attempt detail ==="
-            gh api "repos/$REPO/actions/runs/$RUN_ID" || echo "run call failed"
+            if [ -n "$RUN_ID" ]; then
+              echo "=== jobs for run $RUN_ID ==="
+              gh api "repos/$REPO/actions/runs/$RUN_ID/jobs" || echo "jobs call failed"
+            fi
+            if [ -n "$JOB_ID" ]; then
+              echo "=== logs for job $JOB_ID ==="
+              curl -sL -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/$REPO/actions/jobs/$JOB_ID/logs" || echo "logs call failed"
+            fi
           } > diag-output.txt 2>&1
           if ! gh api "repos/$REPO/git/ref/heads/lint-output" > /dev/null 2>&1; then
             gh api -X POST "repos/$REPO/git/refs" -f ref="refs/heads/lint-output" -f sha="$SHA" > /dev/null
