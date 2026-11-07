@@ -55,3 +55,4 @@ A second operator batch added three plugin requests with exact install commands
 Publisher page references carry no package name, so they are cataloged in the
 registry's `publisher_requests` section as `review_required` and must have
 their package, kind, and publisher identity resolved before review.
+Publisher requests never receive an install command until a concrete package is selected.
