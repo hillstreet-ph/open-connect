@@ -174,17 +174,23 @@ jobs:
           slug_for() {
             case "$1" in
               openclaw-*) printf 'oc-%s' "${1#openclaw-}" ;;
-              clawhub) printf 'oc-clawhub' ;;
+              clawhub) printf 'oc-clawhub-publisher' ;;
               discord-clawd) printf 'discord-clawd-agent' ;;
               *) printf '%s' "$1" ;;
             esac
           }
           publish() {
             local dir="$1" root="$2" slug
+            local base
+            base="$(basename "$dir")"
             if [ "$root" = "skills/vendor/openclaw/skills" ]; then
-              slug="oc-$(basename "$dir")"
+              if [ "$base" = "clawhub" ]; then
+                slug="oc-clawhub-publisher"
+              else
+                slug="oc-$base"
+              fi
             else
-              slug="$(slug_for "$(basename "$dir")")"
+              slug="$(slug_for "$base")"
             fi
             local args=(--slug "$slug" --owner "$OWNER" --categories "$CATEGORIES" --topics "$TOPICS" --json --source-repo hillstreet-ph/open-connect --source-commit "$GITHUB_SHA" --source-path "$dir")
             if [ "$DRY_RUN" = "true" ]; then
