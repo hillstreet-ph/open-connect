@@ -8,7 +8,11 @@ export type SavedModelConnection = {
 };
 
 export type SavedModelUpstream = {
-  name: (typeof COMPATIBLE_GATEWAY_PROVIDERS)[number]["id"] | "litellm" | "cloudflare";
+  name:
+    | (typeof COMPATIBLE_GATEWAY_PROVIDERS)[number]["id"]
+    | "litellm"
+    | "anthropic"
+    | "cloudflare";
   baseUrl: string;
   headers: Record<string, string>;
 };
@@ -74,6 +78,8 @@ const COMPATIBLE_MODEL_ENDPOINTS: Record<string, string> = Object.fromEntries(
   COMPATIBLE_GATEWAY_PROVIDERS.map((provider) => [provider.id, provider.baseUrl]),
 );
 
+const ANTHROPIC_CATALOG_BASE = "https://api.anthropic.com/v1";
+
 /** Resolve connected OpenAI-compatible model providers for this user only. */
 export async function savedModelUpstreams(
   userId: string,
@@ -87,10 +93,28 @@ export async function savedModelUpstreams(
   const configured: SavedModelUpstream[] = [];
   for (const connection of connections) {
     if (
-      !(connection.provider in COMPATIBLE_MODEL_ENDPOINTS || connection.provider === "litellm") ||
+      !(
+        connection.provider in COMPATIBLE_MODEL_ENDPOINTS ||
+        connection.provider === "litellm" ||
+        connection.provider === "anthropic"
+      ) ||
       connection.status !== "connected"
     ) {
       continue;
+    }
+    // The native Anthropic API is not OpenAI-compatible; only a saved custom
+    // endpoint (a router or proxy serving Claude) can serve /v1 requests.
+    if (connection.provider === "anthropic") {
+      try {
+        if (
+          customGatewayEndpoint(connection.metadata, ANTHROPIC_CATALOG_BASE) ===
+          ANTHROPIC_CATALOG_BASE
+        ) {
+          continue;
+        }
+      } catch {
+        continue;
+      }
     }
     const reference = connection.credential_reference?.match(
       new RegExp(`^credential://${connection.provider}/([0-9a-f-]{36})$`, "i"),
@@ -108,6 +132,13 @@ export async function savedModelUpstreams(
     let upstreamBaseUrl: string;
     if (connection.provider === "litellm") {
       upstreamBaseUrl = endpointForLiteLlm(connection.metadata);
+    } else if (connection.provider === "anthropic") {
+      try {
+        upstreamBaseUrl = customGatewayEndpoint(connection.metadata, ANTHROPIC_CATALOG_BASE);
+      } catch {
+        // An invalid custom Claude endpoint must not block the user's other providers.
+        continue;
+      }
     } else {
       try {
         upstreamBaseUrl = customGatewayEndpoint(

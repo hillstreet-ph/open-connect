@@ -399,3 +399,22 @@ test("generic endpoint validation rejects bad keys and degrades gracefully", asy
   );
   assert.equal(noCatalog.verified, false);
 });
+
+test("Claude custom OpenAI-compatible endpoints validate with a bearer catalog probe", async () => {
+  const setup = normalizeConnectionSetup(
+    { provider: "anthropic", api_key: "router-fixture-key", endpoint_url: "https://custom.example/v1" },
+    app("anthropic"),
+  );
+  const result = await validateConnectionCredential(setup, async (url, init) => {
+    assert.equal(String(url), "https://custom.example/v1/models");
+    assert.equal(new Headers(init?.headers).get("Authorization"), "Bearer router-fixture-key");
+    assert.equal(new Headers(init?.headers).get("x-api-key"), null);
+    return Response.json({ data: [{ id: "anthropic/claude-sonnet-4" }] });
+  });
+  assert.equal(result.verified, true);
+  assert.match(result.detail, /1 models fetched/);
+  await assert.rejects(
+    validateConnectionCredential(setup, async () => new Response(null, { status: 401 })),
+    /HTTP 401/,
+  );
+});
