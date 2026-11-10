@@ -67,6 +67,11 @@ jobs:
         # tests pin the HTTP fallback so /ai-factory/mcp cannot regress to
         # -32603 "Static asset binding is unavailable" in production.
         run: node --experimental-strip-types --test src/lib/ai-factory-mcp.test.ts
+      - name: OpenClaw marketplace portable exports
+        # Regenerates the marketplace export bundle and verifies the build
+        # just shipped it: one entry per cataloged resource, metadata-only
+        # policy intact, every export present in the built Pages output.
+        run: node scripts/generate-openclaw-exports.mjs --verify-build
       - name: Render SSR pages
         env:
           VITE_SUPABASE_URL: https://huadtiuuoiriqrjpjxhr.supabase.co
