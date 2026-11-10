@@ -66,3 +66,27 @@ The operator requested the Tencent BrowserSkill repository
 `openclaw plugins install Tencent/BrowserSkill`, resolved through the
 `github_repository` rule. Browser control is classified as critical risk and
 requires isolation and security review before install.
+
+## Portable exports and downloads (2026-11-10)
+
+The marketplace catalog is now portable. At build time
+`scripts/generate_openclaw_exports.py` reads the registry and emits a
+downloadable export bundle to `public/openclaw/exports/`, served from
+https://open-connect.site/openclaw/exports/:
+
+- `index.json` — manifest with the download URL of every format.
+- `registry.json` — verbatim registry copy.
+- `universal.json` — neutral portable catalog (one record per resource).
+- `chatgpt.json` — custom-GPT-ready instructions plus the catalog.
+- `claude.json` — Claude-ready skill catalog.
+- `mistral.json` — Mistral / Le Chat agents-ready catalog.
+- `hermes.json` — Hermes runtime agent config.
+- `prompt.md` — human-readable install pack.
+
+The exports are metadata-only and preserve the registry policy: they carry
+each install command and canonical URL as text so an operator can run it in
+their own environment after license verification and a separate security
+review. No export executes, schedules, or automates an install, no
+credentials are included, and every entry keeps its `review_required`
+state. CI regenerates the bundle with `--verify-build` after the production
+build so the shipped exports can never drift from the registry.
