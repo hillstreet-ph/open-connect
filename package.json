@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "prebuild": "node scripts/unpack-ai-factory-roster.mjs && node scripts/generate-ai-factory-exports.mjs && node scripts/generate-openclaw-exports.mjs",
+    "prebuild": "node scripts/unpack-ai-factory-roster.mjs && node scripts/generate-ai-factory-exports.mjs && python3 scripts/generate_openclaw_exports.py",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
@@ -50,8 +50,8 @@
     "test:roster:contract": "python3 scripts/validate_ai_factory_roster_test.py",
     "ai-factory:exports": "node scripts/generate-ai-factory-exports.mjs",
     "ai-factory:exports:check": "node scripts/generate-ai-factory-exports.mjs --check",
-    "openclaw:exports": "node scripts/generate-openclaw-exports.mjs",
-    "openclaw:exports:verify": "node scripts/generate-openclaw-exports.mjs --verify-build"
+    "openclaw:exports": "python3 scripts/generate_openclaw_exports.py",
+    "openclaw:exports:verify": "python3 scripts/generate_openclaw_exports.py --verify-build"
   },
   "dependencies": {
     "@browserbasehq/sdk": "2.24.0",
