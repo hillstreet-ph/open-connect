@@ -85,6 +85,15 @@ ROSTER_ASSETS: tuple[str, ...] = (
 # JSON assets are additionally parsed, so a truncated or HTML-error body fails.
 JSON_ASSETS = frozenset({"data/agents-v10.json", "data/catalog-v11.json"})
 
+# Portable exports, generated at build time by
+# `scripts/generate-ai-factory-exports.mjs`. Every agent must be takeable into
+# another runtime, so each of these must resolve for all 103 agents.
+EXPORT_PREFIX = f"{ROSTER_PREFIX}data/exports/"
+EXPORT_FORMATS: tuple[str, ...] = ("neutral", "chatgpt", "claude", "hermes", "prompt")
+
+# The two manifest documents that describe the export set itself.
+EXPORT_MANIFESTS: tuple[str, ...] = ("index.json", "openapi.json")
+
 
 @dataclass
 class CheckResult:
@@ -286,6 +295,108 @@ def run_checks(
     return results
 
 
+def check_export_manifest(
+    name: str,
+    base_url: str,
+    *,
+    fetch: Callable[..., FetchOutcome] = fetch,
+    **fetch_kwargs,
+) -> CheckResult:
+    """Assert an export manifest document resolves and parses as JSON."""
+    url = base_url.rstrip("/") + EXPORT_PREFIX + name
+    outcome = fetch(url, **fetch_kwargs)
+
+    if outcome.status is None:
+        return CheckResult(name, url, False, f"unreachable: {outcome.error}")
+    if outcome.status != 200:
+        return CheckResult(name, url, False, f"HTTP {outcome.status}")
+    try:
+        document = json.loads(outcome.body)
+    except json.JSONDecodeError as exc:
+        return CheckResult(name, url, False, f"invalid JSON: {exc}")
+
+    if name == "index.json":
+        count = document.get("count")
+        agents = document.get("agents") or []
+        if count != len(agents):
+            return CheckResult(
+                name, url, False, f"count {count} != {len(agents)} indexed agents"
+            )
+        if not agents:
+            return CheckResult(name, url, False, "index lists no agents")
+        return CheckResult(name, url, True, f"200, {len(agents)} agents indexed")
+
+    return CheckResult(name, url, True, "200, valid JSON")
+
+
+def check_export(
+    slug: str,
+    fmt: str,
+    base_url: str,
+    *,
+    fetch: Callable[..., FetchOutcome] = fetch,
+    **fetch_kwargs,
+) -> CheckResult:
+    """Assert one agent's export in one format resolves with parseable content.
+
+    A `.md` export is only required to be non-empty text; the JSON formats are
+    parsed, so a truncated or HTML-error body fails rather than passing on a 200.
+    """
+    ext = "md" if fmt == "prompt" else "json"
+    label = f"{fmt}/{slug}"
+    url = base_url.rstrip("/") + EXPORT_PREFIX + f"{fmt}/{slug}.{ext}"
+    outcome = fetch(url, **fetch_kwargs)
+
+    if outcome.status is None:
+        return CheckResult(label, url, False, f"unreachable: {outcome.error}")
+    if outcome.status != 200:
+        return CheckResult(label, url, False, f"HTTP {outcome.status}")
+    if not outcome.body.strip():
+        return CheckResult(label, url, False, "empty body")
+
+    if ext == "json":
+        try:
+            document = json.loads(outcome.body)
+        except json.JSONDecodeError as exc:
+            return CheckResult(label, url, False, f"invalid JSON: {exc}")
+        if not isinstance(document, dict):
+            return CheckResult(label, url, False, "export is not a JSON object")
+        if document.get("slug") != slug:
+            return CheckResult(
+                label, url, False, f"slug mismatch: {document.get('slug')!r} != {slug!r}"
+            )
+        # The honesty rule: an export must never claim callable tools it lacks.
+        if fmt in ("chatgpt", "claude", "hermes"):
+            if document.get("tools"):
+                return CheckResult(
+                    label, url, False, "export declares tools the agent does not have"
+                )
+        return CheckResult(label, url, True, "200, valid JSON")
+
+    return CheckResult(label, url, True, "200, non-empty text")
+
+
+def run_export_checks(
+    base_url: str = DEFAULT_BASE_URL,
+    *,
+    slugs: Iterable[str],
+    formats: Iterable[str] = EXPORT_FORMATS,
+    manifests: Iterable[str] = EXPORT_MANIFESTS,
+    fetch: Callable[..., FetchOutcome] = fetch,
+    **fetch_kwargs,
+) -> list[CheckResult]:
+    """Run the export checks for `slugs` across every format plus the manifests."""
+    results: list[CheckResult] = []
+    for name in manifests:
+        results.append(check_export_manifest(name, base_url, fetch=fetch, **fetch_kwargs))
+    for fmt in formats:
+        for slug in slugs:
+            results.append(
+                check_export(slug, fmt, base_url, fetch=fetch, **fetch_kwargs)
+            )
+    return results
+
+
 def _truncate(text: str, width: int) -> str:
     return text if len(text) <= width else text[: width - 1] + "\u2026"
 
@@ -332,6 +443,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--backoff", type=float, default=2.0, help="initial retry backoff in seconds"
     )
+    parser.add_argument(
+        "--skip-exports",
+        action="store_true",
+        help="check only the pages and assets, not the portable export URLs",
+    )
+    parser.add_argument(
+        "--export-slugs",
+        default="",
+        help="comma-separated slugs to check instead of every agent in index.json",
+    )
     args = parser.parse_args(argv)
 
     if args.attempts < 1:
@@ -347,6 +468,50 @@ def main(argv: list[str] | None = None) -> int:
         timeout=args.timeout,
         backoff=args.backoff,
     )
+
+    if not args.skip_exports:
+        # The export set describes itself: `index.json` lists every agent, so the
+        # smoke test needs no hard-coded slug list and cannot drift from the data.
+        index_outcome = fetch(
+            args.base_url.rstrip("/") + EXPORT_PREFIX + "index.json",
+            attempts=args.attempts,
+            timeout=args.timeout,
+            backoff=args.backoff,
+        )
+        slugs: list[str] = []
+        if index_outcome.status == 200:
+            try:
+                slugs = [
+                    entry["slug"]
+                    for entry in json.loads(index_outcome.body).get("agents", [])
+                    if isinstance(entry, dict) and entry.get("slug")
+                ]
+            except (json.JSONDecodeError, AttributeError):
+                slugs = []
+
+        if args.export_slugs:
+            slugs = [s for s in args.export_slugs.split(",") if s]
+
+        results.extend(
+            run_export_checks(
+                args.base_url,
+                slugs=slugs,
+                attempts=args.attempts,
+                timeout=args.timeout,
+                backoff=args.backoff,
+            )
+        )
+
+        if not slugs:
+            results.append(
+                CheckResult(
+                    "exports",
+                    args.base_url.rstrip("/") + EXPORT_PREFIX + "index.json",
+                    False,
+                    "index.json did not yield any agent slugs to verify",
+                )
+            )
+
     print(render_table(results, len(ROSTER_PAGES)))
 
     failures = [r for r in results if not r.ok]

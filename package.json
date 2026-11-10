@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "prebuild": "node scripts/unpack-ai-factory-roster.mjs",
+    "prebuild": "node scripts/unpack-ai-factory-roster.mjs && node scripts/generate-ai-factory-exports.mjs",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
@@ -47,7 +47,9 @@
     "test:workforce:db": "node scripts/test-workforce-db.mjs",
     "test:login:db": "node scripts/test-login-activity-db.mjs",
     "test:roster:smoke": "python3 scripts/validate_ai_factory_roster.py",
-    "test:roster:contract": "python3 scripts/validate_ai_factory_roster_test.py"
+    "test:roster:contract": "python3 scripts/validate_ai_factory_roster_test.py",
+    "ai-factory:exports": "node scripts/generate-ai-factory-exports.mjs",
+    "ai-factory:exports:check": "node scripts/generate-ai-factory-exports.mjs --check"
   },
   "dependencies": {
     "@browserbasehq/sdk": "2.24.0",
@@ -130,7 +132,7 @@
     "globals": "^17.12.0",
     "nitro": "3.0.260603-beta",
     "prettier": "3.9.10",
-    "typescript": "5.9.3",
+    "typescript": "6.0.3",
     "typescript-eslint": "^8.72.0",
     "vite": "8.3.5"
   },
