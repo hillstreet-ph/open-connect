@@ -101,7 +101,13 @@ def http_get(url: str, timeout: int = 25) -> tuple[int, bytes]:
             return resp.status, resp.read()
     except urllib.error.HTTPError as exc:
         return exc.code, exc.read() or b""
-    except Exception:  # noqa: BLE001 - transport errors are all "status 0"
+    except Exception as exc:  # noqa: BLE001 - transport errors are all "status 0"
+        # Record *which* transport failure this was, exactly as http_post_json
+        # does. A status of 0 alone cannot tell a DNS failure from a timeout
+        # from a refused connection from a TLS error, and those are four
+        # different faults with four different fixes. The 2-tuple return is
+        # unchanged so every existing caller and test keeps working.
+        _record_transport_failure(exc)
         return 0, b""
 
 
@@ -265,6 +271,9 @@ def check_commit(
     sentence to the failure detail, never change the verdict.
     """
     c = Check("commit identity")
+    # Reset first: a transport note left over from an earlier check must never
+    # be attributed to this one.
+    _reset_transport()
     status, body = http_get(f"{base_url}{BUILD_INFO_PATH}")
 
     # Every branch below is a distinct fault with a distinct fix. They all fail
@@ -272,12 +281,37 @@ def check_commit(
     # let a reader tell "production is serving an old build" apart from
     # "production cannot tell us what it is serving at all".
     if status == 0:
-        return c.fail(
+        # The base sentence is written for the case where nothing more is
+        # known, so it deliberately does not speculate about the deploy. When
+        # the lookup below *does* answer, it can say whether a build for main
+        # HEAD failed, is still running, or succeeded — which is exactly what
+        # separates "the deploy is broken" from "the site is down".
+        base = (
             f"GET {BUILD_INFO_PATH} got no HTTP response (transport failure, "
             "timeout or DNS). Production did not answer, so nothing is known "
             "about which commit it serves. This is NOT evidence of a stale "
             "build \u2014 check that the host resolves and is reachable."
         )
+        detail = base
+        # Name the specific fault (DNS / refused / TLS / timeout) whenever one
+        # was recorded. This is independent of the lookup: it is what the gate
+        # itself observed, and it is the difference between four different
+        # fixes. `_transport_phrase` falls back to a generic "connection
+        # failed" when nothing was recorded, which is the pre-change wording.
+        if _last_transport["kind"]:
+            detail = f"{base} Transport fault: {_transport_phrase(25)}."
+        # Enrichment only — the verdict below is already fail, and a raising or
+        # unavailable lookup must degrade to a note, never change the outcome.
+        if cf is not None:
+            try:
+                build = cf.describe(expected, "")
+                detail = f"{detail} {build.sentence_for_transport()}"
+            except Exception as exc:  # noqa: BLE001 - enrichment must never fail the gate
+                detail = (
+                    f"{detail} Build-level detail unavailable: lookup "
+                    f"raised {type(exc).__name__}."
+                )
+        return c.fail(detail)
     if status == 404:
         # The base sentence is written for the case where nothing more is
         # known, so it deliberately does not speculate about which build is

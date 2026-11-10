@@ -70,6 +70,17 @@ jobs:
         # main HEAD at all, and no token configured (today's message plus one
         # hint line). The lookup is enrichment only: a 404 still exits 1, and
         # it can never turn a passing gate red.
+        #
+        # A transport failure (DNS, refused connection, TLS, timeout) consults
+        # the same lookup, because when production does not answer at all the
+        # build queue is the only thing that can tell "the deploy is broken"
+        # from "the site is down". Each fault is named as itself, and each
+        # lookup outcome gets its own wording: FAILED (the deploy broke),
+        # still building/queued (production may be mid-deploy), SUCCEEDED (the
+        # fault is at the edge or the network, not the deploy), no build for
+        # main HEAD, and no token (today's message plus the same hint line).
+        # A transport failure still exits 1, and the no-token path is
+        # byte-identical apart from that one hint.
         run: python3 -m unittest discover -s scripts -p 'verify_production_deploy_test.py' -v
       - name: Cloudflare build-detail contract tests
         # Offline: pins the optional Cloudflare Pages lookup in four states —
