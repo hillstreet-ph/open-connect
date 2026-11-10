@@ -8,6 +8,7 @@ import { TOKEN_ENDPOINT_AUTH_METHODS } from "./lib/oauth-client-auth";
 import { runWithRuntimeEnv } from "./lib/runtime-env.server";
 import { aiGatewayMetadata, llmsTxt } from "./lib/ai-gateway-discovery";
 import { isRosterPath, rosterPageCandidates } from "./lib/ai-factory-roster-assets";
+import { handleAiFactoryMcp } from "./lib/ai-factory-mcp";
 import { withSecurityHeaders } from "./lib/security-headers";
 
 type ServerEntry = {
@@ -263,6 +264,11 @@ export default {
 
           const rosterAsset = await handleRosterAsset(request, env);
           if (rosterAsset) return rosterAsset;
+
+          // Read-only MCP access to the roster so an external runtime (ChatGPT,
+          // Claude, Hermes, ...) can pull an agent definition into itself.
+          const aiFactoryMcp = await handleAiFactoryMcp(request, env);
+          if (aiFactoryMcp) return aiFactoryMcp;
 
           const handler = await getServerEntry();
           const response = await handler.fetch(request, env, ctx);
