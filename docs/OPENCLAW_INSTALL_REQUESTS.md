@@ -56,3 +56,13 @@ Publisher page references carry no package name, so they are cataloged in the
 registry's `publisher_requests` section as `review_required` and must have
 their package, kind, and publisher identity resolved before review.
 Publisher requests never receive an install command until a concrete package is selected.
+
+
+## BrowserSkill request (2026-11-07)
+
+The operator requested the Tencent BrowserSkill repository
+(https://github.com/Tencent/BrowserSkill). It is cataloged as
+`open-oc-plugin-tencent-browserskill` with the install command
+`openclaw plugins install Tencent/BrowserSkill`, resolved through the
+`github_repository` rule. Browser control is classified as critical risk and
+requires isolation and security review before install.
