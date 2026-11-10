@@ -45,8 +45,12 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
+import socket
+import ssl
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -118,8 +122,112 @@ def http_post_json(url: str, payload: dict, timeout: int = 30) -> tuple[int, byt
             return resp.status, resp.read()
     except urllib.error.HTTPError as exc:
         return exc.code, exc.read() or b""
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        # Record *which* transport failure this was. A status of 0 alone cannot
+        # tell a DNS failure from a timeout from a refused connection, and those
+        # are three different faults. The 2-tuple return is unchanged so every
+        # existing caller and test keeps working.
+        _record_transport_failure(exc)
         return 0, b""
+
+
+# The transport failure behind the most recent status-0 response. Reset at the
+# start of each MCP check so a stale note can never be attributed to a later
+# stage. Diagnostic only: it never changes a verdict.
+_last_transport: dict[str, str] = {"kind": "", "error": ""}
+
+
+def _record_transport_failure(exc: BaseException) -> None:
+    reason = getattr(exc, "reason", None)
+    kind = "connection"
+    for candidate in (exc, reason):
+        if isinstance(candidate, (TimeoutError, socket.timeout)):
+            kind = "timeout"
+            break
+        if isinstance(candidate, socket.gaierror):
+            kind = "dns"
+            break
+        if isinstance(candidate, ssl.SSLError):
+            kind = "tls"
+            break
+    _last_transport["kind"] = kind
+    _last_transport["error"] = str(reason or exc)
+
+
+def _reset_transport() -> None:
+    _last_transport["kind"] = ""
+    _last_transport["error"] = ""
+
+
+def _transport_phrase(timeout: int | None = None) -> str:
+    """Describe the last transport failure, and what it implies."""
+    kind = _last_transport["kind"] or "connection"
+    reason = _last_transport["error"] or "no response"
+    if kind == "dns":
+        return (
+            f"DNS lookup failed ({reason}) \u2014 the hostname did not resolve, so "
+            "production was never reached"
+        )
+    if kind == "timeout":
+        budget = f" after {timeout:g}s" if timeout else ""
+        return (
+            f"request timed out{budget} ({reason}) \u2014 production did not answer "
+            "in time"
+        )
+    if kind == "tls":
+        return (
+            f"TLS handshake failed ({reason}) \u2014 the connection was never "
+            "established"
+        )
+    return (
+        f"connection failed ({reason}) \u2014 production did not answer at all"
+    )
+
+
+def _jsonrpc_error(body: bytes) -> str | None:
+    """Return a description when `body` is a JSON-RPC error object, else None.
+
+    A JSON-RPC error is a well-formed 200 response that carries a failure in
+    `error` instead of `result`. Reporting it as "no result" hides the server's
+    own code and message, which is the most useful part.
+    """
+    try:
+        payload = json.loads(body)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    error = payload.get("error")
+    if not isinstance(error, dict):
+        return None
+    code = error.get("code", "?")
+    message = str(error.get("message") or "").strip() or "no message"
+    return f"JSON-RPC error {code}: {redact(message)}"
+
+
+def _not_json(body: bytes) -> str:
+    """Describe a body that is not JSON at all, without dumping a whole page."""
+    head = body[:120].decode("utf-8", errors="replace").replace("\n", " ")
+    return f"response is not valid JSON (body starts {redact(head)!r})"
+
+
+# Anything that looks like a credential, so a server's own error text can never
+# carry one into a log, a job summary or an issue body. The gate never sends a
+# token, but a response body is not under its control.
+_SECRET_PATTERNS = (
+    re.compile(r"gh[pousr]_[A-Za-z0-9]{16,}"),          # GitHub tokens
+    re.compile(r"github_pat_[A-Za-z0-9_]{20,}"),
+    re.compile(r"sk-[A-Za-z0-9_-]{16,}"),                # OpenAI-style keys
+    re.compile(r"(?i)bearer\s+[A-Za-z0-9._\-]{12,}"),    # bearer credentials
+    re.compile(r"(?i)(api[_-]?key|token|secret|password)\s*[=:]\s*\S{8,}"),
+)
+
+
+def redact(text: str) -> str:
+    """Strip anything credential-shaped from a string before it is printed."""
+    for pattern in _SECRET_PATTERNS:
+        text = pattern.sub("[redacted]", text)
+    return text
 
 
 def resolve_expected_sha(value: str) -> str:
@@ -196,11 +304,44 @@ def check_commit(
     )
 
 
+def _summarise_roster_report(report: dict) -> str:
+    """Turn the validator's JSON report into a sentence naming what broke.
+
+    The validator already classifies each failure (a 404, a timeout, a 200
+    serving the SPA shell, a placeholder page). This groups those by kind so the
+    gate says *which* fault it is instead of only that the validator exited 1.
+    """
+    checks = report.get("checks") or []
+    failures = [c for c in checks if not c.get("ok")]
+    if not failures:
+        return ""
+
+    by_kind: dict[str, list[str]] = {}
+    for failure in failures:
+        by_kind.setdefault(failure.get("kind") or "unknown", []).append(
+            str(failure.get("name"))
+        )
+
+    parts = []
+    for kind, names in sorted(by_kind.items()):
+        shown = ", ".join(names[:4]) + ("\u2026" if len(names) > 4 else "")
+        parts.append(f"{kind} ({len(names)}: {shown})")
+    return "; ".join(parts)
+
+
 def check_roster(base_url: str, script: Path) -> Check:
-    """All 9 roster pages must return their own HTML, not the SPA shell."""
+    """All 9 roster pages must return their own HTML, not the SPA shell.
+
+    The validator does the probing and classifies each failure. It is asked for
+    a JSON report so this check can name the failure mode (a missing page, a
+    page serving the wrong content, production not answering) rather than
+    repeating a bare exit code. The verdict is still the validator's exit code.
+    """
     c = Check("roster pages (9)")
     if not script.exists():
         return c.fail(f"validator missing at {script}")
+
+    report_path = Path(tempfile.mkdtemp(prefix="roster-report-")) / "report.json"
     proc = subprocess.run(
         [
             sys.executable,
@@ -213,14 +354,29 @@ def check_roster(base_url: str, script: Path) -> Check:
             "20",
             "--backoff",
             "2",
+            "--json-report",
+            str(report_path),
         ],
         capture_output=True,
         text=True,
     )
     tail = (proc.stdout or "").strip().splitlines()[-3:]
     summary = " | ".join(tail) if tail else (proc.stderr or "").strip()[:300]
+
     if proc.returncode != 0:
-        return c.fail(f"roster validator exited {proc.returncode}: {summary}")
+        detail = f"roster validator exited {proc.returncode}: {summary}"
+        try:
+            report = json.loads(report_path.read_text())
+        except (OSError, json.JSONDecodeError):
+            report = None
+        if report:
+            breakdown = _summarise_roster_report(report)
+            if breakdown:
+                detail = (
+                    f"roster validator exited {proc.returncode} \u2014 "
+                    f"{breakdown}. {summary}"
+                )
+        return c.fail(detail)
     return c.pass_(summary or "9/9 roster pages passed")
 
 
@@ -287,10 +443,40 @@ def check_exports(base_url: str) -> Check:
     return c.pass_(f"{checked}/{checked} export fetches resolved across {len(sample)} agents")
 
 
+def _mcp_stage_failure(
+    stage: str, status: int, body: bytes, *, timeout: int = 30
+) -> str:
+    """Describe a failed MCP stage, naming what actually happened.
+
+    Every stage of the MCP handshake can fail in several distinct ways, and they
+    mean different things: the endpoint never answered, it answered with a
+    non-200, it answered 200 with something that is not JSON, or it answered
+    with a well-formed JSON-RPC error. Each is named, with the stage that broke.
+    """
+    if status == 0:
+        return f"{stage} \u2014 endpoint unreachable: {_transport_phrase(timeout)}"
+    if status != 200:
+        return (
+            f"{stage} \u2014 HTTP {status}: the endpoint answered but refused the "
+            "request"
+        )
+    rpc_error = _jsonrpc_error(body)
+    if rpc_error:
+        return f"{stage} \u2014 {rpc_error}"
+    return f"{stage} \u2014 {_not_json(body)}"
+
+
 def check_mcp(base_url: str) -> Check:
-    """initialize + tools/list + all three tools, with 103 agents."""
+    """initialize + tools/list + all three tools, with 103 agents.
+
+    Each stage reports its own failure mode: unreachable, non-200, not JSON, a
+    JSON-RPC error, a wrong tool set, a tool answering isError, a wrong agent
+    count, or a timeout. The verdict and exit code are unchanged \u2014 only the
+    diagnosis is.
+    """
     c = Check("MCP endpoint")
     url = f"{base_url}{MCP_PATH}"
+    _reset_transport()
 
     status, body = http_post_json(
         url,
@@ -306,27 +492,45 @@ def check_mcp(base_url: str) -> Check:
         },
     )
     if status != 200:
-        return c.fail(f"initialize -> HTTP {status}: {body[:200]!r}")
+        return c.fail(_mcp_stage_failure("initialize", status, body))
+    rpc_error = _jsonrpc_error(body)
+    if rpc_error:
+        return c.fail(f"initialize \u2014 {rpc_error}")
     try:
         init = json.loads(body)["result"]
-    except Exception:  # noqa: BLE001
-        return c.fail(f"initialize returned no result: {body[:200]!r}")
+    except json.JSONDecodeError:
+        return c.fail(f"initialize \u2014 {_not_json(body)}")
+    except (KeyError, TypeError):
+        return c.fail(
+            "initialize \u2014 the response is JSON but carries no result, so the "
+            "server never completed the handshake"
+        )
     server = (init.get("serverInfo") or {}).get("name", "?")
 
     status, body = http_post_json(
         url, {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}}
     )
     if status != 200:
-        return c.fail(f"tools/list -> HTTP {status}")
+        return c.fail(_mcp_stage_failure("tools/list", status, body))
+    rpc_error = _jsonrpc_error(body)
+    if rpc_error:
+        return c.fail(f"tools/list \u2014 {rpc_error}")
     try:
         tools = [t["name"] for t in json.loads(body)["result"]["tools"]]
-    except Exception:  # noqa: BLE001
-        return c.fail(f"tools/list returned no tools: {body[:200]!r}")
+    except json.JSONDecodeError:
+        return c.fail(f"tools/list \u2014 {_not_json(body)}")
+    except (KeyError, TypeError):
+        return c.fail(
+            "tools/list \u2014 the response is JSON but carries no tool list, so the "
+            "server did not advertise its tools"
+        )
 
     required = {"ai_factory_list_agents", "ai_factory_get_agent", "ai_factory_get_export"}
     missing = required - set(tools)
     if missing:
-        return c.fail(f"tools/list missing {sorted(missing)}; got {tools}")
+        return c.fail(
+            f"tools/list \u2014 wrong tool set: missing {sorted(missing)}; got {tools}"
+        )
 
     # Every advertised tool must actually answer, not just be listed.
     for i, name in enumerate(sorted(required), start=10):
@@ -343,22 +547,35 @@ def check_mcp(base_url: str) -> Check:
             },
         )
         if status != 200:
-            return c.fail(f"{name} -> HTTP {status}")
+            return c.fail(_mcp_stage_failure(f"tools/call {name}", status, body))
+        rpc_error = _jsonrpc_error(body)
+        if rpc_error:
+            return c.fail(f"tools/call {name} \u2014 {rpc_error}")
         try:
             res = json.loads(body)["result"]
-        except Exception:  # noqa: BLE001
-            return c.fail(f"{name} returned no result: {body[:200]!r}")
+        except (json.JSONDecodeError, KeyError, TypeError):
+            return c.fail(
+                f"tools/call {name} \u2014 the response is JSON but carries no "
+                "result, so the tool did not answer"
+            )
         if res.get("isError"):
-            return c.fail(f"{name} returned isError: {res.get('content')}")
+            return c.fail(
+                f"tools/call {name} \u2014 the tool answered isError true: "
+                f"{res.get('content')}"
+            )
 
         if name == "ai_factory_list_agents":
             try:
                 count = json.loads(res["content"][0]["text"])["count"]
-            except Exception:  # noqa: BLE001
-                return c.fail("list_agents payload has no count")
+            except (json.JSONDecodeError, KeyError, IndexError, TypeError):
+                return c.fail(
+                    "tools/call ai_factory_list_agents \u2014 the payload has no "
+                    "count, so the roster size cannot be checked"
+                )
             if count != EXPECTED_AGENT_COUNT:
                 return c.fail(
-                    f"roster has {count} agents, expected {EXPECTED_AGENT_COUNT}"
+                    f"tools/call ai_factory_list_agents \u2014 roster has {count} "
+                    f"agents, expected {EXPECTED_AGENT_COUNT}"
                 )
 
     return c.pass_(
@@ -431,7 +648,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"--- attempt {attempt} ---")
         checks = run_once(args.base_url, expected, script, cf)
         for c in checks:
-            print(f"  [{'PASS' if c.ok else 'FAIL'}] {c.name}: {c.detail}")
+            print(f"  [{'PASS' if c.ok else 'FAIL'}] {c.name}: {redact(c.detail)}")
 
         if all(c.ok for c in checks):
             break
@@ -456,7 +673,7 @@ def main(argv: list[str] | None = None) -> int:
     print("=" * 72)
     for c in failed:
         print(f"  FAILED: {c.name}")
-        print(f"          {c.detail}")
+        print(f"          {redact(c.detail)}")
     print()
     print("A merge to main is NOT live. Investigate the Cloudflare Pages build")
     print("for this commit before treating the change as shipped.")
