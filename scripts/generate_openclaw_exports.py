@@ -126,7 +126,6 @@ def build_runtime(fmt, runtime_name, catalog):
             "Portable export of %d OpenClaw marketplace resources "
             "(plugins and skills) cataloged by Open-Connect." % len(catalog)
         ),
-        "generated_at": datetime.now(timezone.utc).isoformat(),
         "source": EXPORT_BASE + "index.json",
         "policy": POLICY_NOTE,
         "instructions": INSTRUCTIONS,
