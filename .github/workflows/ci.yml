@@ -48,6 +48,12 @@ jobs:
         # detection and retry policy against stubs. No network, so it can
         # never make this required check flaky.
         run: python3 scripts/validate_ai_factory_roster_test.py
+      - name: Deploy verification gate contract tests
+        # Offline: pins the post-merge gate's failure paths — a stale commit, a
+        # missing /build-info.json, a wrong agent count, a missing MCP tool.
+        # The gate must go red when production does not match main; a gate that
+        # only ever passes is the bug this change exists to fix.
+        run: python3 -m unittest discover -s scripts -p 'verify_production_deploy_test.py' -v
       - name: Strict TypeScript validation
         run: bun run typecheck
       - name: Production build

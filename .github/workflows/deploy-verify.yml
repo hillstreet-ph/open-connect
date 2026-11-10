@@ -1,0 +1,168 @@
+name: Deploy verify — production must match main
+
+# The gate that makes "merged" mean "live".
+#
+# Runs after every push to main and asserts that the commit production is
+# serving is the commit that is on main. Before this workflow, a merge whose
+# Cloudflare Pages build never ran (or was superseded) passed every existing
+# check, because those checks only asserted that *a* build answered. That is how
+# PR #941 shipped a dead /ai-factory/mcp.
+#
+# On failure it does three visible things:
+#   1. fails the run (red X on the commit),
+#   2. writes a job summary explaining exactly what production is serving,
+#   3. opens/updates a `deploy-drift` issue so it cannot be missed.
+#
+# It is intentionally NOT a required status check on `main`. A required check
+# that depends on an external deploy would block merges during a Cloudflare
+# outage — the same trap `ci.yml` already avoids by publishing "Build & validate"
+# from the CI result rather than from a live probe. Visibility, not gating.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: "Commit production must serve (blank = current main HEAD)"
+        required: false
+        default: ""
+
+concurrency:
+  group: deploy-verify-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  verify:
+    name: Production matches main
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - name: Resolve the expected commit
+        id: expected
+        env:
+          INPUT_SHA: ${{ github.event.inputs.expected_sha }}
+        run: |
+          if [ -n "$INPUT_SHA" ]; then
+            echo "sha=$INPUT_SHA" >> "$GITHUB_OUTPUT"
+          else
+            echo "sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify production serves main HEAD
+        id: gate
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          python3 scripts/verify_production_deploy.py \
+            --expected-sha "${{ steps.expected.outputs.sha }}" \
+            --wait 900 \
+            --interval 30 2>&1 | tee /tmp/gate.log
+          status=${PIPESTATUS[0]}
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Write the job summary
+        if: always()
+        run: |
+          {
+            echo "## Deploy verification"
+            echo
+            echo "Expected commit: \`${{ steps.expected.outputs.sha }}\`"
+            echo
+            if [ "${{ steps.gate.outputs.status }}" = "0" ]; then
+              echo "**PASS** — production is serving main HEAD."
+            else
+              echo "**FAIL** — production is NOT serving main HEAD."
+              echo
+              echo "A merge to main did not reach production. The change is not live."
+            fi
+            echo
+            echo '```'
+            tail -60 /tmp/gate.log 2>/dev/null || echo "(no log)"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Open or update the deploy-drift issue
+        if: steps.gate.outputs.status != '0'
+        uses: actions/github-script@v9
+        env:
+          EXPECTED: ${{ steps.expected.outputs.sha }}
+        with:
+          script: |
+            const fs = require('fs');
+            const log = fs.existsSync('/tmp/gate.log')
+              ? fs.readFileSync('/tmp/gate.log', 'utf8').trim().slice(-4000)
+              : '(no log captured)';
+            const expected = process.env.EXPECTED;
+            const title = '[deploy-drift] Production is not serving main HEAD';
+            const labels = ['deploy-drift', 'production'];
+            const body = [
+              '## Production does not match `main`',
+              '',
+              `Expected commit: \`${expected}\``,
+              '',
+              'A merge to `main` did not reach production. Until this is resolved,',
+              '`main` and https://open-connect.site disagree — treat the merge as',
+              '**not shipped**.',
+              '',
+              '### Gate output',
+              '~~~text',
+              log,
+              '~~~',
+              '',
+              '### Likely causes, in order',
+              '1. The Cloudflare Pages build for this commit never started.',
+              '2. It started and was superseded by a newer commit before finishing.',
+              '3. It failed — check Deployments in the Cloudflare dashboard.',
+              '',
+              '### Recovery',
+              '- Cloudflare dashboard -> Workers & Pages -> open-connect-app -> Deployments',
+              '  -> Retry the deployment for this commit.',
+              '- Or run the **Redeploy — force a Cloudflare Pages build** workflow',
+              '  (needs the `CF_PAGES_DEPLOY_HOOK` secret).',
+              '',
+              `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              '',
+              '_Updated automatically by the deploy verification gate._'
+            ].join('\n');
+
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: labels.join(','),
+              per_page: 100
+            });
+            const existing = issues.find(i => i.title === title);
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels
+              });
+            }
+
+      - name: Fail loudly
+        if: steps.gate.outputs.status != '0'
+        run: |
+          echo "::error title=Production does not match main::A merge to main did not reach production. See the job summary and the deploy-drift issue."
+          exit 1
