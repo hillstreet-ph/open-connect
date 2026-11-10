@@ -17,6 +17,15 @@ name: Deploy verify — production must match main
 # that depends on an external deploy would block merges during a Cloudflare
 # outage — the same trap `ci.yml` already avoids by publishing "Build & validate"
 # from the CI result rather than from a live probe. Visibility, not gating.
+#
+# Optional build detail: when production does not match main, the gate can name
+# the build that superseded it. That needs two repository secrets:
+#   CLOUDFLARE_API_TOKEN      Cloudflare API token, scope: Account > Cloudflare
+#                             Pages > Read. No write scope is used.
+#   CLOUDFLARE_ACCOUNT_ID     account that owns the Pages project
+#   CLOUDFLARE_PAGES_PROJECT  optional, defaults to open-connect-app
+# Both are optional. Without them the gate behaves exactly as before and says
+# build-level detail is unavailable. See docs/DEPLOY_VERIFY.md.
 
 on:
   push:
@@ -61,6 +70,11 @@ jobs:
         id: gate
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Optional. Absent secrets resolve to an empty string, which the gate
+          # treats as "build detail unavailable" — never as a failure.
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_PAGES_PROJECT: ${{ secrets.CLOUDFLARE_PAGES_PROJECT }}
         run: |
           set +e
           python3 scripts/verify_production_deploy.py \
@@ -124,6 +138,11 @@ jobs:
               '1. The Cloudflare Pages build for this commit never started.',
               '2. It started and was superseded by a newer commit before finishing.',
               '3. It failed — check Deployments in the Cloudflare dashboard.',
+              '',
+              'If `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are configured,',
+              'the gate output above names the superseding build directly (commit,',
+              'status, created time, deployment URL). If it says build-level detail',
+              'is unavailable, those secrets are not set — see `docs/DEPLOY_VERIFY.md`.',
               '',
               '### Recovery',
               '- Cloudflare dashboard -> Workers & Pages -> open-connect-app -> Deployments',

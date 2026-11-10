@@ -23,6 +23,15 @@ What this checks
 4. **MCP endpoint** — `/ai-factory/mcp` answers `initialize`, `tools/list`, and
    all three tools, with 103 agents in the roster.
 
+When production does not match main, the gate can optionally name the build
+that superseded it. If `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are
+set, it asks the Cloudflare Pages API for the project's recent deployments and
+reports the superseding build's commit, status, created time and URL. Without
+them it says plainly that build-level detail is unavailable and behaves exactly
+as it did before — the token is optional and its absence is never a failure.
+See `scripts/cloudflare_pages.py` for the lookup and `docs/DEPLOY_VERIFY.md`
+for the secret names and the minimum token scope.
+
 Exit codes: 0 production matches main, 1 it does not, 2 bad usage.
 
 Usage:
@@ -42,6 +51,8 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+
+import cloudflare_pages
 
 DEFAULT_BASE_URL = "https://open-connect.site"
 EXPECTED_AGENT_COUNT = 103
@@ -136,8 +147,15 @@ def resolve_expected_sha(value: str) -> str:
     return data["object"]["sha"]
 
 
-def check_commit(base_url: str, expected: str) -> Check:
-    """The load-bearing check: does production report the commit we expect?"""
+def check_commit(
+    base_url: str, expected: str, cf: "cloudflare_pages.CloudflarePages | None" = None
+) -> Check:
+    """The load-bearing check: does production report the commit we expect?
+
+    On a mismatch, `cf` (when supplied) is asked to name the build that
+    superseded production. That lookup is enrichment only: it can add a
+    sentence to the failure detail, never change the verdict.
+    """
     c = Check("commit identity")
     status, body = http_get(f"{base_url}{BUILD_INFO_PATH}")
     if status != 200:
@@ -157,11 +175,21 @@ def check_commit(base_url: str, expected: str) -> Check:
             "a SHA, so it cannot be matched to main."
         )
     if served != expected:
-        return c.fail(
+        detail = (
             f"production serves {served[:10]} but main HEAD is {expected[:10]} "
             f"(built_at={info.get('built_at')}, source={info.get('source')}). "
             "The merge did not reach production."
         )
+        if cf is not None:
+            try:
+                build = cf.describe(expected, served)
+                detail = f"{detail} {build.sentence()}"
+            except Exception as exc:  # noqa: BLE001 - enrichment must never fail the gate
+                detail = (
+                    f"{detail} Build-level detail unavailable: lookup raised "
+                    f"{type(exc).__name__}."
+                )
+        return c.fail(detail)
     return c.pass_(
         f"production serves {served[:10]} == main HEAD "
         f"(source={info.get('source')}, built_at={info.get('built_at')})"
@@ -339,9 +367,14 @@ def check_mcp(base_url: str) -> Check:
     )
 
 
-def run_once(base_url: str, expected: str, script: Path) -> list[Check]:
+def run_once(
+    base_url: str,
+    expected: str,
+    script: Path,
+    cf: "cloudflare_pages.CloudflarePages | None" = None,
+) -> list[Check]:
     return [
-        check_commit(base_url, expected),
+        check_commit(base_url, expected, cf),
         check_roster(base_url, script),
         check_exports(base_url),
         check_mcp(base_url),
@@ -363,14 +396,30 @@ def main(argv: list[str] | None = None) -> int:
         help="Seconds to keep retrying while production has not caught up",
     )
     parser.add_argument("--interval", type=int, default=30)
+    parser.add_argument(
+        "--no-cloudflare",
+        action="store_true",
+        help="Skip the optional Cloudflare Pages build-detail lookup",
+    )
     args = parser.parse_args(argv)
 
     expected = resolve_expected_sha(args.expected_sha)
     script = Path(__file__).resolve().parent / "validate_ai_factory_roster.py"
 
+    # Optional enrichment. Constructed from the environment only; when the
+    # token or account id is absent this object reports itself disabled and
+    # makes no network call, so the gate behaves exactly as it did before.
+    cf = None if args.no_cloudflare else cloudflare_pages.CloudflarePages.from_env()
+
     print(f"verify: base={args.base_url}")
     print(f"verify: expected commit={expected}")
     print(f"verify: wait budget={args.wait}s")
+    if cf is None:
+        print("verify: cloudflare build detail=disabled (--no-cloudflare)")
+    elif cf.enabled:
+        print(f"verify: cloudflare build detail=enabled (project={cf.project})")
+    else:
+        print(f"verify: cloudflare build detail=unavailable ({cf.disabled_reason})")
     print()
 
     deadline = time.time() + max(0, args.wait)
@@ -380,7 +429,7 @@ def main(argv: list[str] | None = None) -> int:
     while True:
         attempt += 1
         print(f"--- attempt {attempt} ---")
-        checks = run_once(args.base_url, expected, script)
+        checks = run_once(args.base_url, expected, script, cf)
         for c in checks:
             print(f"  [{'PASS' if c.ok else 'FAIL'}] {c.name}: {c.detail}")
 
