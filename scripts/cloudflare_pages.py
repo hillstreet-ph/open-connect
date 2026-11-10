@@ -321,6 +321,85 @@ class BuildDetail:
             "so the build for main HEAD cannot be identified."
         )
 
+    def sentence_for_transport(self) -> str:
+        """One sentence for the case where production did not answer at all.
+
+        A transport failure (DNS, refused connection, TLS, timeout) says only
+        that the site is unreachable. It says nothing about the deploy, and the
+        two are routinely confused: "the site is down" and "the deploy is
+        broken" need different people to do different things. The build lookup
+        separates them, because Cloudflare's build queue is reachable even when
+        the site is not. The wording is chosen by *outcome*:
+
+        * **failed** — the deploy broke, and production is not answering. Both
+          faults are real; fix the build first.
+        * **cancelled / skipped** — the build never completed, so nothing newer
+          landed.
+        * **still building / queued** — production may be mid-deploy; re-run
+          once it lands.
+        * **succeeded** — the build is fine, so the fault is at the edge or the
+          network, not the deploy.
+        * **no build for main HEAD** — say so plainly.
+        * **unavailable** — keep the caller's own message; add a hint only when
+          a token would have made the difference.
+        """
+        if not self.available:
+            if not self.token_configured:
+                return (
+                    "A Cloudflare API token would let the gate name the build "
+                    f"for main HEAD (set {TOKEN_ENV} and {ACCOUNT_ENV})."
+                )
+            return f"Build-level detail unavailable: {self.reason}"
+
+        if self.superseding:
+            s = self.superseding
+            outcome = s.get("outcome", OUTCOME_UNKNOWN)
+            fields = self._fields(s)
+
+            if outcome == OUTCOME_FAILED:
+                return (
+                    f"The build for main HEAD FAILED: {fields}. The deploy "
+                    "broke, and production is not answering either. Fix the "
+                    "build before re-running the gate."
+                )
+            if outcome == OUTCOME_CANCELLED:
+                return (
+                    f"The build for main HEAD was {s['status']} before it "
+                    f"finished: {fields}. Nothing newer landed, so the deploy "
+                    "never completed."
+                )
+            if outcome == OUTCOME_IN_PROGRESS:
+                return (
+                    f"The build for main HEAD is {s['status']}: {fields}. "
+                    "Production may be mid-deploy; re-run the gate once it "
+                    "lands."
+                )
+            if outcome == OUTCOME_SUCCEEDED:
+                return (
+                    f"The build for main HEAD SUCCEEDED: {fields}. The build is "
+                    "fine, so the fault is at the edge or the network, not the "
+                    "deploy."
+                )
+            return (
+                f"The build for main HEAD has an unrecognised status "
+                f"{s['status']!r}: {fields}. The gate cannot tell whether this "
+                "build produced a deployable artifact, so it does not claim "
+                "that it did."
+            )
+
+        newest = self.production or (self.recent[0] if self.recent else None)
+        if newest:
+            return (
+                "No Cloudflare Pages build exists for main HEAD at all; the "
+                f"newest production deployment is commit {newest['commit'][:10]} "
+                f"({newest['status']}, created {newest['created']}). The build "
+                "for this commit never started."
+            )
+        return (
+            "No Cloudflare Pages deployments were returned for this project, "
+            "so the build for main HEAD cannot be identified."
+        )
+
 
 class CloudflarePages:
     """A thin, optional reader over the Pages deployments API."""

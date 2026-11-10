@@ -721,6 +721,236 @@ class BuildInfo404LookupTests(unittest.TestCase):
         self.assertEqual(code, 1)
 
 
+class TransportFailureLookupTests(unittest.TestCase):
+    """A transport failure from /build-info.json must consult the build lookup.
+
+    When production does not answer at all, the transport fault alone cannot
+    tell "the deploy is broken" from "the site is down". The build queue can:
+    it is reachable even when the site is not, so it can say whether a build
+    for main HEAD failed, is still running, or succeeded.
+
+    These tests pin that the gate now says which, using the same outcome-aware
+    wording as `cloudflare_pages.py`, and that the lookup stays enrichment:
+    every case still fails, the no-token path is byte-identical to before apart
+    from one added hint line, and no token ever reaches the message.
+
+    All HTTP and Cloudflare responses are mocked. Nothing here touches the
+    Cloudflare API or production.
+    """
+
+    def _check(self, cf_client, fault=None):
+        """Run check_commit with a status-0 response, recording `fault` first.
+
+        The real `http_get` records the transport failure before returning
+        (0, b""), so the fake does the same — otherwise the test would exercise
+        a state the production code cannot reach.
+        """
+
+        def fake_get(url, timeout=25):
+            if fault is not None:
+                gate._record_transport_failure(fault)
+            return 0, b""
+
+        with mock.patch.object(gate, "http_get", side_effect=fake_get):
+            return gate.check_commit("https://x", MAIN_SHA, cf_client)
+
+    def _client(self):
+        return cf.CloudflarePages(
+            token="cf-test-token-DO-NOT-LEAK", account="acct", project="p"
+        )
+
+    def _with_deployments(self, deployments):
+        return mock.patch.object(
+            cf, "_api_get", return_value=(200, {"success": True, "result": deployments}, "")
+        )
+
+    # --- every distinct transport fault is named as itself ------------------
+
+    def test_dns_failure_is_named_as_dns(self):
+        fault = gate.urllib.error.URLError(gate.socket.gaierror("Name or service not known"))
+        with self._with_deployments([deployment(MAIN_SHA, status="success")]):
+            c = self._check(self._client(), fault)
+        self.assertFalse(c.ok)
+        self.assertIn("DNS lookup failed", c.detail)
+        self.assertIn("hostname did not resolve", c.detail)
+
+    def test_refused_connection_is_named_as_a_connection_failure(self):
+        fault = gate.urllib.error.URLError(ConnectionRefusedError("Connection refused"))
+        with self._with_deployments([deployment(MAIN_SHA, status="success")]):
+            c = self._check(self._client(), fault)
+        self.assertFalse(c.ok)
+        self.assertIn("connection failed", c.detail)
+        self.assertIn("did not answer at all", c.detail)
+
+    def test_tls_failure_is_named_as_tls(self):
+        fault = gate.urllib.error.URLError(gate.ssl.SSLError("certificate verify failed"))
+        with self._with_deployments([deployment(MAIN_SHA, status="success")]):
+            c = self._check(self._client(), fault)
+        self.assertFalse(c.ok)
+        self.assertIn("TLS handshake failed", c.detail)
+        self.assertIn("connection was never established", c.detail)
+
+    def test_timeout_is_named_as_a_timeout(self):
+        with self._with_deployments([deployment(MAIN_SHA, status="success")]):
+            c = self._check(self._client(), TimeoutError("timed out"))
+        self.assertFalse(c.ok)
+        self.assertIn("request timed out", c.detail)
+        self.assertIn("did not answer in time", c.detail)
+
+    def test_http_get_records_the_transport_fault(self):
+        # The branch cannot name a fault it never recorded. Before this change
+        # http_get swallowed the exception, so every transport failure printed
+        # the same generic sentence.
+        gate._reset_transport()
+        with mock.patch.object(
+            gate.urllib.request,
+            "urlopen",
+            side_effect=gate.urllib.error.URLError(gate.socket.gaierror("nope")),
+        ):
+            status, body = gate.http_get("https://x/build-info.json")
+        self.assertEqual((status, body), (0, b""))
+        self.assertEqual(gate._last_transport["kind"], "dns")
+
+    # --- case 1: a build for main HEAD FAILED -------------------------------
+
+    def test_failed_build_says_the_deploy_broke(self):
+        deployments = [deployment(MAIN_SHA, status="failure", created="2026-11-10T21:00:00Z")]
+        with self._with_deployments(deployments):
+            c = self._check(self._client())
+        self.assertFalse(c.ok)
+        self.assertIn("FAILED", c.detail)
+        self.assertIn(MAIN_SHA[:10], c.detail)
+        self.assertIn("The deploy broke", c.detail)
+        self.assertIn("production is not answering either", c.detail)
+
+    # --- case 2: a build is still building / queued -------------------------
+
+    def test_in_progress_build_says_production_may_be_mid_deploy(self):
+        deployments = [deployment(MAIN_SHA, status="active", created="2026-11-10T21:00:00Z")]
+        with self._with_deployments(deployments):
+            c = self._check(self._client())
+        self.assertFalse(c.ok)
+        self.assertIn("still building", c.detail)
+        self.assertIn("may be mid-deploy", c.detail)
+        self.assertIn("re-run the gate once it lands", c.detail)
+
+    def test_queued_build_says_production_may_be_mid_deploy(self):
+        deployments = [deployment(MAIN_SHA, status="idle", created="2026-11-10T21:00:00Z")]
+        with self._with_deployments(deployments):
+            c = self._check(self._client())
+        self.assertFalse(c.ok)
+        self.assertIn("queued", c.detail)
+        self.assertIn("may be mid-deploy", c.detail)
+
+    # --- case 3: a build SUCCEEDED -----------------------------------------
+
+    def test_succeeded_build_puts_the_fault_at_the_edge_or_network(self):
+        deployments = [deployment(MAIN_SHA, status="success", created="2026-11-10T21:00:00Z")]
+        with self._with_deployments(deployments):
+            c = self._check(self._client())
+        self.assertFalse(c.ok)
+        self.assertIn("SUCCEEDED", c.detail)
+        self.assertIn("The build is fine", c.detail)
+        self.assertIn("edge or the network, not the deploy", c.detail)
+
+    # --- case 4: no build for main HEAD at all ------------------------------
+
+    def test_no_build_for_main_head_is_stated_plainly(self):
+        deployments = [deployment(OLD_SHA, created="2026-11-10T19:00:00Z")]
+        with self._with_deployments(deployments):
+            c = self._check(self._client())
+        self.assertFalse(c.ok)
+        self.assertIn("No Cloudflare Pages build exists for main HEAD at all", c.detail)
+        self.assertIn(OLD_SHA[:10], c.detail)
+
+    # --- case 5: no token configured ---------------------------------------
+
+    def test_no_token_keeps_todays_message_and_adds_one_hint(self):
+        c = self._check(cf.CloudflarePages(token="", account=""))
+        self.assertFalse(c.ok)
+        # Today's message, verbatim, still present.
+        self.assertIn("GET /build-info.json got no HTTP response", c.detail)
+        self.assertIn("Production did not answer", c.detail)
+        self.assertIn("NOT evidence of a stale build", c.detail)
+        # Plus exactly one added hint line.
+        self.assertIn("A Cloudflare API token would let the gate name the build", c.detail)
+        self.assertEqual(c.detail.count("A Cloudflare API token would let"), 1)
+
+    def test_no_token_makes_no_network_call(self):
+        with mock.patch.object(cf, "_api_get") as api:
+            self._check(cf.CloudflarePages(token="", account=""))
+        api.assert_not_called()
+
+    def test_no_token_transport_detail_is_unchanged_apart_from_the_hint(self):
+        # The pre-change message, reconstructed exactly.
+        before = (
+            "GET /build-info.json got no HTTP response (transport failure, "
+            "timeout or DNS). Production did not answer, so nothing is known "
+            "about which commit it serves. This is NOT evidence of a stale "
+            "build \u2014 check that the host resolves and is reachable."
+        )
+        c = self._check(cf.CloudflarePages(token="", account=""))
+        self.assertTrue(c.detail.startswith(before), c.detail)
+        suffix = c.detail[len(before):].strip()
+        self.assertTrue(suffix.startswith("A Cloudflare API token would let"), suffix)
+
+    def test_no_cloudflare_client_keeps_todays_message_exactly(self):
+        # --no-cloudflare passes cf=None: byte-identical to before the change.
+        c = self._check(None)
+        self.assertFalse(c.ok)
+        self.assertEqual(
+            c.detail,
+            "GET /build-info.json got no HTTP response (transport failure, "
+            "timeout or DNS). Production did not answer, so nothing is known "
+            "about which commit it serves. This is NOT evidence of a stale "
+            "build \u2014 check that the host resolves and is reachable.",
+        )
+
+    # --- contract: enrichment never changes the verdict ---------------------
+
+    def test_transport_failure_still_fails_with_a_token_and_a_build(self):
+        deployments = [deployment(MAIN_SHA, status="success")]
+        with self._with_deployments(deployments):
+            c = self._check(self._client())
+        self.assertFalse(c.ok, "a transport failure must fail even when the lookup succeeds")
+
+    def test_transport_failure_still_fails_when_the_lookup_raises(self):
+        with mock.patch.object(cf, "_api_get", side_effect=RuntimeError("boom")):
+            c = self._check(self._client())
+        self.assertFalse(c.ok)
+        self.assertIn("Build-level detail unavailable", c.detail)
+        self.assertIn("RuntimeError", c.detail)
+
+    def test_transport_failure_still_fails_when_the_lookup_is_unavailable(self):
+        with mock.patch.object(cf, "_api_get", return_value=(0, None, "transport error (TimeoutError)")):
+            c = self._check(self._client())
+        self.assertFalse(c.ok)
+        self.assertIn("Build-level detail unavailable", c.detail)
+
+    def test_lookup_never_turns_a_passing_gate_red(self):
+        # A 200 that matches main must pass, and must not call the lookup.
+        with mock.patch.object(gate, "http_get", return_value=(200, build_info(MAIN_SHA))), \
+             mock.patch.object(cf, "_api_get") as api:
+            c = gate.check_commit("https://x", MAIN_SHA, self._client())
+        self.assertTrue(c.ok, c.detail)
+        api.assert_not_called()
+
+    def test_token_never_appears_in_the_transport_detail(self):
+        secret = "cf-test-token-DO-NOT-LEAK"
+        deployments = [deployment(MAIN_SHA, status="failure")]
+        with self._with_deployments(deployments):
+            c = self._check(self._client())
+        self.assertNotIn(secret, c.detail)
+
+    def test_transport_exit_code_is_still_one(self):
+        with mock.patch.object(gate, "http_get", return_value=(0, b"")), \
+             mock.patch.object(gate, "check_roster", return_value=gate.Check("r").pass_("ok")), \
+             mock.patch.object(gate, "check_exports", return_value=gate.Check("e").pass_("ok")), \
+             mock.patch.object(gate, "check_mcp", return_value=gate.Check("m").pass_("ok")):
+            code = gate.main(["--expected-sha", MAIN_SHA, "--wait", "0", "--no-cloudflare"])
+        self.assertEqual(code, 1)
+
+
 class ExitCodeTests(unittest.TestCase):
     def test_main_returns_one_when_commit_mismatches(self):
         with mock.patch.object(gate, "http_get", return_value=(200, build_info(OLD_SHA))), \
