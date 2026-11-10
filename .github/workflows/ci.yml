@@ -125,12 +125,18 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Roster pages, assets and legacy .html URLs
+        # On a pull request this probes PRODUCTION, which by definition does not
+        # yet serve the exports this PR adds — so the export URLs are skipped
+        # here and covered instead by the offline contract test in `validate`,
+        # which inspects the built export set. After merge to main the exports
+        # are live, so the full check (pages + every export URL) runs there.
         run: |
           python3 scripts/validate_ai_factory_roster.py \
             --base-url https://open-connect.site \
             --attempts 5 \
             --timeout 20 \
-            --backoff 3
+            --backoff 3 \
+            ${{ github.event_name == 'pull_request' && '--skip-exports' || '' }}
 
   smoke-production:
     name: Production smoke (post-merge)
