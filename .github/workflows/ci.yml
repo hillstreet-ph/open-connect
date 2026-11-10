@@ -56,6 +56,11 @@ jobs:
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_placeholder' }}
           VITE_APP_URL: https://open-connect.site
         run: bun run build
+      - name: AI Factory portable export contract tests
+        # Runs after the build because it inspects the generated export set:
+        # 103 agents x 5 formats, seven fields present, and no export inventing
+        # callable tools the agent does not have.
+        run: python3 scripts/validate_ai_factory_exports_test.py
       - name: Render SSR pages
         env:
           VITE_SUPABASE_URL: https://huadtiuuoiriqrjpjxhr.supabase.co
