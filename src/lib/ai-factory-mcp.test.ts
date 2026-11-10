@@ -121,7 +121,7 @@ describe("ai-factory MCP endpoint", () => {
       result: { isError: boolean; content: { text: string }[] };
     };
     assert.equal(body.result.isError, false);
-    const payload = JSON.parse(body.result.content[0].text) as { count: number };
+    const payload = JSON.parse(body.result.content[0]!.text) as { count: number };
     assert.equal(payload.count, 2);
     assert.ok(seen.some((u) => u.endsWith("/data/exports/index.json")));
   });
