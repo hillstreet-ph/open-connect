@@ -53,6 +53,13 @@ jobs:
         # missing /build-info.json, a wrong agent count, a missing MCP tool.
         # The gate must go red when production does not match main; a gate that
         # only ever passes is the bug this change exists to fix.
+        #
+        # The commit-identity check is outcome-aware: a 404 (file never
+        # deployed), another non-200, a transport failure, a 200 with corrupt
+        # JSON, a 200 with no usable commit, and a genuine stale build each get
+        # their own diagnosis. Every one of them still fails the gate — a 404
+        # is never "unknown, therefore fine" — and the 404 message must not
+        # claim the build is stale.
         run: python3 -m unittest discover -s scripts -p 'verify_production_deploy_test.py' -v
       - name: Cloudflare build-detail contract tests
         # Offline: pins the optional Cloudflare Pages lookup in four states —

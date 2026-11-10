@@ -86,6 +86,143 @@ class CommitIdentityTests(unittest.TestCase):
         self.assertIn("not valid JSON", c.detail)
 
 
+class CommitIdentityOutcomeTests(unittest.TestCase):
+    """Each failure mode must be named as itself, not as a flat mismatch.
+
+    The point of these tests is diagnosis, not verdict: every case here must
+    still FAIL the gate (a 404 is never "unknown, therefore fine"), but the
+    message has to tell "production serves an old build" apart from
+    "production cannot say what it serves at all".
+    """
+
+    def _check(self, response):
+        with mock.patch.object(gate, "http_get", return_value=response):
+            return gate.check_commit("https://x", MAIN_SHA)
+
+    # --- 404: file not deployed at all -------------------------------------
+
+    def test_404_still_fails_the_gate(self):
+        c = self._check((404, b""))
+        self.assertFalse(c.ok, "a 404 must never be treated as unknown-and-ok")
+
+    def test_404_says_the_file_is_not_deployed(self):
+        c = self._check((404, b""))
+        self.assertIn("404", c.detail)
+        self.assertIn("not deployed", c.detail)
+        self.assertIn("write-build-info.mjs", c.detail)
+
+    def test_404_does_not_claim_the_build_is_stale(self):
+        c = self._check((404, b""))
+        self.assertIn("NOT evidence of a stale build", c.detail)
+        # It must not assert staleness as fact.
+        self.assertNotIn("serving an older commit", c.detail)
+        self.assertNotIn("did not reach production", c.detail)
+
+    # --- other non-200 -----------------------------------------------------
+
+    def test_500_names_the_status_and_implication(self):
+        c = self._check((500, b"boom"))
+        self.assertFalse(c.ok)
+        self.assertIn("500", c.detail)
+        self.assertIn("serving/access fault", c.detail)
+        self.assertIn("not a stale build", c.detail)
+
+    def test_403_names_access_control(self):
+        c = self._check((403, b"denied"))
+        self.assertFalse(c.ok)
+        self.assertIn("403", c.detail)
+        self.assertIn("access control", c.detail)
+
+    # --- transport ---------------------------------------------------------
+
+    def test_transport_failure_says_production_did_not_answer(self):
+        c = self._check((0, b""))
+        self.assertFalse(c.ok)
+        self.assertIn("no HTTP response", c.detail)
+        self.assertIn("did not answer", c.detail)
+        self.assertIn("NOT evidence of a stale build", c.detail)
+
+    # --- 200 but corrupt ---------------------------------------------------
+
+    def test_200_non_json_says_corrupt(self):
+        c = self._check((200, b"<html>nope"))
+        self.assertFalse(c.ok)
+        self.assertIn("not valid JSON", c.detail)
+        self.assertIn("corrupt", c.detail)
+        self.assertIn("NOT evidence of a stale build", c.detail)
+
+    def test_200_json_wrong_type_does_not_raise(self):
+        # A JSON array/string is valid JSON but not a build record. This used
+        # to raise AttributeError and crash the gate instead of failing it.
+        for body in (b"[]", b'"hello"', b"42", b"null"):
+            with self.subTest(body=body):
+                c = self._check((200, body))
+                self.assertFalse(c.ok)
+                self.assertIn("does not identify a build", c.detail)
+
+    # --- 200 but no commit -------------------------------------------------
+
+    def test_200_missing_commit_says_no_build_identified(self):
+        c = self._check((200, json.dumps({"built_at": "x"}).encode()))
+        self.assertFalse(c.ok)
+        self.assertIn("does not identify a build", c.detail)
+        self.assertIn("NOT evidence of a stale build", c.detail)
+
+    def test_200_null_commit_says_no_build_identified(self):
+        # Previously printed "production serves None but main HEAD is ..." and
+        # claimed the merge did not reach production.
+        c = self._check((200, json.dumps({"commit": None}).encode()))
+        self.assertFalse(c.ok)
+        self.assertIn("does not identify a build", c.detail)
+        self.assertNotIn("serves None", c.detail)
+        self.assertNotIn("did not reach production", c.detail)
+
+    def test_200_empty_commit_says_no_build_identified(self):
+        c = self._check((200, json.dumps({"commit": "   "}).encode()))
+        self.assertFalse(c.ok)
+        self.assertIn("does not identify a build", c.detail)
+
+    # --- genuine stale build ----------------------------------------------
+
+    def test_stale_build_names_both_shas(self):
+        c = self._check((200, build_info(OLD_SHA)))
+        self.assertFalse(c.ok)
+        self.assertIn(OLD_SHA, c.detail)
+        self.assertIn(MAIN_SHA, c.detail)
+        self.assertIn("serving an older commit", c.detail)
+
+    def test_stale_build_is_distinguishable_from_404(self):
+        stale = self._check((200, build_info(OLD_SHA)))
+        missing = self._check((404, b""))
+        self.assertNotEqual(stale.detail, missing.detail)
+        self.assertIn("serving an older commit", stale.detail)
+        self.assertNotIn("serving an older commit", missing.detail)
+
+    # --- pass path unchanged ----------------------------------------------
+
+    def test_match_still_passes(self):
+        c = self._check((200, build_info(MAIN_SHA)))
+        self.assertTrue(c.ok)
+        self.assertIn(MAIN_SHA[:10], c.detail)
+
+    # --- no secret leaks ---------------------------------------------------
+
+    def test_no_token_appears_in_any_failure_message(self):
+        token = "ghp_" + "A" * 36
+        for response in (
+            (404, b""),
+            (500, b""),
+            (0, b""),
+            (200, b"<html>nope"),
+            (200, json.dumps({"commit": None}).encode()),
+            (200, build_info(OLD_SHA)),
+        ):
+            with self.subTest(response=response[0]):
+                c = self._check(response)
+                self.assertNotIn(token, c.detail)
+                self.assertNotIn("ghp_", c.detail)
+
+
 class RosterDelegationTests(unittest.TestCase):
     def test_passes_when_validator_exits_zero(self):
         proc = mock.Mock(returncode=0, stdout="Roster pages: 9/9 passed\n", stderr="")
