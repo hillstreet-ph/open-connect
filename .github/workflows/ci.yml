@@ -54,6 +54,13 @@ jobs:
         # The gate must go red when production does not match main; a gate that
         # only ever passes is the bug this change exists to fix.
         run: python3 -m unittest discover -s scripts -p 'verify_production_deploy_test.py' -v
+      - name: Cloudflare build-detail contract tests
+        # Offline: pins the optional Cloudflare Pages lookup in four states —
+        # token present with a superseding build, token present with none,
+        # token absent, and API error responses. Also asserts the token never
+        # reaches a log, a job summary or an issue body. No network, so the
+        # token-backed path is covered without a token being configured.
+        run: python3 -m unittest discover -s scripts -p 'cloudflare_pages_test.py' -v
       - name: Strict TypeScript validation
         run: bun run typecheck
       - name: Production build
