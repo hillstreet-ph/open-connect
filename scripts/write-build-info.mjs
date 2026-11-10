@@ -47,9 +47,7 @@ const commit =
   fromGit();
 
 const branch =
-  (process.env.CF_PAGES_BRANCH || "").trim() ||
-  (process.env.GITHUB_REF_NAME || "").trim() ||
-  "";
+  (process.env.CF_PAGES_BRANCH || "").trim() || (process.env.GITHUB_REF_NAME || "").trim() || "";
 
 const info = {
   commit: commit || "unknown",
@@ -68,9 +66,7 @@ const info = {
 mkdirSync(dirname(outFile), { recursive: true });
 writeFileSync(outFile, `${JSON.stringify(info, null, 2)}\n`, "utf8");
 
-console.log(
-  `build-info: commit=${info.short} source=${info.source} branch=${info.branch || "-"}`,
-);
+console.log(`build-info: commit=${info.short} source=${info.source} branch=${info.branch || "-"}`);
 
 if (!commit) {
   // Not fatal: a local build without git still produces a usable bundle. The
