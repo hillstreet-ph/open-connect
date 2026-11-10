@@ -71,7 +71,7 @@ jobs:
         # Regenerates the marketplace export bundle and verifies the build
         # just shipped it: one entry per cataloged resource, metadata-only
         # policy intact, every export present in the built Pages output.
-        run: node scripts/generate-openclaw-exports.mjs --verify-build
+        run: python3 scripts/generate_openclaw_exports.py --verify-build
       - name: Render SSR pages
         env:
           VITE_SUPABASE_URL: https://huadtiuuoiriqrjpjxhr.supabase.co
