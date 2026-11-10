@@ -47,7 +47,8 @@ afterEach(() => {
 function stubFetch(handler: (url: string) => Response | null) {
   const seen: string[] = [];
   globalThis.fetch = (async (input: RequestInfo | URL) => {
-    const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+    const url =
+      typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
     seen.push(url);
     const res = handler(url);
     if (res) return res;
@@ -111,7 +112,10 @@ describe("ai-factory MCP endpoint", () => {
         ? new Response(JSON.stringify(INDEX), { status: 200 })
         : null,
     );
-    const res = await handleAiFactoryMcp(rpc("tools/call", { name: "ai_factory_list_agents", arguments: {} }), {});
+    const res = await handleAiFactoryMcp(
+      rpc("tools/call", { name: "ai_factory_list_agents", arguments: {} }),
+      {},
+    );
     assert.ok(res);
     const body = (await res.json()) as {
       result: { isError: boolean; content: { text: string }[] };
