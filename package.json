@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "prebuild": "node scripts/unpack-ai-factory-roster.mjs && node scripts/generate-ai-factory-exports.mjs && python3 scripts/generate_openclaw_exports.py",
+    "prebuild": "node scripts/unpack-ai-factory-roster.mjs && node scripts/generate-ai-factory-exports.mjs && python3 scripts/generate_openclaw_exports.py && node scripts/write-build-info.mjs",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
