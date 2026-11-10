@@ -80,7 +80,8 @@ function parseNicheTeams() {
   if (!existsSync(file)) return new Map();
   const html = readFileSync(file, "utf8");
   const out = new Map();
-  const cardRe = /<article class="niche-card[^"]*" data-niche="([^"]+)"[\s\S]*?<div class="niche-teams">([\s\S]*?)<\/div>/g;
+  const cardRe =
+    /<article class="niche-card[^"]*" data-niche="([^"]+)"[\s\S]*?<div class="niche-teams">([\s\S]*?)<\/div>/g;
   let m;
   while ((m = cardRe.exec(html))) {
     const niche = m[1];
@@ -90,10 +91,7 @@ function parseNicheTeams() {
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean);
-    out.set(
-      niche,
-      names.map((n) => teamIdByName.get(n)).filter(Boolean),
-    );
+    out.set(niche, names.map((n) => teamIdByName.get(n)).filter(Boolean));
   }
   return out;
 }
@@ -130,16 +128,30 @@ function buildNeutral(slug, a) {
     description: a.description,
     instruction: a.instruction,
     knowledge: a.knowledge || [],
-    knowledge_files: (a.knowledgeFiles || []).map((f) => ({ name: f.name, type: f.type, size: f.size })),
-    tools: (a.tools || []).map((t) => ({ id: t.id, label: t.label, description: t.description || "" })),
-    skills: (a.skills || []).map((s) => ({ id: s.id, label: s.label, description: s.description || "" })),
+    knowledge_files: (a.knowledgeFiles || []).map((f) => ({
+      name: f.name,
+      type: f.type,
+      size: f.size,
+    })),
+    tools: (a.tools || []).map((t) => ({
+      id: t.id,
+      label: t.label,
+      description: t.description || "",
+    })),
+    skills: (a.skills || []).map((s) => ({
+      id: s.id,
+      label: s.label,
+      description: s.description || "",
+    })),
     connectors: (a.connectors || []).map((c) => ({
       id: c.id,
       label: c.label,
       status: c.status,
       provider: c.provider,
     })),
-    team: primary ? { id: primary.id, name: primary.name, category: primary.category, layer: primary.layer } : null,
+    team: primary
+      ? { id: primary.id, name: primary.name, category: primary.category, layer: primary.layer }
+      : null,
     teams: tids,
     niche: nichesFor(slug)[0] || null,
     niches: nichesFor(slug),
@@ -342,7 +354,7 @@ function buildOpenApi() {
         get: {
           operationId: "listExports",
           summary: "Manifest of all agents and their export URLs",
-          responses: { "200": { description: "Export index" } },
+          responses: { 200: { description: "Export index" } },
         },
       },
       "/ai-factory/roster/data/exports/{format}/{slug}.json": {
@@ -350,17 +362,25 @@ function buildOpenApi() {
           operationId: "getExport",
           summary: "One agent's export in a given format",
           parameters: [
-            { name: "format", in: "path", required: true, schema: { type: "string", enum: FORMATS } },
+            {
+              name: "format",
+              in: "path",
+              required: true,
+              schema: { type: "string", enum: FORMATS },
+            },
             { name: "slug", in: "path", required: true, schema: { type: "string" } },
           ],
-          responses: { "200": { description: "Agent export" }, "404": { description: "Unknown agent or format" } },
+          responses: {
+            200: { description: "Agent export" },
+            404: { description: "Unknown agent or format" },
+          },
         },
       },
       "/ai-factory/mcp": {
         post: {
           operationId: "mcp",
           summary: "MCP JSON-RPC endpoint (initialize, tools/list, tools/call)",
-          responses: { "200": { description: "JSON-RPC response" } },
+          responses: { 200: { description: "JSON-RPC response" } },
         },
       },
     },
@@ -535,7 +555,10 @@ for (const page of pages) {
   if (!html.includes('class="agent-card"')) continue;
   let changed = false;
   if (!html.includes("assets/portability.css")) {
-    html = html.replace("</head>", '<link rel="stylesheet" href="assets/portability.css">\n</head>');
+    html = html.replace(
+      "</head>",
+      '<link rel="stylesheet" href="assets/portability.css">\n</head>',
+    );
     changed = true;
   }
   if (!html.includes("assets/portability.js")) {
