@@ -266,26 +266,67 @@ def check_commit(
     """
     c = Check("commit identity")
     status, body = http_get(f"{base_url}{BUILD_INFO_PATH}")
+
+    # Every branch below is a distinct fault with a distinct fix. They all fail
+    # the gate (a 404 is never "unknown, therefore fine"), but the message must
+    # let a reader tell "production is serving an old build" apart from
+    # "production cannot tell us what it is serving at all".
+    if status == 0:
+        return c.fail(
+            f"GET {BUILD_INFO_PATH} got no HTTP response (transport failure, "
+            "timeout or DNS). Production did not answer, so nothing is known "
+            "about which commit it serves. This is NOT evidence of a stale "
+            "build \u2014 check that the host resolves and is reachable."
+        )
+    if status == 404:
+        return c.fail(
+            f"GET {BUILD_INFO_PATH} -> HTTP 404. The file is not deployed at all, "
+            "so production cannot report its own commit. This means the build "
+            "predates the build-info step (write-build-info.mjs) or the file was "
+            "never published. This is NOT evidence of a stale build \u2014 the "
+            "deployed build may well be current; it simply cannot say so."
+        )
     if status != 200:
         return c.fail(
-            f"GET {BUILD_INFO_PATH} -> HTTP {status}. Production cannot state which "
-            "commit it is serving, so a merge cannot be verified as live."
+            f"GET {BUILD_INFO_PATH} -> HTTP {status}. Production answered but did "
+            "not serve the build-info document, so it cannot state which commit "
+            "it is serving. This is a serving/access fault (a 5xx points at the "
+            "host or an upstream error, a 403/401 at access control), not a "
+            "stale build."
         )
     try:
         info = json.loads(body)
     except json.JSONDecodeError:
-        return c.fail(f"{BUILD_INFO_PATH} is not valid JSON: {body[:200]!r}")
+        return c.fail(
+            f"{BUILD_INFO_PATH} returned HTTP 200 but the body is not valid JSON "
+            f"({body[:200]!r}). The file exists but is corrupt, so production "
+            "cannot state which commit it is serving. This is NOT evidence of a "
+            "stale build \u2014 the build-info step wrote a malformed document."
+        )
+    if not isinstance(info, dict):
+        return c.fail(
+            f"{BUILD_INFO_PATH} returned HTTP 200 with valid JSON of type "
+            f"{type(info).__name__}, not an object. The file exists but does not "
+            "identify a build, so production cannot state which commit it is "
+            "serving. This is NOT evidence of a stale build."
+        )
 
-    served = str(info.get("commit", "")).strip()
+    raw_commit = info.get("commit")
+    # `str(None)` is "None", which is truthy and would otherwise fall through to
+    # the stale-build branch and be reported as a commit that production serves.
+    served = "" if raw_commit is None else str(raw_commit).strip()
     if not served or served == "unknown":
         return c.fail(
-            f"{BUILD_INFO_PATH} reports commit={served!r}; the build did not record "
-            "a SHA, so it cannot be matched to main."
+            f"{BUILD_INFO_PATH} returned HTTP 200 with valid JSON but "
+            f"commit={served!r}. The file exists but does not identify a build, "
+            "so it cannot be matched to main. This is NOT evidence of a stale "
+            "build \u2014 the build-info step ran but recorded no SHA."
         )
     if served != expected:
         detail = (
             f"production serves {served[:10]} but main HEAD is {expected[:10]} "
             f"(built_at={info.get('built_at')}, source={info.get('source')}). "
+            f"Production is serving an older commit: {served} is not {expected}. "
             "The merge did not reach production."
         )
         if cf is not None:
