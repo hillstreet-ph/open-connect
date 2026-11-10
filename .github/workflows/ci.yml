@@ -61,6 +61,12 @@ jobs:
         # 103 agents x 5 formats, seven fields present, and no export inventing
         # callable tools the agent does not have.
         run: python3 scripts/validate_ai_factory_exports_test.py
+      - name: AI Factory MCP endpoint contract tests
+        # The endpoint reads exports through the ASSETS binding on Pages, but
+        # this project deploys as a Worker where that binding is absent. These
+        # tests pin the HTTP fallback so /ai-factory/mcp cannot regress to
+        # -32603 "Static asset binding is unavailable" in production.
+        run: node --experimental-strip-types --test src/lib/ai-factory-mcp.test.ts
       - name: Render SSR pages
         env:
           VITE_SUPABASE_URL: https://huadtiuuoiriqrjpjxhr.supabase.co
