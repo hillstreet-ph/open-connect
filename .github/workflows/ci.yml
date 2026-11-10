@@ -60,6 +60,13 @@ jobs:
         # token absent, and API error responses. Also asserts the token never
         # reaches a log, a job summary or an issue body. No network, so the
         # token-backed path is covered without a token being configured.
+        #
+        # The superseding-build cases are exercised across every build outcome,
+        # not just success: a FAILED build must be named as failed (the deploy
+        # broke, not a race), a cancelled/skipped build as never completed, an
+        # in-progress build as not finished, and an unrecognised status must
+        # never be reported as success. A newer failure for main HEAD must not
+        # be masked by an older success for the same commit.
         run: python3 -m unittest discover -s scripts -p 'cloudflare_pages_test.py' -v
       - name: Strict TypeScript validation
         run: bun run typecheck

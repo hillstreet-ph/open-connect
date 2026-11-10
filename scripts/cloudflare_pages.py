@@ -52,11 +52,33 @@ MAX_DEPLOYMENTS = 25
 STATUS_WORDS = {
     "success": "succeeded",
     "failure": "failed",
+    "failed": "failed",
     "active": "still building",
+    "building": "still building",
     "canceled": "cancelled",
     "cancelled": "cancelled",
     "idle": "queued",
     "queued": "queued",
+    "skipped": "skipped",
+}
+
+# How a status should be *read*, which is not the same as how it is spelled.
+# A failed build means the deploy broke; a succeeded build that is not live
+# means it lost a race. Those are different faults and the gate must not blur
+# them into one generic "mismatch".
+OUTCOME_FAILED = "failed"
+OUTCOME_CANCELLED = "cancelled"
+OUTCOME_IN_PROGRESS = "in_progress"
+OUTCOME_SUCCEEDED = "succeeded"
+OUTCOME_UNKNOWN = "unknown"
+
+OUTCOME_BY_STATUS = {
+    "succeeded": OUTCOME_SUCCEEDED,
+    "failed": OUTCOME_FAILED,
+    "cancelled": OUTCOME_CANCELLED,
+    "skipped": OUTCOME_CANCELLED,
+    "still building": OUTCOME_IN_PROGRESS,
+    "queued": OUTCOME_IN_PROGRESS,
 }
 
 
@@ -115,24 +137,88 @@ class BuildDetail:
         superseding: dict | None = None,
         production: dict | None = None,
         recent: list[dict] | None = None,
+        related: list[dict] | None = None,
     ) -> None:
         self.available = available
         self.reason = reason
         self.superseding = superseding
         self.production = production
         self.recent = recent or []
+        # Other deployments for main HEAD, newest first, excluding `superseding`.
+        # Used to say "and an earlier attempt also failed" without letting an
+        # older attempt stand in for the current one.
+        self.related = related or []
+
+    def _fields(self, d: dict) -> str:
+        """The four fields an operator needs, in one clause."""
+        return (
+            f"commit {d['commit'][:10]}, status {d['status']}, "
+            f"created {d['created']}, deployment {d['url']}"
+        )
 
     def sentence(self) -> str:
-        """One sentence for the gate's failure detail."""
+        """One sentence for the gate's failure detail.
+
+        The wording is chosen by *outcome*, not by the status string, because
+        the operator's next action depends on which fault this is:
+
+        * **failed** \u2014 the deploy broke. Nothing is racing; the build itself
+          did not produce a deployable artifact. This is the case that must
+          never be reported as a generic mismatch or as a success.
+        * **cancelled / skipped** \u2014 the build was stopped before it finished.
+        * **still building / queued** \u2014 it has not finished yet; wait.
+        * **succeeded** \u2014 it built and is not live, so it lost a race.
+        * **anything else** \u2014 an unrecognised status. Say so, and do not
+          claim success on a status we do not understand.
+        """
         if not self.available:
             return f"Build-level detail unavailable: {self.reason}"
 
         if self.superseding:
             s = self.superseding
-            return (
-                f"Superseding build: commit {s['commit'][:10]} is {s['status']} "
-                f"(created {s['created']}), deployment {s['url']}."
-            )
+            outcome = s.get("outcome", OUTCOME_UNKNOWN)
+            fields = self._fields(s)
+
+            if outcome == OUTCOME_FAILED:
+                msg = (
+                    f"The build for main HEAD FAILED: {fields}. "
+                    "The deploy broke \u2014 this is not a build that lost a race "
+                    "with a newer commit, it is a build that did not produce a "
+                    "deployable artifact. Fix the build before re-running the gate."
+                )
+            elif outcome == OUTCOME_CANCELLED:
+                msg = (
+                    f"The build for main HEAD was {s['status']} before it "
+                    f"finished: {fields}. The deploy never completed \u2014 this is "
+                    "not a build that lost a race with a newer commit."
+                )
+            elif outcome == OUTCOME_IN_PROGRESS:
+                msg = (
+                    f"The build for main HEAD is {s['status']}: {fields}. "
+                    "It has not finished yet; re-run the gate once it completes."
+                )
+            elif outcome == OUTCOME_SUCCEEDED:
+                msg = (
+                    f"Superseding build: {fields}. It succeeded but is not live, "
+                    "so production is serving an older commit."
+                )
+            else:
+                msg = (
+                    f"The build for main HEAD has an unrecognised status "
+                    f"{s['status']!r}: {fields}. The gate cannot tell whether "
+                    "this build produced a deployable artifact, so it does not "
+                    "claim that it did."
+                )
+
+            # An earlier attempt for the same commit is worth naming, but only
+            # as context \u2014 it must never replace the newest build above.
+            earlier = [d for d in self.related if d.get("outcome") == OUTCOME_FAILED]
+            if earlier and outcome != OUTCOME_FAILED:
+                msg += (
+                    f" An earlier build for the same commit also failed "
+                    f"(created {earlier[0]['created']})."
+                )
+            return msg
 
         # No deployment exists for main HEAD at all. That is a different fault
         # from "it built and lost the race", and the operator needs to know
@@ -188,7 +274,7 @@ class CloudflarePages:
         return f"{ACCOUNT_ENV} is not set"
 
     def _normalise(self, raw: dict) -> dict | None:
-        """Flatten one deployment into the four fields the gate reports."""
+        """Flatten one deployment into the fields the gate reports."""
         if not isinstance(raw, dict):
             return None
         trigger = raw.get("deployment_trigger") or {}
@@ -197,15 +283,38 @@ class CloudflarePages:
         if not commit:
             return None
         stage = raw.get("latest_stage") or {}
-        status = str(stage.get("status") or "unknown").lower()
+        status = str(stage.get("status") or "unknown").strip().lower()
+        word = STATUS_WORDS.get(status, status)
+        # A null/absent URL must never reach the message as the string "None".
+        url = raw.get("url")
+        url = str(url).strip() if url else ""
         return {
             "commit": commit,
-            "status": STATUS_WORDS.get(status, status),
+            "status": word,
+            "outcome": OUTCOME_BY_STATUS.get(word, OUTCOME_UNKNOWN),
             "created": str(raw.get("created_on") or "unknown"),
-            "url": str(raw.get("url") or "(no deployment URL)"),
+            "url": url or "(no deployment URL)",
             "environment": str(raw.get("environment") or "").lower(),
             "id": str(raw.get("short_id") or raw.get("id") or ""),
         }
+
+    @staticmethod
+    def _newest(deployments: list[dict]) -> list[dict]:
+        """Order newest first.
+
+        The API documents newest-first, but the gate must not *depend* on that:
+        picking the first match in an unordered list is how a failed build gets
+        reported as the older success that preceded it. Sort explicitly, and
+        keep the API order as the tie-break for identical timestamps.
+        """
+        return sorted(
+            deployments,
+            # A deployment with no created_on cannot be ordered; push it last
+            # rather than letting the literal "unknown" sort to the front.
+            key=lambda d: (d["created"] != "unknown", d["created"]),
+            reverse=True,
+        )
+
 
     def describe(self, expected_sha: str, served_sha: str) -> BuildDetail:
         """Name the build that superseded production, or say why we cannot.
@@ -244,14 +353,20 @@ class CloudflarePages:
                 False, "Cloudflare returned no deployments with a commit hash"
             )
 
+        # Order explicitly. The API documents newest-first, but relying on that
+        # is how a failed build gets reported as the older success before it.
+        deployments = self._newest(deployments)
+
         production = [d for d in deployments if d["environment"] == "production"]
-        superseding = next(
-            (d for d in deployments if d["commit"] == expected_sha), None
-        )
+        for_head = [d for d in deployments if d["commit"] == expected_sha]
+        # The newest build for main HEAD is the one that decides what happened.
+        # An older attempt for the same commit must never stand in for it.
+        superseding = for_head[0] if for_head else None
 
         return BuildDetail(
             True,
             superseding=superseding,
             production=production[0] if production else None,
             recent=deployments[:5],
+            related=for_head[1:],
         )

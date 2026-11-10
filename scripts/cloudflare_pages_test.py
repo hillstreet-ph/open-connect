@@ -335,6 +335,222 @@ class TokenNeverLeaksTests(unittest.TestCase):
         self.assertNotIn(TOKEN, error)
 
 
+class FailedBuildTests(unittest.TestCase):
+    """A FAILED build is the case that matters most, and the one that was missed.
+
+    A failed build means the deploy broke. A succeeded build that is not live
+    means it lost a race. Those need different words, because they need
+    different actions: one is "fix the build", the other is "wait for the next
+    deploy". Before this class existed, every "superseding build" case was
+    exercised with a build that had succeeded, so the failed path was never
+    pinned \u2014 and it was wrong in two ways:
+
+    1. `sentence()` printed "Superseding build: commit X is failed", which reads
+       as a race, not a break.
+    2. `describe()` took the *first* deployment matching main HEAD in whatever
+       order the API returned. With an older success and a newer failure for the
+       same commit, it reported the older success \u2014 claiming a build succeeded
+       when the newest build for that commit had failed.
+    """
+
+    def _describe(self, deployments: list[dict]) -> cf.BuildDetail:
+        with mock.patch.object(cf, "_api_get", return_value=api_ok(deployments)):
+            return make_client().describe(MAIN_SHA, OLD_SHA)
+
+    def test_failure_status_names_the_build_as_failed(self):
+        detail = self._describe([deployment(MAIN_SHA, status="failure")])
+        sentence = detail.sentence()
+
+        self.assertEqual(detail.superseding["outcome"], cf.OUTCOME_FAILED)
+        self.assertIn("FAILED", sentence)
+        self.assertIn(MAIN_SHA[:10], sentence)                       # commit
+        self.assertIn("status failed", sentence)                     # status
+        self.assertIn("2026-11-10T20:00:00.000Z", sentence)          # created
+        self.assertIn("pages.dev", sentence)                         # URL
+
+    def test_failure_says_the_deploy_broke_not_that_it_was_superseded(self):
+        sentence = self._describe([deployment(MAIN_SHA, status="failure")]).sentence()
+
+        self.assertIn("deploy broke", sentence)
+        self.assertIn("not a build that lost a race", sentence)
+        # The old wording implied a race. It must be gone for a failed build.
+        self.assertNotIn("Superseding build", sentence)
+
+    def test_failure_never_claims_success(self):
+        sentence = self._describe([deployment(MAIN_SHA, status="failure")]).sentence()
+        self.assertNotIn("succeeded", sentence)
+        self.assertNotIn("is failed", sentence)  # the old, race-flavoured phrasing
+
+    def test_failed_status_spelling_is_also_recognised(self):
+        # Cloudflare has used both "failure" and "failed"; neither may fall
+        # through to the unrecognised-status branch.
+        detail = self._describe([deployment(MAIN_SHA, status="failed")])
+        self.assertEqual(detail.superseding["outcome"], cf.OUTCOME_FAILED)
+        self.assertIn("FAILED", detail.sentence())
+
+    def test_newest_canceled_wins_over_an_older_failure(self):
+        # Two builds for main HEAD: the newest was cancelled, an earlier one
+        # failed. The gate must report the newest, and may mention the earlier
+        # failure as context \u2014 but must not report the failure as current.
+        deployments = [
+            deployment(MAIN_SHA, status="canceled", created="2026-11-10T22:00:00Z"),
+            deployment(MAIN_SHA, status="failure", created="2026-11-10T21:00:00Z"),
+        ]
+        detail = self._describe(deployments)
+        sentence = detail.sentence()
+
+        self.assertEqual(detail.superseding["created"], "2026-11-10T22:00:00Z")
+        self.assertEqual(detail.superseding["outcome"], cf.OUTCOME_CANCELLED)
+        self.assertIn("cancelled", sentence)
+        self.assertIn("2026-11-10T22:00:00Z", sentence)
+        # The earlier failure is context, clearly marked as earlier.
+        self.assertIn("earlier build for the same commit also failed", sentence)
+        self.assertIn("2026-11-10T21:00:00Z", sentence)
+
+    def test_newest_failure_wins_over_an_older_canceled(self):
+        deployments = [
+            deployment(MAIN_SHA, status="failure", created="2026-11-10T22:00:00Z"),
+            deployment(MAIN_SHA, status="canceled", created="2026-11-10T21:00:00Z"),
+        ]
+        detail = self._describe(deployments)
+        self.assertEqual(detail.superseding["outcome"], cf.OUTCOME_FAILED)
+        self.assertIn("FAILED", detail.sentence())
+
+    def test_failed_head_is_not_reported_as_an_older_success(self):
+        # The regression that motivated this class: a failed build for main HEAD
+        # alongside a succeeded build for an older commit. The older success
+        # must not be presented as if it were current.
+        deployments = [
+            deployment(MAIN_SHA, status="failure", created="2026-11-10T21:00:00Z"),
+            deployment(OLD_SHA, status="success", created="2026-11-10T19:00:00Z"),
+        ]
+        detail = self._describe(deployments)
+        sentence = detail.sentence()
+
+        self.assertEqual(detail.superseding["commit"], MAIN_SHA)
+        self.assertEqual(detail.superseding["outcome"], cf.OUTCOME_FAILED)
+        self.assertIn("FAILED", sentence)
+        self.assertIn(MAIN_SHA[:10], sentence)
+        # The older commit's success must not be offered as the current state.
+        self.assertNotIn(OLD_SHA[:10], sentence)
+        self.assertNotIn("succeeded", sentence)
+
+    def test_older_success_for_same_commit_does_not_mask_a_newer_failure(self):
+        # Same commit, two attempts, API order NOT newest-first. The newest
+        # attempt is the failure and must be the one reported.
+        deployments = [
+            deployment(MAIN_SHA, status="success", created="2026-11-10T19:00:00Z"),
+            deployment(MAIN_SHA, status="failure", created="2026-11-10T21:00:00Z"),
+        ]
+        detail = self._describe(deployments)
+        sentence = detail.sentence()
+
+        self.assertEqual(detail.superseding["created"], "2026-11-10T21:00:00Z")
+        self.assertEqual(detail.superseding["outcome"], cf.OUTCOME_FAILED)
+        self.assertIn("FAILED", sentence)
+        self.assertNotIn("succeeded", sentence)
+
+    def test_failed_build_with_null_url_does_not_crash_or_print_none(self):
+        deployments = [deployment(MAIN_SHA, status="failure", url=None)]
+        detail = self._describe(deployments)
+        sentence = detail.sentence()
+
+        self.assertEqual(detail.superseding["outcome"], cf.OUTCOME_FAILED)
+        self.assertIn("FAILED", sentence)
+        self.assertIn("(no deployment URL)", sentence)
+        self.assertNotIn("None", sentence)
+
+    def test_failed_build_with_absent_url_key_does_not_crash(self):
+        raw = deployment(MAIN_SHA, status="failure")
+        del raw["url"]
+        detail = self._describe([raw])
+        sentence = detail.sentence()
+
+        self.assertIn("FAILED", sentence)
+        self.assertNotIn("None", sentence)
+
+    def test_unrecognised_status_does_not_crash_or_claim_success(self):
+        detail = self._describe([deployment(MAIN_SHA, status="errored")])
+        sentence = detail.sentence()
+
+        self.assertEqual(detail.superseding["outcome"], cf.OUTCOME_UNKNOWN)
+        self.assertIn("unrecognised status", sentence)
+        self.assertIn("errored", sentence)
+        self.assertIn("does not claim that it did", sentence)
+        self.assertNotIn("succeeded", sentence)
+        self.assertNotIn("Superseding build", sentence)
+
+    def test_missing_latest_stage_is_unknown_not_success(self):
+        raw = deployment(MAIN_SHA)
+        del raw["latest_stage"]
+        detail = self._describe([raw])
+
+        self.assertEqual(detail.superseding["outcome"], cf.OUTCOME_UNKNOWN)
+        self.assertNotIn("succeeded", detail.sentence())
+
+    def test_skipped_build_is_reported_as_not_completed(self):
+        detail = self._describe([deployment(MAIN_SHA, status="skipped")])
+        sentence = detail.sentence()
+
+        self.assertEqual(detail.superseding["outcome"], cf.OUTCOME_CANCELLED)
+        self.assertIn("skipped", sentence)
+        self.assertIn("never completed", sentence)
+        self.assertNotIn("succeeded", sentence)
+
+    def test_in_progress_build_is_not_reported_as_failed_or_succeeded(self):
+        detail = self._describe([deployment(MAIN_SHA, status="active")])
+        sentence = detail.sentence()
+
+        self.assertEqual(detail.superseding["outcome"], cf.OUTCOME_IN_PROGRESS)
+        self.assertIn("still building", sentence)
+        self.assertIn("not finished yet", sentence)
+        self.assertNotIn("succeeded", sentence)
+        self.assertNotIn("FAILED", sentence)
+
+    def test_succeeded_build_still_reads_as_a_race(self):
+        # The pre-existing behaviour, unchanged: a build that succeeded but is
+        # not live lost a race, and the wording must still say so.
+        detail = self._describe([deployment(MAIN_SHA, status="success")])
+        sentence = detail.sentence()
+
+        self.assertEqual(detail.superseding["outcome"], cf.OUTCOME_SUCCEEDED)
+        self.assertIn("Superseding build", sentence)
+        self.assertIn("succeeded but is not live", sentence)
+        self.assertNotIn("FAILED", sentence)
+
+    def test_gate_detail_names_a_failed_build_end_to_end(self):
+        # Through the real gate entry point, not just the lookup.
+        deployments = [deployment(MAIN_SHA, status="failure")]
+        with mock.patch.object(gate, "http_get", return_value=(200, build_info(OLD_SHA))), \
+             mock.patch.object(cf, "_api_get", return_value=api_ok(deployments)):
+            c = gate.check_commit("https://x", MAIN_SHA, make_client())
+
+        self.assertFalse(c.ok)
+        self.assertIn("did not reach production", c.detail)
+        self.assertIn("FAILED", c.detail)
+        self.assertIn(MAIN_SHA[:10], c.detail)
+        self.assertIn("pages.dev", c.detail)
+        self.assertNotIn("Superseding build", c.detail)
+
+    def test_failed_build_does_not_turn_a_passing_gate_red(self):
+        # Enrichment is only consulted on a mismatch. A failed build in the
+        # queue must not affect a gate whose commit already matches.
+        deployments = [deployment(MAIN_SHA, status="failure")]
+        with mock.patch.object(gate, "http_get", return_value=(200, build_info(MAIN_SHA))), \
+             mock.patch.object(cf, "_api_get", return_value=api_ok(deployments)):
+            c = gate.check_commit("https://x", MAIN_SHA, make_client())
+
+        self.assertTrue(c.ok)
+        self.assertNotIn("FAILED", c.detail)
+
+    def test_failed_build_detail_never_contains_the_token(self):
+        deployments = [deployment(MAIN_SHA, status="failure")]
+        with mock.patch.object(gate, "http_get", return_value=(200, build_info(OLD_SHA))), \
+             mock.patch.object(cf, "_api_get", return_value=api_ok(deployments)):
+            c = gate.check_commit("https://x", MAIN_SHA, make_client())
+        self.assertNotIn(TOKEN, c.detail)
+
+
 class MainWiringTests(unittest.TestCase):
     """main() must construct the client from the environment and stay optional."""
 
