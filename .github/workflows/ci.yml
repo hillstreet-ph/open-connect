@@ -81,6 +81,18 @@ jobs:
         # main HEAD, and no token (today's message plus the same hint line).
         # A transport failure still exits 1, and the no-token path is
         # byte-identical apart from that one hint.
+        #
+        # The MCP stage carries the same outcome-aware naming, at every stage
+        # of the handshake (initialize, tools/list, each tools/call): a
+        # transport fault names DNS / refused / TLS / timeout, a non-200 names
+        # the status class (5xx host-or-upstream, 401/403 access control, 404
+        # route not deployed), a 200 that is not JSON says the endpoint served
+        # something that is not the MCP router, a JSON-RPC error names the
+        # server's own code and message with any credential redacted, and a
+        # wrong tool set or agent count names what was expected and what was
+        # found. A 200 that is not JSON is kept distinct from a well-formed
+        # envelope with no result, because they are different faults. Every
+        # one of them still fails the gate, and no message may carry a token.
         run: python3 -m unittest discover -s scripts -p 'verify_production_deploy_test.py' -v
       - name: Cloudflare build-detail contract tests
         # Offline: pins the optional Cloudflare Pages lookup in four states —

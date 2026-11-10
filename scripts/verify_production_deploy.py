@@ -212,9 +212,19 @@ def _jsonrpc_error(body: bytes) -> str | None:
 
 
 def _not_json(body: bytes) -> str:
-    """Describe a body that is not JSON at all, without dumping a whole page."""
+    """Describe a body that is not JSON at all, without dumping a whole page.
+
+    A 200 that is not JSON is not a protocol error the server reported — it is
+    the endpoint answering with something else entirely, which in practice is
+    an HTML error page, a login/placeholder page, or a proxy interstitial. The
+    implication is stated so a reader does not go looking for a JSON-RPC bug.
+    """
     head = body[:120].decode("utf-8", errors="replace").replace("\n", " ")
-    return f"response is not valid JSON (body starts {redact(head)!r})"
+    return (
+        f"the endpoint answered HTTP 200 but not with JSON-RPC "
+        f"(body starts {redact(head)!r}) \u2014 likely an HTML error or "
+        "placeholder page, not the MCP router"
+    )
 
 
 # Anything that looks like a credential, so a server's own error text can never
@@ -557,10 +567,18 @@ def _mcp_stage_failure(
     if status == 0:
         return f"{stage} \u2014 endpoint unreachable: {_transport_phrase(timeout)}"
     if status != 200:
-        return (
-            f"{stage} \u2014 HTTP {status}: the endpoint answered but refused the "
-            "request"
-        )
+        # A non-200 is the endpoint answering and refusing, not a protocol
+        # fault. Name the class of status so the reader knows where to look:
+        # 5xx is the host/upstream, 401/403 is access control, 404 is routing.
+        if status >= 500:
+            implies = "the host or an upstream error, not the MCP router itself"
+        elif status in (401, 403):
+            implies = "access control refused the request"
+        elif status == 404:
+            implies = "the MCP route is not deployed at this path"
+        else:
+            implies = "the endpoint answered but refused the request"
+        return f"{stage} \u2014 HTTP {status}: {implies}"
     rpc_error = _jsonrpc_error(body)
     if rpc_error:
         return f"{stage} \u2014 {rpc_error}"
@@ -654,7 +672,14 @@ def check_mcp(base_url: str) -> Check:
             return c.fail(f"tools/call {name} \u2014 {rpc_error}")
         try:
             res = json.loads(body)["result"]
-        except (json.JSONDecodeError, KeyError, TypeError):
+        except json.JSONDecodeError:
+            # A 200 that is not JSON at all is a different fault from a
+            # well-formed envelope with no result: the first means the endpoint
+            # served something that is not the MCP router, the second means the
+            # router answered but the tool produced nothing. Collapsing both
+            # into "carries no result" sent readers after the wrong bug.
+            return c.fail(f"tools/call {name} \u2014 {_not_json(body)}")
+        except (KeyError, TypeError):
             return c.fail(
                 f"tools/call {name} \u2014 the response is JSON but carries no "
                 "result, so the tool did not answer"

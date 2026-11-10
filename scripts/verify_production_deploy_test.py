@@ -477,7 +477,8 @@ class McpOutcomeTests(unittest.TestCase):
         ):
             c = gate.check_mcp("https://x")
         self.assertFalse(c.ok)
-        self.assertIn("not valid JSON", c.detail)
+        self.assertIn("not with JSON-RPC", c.detail)
+        self.assertIn("placeholder page", c.detail)
 
     def test_jsonrpc_error_object_is_named(self):
         body = json.dumps(
@@ -567,6 +568,138 @@ class McpOutcomeTests(unittest.TestCase):
             c = gate.check_mcp("https://x")
         self.assertFalse(c.ok)
         self.assertNotIn(secret, c.detail)
+
+    # --- the same outcome-aware naming the commit-identity check has --------
+    #
+    # The MCP stage must name what happened at *every* stage, not only at
+    # initialize. These pin the branches that previously collapsed into one
+    # generic sentence, and pin that each still fails the gate.
+
+    def test_tool_call_non_json_body_is_named_as_not_jsonrpc(self):
+        # Previously this reported "carries no result", which sent a reader
+        # looking for a tool bug when the endpoint had served an HTML page.
+        with mock.patch.object(
+            gate, "http_post_json", side_effect=self._router(
+                ai_factory_get_agent=(200, b"<html>placeholder</html>")
+            )
+        ):
+            c = gate.check_mcp("https://x")
+        self.assertFalse(c.ok)
+        self.assertIn("ai_factory_get_agent", c.detail)
+        self.assertIn("not with JSON-RPC", c.detail)
+        self.assertNotIn("carries no result", c.detail)
+
+    def test_tool_call_json_without_result_is_still_named_separately(self):
+        # The other half of the split: a well-formed envelope with no result
+        # keeps its own wording, so the two faults stay distinguishable.
+        with mock.patch.object(
+            gate, "http_post_json", side_effect=self._router(
+                ai_factory_get_agent=(200, json.dumps({"jsonrpc": "2.0", "id": 3}).encode())
+            )
+        ):
+            c = gate.check_mcp("https://x")
+        self.assertFalse(c.ok)
+        self.assertIn("carries no result", c.detail)
+        self.assertNotIn("not with JSON-RPC", c.detail)
+
+    def test_transport_failure_on_tool_call_still_fails_the_gate(self):
+        # The contract that must not soften: a transport fault at any stage is
+        # a failure, and it names the specific fault that was recorded.
+        def fake_post(url, payload, timeout=30):
+            if payload.get("method") == "tools/call":
+                gate._record_transport_failure(
+                    gate.urllib.error.URLError(gate.socket.gaierror("Name or service not known"))
+                )
+                return 0, b""
+            return self._router()(url, payload, timeout)
+
+        with mock.patch.object(gate, "http_post_json", side_effect=fake_post):
+            c = gate.check_mcp("https://x")
+        self.assertFalse(c.ok)
+        self.assertIn("unreachable", c.detail)
+        self.assertIn("DNS", c.detail)
+
+    def test_tls_failure_is_named_as_tls(self):
+        def fake_post(url, payload, timeout=30):
+            gate._record_transport_failure(gate.ssl.SSLError("certificate verify failed"))
+            return 0, b""
+
+        with mock.patch.object(gate, "http_post_json", side_effect=fake_post):
+            c = gate.check_mcp("https://x")
+        self.assertFalse(c.ok)
+        self.assertIn("TLS", c.detail)
+
+    def test_connection_refused_is_named(self):
+        def fake_post(url, payload, timeout=30):
+            gate._record_transport_failure(ConnectionRefusedError(111, "Connection refused"))
+            return 0, b""
+
+        with mock.patch.object(gate, "http_post_json", side_effect=fake_post):
+            c = gate.check_mcp("https://x")
+        self.assertFalse(c.ok)
+        self.assertIn("connection failed", c.detail)
+
+    def test_5xx_names_the_host_or_upstream(self):
+        with mock.patch.object(gate, "http_post_json", return_value=(502, b"")):
+            c = gate.check_mcp("https://x")
+        self.assertFalse(c.ok)
+        self.assertIn("502", c.detail)
+        self.assertIn("upstream", c.detail)
+
+    def test_403_names_access_control(self):
+        with mock.patch.object(gate, "http_post_json", return_value=(403, b"")):
+            c = gate.check_mcp("https://x")
+        self.assertFalse(c.ok)
+        self.assertIn("403", c.detail)
+        self.assertIn("access control", c.detail)
+
+    def test_404_names_the_route_not_deployed(self):
+        with mock.patch.object(gate, "http_post_json", return_value=(404, b"")):
+            c = gate.check_mcp("https://x")
+        self.assertFalse(c.ok)
+        self.assertIn("404", c.detail)
+        self.assertIn("not deployed", c.detail)
+
+    def test_jsonrpc_error_message_is_redacted(self):
+        # A JSON-RPC error is the server's own text, so it is the most likely
+        # place for a credential to appear. It must be named and redacted.
+        secret = "ghp_" + "Z9y8X7w6V5u4T3s2R1q0P9o8N7m6L5k4J3h2"
+        body = json.dumps(
+            {"jsonrpc": "2.0", "id": 1, "error": {"code": -32001, "message": f"auth failed for {secret}"}}
+        ).encode()
+        with mock.patch.object(gate, "http_post_json", return_value=(200, body)):
+            c = gate.check_mcp("https://x")
+        self.assertFalse(c.ok)
+        self.assertIn("JSON-RPC error", c.detail)
+        self.assertIn("-32001", c.detail)
+        self.assertIn("[redacted]", c.detail)
+        self.assertNotIn(secret, c.detail)
+
+    def test_non_json_body_never_leaks_a_token(self):
+        secret = "ghp_" + "Q1w2E3r4T5y6U7i8O9p0A1s2D3f4G5h6J7k8"
+        with mock.patch.object(
+            gate, "http_post_json", return_value=(200, f"<html>{secret}</html>".encode())
+        ):
+            c = gate.check_mcp("https://x")
+        self.assertFalse(c.ok)
+        self.assertNotIn(secret, c.detail)
+
+    def test_every_failure_mode_still_fails_the_gate(self):
+        # A gate that only ever passes is the bug this change exists to fix.
+        # No branch added here may turn a failure into a pass.
+        cases = [
+            ("transport", (0, b"")),
+            ("non-200", (500, b"")),
+            ("non-json", (200, b"<html>x</html>")),
+            ("rpc-error", (200, json.dumps({"jsonrpc": "2.0", "id": 1, "error": {"code": -1, "message": "x"}}).encode())),
+            ("no-result", (200, json.dumps({"jsonrpc": "2.0", "id": 1}).encode())),
+        ]
+        for label, response in cases:
+            with self.subTest(label):
+                with mock.patch.object(gate, "http_post_json", return_value=response):
+                    c = gate.check_mcp("https://x")
+                self.assertFalse(c.ok, f"{label} must fail the gate")
+                self.assertTrue(c.detail.strip(), f"{label} must say something")
 
 
 class BuildInfo404LookupTests(unittest.TestCase):
