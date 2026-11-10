@@ -70,7 +70,7 @@ requires isolation and security review before install.
 ## Portable exports and downloads (2026-11-10)
 
 The marketplace catalog is now portable. At build time
-`scripts/generate-openclaw-exports.mjs` reads the registry and emits a
+`scripts/generate_openclaw_exports.py` reads the registry and emits a
 downloadable export bundle to `public/openclaw/exports/`, served from
 https://open-connect.site/openclaw/exports/:
 
