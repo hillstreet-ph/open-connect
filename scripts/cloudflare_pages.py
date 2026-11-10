@@ -138,9 +138,14 @@ class BuildDetail:
         production: dict | None = None,
         recent: list[dict] | None = None,
         related: list[dict] | None = None,
+        token_configured: bool = True,
     ) -> None:
         self.available = available
         self.reason = reason
+        # False only when the lookup was skipped because no token/account was
+        # configured. That is the one unavailable case where a hint is useful:
+        # the operator could get this detail by setting the secret.
+        self.token_configured = token_configured
         self.superseding = superseding
         self.production = production
         self.recent = recent or []
@@ -237,6 +242,86 @@ class BuildDetail:
         )
 
 
+    def sentence_for_404(self) -> str:
+        """One sentence for the `/build-info.json` 404 case.
+
+        A 404 is the one case where the build lookup is most useful, because
+        the 404 alone cannot distinguish the two very different situations it
+        can mean: the live deploy predates `write-build-info.mjs`, or a newer
+        build for main HEAD failed and the old one is still serving. The
+        lookup answers that, and the wording is chosen by *outcome* so the
+        operator's next action is unambiguous:
+
+        * **failed** — the deploy broke. The 404 is the old build still
+          serving; fix the build.
+        * **cancelled / skipped** — the build never completed, so nothing
+          newer landed.
+        * **still building / queued** — the 404 is expected until it lands.
+        * **succeeded** — the build ran and is not producing the file. That is
+          a build-configuration fault, not a deploy race.
+        * **no build for main HEAD** — say so plainly.
+        * **unavailable** — keep the caller's own message; add a hint only
+          when a token would have made the difference.
+        """
+        if not self.available:
+            if not self.token_configured:
+                return (
+                    "A Cloudflare API token would let the gate name the build "
+                    f"for main HEAD (set {TOKEN_ENV} and {ACCOUNT_ENV})."
+                )
+            return f"Build-level detail unavailable: {self.reason}"
+
+        if self.superseding:
+            s = self.superseding
+            outcome = s.get("outcome", OUTCOME_UNKNOWN)
+            fields = self._fields(s)
+
+            if outcome == OUTCOME_FAILED:
+                return (
+                    f"The build for main HEAD FAILED: {fields}. The deploy "
+                    "broke, and the 404 is the older build still serving "
+                    "production. Fix the build before re-running the gate."
+                )
+            if outcome == OUTCOME_CANCELLED:
+                return (
+                    f"The build for main HEAD was {s['status']} before it "
+                    f"finished: {fields}. Nothing newer landed, so the 404 is "
+                    "the older build still serving production."
+                )
+            if outcome == OUTCOME_IN_PROGRESS:
+                return (
+                    f"The build for main HEAD is {s['status']}: {fields}. The "
+                    "404 is expected until it lands; re-run the gate once it "
+                    "completes."
+                )
+            if outcome == OUTCOME_SUCCEEDED:
+                return (
+                    f"The build for main HEAD SUCCEEDED: {fields}. It is not "
+                    "producing /build-info.json, so this is a build-"
+                    "configuration fault (the build-info step is not writing "
+                    "the file), not a deploy race."
+                )
+            return (
+                f"The build for main HEAD has an unrecognised status "
+                f"{s['status']!r}: {fields}. The gate cannot tell whether this "
+                "build produced a deployable artifact, so it does not claim "
+                "that it did."
+            )
+
+        newest = self.production or (self.recent[0] if self.recent else None)
+        if newest:
+            return (
+                "No Cloudflare Pages build exists for main HEAD at all; the "
+                f"newest production deployment is commit {newest['commit'][:10]} "
+                f"({newest['status']}, created {newest['created']}). The build "
+                "for this commit never started."
+            )
+        return (
+            "No Cloudflare Pages deployments were returned for this project, "
+            "so the build for main HEAD cannot be identified."
+        )
+
+
 class CloudflarePages:
     """A thin, optional reader over the Pages deployments API."""
 
@@ -323,7 +408,7 @@ class CloudflarePages:
         production actually reports. Never raises.
         """
         if not self.enabled:
-            return BuildDetail(False, self.disabled_reason)
+            return BuildDetail(False, self.disabled_reason, token_configured=False)
 
         path = (
             f"/accounts/{self.account}/pages/projects/{self.project}"

@@ -18,6 +18,7 @@ import json
 import unittest
 from unittest import mock
 
+import cloudflare_pages as cf
 import verify_production_deploy as gate
 
 MAIN_SHA = "73a38b178e52453831cb75d067ab0990799da6c5"
@@ -34,6 +35,28 @@ def build_info(commit: str, source: str = "cloudflare-pages") -> bytes:
             "built_at": "2026-11-10T20:00:00.000Z",
         }
     ).encode()
+
+
+def deployment(
+    commit: str,
+    status: str = "success",
+    environment: str = "production",
+    created: str = "2026-11-10T20:00:00.000Z",
+    url: str = "https://abc123.open-connect-app.pages.dev",
+) -> dict:
+    """One Cloudflare Pages deployment, shaped like the real API payload."""
+    return {
+        "id": f"dep-{commit[:8]}",
+        "short_id": commit[:8],
+        "url": url,
+        "created_on": created,
+        "environment": environment,
+        "latest_stage": {"name": "deploy", "status": status},
+        "deployment_trigger": {
+            "type": "ad_hoc",
+            "metadata": {"commit_hash": commit, "branch": "main"},
+        },
+    }
 
 
 def agents_payload(count: int = 103) -> bytes:
@@ -544,6 +567,158 @@ class McpOutcomeTests(unittest.TestCase):
             c = gate.check_mcp("https://x")
         self.assertFalse(c.ok)
         self.assertNotIn(secret, c.detail)
+
+
+class BuildInfo404LookupTests(unittest.TestCase):
+    """A 404 from /build-info.json must consult the build lookup.
+
+    The 404 alone cannot distinguish "the live deploy predates
+    write-build-info.mjs" from "a newer build for main HEAD failed and the old
+    one is still serving". These tests pin that the gate now says which, using
+    the same outcome-aware wording as `cloudflare_pages.py`, and that the
+    lookup stays enrichment: every case still fails, and the no-token path is
+    byte-identical to before apart from one added hint line.
+
+    All HTTP and Cloudflare responses are mocked. Nothing here touches the
+    Cloudflare API or production.
+    """
+
+    def _check(self, cf_client):
+        with mock.patch.object(gate, "http_get", return_value=(404, b"")):
+            return gate.check_commit("https://x", MAIN_SHA, cf_client)
+
+    def _client(self, deployments):
+        return cf.CloudflarePages(
+            token="cf-test-token-DO-NOT-LEAK", account="acct", project="p"
+        )
+
+    def _with_deployments(self, deployments):
+        return mock.patch.object(
+            cf, "_api_get", return_value=(200, {"success": True, "result": deployments}, "")
+        )
+
+    # --- case 1: a newer build for main HEAD FAILED -------------------------
+
+    def test_failed_build_is_named_and_404_is_the_old_build_serving(self):
+        deployments = [deployment(MAIN_SHA, status="failure", created="2026-11-10T21:00:00Z")]
+        with self._with_deployments(deployments):
+            c = self._check(self._client(deployments))
+        self.assertFalse(c.ok)
+        self.assertIn("FAILED", c.detail)
+        self.assertIn(MAIN_SHA[:10], c.detail)
+        self.assertIn("failed", c.detail)
+        self.assertIn("2026-11-10T21:00:00Z", c.detail)
+        self.assertIn("pages.dev", c.detail)
+        self.assertIn("older build still serving", c.detail)
+
+    # --- case 2: a newer build is still building / queued -------------------
+
+    def test_in_progress_build_says_the_404_is_expected(self):
+        deployments = [deployment(MAIN_SHA, status="active", created="2026-11-10T21:00:00Z")]
+        with self._with_deployments(deployments):
+            c = self._check(self._client(deployments))
+        self.assertFalse(c.ok)
+        self.assertIn("still building", c.detail)
+        self.assertIn("404 is expected until it lands", c.detail)
+
+    def test_queued_build_says_the_404_is_expected(self):
+        deployments = [deployment(MAIN_SHA, status="idle", created="2026-11-10T21:00:00Z")]
+        with self._with_deployments(deployments):
+            c = self._check(self._client(deployments))
+        self.assertFalse(c.ok)
+        self.assertIn("queued", c.detail)
+        self.assertIn("404 is expected until it lands", c.detail)
+
+    # --- case 3: a newer build SUCCEEDED but the file is still 404 ----------
+
+    def test_succeeded_build_is_a_build_configuration_fault(self):
+        deployments = [deployment(MAIN_SHA, status="success", created="2026-11-10T21:00:00Z")]
+        with self._with_deployments(deployments):
+            c = self._check(self._client(deployments))
+        self.assertFalse(c.ok)
+        self.assertIn("SUCCEEDED", c.detail)
+        self.assertIn("build-configuration fault", c.detail)
+        self.assertIn("not a deploy race", c.detail)
+
+    # --- case 4: no build exists for main HEAD at all -----------------------
+
+    def test_no_build_for_main_head_is_stated_plainly(self):
+        deployments = [deployment(OLD_SHA, created="2026-11-10T19:00:00Z")]
+        with self._with_deployments(deployments):
+            c = self._check(self._client(deployments))
+        self.assertFalse(c.ok)
+        self.assertIn("No Cloudflare Pages build exists for main HEAD at all", c.detail)
+        self.assertIn(OLD_SHA[:10], c.detail)
+
+    # --- case 5: no token configured ---------------------------------------
+
+    def test_no_token_keeps_todays_message_and_adds_one_hint(self):
+        c = self._check(cf.CloudflarePages(token="", account=""))
+        self.assertFalse(c.ok)
+        # Today's message, verbatim, still present.
+        self.assertIn("GET /build-info.json -> HTTP 404", c.detail)
+        self.assertIn("The file is not deployed at all", c.detail)
+        self.assertIn("write-build-info.mjs", c.detail)
+        self.assertIn("NOT evidence of a stale build", c.detail)
+        # Plus exactly one added hint line.
+        self.assertIn("A Cloudflare API token would let the gate name the build", c.detail)
+        self.assertEqual(c.detail.count("A Cloudflare API token would let"), 1)
+
+    def test_no_token_makes_no_network_call(self):
+        with mock.patch.object(cf, "_api_get") as api:
+            self._check(cf.CloudflarePages(token="", account=""))
+        api.assert_not_called()
+
+    def test_no_token_404_detail_is_unchanged_apart_from_the_hint(self):
+        # The pre-change message, reconstructed exactly.
+        before = (
+            "GET /build-info.json -> HTTP 404. The file is not deployed at all, "
+            "so production cannot report its own commit. This means the build "
+            "predates the build-info step (write-build-info.mjs) or the file was "
+            "never published. This is NOT evidence of a stale build \u2014 the "
+            "deployed build may well be current; it simply cannot say so."
+        )
+        c = self._check(cf.CloudflarePages(token="", account=""))
+        self.assertTrue(c.detail.startswith(before), c.detail)
+        suffix = c.detail[len(before):].strip()
+        self.assertTrue(suffix.startswith("A Cloudflare API token would let"), suffix)
+
+    # --- contract: enrichment never changes the verdict ---------------------
+
+    def test_404_still_fails_with_a_token_and_a_superseding_build(self):
+        deployments = [deployment(MAIN_SHA, status="success")]
+        with self._with_deployments(deployments):
+            c = self._check(self._client(deployments))
+        self.assertFalse(c.ok, "a 404 must fail even when the lookup succeeds")
+
+    def test_404_still_fails_when_the_lookup_raises(self):
+        with mock.patch.object(cf, "_api_get", side_effect=RuntimeError("boom")):
+            c = self._check(self._client([]))
+        self.assertFalse(c.ok)
+        self.assertIn("Build-level detail unavailable", c.detail)
+
+    def test_lookup_never_turns_a_passing_gate_red(self):
+        # A 200 that matches main must pass, and must not call the lookup.
+        with mock.patch.object(gate, "http_get", return_value=(200, build_info(MAIN_SHA))), \
+             mock.patch.object(cf, "_api_get") as api:
+            c = gate.check_commit("https://x", MAIN_SHA, self._client([]))
+        self.assertTrue(c.ok, c.detail)
+        api.assert_not_called()
+
+    def test_token_never_appears_in_the_404_detail(self):
+        secret = "cf-test-token-DO-NOT-LEAK"
+        deployments = [deployment(MAIN_SHA, status="failure")]
+        with self._with_deployments(deployments):
+            c = self._check(self._client(deployments))
+        self.assertNotIn(secret, c.detail)
+
+    def test_404_exit_code_is_still_one(self):
+        with mock.patch.object(gate, "http_get", return_value=(404, b"")), \
+             mock.patch.object(gate, "check_roster", return_value=gate.Check("r").pass_("ok")), \
+             mock.patch.object(gate, "check_exports", return_value=gate.Check("e").pass_("ok")), \
+             mock.patch.object(gate, "check_mcp", return_value=gate.Check("m").pass_("ok")):
+            code = gate.main(["--expected-sha", MAIN_SHA, "--wait", "0", "--no-cloudflare"])
+        self.assertEqual(code, 1)
 
 
 class ExitCodeTests(unittest.TestCase):

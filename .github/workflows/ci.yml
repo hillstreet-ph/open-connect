@@ -60,6 +60,16 @@ jobs:
         # their own diagnosis. Every one of them still fails the gate — a 404
         # is never "unknown, therefore fine" — and the 404 message must not
         # claim the build is stale.
+        #
+        # A 404 also consults the Cloudflare build lookup, because the 404
+        # alone cannot tell "the live deploy predates write-build-info.mjs"
+        # from "a newer build for main HEAD failed and the old one is still
+        # serving". The five cases are pinned offline with mocked responses:
+        # a newer build FAILED, still building/queued, SUCCEEDED but the file
+        # is still 404 (a build-configuration fault, not a race), no build for
+        # main HEAD at all, and no token configured (today's message plus one
+        # hint line). The lookup is enrichment only: a 404 still exits 1, and
+        # it can never turn a passing gate red.
         run: python3 -m unittest discover -s scripts -p 'verify_production_deploy_test.py' -v
       - name: Cloudflare build-detail contract tests
         # Offline: pins the optional Cloudflare Pages lookup in four states —
