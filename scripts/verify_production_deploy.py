@@ -279,13 +279,39 @@ def check_commit(
             "build \u2014 check that the host resolves and is reachable."
         )
     if status == 404:
-        return c.fail(
+        # The base sentence is written for the case where nothing more is
+        # known, so it deliberately does not speculate about which build is
+        # live. When the lookup below *does* answer, that speculation would
+        # contradict it ("may well be current" vs "the older build is still
+        # serving"), so the conclusive variant drops it.
+        base = (
             f"GET {BUILD_INFO_PATH} -> HTTP 404. The file is not deployed at all, "
             "so production cannot report its own commit. This means the build "
             "predates the build-info step (write-build-info.mjs) or the file was "
-            "never published. This is NOT evidence of a stale build \u2014 the "
-            "deployed build may well be current; it simply cannot say so."
+            "never published."
         )
+        inconclusive = (
+            f"{base} This is NOT evidence of a stale build \u2014 the deployed "
+            "build may well be current; it simply cannot say so."
+        )
+        detail = inconclusive
+        # A 404 is the case where the build lookup earns its keep: it can say
+        # whether a newer build for main HEAD failed (the old one is still
+        # serving) or is still building (the 404 is expected), which the 404
+        # alone cannot. Enrichment only \u2014 the verdict below is already fail.
+        if cf is not None:
+            try:
+                build = cf.describe(expected, "")
+                if build.available:
+                    detail = f"{base} {build.sentence_for_404()}"
+                else:
+                    detail = f"{inconclusive} {build.sentence_for_404()}"
+            except Exception as exc:  # noqa: BLE001 - enrichment must never fail the gate
+                detail = (
+                    f"{inconclusive} Build-level detail unavailable: lookup "
+                    f"raised {type(exc).__name__}."
+                )
+        return c.fail(detail)
     if status != 200:
         return c.fail(
             f"GET {BUILD_INFO_PATH} -> HTTP {status}. Production answered but did "
