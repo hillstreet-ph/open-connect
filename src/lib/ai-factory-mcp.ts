@@ -84,8 +84,33 @@ function rpcError(id: unknown, code: number, message: string): Response {
   return json({ jsonrpc: "2.0", id, error: { code, message } });
 }
 
+/**
+ * Where the export files are read from.
+ *
+ * On Cloudflare Pages Functions the static site is exposed as the `ASSETS`
+ * binding. This project deploys as a Worker (see wrangler.toml), where that
+ * binding does not exist — so fall back to an HTTP read of the same origin
+ * rather than failing every tool call with -32603.
+ */
+type AssetSource = { fetch(request: Request): Promise<Response> };
+
+function assetSource(assets: Assets | undefined, origin: string): AssetSource {
+  if (assets) return assets;
+  return {
+    fetch: (request: Request) =>
+      fetch(new URL(new URL(request.url).pathname, origin).toString(), {
+        method: "GET",
+        headers: { accept: "*/*" },
+      }),
+  };
+}
+
 /** Read a JSON document from the static asset layer. */
-async function readAsset(assets: Assets, origin: string, path: string): Promise<unknown | null> {
+async function readAsset(
+  assets: AssetSource,
+  origin: string,
+  path: string,
+): Promise<unknown | null> {
   const response = await assets.fetch(
     new Request(new URL(path, origin).toString(), {
       method: "GET",
@@ -110,7 +135,7 @@ type IndexEntry = {
   live_connectors: number;
 };
 
-async function loadIndex(assets: Assets, origin: string): Promise<IndexEntry[] | null> {
+async function loadIndex(assets: AssetSource, origin: string): Promise<IndexEntry[] | null> {
   const index = (await readAsset(assets, origin, `${EXPORT_PREFIX}index.json`)) as {
     agents?: IndexEntry[];
   } | null;
@@ -129,7 +154,7 @@ function errorResult(message: string) {
 }
 
 async function callTool(
-  assets: Assets,
+  assets: AssetSource,
   origin: string,
   name: string,
   args: Record<string, unknown>,
@@ -219,10 +244,7 @@ export async function handleAiFactoryMcp(request: Request, env: unknown): Promis
     return json({ error: "Method not allowed. Use POST with a JSON-RPC body." }, 405);
   }
 
-  const assets = (env as { ASSETS?: Assets })?.ASSETS;
-  if (!assets) {
-    return rpcError(null, -32603, "Static asset binding is unavailable on this deployment.");
-  }
+  const assets = assetSource((env as { ASSETS?: Assets })?.ASSETS, url.origin);
 
   let body: { jsonrpc?: string; id?: unknown; method?: string; params?: Record<string, unknown> };
   try {
