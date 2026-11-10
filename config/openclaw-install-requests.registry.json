@@ -1116,6 +1116,18 @@
       "risk": "medium",
       "state": "review_required",
       "review_reason": "Metadata-only catalog entry; license and security review required before install."
+    },
+    {
+      "slug": "open-oc-plugin-tencent-browserskill",
+      "kind": "plugin",
+      "install_command": "openclaw plugins install Tencent/BrowserSkill",
+      "source_ref": "Tencent/BrowserSkill",
+      "source_type": "github_repository",
+      "canonical_url": "https://github.com/Tencent/BrowserSkill",
+      "license": null,
+      "risk": "critical",
+      "state": "review_required",
+      "review_reason": "Browser or desktop control requires isolation and security review."
     }
   ],
   "duplicate_requests": [
