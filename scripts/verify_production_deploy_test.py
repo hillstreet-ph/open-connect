@@ -1097,9 +1097,20 @@ class ExitCodeTests(unittest.TestCase):
         with mock.patch.object(gate, "http_get", return_value=(200, build_info(MAIN_SHA))), \
              mock.patch.object(gate, "check_roster", return_value=gate.Check("r").pass_("ok")), \
              mock.patch.object(gate, "check_exports", return_value=gate.Check("e").pass_("ok")), \
+             mock.patch.object(gate, "check_use_in", return_value=gate.Check("u").pass_("ok")), \
              mock.patch.object(gate, "check_mcp", return_value=gate.Check("m").pass_("ok")):
             code = gate.main(["--expected-sha", MAIN_SHA, "--wait", "0"])
         self.assertEqual(code, 0)
+
+    def test_use_in_failure_turns_the_gate_red(self):
+        """A deploy that ships the pages but not the per-target artifacts must fail."""
+        with mock.patch.object(gate, "http_get", return_value=(200, build_info(MAIN_SHA))), \
+             mock.patch.object(gate, "check_roster", return_value=gate.Check("r").pass_("ok")), \
+             mock.patch.object(gate, "check_exports", return_value=gate.Check("e").pass_("ok")), \
+             mock.patch.object(gate, "check_use_in", return_value=gate.Check("u").fail("missing")), \
+             mock.patch.object(gate, "check_mcp", return_value=gate.Check("m").pass_("ok")):
+            code = gate.main(["--expected-sha", MAIN_SHA, "--wait", "0"])
+        self.assertEqual(code, 1)
 
 
 if __name__ == "__main__":
