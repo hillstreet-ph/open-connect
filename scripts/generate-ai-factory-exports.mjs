@@ -1155,7 +1155,10 @@ for (const page of pages) {
   if (!html.includes('class="agent-card"')) continue;
   let changed = false;
   if (!html.includes("assets/portability.css")) {
-    html = html.replace("</head>", '<link rel="stylesheet" href="assets/portability.css">\n</head>');
+    html = html.replace(
+      "</head>",
+      '<link rel="stylesheet" href="assets/portability.css">\n</head>',
+    );
     changed = true;
   }
   if (!html.includes("assets/portability.js")) {
