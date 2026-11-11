@@ -6,13 +6,18 @@ real.
 
 ## What exists
 
-| Format | Path | Shape |
+Every target gets the artifact **its own UI accepts**, not just a JSON blob it
+cannot consume. A JSON document labelled `hermes` is not something Hermes can
+load; the export set therefore also ships the files each tool actually reads.
+
+| Format | Artifacts | Shape |
 |---|---|---|
-| Neutral | `data/exports/neutral/<slug>.json` | Seven fields + `team`, `teams`, `niche`, `niches`, `slug`, `avatar`, `capabilities` |
-| ChatGPT | `data/exports/chatgpt/<slug>.json` | `instructions`, `conversation_starters`, `actions: []`, `knowledge_files` |
-| Claude | `data/exports/claude/<slug>.json` | `system_prompt`, `tools: []`, `mcp_servers[]` |
-| Hermes | `data/exports/hermes/<slug>.json` | `system_prompt`, `tools: []`, `skills[]`, `model_hint` |
-| Prompt | `data/exports/prompt/<slug>.md` | Front-matter + system prompt, for prompt-only runtimes |
+| Neutral | `neutral/<slug>.json` | Seven fields + `team`, `teams`, `niche`, `niches`, `slug`, `avatar`, `capabilities` |
+| ChatGPT | `chatgpt/<slug>.json` + `chatgpt/<slug>.instructions.txt` | Custom-GPT metadata (name ≤ 50, description ≤ 300, ≤ 4 starters) and the exact text to paste into Instructions (≤ 8,000 chars) |
+| Claude | `claude/<slug>.json` + `claude/<slug>.instructions.md` | Project instructions plus an `mcp_servers` block naming the remote connector URL and transport |
+| Hermes | `hermes/<slug>.json` + `hermes/<slug>.config.yaml` + `hermes/<slug>.SOUL.md` | A real `~/.hermes/config.yaml` fragment (`mcp_servers` + `skills.auto_load`) and the `~/.hermes/SOUL.md` identity file |
+| Prompt | `prompt/<slug>.md` | Front-matter + system prompt, for prompt-only runtimes |
+| Use in | `use-in/<slug>.json` | Per-target format, limits, numbered steps, artifact + metadata URLs |
 
 Plus:
 
@@ -84,8 +89,34 @@ These are deliberate, and the exports state them rather than papering over them:
 node scripts/generate-ai-factory-exports.mjs          # regenerate
 node scripts/generate-ai-factory-exports.mjs --check  # fail if stale
 python3 scripts/validate_ai_factory_exports_test.py   # offline contract (2077 checks)
+python3 scripts/validate_ai_factory_exports.py        # per-target limits, YAML schema, secret scan
 python3 scripts/validate_ai_factory_roster.py         # live smoke, incl. every export URL
 ```
 
 The live smoke test reads `index.json` to discover the slugs, so it needs no
 hard-coded agent list and cannot drift from the data.
+
+## On the platform
+
+Every agent card carries a **Use in** control: a *Set up in ChatGPT · Claude ·
+Hermes* button that opens a dialog with the four targets, their limits, the
+numbered steps for that tool, and links to the artifact and its metadata JSON
+(`assets/portability.js`, `assets/portability.css`). The four quick-download
+chips beside it go straight to the ChatGPT instructions, Claude instructions,
+Hermes config and generic prompt.
+
+The dialog is driven by `use-in/<slug>.json`, so the steps a user reads and the
+files they download come from the same generated source as the exports
+themselves. There is no second, hand-written copy of the instructions to drift.
+
+## What each target still needs from a human
+
+These are the steps no export can perform, stated plainly so nobody expects the
+download alone to be a finished integration:
+
+| Target | Human step |
+|---|---|
+| ChatGPT | Create the GPT and paste the file; add Actions yourself if you want connector access — no credentials ship |
+| Claude | Add the custom connector in your account (Owner on Team/Enterprise), then enable it in the Project |
+| Hermes | Install Hermes, merge the YAML fragment rather than overwriting `config.yaml`, write `SOUL.md` |
+| Generic | Provide the model, the knowledge files and any credentials yourself |

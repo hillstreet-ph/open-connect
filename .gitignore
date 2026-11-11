@@ -50,3 +50,6 @@ public/ai-factory/roster
 
 # Written by scripts/write-build-info.mjs at build time — describes a build, never committed
 public/build-info.json
+
+# Generated at build time from the marketplace catalog
+public/openclaw

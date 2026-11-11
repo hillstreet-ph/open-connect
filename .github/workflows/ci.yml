@@ -48,6 +48,17 @@ jobs:
         # detection and retry policy against stubs. No network, so it can
         # never make this required check flaky.
         run: python3 scripts/validate_ai_factory_roster_test.py
+      - name: AI Factory export contract tests
+        # Offline: regenerates the exports from the roster and asserts every
+        # target's real requirements — ChatGPT's field ceilings, Claude's MCP
+        # server block, Hermes' YAML schema, prompt front matter — plus a
+        # credential scan. Pins the contract so a stub or a renamed copy of
+        # another format fails here instead of shipping.
+        run: |
+          node scripts/unpack-ai-factory-roster.mjs
+          node scripts/generate-ai-factory-exports.mjs
+          python3 scripts/validate_ai_factory_exports_test.py --root public
+          python3 scripts/validate_ai_factory_exports.py
       - name: Deploy verification gate contract tests
         # Offline: pins the post-merge gate's failure paths — a stale commit, a
         # missing /build-info.json, a wrong agent count, a missing MCP tool.

@@ -1,5 +1,29 @@
 # Cloudflare Pages static-asset headers. Worker responses (SSR, API, MCP) get the
 # same baseline from src/lib/security-headers.ts.
+# The roster routes are extensionless (/ai-factory/roster/teams and friends).
+# Cloudflare cannot infer a type for those, so it falls back to
+# application/octet-stream and the browser downloads the page instead of
+# rendering it. Every one of them serves the same merged platform document,
+# so they are all HTML.
+/ai-factory/roster/
+  Content-Type: text/html; charset=utf-8
+/ai-factory/roster/teams
+  Content-Type: text/html; charset=utf-8
+/ai-factory/roster/niches
+  Content-Type: text/html; charset=utf-8
+/ai-factory/roster/playbooks
+  Content-Type: text/html; charset=utf-8
+/ai-factory/roster/hub
+  Content-Type: text/html; charset=utf-8
+/ai-factory/roster/studio
+  Content-Type: text/html; charset=utf-8
+/ai-factory/roster/connectors
+  Content-Type: text/html; charset=utf-8
+/ai-factory/roster/command-center
+  Content-Type: text/html; charset=utf-8
+/ai-factory/roster/registry
+  Content-Type: text/html; charset=utf-8
+
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
