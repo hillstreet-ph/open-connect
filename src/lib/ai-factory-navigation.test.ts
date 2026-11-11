@@ -32,3 +32,18 @@ test("legacy route redirects to the single AI Factory workspace", () => {
   assert.match(legacy, /throw redirect\(\{ to: "\/ai-factory", search, replace: true \}\)/);
   assert.doesNotMatch(legacy, /WorkforceDirectory|useMutation|component:/);
 });
+
+test("/ai-factory is a shim onto the merged platform, not a second page", () => {
+  const shim = readFileSync(
+    new URL("../routes/_authenticated/ai-factory.tsx", import.meta.url),
+    "utf8",
+  );
+  // It must not render a workspace of its own any more.
+  assert.doesNotMatch(shim, /WorkforceDirectory|FactoryWorkspace|useMutation|component:/);
+  // Every legacy view value has to resolve to a real roster section.
+  assert.match(shim, /teams: "\/ai-factory\/roster\/team-builder"/);
+  assert.match(shim, /workforce: "\/ai-factory\/roster\/workforce"/);
+  assert.match(shim, /roster: "\/ai-factory\/roster\/"/);
+  // A specialist selection goes to the Workforce view.
+  assert.match(shim, /search\.agent \|\| search\.chat/);
+});

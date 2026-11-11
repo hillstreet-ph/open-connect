@@ -21,6 +21,68 @@
 /** Directory that holds the roster's static files, with a trailing slash. */
 export const ROSTER_PREFIX = "/ai-factory/roster/";
 
+/**
+ * Where each legacy `/ai-factory?view=…` value now lives inside the merged
+ * platform.
+ *
+ * The `/ai-factory` SPA used to be a separate page with its own view switch.
+ * Its content is now part of the one roster platform, so every old view value
+ * has to land on the section that carries that content. `teams` is the SPA's
+ * private team workspace, which is NOT the roster's 103-agent `teams` view —
+ * it is the Team Builder, so it maps to `team-builder`.
+ */
+const LEGACY_VIEW_TARGETS: Record<string, string> = {
+  teams: "team-builder",
+  roster: "",
+  workforce: "workforce",
+  agents: "workforce",
+  directory: "workforce",
+  "team-builder": "team-builder",
+  builder: "team-builder",
+  niches: "niches",
+  playbooks: "playbooks",
+  hub: "hub",
+  "command-center": "command-center",
+  connectors: "connectors",
+  registry: "registry",
+  studio: "studio",
+  overview: "",
+  index: "",
+};
+
+/**
+ * Resolve a legacy `/ai-factory` URL to the merged platform URL that now holds
+ * its content, or `null` when the request is not a legacy SPA URL.
+ *
+ * Only the bare `/ai-factory` path is handled. `/ai-factory/roster/...` and
+ * `/ai-factory/mcp` are real endpoints and must not be redirected.
+ *
+ * A `?agent=` or `?chat=` selection is carried across to the Workforce view,
+ * because that is where a specialist is now opened; `?project=` is dropped
+ * because the merged platform has no project scope switch.
+ */
+export function legacyFactoryRedirect(url: URL): string | null {
+  if (url.pathname !== "/ai-factory" && url.pathname !== "/ai-factory/") return null;
+
+  const view = (url.searchParams.get("view") ?? "").toLowerCase();
+  const agent = url.searchParams.get("agent");
+  const chat = url.searchParams.get("chat");
+
+  // A specialist selection always belongs to the Workforce view, whatever the
+  // view value says — that is the only place a specialist can be opened.
+  let target: string;
+  if (agent || chat) target = "workforce";
+  else if (view && view in LEGACY_VIEW_TARGETS) target = LEGACY_VIEW_TARGETS[view] ?? "";
+  else target = "";
+
+  const path = target ? `${ROSTER_PREFIX}${target}` : ROSTER_PREFIX;
+  const params = new URLSearchParams();
+  if (agent) params.set("agent", agent);
+  if (chat) params.set("chat", chat);
+  const query = params.toString();
+  return query ? `${path}?${query}` : path;
+}
+
 /** True when `pathname` addresses the roster sub-site (not the app). */
 export function isRosterPath(pathname: string): boolean {
   return pathname === "/ai-factory/roster" || pathname.startsWith(ROSTER_PREFIX);

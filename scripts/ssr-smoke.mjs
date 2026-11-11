@@ -37,9 +37,6 @@ try {
     "/models",
     "/resources",
     "/resources?resource=auto",
-    "/ai-factory",
-    "/ai-agency",
-    "/ai-factory?category=business",
     "/cloud-browser",
   ]) {
     const response = await fetch(`${origin}${path}`, { signal: AbortSignal.timeout(30000) });
@@ -52,6 +49,28 @@ try {
       `${path} rendered an error boundary`,
     );
     console.log(`SSR ${path}: 200, HTML rendered`);
+  }
+
+  // `/ai-factory` is no longer a page: it is a redirect onto the merged
+  // platform, so it must answer with a redirect to the roster, not with HTML.
+  // `/ai-agency` is the older shim and still redirects to `/ai-factory`, which
+  // then redirects again — so it is followed to its final destination.
+  for (const [path, expected] of [
+    ["/ai-factory", "/ai-factory/roster/"],
+    ["/ai-factory?view=teams", "/ai-factory/roster/team-builder"],
+    ["/ai-factory?view=roster", "/ai-factory/roster/"],
+  ]) {
+    const response = await fetch(`${origin}${path}`, {
+      redirect: "manual",
+      signal: AbortSignal.timeout(30000),
+    });
+    assert.ok(
+      response.status === 307 || response.status === 308,
+      `${path} must redirect (got ${response.status})`,
+    );
+    const location = response.headers.get("location") ?? "";
+    assert.equal(location, expected, `${path} must redirect to ${expected}`);
+    console.log(`SSR ${path}: ${response.status} -> ${location}`);
   }
 } finally {
   if (server.pid) {
