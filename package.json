@@ -48,6 +48,8 @@
     "test:login:db": "node scripts/test-login-activity-db.mjs",
     "test:roster:smoke": "python3 scripts/validate_ai_factory_roster.py",
     "test:roster:contract": "python3 scripts/validate_ai_factory_roster_test.py",
+    "test:exports": "python3 scripts/validate_ai_factory_exports.py",
+    "test:exports:contract": "python3 scripts/validate_ai_factory_exports_test.py",
     "ai-factory:exports": "node scripts/generate-ai-factory-exports.mjs",
     "ai-factory:exports:check": "node scripts/generate-ai-factory-exports.mjs --check",
     "openclaw:exports": "python3 scripts/generate_openclaw_exports.py",
