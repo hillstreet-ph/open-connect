@@ -1132,9 +1132,21 @@ for (const [rel, content] of files) {
 
 // Inject the per-card "Use in" control and the dialog into every page that
 // renders agent cards.
+//
+// The roster ships each page TWICE: as `teams.html` and as an extensionless
+// `teams`. Cloudflare's asset layer resolves the extensionless file directly,
+// so the worker's `handleRosterAsset` passthrough never runs for it — meaning a
+// page that is only patched in its `.html` form serves the unpatched copy at
+// the URL users actually visit. Both forms must be patched, or the control is
+// invisible in production while every local check passes.
 const pages = readdirSync(roster).filter((n) => n.endsWith(".html"));
+const pageFiles = pages.flatMap((n) => {
+  const bare = n.slice(0, -".html".length);
+  const barePath = join(roster, bare);
+  return existsSync(barePath) ? [n, bare] : [n];
+});
 let injected = 0;
-for (const page of pages) {
+for (const page of pageFiles) {
   const p = join(roster, page);
   const html = readFileSync(p, "utf8");
   if (!html.includes('class="agent-card"')) continue;
@@ -1149,7 +1161,7 @@ writeFileSync(join(roster, "assets", "portability.css"), PORTABILITY_CSS);
 writeFileSync(join(roster, "assets", "portability.js"), PORTABILITY_JS);
 
 // Link the assets from every page that has cards.
-for (const page of pages) {
+for (const page of pageFiles) {
   const p = join(roster, page);
   let html = readFileSync(p, "utf8");
   if (!html.includes('class="agent-card"')) continue;

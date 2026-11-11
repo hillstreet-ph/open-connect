@@ -318,6 +318,39 @@ def main() -> int:
                 )
             )
 
+    # Cross-cutting: every page form the site actually serves must carry the
+    # "Use in" control. The roster ships each page twice — `teams.html` and an
+    # extensionless `teams` — and Cloudflare's asset layer resolves the
+    # extensionless file directly, bypassing the worker. Patching only the
+    # `.html` form leaves the control invisible at the URL users visit while
+    # every other check here still passes, so both forms are asserted.
+    roster = EXPORTS.parent.parent
+    page_forms: list[tuple[str, Path]] = []
+    for html_path in sorted(roster.glob("*.html")):
+        body = html_path.read_text(encoding="utf-8", errors="replace")
+        if 'class="agent-card"' not in body:
+            continue
+        page_forms.append((html_path.name, html_path))
+        bare = html_path.with_suffix("")
+        if bare.exists():
+            page_forms.append((bare.name, bare))
+
+    for name, path in page_forms:
+        body = path.read_text(encoding="utf-8", errors="replace")
+        has_block = "pf-use-open" in body
+        has_js = "assets/portability.js" in body
+        results.append(
+            Result(
+                "use-in-page",
+                name,
+                has_block and has_js,
+                "control + script present"
+                if has_block and has_js
+                else f"missing {'control ' if not has_block else ''}"
+                f"{'script' if not has_js else ''}".strip(),
+            )
+        )
+
     # Cross-cutting: secret scan over every shipped text artifact.
     leaks: list[str] = []
     for path in EXPORTS.rglob("*"):
