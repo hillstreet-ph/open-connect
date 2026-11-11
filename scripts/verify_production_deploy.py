@@ -554,6 +554,80 @@ def check_exports(base_url: str) -> Check:
     return c.pass_(f"{checked}/{checked} export fetches resolved across {len(sample)} agents")
 
 
+def check_use_in(base_url: str) -> Check:
+    """The per-target artifacts and the "Use in" payloads must resolve.
+
+    `check_exports` proves the MCP tool can serve an export. This proves the
+    files a user actually clicks are live over plain HTTP: the ChatGPT
+    instructions, the Claude Project instructions, the Hermes config YAML and
+    SOUL.md, the generic prompt, and the use-in JSON that drives the dialog.
+
+    A 200 is not enough — a Cloudflare redirect loop or an SPA fallback also
+    answers 200. Each artifact is checked for a marker only the real file has.
+    """
+    c = Check("use-in artifacts")
+    index_url = f"{base_url}/ai-factory/roster/data/exports/index.json"
+    status, body = http_get(index_url)
+    if status != 200:
+        return c.fail(f"export index -> HTTP {status}")
+    try:
+        index = json.loads(body)
+        agents = index["agents"]
+    except Exception as exc:  # noqa: BLE001
+        return c.fail(f"export index unparseable: {exc}")
+
+    if not agents:
+        return c.fail("export index lists no agents")
+
+    sample = [agents[0], agents[len(agents) // 2], agents[-1]]
+    # (url key, marker that only the real artifact contains)
+    targets = [
+        ("chatgpt_instructions", "## Operating instructions"),
+        ("claude_instructions", "## Working with the AI Factory connector"),
+        ("hermes_config", "mcp_servers:"),
+        ("hermes_soul", "## Operating instructions"),
+        ("prompt", "## System prompt"),
+    ]
+    failures: list[str] = []
+    checked = 0
+    for agent in sample:
+        slug = agent.get("slug")
+        urls = agent.get("urls") or {}
+        if not slug:
+            continue
+        for key, marker in targets:
+            url = urls.get(key)
+            if not url:
+                failures.append(f"{slug}: index has no {key} url")
+                continue
+            status, body = http_get(url)
+            checked += 1
+            if status != 200:
+                failures.append(f"{slug}/{key} -> HTTP {status}")
+                continue
+            text = body.decode("utf-8", "replace")
+            if marker not in text:
+                failures.append(f"{slug}/{key} -> 200 but missing marker {marker!r}")
+        # The use-in payload drives the dialog; it must name all four targets.
+        status, body = http_get(f"{base_url}/ai-factory/roster/data/exports/use-in/{slug}.json")
+        checked += 1
+        if status != 200:
+            failures.append(f"{slug}/use-in -> HTTP {status}")
+            continue
+        try:
+            payload = json.loads(body)
+            ids = {t["id"] for t in payload["targets"]}
+        except Exception as exc:  # noqa: BLE001
+            failures.append(f"{slug}/use-in unparseable: {exc}")
+            continue
+        if ids != {"chatgpt", "claude", "hermes", "generic"}:
+            failures.append(f"{slug}/use-in targets are {sorted(ids)}")
+
+    if failures:
+        return c.fail(f"{len(failures)}/{checked} artifact checks failed: {failures[:5]}")
+    return c.pass_(f"{checked}/{checked} artifacts resolved with correct content across {len(sample)} agents")
+
+
 def _mcp_stage_failure(
     stage: str, status: int, body: bytes, *, timeout: int = 30
 ) -> str:
@@ -720,6 +794,7 @@ def run_once(
         check_commit(base_url, expected, cf),
         check_roster(base_url, script),
         check_exports(base_url),
+        check_use_in(base_url),
         check_mcp(base_url),
     ]
 
