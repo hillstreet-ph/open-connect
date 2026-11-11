@@ -849,6 +849,7 @@ class BuildInfo404LookupTests(unittest.TestCase):
         with mock.patch.object(gate, "http_get", return_value=(404, b"")), \
              mock.patch.object(gate, "check_roster", return_value=gate.Check("r").pass_("ok")), \
              mock.patch.object(gate, "check_exports", return_value=gate.Check("e").pass_("ok")), \
+             mock.patch.object(gate, "check_use_in", return_value=gate.Check("u").pass_("ok")), \
              mock.patch.object(gate, "check_mcp", return_value=gate.Check("m").pass_("ok")):
             code = gate.main(["--expected-sha", MAIN_SHA, "--wait", "0", "--no-cloudflare"])
         self.assertEqual(code, 1)
@@ -1079,6 +1080,7 @@ class TransportFailureLookupTests(unittest.TestCase):
         with mock.patch.object(gate, "http_get", return_value=(0, b"")), \
              mock.patch.object(gate, "check_roster", return_value=gate.Check("r").pass_("ok")), \
              mock.patch.object(gate, "check_exports", return_value=gate.Check("e").pass_("ok")), \
+             mock.patch.object(gate, "check_use_in", return_value=gate.Check("u").pass_("ok")), \
              mock.patch.object(gate, "check_mcp", return_value=gate.Check("m").pass_("ok")):
             code = gate.main(["--expected-sha", MAIN_SHA, "--wait", "0", "--no-cloudflare"])
         self.assertEqual(code, 1)
@@ -1089,6 +1091,7 @@ class ExitCodeTests(unittest.TestCase):
         with mock.patch.object(gate, "http_get", return_value=(200, build_info(OLD_SHA))), \
              mock.patch.object(gate, "check_roster", return_value=gate.Check("r").pass_("ok")), \
              mock.patch.object(gate, "check_exports", return_value=gate.Check("e").pass_("ok")), \
+             mock.patch.object(gate, "check_use_in", return_value=gate.Check("u").pass_("ok")), \
              mock.patch.object(gate, "check_mcp", return_value=gate.Check("m").pass_("ok")):
             code = gate.main(["--expected-sha", MAIN_SHA, "--wait", "0"])
         self.assertEqual(code, 1)
