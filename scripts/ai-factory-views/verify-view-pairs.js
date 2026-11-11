@@ -12,8 +12,8 @@ const js = new Set(files.filter((f) => f.endsWith(".js")).map((f) => f.replace(/
 const missingJs = [...html].filter((n) => !js.has(n));
 const missingHtml = [...js].filter((n) => !html.has(n));
 if (missingJs.length || missingHtml.length) {
-if (missingJs.length) console.error("views without a controller: " + missingJs.join(", "));
-if (missingHtml.length) console.error("controllers without a view: " + missingHtml.join(", "));
-process.exit(1);
+  if (missingJs.length) console.error("views without a controller: " + missingJs.join(", "));
+  if (missingHtml.length) console.error("controllers without a view: " + missingHtml.join(", "));
+  process.exit(1);
 }
 console.log("view/controller pairs OK: " + [...html].sort().join(", "));
