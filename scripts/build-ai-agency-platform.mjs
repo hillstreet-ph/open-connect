@@ -68,13 +68,21 @@ const VIEWS = [
   { slug: "studio", label: "Studio", marker: "Studio Builder" },
 ];
 
-/** A page's own title, without the site suffix, HTML-unescaped for reuse. */
+/**
+ * A page's own title, without the site suffix, HTML-unescaped for reuse.
+ *
+ * Decoding is a single pass over the entity table rather than a chain of
+ * `.replace()` calls: chained replacements unescape their own output, so
+ * `&amp;mdash;` would become an em dash instead of the literal text the
+ * author wrote. One pass cannot re-consume what it just produced.
+ */
+const TITLE_ENTITIES = { "&amp;": "&", "&mdash;": "\u2014", "&ndash;": "\u2013", "&nbsp;": " " };
+
 function pageTitle(html) {
   const raw = (html.match(/<title>([\s\S]*?)<\/title>/) ?? [])[1] ?? "";
   return raw
     .replace(/\s*\|\s*Open-Connect.*$/i, "")
-    .replace(/&amp;/g, "&")
-    .replace(/&mdash;/g, "\u2014")
+    .replace(/&(?:amp|mdash|ndash|nbsp);/g, (entity) => TITLE_ENTITIES[entity] ?? entity)
     .trim();
 }
 
@@ -385,8 +393,17 @@ writeFileSync(join(target, "assets", "platform.js"), router);
  * edit to assets/profile.js would be silently reverted.
  */
 const profilePath = join(target, "assets", "profile.js");
-if (existsSync(profilePath)) {
-  let js = readFileSync(profilePath, "utf8");
+// Read once and treat a missing file as "nothing to patch". Checking with
+// existsSync first and reading afterwards is a race: the file can disappear
+// between the two calls, and the read would then throw.
+let profileSource = null;
+try {
+  profileSource = readFileSync(profilePath, "utf8");
+} catch (err) {
+  if (err.code !== "ENOENT") throw err;
+}
+if (profileSource !== null) {
+  let js = profileSource;
 
   const anchor = `    h += '<div class="pf-sec"><h5>3 &middot; Instruction</h5>' +
          '<div class="pf-instruction">' + esc(p.instruction) + "</div></div>";
