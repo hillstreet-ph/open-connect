@@ -11,15 +11,25 @@
   "use strict";
 
   var SUPABASE_URL = "https://huadtiuuoiriqrjpjxhr.supabase.co";
-  var SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh1YWR0aXV1b2lyaXFyanBqeGhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1MzIwODMsImV4cCI6MjEwNTEwODA4M30.5TF6RWJ7ycwI2YJqu_aYVS7ZZxXAIGSCcim3ilkPr0w";
+  var SUPABASE_ANON =
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh1YWR0aXV1b2lyaXFyanBqeGhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1MzIwODMsImV4cCI6MjEwNTEwODA4M30.5TF6RWJ7ycwI2YJqu_aYVS7ZZxXAIGSCcim3ilkPr0w";
   var CATEGORIES = ["development", "business", "marketing", "research", "operations", "custom"];
 
-  var sb = null, user = null, teams = [], editing = null, selected = "";
-  var $ = function (id) { return document.getElementById(id); };
+  var sb = null,
+    user = null,
+    teams = [],
+    editing = null,
+    selected = "";
+  var $ = function (id) {
+    return document.getElementById(id);
+  };
 
   function esc(s) {
     return String(s == null ? "" : s)
-      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
   }
   function msg(id, text, kind) {
     var el = $(id);
@@ -34,7 +44,12 @@
     el.className = "st-save" + (kind ? " " + kind : "");
   }
   function rolesFrom(text) {
-    return text.split("\n").map(function (r) { return r.trim(); }).filter(Boolean);
+    return text
+      .split("\n")
+      .map(function (r) {
+        return r.trim();
+      })
+      .filter(Boolean);
   }
 
   function renderList() {
@@ -47,24 +62,52 @@
     });
     var list = $("tbList");
     if (!shown.length) {
-      list.innerHTML = '<p class="st-msg">No teams yet. Create one on the left, or clear the filter.</p>';
+      list.innerHTML =
+        '<p class="st-msg">No teams yet. Create one on the left, or clear the filter.</p>';
       return;
     }
-    list.innerHTML = shown.map(function (t) {
-      return '<article class="agent-card" data-team="' + esc(t.id) + '">' +
-        '<div class="agent-body">' +
-          '<div class="agent-cat">' + esc(t.category) + (t.archived ? " · archived" : "") + "</div>" +
-          '<h3 class="agent-role">' + esc(t.name) + "</h3>" +
-          '<p class="agent-desc">' + esc(t.description || "No description") + "</p>" +
-          '<div class="agent-tags">' + (t.roles || []).map(function (r) { return '<span class="chip">' + esc(r) + "</span>"; }).join("") + "</div>" +
-        "</div>" +
-        '<div class="agent-foot">' +
-          '<button class="btn btn-outline btn-sm" type="button" data-edit="' + esc(t.id) + '">Edit</button>' +
-          '<button class="btn btn-outline btn-sm" type="button" data-archive="' + esc(t.id) + '">' + (t.archived ? "Restore" : "Archive") + "</button>" +
-          '<button class="btn btn-primary btn-sm" type="button" data-select="' + esc(t.id) + '">Run</button>' +
-        "</div>" +
-      "</article>";
-    }).join("");
+    list.innerHTML = shown
+      .map(function (t) {
+        return (
+          '<article class="agent-card" data-team="' +
+          esc(t.id) +
+          '">' +
+          '<div class="agent-body">' +
+          '<div class="agent-cat">' +
+          esc(t.category) +
+          (t.archived ? " · archived" : "") +
+          "</div>" +
+          '<h3 class="agent-role">' +
+          esc(t.name) +
+          "</h3>" +
+          '<p class="agent-desc">' +
+          esc(t.description || "No description") +
+          "</p>" +
+          '<div class="agent-tags">' +
+          (t.roles || [])
+            .map(function (r) {
+              return '<span class="chip">' + esc(r) + "</span>";
+            })
+            .join("") +
+          "</div>" +
+          "</div>" +
+          '<div class="agent-foot">' +
+          '<button class="btn btn-outline btn-sm" type="button" data-edit="' +
+          esc(t.id) +
+          '">Edit</button>' +
+          '<button class="btn btn-outline btn-sm" type="button" data-archive="' +
+          esc(t.id) +
+          '">' +
+          (t.archived ? "Restore" : "Archive") +
+          "</button>" +
+          '<button class="btn btn-primary btn-sm" type="button" data-select="' +
+          esc(t.id) +
+          '">Run</button>' +
+          "</div>" +
+          "</article>"
+        );
+      })
+      .join("");
   }
 
   function loadDraft(t) {
@@ -79,8 +122,17 @@
 
   async function loadTeams() {
     state("loading…");
-    var r = await sb.from("ai_agency_teams").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(200);
-    if (r.error) { state("load failed", "err"); msg("tbMsg", "Teams could not be loaded.", "err"); return; }
+    var r = await sb
+      .from("ai_agency_teams")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (r.error) {
+      state("load failed", "err");
+      msg("tbMsg", "Teams could not be loaded.", "err");
+      return;
+    }
     teams = r.data || [];
     state("loaded", "ok");
     renderList();
@@ -101,17 +153,30 @@
       roles: roles,
       updated_at: new Date().toISOString(),
     };
-    if (!row.name) { msg("tbFormMsg", "Give the team a name.", "err"); return; }
+    if (!row.name) {
+      msg("tbFormMsg", "Give the team a name.", "err");
+      return;
+    }
     state("saving…");
     var r;
     if (editing) {
-      r = await sb.from("ai_agency_teams").update(row).eq("id", editing.id).eq("user_id", user.id).select("id").maybeSingle();
+      r = await sb
+        .from("ai_agency_teams")
+        .update(row)
+        .eq("id", editing.id)
+        .eq("user_id", user.id)
+        .select("id")
+        .maybeSingle();
     } else {
       r = await sb.from("ai_agency_teams").insert(row).select("id").maybeSingle();
     }
     if (r.error || !r.data) {
       state("save failed", "err");
-      msg("tbFormMsg", r.error && r.error.message ? r.error.message : "The team could not be saved.", "err");
+      msg(
+        "tbFormMsg",
+        r.error && r.error.message ? r.error.message : "The team could not be saved.",
+        "err",
+      );
       return;
     }
     state("saved", "ok");
@@ -125,10 +190,18 @@
     for (var i = 0; i < teams.length; i++) if (teams[i].id === id) t = teams[i];
     if (!t) return;
     state("updating…");
-    var r = await sb.from("ai_agency_teams")
+    var r = await sb
+      .from("ai_agency_teams")
       .update({ archived: !t.archived, updated_at: new Date().toISOString() })
-      .eq("id", id).eq("user_id", user.id).select("id").maybeSingle();
-    if (r.error || !r.data) { state("update failed", "err"); msg("tbMsg", "The team could not be updated.", "err"); return; }
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .select("id")
+      .maybeSingle();
+    if (r.error || !r.data) {
+      state("update failed", "err");
+      msg("tbMsg", "The team could not be updated.", "err");
+      return;
+    }
     state("updated", "ok");
     await loadTeams();
   }
@@ -145,31 +218,62 @@
 
   async function loadRuns() {
     if (!selected) return;
-    var r = await sb.from("autonomous_runs")
+    var r = await sb
+      .from("autonomous_runs")
       .select("id,state,goal,evidence,created_at")
       .eq("user_id", user.id)
       .contains("evidence", { executor: "ai_agency", team_id: selected })
       .order("created_at", { ascending: false })
       .limit(20);
     var box = $("tbRuns");
-    if (r.error) { box.innerHTML = '<p class="st-msg">Run history could not be loaded.</p>'; return; }
+    if (r.error) {
+      box.innerHTML = '<p class="st-msg">Run history could not be loaded.</p>';
+      return;
+    }
     var rows = r.data || [];
-    if (!rows.length) { box.innerHTML = '<p class="st-msg">No runs for this team yet.</p>'; return; }
-    box.innerHTML = rows.map(function (run) {
-      var workers = (run.evidence && run.evidence.workers) || [];
-      return '<div class="st-list-row">' +
-        '<div><b>' + esc(run.state) + "</b> · " + esc(new Date(run.created_at).toLocaleString()) + "</div>" +
-        '<div class="st-msg">' + esc(run.goal) + "</div>" +
-        (workers.length ? '<div class="st-msg">' + workers.map(function (w) { return esc(w.role || w.name || "role") + ": " + esc(w.status); }).join(" · ") + "</div>" : "") +
-      "</div>";
-    }).join("");
+    if (!rows.length) {
+      box.innerHTML = '<p class="st-msg">No runs for this team yet.</p>';
+      return;
+    }
+    box.innerHTML = rows
+      .map(function (run) {
+        var workers = (run.evidence && run.evidence.workers) || [];
+        return (
+          '<div class="st-list-row">' +
+          "<div><b>" +
+          esc(run.state) +
+          "</b> · " +
+          esc(new Date(run.created_at).toLocaleString()) +
+          "</div>" +
+          '<div class="st-msg">' +
+          esc(run.goal) +
+          "</div>" +
+          (workers.length
+            ? '<div class="st-msg">' +
+              workers
+                .map(function (w) {
+                  return esc(w.role || w.name || "role") + ": " + esc(w.status);
+                })
+                .join(" · ") +
+              "</div>"
+            : "") +
+          "</div>"
+        );
+      })
+      .join("");
   }
 
   async function runTeam(ev) {
     ev.preventDefault();
-    if (!selected) { msg("tbRunMsg", "Choose a team to run first.", "err"); return; }
+    if (!selected) {
+      msg("tbRunMsg", "Choose a team to run first.", "err");
+      return;
+    }
     var goal = $("tbGoal").value.trim();
-    if (!goal) { msg("tbRunMsg", "Describe the goal.", "err"); return; }
+    if (!goal) {
+      msg("tbRunMsg", "Describe the goal.", "err");
+      return;
+    }
     state("running…");
     msg("tbRunMsg", "Running the team. This can take a moment…");
     try {
@@ -179,12 +283,27 @@
       var res = await fetch("/api/v1/ai-factory/teams/run", {
         method: "POST",
         headers: { "content-type": "application/json", authorization: "Bearer " + token },
-        body: JSON.stringify({ teamId: selected, goal: goal, context: $("tbContext").value.trim() }),
+        body: JSON.stringify({
+          teamId: selected,
+          goal: goal,
+          context: $("tbContext").value.trim(),
+        }),
       });
-      var body = await res.json().catch(function () { return {}; });
+      var body = await res.json().catch(function () {
+        return {};
+      });
       if (!res.ok) throw new Error(body.error || "The team run could not be started.");
-      state(body.state === "succeeded" ? "run succeeded" : "run finished with issues", body.state === "succeeded" ? "ok" : "err");
-      msg("tbRunMsg", body.state === "succeeded" ? "Team proposals are ready." : "Some roles were unavailable. Review the saved results.", body.state === "succeeded" ? "ok" : "err");
+      state(
+        body.state === "succeeded" ? "run succeeded" : "run finished with issues",
+        body.state === "succeeded" ? "ok" : "err",
+      );
+      msg(
+        "tbRunMsg",
+        body.state === "succeeded"
+          ? "Team proposals are ready."
+          : "Some roles were unavailable. Review the saved results.",
+        body.state === "succeeded" ? "ok" : "err",
+      );
       await loadRuns();
     } catch (e) {
       state("run failed", "err");
@@ -206,29 +325,46 @@
 
   function init() {
     if (!window.supabase || !window.supabase.createClient) {
-      msg("tbMsg", "The Supabase client could not be loaded. Check your connection and reload.", "err");
+      msg(
+        "tbMsg",
+        "The Supabase client could not be loaded. Check your connection and reload.",
+        "err",
+      );
       return;
     }
     sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
       auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
     });
-    sb.auth.getSession().then(function (res) { signedIn(res.data && res.data.session); });
-    sb.auth.onAuthStateChange(function (_e, session) { signedIn(session); });
+    sb.auth.getSession().then(function (res) {
+      signedIn(res.data && res.data.session);
+    });
+    sb.auth.onAuthStateChange(function (_e, session) {
+      signedIn(session);
+    });
 
     $("tbSigninForm").addEventListener("submit", async function (ev) {
       ev.preventDefault();
       $("tbGateMsg").textContent = "signing in…";
-      var r = await sb.auth.signInWithPassword({ email: $("tbEmail").value, password: $("tbPassword").value });
-      $("tbGateMsg").textContent = r.error ? (r.error.message || "Sign in failed") : "";
+      var r = await sb.auth.signInWithPassword({
+        email: $("tbEmail").value,
+        password: $("tbPassword").value,
+      });
+      $("tbGateMsg").textContent = r.error ? r.error.message || "Sign in failed" : "";
     });
-    $("tbSignoutBtn").addEventListener("click", function () { sb.auth.signOut(); });
+    $("tbSignoutBtn").addEventListener("click", function () {
+      sb.auth.signOut();
+    });
     $("tbForm").addEventListener("submit", saveTeam);
-    $("tbReset").addEventListener("click", function () { loadDraft(null); });
+    $("tbReset").addEventListener("click", function () {
+      loadDraft(null);
+    });
     $("tbFilter").addEventListener("change", renderList);
     $("tbArchived").addEventListener("change", renderList);
     $("tbRunForm").addEventListener("submit", runTeam);
     $("tbList").addEventListener("click", function (ev) {
-      var t = ev.target.closest ? ev.target.closest("[data-edit],[data-archive],[data-select]") : null;
+      var t = ev.target.closest
+        ? ev.target.closest("[data-edit],[data-archive],[data-select]")
+        : null;
       if (!t) return;
       if (t.hasAttribute("data-edit")) {
         var id = t.getAttribute("data-edit");
