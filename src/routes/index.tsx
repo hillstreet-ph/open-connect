@@ -166,19 +166,13 @@ function Home() {
         </div>
       </section>
 
-      <section
-        aria-labelledby="how-it-works-heading"
-        className="border-t border-border py-12"
-      >
+      <section aria-labelledby="how-it-works-heading" className="border-t border-border py-12">
         <h2 id="how-it-works-heading" className="font-display text-2xl font-semibold">
           How it works
         </h2>
         <div className="mt-6 grid gap-5 md:grid-cols-3">
           {steps.map(({ step, title, body }) => (
-            <article
-              key={step}
-              className="rounded-2xl border border-border bg-card p-6"
-            >
+            <article key={step} className="rounded-2xl border border-border bg-card p-6">
               <span className="inline-flex size-8 items-center justify-center rounded-full border border-border text-sm font-semibold text-primary">
                 {step}
               </span>
