@@ -7,8 +7,13 @@ import { OAUTH_SCOPES_SUPPORTED } from "./lib/oauth.server";
 import { TOKEN_ENDPOINT_AUTH_METHODS } from "./lib/oauth-client-auth";
 import { runWithRuntimeEnv } from "./lib/runtime-env.server";
 import { aiGatewayMetadata, llmsTxt } from "./lib/ai-gateway-discovery";
-import { isRosterPath, rosterPageCandidates } from "./lib/ai-factory-roster-assets";
+import {
+  isRosterPath,
+  legacyFactoryRedirect,
+  rosterPageCandidates,
+} from "./lib/ai-factory-roster-assets";
 import { handleAiFactoryMcp } from "./lib/ai-factory-mcp";
+import { handleAiFactoryTeamRun } from "./lib/ai-factory-team-run-http.server";
 import { withSecurityHeaders } from "./lib/security-headers";
 
 type ServerEntry = {
@@ -262,6 +267,18 @@ export default {
           const wellKnown = handleWellKnown(request);
           if (wellKnown) return wellKnown;
 
+          // The /ai-factory SPA is gone: its content is now part of the one
+          // roster platform. Every legacy URL (bare, ?view=teams, ?view=roster,
+          // ?agent=…) is redirected to the section that now holds it, so no old
+          // bookmark 404s and no old URL serves a second, divergent document.
+          const legacy = legacyFactoryRedirect(url);
+          if (legacy) {
+            return new Response(null, {
+              status: 308,
+              headers: { location: legacy, "cache-control": "no-store" },
+            });
+          }
+
           const rosterAsset = await handleRosterAsset(request, env);
           if (rosterAsset) return rosterAsset;
 
@@ -269,6 +286,12 @@ export default {
           // Claude, Hermes, ...) can pull an agent definition into itself.
           const aiFactoryMcp = await handleAiFactoryMcp(request, env);
           if (aiFactoryMcp) return aiFactoryMcp;
+
+          // Team runs for the merged platform's Team Builder view. The static
+          // roster cannot call a server function, so it posts here with the
+          // user's own bearer token.
+          const teamRun = await handleAiFactoryTeamRun(request);
+          if (teamRun) return teamRun;
 
           const handler = await getServerEntry();
           const response = await handler.fetch(request, env, ctx);

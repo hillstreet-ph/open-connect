@@ -3,8 +3,7 @@ import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { FACTORY_CATEGORIES, factoryTeamInput, type FactoryRun } from "@/lib/ai-factory";
-import { validateTeamInput, runFreeAgentTeam } from "@/lib/agent-team";
-import { requestTeamWorker } from "@/lib/agent-team-worker.server";
+import { validateTeamInput } from "@/lib/agent-team";
 
 export const listFactoryTeams = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -100,57 +99,15 @@ export const runFactoryTeam = createServerFn({ method: "POST" })
       context.userId,
       data.teamId,
     );
-    const { resolveAutoFreeRoutes, resolveUserUpstreams } = await import("@/lib/gateway.server");
-    const routes = await resolveAutoFreeRoutes(await resolveUserUpstreams(context.userId, false));
-    if (!routes.length)
-      throw new Error(
-        "No model provider is reachable. Connect a provider in AI Gateway, or confirm the platform Workers AI binding (OC_AI) is deployed.",
-      );
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { finishFactoryProposalRun } = await import("@/lib/ai-factory-run-store.server");
-    const db = supabaseAdmin as SupabaseClient;
-    const id = crypto.randomUUID();
-    const evidence = {
-      executor: "ai_agency",
-      team_id: team.id,
-      team_name: team.name,
-      category: team.category,
-      roles: team.roles,
-      execution_performed: false,
-    };
-    const { error: startError } = await db.from("autonomous_runs").insert({
-      id,
-      user_id: context.userId,
-      goal: data.goal,
-      environment: "development",
-      state: "running",
-      plan: { mode: "proposals", roles: team.roles },
-      evidence,
-      rollback: { available: false },
-      correlation_id: id,
-    });
-    if (startError) throw new Error("Could not save run history. No AI request was sent.");
-    let result: Awaited<ReturnType<typeof runFreeAgentTeam>>;
-    try {
-      result = await runFreeAgentTeam(
-        routes,
-        { goal: data.goal, context: data.context },
-        requestTeamWorker,
-        team.roles,
-      );
-    } catch {
-      await finishFactoryProposalRun(db, context.userId, id, "failed", {
-        ...evidence,
-        error: "The team request was interrupted. Completion is unverified.",
-      });
-      throw new Error(`Team run ${id} did not complete. Check its history before retrying.`);
-    }
-    const state = result.workers.every((worker) => worker.status === "completed")
-      ? "succeeded"
-      : "failed";
-    await finishFactoryProposalRun(db, context.userId, id, state, {
-      ...evidence,
-      workers: result.workers,
-    });
-    return { id, state };
+    const { runOwnedFactoryTeam } = await import("@/lib/ai-factory-team-run.server");
+    // One implementation for both surfaces: this server function and the
+    // `/api/v1/ai-factory/teams/run` route the merged platform's Team Builder
+    // posts to. Keeping the run logic here as well would let the two drift.
+    return runOwnedFactoryTeam(
+      supabaseAdmin as SupabaseClient,
+      context.userId,
+      team as { id: string; name: string; category: string; roles: string[] },
+      { goal: data.goal, context: data.context },
+    );
   });

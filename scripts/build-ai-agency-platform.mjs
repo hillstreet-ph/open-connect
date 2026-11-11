@@ -32,7 +32,7 @@
  *
  * Runs from `prebuild`, after `unpack-ai-factory-roster.mjs`.
  */
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -42,6 +42,38 @@ const target = join(root, "public", "ai-factory", "roster");
 if (!existsSync(target)) {
   console.log("[ai-agency] roster not unpacked, skipping platform build");
   process.exit(0);
+}
+
+/**
+ * Copy the two views that used to live only in the /ai-factory SPA into the
+ * roster target, so this script can merge them like any other page.
+ *
+ * They are kept in `scripts/ai-factory-views/` rather than in the zip because
+ * `unpack-ai-factory-roster.mjs` replaces the whole roster directory from the
+ * archive on every build — anything written into the target before that step
+ * would be silently discarded. Copying here, after the unpack, is the only
+ * place the files survive.
+ *
+ * `teams.html` is renamed to `team-builder.html` on the way in: the roster
+ * already owns a `teams` view (the 103-agent roster), and the SPA's team
+ * workspace is a different thing. Keeping the source name would collide.
+ */
+const viewSources = join(root, "scripts", "ai-factory-views");
+const viewCopies = [
+  ["workforce.html", "workforce.html"],
+  ["workforce.js", join("assets", "workforce.js")],
+  ["teams.html", "team-builder.html"],
+  ["teams.js", join("assets", "teams.js")],
+];
+for (const [from, to] of viewCopies) {
+  const src = join(viewSources, from);
+  if (!existsSync(src)) {
+    console.error(`[ai-agency] missing view source ${from}`);
+    process.exit(1);
+  }
+  const dest = join(target, to);
+  mkdirSync(dirname(dest), { recursive: true });
+  writeFileSync(dest, readFileSync(src));
 }
 
 /**
@@ -66,6 +98,12 @@ const VIEWS = [
   { slug: "playbooks", label: "Playbooks", marker: "Briefings" },
   { slug: "registry", label: "Registry", marker: "Import Package" },
   { slug: "studio", label: "Studio", marker: "Studio Builder" },
+  // The two views that used to live only in the /ai-factory SPA. They are
+  // authored in `scripts/ai-factory-views/` and copied into the roster target
+  // before this script reads it, because `unpack-ai-factory-roster.mjs`
+  // replaces the whole roster directory from the zip on every build.
+  { slug: "workforce", label: "Workforce", marker: "Workforce Directory" },
+  { slug: "team-builder", label: "Team Builder", marker: "Team Builder" },
 ];
 
 /**
@@ -311,7 +349,7 @@ ${styles.map((s) => s.tag).join("\n")}
 ${navLinks}
     </nav>
     <div class="hdr-actions">
-      <a class="btn btn-outline btn-sm" href="/ai-factory">Open workspace</a>
+      <a class="btn btn-outline btn-sm" href="/dashboard">Open workspace</a>
       <button class="menu-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="nav" aria-label="Toggle navigation">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
       </button>

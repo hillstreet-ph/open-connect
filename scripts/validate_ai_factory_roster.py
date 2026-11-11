@@ -161,6 +161,11 @@ ROSTER_PAGES: tuple[RosterPage, ...] = (
     RosterPage("connectors", f"{ROSTER_PREFIX}connectors", "Live Status"),
     RosterPage("command-center", f"{ROSTER_PREFIX}command-center", "All Deliverables"),
     RosterPage("registry", f"{ROSTER_PREFIX}registry", "Import Package"),
+    # The two views that used to live only in the /ai-factory SPA. They are now
+    # sections of this platform, so they are held to the same contract: served
+    # at their own clean URL, carrying their own marker, with no SPA shell.
+    RosterPage("workforce", f"{ROSTER_PREFIX}workforce", "Workforce Directory"),
+    RosterPage("team-builder", f"{ROSTER_PREFIX}team-builder", "Team Builder"),
 )
 
 # Shared assets that must resolve from the roster base path. A page can render
@@ -170,6 +175,8 @@ ROSTER_ASSETS: tuple[str, ...] = (
     "assets/site.css",
     "assets/nav.js",
     "assets/studio.js",
+    "assets/workforce.js",
+    "assets/teams.js",
     "data/agents-v10.json",
     "data/catalog-v11.json",
     "images/agents/account-manager.webp",

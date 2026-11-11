@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Team Builder | Open-Connect AI Factory</title>
+<meta name="description" content="Build private AI Agency teams, run them for a goal, and read the proposal history. Teams are stored in the platform's own schema and run through the same executor as the workspace.">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="assets/studio.css">
+</head>
+<body>
+<main>
+  <section class="sec" style="padding-top:0">
+    <div class="wrap">
+      <div class="st-gate" id="tbGate">
+        <div class="st-gate-in">
+          <h3>Sign in to build teams</h3>
+          <p>Private teams belong to your account and are stored in the platform's own schema. Row-level security requires your session.</p>
+          <form id="tbSigninForm" class="st-form" autocomplete="on">
+            <label class="st-lbl" for="tbEmail">Email</label>
+            <input class="st-in" id="tbEmail" type="email" required autocomplete="username" placeholder="you@example.com">
+            <label class="st-lbl" for="tbPassword">Password</label>
+            <input class="st-in" id="tbPassword" type="password" required autocomplete="current-password" placeholder="••••••••">
+            <button class="btn btn-primary" type="submit" id="tbSigninBtn">Sign in</button>
+            <p class="st-msg" id="tbGateMsg" role="status"></p>
+          </form>
+        </div>
+      </div>
+
+      <div id="tbApp" style="display:none">
+        <div class="st-bar">
+          <div class="st-who"><span class="st-dot" id="tbWhoDot"></span><span id="tbWhoEmail">—</span></div>
+          <div class="st-bar-actions">
+            <span class="st-save" id="tbState" role="status"></span>
+            <button class="btn btn-outline btn-sm" type="button" id="tbSignoutBtn">Sign out</button>
+          </div>
+        </div>
+
+        <div class="st-grid">
+          <aside class="st-editor">
+            <div class="st-editor-head">
+              <span class="st-eyebrow" id="tbFormTitle">New private team</span>
+            </div>
+            <form id="tbForm" class="st-form">
+              <label class="st-lbl" for="tbName">Team name</label>
+              <input class="st-in" id="tbName" required maxlength="100" placeholder="Growth squad">
+              <label class="st-lbl" for="tbCategory">Category</label>
+              <select class="st-in" id="tbCategory">
+                <option value="development">Development</option>
+                <option value="business">Business</option>
+                <option value="marketing">Marketing</option>
+                <option value="research">Research</option>
+                <option value="operations">Operations</option>
+                <option value="custom">Custom</option>
+              </select>
+              <label class="st-lbl" for="tbDescription">Description</label>
+              <textarea class="st-in" id="tbDescription" rows="3" maxlength="2000" placeholder="What this team is for"></textarea>
+              <label class="st-lbl" for="tbRoles">Roles (one per line, 2–6)</label>
+              <textarea class="st-in" id="tbRoles" rows="4" placeholder="Planner&#10;Builder&#10;Reviewer"></textarea>
+              <div class="st-editor-actions">
+                <button class="btn btn-primary btn-sm" type="submit" id="tbSave">Save team</button>
+                <button class="btn btn-outline btn-sm" type="button" id="tbReset">Clear</button>
+              </div>
+              <p class="st-msg" id="tbFormMsg" role="status"></p>
+            </form>
+          </aside>
+
+          <div>
+            <div class="filters" style="margin-bottom:14px">
+              <label class="sr-only" for="tbFilter">Filter by category</label>
+              <select class="st-in" id="tbFilter" style="max-width:220px">
+                <option value="all">All categories</option>
+                <option value="development">Development</option>
+                <option value="business">Business</option>
+                <option value="marketing">Marketing</option>
+                <option value="research">Research</option>
+                <option value="operations">Operations</option>
+                <option value="custom">Custom</option>
+              </select>
+              <label class="st-in-sm" style="display:flex;align-items:center;gap:8px">
+                <input type="checkbox" id="tbArchived"> Show archived
+              </label>
+            </div>
+            <div class="agent-grid" id="tbList" aria-live="polite"></div>
+            <p class="st-msg" id="tbMsg" role="status"></p>
+
+            <section class="sec" id="tbRunSec" style="display:none;padding-top:26px">
+              <h3 id="tbRunTitle">Run team</h3>
+              <form id="tbRunForm" class="st-form">
+                <label class="st-lbl" for="tbGoal">Goal</label>
+                <textarea class="st-in" id="tbGoal" rows="3" required placeholder="What should this team produce?"></textarea>
+                <label class="st-lbl" for="tbContext">Context (optional)</label>
+                <textarea class="st-in" id="tbContext" rows="3" placeholder="Constraints, background, links"></textarea>
+                <div class="st-editor-actions">
+                  <button class="btn btn-primary btn-sm" type="submit" id="tbRun">Run team</button>
+                </div>
+                <p class="st-msg" id="tbRunMsg" role="status"></p>
+              </form>
+              <h4 style="margin-top:22px">Proposal history</h4>
+              <div id="tbRuns" class="st-list"></div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="assets/teams.js?v=1"></script>
+</body>
+</html>
