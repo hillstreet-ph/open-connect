@@ -3,7 +3,8 @@ import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { FACTORY_CATEGORIES, factoryTeamInput, type FactoryRun } from "@/lib/ai-factory";
-import { validateTeamInput, runFreeAgentTeam, requestTeamWorker } from "@/lib/agent-team";
+import { validateTeamInput, runFreeAgentTeam } from "@/lib/agent-team";
+import { requestTeamWorker } from "@/lib/agent-team-worker.server";
 
 export const listFactoryTeams = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -102,7 +103,9 @@ export const runFactoryTeam = createServerFn({ method: "POST" })
     const { resolveAutoFreeRoutes, resolveUserUpstreams } = await import("@/lib/gateway.server");
     const routes = await resolveAutoFreeRoutes(await resolveUserUpstreams(context.userId, false));
     if (!routes.length)
-      throw new Error("Connect an available free model provider in AI Gateway first.");
+      throw new Error(
+        "No model provider is reachable. Connect a provider in AI Gateway, or confirm the platform Workers AI binding (OC_AI) is deployed.",
+      );
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { finishFactoryProposalRun } = await import("@/lib/ai-factory-run-store.server");
     const db = supabaseAdmin as SupabaseClient;

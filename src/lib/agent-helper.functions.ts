@@ -854,15 +854,23 @@ async function requestFreeModel(
   includeTools: boolean,
   allowedTools?: readonly string[],
 ) {
-  let response: Response;
+  // Shared dispatcher: the credential-free `cloudflare` upstream runs on the
+  // OC_AI binding rather than HTTP, so a bare fetch to its marker base URL
+  // would fail at the provider step on a keyless deployment.
+  const { requestRouteCompletion, carriesStatus } = await import("./gateway-chat.server.ts");
+  let payload: {
+    choices?: Array<{
+      message?: {
+        role?: string;
+        content?: unknown;
+        tool_calls?: AgentHelperToolCall[];
+      };
+    }>;
+  };
   try {
-    response = await fetch(`${upstream.baseUrl}/chat/completions`, {
-      method: "POST",
-      redirect: "manual",
-      signal: AbortSignal.timeout(15_000),
-      headers: upstream.headers ?? {},
-      body: JSON.stringify({
-        model,
+    payload = (await requestRouteCompletion(
+      { upstream, model },
+      {
         messages,
         ...(includeTools
           ? {
@@ -875,29 +883,20 @@ async function requestFreeModel(
           : {}),
         max_tokens: 900,
         temperature: 0.25,
-      }),
+      },
+      { timeoutMs: 15_000 },
+    )) as typeof payload;
+  } catch (error) {
+    if (carriesStatus(error) && (error.status === 401 || error.status === 403)) {
+      throw new Error(`${upstream.name} rejected the saved credential. Update it in AI Gateway.`, {
+        cause: error,
+      });
+    }
+    throw new Error("Copilot could not reach the configured model. Try again in a moment.", {
+      cause: error,
     });
-  } catch {
-    throw new Error("Copilot could not reach the configured model. Try again in a moment.");
   }
-
-  if (!response.ok) {
-    throw new Error(
-      response.status === 401 || response.status === 403
-        ? `${upstream.name} rejected the saved credential. Update it in AI Gateway.`
-        : "Copilot is temporarily unavailable. Try again in a moment.",
-    );
-  }
-  const result = (await response.json().catch(() => null)) as {
-    choices?: Array<{
-      message?: {
-        role?: string;
-        content?: unknown;
-        tool_calls?: AgentHelperToolCall[];
-      };
-    }>;
-  } | null;
-  const message = result?.choices?.[0]?.message;
+  const message = payload?.choices?.[0]?.message;
   return {
     message,
     content: typeof message?.content === "string" ? message.content.trim() : "",
@@ -1000,7 +999,9 @@ export const askAgentHelper = createServerFn({ method: "POST" })
             specialist.version.config.model === route.model,
         );
       if (!routes.length) {
-        throw new Error("Connect OpenRouter or LiteLLM in AI Gateway before using Copilot.");
+        throw new Error(
+          "No model provider is reachable. Connect a provider in AI Gateway, or confirm the platform Workers AI binding (OC_AI) is deployed.",
+        );
       }
       const modelMessages = helperModelMessages(data.messages, data.attachments);
       const systemPrompt =
@@ -1054,7 +1055,7 @@ export const askAgentHelper = createServerFn({ method: "POST" })
       }
       if (!first)
         throw new Error(
-          "No connected free model is available right now. Check AI Gateway connections.",
+          "No free model route is available right now. Check AI Gateway connections, or confirm the platform Workers AI binding (OC_AI) is deployed.",
         );
       if (!selectedRoute) throw new Error("No model route selected.");
       const route = selectedRoute;
