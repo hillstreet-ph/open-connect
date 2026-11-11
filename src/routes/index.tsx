@@ -13,6 +13,11 @@ export const Route = createFileRoute("/")({
           "Open-Connect is one gateway for AI agent resources, app connections and AI models. Discover skills and tools, connect your accounts, and run tasks and automations from a single workspace.",
       },
       { property: "og:title", content: "Open-Connect — Your AI workspace" },
+      {
+        property: "og:description",
+        content:
+          "Discover agent resources, connect your apps and AI models, and run tasks and automations in one workspace.",
+      },
     ],
   }),
   component: Home,
