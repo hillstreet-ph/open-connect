@@ -559,6 +559,7 @@ class MainWiringTests(unittest.TestCase):
              mock.patch.object(gate, "http_get", return_value=(200, build_info(MAIN_SHA))), \
              mock.patch.object(gate, "check_roster", return_value=gate.Check("r").pass_("ok")), \
              mock.patch.object(gate, "check_exports", return_value=gate.Check("e").pass_("ok")), \
+             mock.patch.object(gate, "check_use_in", return_value=gate.Check("u").pass_("ok")), \
              mock.patch.object(gate, "check_mcp", return_value=gate.Check("m").pass_("ok")):
             return gate.main(argv)
 
