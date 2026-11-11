@@ -119,6 +119,19 @@ jobs:
         # never be reported as success. A newer failure for main HEAD must not
         # be masked by an older success for the same commit.
         run: python3 -m unittest discover -s scripts -p 'cloudflare_pages_test.py' -v
+      - name: Auto-fix scope contract tests
+        # Offline: pins the checker's own behaviour against in-memory fixtures,
+        # including the case that matters most -- a prettier scope narrowed to
+        # src/ while `bun run lint` covers the repo must FAIL. A contract test
+        # that only ever passes is the bug this change exists to prevent.
+        run: python3 -m unittest discover -s scripts -p 'validate_autofix_scope_test.py' -v
+      - name: Auto-fix scope matches bun run lint
+        # The live assertion: parses .github/workflows/pr-automation.yml and
+        # package.json and fails if the autofix job's prettier/eslint paths
+        # drift from what `bun run lint` (eslint .) actually covers. This is
+        # what makes a future narrowing of the autofix paths break the build
+        # instead of silently passing.
+        run: python3 scripts/validate_autofix_scope.py
       - name: Strict TypeScript validation
         run: bun run typecheck
       - name: Production build

@@ -15,6 +15,13 @@ name: PR Automation - auto-fix, auto-update, auto-merge, auto-deploy
 #   never touched, `git diff --cached` stayed empty, and the job reported
 #   "No automatic fixes required" while CI failed on 125 auto-fixable errors.
 #
+#   PR #980 widened the eslint call but left the prettier call narrowed to src/,
+#   which is the same bug half-fixed. Both calls are now repo-wide.
+#
+#   This contract is ENFORCED, not just documented: scripts/validate_autofix_scope.py
+#   parses this file and package.json and fails the required "Build & validate"
+#   check if the two scopes ever drift apart again.
+#
 # FAILURE CONTRACT:
 #   The job fails (non-zero exit) whenever it cannot push, or whenever fixable
 #   lint errors remain after the fix pass. It never reports success while
@@ -71,7 +78,7 @@ jobs:
         # required "Build & validate" check runs. No `|| true`: a crash here
         # must fail the job rather than be swallowed.
         run: |
-          bunx prettier --write "src/**/*.{ts,tsx,css}"
+          bunx prettier --write "**/*.{ts,tsx,js,mjs,cjs}"
           bunx eslint . --fix
 
       - name: Verify no fixable lint errors remain
