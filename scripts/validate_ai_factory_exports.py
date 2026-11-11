@@ -351,8 +351,15 @@ def main() -> int:
             print(f"FAIL {r.target}/{r.slug}: {r.detail}")
         for m in missing_files[:20]:
             print(f"MISSING {m}")
-        for leak in report["secret_leaks"]:
-            print(f"SECRET {leak}")
+        # Never echo a matched value or the file it came from into a log: the
+        # point of the scan is that a secret must not reach a log, and a path
+        # next to a hit is enough for a reader to infer which artifact leaked.
+        # The count is reported here; `--json` carries the paths for tooling.
+        if report["secret_leaks"]:
+            print(
+                f"SECRET: {len(report['secret_leaks'])} artifact(s) matched a "
+                "credential pattern; re-run with --json for the paths"
+            )
         print(
             f"\n{report['passed']}/{report['checks']} checks passed across "
             f"{report['agents']} agents; {len(missing_files)} missing files, "
