@@ -344,7 +344,7 @@ const router = `
   }
 
   /**
-   * Resolve a hash to the card it names.
+   * Resolve a hash to the card it names, inside the view that owns it.
    *
    * The teams and niches views render their cards from data attributes
    * (data-group, data-niche) rather than element ids, so the overview's
@@ -352,14 +352,36 @@ const router = `
    * to land on: getElementById returned null and the reader stayed at the top of
    * a view they had not asked for. Looking the attribute up as well gives every
    * one of those links a real target.
+   *
+   * The lookup is scoped to the view because two slugs (digital-marketing,
+   * conversational-ai) name a team group *and* a niche. An unscoped query
+   * returned whichever came first in the document, so those two niche cards
+   * opened the teams view instead of the niche they pointed at.
    */
-  function targetFor(hash) {
+  function targetFor(hash, view) {
     if (!/^[A-Za-z0-9-]+$/.test(hash)) return null;
+    var root = view ? document.querySelector('.view[data-view="' + view + '"]') : document;
+    if (!root) return null;
     return (
-      document.getElementById(hash) ||
-      document.querySelector('[data-group="' + hash + '"]') ||
-      document.querySelector('[data-niche="' + hash + '"]')
+      root.querySelector("#" + hash) ||
+      root.querySelector('[data-group="' + hash + '"]') ||
+      root.querySelector('[data-niche="' + hash + '"]')
     );
+  }
+
+  /**
+   * Scroll a card into view once its view is actually displayed.
+   *
+   * scrollIntoView on an element inside a display:none view is a no-op: the
+   * element has no layout box yet, so the page stays at the top. The view is
+   * shown first and the scroll deferred a frame, which is what makes a deep
+   * link land on its card rather than on the top of the page.
+   */
+  function reveal(el) {
+    el.classList.add("anchor-hit");
+    requestAnimationFrame(function () {
+      el.scrollIntoView({ block: "start" });
+    });
   }
 
   function apply() {
@@ -368,20 +390,33 @@ const router = `
     // A hash that names a card in a *different* view (the overview links to
     // niches#casino-platform-operations) must switch views first.
     var hash = decodeURIComponent(location.hash.slice(1));
-    if (hash) {
-      var el = targetFor(hash);
-      if (el) {
-        var ownerEl = el.closest(".view");
-        var owner = ownerEl && ownerEl.getAttribute("data-view");
-        if (owner && owner !== slug) show(owner);
-        // If the target is a team group, light up its filter chip so the view
-        // shows that group alone rather than opening on the full roster.
-        var chip = document.querySelector('[data-filter="' + hash + '"]');
-        if (chip) chip.click();
-        el.scrollIntoView({ block: "start" });
-        el.classList.add("anchor-hit");
+    if (!hash) return;
+
+    // The hash may name a card in this view or in another one. Try the view the
+    // URL asks for first, then the other views, so a shared link still works
+    // when the path and the fragment disagree.
+    var el = targetFor(hash, slug);
+    if (!el) {
+      var others = ["teams", "niches"];
+      for (var i = 0; i < others.length && !el; i++) {
+        if (others[i] !== slug) el = targetFor(hash, others[i]);
       }
     }
+    if (!el) return;
+
+    var ownerEl = el.closest(".view");
+    var owner = ownerEl && ownerEl.getAttribute("data-view");
+    if (owner && owner !== slug) show(owner);
+    // If the target is a team group, light up its filter chip so the view
+    // shows that group alone rather than opening on the full roster. The chip
+    // belongs to the teams view, so it is only clicked for a team group: two
+    // slugs are shared with a niche, and clicking the teams chip for one of
+    // those re-rendered the teams grid and undid the scroll to the niche card.
+    if (el.hasAttribute("data-group")) {
+      var chip = document.querySelector('[data-filter="' + hash + '"]');
+      if (chip) chip.click();
+    }
+    reveal(el);
   }
 
   // In-page navigation between views without a full document load.
