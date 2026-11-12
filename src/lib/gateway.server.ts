@@ -163,16 +163,33 @@ export function resolveUpstreams(): Upstream[] {
   // Credential-free platform fallback: the Workers AI binding needs no API
   // key, so Open-Auto free-first routing works on every deployment without
   // stored secrets.
-  const cloudflareId = `cloudflare:${CLOUDFLARE_AI_BASE_URL}`;
-  if (!seen.has(cloudflareId)) {
-    list.push({
-      name: CLOUDFLARE_AI_UPSTREAM_NAME,
-      baseUrl: CLOUDFLARE_AI_BASE_URL,
-      headers: {},
-    });
+  for (const upstream of resolvePlatformFreeUpstreams()) {
+    const id = `${upstream.name}:${upstream.baseUrl}`;
+    if (!seen.has(id)) {
+      seen.add(id);
+      list.push(upstream);
+    }
   }
 
   return list;
+}
+
+/**
+ * The credential-free platform upstream(s).
+ *
+ * Workers AI runs on the `OC_AI` binding: no API key, no account, no bill. It
+ * is therefore not "a different account" and is safe to expose even when
+ * credentialed platform fallback is disabled — which is what keeps the
+ * in-app agent chat working on a deployment that has no provider key stored.
+ */
+export function resolvePlatformFreeUpstreams(): Upstream[] {
+  return [
+    {
+      name: CLOUDFLARE_AI_UPSTREAM_NAME,
+      baseUrl: CLOUDFLARE_AI_BASE_URL,
+      headers: {},
+    },
+  ];
 }
 
 export async function resolveUserUpstreams(
@@ -188,10 +205,7 @@ export async function resolveUserUpstreams(
     .from("app_connections")
     .select("provider,status,credential_reference,metadata")
     .eq("user_id", userId)
-    .in(
-      "provider",
-      COMPATIBLE_GATEWAY_PROVIDERS.map((provider) => provider.id),
-    )
+    .in("provider", [...COMPATIBLE_GATEWAY_PROVIDERS.map((provider) => provider.id), "anthropic"])
     .eq("status", "connected")
     .order("created_at", { ascending: false });
   if (connectionError) throw new Error("Unable to read model connection.");
@@ -206,12 +220,20 @@ export async function resolveUserUpstreams(
       return data;
     },
   });
-  // A saved personal connection is authoritative: no silent fallback to a different account.
-  return saved.length > 0 || (connections?.length ?? 0) > 0
-    ? saved
-    : allowPlatformFallback
-      ? resolveUpstreams()
-      : [];
+  // A saved personal connection is authoritative: no silent fallback to a
+  // different *account*. The credential-free Workers AI binding is not another
+  // account, so it is appended even when credentialed fallback is disabled —
+  // otherwise the in-app agent chat has no route at all on a keyless
+  // deployment and fails at the provider step.
+  const platformFree = resolvePlatformFreeUpstreams();
+  if (saved.length > 0 || (connections?.length ?? 0) > 0) {
+    const seen = new Set(saved.map((upstream) => `${upstream.name}:${upstream.baseUrl}`));
+    return [
+      ...saved,
+      ...platformFree.filter((upstream) => !seen.has(`${upstream.name}:${upstream.baseUrl}`)),
+    ];
+  }
+  return allowPlatformFallback ? resolveUpstreams() : platformFree;
 }
 
 export type AutoFreeRoute = { upstream: Upstream; model: string };

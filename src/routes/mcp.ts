@@ -21,12 +21,8 @@ import { matchBrowserCredentials } from "@/lib/browser-credential-matching";
 import { autoInstructions, readAutoMode, writeAutoMode } from "@/lib/auto-mode.server";
 import { saveRunLearning } from "@/lib/agent-learning.server";
 import { createHash } from "node:crypto";
-import {
-  redactContext,
-  validateTeamInput,
-  runFreeAgentTeam,
-  requestTeamWorker,
-} from "@/lib/agent-team";
+import { redactContext, validateTeamInput, runFreeAgentTeam } from "@/lib/agent-team";
+import { requestTeamWorker } from "@/lib/agent-team-worker.server";
 import { COMMAND_CENTER_HTML } from "@/lib/command-center";
 import {
   CLOUD_BROWSER_FRAME_DOMAINS,

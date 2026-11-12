@@ -12,7 +12,12 @@ export const AI_GATEWAY_PROVIDERS = [
     baseUrl: "https://integrate.api.nvidia.com/v1",
     official: true,
   },
-  { id: "ollama_cloud", name: "Ollama Cloud", baseUrl: "https://ollama.com/v1", official: false },
+  {
+    id: "ollama_cloud",
+    name: "Ollama Cloud",
+    baseUrl: "https://ollama.com/v1",
+    official: false,
+  },
   {
     id: "kilo",
     name: "Kilo Code Gateway",
@@ -76,6 +81,36 @@ export const AI_GATEWAY_PROVIDERS = [
     name: "Fireworks AI",
     baseUrl: "https://api.fireworks.ai/inference/v1",
     official: true,
+  },
+  {
+    id: "lmstudio",
+    name: "LM Studio",
+    baseUrl: "https://api.lmstudio.ai/v1",
+    official: true,
+  },
+  {
+    id: "dashscope",
+    name: "Alibaba Cloud Model Studio",
+    baseUrl: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+    official: true,
+  },
+  {
+    id: "yolo_auto",
+    name: "Yolo-Auto (Qwen3.8)",
+    baseUrl: "https://yolo-auto.com/v1",
+    official: true,
+  },
+  {
+    id: "siliconflow",
+    name: "SiliconFlow",
+    baseUrl: "https://api.siliconflow.com/v1",
+    official: true,
+  },
+  {
+    id: "litellm",
+    name: "Custom (OpenAI-compatible)",
+    baseUrl: "",
+    official: false,
   },
 ] as const;
 
