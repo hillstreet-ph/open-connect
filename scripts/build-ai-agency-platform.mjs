@@ -190,20 +190,88 @@ const hrefOf = (tag) => (tag.match(/href="([^"]+)"/) ?? [])[1] ?? "";
 const srcOf = (tag) => (tag.match(/src="([^"]+)"/) ?? [])[1] ?? "";
 
 /**
- * Point the roster's own cross-page links at the platform's clean URLs.
+ * Where a link that used to leave the platform for a stand-alone page now goes.
  *
- * The unpack step already rewrote `teams.html` -> `/ai-factory/roster/teams`.
- * This catches anything it missed (a link written with a leading `./`, or a
- * bare `index.html`) so no view ever links to a file that no longer exists as
- * a distinct document.
+ * The nine original pages were separate documents. Each one is now a view of
+ * this platform, so a link that still points at the old URL sends a reader out
+ * of the site to a second copy of content they are already standing in — two
+ * places to drift, and a back button that does not return them to the platform.
+ * Every entry below is the page that view replaced.
  */
-function rewriteLinks(html) {
+const SUPERSEDED_PAGES = {
+  "https://static.teamily.ai/sites/163740a7-675d-41b2-964c-a2b7a15b3d5d/webpages/ai-agency-hub/index.html":
+    "/ai-factory/roster/hub",
+  "https://static.teamily.ai/sites/39475c4b-ef2e-4cb7-9700-4053e1dc04d4/webpages/ai-agency-command-center/index.html":
+    "/ai-factory/roster/command-center",
+  "https://static.teamily.ai/sites/287794ea-6a72-47b7-913b-ed0958dd986c/webpages/ai-agents-agentic/index.html":
+    "/ai-factory/roster/teams",
+};
+
+/** Reference documents that have no in-platform copy of their own. */
+const REFERENCE_DOCS = [
+  "https://static.teamily.ai/sites/0a1e98c5-31f0-44a7-877f-f9bc2b03bd43/webpages/ai-model-lifecycle-playbook/index.html",
+  "https://static.teamily.ai/sites/00b00caa-ec14-4288-b7a2-0cd6c245dadc/webpages/ai-trends-briefing-2026/index.html",
+];
+
+/** The NovaSquad agency page: a different product, with no view here. */
+const FOREIGN_CARD =
+  "https://static.teamily.ai/sites/f7efe877-9f13-41c6-86b2-a7824d3ceb5d/webpages/ai-agency_v2/index.html";
+
+/** Escape a literal string for use inside a RegExp. */
+const rx = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * Point every link at the view that now holds its content.
+ *
+ * Three kinds of link need moving:
+ *
+ * 1. `teams.html#direction` / `niches.html#casino-platform-operations` — the
+ *    original pages' in-page anchors. Left alone they resolve against the
+ *    *current* view (the overview), so every one of the 45 category cards on the
+ *    overview sent the reader to a card that was never on the page they landed
+ *    on. They are rewritten to the clean URL of the view that owns the card.
+ * 2. Links to the stand-alone pages those views replaced (`SUPERSEDED_PAGES`).
+ * 3. The legacy `/ai-factory` SPA shim, which is a redirect hop to this very
+ *    platform and belongs to no view.
+ *
+ * The two reference documents stay external, because nothing on the platform
+ * carries them — but they are listed in one place only (Playbooks), so the
+ * Command Center does not offer a second door to the same document.
+ */
+function rewriteLinks(html, slug) {
   let out = html;
-  for (const { slug } of VIEWS) {
-    const clean = slug === "index" ? "" : slug;
-    out = out.replaceAll(`href="./${slug}.html"`, `href="/ai-factory/roster/${clean}"`);
-    out = out.replaceAll(`href="${slug}.html"`, `href="/ai-factory/roster/${clean}"`);
+  for (const { slug: other } of VIEWS) {
+    const clean = other === "index" ? "" : other;
+    out = out.replaceAll(`href="./${other}.html"`, `href="/ai-factory/roster/${clean}"`);
+    out = out.replaceAll(`href="${other}.html"`, `href="/ai-factory/roster/${clean}"`);
   }
+
+  // 1 - In-page anchors belong to the view that owns the card, not this one.
+  out = out.replace(
+    /href="(teams|niches)\.html#([A-Za-z0-9-]+)"/g,
+    (_m, page, anchor) => `href="/ai-factory/roster/${page}#${anchor}"`,
+  );
+
+  // 2 - Stand-alone pages that are now views of this platform.
+  for (const [from, to] of Object.entries(SUPERSEDED_PAGES)) out = out.split(from).join(to);
+
+  // 3 - The legacy SPA shim is a hop to this platform; link to it directly.
+  out = out.split('href="/ai-factory"').join('href="/ai-factory/roster/"');
+
+  // The Command Center is an index of deliverables, not a second copy of the
+  // reference library: send those two cards to the Playbooks view.
+  if (slug === "command-center" && out.trim() !== "") {
+    for (const doc of REFERENCE_DOCS) out = out.split(doc).join("/ai-factory/roster/playbooks");
+    // A card for a different product's site is not a deliverable of this
+    // platform; dropping it is the only honest option (there is no view for it).
+    const card = new RegExp(`\\s*<a\\b[^>]*href="${rx(FOREIGN_CARD)}"[^>]*>[\\s\\S]*?</a>`, "g");
+    if (!card.test(out)) {
+      console.error("[ai-agency] command-center: could not locate the foreign agency card");
+      process.exit(1);
+    }
+    out = out.replace(card, "");
+  }
+
   return out;
 }
 
@@ -225,9 +293,9 @@ const navLinks = VIEWS.map(({ slug, label }) => {
 
 const views = VIEWS.map(({ slug, label }) => {
   const source = pages[VIEWS.findIndex((v) => v.slug === slug)];
-  const inner = rewriteLinks(mainInner(source, slug));
+  const inner = rewriteLinks(mainInner(source, slug), slug);
   // Modals/overlays authored after </main> belong to this view too.
-  const tail = rewriteLinks(mainTail(source));
+  const tail = rewriteLinks(mainTail(source), slug);
   // The overview already opens with its own hero <h1>; the other eight open
   // with an <h2>, so they get a view header carrying their own page title.
   const header =
@@ -275,18 +343,43 @@ const router = `
     document.documentElement.setAttribute("data-view", slug);
   }
 
+  /**
+   * Resolve a hash to the card it names.
+   *
+   * The teams and niches views render their cards from data attributes
+   * (data-group, data-niche) rather than element ids, so the overview's
+   * teams#direction and niches#casino-platform-operations links had nothing
+   * to land on: getElementById returned null and the reader stayed at the top of
+   * a view they had not asked for. Looking the attribute up as well gives every
+   * one of those links a real target.
+   */
+  function targetFor(hash) {
+    if (!/^[A-Za-z0-9-]+$/.test(hash)) return null;
+    return (
+      document.getElementById(hash) ||
+      document.querySelector('[data-group="' + hash + '"]') ||
+      document.querySelector('[data-niche="' + hash + '"]')
+    );
+  }
+
   function apply() {
     var slug = slugFromPath();
     show(slug);
-    // A hash that names an element inside a *different* view (the overview
-    // links to niches.html#casino-platform-operations) must switch views first.
-    var hash = location.hash.slice(1);
+    // A hash that names a card in a *different* view (the overview links to
+    // niches#casino-platform-operations) must switch views first.
+    var hash = decodeURIComponent(location.hash.slice(1));
     if (hash) {
-      var el = document.getElementById(hash);
-      if (el && el.closest(".view")) {
-        var owner = el.closest(".view").getAttribute("data-view");
+      var el = targetFor(hash);
+      if (el) {
+        var ownerEl = el.closest(".view");
+        var owner = ownerEl && ownerEl.getAttribute("data-view");
         if (owner && owner !== slug) show(owner);
+        // If the target is a team group, light up its filter chip so the view
+        // shows that group alone rather than opening on the full roster.
+        var chip = document.querySelector('[data-filter="' + hash + '"]');
+        if (chip) chip.click();
         el.scrollIntoView({ block: "start" });
+        el.classList.add("anchor-hit");
       }
     }
   }
@@ -306,6 +399,7 @@ const router = `
   });
 
   window.addEventListener("popstate", apply);
+  window.addEventListener("hashchange", apply);
   apply();
 })();
 `;
@@ -334,6 +428,8 @@ ${styles.map((s) => s.tag).join("\n")}
 .view-head { padding: 44px 0 8px; }
 .view-head h1 { font-size: clamp(1.7rem, 3.2vw, 2.5rem); letter-spacing: -.03em; margin: 10px 0 12px; }
 .view-sub { color: var(--muted); max-width: 68ch; margin: 0; font-size: 1rem; line-height: 1.6; }
+/* Marks the card a deep link landed on, so the target is visible at a glance. */
+.anchor-hit { outline: 2px solid var(--primary, #0fd6ce); outline-offset: 6px; border-radius: 12px; }
 </style>
 </head>
 <body>
@@ -395,7 +491,7 @@ ${views}
         <h4>Platform</h4>
         <ul>
           <li><a href="/ai-factory/roster/registry">Registry &amp; import</a></li>
-          <li><a href="/ai-factory">AI Factory workspace</a></li>
+          <li><a href="/ai-factory/roster/">AI Factory platform</a></li>
           <li><a href="https://open-connect.site">open-connect.site</a></li>
         </ul>
       </div>
