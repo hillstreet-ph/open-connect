@@ -499,6 +499,22 @@ export function summarizeDataset(dataset: Dataset) {
   };
 }
 
+/** Actionable wording for common TinyFish failures; the provider message wins otherwise. */
+export function tinyFishErrorMessage(status: number, providerMessage?: string): string {
+  const code = ` (HTTP ${status})`;
+  if (status === 401)
+    return `TinyFish rejected the API key${code}. Update it in Connections → TinyFish Cloud Browser.`;
+  if (status === 402)
+    return `Your TinyFish wallet balance is empty${code}. Add funds at agent.tinyfish.ai/wallet.`;
+  if (status === 429) return `TinyFish rate limit reached${code}. Wait a moment and try again.`;
+  if (status === 403)
+    return providerMessage
+      ? `TinyFish denied this request${code}: ${providerMessage}`
+      : `TinyFish denied this request${code}. This feature may not be enabled for your account.`;
+  if (status >= 500) return `TinyFish is temporarily unavailable${code}. Try again shortly.`;
+  return providerMessage ?? `TinyFish returned HTTP ${status}.`;
+}
+
 export function createTinyFishClient(apiKey: string, send: typeof fetch = fetch) {
   if (!apiKey || apiKey.length < 8) throw new Error("TinyFish API key is not configured.");
   async function request<T>(
@@ -507,17 +523,32 @@ export function createTinyFishClient(apiKey: string, send: typeof fetch = fetch)
     base = TINYFISH_API,
     timeoutMs = 25_000,
   ): Promise<T> {
-    const response = await send(`${base}${path}`, {
-      ...init,
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        "X-API-Key": apiKey,
-        ...(init.headers ?? {}),
-      },
-      redirect: "manual",
-      signal: AbortSignal.timeout(timeoutMs),
-    });
+    let response: Response;
+    try {
+      response = await send(`${base}${path}`, {
+        ...init,
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          "X-API-Key": apiKey,
+          ...(init.headers ?? {}),
+        },
+        redirect: "manual",
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+    } catch (error) {
+      // Only transport failures are rewritten; deliberate errors (e.g. broker policy) pass through.
+      const timedOut =
+        error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError");
+      if (!timedOut && !(error instanceof TypeError)) throw error;
+      throw new TinyFishError(
+        0,
+        timedOut ? "TIMEOUT" : "NETWORK",
+        timedOut
+          ? "TinyFish did not respond in time. Try again."
+          : "TinyFish could not be reached. Check the connection and try again.",
+      );
+    }
     if (response.status === 204) return undefined as T;
     const payload = (await response.json().catch(() => ({}))) as {
       error?: { code?: string; message?: string };
@@ -526,7 +557,7 @@ export function createTinyFishClient(apiKey: string, send: typeof fetch = fetch)
       throw new TinyFishError(
         response.status,
         payload.error?.code ?? `HTTP_${response.status}`,
-        payload.error?.message ?? `TinyFish returned HTTP ${response.status}.`,
+        tinyFishErrorMessage(response.status, payload.error?.message),
       );
     }
     return payload as T;

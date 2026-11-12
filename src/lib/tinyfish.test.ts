@@ -13,6 +13,7 @@ import {
   normalizeMonitor,
   normalizeDataset,
   summarizeResearch,
+  tinyFishErrorMessage,
   normalizeWebFetch,
   summarizeFetch,
   TINYFISH_BROWSER_API,
@@ -513,5 +514,35 @@ describe("research, monitors and datasets", () => {
     });
     expect(() => normalizeDataset({ prompt: "ab" })).toThrow("3 to 15,000");
     expect(() => normalizeDataset({ prompt: "abc", target_rows: 251 })).toThrow("1-250");
+  });
+});
+
+describe("error handling", () => {
+  test("maps auth, wallet, rate-limit and outage statuses to actionable messages", () => {
+    expect(tinyFishErrorMessage(401)).toContain("Connections");
+    expect(tinyFishErrorMessage(402)).toContain("wallet");
+    expect(tinyFishErrorMessage(429)).toContain("rate limit");
+    expect(tinyFishErrorMessage(403, "Research is not enabled")).toContain(
+      "Research is not enabled",
+    );
+    expect(tinyFishErrorMessage(503)).toContain("temporarily unavailable");
+    expect(tinyFishErrorMessage(400, "Bad query")).toBe("Bad query");
+  });
+
+  test("network failures and timeouts surface as TinyFish errors, not raw exceptions", async () => {
+    const down = (async () => {
+      throw new TypeError("fetch failed");
+    }) as unknown as typeof fetch;
+    await expect(createTinyFishClient(KEY, down).listMonitors()).rejects.toThrow(
+      "could not be reached",
+    );
+    const slow = (async () => {
+      throw Object.assign(new Error("timeout"), { name: "TimeoutError" });
+    }) as unknown as typeof fetch;
+    await expect(createTinyFishClient(KEY, slow).listDatasets()).rejects.toThrow(
+      "did not respond in time",
+    );
+    const limited = (async () => new Response("{}", { status: 429 })) as unknown as typeof fetch;
+    await expect(createTinyFishClient(KEY, limited).getWallet()).rejects.toThrow("rate limit");
   });
 });
