@@ -1,0 +1,1120 @@
+#!/usr/bin/env python3
+"""Unit tests for the post-merge production deploy gate.
+
+These run offline. `http_get` / `http_post_json` are monkeypatched so the
+assertions about commit matching, roster delegation, export sampling and the
+MCP contract are exercised without touching production — the same approach
+`validate_ai_factory_roster_test.py` uses, so this can sit in the required
+"Build & validate" check without ever making it flaky.
+
+The behaviour worth pinning is the *failure* path: the gate must go red when
+production serves a different commit than main, because a gate that only ever
+passes is the bug this whole change exists to fix.
+"""
+
+from __future__ import annotations
+
+import json
+import unittest
+from unittest import mock
+
+import cloudflare_pages as cf
+import verify_production_deploy as gate
+
+MAIN_SHA = "73a38b178e52453831cb75d067ab0990799da6c5"
+OLD_SHA = "bc6ed48181aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+
+
+def build_info(commit: str, source: str = "cloudflare-pages") -> bytes:
+    return json.dumps(
+        {
+            "commit": commit,
+            "short": commit[:10],
+            "branch": "main",
+            "source": source,
+            "built_at": "2026-11-10T20:00:00.000Z",
+        }
+    ).encode()
+
+
+def deployment(
+    commit: str,
+    status: str = "success",
+    environment: str = "production",
+    created: str = "2026-11-10T20:00:00.000Z",
+    url: str = "https://abc123.open-connect-app.pages.dev",
+) -> dict:
+    """One Cloudflare Pages deployment, shaped like the real API payload."""
+    return {
+        "id": f"dep-{commit[:8]}",
+        "short_id": commit[:8],
+        "url": url,
+        "created_on": created,
+        "environment": environment,
+        "latest_stage": {"name": "deploy", "status": status},
+        "deployment_trigger": {
+            "type": "ad_hoc",
+            "metadata": {"commit_hash": commit, "branch": "main"},
+        },
+    }
+
+
+def agents_payload(count: int = 103) -> bytes:
+    agents = [
+        {"slug": f"agent-{i}", "name": f"Agent {i}"} for i in range(count)
+    ]
+    return json.dumps(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "result": {
+                "content": [{"type": "text", "text": json.dumps({"count": count, "agents": agents})}]
+            },
+        }
+    ).encode()
+
+
+class CommitIdentityTests(unittest.TestCase):
+    def test_passes_when_production_serves_main_head(self):
+        with mock.patch.object(gate, "http_get", return_value=(200, build_info(MAIN_SHA))):
+            c = gate.check_commit("https://x", MAIN_SHA)
+        self.assertTrue(c.ok, c.detail)
+        self.assertIn(MAIN_SHA[:10], c.detail)
+
+    def test_fails_when_production_serves_an_older_commit(self):
+        # The exact regression: a merge that never deployed.
+        with mock.patch.object(gate, "http_get", return_value=(200, build_info(OLD_SHA))):
+            c = gate.check_commit("https://x", MAIN_SHA)
+        self.assertFalse(c.ok)
+        self.assertIn(OLD_SHA[:10], c.detail)
+        self.assertIn(MAIN_SHA[:10], c.detail)
+        self.assertIn("did not reach production", c.detail)
+
+    def test_fails_when_build_info_is_missing(self):
+        with mock.patch.object(gate, "http_get", return_value=(404, b"")):
+            c = gate.check_commit("https://x", MAIN_SHA)
+        self.assertFalse(c.ok)
+        self.assertIn("404", c.detail)
+
+    def test_fails_when_commit_is_unknown(self):
+        with mock.patch.object(gate, "http_get", return_value=(200, build_info("unknown"))):
+            c = gate.check_commit("https://x", MAIN_SHA)
+        self.assertFalse(c.ok)
+        self.assertIn("cannot be matched", c.detail)
+
+    def test_fails_on_malformed_json(self):
+        with mock.patch.object(gate, "http_get", return_value=(200, b"<html>nope")):
+            c = gate.check_commit("https://x", MAIN_SHA)
+        self.assertFalse(c.ok)
+        self.assertIn("not valid JSON", c.detail)
+
+
+class CommitIdentityOutcomeTests(unittest.TestCase):
+    """Each failure mode must be named as itself, not as a flat mismatch.
+
+    The point of these tests is diagnosis, not verdict: every case here must
+    still FAIL the gate (a 404 is never "unknown, therefore fine"), but the
+    message has to tell "production serves an old build" apart from
+    "production cannot say what it serves at all".
+    """
+
+    def _check(self, response):
+        with mock.patch.object(gate, "http_get", return_value=response):
+            return gate.check_commit("https://x", MAIN_SHA)
+
+    # --- 404: file not deployed at all -------------------------------------
+
+    def test_404_still_fails_the_gate(self):
+        c = self._check((404, b""))
+        self.assertFalse(c.ok, "a 404 must never be treated as unknown-and-ok")
+
+    def test_404_says_the_file_is_not_deployed(self):
+        c = self._check((404, b""))
+        self.assertIn("404", c.detail)
+        self.assertIn("not deployed", c.detail)
+        self.assertIn("write-build-info.mjs", c.detail)
+
+    def test_404_does_not_claim_the_build_is_stale(self):
+        c = self._check((404, b""))
+        self.assertIn("NOT evidence of a stale build", c.detail)
+        # It must not assert staleness as fact.
+        self.assertNotIn("serving an older commit", c.detail)
+        self.assertNotIn("did not reach production", c.detail)
+
+    # --- other non-200 -----------------------------------------------------
+
+    def test_500_names_the_status_and_implication(self):
+        c = self._check((500, b"boom"))
+        self.assertFalse(c.ok)
+        self.assertIn("500", c.detail)
+        self.assertIn("serving/access fault", c.detail)
+        self.assertIn("not a stale build", c.detail)
+
+    def test_403_names_access_control(self):
+        c = self._check((403, b"denied"))
+        self.assertFalse(c.ok)
+        self.assertIn("403", c.detail)
+        self.assertIn("access control", c.detail)
+
+    # --- transport ---------------------------------------------------------
+
+    def test_transport_failure_says_production_did_not_answer(self):
+        c = self._check((0, b""))
+        self.assertFalse(c.ok)
+        self.assertIn("no HTTP response", c.detail)
+        self.assertIn("did not answer", c.detail)
+        self.assertIn("NOT evidence of a stale build", c.detail)
+
+    # --- 200 but corrupt ---------------------------------------------------
+
+    def test_200_non_json_says_corrupt(self):
+        c = self._check((200, b"<html>nope"))
+        self.assertFalse(c.ok)
+        self.assertIn("not valid JSON", c.detail)
+        self.assertIn("corrupt", c.detail)
+        self.assertIn("NOT evidence of a stale build", c.detail)
+
+    def test_200_json_wrong_type_does_not_raise(self):
+        # A JSON array/string is valid JSON but not a build record. This used
+        # to raise AttributeError and crash the gate instead of failing it.
+        for body in (b"[]", b'"hello"', b"42", b"null"):
+            with self.subTest(body=body):
+                c = self._check((200, body))
+                self.assertFalse(c.ok)
+                self.assertIn("does not identify a build", c.detail)
+
+    # --- 200 but no commit -------------------------------------------------
+
+    def test_200_missing_commit_says_no_build_identified(self):
+        c = self._check((200, json.dumps({"built_at": "x"}).encode()))
+        self.assertFalse(c.ok)
+        self.assertIn("does not identify a build", c.detail)
+        self.assertIn("NOT evidence of a stale build", c.detail)
+
+    def test_200_null_commit_says_no_build_identified(self):
+        # Previously printed "production serves None but main HEAD is ..." and
+        # claimed the merge did not reach production.
+        c = self._check((200, json.dumps({"commit": None}).encode()))
+        self.assertFalse(c.ok)
+        self.assertIn("does not identify a build", c.detail)
+        self.assertNotIn("serves None", c.detail)
+        self.assertNotIn("did not reach production", c.detail)
+
+    def test_200_empty_commit_says_no_build_identified(self):
+        c = self._check((200, json.dumps({"commit": "   "}).encode()))
+        self.assertFalse(c.ok)
+        self.assertIn("does not identify a build", c.detail)
+
+    # --- genuine stale build ----------------------------------------------
+
+    def test_stale_build_names_both_shas(self):
+        c = self._check((200, build_info(OLD_SHA)))
+        self.assertFalse(c.ok)
+        self.assertIn(OLD_SHA, c.detail)
+        self.assertIn(MAIN_SHA, c.detail)
+        self.assertIn("serving an older commit", c.detail)
+
+    def test_stale_build_is_distinguishable_from_404(self):
+        stale = self._check((200, build_info(OLD_SHA)))
+        missing = self._check((404, b""))
+        self.assertNotEqual(stale.detail, missing.detail)
+        self.assertIn("serving an older commit", stale.detail)
+        self.assertNotIn("serving an older commit", missing.detail)
+
+    # --- pass path unchanged ----------------------------------------------
+
+    def test_match_still_passes(self):
+        c = self._check((200, build_info(MAIN_SHA)))
+        self.assertTrue(c.ok)
+        self.assertIn(MAIN_SHA[:10], c.detail)
+
+    # --- no secret leaks ---------------------------------------------------
+
+    def test_no_token_appears_in_any_failure_message(self):
+        token = "ghp_" + "A" * 36
+        for response in (
+            (404, b""),
+            (500, b""),
+            (0, b""),
+            (200, b"<html>nope"),
+            (200, json.dumps({"commit": None}).encode()),
+            (200, build_info(OLD_SHA)),
+        ):
+            with self.subTest(response=response[0]):
+                c = self._check(response)
+                self.assertNotIn(token, c.detail)
+                self.assertNotIn("ghp_", c.detail)
+
+
+class RosterDelegationTests(unittest.TestCase):
+    def test_passes_when_validator_exits_zero(self):
+        proc = mock.Mock(returncode=0, stdout="Roster pages: 9/9 passed\n", stderr="")
+        with mock.patch.object(gate.subprocess, "run", return_value=proc):
+            c = gate.check_roster("https://x", gate.Path(__file__))
+        self.assertTrue(c.ok, c.detail)
+
+    def test_fails_when_validator_exits_nonzero(self):
+        proc = mock.Mock(returncode=1, stdout="Roster pages: 8/9 passed\n", stderr="")
+        with mock.patch.object(gate.subprocess, "run", return_value=proc):
+            c = gate.check_roster("https://x", gate.Path(__file__))
+        self.assertFalse(c.ok)
+        self.assertIn("exited 1", c.detail)
+
+    def test_asks_the_validator_for_a_json_report(self):
+        # The gate can only name a failure mode if the validator is asked for
+        # the machine-readable report; without it the detail is a bare exit code.
+        proc = mock.Mock(returncode=0, stdout="ok\n", stderr="")
+        with mock.patch.object(gate.subprocess, "run", return_value=proc) as run:
+            gate.check_roster("https://x", gate.Path(__file__))
+        argv = run.call_args[0][0]
+        self.assertIn("--json-report", argv)
+
+    def test_names_the_failure_mode_from_the_report(self):
+        # A 404 and a 200-serving-the-SPA-shell are different faults; the gate
+        # must say which, not just that the validator exited 1.
+        report = {
+            "checks": [
+                {"name": "teams", "ok": False, "kind": "http_status", "detail": "HTTP 404"},
+                {"name": "hub", "ok": False, "kind": "wrong_content", "detail": "SPA shell"},
+                {"name": "index", "ok": True, "kind": "", "detail": "200, own HTML"},
+            ]
+        }
+
+        def fake_run(argv, **kwargs):
+            path = argv[argv.index("--json-report") + 1]
+            gate.Path(path).write_text(json.dumps(report))
+            return mock.Mock(returncode=1, stdout="Roster pages: 1/3 passed\n", stderr="")
+
+        with mock.patch.object(gate.subprocess, "run", side_effect=fake_run):
+            c = gate.check_roster("https://x", gate.Path(__file__))
+        self.assertFalse(c.ok)
+        self.assertIn("http_status", c.detail)
+        self.assertIn("wrong_content", c.detail)
+        self.assertIn("teams", c.detail)
+        self.assertIn("hub", c.detail)
+
+    def test_still_fails_when_the_report_is_unreadable(self):
+        # A missing or corrupt report must not turn a failure into a pass.
+        proc = mock.Mock(returncode=1, stdout="Roster pages: 8/9 passed\n", stderr="")
+        with mock.patch.object(gate.subprocess, "run", return_value=proc):
+            c = gate.check_roster("https://x", gate.Path(__file__))
+        self.assertFalse(c.ok)
+        self.assertIn("exited 1", c.detail)
+
+
+class ExportTests(unittest.TestCase):
+    def test_passes_when_all_sampled_exports_resolve(self):
+        def fake_post(url, payload, timeout=30):
+            if payload["params"]["name"] == "ai_factory_list_agents":
+                return 200, agents_payload()
+            return 200, json.dumps(
+                {"jsonrpc": "2.0", "id": 2, "result": {"content": [{"type": "text", "text": "{}"}]}}
+            ).encode()
+
+        with mock.patch.object(gate, "http_post_json", side_effect=fake_post):
+            c = gate.check_exports("https://x")
+        self.assertTrue(c.ok, c.detail)
+        self.assertIn("6/6", c.detail)
+
+    def test_fails_when_an_export_errors(self):
+        def fake_post(url, payload, timeout=30):
+            if payload["params"]["name"] == "ai_factory_list_agents":
+                return 200, agents_payload()
+            return 200, json.dumps(
+                {"jsonrpc": "2.0", "id": 2, "result": {"isError": True, "content": []}}
+            ).encode()
+
+        with mock.patch.object(gate, "http_post_json", side_effect=fake_post):
+            c = gate.check_exports("https://x")
+        self.assertFalse(c.ok)
+        self.assertIn("isError", c.detail)
+
+
+class McpTests(unittest.TestCase):
+    def _router(self, count: int = 103, tools: list[str] | None = None):
+        tools = tools or [
+            "ai_factory_list_agents",
+            "ai_factory_get_agent",
+            "ai_factory_get_export",
+        ]
+
+        def fake_post(url, payload, timeout=30):
+            method = payload.get("method")
+            if method == "initialize":
+                return 200, json.dumps(
+                    {
+                        "jsonrpc": "2.0",
+                        "id": 1,
+                        "result": {
+                            "protocolVersion": "2025-06-18",
+                            "serverInfo": {"name": "open-connect-ai-factory"},
+                        },
+                    }
+                ).encode()
+            if method == "tools/list":
+                return 200, json.dumps(
+                    {
+                        "jsonrpc": "2.0",
+                        "id": 2,
+                        "result": {"tools": [{"name": t} for t in tools]},
+                    }
+                ).encode()
+            name = payload["params"]["name"]
+            if name == "ai_factory_list_agents":
+                return 200, agents_payload(count)
+            return 200, json.dumps(
+                {"jsonrpc": "2.0", "id": 3, "result": {"content": [{"type": "text", "text": "{}"}]}}
+            ).encode()
+
+        return fake_post
+
+    def test_passes_with_three_tools_and_103_agents(self):
+        with mock.patch.object(gate, "http_post_json", side_effect=self._router()):
+            c = gate.check_mcp("https://x")
+        self.assertTrue(c.ok, c.detail)
+        self.assertIn("103 agents", c.detail)
+
+    def test_fails_when_agent_count_is_wrong(self):
+        with mock.patch.object(gate, "http_post_json", side_effect=self._router(count=102)):
+            c = gate.check_mcp("https://x")
+        self.assertFalse(c.ok)
+        self.assertIn("102 agents", c.detail)
+
+    def test_fails_when_a_tool_is_missing(self):
+        with mock.patch.object(
+            gate, "http_post_json", side_effect=self._router(tools=["ai_factory_list_agents"])
+        ):
+            c = gate.check_mcp("https://x")
+        self.assertFalse(c.ok)
+        self.assertIn("missing", c.detail)
+
+    def test_fails_when_initialize_is_not_200(self):
+        with mock.patch.object(gate, "http_post_json", return_value=(500, b"")):
+            c = gate.check_mcp("https://x")
+        self.assertFalse(c.ok)
+        self.assertIn("initialize", c.detail)
+
+
+class McpOutcomeTests(unittest.TestCase):
+    """Every MCP failure mode must be named, and must still be a failure.
+
+    These pin the diagnosis, not just the verdict: a reader has to be able to
+    tell an unreachable endpoint from a 500 from a non-JSON body from a
+    JSON-RPC error from a tool answering isError true.
+    """
+
+    def _router(self, **overrides):
+        """A healthy MCP router with individual stages overridden."""
+
+        def fake_post(url, payload, timeout=30):
+            method = payload.get("method")
+            if method == "initialize":
+                return overrides.get("initialize", (200, json.dumps({
+                    "jsonrpc": "2.0", "id": 1,
+                    "result": {"serverInfo": {"name": "open-connect-ai-factory"}},
+                }).encode()))
+            if method == "tools/list":
+                return overrides.get("tools_list", (200, json.dumps({
+                    "jsonrpc": "2.0", "id": 2,
+                    "result": {"tools": [
+                        {"name": "ai_factory_list_agents"},
+                        {"name": "ai_factory_get_agent"},
+                        {"name": "ai_factory_get_export"},
+                    ]},
+                }).encode()))
+            name = payload["params"]["name"]
+            if name in overrides:
+                return overrides[name]
+            if name == "ai_factory_list_agents":
+                return 200, agents_payload()
+            return 200, json.dumps(
+                {"jsonrpc": "2.0", "id": 3, "result": {"content": [{"type": "text", "text": "{}"}]}}
+            ).encode()
+
+        return fake_post
+
+    def test_endpoint_unreachable_is_named(self):
+        with mock.patch.object(gate, "http_post_json", return_value=(0, b"")):
+            c = gate.check_mcp("https://x")
+        self.assertFalse(c.ok)
+        self.assertIn("unreachable", c.detail)
+        self.assertIn("initialize", c.detail)
+
+    def test_timeout_is_named_as_a_timeout(self):
+        # A timeout is a status-0 response; the transport note must say so
+        # rather than reporting a generic connection failure.
+        def fake_post(url, payload, timeout=30):
+            gate._record_transport_failure(TimeoutError("timed out"))
+            return 0, b""
+
+        with mock.patch.object(gate, "http_post_json", side_effect=fake_post):
+            c = gate.check_mcp("https://x")
+        self.assertFalse(c.ok)
+        self.assertIn("timed out", c.detail)
+
+    def test_dns_failure_is_named(self):
+        def fake_post(url, payload, timeout=30):
+            gate._record_transport_failure(
+                gate.urllib.error.URLError(gate.socket.gaierror("Name or service not known"))
+            )
+            return 0, b""
+
+        with mock.patch.object(gate, "http_post_json", side_effect=fake_post):
+            c = gate.check_mcp("https://x")
+        self.assertFalse(c.ok)
+        self.assertIn("DNS", c.detail)
+
+    def test_non_200_names_the_status_and_stage(self):
+        with mock.patch.object(gate, "http_post_json", return_value=(503, b"")):
+            c = gate.check_mcp("https://x")
+        self.assertFalse(c.ok)
+        self.assertIn("initialize", c.detail)
+        self.assertIn("503", c.detail)
+
+    def test_non_json_body_is_named(self):
+        with mock.patch.object(
+            gate, "http_post_json", return_value=(200, b"<html>gateway</html>")
+        ):
+            c = gate.check_mcp("https://x")
+        self.assertFalse(c.ok)
+        self.assertIn("not with JSON-RPC", c.detail)
+        self.assertIn("placeholder page", c.detail)
+
+    def test_jsonrpc_error_object_is_named(self):
+        body = json.dumps(
+            {"jsonrpc": "2.0", "id": 1, "error": {"code": -32603, "message": "Static asset binding is unavailable"}}
+        ).encode()
+        with mock.patch.object(gate, "http_post_json", return_value=(200, body)):
+            c = gate.check_mcp("https://x")
+        self.assertFalse(c.ok)
+        self.assertIn("JSON-RPC error", c.detail)
+        self.assertIn("-32603", c.detail)
+        self.assertIn("Static asset binding", c.detail)
+
+    def test_initialize_without_result_is_named(self):
+        body = json.dumps({"jsonrpc": "2.0", "id": 1}).encode()
+        with mock.patch.object(gate, "http_post_json", return_value=(200, body)):
+            c = gate.check_mcp("https://x")
+        self.assertFalse(c.ok)
+        self.assertIn("initialize", c.detail)
+        self.assertIn("no result", c.detail)
+
+    def test_tools_list_wrong_tool_set_is_named(self):
+        with mock.patch.object(
+            gate, "http_post_json", side_effect=self._router(
+                tools_list=(200, json.dumps({
+                    "jsonrpc": "2.0", "id": 2,
+                    "result": {"tools": [{"name": "ai_factory_list_agents"}]},
+                }).encode())
+            )
+        ):
+            c = gate.check_mcp("https://x")
+        self.assertFalse(c.ok)
+        self.assertIn("tools/list", c.detail)
+        self.assertIn("wrong tool set", c.detail)
+
+    def test_tool_returning_iserror_true_is_still_a_failure(self):
+        # The contract that must not soften: a tool that answers isError true
+        # is a failure, however well-formed the envelope is.
+        with mock.patch.object(
+            gate, "http_post_json", side_effect=self._router(
+                ai_factory_get_agent=(200, json.dumps({
+                    "jsonrpc": "2.0", "id": 3,
+                    "result": {"isError": True, "content": [{"type": "text", "text": "agent not found"}]},
+                }).encode())
+            )
+        ):
+            c = gate.check_mcp("https://x")
+        self.assertFalse(c.ok)
+        self.assertIn("isError true", c.detail)
+        self.assertIn("ai_factory_get_agent", c.detail)
+
+    def test_wrong_agent_count_is_named(self):
+        with mock.patch.object(
+            gate, "http_post_json", side_effect=self._router(
+                ai_factory_list_agents=(200, agents_payload(102))
+            )
+        ):
+            c = gate.check_mcp("https://x")
+        self.assertFalse(c.ok)
+        self.assertIn("102", c.detail)
+        self.assertIn("expected 103", c.detail)
+
+    def test_tool_call_non_200_names_the_tool(self):
+        with mock.patch.object(
+            gate, "http_post_json", side_effect=self._router(
+                ai_factory_get_export=(500, b"")
+            )
+        ):
+            c = gate.check_mcp("https://x")
+        self.assertFalse(c.ok)
+        self.assertIn("ai_factory_get_export", c.detail)
+        self.assertIn("500", c.detail)
+
+    def test_healthy_endpoint_still_passes(self):
+        with mock.patch.object(gate, "http_post_json", side_effect=self._router()):
+            c = gate.check_mcp("https://x")
+        self.assertTrue(c.ok, c.detail)
+
+    def test_no_token_is_ever_printed(self):
+        # A failure detail must never echo a credential, whatever the body says.
+        # The value is synthetic: it only has to look like a token to the
+        # redactor, and must never be a real one.
+        secret = "ghp_" + "A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8"
+        body = json.dumps(
+            {"jsonrpc": "2.0", "id": 1, "error": {"code": -32000, "message": f"bad auth {secret}"}}
+        ).encode()
+        with mock.patch.object(gate, "http_post_json", return_value=(200, body)):
+            c = gate.check_mcp("https://x")
+        self.assertFalse(c.ok)
+        self.assertNotIn(secret, c.detail)
+
+    # --- the same outcome-aware naming the commit-identity check has --------
+    #
+    # The MCP stage must name what happened at *every* stage, not only at
+    # initialize. These pin the branches that previously collapsed into one
+    # generic sentence, and pin that each still fails the gate.
+
+    def test_tool_call_non_json_body_is_named_as_not_jsonrpc(self):
+        # Previously this reported "carries no result", which sent a reader
+        # looking for a tool bug when the endpoint had served an HTML page.
+        with mock.patch.object(
+            gate, "http_post_json", side_effect=self._router(
+                ai_factory_get_agent=(200, b"<html>placeholder</html>")
+            )
+        ):
+            c = gate.check_mcp("https://x")
+        self.assertFalse(c.ok)
+        self.assertIn("ai_factory_get_agent", c.detail)
+        self.assertIn("not with JSON-RPC", c.detail)
+        self.assertNotIn("carries no result", c.detail)
+
+    def test_tool_call_json_without_result_is_still_named_separately(self):
+        # The other half of the split: a well-formed envelope with no result
+        # keeps its own wording, so the two faults stay distinguishable.
+        with mock.patch.object(
+            gate, "http_post_json", side_effect=self._router(
+                ai_factory_get_agent=(200, json.dumps({"jsonrpc": "2.0", "id": 3}).encode())
+            )
+        ):
+            c = gate.check_mcp("https://x")
+        self.assertFalse(c.ok)
+        self.assertIn("carries no result", c.detail)
+        self.assertNotIn("not with JSON-RPC", c.detail)
+
+    def test_transport_failure_on_tool_call_still_fails_the_gate(self):
+        # The contract that must not soften: a transport fault at any stage is
+        # a failure, and it names the specific fault that was recorded.
+        def fake_post(url, payload, timeout=30):
+            if payload.get("method") == "tools/call":
+                gate._record_transport_failure(
+                    gate.urllib.error.URLError(gate.socket.gaierror("Name or service not known"))
+                )
+                return 0, b""
+            return self._router()(url, payload, timeout)
+
+        with mock.patch.object(gate, "http_post_json", side_effect=fake_post):
+            c = gate.check_mcp("https://x")
+        self.assertFalse(c.ok)
+        self.assertIn("unreachable", c.detail)
+        self.assertIn("DNS", c.detail)
+
+    def test_tls_failure_is_named_as_tls(self):
+        def fake_post(url, payload, timeout=30):
+            gate._record_transport_failure(gate.ssl.SSLError("certificate verify failed"))
+            return 0, b""
+
+        with mock.patch.object(gate, "http_post_json", side_effect=fake_post):
+            c = gate.check_mcp("https://x")
+        self.assertFalse(c.ok)
+        self.assertIn("TLS", c.detail)
+
+    def test_connection_refused_is_named(self):
+        def fake_post(url, payload, timeout=30):
+            gate._record_transport_failure(ConnectionRefusedError(111, "Connection refused"))
+            return 0, b""
+
+        with mock.patch.object(gate, "http_post_json", side_effect=fake_post):
+            c = gate.check_mcp("https://x")
+        self.assertFalse(c.ok)
+        self.assertIn("connection failed", c.detail)
+
+    def test_5xx_names_the_host_or_upstream(self):
+        with mock.patch.object(gate, "http_post_json", return_value=(502, b"")):
+            c = gate.check_mcp("https://x")
+        self.assertFalse(c.ok)
+        self.assertIn("502", c.detail)
+        self.assertIn("upstream", c.detail)
+
+    def test_403_names_access_control(self):
+        with mock.patch.object(gate, "http_post_json", return_value=(403, b"")):
+            c = gate.check_mcp("https://x")
+        self.assertFalse(c.ok)
+        self.assertIn("403", c.detail)
+        self.assertIn("access control", c.detail)
+
+    def test_404_names_the_route_not_deployed(self):
+        with mock.patch.object(gate, "http_post_json", return_value=(404, b"")):
+            c = gate.check_mcp("https://x")
+        self.assertFalse(c.ok)
+        self.assertIn("404", c.detail)
+        self.assertIn("not deployed", c.detail)
+
+    def test_jsonrpc_error_message_is_redacted(self):
+        # A JSON-RPC error is the server's own text, so it is the most likely
+        # place for a credential to appear. It must be named and redacted.
+        secret = "ghp_" + "Z9y8X7w6V5u4T3s2R1q0P9o8N7m6L5k4J3h2"
+        body = json.dumps(
+            {"jsonrpc": "2.0", "id": 1, "error": {"code": -32001, "message": f"auth failed for {secret}"}}
+        ).encode()
+        with mock.patch.object(gate, "http_post_json", return_value=(200, body)):
+            c = gate.check_mcp("https://x")
+        self.assertFalse(c.ok)
+        self.assertIn("JSON-RPC error", c.detail)
+        self.assertIn("-32001", c.detail)
+        self.assertIn("[redacted]", c.detail)
+        self.assertNotIn(secret, c.detail)
+
+    def test_non_json_body_never_leaks_a_token(self):
+        secret = "ghp_" + "Q1w2E3r4T5y6U7i8O9p0A1s2D3f4G5h6J7k8"
+        with mock.patch.object(
+            gate, "http_post_json", return_value=(200, f"<html>{secret}</html>".encode())
+        ):
+            c = gate.check_mcp("https://x")
+        self.assertFalse(c.ok)
+        self.assertNotIn(secret, c.detail)
+
+    def test_every_failure_mode_still_fails_the_gate(self):
+        # A gate that only ever passes is the bug this change exists to fix.
+        # No branch added here may turn a failure into a pass.
+        cases = [
+            ("transport", (0, b"")),
+            ("non-200", (500, b"")),
+            ("non-json", (200, b"<html>x</html>")),
+            ("rpc-error", (200, json.dumps({"jsonrpc": "2.0", "id": 1, "error": {"code": -1, "message": "x"}}).encode())),
+            ("no-result", (200, json.dumps({"jsonrpc": "2.0", "id": 1}).encode())),
+        ]
+        for label, response in cases:
+            with self.subTest(label):
+                with mock.patch.object(gate, "http_post_json", return_value=response):
+                    c = gate.check_mcp("https://x")
+                self.assertFalse(c.ok, f"{label} must fail the gate")
+                self.assertTrue(c.detail.strip(), f"{label} must say something")
+
+
+class BuildInfo404LookupTests(unittest.TestCase):
+    """A 404 from /build-info.json must consult the build lookup.
+
+    The 404 alone cannot distinguish "the live deploy predates
+    write-build-info.mjs" from "a newer build for main HEAD failed and the old
+    one is still serving". These tests pin that the gate now says which, using
+    the same outcome-aware wording as `cloudflare_pages.py`, and that the
+    lookup stays enrichment: every case still fails, and the no-token path is
+    byte-identical to before apart from one added hint line.
+
+    All HTTP and Cloudflare responses are mocked. Nothing here touches the
+    Cloudflare API or production.
+    """
+
+    def _check(self, cf_client):
+        with mock.patch.object(gate, "http_get", return_value=(404, b"")):
+            return gate.check_commit("https://x", MAIN_SHA, cf_client)
+
+    def _client(self, deployments):
+        return cf.CloudflarePages(
+            token="cf-test-token-DO-NOT-LEAK", account="acct", project="p"
+        )
+
+    def _with_deployments(self, deployments):
+        return mock.patch.object(
+            cf, "_api_get", return_value=(200, {"success": True, "result": deployments}, "")
+        )
+
+    # --- case 1: a newer build for main HEAD FAILED -------------------------
+
+    def test_failed_build_is_named_and_404_is_the_old_build_serving(self):
+        deployments = [deployment(MAIN_SHA, status="failure", created="2026-11-10T21:00:00Z")]
+        with self._with_deployments(deployments):
+            c = self._check(self._client(deployments))
+        self.assertFalse(c.ok)
+        self.assertIn("FAILED", c.detail)
+        self.assertIn(MAIN_SHA[:10], c.detail)
+        self.assertIn("failed", c.detail)
+        self.assertIn("2026-11-10T21:00:00Z", c.detail)
+        self.assertIn("pages.dev", c.detail)
+        self.assertIn("older build still serving", c.detail)
+
+    # --- case 2: a newer build is still building / queued -------------------
+
+    def test_in_progress_build_says_the_404_is_expected(self):
+        deployments = [deployment(MAIN_SHA, status="active", created="2026-11-10T21:00:00Z")]
+        with self._with_deployments(deployments):
+            c = self._check(self._client(deployments))
+        self.assertFalse(c.ok)
+        self.assertIn("still building", c.detail)
+        self.assertIn("404 is expected until it lands", c.detail)
+
+    def test_queued_build_says_the_404_is_expected(self):
+        deployments = [deployment(MAIN_SHA, status="idle", created="2026-11-10T21:00:00Z")]
+        with self._with_deployments(deployments):
+            c = self._check(self._client(deployments))
+        self.assertFalse(c.ok)
+        self.assertIn("queued", c.detail)
+        self.assertIn("404 is expected until it lands", c.detail)
+
+    # --- case 3: a newer build SUCCEEDED but the file is still 404 ----------
+
+    def test_succeeded_build_is_a_build_configuration_fault(self):
+        deployments = [deployment(MAIN_SHA, status="success", created="2026-11-10T21:00:00Z")]
+        with self._with_deployments(deployments):
+            c = self._check(self._client(deployments))
+        self.assertFalse(c.ok)
+        self.assertIn("SUCCEEDED", c.detail)
+        self.assertIn("build-configuration fault", c.detail)
+        self.assertIn("not a deploy race", c.detail)
+
+    # --- case 4: no build exists for main HEAD at all -----------------------
+
+    def test_no_build_for_main_head_is_stated_plainly(self):
+        deployments = [deployment(OLD_SHA, created="2026-11-10T19:00:00Z")]
+        with self._with_deployments(deployments):
+            c = self._check(self._client(deployments))
+        self.assertFalse(c.ok)
+        self.assertIn("No Cloudflare Pages build exists for main HEAD at all", c.detail)
+        self.assertIn(OLD_SHA[:10], c.detail)
+
+    # --- case 5: no token configured ---------------------------------------
+
+    def test_no_token_keeps_todays_message_and_adds_one_hint(self):
+        c = self._check(cf.CloudflarePages(token="", account=""))
+        self.assertFalse(c.ok)
+        # Today's message, verbatim, still present.
+        self.assertIn("GET /build-info.json -> HTTP 404", c.detail)
+        self.assertIn("The file is not deployed at all", c.detail)
+        self.assertIn("write-build-info.mjs", c.detail)
+        self.assertIn("NOT evidence of a stale build", c.detail)
+        # Plus exactly one added hint line.
+        self.assertIn("A Cloudflare API token would let the gate name the build", c.detail)
+        self.assertEqual(c.detail.count("A Cloudflare API token would let"), 1)
+
+    def test_no_token_makes_no_network_call(self):
+        with mock.patch.object(cf, "_api_get") as api:
+            self._check(cf.CloudflarePages(token="", account=""))
+        api.assert_not_called()
+
+    def test_no_token_404_detail_is_unchanged_apart_from_the_hint(self):
+        # The pre-change message, reconstructed exactly.
+        before = (
+            "GET /build-info.json -> HTTP 404. The file is not deployed at all, "
+            "so production cannot report its own commit. This means the build "
+            "predates the build-info step (write-build-info.mjs) or the file was "
+            "never published. This is NOT evidence of a stale build \u2014 the "
+            "deployed build may well be current; it simply cannot say so."
+        )
+        c = self._check(cf.CloudflarePages(token="", account=""))
+        self.assertTrue(c.detail.startswith(before), c.detail)
+        suffix = c.detail[len(before):].strip()
+        self.assertTrue(suffix.startswith("A Cloudflare API token would let"), suffix)
+
+    # --- contract: enrichment never changes the verdict ---------------------
+
+    def test_404_still_fails_with_a_token_and_a_superseding_build(self):
+        deployments = [deployment(MAIN_SHA, status="success")]
+        with self._with_deployments(deployments):
+            c = self._check(self._client(deployments))
+        self.assertFalse(c.ok, "a 404 must fail even when the lookup succeeds")
+
+    def test_404_still_fails_when_the_lookup_raises(self):
+        with mock.patch.object(cf, "_api_get", side_effect=RuntimeError("boom")):
+            c = self._check(self._client([]))
+        self.assertFalse(c.ok)
+        self.assertIn("Build-level detail unavailable", c.detail)
+
+    def test_lookup_never_turns_a_passing_gate_red(self):
+        # A 200 that matches main must pass, and must not call the lookup.
+        with mock.patch.object(gate, "http_get", return_value=(200, build_info(MAIN_SHA))), \
+             mock.patch.object(cf, "_api_get") as api:
+            c = gate.check_commit("https://x", MAIN_SHA, self._client([]))
+        self.assertTrue(c.ok, c.detail)
+        api.assert_not_called()
+
+    def test_token_never_appears_in_the_404_detail(self):
+        secret = "cf-test-token-DO-NOT-LEAK"
+        deployments = [deployment(MAIN_SHA, status="failure")]
+        with self._with_deployments(deployments):
+            c = self._check(self._client(deployments))
+        self.assertNotIn(secret, c.detail)
+
+    def test_404_exit_code_is_still_one(self):
+        with mock.patch.object(gate, "http_get", return_value=(404, b"")), \
+             mock.patch.object(gate, "check_roster", return_value=gate.Check("r").pass_("ok")), \
+             mock.patch.object(gate, "check_exports", return_value=gate.Check("e").pass_("ok")), \
+             mock.patch.object(gate, "check_use_in", return_value=gate.Check("u").pass_("ok")), \
+             mock.patch.object(gate, "check_mcp", return_value=gate.Check("m").pass_("ok")):
+            code = gate.main(["--expected-sha", MAIN_SHA, "--wait", "0", "--no-cloudflare"])
+        self.assertEqual(code, 1)
+
+
+class TransportFailureLookupTests(unittest.TestCase):
+    """A transport failure from /build-info.json must consult the build lookup.
+
+    When production does not answer at all, the transport fault alone cannot
+    tell "the deploy is broken" from "the site is down". The build queue can:
+    it is reachable even when the site is not, so it can say whether a build
+    for main HEAD failed, is still running, or succeeded.
+
+    These tests pin that the gate now says which, using the same outcome-aware
+    wording as `cloudflare_pages.py`, and that the lookup stays enrichment:
+    every case still fails, the no-token path is byte-identical to before apart
+    from one added hint line, and no token ever reaches the message.
+
+    All HTTP and Cloudflare responses are mocked. Nothing here touches the
+    Cloudflare API or production.
+    """
+
+    def _check(self, cf_client, fault=None):
+        """Run check_commit with a status-0 response, recording `fault` first.
+
+        The real `http_get` records the transport failure before returning
+        (0, b""), so the fake does the same — otherwise the test would exercise
+        a state the production code cannot reach.
+        """
+
+        def fake_get(url, timeout=25):
+            if fault is not None:
+                gate._record_transport_failure(fault)
+            return 0, b""
+
+        with mock.patch.object(gate, "http_get", side_effect=fake_get):
+            return gate.check_commit("https://x", MAIN_SHA, cf_client)
+
+    def _client(self):
+        return cf.CloudflarePages(
+            token="cf-test-token-DO-NOT-LEAK", account="acct", project="p"
+        )
+
+    def _with_deployments(self, deployments):
+        return mock.patch.object(
+            cf, "_api_get", return_value=(200, {"success": True, "result": deployments}, "")
+        )
+
+    # --- every distinct transport fault is named as itself ------------------
+
+    def test_dns_failure_is_named_as_dns(self):
+        fault = gate.urllib.error.URLError(gate.socket.gaierror("Name or service not known"))
+        with self._with_deployments([deployment(MAIN_SHA, status="success")]):
+            c = self._check(self._client(), fault)
+        self.assertFalse(c.ok)
+        self.assertIn("DNS lookup failed", c.detail)
+        self.assertIn("hostname did not resolve", c.detail)
+
+    def test_refused_connection_is_named_as_a_connection_failure(self):
+        fault = gate.urllib.error.URLError(ConnectionRefusedError("Connection refused"))
+        with self._with_deployments([deployment(MAIN_SHA, status="success")]):
+            c = self._check(self._client(), fault)
+        self.assertFalse(c.ok)
+        self.assertIn("connection failed", c.detail)
+        self.assertIn("did not answer at all", c.detail)
+
+    def test_tls_failure_is_named_as_tls(self):
+        fault = gate.urllib.error.URLError(gate.ssl.SSLError("certificate verify failed"))
+        with self._with_deployments([deployment(MAIN_SHA, status="success")]):
+            c = self._check(self._client(), fault)
+        self.assertFalse(c.ok)
+        self.assertIn("TLS handshake failed", c.detail)
+        self.assertIn("connection was never established", c.detail)
+
+    def test_timeout_is_named_as_a_timeout(self):
+        with self._with_deployments([deployment(MAIN_SHA, status="success")]):
+            c = self._check(self._client(), TimeoutError("timed out"))
+        self.assertFalse(c.ok)
+        self.assertIn("request timed out", c.detail)
+        self.assertIn("did not answer in time", c.detail)
+
+    def test_http_get_records_the_transport_fault(self):
+        # The branch cannot name a fault it never recorded. Before this change
+        # http_get swallowed the exception, so every transport failure printed
+        # the same generic sentence.
+        gate._reset_transport()
+        with mock.patch.object(
+            gate.urllib.request,
+            "urlopen",
+            side_effect=gate.urllib.error.URLError(gate.socket.gaierror("nope")),
+        ):
+            status, body = gate.http_get("https://x/build-info.json")
+        self.assertEqual((status, body), (0, b""))
+        self.assertEqual(gate._last_transport["kind"], "dns")
+
+    # --- case 1: a build for main HEAD FAILED -------------------------------
+
+    def test_failed_build_says_the_deploy_broke(self):
+        deployments = [deployment(MAIN_SHA, status="failure", created="2026-11-10T21:00:00Z")]
+        with self._with_deployments(deployments):
+            c = self._check(self._client())
+        self.assertFalse(c.ok)
+        self.assertIn("FAILED", c.detail)
+        self.assertIn(MAIN_SHA[:10], c.detail)
+        self.assertIn("The deploy broke", c.detail)
+        self.assertIn("production is not answering either", c.detail)
+
+    # --- case 2: a build is still building / queued -------------------------
+
+    def test_in_progress_build_says_production_may_be_mid_deploy(self):
+        deployments = [deployment(MAIN_SHA, status="active", created="2026-11-10T21:00:00Z")]
+        with self._with_deployments(deployments):
+            c = self._check(self._client())
+        self.assertFalse(c.ok)
+        self.assertIn("still building", c.detail)
+        self.assertIn("may be mid-deploy", c.detail)
+        self.assertIn("re-run the gate once it lands", c.detail)
+
+    def test_queued_build_says_production_may_be_mid_deploy(self):
+        deployments = [deployment(MAIN_SHA, status="idle", created="2026-11-10T21:00:00Z")]
+        with self._with_deployments(deployments):
+            c = self._check(self._client())
+        self.assertFalse(c.ok)
+        self.assertIn("queued", c.detail)
+        self.assertIn("may be mid-deploy", c.detail)
+
+    # --- case 3: a build SUCCEEDED -----------------------------------------
+
+    def test_succeeded_build_puts_the_fault_at_the_edge_or_network(self):
+        deployments = [deployment(MAIN_SHA, status="success", created="2026-11-10T21:00:00Z")]
+        with self._with_deployments(deployments):
+            c = self._check(self._client())
+        self.assertFalse(c.ok)
+        self.assertIn("SUCCEEDED", c.detail)
+        self.assertIn("The build is fine", c.detail)
+        self.assertIn("edge or the network, not the deploy", c.detail)
+
+    # --- case 4: no build for main HEAD at all ------------------------------
+
+    def test_no_build_for_main_head_is_stated_plainly(self):
+        deployments = [deployment(OLD_SHA, created="2026-11-10T19:00:00Z")]
+        with self._with_deployments(deployments):
+            c = self._check(self._client())
+        self.assertFalse(c.ok)
+        self.assertIn("No Cloudflare Pages build exists for main HEAD at all", c.detail)
+        self.assertIn(OLD_SHA[:10], c.detail)
+
+    # --- case 5: no token configured ---------------------------------------
+
+    def test_no_token_keeps_todays_message_and_adds_one_hint(self):
+        c = self._check(cf.CloudflarePages(token="", account=""))
+        self.assertFalse(c.ok)
+        # Today's message, verbatim, still present.
+        self.assertIn("GET /build-info.json got no HTTP response", c.detail)
+        self.assertIn("Production did not answer", c.detail)
+        self.assertIn("NOT evidence of a stale build", c.detail)
+        # Plus exactly one added hint line.
+        self.assertIn("A Cloudflare API token would let the gate name the build", c.detail)
+        self.assertEqual(c.detail.count("A Cloudflare API token would let"), 1)
+
+    def test_no_token_makes_no_network_call(self):
+        with mock.patch.object(cf, "_api_get") as api:
+            self._check(cf.CloudflarePages(token="", account=""))
+        api.assert_not_called()
+
+    def test_no_token_transport_detail_is_unchanged_apart_from_the_hint(self):
+        # The pre-change message, reconstructed exactly.
+        before = (
+            "GET /build-info.json got no HTTP response (transport failure, "
+            "timeout or DNS). Production did not answer, so nothing is known "
+            "about which commit it serves. This is NOT evidence of a stale "
+            "build \u2014 check that the host resolves and is reachable."
+        )
+        c = self._check(cf.CloudflarePages(token="", account=""))
+        self.assertTrue(c.detail.startswith(before), c.detail)
+        suffix = c.detail[len(before):].strip()
+        self.assertTrue(suffix.startswith("A Cloudflare API token would let"), suffix)
+
+    def test_no_cloudflare_client_keeps_todays_message_exactly(self):
+        # --no-cloudflare passes cf=None: byte-identical to before the change.
+        c = self._check(None)
+        self.assertFalse(c.ok)
+        self.assertEqual(
+            c.detail,
+            "GET /build-info.json got no HTTP response (transport failure, "
+            "timeout or DNS). Production did not answer, so nothing is known "
+            "about which commit it serves. This is NOT evidence of a stale "
+            "build \u2014 check that the host resolves and is reachable.",
+        )
+
+    # --- contract: enrichment never changes the verdict ---------------------
+
+    def test_transport_failure_still_fails_with_a_token_and_a_build(self):
+        deployments = [deployment(MAIN_SHA, status="success")]
+        with self._with_deployments(deployments):
+            c = self._check(self._client())
+        self.assertFalse(c.ok, "a transport failure must fail even when the lookup succeeds")
+
+    def test_transport_failure_still_fails_when_the_lookup_raises(self):
+        with mock.patch.object(cf, "_api_get", side_effect=RuntimeError("boom")):
+            c = self._check(self._client())
+        self.assertFalse(c.ok)
+        self.assertIn("Build-level detail unavailable", c.detail)
+        self.assertIn("RuntimeError", c.detail)
+
+    def test_transport_failure_still_fails_when_the_lookup_is_unavailable(self):
+        with mock.patch.object(cf, "_api_get", return_value=(0, None, "transport error (TimeoutError)")):
+            c = self._check(self._client())
+        self.assertFalse(c.ok)
+        self.assertIn("Build-level detail unavailable", c.detail)
+
+    def test_lookup_never_turns_a_passing_gate_red(self):
+        # A 200 that matches main must pass, and must not call the lookup.
+        with mock.patch.object(gate, "http_get", return_value=(200, build_info(MAIN_SHA))), \
+             mock.patch.object(cf, "_api_get") as api:
+            c = gate.check_commit("https://x", MAIN_SHA, self._client())
+        self.assertTrue(c.ok, c.detail)
+        api.assert_not_called()
+
+    def test_token_never_appears_in_the_transport_detail(self):
+        secret = "cf-test-token-DO-NOT-LEAK"
+        deployments = [deployment(MAIN_SHA, status="failure")]
+        with self._with_deployments(deployments):
+            c = self._check(self._client())
+        self.assertNotIn(secret, c.detail)
+
+    def test_transport_exit_code_is_still_one(self):
+        with mock.patch.object(gate, "http_get", return_value=(0, b"")), \
+             mock.patch.object(gate, "check_roster", return_value=gate.Check("r").pass_("ok")), \
+             mock.patch.object(gate, "check_exports", return_value=gate.Check("e").pass_("ok")), \
+             mock.patch.object(gate, "check_use_in", return_value=gate.Check("u").pass_("ok")), \
+             mock.patch.object(gate, "check_mcp", return_value=gate.Check("m").pass_("ok")):
+            code = gate.main(["--expected-sha", MAIN_SHA, "--wait", "0", "--no-cloudflare"])
+        self.assertEqual(code, 1)
+
+
+class ExitCodeTests(unittest.TestCase):
+    def test_main_returns_one_when_commit_mismatches(self):
+        with mock.patch.object(gate, "http_get", return_value=(200, build_info(OLD_SHA))), \
+             mock.patch.object(gate, "check_roster", return_value=gate.Check("r").pass_("ok")), \
+             mock.patch.object(gate, "check_exports", return_value=gate.Check("e").pass_("ok")), \
+             mock.patch.object(gate, "check_use_in", return_value=gate.Check("u").pass_("ok")), \
+             mock.patch.object(gate, "check_mcp", return_value=gate.Check("m").pass_("ok")):
+            code = gate.main(["--expected-sha", MAIN_SHA, "--wait", "0"])
+        self.assertEqual(code, 1)
+
+    def test_main_returns_zero_when_everything_matches(self):
+        with mock.patch.object(gate, "http_get", return_value=(200, build_info(MAIN_SHA))), \
+             mock.patch.object(gate, "check_roster", return_value=gate.Check("r").pass_("ok")), \
+             mock.patch.object(gate, "check_exports", return_value=gate.Check("e").pass_("ok")), \
+             mock.patch.object(gate, "check_use_in", return_value=gate.Check("u").pass_("ok")), \
+             mock.patch.object(gate, "check_mcp", return_value=gate.Check("m").pass_("ok")):
+            code = gate.main(["--expected-sha", MAIN_SHA, "--wait", "0"])
+        self.assertEqual(code, 0)
+
+    def test_use_in_failure_turns_the_gate_red(self):
+        """A deploy that ships the pages but not the per-target artifacts must fail."""
+        with mock.patch.object(gate, "http_get", return_value=(200, build_info(MAIN_SHA))), \
+             mock.patch.object(gate, "check_roster", return_value=gate.Check("r").pass_("ok")), \
+             mock.patch.object(gate, "check_exports", return_value=gate.Check("e").pass_("ok")), \
+             mock.patch.object(gate, "check_use_in", return_value=gate.Check("u").fail("missing")), \
+             mock.patch.object(gate, "check_mcp", return_value=gate.Check("m").pass_("ok")):
+            code = gate.main(["--expected-sha", MAIN_SHA, "--wait", "0"])
+        self.assertEqual(code, 1)
+
+
+if __name__ == "__main__":
+    unittest.main()

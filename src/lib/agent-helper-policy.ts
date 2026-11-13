@@ -12,7 +12,16 @@ export type AgentHelperToolName =
   | "install_resource_to_library"
   | "create_task"
   | "create_schedule"
-  | "create_manual_ai_automation";
+  | "create_manual_ai_automation"
+  | "list_knowledge"
+  | "list_library_resources"
+  | "list_workforce_agents"
+  | "list_gateway_models"
+  | "update_task"
+  | "delete_task"
+  | "toggle_automation"
+  | "set_schedule_status"
+  | "remove_library_item";
 
 export const AGENT_HELPER_WRITE_TOOLS = new Set<AgentHelperToolName>([
   "draft_connector_plugin",
@@ -21,18 +30,28 @@ export const AGENT_HELPER_WRITE_TOOLS = new Set<AgentHelperToolName>([
   "create_task",
   "create_schedule",
   "create_manual_ai_automation",
+  "update_task",
+  "delete_task",
+  "toggle_automation",
+  "set_schedule_status",
+  "remove_library_item",
 ]);
 
 export function helperActionQueryKeys(name: AgentHelperToolName): string[] {
   switch (name) {
     case "create_task":
+    case "update_task":
     case "update_task_status":
+    case "delete_task":
       return ["tasks"];
     case "create_schedule":
+    case "set_schedule_status":
       return ["schedules"];
     case "create_manual_ai_automation":
+    case "toggle_automation":
       return ["automations"];
     case "install_resource_to_library":
+    case "remove_library_item":
       return ["resource-library", "my-resources", "toolkits", "toolkit-items"];
     case "draft_connector_plugin":
       return ["my-resources", "resource-library", "resources-review-queue"];
@@ -47,7 +66,7 @@ export type AgentHelperToolCall = {
   function: { name: string; arguments: string };
 };
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[0-9a-f]{12}$/i;
 const CRON_FIELD = "(?:\\*|[0-9]+)(?:[-/,](?:\\*|[0-9]+))*";
 const CRON = new RegExp(`^${CRON_FIELD} ${CRON_FIELD} ${CRON_FIELD} ${CRON_FIELD} ${CRON_FIELD}$`);
 
@@ -169,12 +188,33 @@ export function describeAgentHelperToolResult(
   if (name === "install_resource_to_library") {
     return `Added ${String(result["name"] ?? "the resource")} to your personal Library. This adds the resource only; it does not execute or connect it.`;
   }
+  if (name === "remove_library_item") {
+    return `Removed ${String(result["name"] ?? "the resource")} from your personal Library.`;
+  }
   if (name === "create_task") {
     const task = result["task"] as { title?: unknown } | undefined;
     return `Created the task “${String(task?.title ?? "New task")}”.`;
   }
+  if (name === "update_task") {
+    const task = result["task"] as { title?: unknown } | undefined;
+    return `Updated the task “${String(task?.title ?? "the task")}”.`;
+  }
+  if (name === "delete_task") {
+    return `Deleted the task “${String(result["title"] ?? "the task")}”.`;
+  }
+  if (name === "toggle_automation") {
+    const automation = result["automation"] as { name?: unknown; enabled?: unknown } | undefined;
+    return `Set the automation “${String(automation?.name ?? "the automation")}” to ${automation?.enabled ? "enabled" : "disabled"}.`;
+  }
+  if (name === "set_schedule_status") {
+    const schedule = result["schedule"] as { name?: unknown; status?: unknown } | undefined;
+    return `Set the schedule “${String(schedule?.name ?? "the schedule")}” to ${String(schedule?.status ?? "the selected status")}.`;
+  }
   if (name === "create_schedule") {
     return `Scheduled “${String((result["schedule"] as { name?: unknown } | undefined)?.name ?? "the AI response")}”. The background runner checks every five minutes and uses connected free models.`;
   }
-  return `Created the manual AI automation “${String((result["automation"] as { name?: unknown } | undefined)?.name ?? "New automation")}”. It will run only after a user selects Run in Automations.`;
+  if (name === "create_manual_ai_automation") {
+    return `Created the manual AI automation “${String((result["automation"] as { name?: unknown } | undefined)?.name ?? "New automation")}”. It will run only after a user selects Run in Automations.`;
+  }
+  return "The requested workspace action completed. Check the returned record for the authoritative result.";
 }

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import { cloudBrowserSection, cloudBrowserSections } from "./cloud-browser-sections.ts";
 import {
   adminTab,
   developerSection,
@@ -108,7 +109,10 @@ test("connection surfaces remain internal and separate from Marketplace", () => 
   // One hub: access (tokens, OAuth apps, authorized apps) and integrations
   // (webhooks, Telegram + notification channels). Nothing is repeated in Settings.
   for (const section of developerSections) {
-    assert.ok(integrations.includes(`id="${section}"`), "Missing hub section " + section);
+    assert.ok(
+      integrations.includes(`<TabsContent value="${section}"`),
+      "Missing hub tab panel " + section,
+    );
   }
   assert.ok(integrations.includes("<IncomingWebhooks"));
   assert.ok(integrations.includes("<TelegramIntegrationCard />"));
@@ -745,8 +749,25 @@ test("cloud computer is a separate cloud workspace destination", () => {
     "utf8",
   );
   assert.doesNotMatch(browserRoute, /CloudComputerManager/);
-  assert.match(browserRoute, /PlaywrightBrowser/);
-  assert.match(browserRoute, /kind="computer"/);
+  // One cloud browser for general use: TinyFish console only, no provider switcher.
+  assert.match(browserRoute, /CloudBrowserConsole/);
+  assert.match(browserRoute, /CloudBrowserSearch/);
+  for (const panel of [
+    "CloudBrowserFetch",
+    "CloudBrowserResearch",
+    "CloudBrowserMonitors",
+    "CloudBrowserDatasets",
+    "CloudBrowserProfilesPanel",
+  ])
+    assert.match(browserRoute, new RegExp(panel));
+  for (const section of cloudBrowserSections)
+    assert.match(browserRoute, new RegExp(`<TabsContent value="${section}"`));
+  assert.equal(cloudBrowserSection("monitor"), "monitor");
+  assert.equal(cloudBrowserSection("bogus"), "agent");
+  assert.doesNotMatch(browserRoute, /PlaywrightBrowser/);
+  assert.doesNotMatch(browserRoute, /CloudBrowserSwitcher/);
+  assert.doesNotMatch(browserRoute, /kind="computer"/);
+  assert.match(browserRoute, /to="\/cloud-computer"/);
   assert.doesNotMatch(browserRoute, /search=\{\{ mode: "computer"/);
   assert.doesNotMatch(browserRoute, /mode === "computer"/);
 });

@@ -1,5 +1,6 @@
 import {
   connectionLogin,
+  connectionMethodBadges,
   connectionUsesBrowserLogin,
   connectionReconnectReady,
 } from "@/lib/connection-login";
@@ -7,7 +8,10 @@ import {
   UniversalConnectorDialog,
   type ConnectorInitial,
 } from "@/components/universal-connector-dialog";
-import { refreshConnectorCapabilities } from "@/lib/connector-capabilities.functions";
+import {
+  autoSyncConnectorCapabilities,
+  refreshConnectorCapabilities,
+} from "@/lib/connector-capabilities.functions";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -50,6 +54,7 @@ type CatalogApp = {
   oauth_supported?: boolean;
   connection_method?: string;
   auth_methods?: string[];
+  available_methods?: string[];
   logo?: string;
 };
 
@@ -229,6 +234,18 @@ function ConnectionsPage() {
       if (stale.length) void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
     })();
   }, [user, mine.data, refreshCapabilities, queryClient]);
+  const autoSyncCapabilities = useServerFn(autoSyncConnectorCapabilities);
+  const autoSyncedUser = useRef<string | null>(null);
+  useEffect(() => {
+    if (!user || autoSyncedUser.current === user.id) return;
+    autoSyncedUser.current = user.id;
+    void autoSyncCapabilities({ data: {} })
+      .then((result) => {
+        if (result.refreshed > 0)
+          void queryClient.invalidateQueries({ queryKey: ["app-connections"] });
+      })
+      .catch(() => undefined);
+  }, [user, autoSyncCapabilities, queryClient]);
   const connectMutation = useMutation({
     mutationFn: (input: string | { provider: string; connection_id: string }) =>
       connectFn({ data: typeof input === "string" ? { provider: input } : input }),
@@ -565,6 +582,18 @@ function ConnectionsPage() {
             <p className="text-xs text-muted-foreground">
               {`${app.category} · ${connectionLogin(app).label}`}
             </p>
+            {connectionMethodBadges(app).length > 0 && (
+              <div className="mt-1 flex flex-wrap gap-1">
+                {connectionMethodBadges(app).map((badge) => (
+                  <span
+                    key={badge}
+                    className="rounded-full border border-border/70 px-1.5 py-px text-[10px] leading-4 text-muted-foreground"
+                  >
+                    {badge}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
         {!user ? (
@@ -927,6 +956,8 @@ function ConnectionsPage() {
             </DialogTitle>
             <DialogDescription>
               Manage each account separately. Adding an account keeps your existing connections.
+              Apps that officially support both methods offer a provider sign-in and an API key or
+              token.
             </DialogDescription>
           </DialogHeader>
           {managedConnections.length > 0 ? (
@@ -1036,6 +1067,33 @@ function ConnectionsPage() {
                 ? connectionLogin(managedApp).action
                 : "Connect account"}
           </Button>
+          {managedApp &&
+          managedApp.connection_method !== "api_key" &&
+          (managedApp.available_methods ?? []).includes("api_key") &&
+          !["custom_mcp", "custom_api", "proton_pass", "proton_drive"].includes(
+            managedApp.provider,
+          ) ? (
+            <Button
+              variant="outline"
+              className="w-full"
+              disabled={connectMutation.isPending}
+              onClick={() => {
+                if (!managedApp) return;
+                setConnectionName("");
+                setDescription("");
+                setAuthHeader("X-API-Key");
+                setReconnectId(undefined);
+                setAccountLabel("");
+                setEndpointUrl("");
+                setApiKey("");
+                setSelectedApp(managedApp);
+                closeManagedDialog();
+              }}
+            >
+              <KeyRound aria-hidden="true" className="size-4" />
+              Use an API key or token instead
+            </Button>
+          ) : null}
         </DialogContent>
       </Dialog>
 

@@ -1,4 +1,4 @@
-import { createFileRoute, useLocation } from "@tanstack/react-router";
+import { createFileRoute, Link, useLocation } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { KeyRound, Loader2, Save, Trash2, Upload } from "lucide-react";
@@ -44,7 +44,7 @@ function SettingsPage() {
   const location = useLocation();
   const navigate = Route.useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
-  // Integrations moved to the Developer & integrations hub; keep old links working.
+  // Integrations moved to Developer; keep old links working.
   const legacySection = legacySettingsRedirect(location.hash);
   useEffect(() => {
     if (legacySection)
@@ -185,8 +185,12 @@ function SettingsPage() {
       <AccountLinkCallbackNotice />
       <h1 className="text-3xl font-semibold">Settings</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Manage your profile, security, and data. Tokens, OAuth apps, webhooks, and notifications
-        live in Developer &amp; integrations.
+        Manage your profile, security, and data. Personal tokens, OAuth apps, webhooks, and
+        notifications are in{" "}
+        <Link to="/integrations" search={{ section: "api-key" }} className="underline">
+          Developer
+        </Link>
+        .
       </p>
 
       <Tabs

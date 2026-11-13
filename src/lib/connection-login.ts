@@ -6,6 +6,7 @@ type LoginApp = {
   oauth_supported?: boolean;
   connection_method?: string;
   auth_methods?: readonly string[];
+  available_methods?: readonly string[];
 };
 
 /** A hosted credential form is not necessarily a provider OAuth sign-in. */
@@ -57,6 +58,19 @@ export function connectionLogin(app: LoginApp) {
     detail:
       "Enter the provider-issued API key or access token. It is stored privately; permissions remain limited to the provider's actual grant.",
   };
+}
+
+/** Official method chips shown on connector cards. */
+export function connectionMethodBadges(app: {
+  provider: string;
+  available_methods?: readonly string[];
+}): string[] {
+  const methods = app.available_methods ?? [];
+  const badges: string[] = [];
+  if (methods.includes("oauth")) badges.push("OAuth sign-in");
+  if (methods.includes("api_key")) badges.push("API key / token");
+  if (methods.includes("mcp")) badges.push("MCP");
+  return badges;
 }
 
 export function defaultConnectorAuth(_protocol: string, saved?: unknown): string {

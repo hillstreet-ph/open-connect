@@ -191,3 +191,70 @@ test("stale vault entries do not block other saved accounts or new compatible pr
     ["openrouter"],
   );
 });
+
+test("Claude routes through OpenAI-compatible custom endpoints only", async () => {
+  let resolves = 0;
+  const upstreams = await savedModelUpstreams("user-a", {
+    find: async () => [
+      {
+        provider: "anthropic",
+        status: "connected",
+        credential_reference: "credential://anthropic/11111111-1111-1111-1111-111111111111",
+        metadata: { endpoint_url: "https://claude-router.example/v1/" },
+      },
+      {
+        // Official Anthropic base URL: native API cannot serve OpenAI-compatible chat.
+        provider: "anthropic",
+        status: "connected",
+        credential_reference: "credential://anthropic/22222222-2222-2222-2222-222222222222",
+        metadata: { endpoint_url: "https://api.anthropic.com/v1" },
+      },
+    ],
+    resolve: async (_user, id) => {
+      resolves++;
+      assert.equal(id, "11111111-1111-1111-1111-111111111111");
+      return JSON.stringify({ credential: "claude-secret" });
+    },
+  });
+  assert.equal(resolves, 1, "official-base Claude accounts are skipped without resolving secrets");
+  assert.deepEqual(
+    upstreams.map((upstream) => upstream.name),
+    ["anthropic"],
+  );
+  assert.equal(upstreams[0]?.baseUrl, "https://claude-router.example/v1");
+  assert.equal(upstreams[0]?.headers["Authorization"], "Bearer claude-secret");
+});
+
+test("Claude subscription accounts route through the Anthropic OpenAI-compatible layer", async () => {
+  let resolves = 0;
+  const upstreams = await savedModelUpstreams("user-a", {
+    find: async () => [
+      {
+        provider: "anthropic",
+        status: "connected",
+        credential_reference: "credential://anthropic/11111111-1111-1111-1111-111111111111",
+        metadata: { mode: "oauth_subscription", subscription: true },
+      },
+      {
+        // Official Anthropic base URL without a subscription stays excluded.
+        provider: "anthropic",
+        status: "connected",
+        credential_reference: "credential://anthropic/22222222-2222-2222-2222-222222222222",
+        metadata: { endpoint_url: "https://api.anthropic.com/v1" },
+      },
+    ],
+    resolve: async (_user, id) => {
+      resolves++;
+      assert.equal(id, "11111111-1111-1111-1111-111111111111");
+      return JSON.stringify({ credential: "claude-oauth-token" });
+    },
+  });
+  assert.equal(resolves, 1, "official-base Claude accounts are skipped without resolving secrets");
+  assert.deepEqual(
+    upstreams.map((upstream) => upstream.name),
+    ["anthropic"],
+  );
+  assert.equal(upstreams[0]?.baseUrl, "https://api.anthropic.com/v1");
+  assert.equal(upstreams[0]?.headers["Authorization"], "Bearer claude-oauth-token");
+  assert.equal(upstreams[0]?.headers["anthropic-beta"], "oauth-2025-04-20");
+});

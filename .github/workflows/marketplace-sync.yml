@@ -1,0 +1,62 @@
+name: Marketplace catalog sync
+
+on:
+  schedule:
+    # Every 6 hours at minute 17.
+    - cron: "17 */6 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: marketplace-catalog-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run metadata-only catalog sync
+        run: python3 scripts/sync_marketplace_catalogs.py
+
+      - name: Detect registry change
+        id: diff
+        run: |
+          if git diff --quiet -- config/hermes-clawhub-ingest.registry.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Push sync branch
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          BRANCH="bot/marketplace-catalog-sync"
+          git config user.name "open-connect-sync-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git checkout -B "$BRANCH"
+          git add config/hermes-clawhub-ingest.registry.json
+          git commit -m "chore(marketplace): sync Hermes and ClawHub catalogs (metadata-only)"
+          git push -f origin "$BRANCH"
+
+      - name: Open or update sync PR
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="bot/marketplace-catalog-sync"
+          BODY="Automated metadata-only catalog sync from the Hermes Agent marketplace and ClawHub. All new entries are state review_required with license null and a security review reason. Nothing is downloaded, executed, or installed; install commands remain operator-run text in operator_install_batches."
+          gh pr create --base main --head "$BRANCH" \
+            --title "chore(marketplace): sync Hermes and ClawHub catalogs" \
+            --body "$BODY" \
+            || gh pr edit "$BRANCH" --body "$BODY"

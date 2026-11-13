@@ -21,12 +21,8 @@ import { matchBrowserCredentials } from "@/lib/browser-credential-matching";
 import { autoInstructions, readAutoMode, writeAutoMode } from "@/lib/auto-mode.server";
 import { saveRunLearning } from "@/lib/agent-learning.server";
 import { createHash } from "node:crypto";
-import {
-  redactContext,
-  validateTeamInput,
-  runFreeAgentTeam,
-  requestTeamWorker,
-} from "@/lib/agent-team";
+import { redactContext, validateTeamInput, runFreeAgentTeam } from "@/lib/agent-team";
+import { requestTeamWorker } from "@/lib/agent-team-worker.server";
 import { COMMAND_CENTER_HTML } from "@/lib/command-center";
 import {
   CLOUD_BROWSER_FRAME_DOMAINS,
@@ -598,6 +594,17 @@ const PLATFORM_TOOLS: McpTool[] = [
     },
   },
   {
+    name: "list_developer_access",
+    description:
+      "Read the Developer page: personal tokens, OAuth apps you registered, apps authorized to access this account, incoming webhooks, and notification channels. Metadata only; token values, client secrets, webhook secrets, and notification destinations are never returned.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
+  },
+  {
     name: "match_browser_credentials",
     outputSchema: BROWSER_CREDENTIAL_MATCH_OUTPUT_SCHEMA,
     description:
@@ -686,6 +693,216 @@ const PLATFORM_TOOLS: McpTool[] = [
       idempotentHint: false,
       openWorldHint: true,
     },
+  },
+  {
+    name: "cloud_browser_search",
+    description:
+      "Search the live web with the user's own TinyFish connection and get structured results (title, url, snippet, site, date). Use domain_type news for current events. Read a result's full page with cloud_browser_fetch.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        query: { type: "string", minLength: 1, maxLength: 500 },
+        location: { type: "string", description: "Two-letter country code, e.g. US." },
+        language: { type: "string", description: "Language code, e.g. en." },
+        domain_type: { type: "string", enum: ["web", "news", "research_paper"] },
+        include_domains: { type: "string", description: "Comma-separated domains to keep." },
+        exclude_domains: { type: "string", description: "Comma-separated domains to drop." },
+        recency_minutes: { type: "integer", minimum: 1, maximum: 5256000 },
+        page: { type: "integer", minimum: 0, maximum: 10 },
+      },
+      required: ["query"],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+  },
+  {
+    name: "cloud_browser_fetch",
+    description:
+      "Read up to 10 public web pages through the user's TinyFish connection and return clean Markdown (or HTML), title and description. Renders JavaScript-heavy pages. Long pages are truncated. Private and local addresses are rejected.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        urls: { type: "array", items: { type: "string" }, minItems: 1, maxItems: 10 },
+        format: { type: "string", enum: ["markdown", "html"] },
+        links: { type: "boolean", description: "Also return outbound links." },
+        fresh: { type: "boolean", description: "Bypass cached copies." },
+      },
+      required: ["urls"],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+  },
+  {
+    name: "cloud_browser_run",
+    description:
+      "Use this when a task needs a real web browser: open a site, use saved sign-ins, click, fill forms, or read pages behind a login. Starts the user's Open-Connect cloud browser (TinyFish Chrome) with their saved Browser Context Profile by default and returns immediately with run_id, a live streaming_url, and view_url on open-connect.site. Poll cloud_browser_get_run every 15-30s until terminal. Never put passwords in the goal.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        url: { type: "string", description: "Starting URL, e.g. https://example.com" },
+        goal: { type: "string", description: "Plain-language task for the browser agent." },
+        use_profile: {
+          type: "boolean",
+          description: "Use saved sign-ins (default true). false starts a fresh browser.",
+        },
+        profile_id: { type: "string", description: "Specific Browser Context Profile id." },
+        stealth: { type: "boolean", description: "Anti-detection browser for protected sites." },
+        proxy_country_code: { type: "string", description: "Two-letter proxy exit country." },
+        max_duration_seconds: { type: "integer", minimum: 30, maximum: 3600 },
+      },
+      required: ["url", "goal"],
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
+    _meta: WIDGET_META,
+  },
+  {
+    name: "cloud_browser_get_run",
+    description:
+      "Check a cloud browser run: status, live streaming_url while running, recent actions, and the final result.",
+    inputSchema: {
+      type: "object",
+      properties: { run_id: { type: "string" } },
+      required: ["run_id"],
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+    _meta: WIDGET_META,
+  },
+  {
+    name: "cloud_browser_list_runs",
+    description:
+      "List recent cloud browser runs (newest first), including runs started from open-connect.site or other agents.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        limit: { type: "integer", minimum: 1, maximum: 50 },
+        status: {
+          type: "string",
+          enum: ["PENDING", "RUNNING", "COMPLETED", "FAILED", "CANCELLED"],
+        },
+      },
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+  },
+  {
+    name: "cloud_browser_cancel_run",
+    description: "Stop a running cloud browser run when the user asks to stop it.",
+    inputSchema: {
+      type: "object",
+      properties: { run_id: { type: "string" } },
+      required: ["run_id"],
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true,
+    },
+    _meta: { ui: { visibility: ["model", "app"] }, "openai/widgetAccessible": true },
+  },
+  {
+    name: "cloud_browser_profiles",
+    description:
+      "List the user's saved Browser Context Profiles and, for the default profile, which sites have saved sign-ins (cookie counts only; never cookie values).",
+    inputSchema: { type: "object", properties: {} },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+  },
+  {
+    name: "cloud_browser_research_start",
+    description:
+      "Start a source-backed TinyFish research report on the user's own account (deep: 5-20 min, max: 5-45 min). Returns research_run_id; poll cloud_browser_research_get every 30-60s until terminal. Uses the daily allowance, then the TinyFish wallet.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        query: { type: "string", minLength: 1, maxLength: 10000 },
+        mode: { type: "string", enum: ["deep", "max"] },
+        output_language: { type: "string", description: "BCP 47 tag, e.g. en." },
+      },
+      required: ["query"],
+      additionalProperties: false,
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
+  },
+  {
+    name: "cloud_browser_research_get",
+    description:
+      "Read a research run: status, report text and citations. Omit research_run_id to list recent runs.",
+    inputSchema: {
+      type: "object",
+      properties: { research_run_id: { type: "string" } },
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+  },
+  {
+    name: "cloud_browser_monitors",
+    description: "List the user's TinyFish page and topic monitors with status and schedule.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+  },
+  {
+    name: "cloud_browser_monitor_create",
+    description:
+      "Create a scheduled monitor: type fetch watches one public URL, type search watches a topic. schedule_cron is a five-field UTC cron (topic monitors at least 30 minutes apart). Creating runs a baseline immediately.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        type: { type: "string", enum: ["fetch", "search"] },
+        url: { type: "string", description: "Page URL for type fetch." },
+        query: { type: "string", description: "Topic query for type search." },
+        schedule_cron: { type: "string", description: "e.g. 0 9 * * *" },
+        name: { type: "string", maxLength: 100 },
+        purpose: { type: "string", maxLength: 2000, description: "Which change matters." },
+      },
+      required: ["type", "schedule_cron"],
+      additionalProperties: false,
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
+  },
+  {
+    name: "cloud_browser_dataset_create",
+    description:
+      "Create a TinyFish dataset from a one-sentence description and fill it from the web (billed per row; only when the user asks for a table of many entities). Returns the dataset id; read rows with cloud_browser_dataset_rows.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        prompt: { type: "string", minLength: 3, maxLength: 15000 },
+        target_rows: { type: "integer", minimum: 1, maximum: 250 },
+      },
+      required: ["prompt"],
+      additionalProperties: false,
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
+  },
+  {
+    name: "cloud_browser_dataset_rows",
+    description:
+      "Read a dataset's status and up to 200 rows. Omit dataset_id to list recent datasets.",
+    inputSchema: {
+      type: "object",
+      properties: { dataset_id: { type: "string" } },
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
   },
   {
     name: "cloud_browser_tools",
@@ -1264,6 +1481,155 @@ function textResult(payload: unknown) {
   };
 }
 
+const TINYFISH_TOOLS = new Set([
+  "cloud_browser_search",
+  "cloud_browser_fetch",
+  "cloud_browser_run",
+  "cloud_browser_get_run",
+  "cloud_browser_list_runs",
+  "cloud_browser_cancel_run",
+  "cloud_browser_profiles",
+  "cloud_browser_research_start",
+  "cloud_browser_research_get",
+  "cloud_browser_monitors",
+  "cloud_browser_monitor_create",
+  "cloud_browser_dataset_create",
+  "cloud_browser_dataset_rows",
+]);
+
+/** Cloud browser (TinyFish) tools run with the caller's own TinyFish key from the vault. */
+async function handleTinyFishTool(userId: string, name: string, args: Record<string, unknown>) {
+  const { cloudBrowserClient, cloudBrowserViewUrl, CloudBrowserNotConnectedError } =
+    await import("@/lib/tinyfish.server");
+  const tf = await import("@/lib/tinyfish");
+  let client: import("@/lib/tinyfish").TinyFishClient;
+  try {
+    ({ client } = await cloudBrowserClient(userId));
+  } catch (error) {
+    if (error instanceof CloudBrowserNotConnectedError) {
+      const payload = {
+        status: "not_connected",
+        code: error.code,
+        message: error.message,
+        setup_url: "https://open-connect.site/connections",
+      };
+      return { ...textResult(payload), structuredContent: payload, isError: true };
+    }
+    throw error;
+  }
+  const withView = <T extends { run_id: string }>(run: T) => ({
+    ...run,
+    view_url: cloudBrowserViewUrl(run.run_id),
+  });
+  let payload: unknown;
+  if (name === "cloud_browser_search") {
+    const searched = await client.search(tf.normalizeWebSearch(args));
+    payload = {
+      query: searched.query,
+      page: searched.page ?? 0,
+      results: (searched.results ?? []).map((item) => ({
+        position: item.position,
+        title: item.title,
+        url: item.url,
+        snippet: item.snippet,
+        ...(item.site_name ? { site: item.site_name } : {}),
+        ...(item.date ? { date: item.date } : {}),
+      })),
+    };
+  } else if (name === "cloud_browser_fetch") {
+    payload = tf.summarizeFetch(await client.fetchUrls(tf.normalizeWebFetch(args)));
+  } else if (name === "cloud_browser_run") {
+    payload = withView(await tf.startRunWithLiveView(client, tf.normalizeStartRun(args)));
+  } else if (name === "cloud_browser_get_run") {
+    payload = withView(tf.summarizeRun(await client.getRun(tf.assertRunId(args["run_id"]))));
+  } else if (name === "cloud_browser_list_runs") {
+    const status = String(args["status"] ?? "");
+    const listed = await client.listRuns({
+      limit: Math.min(Number(args["limit"] ?? 10) || 10, 50),
+      ...(["PENDING", "RUNNING", "COMPLETED", "FAILED", "CANCELLED"].includes(status)
+        ? { status: status as import("@/lib/tinyfish").TinyFishRunStatus }
+        : {}),
+    });
+    payload = {
+      runs: (listed.data ?? []).map((run) => withView(tf.summarizeRun(run))),
+      view_url: cloudBrowserViewUrl(),
+    };
+  } else if (name === "cloud_browser_cancel_run") {
+    const runId = tf.assertRunId(args["run_id"]);
+    await client.cancelRun(runId);
+    payload = withView(tf.summarizeRun(await client.getRun(runId)));
+  } else if (name === "cloud_browser_profiles") {
+    const { profiles } = await client.listProfiles();
+    const preferred = profiles.find((profile) => profile.is_default) ?? profiles[0];
+    const detail = preferred ? await client.getProfile(preferred.id).catch(() => null) : null;
+    payload = {
+      profiles: profiles.map((profile) => ({
+        id: profile.id,
+        name: profile.name,
+        is_default: profile.is_default === true,
+        saved_sites: profile.domain_count ?? 0,
+      })),
+      default_profile_sites: (detail?.domains ?? []).map((domain) => ({
+        domain: domain.domain,
+        cookies: domain.cookie_count ?? 0,
+      })),
+    };
+  } else if (name === "cloud_browser_research_start") {
+    const started = await client.startResearch(tf.normalizeResearch(args));
+    if (!started.research_run_id) throw new Error("TinyFish did not start the research run.");
+    payload = {
+      research_run_id: started.research_run_id,
+      status: "QUEUED",
+      view_url: "https://open-connect.site/cloud-browser?section=research",
+    };
+  } else if (name === "cloud_browser_research_get") {
+    payload = args["research_run_id"]
+      ? tf.summarizeResearch(await client.getResearch(tf.assertResearchId(args["research_run_id"])))
+      : { runs: ((await client.listResearch(10)).data ?? []).map(tf.summarizeResearch) };
+  } else if (name === "cloud_browser_monitors") {
+    const { monitors } = await client.listMonitors();
+    payload = {
+      monitors: (monitors ?? []).map((monitor) => ({
+        id: monitor.id,
+        name: monitor.name,
+        type: monitor.type,
+        target: String(monitor.config["url"] ?? monitor.config["query"] ?? ""),
+        schedule_cron: monitor.schedule_cron,
+        status: monitor.status,
+      })),
+    };
+  } else if (name === "cloud_browser_monitor_create") {
+    const created = await client.createMonitor(tf.normalizeMonitor(args));
+    payload = {
+      id: created.monitor.id,
+      name: created.monitor.name,
+      status: created.monitor.status,
+      schedule_cron: created.monitor.schedule_cron,
+      view_url: "https://open-connect.site/cloud-browser?section=monitor",
+    };
+  } else if (name === "cloud_browser_dataset_create") {
+    payload = tf.summarizeDataset(await client.createDataset(tf.normalizeDataset(args)));
+  } else if (name === "cloud_browser_dataset_rows") {
+    if (!args["dataset_id"]) {
+      payload = { datasets: ((await client.listDatasets(10)).data ?? []).map(tf.summarizeDataset) };
+    } else {
+      const datasetId = tf.assertResourceId(args["dataset_id"], "dataset id");
+      const [dataset, rows] = await Promise.all([
+        client.getDataset(datasetId),
+        client.datasetRows(datasetId, 200),
+      ]);
+      payload = {
+        ...tf.summarizeDataset(dataset),
+        rows: (rows.rows ?? []).map((row) => row.data),
+        truncated: rows.truncated === true,
+      };
+    }
+  } else {
+    throw new Error("Unknown cloud browser tool.");
+  }
+  return { ...textResult(payload), structuredContent: payload };
+}
+
 function executionUnavailable(operation: "invoke" | "install", resource: ResourceRow) {
   return {
     ...textResult({
@@ -1435,6 +1801,7 @@ const TOOL_SCOPES: Record<string, string> = {
   list_my_knowledge: "knowledge:read",
   list_workspace_projects: "resources:read",
   list_credential_metadata: "secrets:read",
+  list_developer_access: "secrets:read",
   match_browser_credentials: "secrets:read",
   calculate: "mcp:connect",
   list_connections: "connections:read",
@@ -1446,6 +1813,19 @@ const TOOL_SCOPES: Record<string, string> = {
   cloud_browser_tools: "connections:read",
   cloud_browser_call: "tools:invoke",
   cloud_browser_cancel_task: "tools:invoke",
+  cloud_browser_search: "tools:invoke",
+  cloud_browser_fetch: "tools:invoke",
+  cloud_browser_run: "tools:invoke",
+  cloud_browser_get_run: "connections:read",
+  cloud_browser_list_runs: "connections:read",
+  cloud_browser_cancel_run: "tools:invoke",
+  cloud_browser_profiles: "connections:read",
+  cloud_browser_research_start: "tools:invoke",
+  cloud_browser_research_get: "connections:read",
+  cloud_browser_monitors: "connections:read",
+  cloud_browser_monitor_create: "tools:invoke",
+  cloud_browser_dataset_create: "tools:invoke",
+  cloud_browser_dataset_rows: "connections:read",
   e2b_health: "connections:read",
   e2b_list_sandboxes: "connections:read",
   e2b_create_sandbox: "tools:invoke",
@@ -2043,6 +2423,59 @@ export const Route = createFileRoute("/mcp")({
               throw new Error("Too many credential records to establish an unambiguous match.");
             const payload = matchBrowserCredentials(data ?? [], args["origin"], args["account"]);
             result = { ...textResult(payload), structuredContent: payload };
+          } else if (name === "list_developer_access") {
+            const { isPersonalKeyContext, summarizeDeveloperAccess } =
+              await import("@/lib/developer-access");
+            // Account-wide metadata: never readable through an org/workspace/project-scoped key.
+            if (!isPersonalKeyContext(key))
+              return gatewayError(
+                "Developer access requires a personal context.",
+                403,
+                "insufficient_scope",
+              );
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            // Tables added after the generated types; queried untyped, always scoped to the key owner.
+            const db = supabaseAdmin as unknown as import("@supabase/supabase-js").SupabaseClient;
+            const [tokens, oauthApps, webhooks, channels] = await Promise.all([
+              supabaseAdmin
+                .from("api_keys")
+                .select(
+                  "id,name,key_prefix,scopes,access_profile,oauth_resource,last_used_at,expires_at,revoked_at,created_at",
+                )
+                .eq("user_id", key.userId)
+                .is("revoked_at", null)
+                .order("created_at", { ascending: false })
+                .limit(500),
+              db
+                .from("oauth_clients")
+                .select(
+                  "client_id,client_name,redirect_uris,created_at,secret_rotated_at,revoked_at",
+                )
+                .eq("owner_user_id", key.userId)
+                .order("created_at", { ascending: false })
+                .limit(100),
+              db
+                .from("incoming_webhooks")
+                .select("id,name,created_at")
+                .eq("user_id", key.userId)
+                .order("created_at", { ascending: false })
+                .limit(200),
+              db
+                .from("notification_channels")
+                .select("id,kind,name,enabled,created_at")
+                .eq("user_id", key.userId)
+                .order("created_at", { ascending: false })
+                .limit(200),
+            ]);
+            const failed = [tokens, oauthApps, webhooks, channels].find((r) => r.error);
+            if (failed?.error) throw new Error("Developer access could not be read.");
+            const payload = summarizeDeveloperAccess({
+              tokens: (tokens.data ?? []) as never,
+              oauthApps: (oauthApps.data ?? []) as never,
+              webhooks: webhooks.data ?? [],
+              channels: channels.data ?? [],
+            });
+            result = textResult(payload);
           } else if (name === "list_credential_metadata") {
             const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
             const { data, error } = await supabaseAdmin
@@ -2300,6 +2733,12 @@ export const Route = createFileRoute("/mcp")({
               ...textResult(connectionResult),
               ...(connectionResult.isError ? { isError: true } : {}),
             };
+          } else if (TINYFISH_TOOLS.has(name)) {
+            // The TinyFish key is the caller's personal credential: never usable from
+            // an organization-, workspace- or project-bounded key.
+            if (key.projectId || key.workspaceId || key.organizationId)
+              throw new Error("Cloud Browser currently requires a personal key.");
+            result = await handleTinyFishTool(key.userId, name, args);
           } else if (name === "cloud_browser_cancel_task") {
             if (key.projectId || key.workspaceId || key.organizationId)
               throw new Error("Cloud Browser currently requires a personal key.");

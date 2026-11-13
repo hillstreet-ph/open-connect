@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Workforce Directory | Open-Connect AI Factory</title>
+<meta name="description" content="Every specialist in the AI Factory workforce: department, role, active version, tools, skills and connectors. Launch a specialist chat or open it in Studio.">
+<link rel="stylesheet" href="assets/site.css">
+<link rel="stylesheet" href="assets/studio.css">
+</head>
+<body>
+<main>
+  <section class="sec" style="padding-top:0">
+    <div class="wrap">
+      <div class="st-gate" id="wfGate">
+        <div class="st-gate-in">
+          <h3>Sign in to the workforce</h3>
+          <p>The Workforce Directory reads your own specialists from the production project. Row-level security requires the workspace owner's session.</p>
+          <form id="wfSigninForm" class="st-form" autocomplete="on">
+            <label class="st-lbl" for="wfEmail">Email</label>
+            <input class="st-in" id="wfEmail" type="email" required autocomplete="username" placeholder="you@example.com">
+            <label class="st-lbl" for="wfPassword">Password</label>
+            <input class="st-in" id="wfPassword" type="password" required autocomplete="current-password" placeholder="••••••••">
+            <button class="btn btn-primary" type="submit" id="wfSigninBtn">Sign in</button>
+            <p class="st-msg" id="wfGateMsg" role="status"></p>
+          </form>
+          <p class="st-hint">Browsing the roster needs no session. Reading, launching and editing your own specialists does.</p>
+        </div>
+      </div>
+
+      <div id="wfApp" style="display:none">
+        <div class="st-bar">
+          <div class="st-who"><span class="st-dot" id="wfWhoDot"></span><span id="wfWhoEmail">—</span></div>
+          <div class="st-bar-actions">
+            <span class="st-save" id="wfState" role="status"></span>
+            <button class="btn btn-outline btn-sm" type="button" id="wfSetupBtn">Set up starter workforce</button>
+            <button class="btn btn-outline btn-sm" type="button" id="wfSignoutBtn">Sign out</button>
+          </div>
+        </div>
+
+        <div class="st-catbar" aria-live="polite">
+          <span class="st-cat" id="wfCount">— specialists</span>
+          <span class="st-cat" id="wfLeads">— leads</span>
+          <span class="st-cat" id="wfDepts">— departments</span>
+          <span class="st-catsrc" id="wfSrc">loading workforce…</span>
+        </div>
+
+        <div class="filters" style="margin:18px 0">
+          <label class="sr-only" for="wfDept">Filter by department</label>
+          <select class="st-in" id="wfDept" style="max-width:260px">
+            <option value="">All departments</option>
+          </select>
+          <label class="sr-only" for="wfSearch">Search specialists</label>
+          <input class="st-in" id="wfSearch" type="search" placeholder="Search name, role or slug" style="max-width:320px">
+        </div>
+
+        <div class="agent-grid" id="wfGrid" aria-live="polite"></div>
+        <p class="st-msg" id="wfMsg" role="status"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- specialist detail drawer -->
+  <div class="pf-overlay" id="wfOverlay" hidden>
+    <div class="pf-drawer" role="dialog" aria-modal="true" aria-labelledby="wfDrawerTitle">
+      <button class="pf-close" type="button" id="wfClose" aria-label="Close specialist details">×</button>
+      <div id="wfDrawerBody"></div>
+    </div>
+  </div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="assets/workforce.js?v=1"></script>
+</body>
+</html>

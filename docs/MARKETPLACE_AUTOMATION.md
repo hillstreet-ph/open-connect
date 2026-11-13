@@ -43,6 +43,13 @@ Required production secret: `SUPABASE_SERVICE_ROLE_KEY`, stored in the protected
 requests. Source changes belong in `config/marketplace-sources.registry.json`; every source must use
 an implemented adapter and an explicitly allowlisted host.
 
+## OpenClaw install requests
+
+Requested `openclaw plugins install` and `openclaw skills install` commands are cataloged
+as metadata-only, review-required entries in
+`config/openclaw-install-requests.registry.json`. See
+[OPENCLAW_INSTALL_REQUESTS.md](./OPENCLAW_INSTALL_REQUESTS.md).
+
 ## Vendored upstream skills
 
 Four MIT-licensed upstream repositories are vendored as metadata-only skill sources rather than

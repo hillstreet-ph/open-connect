@@ -27,7 +27,6 @@ export function AgentAttachments({
         type="file"
         multiple
         hidden
-        accept=".txt,.md,.csv,.json,.log,.pdf"
         disabled={disabled || loading}
         onChange={async (event) => {
           const selected = [...(event.target.files ?? [])];
@@ -87,8 +86,9 @@ export function AgentAttachments({
         </span>
       ))}
       <p className="text-[10px] text-muted-foreground">
-        Text and text-based PDF · 3 files, 4 MB each, 24,000 extracted characters total. Extracted
-        text is saved with the chat; originals are not stored.
+        Any file type up to 4 MB · at most 3 files per message. Text, code, and PDF files are
+        extracted for analysis; images, videos, archives, and other binary files are attached as
+        reference metadata. Extracted text is saved with the chat; originals are not stored.
       </p>
       {error ? (
         <p role="alert" className="text-xs text-destructive">

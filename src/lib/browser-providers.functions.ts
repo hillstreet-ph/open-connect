@@ -22,7 +22,7 @@ export const startAdditionalBrowser = createServerFn({ method: "POST" })
     }),
   )
   .handler(async () => {
-    throw new Error("Cloud Browser now uses Playwright. Open /cloud-browser.");
+    throw new Error("Cloud Browser now uses TinyFish. Open /cloud-browser.");
   });
 export const readAdditionalBrowser = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])

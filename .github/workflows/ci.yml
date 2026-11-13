@@ -43,6 +43,95 @@ jobs:
         run: python3 scripts/update-marketplace-branch.test.py
       - name: Production health contract tests
         run: python3 scripts/validate_production_health_test.py
+      - name: AI Factory roster smoke contract tests
+        # Offline: exercises the roster smoke test's markers, SPA-shell
+        # detection and retry policy against stubs. No network, so it can
+        # never make this required check flaky.
+        run: python3 scripts/validate_ai_factory_roster_test.py
+      - name: AI Factory export contract tests
+        # Offline: regenerates the exports from the roster and asserts every
+        # target's real requirements — ChatGPT's field ceilings, Claude's MCP
+        # server block, Hermes' YAML schema, prompt front matter — plus a
+        # credential scan. Pins the contract so a stub or a renamed copy of
+        # another format fails here instead of shipping.
+        run: |
+          node scripts/unpack-ai-factory-roster.mjs
+          node scripts/generate-ai-factory-exports.mjs
+          python3 scripts/validate_ai_factory_exports_test.py --root public
+          python3 scripts/validate_ai_factory_exports.py
+      - name: Deploy verification gate contract tests
+        # Offline: pins the post-merge gate's failure paths — a stale commit, a
+        # missing /build-info.json, a wrong agent count, a missing MCP tool.
+        # The gate must go red when production does not match main; a gate that
+        # only ever passes is the bug this change exists to fix.
+        #
+        # The commit-identity check is outcome-aware: a 404 (file never
+        # deployed), another non-200, a transport failure, a 200 with corrupt
+        # JSON, a 200 with no usable commit, and a genuine stale build each get
+        # their own diagnosis. Every one of them still fails the gate — a 404
+        # is never "unknown, therefore fine" — and the 404 message must not
+        # claim the build is stale.
+        #
+        # A 404 also consults the Cloudflare build lookup, because the 404
+        # alone cannot tell "the live deploy predates write-build-info.mjs"
+        # from "a newer build for main HEAD failed and the old one is still
+        # serving". The five cases are pinned offline with mocked responses:
+        # a newer build FAILED, still building/queued, SUCCEEDED but the file
+        # is still 404 (a build-configuration fault, not a race), no build for
+        # main HEAD at all, and no token configured (today's message plus one
+        # hint line). The lookup is enrichment only: a 404 still exits 1, and
+        # it can never turn a passing gate red.
+        #
+        # A transport failure (DNS, refused connection, TLS, timeout) consults
+        # the same lookup, because when production does not answer at all the
+        # build queue is the only thing that can tell "the deploy is broken"
+        # from "the site is down". Each fault is named as itself, and each
+        # lookup outcome gets its own wording: FAILED (the deploy broke),
+        # still building/queued (production may be mid-deploy), SUCCEEDED (the
+        # fault is at the edge or the network, not the deploy), no build for
+        # main HEAD, and no token (today's message plus the same hint line).
+        # A transport failure still exits 1, and the no-token path is
+        # byte-identical apart from that one hint.
+        #
+        # The MCP stage carries the same outcome-aware naming, at every stage
+        # of the handshake (initialize, tools/list, each tools/call): a
+        # transport fault names DNS / refused / TLS / timeout, a non-200 names
+        # the status class (5xx host-or-upstream, 401/403 access control, 404
+        # route not deployed), a 200 that is not JSON says the endpoint served
+        # something that is not the MCP router, a JSON-RPC error names the
+        # server's own code and message with any credential redacted, and a
+        # wrong tool set or agent count names what was expected and what was
+        # found. A 200 that is not JSON is kept distinct from a well-formed
+        # envelope with no result, because they are different faults. Every
+        # one of them still fails the gate, and no message may carry a token.
+        run: python3 -m unittest discover -s scripts -p 'verify_production_deploy_test.py' -v
+      - name: Cloudflare build-detail contract tests
+        # Offline: pins the optional Cloudflare Pages lookup in four states —
+        # token present with a superseding build, token present with none,
+        # token absent, and API error responses. Also asserts the token never
+        # reaches a log, a job summary or an issue body. No network, so the
+        # token-backed path is covered without a token being configured.
+        #
+        # The superseding-build cases are exercised across every build outcome,
+        # not just success: a FAILED build must be named as failed (the deploy
+        # broke, not a race), a cancelled/skipped build as never completed, an
+        # in-progress build as not finished, and an unrecognised status must
+        # never be reported as success. A newer failure for main HEAD must not
+        # be masked by an older success for the same commit.
+        run: python3 -m unittest discover -s scripts -p 'cloudflare_pages_test.py' -v
+      - name: Auto-fix scope contract tests
+        # Offline: pins the checker's own behaviour against in-memory fixtures,
+        # including the case that matters most -- a prettier scope narrowed to
+        # src/ while `bun run lint` covers the repo must FAIL. A contract test
+        # that only ever passes is the bug this change exists to prevent.
+        run: python3 -m unittest discover -s scripts -p 'validate_autofix_scope_test.py' -v
+      - name: Auto-fix scope matches bun run lint
+        # The live assertion: parses .github/workflows/pr-automation.yml and
+        # package.json and fails if the autofix job's prettier/eslint paths
+        # drift from what `bun run lint` (eslint .) actually covers. This is
+        # what makes a future narrowing of the autofix paths break the build
+        # instead of silently passing.
+        run: python3 scripts/validate_autofix_scope.py
       - name: Strict TypeScript validation
         run: bun run typecheck
       - name: Production build
@@ -51,6 +140,32 @@ jobs:
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_placeholder' }}
           VITE_APP_URL: https://open-connect.site
         run: bun run build
+      - name: AI Factory portable export contract tests
+        # Runs after the build because it inspects the generated export set:
+        # 103 agents x 5 formats, seven fields present, and no export inventing
+        # callable tools the agent does not have.
+        run: python3 scripts/validate_ai_factory_exports_test.py
+      - name: AI Factory MCP endpoint contract tests
+        # The endpoint reads exports through the ASSETS binding on Pages, but
+        # this project deploys as a Worker where that binding is absent. These
+        # tests pin the HTTP fallback so /ai-factory/mcp cannot regress to
+        # -32603 "Static asset binding is unavailable" in production.
+        run: node --experimental-strip-types --test src/lib/ai-factory-mcp.test.ts
+      - name: OpenClaw export merge contract tests
+        # Offline: pins the cross-registry merge in the export generator. A
+        # resource cataloged in both the primary registry and an ingest
+        # registry must fold to ONE entry, and risk must escalate to the more
+        # severe label -- never downgrade. That second half is the one that
+        # matters: openclaw/parallel-plugin is high risk in the primary
+        # registry and medium in the ingest registry, so a "keep the first"
+        # fix would have published a high-risk plugin as medium. A slug
+        # repeated *inside* one registry must still fail the build.
+        run: python3 scripts/generate_openclaw_exports_test.py
+      - name: OpenClaw marketplace portable exports
+        # Regenerates the marketplace export bundle and verifies the build
+        # just shipped it: one entry per cataloged resource, metadata-only
+        # policy intact, every export present in the built Pages output.
+        run: python3 scripts/generate_openclaw_exports.py --verify-build
       - name: Render SSR pages
         env:
           VITE_SUPABASE_URL: https://huadtiuuoiriqrjpjxhr.supabase.co
@@ -101,6 +216,33 @@ jobs:
               });
             }
 
+  roster-smoke:
+    name: AI Factory roster smoke (live)
+    # Runs on every pull request and after every merge to main. Deliberately a
+    # separate job from `validate`: the required "Build & validate" status is
+    # published from `needs.validate.result`, so a brief production outage can
+    # never turn that required check red. The script itself retries transient
+    # failures (connection errors, timeouts, 5xx, 429) with exponential backoff
+    # and only fails on a real, reproducible regression.
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Roster pages, assets and legacy .html URLs
+        # On a pull request this probes PRODUCTION, which by definition does not
+        # yet serve the exports this PR adds — so the export URLs are skipped
+        # here and covered instead by the offline contract test in `validate`,
+        # which inspects the built export set. After merge to main the exports
+        # are live, so the full check (pages + every export URL) runs there.
+        run: |
+          python3 scripts/validate_ai_factory_roster.py \
+            --base-url https://open-connect.site \
+            --attempts 5 \
+            --timeout 20 \
+            --backoff 3 \
+            ${{ github.event_name == 'pull_request' && '--skip-exports' || '' }}
+
   smoke-production:
     name: Production smoke (post-merge)
     runs-on: ubuntu-latest
@@ -143,3 +285,13 @@ jobs:
             echo "$p -> $effective_url $code"
             test "$code" = "200"
           done
+      - name: AI Factory roster pages
+        # The roster is static HTML, not an SPA route, and has regressed twice
+        # (exact-path 404s, then a 308/307 canonicalization loop). Assert each
+        # page's own HTML, not just its status code.
+        run: |
+          python3 scripts/validate_ai_factory_roster.py \
+            --base-url https://open-connect.site \
+            --attempts 5 \
+            --timeout 20 \
+            --backoff 3

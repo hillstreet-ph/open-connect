@@ -5,6 +5,7 @@ import {
   Terminal,
   Smartphone,
   Boxes,
+  Bot,
   CalendarClock,
   FolderKanban,
   LayoutDashboard,
@@ -58,6 +59,7 @@ const PRIMARY: Item[] = [
 
 const WORK: Item[] = [
   { to: "/studio", label: "Studio", icon: Sparkles },
+  { to: "/copilot", label: "Copilot", icon: Bot },
   { to: "/tasks", label: "Task", icon: ListTodo },
   { to: "/schedule", label: "Schedules", icon: CalendarClock },
   { to: "/automations", label: "Automations", icon: Workflow },

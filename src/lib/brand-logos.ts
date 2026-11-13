@@ -40,7 +40,23 @@ export type BrandKey =
   | "composio"
   | "onepassword"
   | "litellm"
-  | "multion";
+  | "multion"
+  | "railway"
+  | "sentry"
+  | "databricks"
+  | "dockerhub"
+  | "docker"
+  | "google_sheets"
+  | "google_docs"
+  | "google_photos"
+  | "google_gemini"
+  | "googlegemini"
+  | "google_super"
+  | "cloudflare_api_key"
+  | "cloudflare_browser_rendering"
+  | "proton"
+  | "proton_pass"
+  | "proton_drive";
 
 const ICON_SLUG: Record<string, string> = {
   huggingface: "huggingface",
@@ -82,6 +98,22 @@ const ICON_SLUG: Record<string, string> = {
   "1password": "1password",
   litellm: "openai",
   multion: "googlechrome",
+  railway: "railway",
+  sentry: "sentry",
+  databricks: "databricks",
+  dockerhub: "docker",
+  docker: "docker",
+  google_sheets: "googlesheets",
+  google_docs: "googledocs",
+  google_photos: "googlephotos",
+  google_super: "google",
+  google_gemini: "googlegemini",
+  googlegemini: "googlegemini",
+  cloudflare_api_key: "cloudflare",
+  cloudflare_browser_rendering: "cloudflare",
+  proton: "proton",
+  proton_pass: "proton",
+  proton_drive: "protondrive",
 };
 
 export const BRAND_COLOR: Record<string, string> = {
@@ -120,6 +152,21 @@ export const BRAND_COLOR: Record<string, string> = {
   onepassword: "#0095FF",
   litellm: "#0EA5E9",
   multion: "#4285F4",
+  railway: "#0B0D0E",
+  sentry: "#362D59",
+  databricks: "#FF3621",
+  dockerhub: "#2496ED",
+  docker: "#2496ED",
+  google_sheets: "#0F9D58",
+  google_docs: "#4285F4",
+  google_photos: "#4285F4",
+  google_gemini: "#8E75B2",
+  googlegemini: "#8E75B2",
+  cloudflare_api_key: "#F38020",
+  cloudflare_browser_rendering: "#F38020",
+  proton: "#6D4AFF",
+  proton_pass: "#6D4AFF",
+  proton_drive: "#6D4AFF",
 };
 
 export function brandLogoUrl(provider: string): string {

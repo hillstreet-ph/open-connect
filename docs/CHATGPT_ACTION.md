@@ -26,3 +26,8 @@ registration, OAuth consent, and the ChatGPT-generated redirect URI must be comp
 - Undocumented action names are rejected before execution.
 - Raw credentials are never accepted; connection writes require opaque `credential://` references.
 - All operations execute through the existing MCP gateway, preserving audit logging and scope checks.
+- `list_credential_metadata` and `list_developer_access` need the optional `secrets:read` scope in
+  addition to the read scopes. Grant it only if the GPT should read credential and Developer-page
+  metadata (tokens, OAuth apps, authorized apps, webhooks, notification channels).
+  `list_developer_access` also rejects keys restricted to an organization, workspace, or project.
+  Secret values are never returned.

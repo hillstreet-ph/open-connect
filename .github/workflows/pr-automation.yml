@@ -1,11 +1,31 @@
 name: PR Automation - auto-fix, auto-update, auto-merge, auto-deploy
 
 # Automatic pipeline for every pull request targeting main:
-#   1. autofix: applies Prettier and ESLint fixes and pushes them to the PR branch
+#   1. autofix: applies ESLint/Prettier fixes and pushes them to the PR branch
 #   2. auto-update: keeps open PR branches up to date with main
 #   3. auto-merge: enables GitHub auto-merge so PRs merge as soon as required checks pass
 #   4. auto-deploy: deployment to production happens automatically on merge to main
 #      (Cloudflare Pages and Zeabur are already bound to the main branch).
+#
+# SCOPE CONTRACT (do not narrow this again):
+#   The required "Build & validate" check runs `bun run lint`, which is `eslint .`
+#   over the whole repository. The autofix job MUST therefore fix the same scope.
+#   A previous version ran `prettier --write "src/**/*.{ts,tsx,css}"` only, so
+#   lint errors living outside src/ (e.g. scripts/ai-factory-views/*.js) were
+#   never touched, `git diff --cached` stayed empty, and the job reported
+#   "No automatic fixes required" while CI failed on 125 auto-fixable errors.
+#
+#   PR #980 widened the eslint call but left the prettier call narrowed to src/,
+#   which is the same bug half-fixed. Both calls are now repo-wide.
+#
+#   This contract is ENFORCED, not just documented: scripts/validate_autofix_scope.py
+#   parses this file and package.json and fails the required "Build & validate"
+#   check if the two scopes ever drift apart again.
+#
+# FAILURE CONTRACT:
+#   The job fails (non-zero exit) whenever it cannot push, or whenever fixable
+#   lint errors remain after the fix pass. It never reports success while
+#   leaving the branch unchanged with outstanding fixable errors.
 #
 # NOTE: pushes made with the default GITHUB_TOKEN do not re-trigger CI workflows.
 # For fully automatic validation after auto-fixes, create a PAT with
@@ -35,13 +55,16 @@ jobs:
     # Same-repo PRs only: never push with repository credentials to a fork.
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout PR head
         uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
+          # Persist the automation token so the push below is authenticated and
+          # the resulting commit re-triggers CI (GITHUB_TOKEN pushes do not).
+          token: ${{ secrets.AUTOMATION_TOKEN || github.token }}
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -51,29 +74,64 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Apply automatic fixes
+        # Repo-wide, matching the scope of `bun run lint` (eslint .) that the
+        # required "Build & validate" check runs. No `|| true`: a crash here
+        # must fail the job rather than be swallowed.
         run: |
-          bunx prettier --write "src/**/*.{ts,tsx,css}"
-          bunx eslint src --fix --no-error-on-unmatched-pattern || true
+          bunx prettier --write "**/*.{ts,tsx,js,mjs,cjs}"
+          bunx eslint . --fix
+
+      - name: Verify no fixable lint errors remain
+        # Re-run the exact command CI runs. If anything is still reported, the
+        # autofix did not do its job and the job must fail loudly.
+        run: |
+          set +e
+          bunx eslint . > /tmp/lint-after.txt 2>&1
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ]; then
+            echo "::error::Auto-fix could not resolve all lint errors. Remaining output:"
+            cat /tmp/lint-after.txt
+            echo "::error::The autofix job refuses to report success while lint still fails."
+            exit 1
+          fi
+          echo "Lint is clean after auto-fix."
 
       - name: Commit and push fixes
         env:
-          AUTOMATION_TOKEN: ${{ secrets.AUTOMATION_TOKEN }}
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
           REPOSITORY: ${{ github.repository }}
         run: |
+          set -euo pipefail
           git config user.name "open-connect-autofixer[bot]"
           git config user.email "actions@users.noreply.github.com"
           git add -A
+
           if git diff --cached --quiet; then
-            echo "No automatic fixes required."
+            # Nothing to commit. This is only acceptable because the previous
+            # step proved lint is already clean.
+            echo "No automatic fixes required (lint already clean)."
             exit 0
           fi
+
           git commit -m "style: apply automatic formatting and lint fixes"
-          if [ -n "$AUTOMATION_TOKEN" ]; then
-            git push "https://x-access-token:$AUTOMATION_TOKEN@github.com/$REPOSITORY.git" "HEAD:$HEAD_REF"
-          else
-            git push
+          local_head="$(git rev-parse HEAD)"
+          echo "Local head after commit: $local_head"
+
+          if ! git push origin "HEAD:$HEAD_REF"; then
+            echo "::error::Failed to push auto-fix commit to $HEAD_REF."
+            exit 1
           fi
+
+          # Prove the push actually landed: the remote branch head must equal
+          # the commit we just created. A silent no-op push is a failure.
+          remote_head="$(git ls-remote origin "refs/heads/$HEAD_REF" | awk '{print $1}')"
+          echo "Remote head after push:  $remote_head"
+          if [ "$remote_head" != "$local_head" ]; then
+            echo "::error::Push reported success but remote head ($remote_head) != local head ($local_head)."
+            exit 1
+          fi
+          echo "Verified: auto-fix commit $local_head is now the head of $HEAD_REF."
 
   auto-update-and-merge:
     name: Update branches and enable auto-merge

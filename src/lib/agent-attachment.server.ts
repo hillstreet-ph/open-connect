@@ -17,7 +17,7 @@ export async function extractAgentAttachment(
     throw new Error("Choose a named file up to 4 MB.");
   const size = bytes.length;
   let text: string;
-  let kind: "pdf" | "text" = "text";
+  let kind: "pdf" | "text" | "file" = "text";
   if (/\.pdf$/i.test(filename)) {
     if (new TextDecoder().decode(bytes.slice(0, 5)) !== "%PDF-")
       throw new Error("This file is not a valid PDF.");
@@ -31,19 +31,21 @@ export async function extractAgentAttachment(
       await pdf.loadingTask.destroy();
     }
   } else {
-    if (!/\.(txt|md|csv|json|log)$/i.test(filename))
-      throw new Error(
-        "Supported files: text, Markdown, CSV, JSON, logs and text-based PDF. Images and scanned PDFs are not supported yet.",
-      );
     try {
       text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+      if (text.includes("\0") || !text.trim()) throw new Error("binary attachment");
     } catch {
-      throw new Error("Use a UTF-8 text file.");
+      kind = "file";
+      text =
+        "Reference file: " +
+        filename +
+        " (" +
+        String(size) +
+        " bytes). This file type is not text-extractable in chat, so it is attached as reference metadata only. Ask the user to describe or paste key content when detailed analysis is needed.";
     }
-    if (text.includes("\0")) throw new Error("Binary files cannot be used as text attachments.");
   }
   text = redactDataText(text.trim());
-  if (!text) throw new Error("No readable text was found. Scanned PDFs need OCR before attaching.");
+  if (!text) throw new Error("No readable content was found in this file.");
   if (text.length > 24000)
     throw new Error("File exceeds 24,000 text characters. Attach a shorter excerpt.");
   return { name: filename, text, kind, size };
