@@ -151,6 +151,16 @@ jobs:
         # tests pin the HTTP fallback so /ai-factory/mcp cannot regress to
         # -32603 "Static asset binding is unavailable" in production.
         run: node --experimental-strip-types --test src/lib/ai-factory-mcp.test.ts
+      - name: OpenClaw export merge contract tests
+        # Offline: pins the cross-registry merge in the export generator. A
+        # resource cataloged in both the primary registry and an ingest
+        # registry must fold to ONE entry, and risk must escalate to the more
+        # severe label -- never downgrade. That second half is the one that
+        # matters: openclaw/parallel-plugin is high risk in the primary
+        # registry and medium in the ingest registry, so a "keep the first"
+        # fix would have published a high-risk plugin as medium. A slug
+        # repeated *inside* one registry must still fail the build.
+        run: python3 scripts/generate_openclaw_exports_test.py
       - name: OpenClaw marketplace portable exports
         # Regenerates the marketplace export bundle and verifies the build
         # just shipped it: one entry per cataloged resource, metadata-only
