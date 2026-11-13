@@ -995,7 +995,8 @@
       "url": "https://api.github.com/repos/mistralai/mistral-vibe",
       "catalog_url": "https://github.com/mistralai/mistral-vibe",
       "group": "agent-platforms",
-      "required": true,
+      "required": false,
+      "notes": "Optional: the mistralai GitHub organization enforces an IP allow list, so GitHub-hosted runners get HTTP 403. Failures are still reported in candidates.json.",
       "categories": [
         "mistral",
         "agents",
