@@ -15,6 +15,7 @@ import {
   resolveAutoFreeRoutes,
   resolveModelId,
   resolveUserUpstreams,
+  type AutoFreeRoute,
 } from "@/lib/gateway.server";
 
 /** Open-Auto pyramid routing: free-first tiered selection across upstreams. */
@@ -30,6 +31,10 @@ const CAPABILITY_ALIASES = new Set(
     (name) => [name, `open-connect/${name}`],
   ),
 );
+
+/** Paid routes a capability alias tries before its free fallback, and their per-call timeout. */
+const CAPABILITY_PAID_ATTEMPTS = 3;
+const CAPABILITY_PAID_TIMEOUT_MS = 20_000;
 
 /** Billing, rate-limit, and upstream availability failures move on to the next route. */
 function shouldTryNextRoute(status: number): boolean {
@@ -197,21 +202,18 @@ export const Route = createFileRoute("/v1/chat/completions")({
           : upstreams.filter((upstream) => upstream.name !== CLOUDFLARE_AI_UPSTREAM_NAME);
         const capabilityFallback =
           !autoFree && !streaming && CAPABILITY_ALIASES.has(requestedModel.toLowerCase());
-        const routes = autoFree
+        const paidRoutes = routableUpstreams.map((upstream) => ({
+          upstream,
+          model: modelForUpstream(resolveModelId(requestedModel), upstream.name),
+        }));
+        const routes: Array<AutoFreeRoute & { freeFallback?: boolean }> = autoFree
           ? await resolveAutoFreeRoutes(upstreams)
-          : [
-              ...routableUpstreams.map((upstream) => ({
-                upstream,
-                model: modelForUpstream(resolveModelId(requestedModel), upstream.name),
-              })),
-              ...(capabilityFallback
-                ? (await resolveAutoFreeRoutes(upstreams)).map((route) => ({
-                    ...route,
-                    freeFallback: true,
-                  }))
-                : []),
-            ];
-        if (routes.length === 0) {
+          : // A capability alias tries a few paid routes, then its free fallback (added lazily
+            // below), so one request stays well inside the Workers subrequest and time limits.
+            capabilityFallback
+            ? paidRoutes.slice(0, CAPABILITY_PAID_ATTEMPTS)
+            : paidRoutes;
+        if (routes.length === 0 && !capabilityFallback) {
           return gatewayError(
             "No connected OpenRouter free router or zero-cost LiteLLM model is available.",
             503,
@@ -223,9 +225,18 @@ export const Route = createFileRoute("/v1/chat/completions")({
 
         let deadline = Date.now() + 35_000;
         let fallbackStarted = false;
-        for (const route of routes) {
+        let fallbackAppended = false;
+        for (let index = 0; ; index += 1) {
+          if (index >= routes.length) {
+            if (!capabilityFallback || fallbackAppended) break;
+            fallbackAppended = true;
+            const freeRoutes = await resolveAutoFreeRoutes(upstreams);
+            routes.push(...freeRoutes.map((route) => ({ ...route, freeFallback: true })));
+            if (index >= routes.length) break;
+          }
+          const route = routes[index]!;
           // Free routes (Auto, or a capability alias's fallback) share one bounded time budget.
-          const freeFallback = "freeFallback" in route && route.freeFallback === true;
+          const freeFallback = route.freeFallback === true;
           if (freeFallback && !fallbackStarted) {
             fallbackStarted = true;
             deadline = Date.now() + 35_000;
@@ -265,7 +276,9 @@ export const Route = createFileRoute("/v1/chat/completions")({
               signal: AbortSignal.timeout(
                 freeRoute && !streaming
                   ? Math.max(1, Math.min(12_000, deadline - Date.now()))
-                  : 120_000,
+                  : capabilityFallback
+                    ? CAPABILITY_PAID_TIMEOUT_MS
+                    : 120_000,
               ),
             });
 
