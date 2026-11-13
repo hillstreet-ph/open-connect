@@ -302,8 +302,9 @@ export const Route = createFileRoute("/v1/chat/completions")({
 
             if (!response.ok) {
               lastError = { status: response.status, body: result };
-              // try the next route on billing, rate-limit, 5xx, or unknown-model failures
-              if (autoFree || shouldTryNextRoute(response.status)) continue;
+              // try the next route on billing, rate-limit, 5xx, or unknown-model failures; a
+              // capability alias keeps going so its free fallback routes are always reached
+              if (autoFree || capabilityFallback || shouldTryNextRoute(response.status)) continue;
               await logGatewayRequest({
                 key,
                 endpoint: "/v1/chat/completions",
