@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import {
@@ -316,12 +317,28 @@ const snapshot =
         selectedSources.map((source) => source.id),
       )
     : results;
-const candidates = deduplicateCandidates(deduplicatePlatformCandidates(snapshot)).map(
-  (candidate) => ({
-    ...candidate,
-    fingerprint: registryFingerprint(candidate),
-  }),
-);
+// Distinct pages can share a title (and so a normalized slug). URLs are already unique after
+// deduplication, so keep the first slug and give later collisions a stable URL-derived suffix.
+function withUniqueSlugs(rows) {
+  const seen = new Set();
+  return rows.map((candidate) => {
+    if (!seen.has(candidate.slug)) {
+      seen.add(candidate.slug);
+      return candidate;
+    }
+    const suffix = createHash("sha256").update(candidate.canonicalUrl).digest("hex").slice(0, 8);
+    const slug = `${candidate.slug}-${suffix}`;
+    seen.add(slug);
+    return { ...candidate, slug };
+  });
+}
+
+const candidates = withUniqueSlugs(
+  deduplicateCandidates(deduplicatePlatformCandidates(snapshot)),
+).map((candidate) => ({
+  ...candidate,
+  fingerprint: registryFingerprint(candidate),
+}));
 
 const enabledSources = registry.sources.filter(isSourceEnabled).length;
 const minimumSources = registry.default_policy.minimum_successful_sources ?? enabledSources;
