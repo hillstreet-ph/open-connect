@@ -9,6 +9,11 @@ import {
   summarizeRun,
   requiresBrowserSignIn,
   normalizeWebSearch,
+  normalizeResearch,
+  normalizeMonitor,
+  normalizeDataset,
+  summarizeResearch,
+  tinyFishErrorMessage,
   normalizeWebFetch,
   summarizeFetch,
   TINYFISH_BROWSER_API,
@@ -436,5 +441,108 @@ describe("web search and fetch", () => {
     expect(summary.results[0]!.text.startsWith("xxxxxxxxxx")).toBe(true);
     expect(summary.results[0]!.final_url).toBe("https://a.com");
     expect(summary.errors).toEqual([{ url: "https://b.com", error: "timeout" }]);
+  });
+});
+
+describe("research, monitors and datasets", () => {
+  test("research defaults to deep mode and validates the question", () => {
+    expect(normalizeResearch({ query: " Compare storage " })).toEqual({
+      query: "Compare storage",
+      mode: "deep",
+    });
+    expect(normalizeResearch({ query: "x", mode: "max", output_language: "pt-BR" }).mode).toBe(
+      "max",
+    );
+    expect(() => normalizeResearch({ query: "" })).toThrow("research question");
+    expect(() => normalizeResearch({ query: "x".repeat(10_001) })).toThrow("10,000");
+  });
+
+  test("research summary reads the report from deep_result.result", () => {
+    const summary = summarizeResearch({
+      research_run_id: "r1",
+      status: "COMPLETED",
+      query: "q",
+      deep_result: { result: "Report", citations: ["https://a.com"] },
+    });
+    expect(summary).toMatchObject({
+      terminal: true,
+      report: "Report",
+      citations: ["https://a.com"],
+    });
+    expect(
+      summarizeResearch({ research_run_id: "r2", status: "RUNNING", query: "q" }).terminal,
+    ).toBe(false);
+  });
+
+  test("monitors accept public pages or topics on a five-field cron only", () => {
+    expect(
+      normalizeMonitor({ type: "fetch", url: "https://a.com/pricing", schedule_cron: "0 9 * * *" }),
+    ).toEqual({
+      type: "fetch",
+      config: { url: "https://a.com/pricing", format: "markdown" },
+      schedule_cron: "0 9 * * *",
+    });
+    expect(
+      normalizeMonitor({
+        type: "search",
+        query: "EV policy",
+        schedule_cron: "CRON_TZ=America/New_York 0 9 * * 1-5",
+        name: "EV",
+      }).config,
+    ).toEqual({ query: "EV policy", recency_minutes: 1440, result_limit: 5 });
+    expect(() => normalizeMonitor({ type: "x", schedule_cron: "0 9 * * *" })).toThrow();
+    expect(() =>
+      normalizeMonitor({ type: "fetch", url: "http://127.0.0.1", schedule_cron: "0 9 * * *" }),
+    ).toThrow("Private");
+    expect(() =>
+      normalizeMonitor({ type: "fetch", url: "https://a.com", schedule_cron: "daily" }),
+    ).toThrow("cron");
+    expect(() =>
+      normalizeMonitor({
+        type: "fetch",
+        url: "https://a.com",
+        schedule_cron: "0 9 * * *",
+        webhook_url: "http://localhost/hook",
+      }),
+    ).toThrow("Private");
+  });
+
+  test("datasets bound prompt length and row count", () => {
+    expect(normalizeDataset({ prompt: "Coffee shops in Oakland" })).toEqual({
+      prompt: "Coffee shops in Oakland",
+      target_rows: 25,
+    });
+    expect(() => normalizeDataset({ prompt: "ab" })).toThrow("3 to 15,000");
+    expect(() => normalizeDataset({ prompt: "abc", target_rows: 251 })).toThrow("1-250");
+  });
+});
+
+describe("error handling", () => {
+  test("maps auth, wallet, rate-limit and outage statuses to actionable messages", () => {
+    expect(tinyFishErrorMessage(401)).toContain("Connections");
+    expect(tinyFishErrorMessage(402)).toContain("wallet");
+    expect(tinyFishErrorMessage(429)).toContain("rate limit");
+    expect(tinyFishErrorMessage(403, "Research is not enabled")).toContain(
+      "Research is not enabled",
+    );
+    expect(tinyFishErrorMessage(503)).toContain("temporarily unavailable");
+    expect(tinyFishErrorMessage(400, "Bad query")).toBe("Bad query");
+  });
+
+  test("network failures and timeouts surface as TinyFish errors, not raw exceptions", async () => {
+    const down = (async () => {
+      throw new TypeError("fetch failed");
+    }) as unknown as typeof fetch;
+    await expect(createTinyFishClient(KEY, down).listMonitors()).rejects.toThrow(
+      "could not be reached",
+    );
+    const slow = (async () => {
+      throw Object.assign(new Error("timeout"), { name: "TimeoutError" });
+    }) as unknown as typeof fetch;
+    await expect(createTinyFishClient(KEY, slow).listDatasets()).rejects.toThrow(
+      "did not respond in time",
+    );
+    const limited = (async () => new Response("{}", { status: 429 })) as unknown as typeof fetch;
+    await expect(createTinyFishClient(KEY, limited).getWallet()).rejects.toThrow("rate limit");
   });
 });

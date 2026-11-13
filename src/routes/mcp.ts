@@ -812,6 +812,99 @@ const PLATFORM_TOOLS: McpTool[] = [
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
   },
   {
+    name: "cloud_browser_research_start",
+    description:
+      "Start a source-backed TinyFish research report on the user's own account (deep: 5-20 min, max: 5-45 min). Returns research_run_id; poll cloud_browser_research_get every 30-60s until terminal. Uses the daily allowance, then the TinyFish wallet.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        query: { type: "string", minLength: 1, maxLength: 10000 },
+        mode: { type: "string", enum: ["deep", "max"] },
+        output_language: { type: "string", description: "BCP 47 tag, e.g. en." },
+      },
+      required: ["query"],
+      additionalProperties: false,
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
+  },
+  {
+    name: "cloud_browser_research_get",
+    description:
+      "Read a research run: status, report text and citations. Omit research_run_id to list recent runs.",
+    inputSchema: {
+      type: "object",
+      properties: { research_run_id: { type: "string" } },
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+  },
+  {
+    name: "cloud_browser_monitors",
+    description: "List the user's TinyFish page and topic monitors with status and schedule.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+  },
+  {
+    name: "cloud_browser_monitor_create",
+    description:
+      "Create a scheduled monitor: type fetch watches one public URL, type search watches a topic. schedule_cron is a five-field UTC cron (topic monitors at least 30 minutes apart). Creating runs a baseline immediately.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        type: { type: "string", enum: ["fetch", "search"] },
+        url: { type: "string", description: "Page URL for type fetch." },
+        query: { type: "string", description: "Topic query for type search." },
+        schedule_cron: { type: "string", description: "e.g. 0 9 * * *" },
+        name: { type: "string", maxLength: 100 },
+        purpose: { type: "string", maxLength: 2000, description: "Which change matters." },
+      },
+      required: ["type", "schedule_cron"],
+      additionalProperties: false,
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
+  },
+  {
+    name: "cloud_browser_dataset_create",
+    description:
+      "Create a TinyFish dataset from a one-sentence description and fill it from the web (billed per row; only when the user asks for a table of many entities). Returns the dataset id; read rows with cloud_browser_dataset_rows.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        prompt: { type: "string", minLength: 3, maxLength: 15000 },
+        target_rows: { type: "integer", minimum: 1, maximum: 250 },
+      },
+      required: ["prompt"],
+      additionalProperties: false,
+    },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
+  },
+  {
+    name: "cloud_browser_dataset_rows",
+    description:
+      "Read a dataset's status and up to 200 rows. Omit dataset_id to list recent datasets.",
+    inputSchema: {
+      type: "object",
+      properties: { dataset_id: { type: "string" } },
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+  },
+  {
     name: "cloud_browser_tools",
     description:
       "List supported Playwright browser actions and their argument schemas. One engine, isolated session per authenticated user. No alternate browser fallback.",
@@ -1396,6 +1489,12 @@ const TINYFISH_TOOLS = new Set([
   "cloud_browser_list_runs",
   "cloud_browser_cancel_run",
   "cloud_browser_profiles",
+  "cloud_browser_research_start",
+  "cloud_browser_research_get",
+  "cloud_browser_monitors",
+  "cloud_browser_monitor_create",
+  "cloud_browser_dataset_create",
+  "cloud_browser_dataset_rows",
 ]);
 
 /** Cloud browser (TinyFish) tools run with the caller's own TinyFish key from the vault. */
@@ -1475,6 +1574,56 @@ async function handleTinyFishTool(userId: string, name: string, args: Record<str
         cookies: domain.cookie_count ?? 0,
       })),
     };
+  } else if (name === "cloud_browser_research_start") {
+    const started = await client.startResearch(tf.normalizeResearch(args));
+    if (!started.research_run_id) throw new Error("TinyFish did not start the research run.");
+    payload = {
+      research_run_id: started.research_run_id,
+      status: "QUEUED",
+      view_url: "https://open-connect.site/cloud-browser?section=research",
+    };
+  } else if (name === "cloud_browser_research_get") {
+    payload = args["research_run_id"]
+      ? tf.summarizeResearch(await client.getResearch(tf.assertResearchId(args["research_run_id"])))
+      : { runs: ((await client.listResearch(10)).data ?? []).map(tf.summarizeResearch) };
+  } else if (name === "cloud_browser_monitors") {
+    const { monitors } = await client.listMonitors();
+    payload = {
+      monitors: (monitors ?? []).map((monitor) => ({
+        id: monitor.id,
+        name: monitor.name,
+        type: monitor.type,
+        target: String(monitor.config["url"] ?? monitor.config["query"] ?? ""),
+        schedule_cron: monitor.schedule_cron,
+        status: monitor.status,
+      })),
+    };
+  } else if (name === "cloud_browser_monitor_create") {
+    const created = await client.createMonitor(tf.normalizeMonitor(args));
+    payload = {
+      id: created.monitor.id,
+      name: created.monitor.name,
+      status: created.monitor.status,
+      schedule_cron: created.monitor.schedule_cron,
+      view_url: "https://open-connect.site/cloud-browser?section=monitor",
+    };
+  } else if (name === "cloud_browser_dataset_create") {
+    payload = tf.summarizeDataset(await client.createDataset(tf.normalizeDataset(args)));
+  } else if (name === "cloud_browser_dataset_rows") {
+    if (!args["dataset_id"]) {
+      payload = { datasets: ((await client.listDatasets(10)).data ?? []).map(tf.summarizeDataset) };
+    } else {
+      const datasetId = tf.assertResourceId(args["dataset_id"], "dataset id");
+      const [dataset, rows] = await Promise.all([
+        client.getDataset(datasetId),
+        client.datasetRows(datasetId, 200),
+      ]);
+      payload = {
+        ...tf.summarizeDataset(dataset),
+        rows: (rows.rows ?? []).map((row) => row.data),
+        truncated: rows.truncated === true,
+      };
+    }
   } else {
     throw new Error("Unknown cloud browser tool.");
   }
@@ -1671,6 +1820,12 @@ const TOOL_SCOPES: Record<string, string> = {
   cloud_browser_list_runs: "connections:read",
   cloud_browser_cancel_run: "tools:invoke",
   cloud_browser_profiles: "connections:read",
+  cloud_browser_research_start: "tools:invoke",
+  cloud_browser_research_get: "connections:read",
+  cloud_browser_monitors: "connections:read",
+  cloud_browser_monitor_create: "tools:invoke",
+  cloud_browser_dataset_create: "tools:invoke",
+  cloud_browser_dataset_rows: "connections:read",
   e2b_health: "connections:read",
   e2b_list_sandboxes: "connections:read",
   e2b_create_sandbox: "tools:invoke",
