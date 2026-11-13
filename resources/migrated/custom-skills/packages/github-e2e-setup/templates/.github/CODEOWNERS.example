@@ -1,0 +1,4 @@
+# Replace placeholders with real users/teams before enabling required CODEOWNERS review.
+# .github/workflows/ @OWNER_OR_TEAM
+# migrations/ @OWNER_OR_TEAM
+# infra/ @OWNER_OR_TEAM

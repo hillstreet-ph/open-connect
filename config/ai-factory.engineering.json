@@ -1,0 +1,69 @@
+{
+  "schema_version": "1.0.0",
+  "department_id": "engineering",
+  "display_name": "Software Engineering",
+  "status": "proposed",
+  "execution_mode": "proposal_only",
+  "lead": "open-agentDev",
+  "agents": [
+    {
+      "id": "open-agentDev",
+      "role": "Engineering Lead",
+      "supervisor_id": "agency-director"
+    },
+    {
+      "id": "open-agentDev-solution-architect",
+      "role": "Solution Architect",
+      "supervisor_id": "open-agentDev"
+    },
+    {
+      "id": "open-agentDev-frontend-engineer",
+      "role": "Frontend Engineer",
+      "supervisor_id": "open-agentDev"
+    },
+    {
+      "id": "open-agentDev-backend-engineer",
+      "role": "Backend Engineer",
+      "supervisor_id": "open-agentDev"
+    },
+    {
+      "id": "open-agentDev-mobile-engineer",
+      "role": "Mobile Engineer",
+      "supervisor_id": "open-agentDev"
+    },
+    {
+      "id": "open-agentDev-devops-engineer",
+      "role": "Devops Engineer",
+      "supervisor_id": "open-agentDev"
+    },
+    {
+      "id": "open-agentDev-qa-automation",
+      "role": "Qa Automation",
+      "supervisor_id": "open-agentDev"
+    },
+    {
+      "id": "open-agentDev-documentation-engineer",
+      "role": "Documentation Engineer",
+      "supervisor_id": "open-agentDev"
+    }
+  ],
+  "workflows": [
+    "feature-delivery",
+    "bug-fix",
+    "infrastructure-change",
+    "code-review",
+    "incident-response"
+  ],
+  "security": {
+    "default_deny": true,
+    "credential_mode": "reference_only",
+    "production_deploy": "approval_required",
+    "merge": "approval_required",
+    "audit_required": true
+  },
+  "integration": {
+    "runtime_adapter": "not_implemented",
+    "ui_binding": "not_implemented",
+    "persistent_registration": "not_implemented"
+  }
+}

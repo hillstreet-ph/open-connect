@@ -1,0 +1,54 @@
+begin;
+do $$
+declare personal uuid; shared uuid; v1 uuid; v2 uuid; c1 uuid; c2 uuid; result jsonb;
+ config jsonb := '{"name":"Fixture specialist","department":"engineering","role":"Developer","instructions":"Use only granted capabilities.","sourceResourceId":"20000000-0000-4000-8000-000000000001"}';
+begin
+ execute 'set local role anon';
+ begin perform count(*) from public.workforce_agents; raise exception 'TEST FAILED anonymous read'; exception when insufficient_privilege then null; end;
+ execute 'set local role authenticated';
+ perform set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001',true);
+ result=public.save_workforce_agent(null,null,'fixture-private',true,'30000000-0000-4000-8000-000000000001',config,null);
+ personal=(result->>'agent_id')::uuid;
+ begin perform public.save_workforce_agent(null,null,'duplicate-source',false,null,config,null); raise exception 'TEST FAILED duplicate source'; exception when unique_violation then null; end;
+ v1=(result->>'version_id')::uuid;
+ perform public.activate_workforce_agent(personal,v1,null);
+ c1=public.launch_workforce_chat(personal);
+ result=public.save_workforce_agent(personal,null,'fixture-private',true,null,config||'{"instructions":"Second immutable version."}',1);
+ v2=(result->>'version_id')::uuid;
+ if (select workforce_version_id from public.agent_chats where id=c1)<>v1 then raise exception 'Pinned chat changed'; end if;
+ begin perform public.save_workforce_agent(personal,null,'fixture-private',true,null,config,1); raise exception 'TEST FAILED stale edit'; exception when others then if sqlerrm not like 'Specialist changed%' then raise; end if; end;
+ begin update public.workforce_agent_versions set config='{}' where id=v1; raise exception 'TEST FAILED mutable history'; exception when insufficient_privilege then null; end;
+ begin insert into public.agent_chats(user_id,title,workforce_agent_id,workforce_version_id) values(auth.uid(),'Forged draft',personal,v2); raise exception 'TEST FAILED draft chat'; exception when others then if sqlerrm not like 'Specialist version is not active%' then raise; end if; end;
+ perform public.activate_workforce_agent(personal,v2,v1);
+ begin perform public.activate_workforce_agent(personal,v1,v1); raise exception 'TEST FAILED stale activation'; exception when others then if sqlerrm not like 'Specialist changed%' then raise; end if; end;
+ begin update public.agent_chats set workforce_agent_id=null,workforce_version_id=null where id=c1; raise exception 'TEST FAILED chat rebound'; exception when others then if sqlerrm<>'Specialist chat identity is immutable' then raise; end if; end;
+ begin update public.workforce_agents set project_id='10000000-0000-4000-8000-000000000001' where id=personal; raise exception 'TEST FAILED scope moved'; exception when others then if sqlerrm<>'Workforce identity and scope are immutable' then raise; end if; end;
+ result=public.save_workforce_agent(null,'10000000-0000-4000-8000-000000000001','fixture-project',true,null,config,null);
+ shared=(result->>'agent_id')::uuid;
+ perform public.activate_workforce_agent(shared,(result->>'version_id')::uuid,null);
+ perform set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000002',true);
+ if (select count(*) from public.workforce_agents where id=personal)<>0 then raise exception 'Personal agent leaked'; end if;
+ if (select count(*) from public.workforce_agent_versions where agent_id=personal)<>0 then raise exception 'Personal versions leaked'; end if;
+ c2=public.launch_workforce_chat(shared);
+ if c2 is null then raise exception 'Project member could not launch'; end if;
+ begin perform public.save_workforce_agent(shared,null,'fixture-project',true,null,config,1); raise exception 'TEST FAILED member edit'; exception when others then if sqlerrm like 'TEST FAILED%' then raise; end if; end;
+ begin perform public.launch_workforce_chat(personal); raise exception 'TEST FAILED other owner launch'; exception when others then if sqlerrm not like 'Choose an active specialist%' then raise; end if; end;
+ perform set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001',true);
+ update public.workforce_agents set enabled=false where id=shared;
+ perform set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000002',true);
+ begin perform public.launch_workforce_chat(shared); raise exception 'TEST FAILED disabled launch'; exception when others then if sqlerrm not like 'Choose an active specialist%' then raise; end if; end;
+ perform set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000003',true);
+ if (select count(*) from public.workforce_agents)<>0 then raise exception 'Unrelated account leaked'; end if;
+ execute 'reset role';
+ -- Referenced legacy/source deletion preserves version origin and does not break parent cleanup.
+ delete from public.ai_agency_teams where id='30000000-0000-4000-8000-000000000001';
+ if (select legacy_team_id from public.workforce_agents where id=personal) is not null then raise exception 'Legacy cleanup failed'; end if;
+ delete from public.resources where id='20000000-0000-4000-8000-000000000001';
+ if (select source_resource_id from public.workforce_agents where id=personal) is null then raise exception 'Historical source origin lost'; end if;
+ -- Registry dependencies must not block account/project cleanup.
+ delete from public.projects where id='10000000-0000-4000-8000-000000000001';
+ if exists(select 1 from public.workforce_agents where id=shared) then raise exception 'Project cleanup failed'; end if;
+ delete from auth.users where id='00000000-0000-4000-8000-000000000001';
+ if exists(select 1 from public.workforce_agents where id=personal) then raise exception 'Account cleanup failed'; end if;
+end $$;
+rollback;

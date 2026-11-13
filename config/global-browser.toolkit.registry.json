@@ -1,0 +1,21 @@
+{
+  "id": "open-connect-global-browser",
+  "version": "2.0.0",
+  "scope": "authenticated-owner-isolated",
+  "engine": "playwright",
+  "package": "@playwright/mcp",
+  "tested_candidate_version": "0.0.83",
+  "local_command": "npx @playwright/mcp@latest",
+  "functions": ["cloud_browser_tools", "cloud_browser_call"],
+  "worker": "services/playwright-worker",
+  "policy": {
+    "alternate_engine_fallback": false,
+    "shared_cross_owner_context": false,
+    "idle_timeout_seconds": 900,
+    "max_sessions": 8,
+    "arbitrary_server_code": false,
+    "credential_values_in_chat": false,
+    "captcha": "human_handoff"
+  },
+  "sources": ["https://github.com/microsoft/playwright-mcp"]
+}

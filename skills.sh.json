@@ -1,0 +1,55 @@
+{
+  "$schema": "https://skills.sh/schemas/skills.sh.schema.json",
+  "groupings": [
+    {
+      "title": "Open-Connect Platform",
+      "skills": [
+        "auto",
+        "open-connect-agent",
+        "open-connect-control",
+        "open-connect-global-browser",
+        "claude-autonomous-e2e",
+        "hillstreet-integrations-mobile",
+        "zeabur-control"
+      ]
+    },
+    {
+      "title": "Vendored OpenClaw Skills",
+      "skills": [
+        "sag",
+        "gog",
+        "tmux",
+        "xurl",
+        "spike",
+        "notion",
+        "blucli",
+        "trello",
+        "gemini",
+        "github",
+        "oracle",
+        "clawhub",
+        "songsee",
+        "openhue",
+        "camsnap",
+        "weather",
+        "gifgrep"
+      ]
+    },
+    {
+      "title": "Vendored OpenClaw Agents",
+      "skills": [
+        "deslop",
+        "crabbox",
+        "auto-qa"
+      ]
+    },
+    {
+      "title": "Vendored Utilities",
+      "skills": [
+        "nexu-open-design",
+        "openrouter-models",
+        "uv"
+      ]
+    }
+  ]
+}

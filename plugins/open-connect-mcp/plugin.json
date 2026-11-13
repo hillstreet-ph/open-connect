@@ -1,0 +1,23 @@
+{
+  "author": {
+    "name": "App developer"
+  },
+  "description": "open-connect MCP",
+  "name": "dev-6acaeb867398819195374ebecb7c3a97",
+  "version": "1.2.0",
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "capabilities": [],
+        "category": "Other",
+        "defaultPrompt": null,
+        "developerName": "App developer",
+        "displayName": "open-connect MCP",
+        "longDescription": "open-connect MCP",
+        "shortDescription": "open-connect MCP"
+      },
+      "apps": "./.app.json"
+    }
+  }
+}

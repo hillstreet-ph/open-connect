@@ -1,0 +1,98 @@
+/**
+ * Canonical identity helpers for Open Connect.
+ * See docs/IDENTITY_MODEL.md
+ *
+ * Human roles: admin | developer | member across organization and projects
+ * Machine:    ai_client | ai_agent | service_account | api_client | mcp_client
+ *
+ * Legacy platform app_role (user/developer/publisher/admin/owner) remains for
+ * route guards until full cutover — map product language via these helpers.
+ */
+
+export type OrgRole = "admin" | "developer" | "member";
+export type ProjectRole = "admin" | "developer" | "member";
+export type PrincipalType =
+  "human" | "ai_client" | "ai_agent" | "service_account" | "api_client" | "mcp_client";
+
+export const ORG_ROLE_RANK: Record<OrgRole, number> = {
+  member: 1,
+  developer: 2,
+  admin: 3,
+};
+
+export const PROJECT_ROLE_RANK: Record<ProjectRole, number> = {
+  member: 1,
+  developer: 2,
+  admin: 3,
+};
+
+/** Map legacy app_role labels into org vocabulary for UI copy. */
+export function appRoleToOrgRole(role: string): OrgRole {
+  if (role === "owner" || role === "admin") return "admin";
+  if (role === "developer") return "developer";
+  return "member";
+}
+
+/** Map an organization role onto the canonical platform app_role. */
+export function orgRoleToAppRole(role: OrgRole): "admin" | "developer" | "user" {
+  if (role === "admin") return "admin";
+  if (role === "developer") return "developer";
+  return "user";
+}
+
+export function hasOrgRole(roles: OrgRole[], required: OrgRole): boolean {
+  return roles.some((r) => ORG_ROLE_RANK[r] >= ORG_ROLE_RANK[required]);
+}
+
+export function hasProjectRole(roles: ProjectRole[], required: ProjectRole): boolean {
+  return roles.some((r) => PROJECT_ROLE_RANK[r] >= PROJECT_ROLE_RANK[required]);
+}
+
+export function highestOrgRole(roles: OrgRole[]): OrgRole {
+  if (!roles.length) return "member";
+  return roles.reduce((best, r) => (ORG_ROLE_RANK[r] > ORG_ROLE_RANK[best] ? r : best), roles[0]!);
+}
+
+export function highestProjectRole(roles: ProjectRole[]): ProjectRole | null {
+  if (!roles.length) return null;
+  return roles.reduce(
+    (best, r) => (PROJECT_ROLE_RANK[r] > PROJECT_ROLE_RANK[best] ? r : best),
+    roles[0]!,
+  );
+}
+
+/** Surfaces for permission-aware navigation (target IA). */
+export type ProductSurface = "member_workspace" | "admin_console";
+
+export function surfacesForOrgRole(role: OrgRole): ProductSurface[] {
+  if (role === "admin") return ["member_workspace", "admin_console"];
+  return ["member_workspace"];
+}
+
+export const ORG_ROLE_LABEL: Record<OrgRole, string> = {
+  admin: "Admin",
+  developer: "Developer",
+  member: "Member",
+};
+
+export const PROJECT_ROLE_LABEL: Record<ProjectRole, string> = {
+  admin: "Admin",
+  developer: "Developer",
+  member: "Member",
+};
+
+/** Canonical ordered org/project role lists (lowest → highest privilege). */
+export const ORG_ROLES: OrgRole[] = ["member", "developer", "admin"];
+export const PROJECT_ROLES: ProjectRole[] = ["member", "developer", "admin"];
+
+export const ORG_ROLE_SUMMARY: Record<OrgRole, string> = {
+  admin: "Manage people, groups, settings, and project sharing within the organization.",
+  developer: "Build, publish, and verify shared resources and develop assigned projects.",
+  member: "Use the workspace, resources, and projects explicitly shared with you.",
+};
+
+export const PROJECT_ROLE_SUMMARY: Record<ProjectRole, string> = {
+  admin: "Manage this project, its collaborators, installs, and environments.",
+  developer: "Build project resources, tools, and project-scoped keys.",
+  member: "Use resources and features explicitly shared with this project.",
+};

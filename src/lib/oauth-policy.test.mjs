@@ -1,0 +1,155 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {
+  OAUTH_SCOPES,
+  safeOAuthReturn,
+  validateOAuthRequest,
+  consentScopes,
+} from "./oauth-policy.ts";
+import { scopesForProfile } from "./access-profiles.ts";
+import { OAUTH_SCOPES_SUPPORTED } from "./oauth.server.ts";
+const req = {
+  response_type: "code",
+  client_id: "test",
+  redirect_uri: "https://chatgpt.com/connector/oauth/test",
+  code_challenge: "a".repeat(43),
+  code_challenge_method: "S256",
+};
+test("hung OAuth requests time out, abort, and leave the flow recoverable", async () => {
+  const { withOAuthRequestTimeout } = await import("./oauth-consent.ts");
+  let signal;
+  await assert.rejects(
+    withOAuthRequestTimeout((value) => {
+      signal = value;
+      return new Promise(() => {});
+    }, 10),
+    /timed out.*restart/i,
+  );
+  assert.equal(signal.aborted, true);
+  assert.equal(await withOAuthRequestTimeout(async () => "recovered", 100), "recovered");
+});
+test("OAuth request wrapper preserves server failures and successful results", async () => {
+  const { withOAuthRequestTimeout } = await import("./oauth-consent.ts");
+  await assert.rejects(
+    withOAuthRequestTimeout(() => {
+      throw new Error("Denied");
+    }),
+    /Denied/,
+  );
+  assert.deepEqual(await withOAuthRequestTimeout(async () => ({ data: "code", error: null })), {
+    data: "code",
+    error: null,
+  });
+});
+test("consent preserves client requests and permits explicit role-checked profiles", () => {
+  const requested = "mcp:connect resources:read";
+  assert.deepEqual(consentScopes("requested", requested, false), requested.split(" "));
+  for (const profile of ["read_only", "builder", "developer"])
+    assert.deepEqual(consentScopes(profile, requested, false), scopesForProfile(profile));
+  assert.deepEqual(consentScopes("administrator", requested, true), [...OAUTH_SCOPES]);
+  assert.throws(() => consentScopes("administrator", requested, false), /Admin account/);
+  assert.throws(() => consentScopes("requested", "admin:*", true), /Unsupported/);
+});
+test("retains local consent return and blocks external redirects", () => {
+  assert.equal(safeOAuthReturn("/oauth/authorize?state=x"), "/oauth/authorize?state=x");
+  for (const s of ["//evil.test", "https://evil.test", "/\\evil.test", "/dashboard"])
+    assert.equal(safeOAuthReturn(s), "/dashboard");
+});
+test("requires code and S256, rejects unsupported scopes and unsafe callbacks", () => {
+  for (const p of [
+    { response_type: "token" },
+    { code_challenge_method: "plain" },
+    { code_challenge: "x" },
+    { scope: "admin:*" },
+    { redirect_uri: "javascript:alert(1)" },
+  ])
+    assert.throws(() => validateOAuthRequest({ ...req, ...p }));
+});
+test("malformed callbacks return a stable error on server and browser", () => {
+  for (const redirect_uri of ["", "not a URL"]) {
+    assert.throws(
+      () => validateOAuthRequest({ ...req, redirect_uri }),
+      (error) =>
+        error instanceof Error &&
+        error.message === "Invalid HTTPS callback. Restart from your client.",
+    );
+  }
+});
+
+test("accepts native loopback callbacks so desktop clients can connect", () => {
+  for (const redirect_uri of [
+    "http://127.0.0.1:1455/callback",
+    "http://localhost:8080/auth/callback",
+  ])
+    assert.equal(validateOAuthRequest({ ...req, redirect_uri }).redirect_uri, redirect_uri);
+  for (const redirect_uri of ["http://evil.example/callback", "http://10.0.0.5/callback"])
+    assert.throws(() => validateOAuthRequest({ ...req, redirect_uri }), /Invalid HTTPS callback/);
+});
+
+test("preserves requested scopes without adding write permissions", () => {
+  assert.equal(
+    validateOAuthRequest({ ...req, scope: "mcp:connect resources:read" }).scope,
+    "mcp:connect resources:read",
+  );
+  assert.equal(validateOAuthRequest(req).scope, "mcp:connect resources:read connections:read");
+});
+
+test("allows private memory and knowledge reads when explicitly requested", () => {
+  const scope = "mcp:connect memory:read knowledge:read";
+  assert.equal(validateOAuthRequest({ ...req, scope }).scope, scope);
+});
+
+test("accepts explicit control scope without adding it to default consent", () => {
+  const scope = "mcp:connect control:write";
+  assert.equal(validateOAuthRequest({ ...req, scope }).scope, scope);
+  assert.equal(validateOAuthRequest(req).scope.includes("control:write"), false);
+  assert.deepEqual(OAUTH_SCOPES_SUPPORTED, OAUTH_SCOPES);
+});
+
+test("database OAuth allowlist accepts advertised private read scopes", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const migration = await readFile(
+    new URL(
+      "../../supabase/migrations/20261009012000_oauth_memory_knowledge_scopes.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.match(migration, /'memory:read'/);
+  assert.match(migration, /'knowledge:read'/);
+  assert.match(migration, /TO authenticated/);
+  assert.doesNotMatch(migration, /TO anon\s*;/);
+});
+
+test("static discovery advertises only implemented OAuth grants", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const metadata = JSON.parse(
+    await readFile(
+      new URL("../../public/.well-known/oauth-authorization-server", import.meta.url),
+      "utf8",
+    ),
+  );
+  assert.deepEqual(metadata.grant_types_supported, ["authorization_code"]);
+  assert.ok(metadata.scopes_supported.includes("memory:read"));
+  assert.ok(metadata.scopes_supported.includes("knowledge:read"));
+  assert.deepEqual(metadata.scopes_supported, [...OAUTH_SCOPES]);
+  assert.deepEqual(metadata.token_endpoint_auth_methods_supported, [
+    "none",
+    "client_secret_basic",
+    "client_secret_post",
+  ]);
+  assert.equal(metadata.logo_uri, "https://open-connect.site/open-connect-mark.png");
+});
+
+test("static protected-resource metadata advertises private read grants", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const metadata = JSON.parse(
+    await readFile(
+      new URL("../../public/.well-known/oauth-protected-resource", import.meta.url),
+      "utf8",
+    ),
+  );
+  assert.ok(metadata.scopes_supported.includes("memory:read"));
+  assert.ok(metadata.scopes_supported.includes("knowledge:read"));
+  assert.deepEqual(metadata.scopes_supported, [...OAUTH_SCOPES]);
+});

@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Open-Connect for ChatGPT",
+  "version": "0.2.0",
+  "description": "Open-Connect navigation and optional prompt suggestions for ChatGPT.",
+  "permissions": [
+    "storage",
+    "sidePanel"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "side_panel": {
+    "default_path": "panel.html"
+  }
+}

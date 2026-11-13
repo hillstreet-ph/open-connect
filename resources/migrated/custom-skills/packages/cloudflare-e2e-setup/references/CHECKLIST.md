@@ -1,0 +1,21 @@
+# Cloudflare E2E Checklist
+
+- [ ] Correct account/zone identified
+- [ ] Existing production inventoried
+- [ ] DNS records preserved/audited
+- [ ] Nameserver/delegation state verified
+- [ ] Proxy state correct
+- [ ] DNSSEC reviewed
+- [ ] TLS/HTTPS verified
+- [ ] Pages configured if applicable
+- [ ] Workers/routes/bindings configured if applicable
+- [ ] Secrets/variables correctly scoped
+- [ ] Security controls reviewed
+- [ ] Cache behavior safe
+- [ ] GitHub CI/CD integrated
+- [ ] Origin healthy
+- [ ] Staging verified
+- [ ] Previous state recorded before production cutover
+- [ ] Production DNS/TLS/application verified
+- [ ] Rollback path documented
+- [ ] No duplicate resources introduced

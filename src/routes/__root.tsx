@@ -1,0 +1,172 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { DataProvider } from "@data-client/react";
+import {
+  Outlet,
+  Link,
+  createRootRouteWithContext,
+  useRouter,
+  useRouterState,
+  HeadContent,
+  Scripts,
+} from "@tanstack/react-router";
+import { useEffect, type ReactNode } from "react";
+
+import appCss from "../styles.css?url";
+import { reportError } from "../lib/error-reporting";
+import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
+import { Toaster } from "@/components/ui/sonner";
+import { useAuth } from "@/hooks/use-auth";
+import { usesWorkspaceChrome } from "@/lib/shell";
+
+function NotFoundComponent() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="max-w-md text-center">
+        <h1 className="text-7xl font-bold text-foreground">404</h1>
+        <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          The page you're looking for doesn't exist or has been moved.
+        </p>
+        <div className="mt-6">
+          <Link
+            to="/"
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            Go home
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ErrorComponent({ error, reset }: { error: unknown; reset: () => void }) {
+  console.error("[Open-Connect] route error", error);
+  const router = useRouter();
+  useEffect(() => {
+    reportError(error, { boundary: "tanstack_root_error_component" });
+  }, [error]);
+
+  const detail =
+    error instanceof Error && error.message && error.message !== "HTTPError"
+      ? error.message
+      : "A temporary client error occurred. Refresh usually fixes it after a new deploy.";
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="max-w-md text-center">
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">
+          This page didn't load
+        </h1>
+        <p className="mt-2 text-sm text-muted-foreground">{detail}</p>
+        <div className="mt-6 flex flex-wrap justify-center gap-2">
+          <button
+            onClick={() => {
+              try {
+                router.invalidate();
+              } catch {
+                /* ignore */
+              }
+              reset();
+              window.location.reload();
+            }}
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            Try again
+          </button>
+          <a
+            href="/"
+            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+          >
+            Go home
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+  head: () => ({
+    meta: [
+      { charSet: "utf-8" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+      { title: "Open-Connect — Unified AI agent integration platform" },
+      {
+        name: "description",
+        content:
+          "Agent resources, secure app connections and a multi-provider AI model gateway behind one account, key and MCP URL.",
+      },
+      { name: "author", content: "Open-Connect" },
+      { name: "theme-color", content: "#0d1016" },
+      { property: "og:title", content: "Open-Connect — Unified AI agent integration platform" },
+      {
+        property: "og:description",
+        content: "One gateway for agent resources, app connections and AI models.",
+      },
+      { property: "og:type", content: "website" },
+      { property: "og:image", content: "https://open-connect.site/open-connect-logo.webp" },
+      { property: "og:image:alt", content: "Open Connect platform logo" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: "https://open-connect.site/open-connect-logo.webp" },
+    ],
+    links: [
+      { rel: "stylesheet", href: appCss },
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=DM+Sans:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap",
+      },
+      { rel: "icon", href: "/open-connect-favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/open-connect-icon-192.png", type: "image/png", sizes: "192x192" },
+      { rel: "apple-touch-icon", href: "/open-connect-touch-icon.png", sizes: "180x180" },
+      { rel: "manifest", href: "/site.webmanifest" },
+    ],
+  }),
+  shellComponent: RootShell,
+  component: RootComponent,
+  notFoundComponent: NotFoundComponent,
+  errorComponent: ErrorComponent,
+});
+
+function RootShell({ children }: { children: ReactNode }) {
+  return (
+    <html lang="en" className="dark">
+      <head>
+        <HeadContent />
+      </head>
+      <body>
+        {children}
+        <Scripts />
+      </body>
+    </html>
+  );
+}
+
+function RootComponent() {
+  const { queryClient } = Route.useRouteContext();
+  const { user } = useAuth();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const privateRoute = useRouterState({
+    select: (state) => state.matches.some((match) => match.routeId === "/_authenticated"),
+  });
+  const inApp = usesWorkspaceChrome(pathname, Boolean(user), privateRoute);
+
+  return (
+    <DataProvider>
+      <QueryClientProvider client={queryClient}>
+        <div className="flex min-h-dvh flex-col">
+          {/* Marketing chrome only outside ops workspace */}
+          {inApp ? null : <SiteHeader />}
+          <main className={inApp ? "flex-1 bg-background" : "flex-1"}>
+            <Outlet />
+          </main>
+          {inApp ? null : <SiteFooter />}
+        </div>
+        <Toaster />
+      </QueryClientProvider>
+    </DataProvider>
+  );
+}

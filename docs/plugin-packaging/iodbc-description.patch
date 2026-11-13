@@ -1,0 +1,10 @@
+--- a/skills/iodbc-dsn-manager/SKILL.md
++++ b/skills/iodbc-dsn-manager/SKILL.md
+@@ -1,6 +1,6 @@
+ ---
+ name: iodbc-dsn-manager
+-description: Configure and verify ODBC Data Source Names (DSNs) using iODBC or unixODBC. Supports three execution modes in priority order: (C) OpenLink www_sv Admin Assistant HTTP server — preferred when available; (B) odbc_rest_server.py REST bridge — for remote/sandbox access; (A) local CLI via iodbctest/isql. Works on macOS and Linux. Covers all DSN types: MT (Multi-Tier), Virtuoso, Unix Lite, and single-tier. Use when the user asks to list, test, configure, add, or troubleshoot ODBC DSNs.
++description: "Configure and verify ODBC Data Source Names (DSNs) using iODBC or unixODBC. Supports three execution modes in priority order: (C) OpenLink www_sv Admin Assistant HTTP server — preferred when available; (B) odbc_rest_server.py REST bridge — for remote/sandbox access; (A) local CLI via iodbctest/isql. Works on macOS and Linux. Covers all DSN types: MT (Multi-Tier), Virtuoso, Unix Lite, and single-tier. Use when the user asks to list, test, configure, add, or troubleshoot ODBC DSNs."
+ ---
+ 
+ # ODBC DSN Manager Skill

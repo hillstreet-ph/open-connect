@@ -1,0 +1,13 @@
+.git
+.github
+.lovable
+dist
+node_modules
+project_sources
+*.log
+*.zip
+*.xlsx
+*.pdf
+.env
+.env.*
+!control-plane/.env.example

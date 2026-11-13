@@ -1,0 +1,22 @@
+# Zeabur E2E Checklist
+
+- [ ] Correct workspace/project/environment identified
+- [ ] Existing production inventoried
+- [ ] Deployment source classified
+- [ ] Service roots/build/start commands detected
+- [ ] Actual ports detected
+- [ ] Health behavior verified
+- [ ] Variable/secret contract built
+- [ ] Persistent paths classified
+- [ ] Volumes/mounts verified
+- [ ] DB/cache ownership determined
+- [ ] Internal/public networking reviewed
+- [ ] Generated origin verified
+- [ ] Cloudflare/custom domain integration reviewed
+- [ ] Workers/jobs validated
+- [ ] Staging deployed and verified
+- [ ] Backup/recovery readiness checked
+- [ ] Known-good rollback state recorded
+- [ ] Production deployed and verified
+- [ ] No duplicate resources introduced
+- [ ] Portability/cost reviewed

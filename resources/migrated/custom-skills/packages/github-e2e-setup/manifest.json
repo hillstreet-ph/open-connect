@@ -1,0 +1,24 @@
+{
+  "name": "github-e2e-setup",
+  "version": "1.0.0",
+  "entrypoint": "SKILL.md",
+  "modes": [
+    "FORK",
+    "CLONE_INDEPENDENT",
+    "IMPORT",
+    "UPLOAD",
+    "GENERATED",
+    "EXISTING_REPOSITORY",
+    "PRODUCTION_EXISTING"
+  ],
+  "common_providers": [
+    "GitHub",
+    "Docker Hub",
+    "Supabase",
+    "Cloudflare"
+  ],
+  "runtime_choice": [
+    "Railway",
+    "Zeabur"
+  ]
+}

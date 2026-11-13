@@ -1,0 +1,19 @@
+{
+  "name": "open-codex-kit",
+  "version": "1.0.0",
+  "description": "Codex CLI, Agents SDK, cloud workspace, and Open-Connect operations toolkit.",
+  "author": {
+    "name": "HillStreet Information Technology Services"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Open Codex Kit",
+    "shortDescription": "Operate Codex and cloud agent workspaces safely.",
+    "longDescription": "Install, verify, and operate Codex CLI and the OpenAI Agents SDK with scoped terminal, workspace, browser, computer, MCP, Git, and Open-Connect capabilities.",
+    "developerName": "HillStreet Information Technology Services",
+    "category": "Developer Tools",
+    "capabilities": ["Codex CLI", "Agents SDK", "MCP", "Cloud terminal", "Cloud browser", "Cloud computer", "Git workflows"],
+    "defaultPrompt": "Use Open Codex Kit to inspect my workspace, select the smallest safe capability set, and verify every change."
+  },
+  "mcpServers": "./.mcp.json"
+}

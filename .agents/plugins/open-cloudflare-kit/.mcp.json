@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "open-connect": {
+      "type": "http",
+      "url": "https://open-connect.site/mcp",
+      "headers": {
+        "Authorization": "Bearer ${OPEN_CONNECT_API_KEY}"
+      }
+    },
+    "cloudflare": {
+      "type": "http",
+      "url": "https://mcp.cloudflare.com/mcp"
+    }
+  }
+}

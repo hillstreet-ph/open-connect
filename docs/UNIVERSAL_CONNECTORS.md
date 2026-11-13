@@ -1,0 +1,24 @@
+# Universal connectors and Studio imports
+
+Connections, Settings / Integrations and Studio share one **Add custom MCP** form. A profile contains a name, description, account label, optional PNG icon, endpoint, transport and authentication. Supported transports are MCP Streamable HTTP, legacy SSE and an explicit OpenAPI 3.x JSON subset. Credentials remain encrypted in the owner’s Vault; tools never receive credentials in chat.
+
+Authentication supports none, Bearer, a named API-key header, personal access token, and OAuth authorization code with PKCE. OAuth servers must expose supported discovery metadata and either dynamic client registration or a registered client with an issuer. Consent happens at the provider. The callback is `https://open-connect.site/custom-oauth-callback`. OAuth tokens and refresh state stay encrypted. Refresh writes use owner-bound, service-only compare-and-swap. A reconnect activates only after capability discovery; a failed probe leaves the previous account usable.
+
+MCP discovery reads tools, prompts and resource descriptors, including pagination (50 pages and 2,000 entries per collection). Descriptors are not automatically executable skills or verified Marketplace packages. Public server availability, scopes and provider support remain authoritative. The owner can disable individual discovered tools, rediscover capabilities and create a private Studio plugin draft. Agent-Helper can list owned connector names/counts and create the same private draft using its exact ID. It never authorizes a provider or publishes from chat.
+
+OpenAPI imports support public HTTPS servers, unique operation IDs, explicit path/query parameters and inline JSON schemas/bodies. Header/cookie parameters, unresolved references, arbitrary executables and local stdio servers are rejected. Definitions are validated without calling an API operation; discovery does not establish that an account has permission to execute every operation. Existing project grants, write restrictions, destructive confirmations and audit controls still apply.
+
+Studio accepts supported resource uploads and public website/GitHub URLs. GitHub root imports pin discovered documents to a commit (25 candidates maximum); website text is converted into a private document. URL fetches validate public DNS addresses and pin Node HTTPS connections (Workers use public-Internet fetch isolation), reject redirects/private addresses and bound response sizes. Private or credential-bearing URL imports are not supported. Nothing from an import is executed.
+
+Uploads/imports receive a SHA-256 and bounded static archive/manifest inspection. Checks include traversal, symlinks, archive integrity, executable payloads, malformed JSON and common exposed-secret patterns. **This is not antivirus and does not establish that a package is malware-free.** Reports explicitly say `antivirus: not_run`; reviewers can inspect findings and rescan packages. Scan failures block verification/publication. Changes to content or review metadata reset approval. Source, license, runtime dependencies and execution tests still require review before publication.
+
+Identical owned content/type is deduplicated by a database index. Changed content creates a private update candidate referencing the prior version; it never silently overwrites published resources or removes older archives. Reviewers can edit title, description, version and license, then verify/publish through the existing review controls. Colored labels supplement readable status text.
+
+Validation: mocked SDK OAuth discovery/registration/PKCE exchange and SSE initialization/tool discovery; OpenAPI schemas; static archive adversarial fixtures; existing control/navigation/registry suites; type checking, lint, production build and SSR smoke. Database transaction checks verify token rotation, stale CAS, owner binding, restricted execution and exact-byte duplicate rejection. Vendor consent and real tool execution must be verified for each connected provider.
+
+Website imports parse HTML with pinned parse5 8.0.1 and emit escaped text, omitting script,
+style, template and embedded-content nodes. Converted pages are inspected as Markdown guides
+regardless of whether the source URL ends in `.html`, `.php` or no file extension. Text/JSON
+manifests retain their original bytes. Regression coverage includes malformed nested tags,
+encoded markup, omitted executable content and supported inspection filenames. This parsing
+step does not replace source, license, runtime or publication review.

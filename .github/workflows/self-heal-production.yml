@@ -1,0 +1,143 @@
+name: Self-heal — production probe
+
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: self-heal-production
+  cancel-in-progress: false
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      OPEN_CONNECT_GITHUB_APP_ID: ${{ secrets.OPEN_CONNECT_GITHUB_APP_ID }}
+      OPEN_CONNECT_GITHUB_APP_PRIVATE_KEY: ${{ secrets.OPEN_CONNECT_GITHUB_APP_PRIVATE_KEY }}
+    steps:
+      - name: Create GitHub App token
+        if: env.OPEN_CONNECT_GITHUB_APP_ID != '' && env.OPEN_CONNECT_GITHUB_APP_PRIVATE_KEY != ''
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.OPEN_CONNECT_GITHUB_APP_ID }}
+          private-key: ${{ secrets.OPEN_CONNECT_GITHUB_APP_PRIVATE_KEY }}
+
+      - name: Probe production surfaces
+        id: probe
+        shell: bash
+        run: |
+          set +e
+          failed=false
+          : > /tmp/probe-report.txt
+
+          check() {
+            local name="$1"
+            local url="$2"
+            local expected="$3"
+            local body="/tmp/probe-${name}.body"
+            local code
+
+            code=$(curl --silent --show-error --location               --output "$body"               --write-out "%{http_code}"               --max-time 25               "$url")
+            curl_exit=$?
+
+            if [ "$curl_exit" -ne 0 ]; then
+              code="000"
+            fi
+
+            printf "%s HTTP %s\n" "$name" "$code" >> /tmp/probe-report.txt
+            if [ "$code" != "$expected" ]; then
+              failed=true
+              printf "%s expected HTTP %s\n" "$name" "$expected" >> /tmp/probe-report.txt
+            fi
+          }
+
+          check health https://open-connect.site/api/v1/health 200
+          check oauth https://open-connect.site/.well-known/oauth-authorization-server 200
+          check home https://open-connect.site/ 200
+          check auth https://open-connect.site/auth 200
+
+          if [ -f /tmp/probe-health.body ]; then
+            python3 - <<'PY' || failed=true
+          import json
+          from pathlib import Path
+
+          data = json.loads(Path("/tmp/probe-health.body").read_text())
+          assert data.get("status") == "ok", data
+          PY
+          else
+            failed=true
+            printf "health response body missing\n" >> /tmp/probe-report.txt
+          fi
+
+          echo "failed=$failed" >> "$GITHUB_OUTPUT"
+          cat /tmp/probe-report.txt
+
+      - name: Open or update incident issue
+        if: steps.probe.outputs.failed == 'true'
+        uses: actions/github-script@v9
+        with:
+          github-token: ${{ steps.app-token.outputs.token || github.token }}
+          script: |
+            const fs = require('fs');
+            const report = fs.existsSync('/tmp/probe-report.txt')
+              ? fs.readFileSync('/tmp/probe-report.txt', 'utf8').trim()
+              : 'Production probe failed without a report.';
+            const title = '[self-heal] Production health failure';
+            const labels = ['self-heal', 'production'];
+            const body = [
+              '## Automated production probe failed',
+              '',
+              '### Probe results',
+              '~~~text',
+              report,
+              '~~~',
+              '',
+              '### Required review',
+              '1. Check the latest Cloudflare Pages deployment.',
+              '2. Verify the Supabase project and edge-function status.',
+              '3. Diagnose the failing surface before any production redeploy.',
+              '4. Require explicit approval before rerunning a production deployment.',
+              '',
+              `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              '',
+              '_Updated by the self-heal production probe._'
+            ].join('\n');
+
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: labels.join(','),
+              per_page: 100
+            });
+            const existing = issues.find(issue => issue.title === title);
+
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels
+              });
+            }
+
+      - name: Mark probe failure
+        if: steps.probe.outputs.failed == 'true'
+        run: |
+          echo "One or more production probes failed."
+          exit 1

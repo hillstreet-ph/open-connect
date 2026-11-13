@@ -1,0 +1,439 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import {
+  BookOpen,
+  Boxes,
+  Download,
+  ExternalLink,
+  KeyRound,
+  Plug,
+  Shield,
+  Wrench,
+} from "lucide-react";
+import { useRoles } from "@/hooks/use-roles";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
+export const Route = createFileRoute("/_authenticated/guides")({
+  head: () => ({
+    meta: [
+      { title: "Guides — Open-Connect" },
+      {
+        name: "description",
+        content:
+          "User guide, marketplace access, and professional E2E setup. Not part of the marketplace catalog.",
+      },
+      { name: "robots", content: "noindex" },
+    ],
+  }),
+  component: GuidesPage,
+});
+
+const DEMO_BASE = "/downloads/open-connect-control-plane-demo";
+
+const userGuideSections = [
+  {
+    id: "mcp",
+    title: "MCP client setup",
+    body: "Point Claude, Cursor, Hermes, or any MCP client at the Open-Connect gateway with a scoped key.",
+    steps: [
+      "Open Developer > Personal tokens and create a scoped token that includes mcp:connect.",
+      "Set MCP URL to https://open-connect.site/mcp",
+      "Add header Authorization: Bearer oc_live_…",
+      "Call tools/list to see marketplace and platform tools.",
+    ],
+    href: "/integrations",
+    hrefLabel: "Open Developer",
+  },
+  {
+    id: "oauth",
+    title: "OAuth for AI clients",
+    body: "ChatGPT and OAuth MCP clients use PKCE S256 against Open-Connect discovery endpoints.",
+    steps: [
+      "Discovery: /.well-known/oauth-authorization-server",
+      "Resource: /.well-known/oauth-protected-resource",
+      "Authorize with code_challenge_method=S256",
+      "Sign in to Open-Connect and approve the requested scopes; OAuth clients do not need an API key",
+    ],
+    href: "/integrations",
+    hrefLabel: "OAuth apps",
+  },
+  {
+    id: "connections",
+    title: "Connect apps",
+    body: "Link GitHub, Slack, Drive, and more. Agents receive capability grants — never raw tokens.",
+    steps: [
+      "Open Connections and sign in if needed.",
+      "Click Connect on an app.",
+      "Capability is stored server-side as a credential reference.",
+      "MCP resource invoke can resolve matching grants.",
+    ],
+    href: "/connections",
+    hrefLabel: "Open Connections",
+  },
+  {
+    id: "models",
+    title: "Models gateway",
+    body: "OpenAI-compatible /v1 with Open-Connect aliases and your scoped key.",
+    steps: [
+      "Base URL: https://open-connect.site/v1",
+      "Use models:read / models:invoke scopes",
+      "Aliases: open-connect/fast, balanced, reasoning, coding, vision",
+      "POST /v1/chat/completions with Bearer oc_live_…",
+    ],
+    href: "/models",
+    hrefLabel: "Models",
+  },
+  {
+    id: "roles",
+    title: "Roles and permissions",
+    body: "Your role controls uploads, publishing, and admin. Defaults to Member after signup.",
+    steps: [
+      "Member — dashboard, keys, download, upload own packages",
+      "Developer — toolkits, publishing, and verification",
+      "Admin — platform roles and System administration",
+    ],
+    href: "/admin",
+    hrefLabel: "System administration",
+  },
+];
+
+function GuidesPage() {
+  const { primary, loading } = useRoles();
+
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-10 sm:py-14">
+      <Badge variant="outline" className="mb-2 border-primary/40 text-primary">
+        <BookOpen className="mr-1 size-3" /> Workspace · Guides
+      </Badge>
+      <h1 className="text-2xl font-semibold sm:text-3xl">Guidelines</h1>
+      <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+        Guides are <strong className="font-medium text-foreground">not</strong> marketplace catalog
+        items. Use the buttons below: packages live in Marketplace; how-to lives here; professional
+        E2E demos live under downloads.
+      </p>
+      <p className="mt-2 text-xs text-muted-foreground">
+        Your role: <span className="font-medium text-foreground">{loading ? "…" : primary}</span>
+      </p>
+
+      {/* Primary hub buttons */}
+      <div className="mt-8 grid gap-3 sm:grid-cols-3">
+        <Card className="shadow-panel">
+          <CardHeader className="p-5 pb-3">
+            <span className="flex size-10 items-center justify-center rounded-lg bg-primary/15 text-primary">
+              <Boxes className="size-5" />
+            </span>
+            <CardTitle className="mt-3 text-base">Marketplace (all packages)</CardTitle>
+            <CardDescription>
+              Skills, MCP, tools, plugins, agents, prompts. Sign-in required to download.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="px-5 pb-5">
+            <Button asChild className="w-full">
+              <Link to="/resources">Open Marketplace</Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-panel">
+          <CardHeader className="p-5 pb-3">
+            <span className="flex size-10 items-center justify-center rounded-lg bg-primary/15 text-primary">
+              <BookOpen className="size-5" />
+            </span>
+            <CardTitle className="mt-3 text-base">User guide</CardTitle>
+            <CardDescription>
+              MCP, OAuth, connections, models, roles — step-by-step for clients.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="px-5 pb-5">
+            <Button
+              asChild
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                document.getElementById("user-guide")?.scrollIntoView({ behavior: "smooth" });
+              }}
+            >
+              <a href="#user-guide">Jump to user guide</a>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-panel">
+          <CardHeader className="p-5 pb-3">
+            <span className="flex size-10 items-center justify-center rounded-lg bg-primary/15 text-primary">
+              <Wrench className="size-5" />
+            </span>
+            <CardTitle className="mt-3 text-base">Professional setup E2E</CardTitle>
+            <CardDescription>
+              Webhook delivery setup and a control-plane policy demo with tests and a validator.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="px-5 pb-5">
+            <Button asChild variant="outline" className="w-full">
+              <a href="#professional-e2e">Open professional setup</a>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* User guide detail */}
+      <h2
+        id="user-guide"
+        className="mt-12 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+      >
+        User guide
+      </h2>
+      <div className="mt-3 grid gap-4 md:grid-cols-2">
+        {userGuideSections.map((g) => (
+          <Card key={g.id} className="shadow-panel">
+            <CardHeader className="p-5 pb-2">
+              <CardTitle className="text-base">{g.title}</CardTitle>
+              <CardDescription>{g.body}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 p-5 pt-2">
+              <ol className="list-decimal space-y-1.5 pl-4 text-sm text-muted-foreground">
+                {g.steps.map((s) => (
+                  <li key={s}>{s}</li>
+                ))}
+              </ol>
+              <Button asChild size="sm" variant="outline">
+                <Link to={g.href}>{g.hrefLabel}</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Professional E2E package */}
+      <h2
+        id="professional-e2e"
+        className="mt-12 text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+      >
+        Professional setup E2E
+      </h2>
+      <Card id="webhook-setup" className="mt-3 scroll-mt-6 shadow-panel">
+        <CardHeader className="p-5 pb-3">
+          <CardTitle className="text-base">
+            Webhooks: professional setup from event to delivery
+          </CardTitle>
+          <CardDescription>
+            Configure incoming receipts, notification alerts, and delivery monitoring in Settings.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4 px-5 pb-5">
+          <div className="flex flex-wrap gap-2">
+            <Button asChild size="sm" variant="outline">
+              <Link to="/integrations" search={{ section: "webhooks" }}>
+                Open webhooks
+              </Link>
+            </Button>
+            <Button asChild size="sm" variant="outline">
+              <Link to="/integrations" search={{ section: "apps" }}>
+                Set up a Telegram bot
+              </Link>
+            </Button>
+          </div>
+          <h3 className="font-medium">Incoming webhooks</h3>
+          <ol className="list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
+            <li>
+              Create an incoming webhook in Settings → Integrations. Save its URL and the secret
+              shown once.
+            </li>
+            <li>
+              Configure a sender that can POST JSON and set the <code>x-open-connect-secret</code>{" "}
+              and <code>x-open-connect-delivery-id</code> headers. Use a unique delivery ID for each
+              event and reuse it for retries. Limit each request to 64 KiB.
+            </li>
+            <li>
+              Send a synthetic event. A new receipt returns HTTP 202; a duplicate delivery ID
+              returns HTTP 200. An invalid secret returns HTTP 401. In Settings, open the webhook’s
+              deliveries to inspect the receipt; the notification bell also shows it.
+            </li>
+            <li>
+              Incoming receipts are stored only; they do not run automations. The built-in receiver
+              does not verify provider signatures or answer verification challenges. For senders
+              that require those features or cannot set the required headers, use a separate
+              compatible receiver.
+            </li>
+          </ol>
+          <h3 className="font-medium">Outbound alerts and monitoring</h3>
+          <ol className="list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
+            <li>
+              Under Notifications and alerts, add a Telegram destination using a connected bot and
+              numeric chat ID, or add a public HTTPS outbound webhook URL. Save its signing secret
+              when shown.
+            </li>
+            <li>
+              Use Send test alert and check the result in Outbound delivery monitoring. Sent means
+              the destination returned an acknowledgment; failed or interrupted attempts can be
+              retried manually.
+            </li>
+            <li>
+              New incoming receipts create <code>webhook.received</code> summaries for enabled
+              destinations; raw incoming payloads are not forwarded. Outbound receivers should
+              verify the HMAC signature and timestamp and deduplicate by event ID. The full headers
+              and retry contract are shown in Settings.
+            </li>
+          </ol>
+          <details className="rounded border p-3">
+            <summary className="cursor-pointer text-sm font-medium">
+              Separate provider-specific receiver setup
+            </summary>
+            <p className="my-3 text-xs text-muted-foreground">
+              These steps apply to a separate receiver, not the built-in shared-secret inbox.
+              Connecting an app does not register its webhooks.
+            </p>
+            <ol className="list-decimal space-y-3 pl-5 text-sm text-muted-foreground">
+              <li>
+                <strong className="text-foreground">Choose the event and destination.</strong>{" "}
+                Record the provider, event names, owning project, HTTPS receiver URL, and expected
+                action. Start with a staging receiver and synthetic events. Connecting an app does
+                not automatically register its webhooks.
+              </li>
+              <li>
+                <strong className="text-foreground">Prepare and protect the receiver.</strong>{" "}
+                Deploy a receiver that implements your provider’s documented verification method.
+                Check the signature against the original request bytes before parsing or processing;
+                enforce timestamps when the provider signs them. Keep signing secrets in server
+                secret storage, separate from app access tokens. Reject unauthenticated requests
+                before any action.
+              </li>
+              <li>
+                <strong className="text-foreground">Register only the events you need.</strong> In
+                the provider’s webhook configuration, enter the verified receiver URL, select the
+                intended events, and configure the matching signing secret. Complete any provider
+                verification challenge. Never put a secret in the URL or a browser configuration.
+              </li>
+              <li>
+                <strong className="text-foreground">Prove a valid delivery.</strong> Use the
+                provider’s signed test delivery, then perform one harmless staging action that emits
+                a real event. Match the delivery ID in the provider log to the receiver log and the
+                expected result. A successful HTTP response alone does not prove the action
+                completed.
+              </li>
+              <li>
+                <strong className="text-foreground">Test failure and recovery.</strong> Confirm a
+                missing or invalid signature causes rejection with no action. Redeliver the same
+                event and verify its durable delivery ID prevents duplicate actions. Test failed
+                processing, bounded retries with backoff, and recovery from the failed-delivery
+                queue. Acknowledge promptly only after durable acceptance; process longer work
+                asynchronously.
+              </li>
+              <li>
+                <strong className="text-foreground">Enable and monitor production.</strong> Repeat
+                the checks using separate production secrets and the intended event scope. Monitor
+                delivery failures, queue age, and action results without logging secrets or full
+                sensitive payloads. To roll back, disable the provider subscription and pause
+                processing; retain failed delivery IDs for controlled replay. Reverify after
+                rotation.
+              </li>
+            </ol>
+            <p className="text-xs text-muted-foreground">
+              Troubleshooting: no deliveries → check subscription and event filters; authentication
+              failures → check signing secret, raw request body, and signed timestamp; timeouts →
+              check durable acceptance and queue health; duplicate actions → check delivery ID
+              storage.
+            </p>
+          </details>
+        </CardContent>
+      </Card>
+
+      <Card className="mt-3 shadow-panel">
+        <CardHeader className="p-5">
+          <CardTitle className="text-base">Control plane demo package</CardTitle>
+          <CardDescription>
+            Deny-by-default policy, vault references, approval rules, and local validator. Served
+            from{" "}
+            <code className="font-mono text-xs">/downloads/open-connect-control-plane-demo/</code>{" "}
+            on the edge — not from the Marketplace catalog.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3 px-5 pb-5">
+          <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+            <li>
+              <a className="text-primary hover:underline" href={`${DEMO_BASE}/README.md`}>
+                README.md
+              </a>
+            </li>
+            <li>
+              <a className="text-primary hover:underline" href={`${DEMO_BASE}/control-plane.yaml`}>
+                control-plane.yaml
+              </a>
+            </li>
+            <li>
+              <a className="text-primary hover:underline" href={`${DEMO_BASE}/test-cases.yaml`}>
+                test-cases.yaml
+              </a>
+            </li>
+            <li>
+              <a className="text-primary hover:underline" href={`${DEMO_BASE}/validate_demo.py`}>
+                validate_demo.py
+              </a>
+            </li>
+            <li>
+              <a
+                className="text-primary hover:underline"
+                href={`${DEMO_BASE}/validation-report.md`}
+              >
+                validation-report.md
+              </a>
+            </li>
+            <li>
+              <a className="text-primary hover:underline" href={`${DEMO_BASE}/audit-events.jsonl`}>
+                audit-events.jsonl
+              </a>
+            </li>
+          </ul>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild size="sm">
+              <a href={`${DEMO_BASE}/README.md`}>
+                <Download className="mr-1 size-3.5" /> Open package README
+              </a>
+            </Button>
+            <Button asChild size="sm" variant="outline">
+              <Link to="/dashboard">Dashboard</Link>
+            </Button>
+            <Button asChild size="sm" variant="outline">
+              <Link to="/resources">Marketplace</Link>
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Local validate:{" "}
+            <code className="font-mono">pip install pyyaml && python validate_demo.py</code>
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card className="mt-10 bg-pillar">
+        <CardHeader className="p-5">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Shield className="size-4" /> Public vs workspace
+          </CardTitle>
+          <CardDescription>
+            Anyone can view the homepage and marketplace catalog. Sign-in is required to download
+            packages, upload, manage keys, secrets, agents, and connections. Guides stay in the
+            workspace — not in the marketplace grid.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-2 px-5 pb-5">
+          <Button asChild size="sm">
+            <Link to="/dashboard">
+              <KeyRound className="mr-1 size-3.5" /> Dashboard
+            </Link>
+          </Button>
+          <Button asChild size="sm" variant="outline">
+            <Link to="/connections">
+              <Plug className="mr-1 size-3.5" /> Connections
+            </Link>
+          </Button>
+          <Button asChild size="sm" variant="outline">
+            <a href="https://open-connect.site/mcp" target="_blank" rel="noreferrer">
+              MCP endpoint <ExternalLink className="ml-1 size-3" />
+            </a>
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

@@ -1,0 +1,33 @@
+# Open Connect — Supabase local/CLI config
+# Canonical cloud project: open-connect (ap-northeast-1)
+project_id = "huadtiuuoiriqrjpjxhr"
+
+[api]
+enabled = true
+
+[db]
+port = 54322
+
+[studio]
+enabled = true
+
+# Edge Functions — JWT verification policy
+[functions.health]
+verify_jwt = false
+
+[functions.get_secret]
+verify_jwt = true
+
+[functions.add_secret]
+verify_jwt = true
+
+[functions.connection-webhook]
+verify_jwt = false
+
+# Twilio validates its request signature; the worker validates a vault-backed key.
+[functions.hillstreet-otp-forwarder]
+verify_jwt = false
+
+[functions.hillstreet-otp-worker]
+verify_jwt = false
+entrypoint = "./functions/hillstreet-otp-worker/worker.ts"

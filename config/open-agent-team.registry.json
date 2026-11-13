@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0.0",
+  "team_id": "open-engineering-team",
+  "supervisor": "open-ceo-developer",
+  "agents": [
+    {
+      "id": "open-ceo-developer",
+      "role": "supervisor",
+      "delegates": [
+        "open-planner",
+        "open-fullstack-developer",
+        "open-devops",
+        "open-security-reviewer",
+        "open-qa-reviewer"
+      ]
+    },
+    { "id": "open-planner", "role": "planner", "delegates": ["open-browser-researcher"] },
+    {
+      "id": "open-fullstack-developer",
+      "role": "implementation",
+      "delegates": ["open-db-engineer"]
+    },
+    { "id": "open-devops", "role": "delivery", "delegates": [] },
+    { "id": "open-browser-researcher", "role": "research", "delegates": [] },
+    { "id": "open-db-engineer", "role": "data", "delegates": [] },
+    { "id": "open-security-reviewer", "role": "security_gate", "delegates": [] },
+    { "id": "open-qa-reviewer", "role": "quality_gate", "delegates": [] }
+  ],
+  "policy": {
+    "credential_transport": "opaque_reference_only",
+    "max_parallel_workers": 4,
+    "max_repair_attempts": 3,
+    "production_requires_approval": true,
+    "destructive_actions_require_approval": true,
+    "self_modify_code_automatically": false
+  }
+}

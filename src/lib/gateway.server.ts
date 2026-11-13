@@ -1,0 +1,405 @@
+import { resourceAllowsRequest } from "./mcp-oauth-contract.ts";
+import { collectAutoFreeRoutes } from "./auto-free-routing.ts";
+import { COMPATIBLE_GATEWAY_PROVIDERS } from "./ai-gateway-providers.ts";
+/**
+ * Open-Connect gateway server helpers.
+ * Server-only: never import from client code.
+ *
+ * Production model plane (single client-facing gateway):
+ *   Client → https://open-connect.site/v1 + oc_live_ key
+ *         → OpenRouter (multi-provider: OpenAI, Claude, Gemini, …)
+ *         → optional self-hosted LiteLLM if LITELLM_BASE_URL is not openrouter.ai
+ *
+ * Env (Cloudflare Pages secrets — never commit):
+ *   LITELLM_BASE_URL   e.g. https://openrouter.ai/api/v1
+ *   LITELLM_MASTER_KEY OpenRouter sk-or-v1-… (or LiteLLM master key)
+ *   OPENROUTER_API_KEY optional explicit OpenRouter key
+ *   OPENROUTER_BASE_URL optional override
+ *   FIREWORKS_API_KEY  optional Fireworks AI platform key (OpenAI-compatible inference)
+ *   FIREWORKS_BASE_URL defaults to https://api.fireworks.ai/inference/v1
+ */
+import { createHash } from "crypto";
+import { generateClientKey, isClientKey } from "./gateway-keys.ts";
+import { FREE_MODEL_POOL, MANAGED_MODEL_IDS, MODEL_ALIASES } from "./model-aliases.ts";
+
+export { FREE_MODEL_POOL, MANAGED_MODEL_IDS, MODEL_ALIASES };
+import { fetchFreeModelCatalog, isAutoFreeModel } from "./model-catalog";
+import {
+  CLOUDFLARE_AI_BASE_URL,
+  CLOUDFLARE_AI_FREE_MODELS,
+  CLOUDFLARE_AI_UPSTREAM_NAME,
+} from "./cloudflare-ai.server";
+
+export const KEY_PREFIX = "oc_live_";
+
+export type UpstreamName = import("./model-connection.server").SavedModelUpstream["name"];
+
+export type Upstream = {
+  name: UpstreamName;
+  baseUrl: string;
+  headers: Record<string, string>;
+};
+
+let freeRotateIdx = 0;
+
+/** Prefer OpenRouter official free auto-router; else round-robin pool. */
+export function nextFreeModel(preferAutoRouter = true): string {
+  if (preferAutoRouter) return "openrouter/free";
+  const pool = FREE_MODEL_POOL.filter((id) => id !== "openrouter/free");
+  if (!pool.length) return "openrouter/free";
+  const id = pool[freeRotateIdx % pool.length]!;
+  freeRotateIdx += 1;
+  return id;
+}
+
+export function resolveModelId(requested: string): string {
+  const key = (requested || "").trim();
+  if (!key) return nextFreeModel(true);
+
+  if (
+    key === "open-connect/rotate-free" ||
+    key === "open-connect/free-rotate" ||
+    key === "free-rotate"
+  ) {
+    return nextFreeModel(false);
+  }
+
+  if (key === "open-connect/free" || key === "free" || key === "open-connect/auto-free") {
+    return "openrouter/free";
+  }
+
+  if (key.endsWith(":free") || key === "openrouter/free") {
+    return key;
+  }
+
+  return MODEL_ALIASES[key] ?? key;
+}
+
+function stripTrailingSlash(url: string): string {
+  return url.replace(/\/+$/, "");
+}
+
+function isOpenRouterBase(url: string): boolean {
+  return !url || url.includes("openrouter.ai");
+}
+
+/**
+ * Resolve upstreams for catalog + chat.
+ * Production default: LITELLM_* → OpenRouter (one credential, all providers).
+ */
+export function resolveUpstreams(): Upstream[] {
+  const list: Upstream[] = [];
+  const seen = new Set<string>();
+  const appUrl = process.env["VITE_APP_URL"] ?? "https://open-connect.site";
+
+  const liteBaseRaw = process.env["LITELLM_BASE_URL"] || "";
+  const liteKey = process.env["LITELLM_MASTER_KEY"] || "";
+  const explicitOrKey = process.env["OPENROUTER_API_KEY"] || "";
+  const explicitOrBase = process.env["OPENROUTER_BASE_URL"] || "";
+
+  const orKey =
+    explicitOrKey ||
+    (isOpenRouterBase(liteBaseRaw) && liteKey ? liteKey : "") ||
+    (!liteBaseRaw && liteKey ? liteKey : "");
+
+  const orBase = stripTrailingSlash(
+    explicitOrBase ||
+      (isOpenRouterBase(liteBaseRaw) && liteBaseRaw ? liteBaseRaw : "https://openrouter.ai/api/v1"),
+  );
+
+  if (orKey) {
+    const id = `openrouter:${orBase}`;
+    if (!seen.has(id)) {
+      seen.add(id);
+      list.push({
+        name: "openrouter",
+        baseUrl: orBase,
+        headers: {
+          Authorization: `Bearer ${orKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": appUrl,
+          "X-Title": "Open-Connect",
+        },
+      });
+    }
+  }
+
+  if (liteKey && liteBaseRaw && !isOpenRouterBase(liteBaseRaw)) {
+    const liteBase = stripTrailingSlash(liteBaseRaw);
+    const id = `litellm:${liteBase}`;
+    if (!seen.has(id)) {
+      seen.add(id);
+      list.push({
+        name: "litellm",
+        baseUrl: liteBase,
+        headers: {
+          Authorization: `Bearer ${liteKey}`,
+          "Content-Type": "application/json",
+        },
+      });
+    }
+  }
+
+  // Optional Fireworks AI platform upstream (OpenAI-compatible inference).
+  const fireworksKey = process.env["FIREWORKS_API_KEY"] || "";
+  const fireworksBase = stripTrailingSlash(
+    process.env["FIREWORKS_BASE_URL"] || "https://api.fireworks.ai/inference/v1",
+  );
+  if (fireworksKey && fireworksBase.startsWith("https://")) {
+    const id = `fireworks:${fireworksBase}`;
+    if (!seen.has(id)) {
+      seen.add(id);
+      list.push({
+        name: "fireworks",
+        baseUrl: fireworksBase,
+        headers: {
+          Authorization: `Bearer ${fireworksKey}`,
+          "Content-Type": "application/json",
+        },
+      });
+    }
+  }
+
+  // Credential-free platform fallback: the Workers AI binding needs no API
+  // key, so Open-Auto free-first routing works on every deployment without
+  // stored secrets.
+  for (const upstream of resolvePlatformFreeUpstreams()) {
+    const id = `${upstream.name}:${upstream.baseUrl}`;
+    if (!seen.has(id)) {
+      seen.add(id);
+      list.push(upstream);
+    }
+  }
+
+  return list;
+}
+
+/**
+ * The credential-free platform upstream(s).
+ *
+ * Workers AI runs on the `OC_AI` binding: no API key, no account, no bill. It
+ * is therefore not "a different account" and is safe to expose even when
+ * credentialed platform fallback is disabled — which is what keeps the
+ * in-app agent chat working on a deployment that has no provider key stored.
+ */
+export function resolvePlatformFreeUpstreams(): Upstream[] {
+  return [
+    {
+      name: CLOUDFLARE_AI_UPSTREAM_NAME,
+      baseUrl: CLOUDFLARE_AI_BASE_URL,
+      headers: {},
+    },
+  ];
+}
+
+export async function resolveUserUpstreams(
+  userId: string,
+  allowPlatformFallback = true,
+): Promise<Upstream[]> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { savedModelUpstreams } = await import("./model-connection.server");
+  // Generated database types lag the deployed credential resolver RPC.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = supabaseAdmin as any;
+  const { data: connections, error: connectionError } = await db
+    .from("app_connections")
+    .select("provider,status,credential_reference,metadata")
+    .eq("user_id", userId)
+    .in("provider", [...COMPATIBLE_GATEWAY_PROVIDERS.map((provider) => provider.id), "anthropic"])
+    .eq("status", "connected")
+    .order("created_at", { ascending: false });
+  if (connectionError) throw new Error("Unable to read model connection.");
+  const saved = await savedModelUpstreams(userId, {
+    find: async () => connections ?? [],
+    resolve: async (id, credentialId) => {
+      const { data, error } = await db.rpc("resolve_connection_credential", {
+        p_user_id: id,
+        p_credential_id: credentialId,
+      });
+      if (error || typeof data !== "string") throw new Error("Unable to resolve model credential.");
+      return data;
+    },
+  });
+  // A saved personal connection is authoritative: no silent fallback to a
+  // different *account*. The credential-free Workers AI binding is not another
+  // account, so it is appended even when credentialed fallback is disabled —
+  // otherwise the in-app agent chat has no route at all on a keyless
+  // deployment and fails at the provider step.
+  const platformFree = resolvePlatformFreeUpstreams();
+  if (saved.length > 0 || (connections?.length ?? 0) > 0) {
+    const seen = new Set(saved.map((upstream) => `${upstream.name}:${upstream.baseUrl}`));
+    return [
+      ...saved,
+      ...platformFree.filter((upstream) => !seen.has(`${upstream.name}:${upstream.baseUrl}`)),
+    ];
+  }
+  return allowPlatformFallback ? resolveUpstreams() : platformFree;
+}
+
+export type AutoFreeRoute = { upstream: Upstream; model: string };
+
+const AUTO_FREE_CATALOG_TTL_MS = 60_000;
+const autoFreeCatalogCache = new Map<string, { expiresAt: number; ids: string[] }>();
+
+/** Build free-only fallback routes from the current user's connected model gateways. */
+export async function resolveAutoFreeRoutes(upstreams: Upstream[]): Promise<AutoFreeRoute[]> {
+  return collectAutoFreeRoutes(upstreams, async (upstream) => {
+    if (upstream.name === CLOUDFLARE_AI_UPSTREAM_NAME) {
+      return [...CLOUDFLARE_AI_FREE_MODELS];
+    }
+    const cacheKey = createHash("sha256")
+      .update(`${upstream.name}\n${upstream.baseUrl}\n${upstream.headers["Authorization"] ?? ""}`)
+      .digest("hex");
+    let catalog = autoFreeCatalogCache.get(cacheKey);
+    if (!catalog || catalog.expiresAt <= Date.now()) {
+      const models = await fetchFreeModelCatalog([upstream]);
+      catalog = {
+        expiresAt: Date.now() + AUTO_FREE_CATALOG_TTL_MS,
+        ids: models.map((model) => model.id),
+      };
+      autoFreeCatalogCache.set(cacheKey, catalog);
+    }
+    return catalog.ids;
+  });
+}
+
+export { isAutoFreeModel };
+export function resolveUpstream(): Upstream | null {
+  return resolveUpstreams()[0] ?? null;
+}
+
+export function hashKey(rawKey: string): string {
+  return createHash("sha256").update(rawKey).digest("hex");
+}
+
+export function generateKey(modelOnly = false): { raw: string; hash: string; prefix: string } {
+  return generateClientKey(modelOnly);
+}
+
+export type AuthedKey = {
+  id: string;
+  userId: string;
+  scopes: string[];
+  organizationId: string | null;
+  workspaceId: string | null;
+  projectId: string | null;
+  accessProfile: string;
+};
+
+export function readBearer(request: Request): string | null {
+  const header = request.headers.get("authorization") ?? request.headers.get("x-api-key");
+  if (!header) return null;
+  const value = header.startsWith("Bearer ") ? header.slice(7) : header;
+  return value.trim() || null;
+}
+
+export function hasScope(key: AuthedKey, scope: string): boolean {
+  return key.scopes.includes(scope) || key.scopes.includes("*");
+}
+
+export async function authenticateKey(request: Request): Promise<AuthedKey | null> {
+  const raw = readBearer(request);
+  if (!raw || !isClientKey(raw)) return null;
+
+  // Verify every request so deleted/revoked keys never survive in an instance cache.
+  const { oauthDatabase } = await import("@/lib/oauth-client.server");
+  const { data, error } = await oauthDatabase().rpc("oc_verify_gateway_key", { p_key: raw });
+  if (error || !data || !resourceAllowsRequest(data.oauth_resource, request.url)) return null;
+  const key: AuthedKey = {
+    id: data.id,
+    userId: data.user_id,
+    scopes: data.scopes ?? [],
+    organizationId: data.organization_id ?? null,
+    workspaceId: data.workspace_id ?? null,
+    projectId: data.project_id ?? null,
+    accessProfile: data.access_profile ?? "legacy",
+  };
+  return key;
+}
+
+export async function logGatewayRequest(entry: {
+  key: AuthedKey;
+  endpoint: string;
+  model?: string | null;
+  statusCode: number;
+  upstream: string;
+  totalTokens?: number | null;
+}): Promise<void> {
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.from("gateway_requests").insert({
+      api_key_id: entry.key.id,
+      user_id: entry.key.userId,
+      endpoint: entry.endpoint,
+      model: entry.model ?? null,
+      status_code: entry.statusCode,
+      upstream: entry.upstream,
+      total_tokens: entry.totalTokens ?? null,
+    });
+  } catch {
+    // ignore audit failures
+  }
+}
+
+export function json(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json" },
+  });
+}
+
+export function gatewayError(message: string, status: number, code: string): Response {
+  return json({ error: { message, type: "open_connect_error", code } }, status);
+}
+
+/** Full catalog: managed aliases + every model from connected upstream credentials. */
+export async function fetchMergedModelCatalog(configured?: Upstream[]): Promise<{
+  ids: string[];
+  upstreams: string[];
+  providers: string[];
+}> {
+  const upstreams = configured ?? resolveUpstreams();
+  const ids = new Set<string>(MANAGED_MODEL_IDS);
+  const names: string[] = [];
+  const providers = new Set<string>();
+
+  await Promise.all(
+    upstreams.map(async (u) => {
+      names.push(u.name);
+      if (u.name === CLOUDFLARE_AI_UPSTREAM_NAME) {
+        providers.add(u.name);
+        for (const id of CLOUDFLARE_AI_FREE_MODELS) {
+          ids.add(id);
+        }
+        return;
+      }
+      try {
+        const response = await fetch(`${u.baseUrl}/models`, {
+          headers: u.headers,
+          signal: AbortSignal.timeout(15_000),
+        });
+        if (!response.ok) return;
+        const payload = (await response.json().catch(() => null)) as {
+          data?: { id?: string }[];
+        } | null;
+        const data = payload?.data;
+        if (!Array.isArray(data)) return;
+        for (const m of data) {
+          if (m && typeof m.id === "string" && m.id.length > 0) {
+            ids.add(m.id);
+            const slash = m.id.indexOf("/");
+            providers.add(slash > 0 ? m.id.slice(0, slash) : u.name);
+          }
+        }
+      } catch {
+        // keep managed list
+      }
+    }),
+  );
+
+  return {
+    ids: [...ids].sort(),
+    upstreams: names,
+    providers: [...providers].sort(),
+  };
+}

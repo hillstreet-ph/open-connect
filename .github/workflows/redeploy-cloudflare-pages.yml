@@ -1,0 +1,109 @@
+name: Redeploy — force a Cloudflare Pages build
+
+# Replaces the old `fixer-redeploy.yml`, which could never work.
+#
+# The old workflow committed an empty commit and pushed it straight to `main`.
+# `main` is protected with `enforce_admins: true` and no force-push, so that
+# push was rejected every time — both recorded runs failed (2026-11-10T19:26Z
+# and 19:43Z). It was never a usable redeploy lever.
+#
+# This version never writes to `main`. It triggers a build through a channel
+# that is allowed to: a Cloudflare Pages **Deploy Hook**.
+#
+# Setup (one time, by a repo admin):
+#   1. Cloudflare dashboard -> Workers & Pages -> open-connect-app
+#      -> Settings -> Builds & deployments -> Deploy hooks -> Add
+#      Name it "github-redeploy", branch `main`.
+#   2. Copy the generated URL and save it as the repo secret
+#      `CF_PAGES_DEPLOY_HOOK`.
+#
+# If that secret is absent this workflow fails loudly and says so. It does not
+# fall back to pushing to main, because that fallback is what was broken.
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Why redeploy"
+        required: false
+        default: "manual heal"
+      verify:
+        description: "Run the post-deploy production gate afterwards"
+        type: boolean
+        required: false
+        default: true
+
+concurrency:
+  group: redeploy-cloudflare-pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  redeploy:
+    name: Trigger Cloudflare Pages build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check the deploy hook is configured
+        id: hook
+        env:
+          HOOK: ${{ secrets.CF_PAGES_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "::error title=Deploy hook not configured::CF_PAGES_DEPLOY_HOOK is not set."
+            cat <<'MSG'
+          Cannot redeploy: no Cloudflare Pages deploy hook is configured.
+
+          This workflow deliberately does NOT push to main. main is protected
+          (enforce_admins: true, no force-push), so a direct push is rejected —
+          that is exactly why the previous fixer-redeploy.yml failed.
+
+          To enable redeploys, a repo admin must:
+            1. Cloudflare dashboard -> Workers & Pages -> open-connect-app
+               -> Settings -> Builds & deployments -> Deploy hooks -> Add
+               Name: github-redeploy   Branch: main
+            2. Save the URL as the repository secret CF_PAGES_DEPLOY_HOOK
+               (Settings -> Secrets and variables -> Actions -> New secret)
+
+          Until then, redeploy from the Cloudflare dashboard:
+            Deployments -> (latest) -> Retry deployment
+          MSG
+            exit 1
+          fi
+          echo "configured=true" >> "$GITHUB_OUTPUT"
+
+      - name: POST the deploy hook
+        id: trigger
+        env:
+          HOOK: ${{ secrets.CF_PAGES_DEPLOY_HOOK }}
+        run: |
+          set -euo pipefail
+          echo "Triggering Cloudflare Pages build: ${{ github.event.inputs.reason }}"
+          code=$(curl -sS -o /tmp/hook.out -w '%{http_code}' -X POST --max-time 30 "$HOOK")
+          echo "deploy hook -> HTTP $code"
+          head -c 500 /tmp/hook.out || true
+          echo
+          if [ "$code" -lt 200 ] || [ "$code" -ge 300 ]; then
+            echo "::error title=Deploy hook rejected::HTTP $code from the Cloudflare deploy hook."
+            exit 1
+          fi
+          echo "triggered=true" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for production to serve main HEAD
+        if: steps.trigger.outputs.triggered == 'true' && inputs.verify
+        uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - name: Run the production gate
+        if: steps.trigger.outputs.triggered == 'true' && inputs.verify
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 scripts/verify_production_deploy.py \
+            --expected-sha auto \
+            --wait 900 \
+            --interval 30

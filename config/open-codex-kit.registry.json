@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0.0",
+  "id": "open-codex-kit",
+  "name": "Open Codex Kit",
+  "version": "1.0.0",
+  "publisher": "HillStreet Information Technology Services",
+  "category": "developer",
+  "clients": ["ChatGPT", "Codex", "Open-Connect"],
+  "capabilities": [
+    "codex_cli",
+    "agents_sdk",
+    "cloud_terminal",
+    "isolated_workspace",
+    "cloud_browser",
+    "cloud_computer",
+    "mcp",
+    "skills",
+    "plugins",
+    "git_workflows"
+  ],
+  "mcp_url": "https://open-connect.site/mcp",
+  "credential_transport": "opaque_reference_only",
+  "default_access": "read_only",
+  "approval_required": [
+    "destructive_action",
+    "production_write",
+    "dns_change",
+    "credential_change",
+    "billing_change",
+    "membership_change"
+  ],
+  "package_url": "https://open-connect.site/downloads/open-codex-kit.zip"
+}

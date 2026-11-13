@@ -1,0 +1,273 @@
+{
+  "schema_version": "1.0.0",
+  "registry_id": "open-connect-curated-resources",
+  "policy": {
+    "mode": "metadata_only",
+    "auto_install": false,
+    "auto_publish": false,
+    "approved_states": ["approved"],
+    "visible_states": ["approved", "review_required", "rejected"]
+  },
+  "resources": [
+    {
+      "slug": "open-skill-vetter",
+      "name": "Skill Vetter",
+      "type": "skill",
+      "url": "https://clawhub.ai/spclaudehome/skills/skill-vetter",
+      "license": "MIT-0",
+      "risk": "medium",
+      "state": "review_required",
+      "reason": "Promising pre-ingestion review policy; security review required."
+    },
+    {
+      "slug": "open-qmd",
+      "name": "Qmd",
+      "type": "mcp",
+      "url": "https://clawhub.ai/steipete/skills/qmd",
+      "license": "MIT-0",
+      "risk": "high",
+      "state": "review_required",
+      "reason": "Knowledge indexing requires privacy and filesystem review."
+    },
+    {
+      "slug": "open-planning-with-files",
+      "name": "Planning with Files",
+      "type": "skill",
+      "url": "https://clawhub.ai/othmanadi/skills/planning-with-files",
+      "license": "MIT-0",
+      "risk": "high",
+      "state": "review_required",
+      "reason": "Hooks may inject local content into model context."
+    },
+    {
+      "slug": "open-superpowers-dev-workflow",
+      "name": "Superpowers Dev Workflow",
+      "type": "skill",
+      "url": "https://clawhub.ai/wlshlad85/skills/superpowers",
+      "license": "MIT-0",
+      "risk": "high",
+      "state": "review_required",
+      "reason": "Executes commands and spawns agents."
+    },
+    {
+      "slug": "open-terminal",
+      "name": "Open Terminal",
+      "type": "tool",
+      "url": "https://github.com/open-webui/open-terminal",
+      "license": "MIT",
+      "risk": "critical",
+      "state": "review_required",
+      "reason": "Remote shell requires isolation and explicit approval."
+    },
+    {
+      "slug": "open-mcpo",
+      "name": "mcpo",
+      "type": "mcp",
+      "url": "https://github.com/open-webui/mcpo",
+      "license": "MIT",
+      "risk": "high",
+      "state": "rejected",
+      "reason": "Duplicates the existing Open-Connect MCP/OpenAPI gateway."
+    },
+    {
+      "slug": "open-swarmclaw",
+      "name": "SwarmClaw",
+      "type": "agent",
+      "url": "https://www.swarmclaw.ai/",
+      "license": "MIT",
+      "risk": "high",
+      "state": "review_required",
+      "reason": "Research adapter only; overlaps Open-System orchestration."
+    },
+    {
+      "slug": "open-fs-safe",
+      "name": "OpenClaw fs-safe",
+      "type": "tool",
+      "url": "https://github.com/openclaw/fs-safe",
+      "license": "MIT",
+      "risk": "high",
+      "state": "review_required",
+      "reason": "Native bindings and filesystem boundaries require security review."
+    },
+    {
+      "slug": "open-rocketchat-plugin",
+      "name": "Rocket.Chat OpenClaw Plugin",
+      "type": "plugin",
+      "url": "https://github.com/RocketChat/OpenClaw.Plugin",
+      "license": "MIT",
+      "risk": "high",
+      "state": "review_required",
+      "reason": "Requires admin access, bot creation, and credential configuration."
+    },
+    {
+      "slug": "open-learn-skills",
+      "name": "learn-skills.dev",
+      "type": "skill",
+      "url": "https://github.com/NeverSight/learn-skills.dev",
+      "license": null,
+      "risk": "high",
+      "state": "review_required",
+      "reason": "No detected license; metadata only."
+    },
+    {
+      "slug": "open-awesome-openclaw-use-cases-cn",
+      "name": "Awesome OpenClaw Use Cases CN",
+      "type": "guide",
+      "url": "https://github.com/AIPMAndy/awesome-openclaw-use-cases-cn",
+      "license": "Apache-2.0 with additional terms",
+      "risk": "medium",
+      "state": "review_required",
+      "reason": "License terms and untrusted prompt content require review."
+    },
+    {
+      "slug": "open-acpx",
+      "name": "OpenClaw acpx",
+      "type": "plugin",
+      "url": "https://github.com/openclaw/acpx",
+      "license": "MIT",
+      "risk": "high",
+      "state": "review_required",
+      "reason": "Controls persistent agent sessions, permissions, and tool events."
+    },
+    {
+      "slug": "open-deja-vu",
+      "name": "deja-vu",
+      "type": "tool",
+      "url": "https://github.com/vshulcz/deja-vu",
+      "license": "MIT",
+      "risk": "critical",
+      "state": "review_required",
+      "reason": "Cross-agent history injection creates privacy and contamination risk."
+    },
+    {
+      "slug": "open-langbot",
+      "name": "LangBot",
+      "type": "agent",
+      "url": "https://github.com/langbot-app/LangBot",
+      "license": "Apache-2.0",
+      "risk": "high",
+      "state": "rejected",
+      "reason": "Substantial overlap with Open-Hub and Open-System."
+    },
+    {
+      "slug": "open-lobe-bench-skill",
+      "name": "Lobe Bench Skill",
+      "type": "skill",
+      "url": "https://github.com/lobehub/lobe-bench-skill",
+      "license": null,
+      "risk": "unknown",
+      "state": "review_required",
+      "reason": "No detected license or sufficient package description."
+    },
+    {
+      "slug": "open-clownfish",
+      "name": "OpenClaw Clownfish",
+      "type": "agent",
+      "url": "https://github.com/openclaw/clownfish",
+      "license": "MIT",
+      "risk": "critical",
+      "state": "review_required",
+      "reason": "Can close or merge GitHub work; repository governance approval required."
+    },
+    {
+      "slug": "open-agent-session-query",
+      "name": "agent-session-query",
+      "type": "mcp",
+      "url": "https://github.com/itswl/agent-session-query",
+      "license": "MIT",
+      "risk": "high",
+      "state": "review_required",
+      "reason": "Session-history access requires privacy and retention review."
+    },
+    {
+      "slug": "open-crabbox",
+      "name": "OpenClaw Crabbox",
+      "type": "tool",
+      "url": "https://github.com/openclaw/crabbox",
+      "license": "MIT",
+      "risk": "critical",
+      "state": "review_required",
+      "reason": "Executes commands across containers, SSH hosts, and cloud machines."
+    },
+    {
+      "slug": "open-tale",
+      "name": "Tale",
+      "type": "agent",
+      "url": "https://github.com/tale-project/tale",
+      "license": null,
+      "risk": "high",
+      "state": "rejected",
+      "reason": "Duplicates Open-System orchestration with weaker provenance."
+    },
+    {
+      "slug": "open-microsandbox-reef",
+      "name": "microsandbox-reef",
+      "type": "tool",
+      "url": "https://github.com/skalenetwork/microsandbox-reef",
+      "license": "MIT",
+      "risk": "critical",
+      "state": "review_required",
+      "reason": "Beta microVM runtime; authentication and host-secret boundaries require review."
+    },
+    {
+      "slug": "open-casdoor",
+      "name": "Casdoor",
+      "type": "app",
+      "url": "https://github.com/casdoor/casdoor",
+      "license": "Apache-2.0",
+      "risk": "high",
+      "state": "rejected",
+      "reason": "Identity reference only; overlaps Supabase authentication and the broker."
+    },
+    {
+      "slug": "open-openclaw-cve-tracker",
+      "name": "OpenClaw CVE Tracker",
+      "type": "guide",
+      "url": "https://github.com/jgamblin/OpenClawCVEs",
+      "license": "MIT",
+      "risk": "medium",
+      "state": "review_required",
+      "reason": "Useful advisory metadata but must be reconciled with authoritative CVE sources."
+    },
+    {
+      "slug": "open-lossless-claw",
+      "name": "Lossless Claw",
+      "type": "tool",
+      "url": "https://github.com/Martian-Engineering/lossless-claw",
+      "license": "MIT",
+      "risk": "critical",
+      "state": "review_required",
+      "reason": "Full transcript persistence and recall require privacy controls."
+    },
+    {
+      "slug": "open-nemoclaw",
+      "name": "NVIDIA NemoClaw",
+      "type": "tool",
+      "url": "https://github.com/NVIDIA/NemoClaw",
+      "license": "Apache-2.0",
+      "risk": "critical",
+      "state": "review_required",
+      "reason": "Alpha sandbox runtime; privilege, egress, and escape boundaries require testing."
+    },
+    {
+      "slug": "open-aris",
+      "name": "ARIS",
+      "type": "skill",
+      "url": "https://github.com/wanshuiyin/Auto-claude-code-research-in-sleep",
+      "license": "MIT",
+      "risk": "critical",
+      "state": "review_required",
+      "reason": "Runs experiments, shell commands, plugins, skills, and persistent knowledge."
+    },
+    {
+      "slug": "open-u-claw",
+      "name": "U-Claw",
+      "type": "app",
+      "url": "https://github.com/InternLM/U-Claw",
+      "license": null,
+      "risk": "high",
+      "state": "rejected",
+      "reason": "Portable runtime duplicates existing capabilities and carries sensitive state."
+    }
+  ]
+}

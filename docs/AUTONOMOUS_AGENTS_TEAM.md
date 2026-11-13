@@ -1,0 +1,96 @@
+# Autonomous-Agents Team MCP card
+
+The client card is served from `ui://open-connect/command-center-v3.html`. The v1 and v2 resource URIs remain readable. It shows Resources, Connections, Credentials, and AI Gateway. Counts, availability, and enabled actions reflect the authenticated key; credential values are never sent to the card.
+
+Auto defaults on for a new account context and preserves a saved Off preference. The MCP initialization instructions ask the coordinating client to discover matching capabilities, verify actual executors, use authorized tools, record verified outcomes, and checkpoint long context. These instructions do not grant permissions or control the host UI. Clients without MCP Apps UI still receive the same tools and structured results.
+
+## Tools and scope
+
+- `auto_discover`: matches approved resource metadata and registered MCP functions allowed by the key; requires `resources:read`. It does not execute a catalog match.
+- `run_agent_team`: requires both `models:invoke` and `agents:invoke` on a personal key. Planner, Builder, and Reviewer run concurrently. Each tries up to three rotated routes discovered from the account's connected free-model catalogs. There is no paid fallback. Workers return proposals and have no execution tools; the coordinating client verifies and executes using separately authorized tools.
+- `save_context_checkpoint`: requires administrator role and `control:write`. Saves only the supplied redacted summary to owned Memory, with a deterministic ID for each user, project, and session. Project keys require verified project access. Organization/workspace keys without a project cannot write personal checkpoints.
+- `list_my_memory` with `checkpoint_session`: restores a saved checkpoint under the caller's existing memory-read and project boundaries.
+- `record_run_outcome`: personal administrator `control:write` only. Retries deduplicate events and Memory records. Three distinct successful runs of the same capability set promote reusable Knowledge. With `resources:write`, they also prepare a private prompt draft in Studio. Saved summaries are redacted; unknown secrets still must not be supplied as context.
+
+Settings → Data contains Data Controls, Memory, Knowledge, and an explicit owned-context JSON export. Export excludes credential and connector tables and fails rather than silently truncating more than 20,000 records in either section.
+
+Key creation and access-profile selection remain in Integrations; the card links there. Scope changes still require the authenticated account's authority. Routine Auto work uses existing grants. Host consent dialogs, native conversation compaction, paid-provider entitlements, and external application permissions remain controlled by their respective hosts/providers.
+
+Learning drafts start unpublished and unverified. Frequency is not a security review or evidence that an action succeeded. A client must supply verified run outcomes, review draft content, and use the existing verification/publication flow with the required authority. The service does not observe or store unseen ChatGPT, Codex, or Claude history.
+
+Refresh/reconnect Open-Connect in each client after deployment so it reloads the new card URI, tools, and initialization instructions.
+
+## Chat card compatibility and approvals
+
+The v4 card initializes the standard MCP Apps bridge before calling tools, even when a host also exposes the older `window.openai.callTool` API. Legacy-only hosts fall back before an action is submitted. Action responses support nested MCP envelopes, and an unknown-tool response asks the user to refresh the host connection and open a new card. A submitted action is never automatically replayed through a different transport.
+
+Auto continues authorized tasks using existing grants. It does not click ChatGPT, Codex, or provider consent prompts, change another app's permission setting, or bypass protected database approvals. Open-Connect's saved Auto setting and a host's app-specific permissions are separate controls. Older cards/tool catalogs may require a host connection refresh; deploying server code cannot silently replace the host's installed catalog.
+
+The connection proxy allows the free-model team up to the existing 60-second MCP operation deadline, rather than cutting it off at 30 seconds while model fallbacks are still running. Other remote tools retain the 30-second call timeout. A timeout does not prove that upstream work never started; the card does not automatically resubmit an uncertain action.
+
+Every worker tries the available free router first. Fallback then crosses connected providers before spending the remaining bounded attempts on sibling models; a large first-provider catalog cannot exclude another provider from all three attempts. Free routing remains best-effort: unavailable workers are reported explicitly, and paid routes are never substituted.
+
+## Chat card inventory counts
+
+The v5 card shows Resources, Connections, Credentials and Models as numeric totals. Credentials counts owned `credential_secrets` metadata with an exact HEAD query; no secret values are retrieved for this count. Models counts distinct IDs in the same AI Gateway catalog used by `list_models`, including managed IDs and models returned by connected providers. Catalog membership does not guarantee inference access, and provider catalog failures retain the gateway's managed fallback list.
+
+Credential totals require `secrets:read`; model totals require `models:read` or `models:invoke`. Both require personal context. Missing grants show Not granted, failed reads show Unavailable, and a real zero remains 0. Status calls allow 30 seconds for provider catalog loading. Legacy card resource URIs remain readable.
+
+## Access section layout
+
+The v6 card separates Access permissions from the Goal input with a block label, spacing and divider. The primary access summary uses readable AI-worker and workspace-control permission labels; exact scope names remain under Technical scope names. The Manage keys and access link opens the existing API-key integration section. These labels describe existing key grants and do not change permissions or establish administrator role access.
+
+
+### Expanded ChatGPT capability discovery
+
+The existing private ChatGPT App plugin also bundles the canonical
+`skills/auto/SKILL.md` workflow. Package its source manifests and that skill with
+`python3 scripts/package-chatgpt-plugin.py --output /tmp/open-connect-plugin.zip`.
+The manifests under `plugins/chatgpt-open-connect` retain the original App ID and
+presentation; do not install that source directory alone or wrap it as a second
+plugin. Use Plugin Creator's guarded update on the existing plugin and verify
+source readback. The skill routes tools already exposed in the host; it does not
+copy authentication between Open-Connect, Composio, and Shelf. Refresh the plugin
+in a new host session when the current session retains an older skill catalog.
+
+`auto_discover` accepts an optional `type`: all (default), tool, toolkit, action,
+function, extension, app, skill, agent, mcp, or plugin. App and extension filters
+include MCP/plugin packages; actions refer to scoped platform functions. Results
+retain original resource and installation types, identify `platform` versus
+`marketplace`, and provide a discovery tool and arguments. For platform matches,
+inspect the named tool's actual input schema and supply the task's required
+arguments; the empty discovery arguments are not an invocation request.
+Marketplace matches use `fetch` with the exact resource slug and remain catalog
+metadata, not proof of installation, host compatibility, or execution access.
+
+To expand into a connected provider, use `list_connections`, choose an authorized
+account, and call `list_connection_tools` for its actual schemas before
+`call_connection_tool`. This avoids publishing duplicate tools for every catalog
+row or claiming that a host can run every third-party extension. Existing scopes,
+provider consent, and host approvals continue to apply.
+
+### Repeated context review in Data Controls
+
+Settings → Data Controls shows repeated prompts and responses across the latest
+200 automatically captured exchanges within the configured retention window.
+Matching normalizes case and whitespace only; it is not semantic AI detection.
+Identical prompt/reply pairs are deduplicated, and old records without matching
+metadata are not backfilled. The panel refreshes every 30 seconds while open.
+
+With helper-memory saving enabled, Open-Connect captures helper prompts and
+replies after completion. An external host can explicitly submit an authorized
+pair through `capture_context_exchange`; the server cannot read that host's chat
+history. The tool requires a personal administrator key with `control:write` and
+honors Data Controls. Automatic draft creation additionally requires
+`resources:write` for MCP callers. Project/workspace/organization keys cannot
+write personal host history through this tool.
+
+Three distinct saved exchanges with the same prompt create one private prompt
+draft when draft suggestions are on. Repeated responses are displayed for review
+but never treated as verified knowledge or executable instructions. The user can
+save an explicitly unverified Knowledge note or review a prompt draft. Notes are
+manual Knowledge records and remain until deleted. Drafts use the existing
+Build for review → Studio review and publication flow; nothing is automatically
+published, installed or granted provider access. Generalize source excerpts and
+remove private details before publication. Verified tool-run Knowledge and
+capability draft suggestions remain a separate evidence-based path.

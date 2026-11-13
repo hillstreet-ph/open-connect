@@ -1,0 +1,6 @@
+*
+!requirements.txt
+!core.py
+!delivery.py
+!source.py
+!worker.py

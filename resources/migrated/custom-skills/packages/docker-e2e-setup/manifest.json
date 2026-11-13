@@ -1,0 +1,25 @@
+{
+  "name": "docker-e2e-setup",
+  "version": "1.0.0",
+  "entrypoint": "SKILL.md",
+  "modes": [
+    "NO_DOCKER",
+    "EXISTING_DOCKERFILE",
+    "EXISTING_COMPOSE",
+    "EXISTING_DOCKERHUB",
+    "EXISTING_PRODUCTION",
+    "MIGRATION"
+  ],
+  "registry": "Docker Hub",
+  "integrates_with": [
+    "github-e2e-setup",
+    "supabase-e2e",
+    "cloudflare-e2e",
+    "railway-e2e",
+    "zeabur-e2e"
+  ],
+  "runtime_choice": [
+    "Railway",
+    "Zeabur"
+  ]
+}

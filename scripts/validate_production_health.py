@@ -1,0 +1,75 @@
+#!/usr/bin/env python3
+"""Validate the public production-health envelope without reading secret values."""
+
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+from typing import Any
+
+REQUIRED_SUPABASE_BINDINGS = (
+    "SUPABASE_URL",
+    "SUPABASE_PUBLISHABLE_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY",
+)
+
+
+def validate_health(payload: Any) -> list[str]:
+    if not isinstance(payload, dict):
+        return ["health response must be a JSON object"]
+
+    failures: list[str] = []
+    if payload.get("status") != "ok":
+        failures.append("status must be ok")
+
+    upstreams = payload.get("model_upstreams")
+    if not isinstance(upstreams, list):
+        failures.append("model_upstreams must be a list")
+
+    model_gateway = payload.get("model_gateway")
+    supports_user_connections = (
+        isinstance(model_gateway, dict)
+        and model_gateway.get("user_connections_supported") is True
+    )
+    if isinstance(upstreams, list) and not upstreams and not supports_user_connections:
+        failures.append("model gateway must have a platform provider or support user-scoped connections")
+
+    kv = payload.get("kv")
+    if not isinstance(kv, dict) or not kv.get("bound") or not kv.get("writable"):
+        failures.append("OC_KV must be bound and writable")
+
+    env = payload.get("env")
+    if not isinstance(env, dict):
+        failures.append("env binding metadata must be present")
+    else:
+        for name in REQUIRED_SUPABASE_BINDINGS:
+            if not env.get(name):
+                failures.append(f"{name} must be configured")
+
+    return failures
+
+
+def main() -> int:
+    if len(sys.argv) != 2:
+        print("usage: validate_production_health.py HEALTH_JSON", file=sys.stderr)
+        return 2
+
+    try:
+        payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"invalid health response: {exc}", file=sys.stderr)
+        return 1
+
+    failures = validate_health(payload)
+    if failures:
+        for failure in failures:
+            print(f"production health contract failed: {failure}", file=sys.stderr)
+        return 1
+
+    print("production health contract passed")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

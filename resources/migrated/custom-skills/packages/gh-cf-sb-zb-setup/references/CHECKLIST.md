@@ -1,0 +1,19 @@
+# Final Checklist
+- [ ] Profile providers correct
+- [ ] Existing resources discovered
+- [ ] Production/data preserved
+- [ ] One-owner map documented
+- [ ] CI/security verified
+- [ ] DB/migrations verified
+- [ ] Auth/OAuth/RLS verified
+- [ ] Storage verified
+- [ ] Zeabur source/runtime/port/health verified
+- [ ] Workers/jobs verified if required
+- [ ] Persistence verified if required
+- [ ] Cloudflare DNS/TLS/proxy verified
+- [ ] Staging E2E verified
+- [ ] Production E2E verified
+- [ ] Monitoring defined
+- [ ] DB/Storage/volume recovery verified
+- [ ] Rollback ready
+- [ ] Docker Hub/Railway remain NOT_REQUIRED

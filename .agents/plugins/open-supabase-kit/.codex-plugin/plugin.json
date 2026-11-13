@@ -1,0 +1,24 @@
+{
+  "name": "open-supabase-kit",
+  "version": "1.0.0",
+  "description": "Supabase Postgres, Auth, Storage, Realtime, migrations, and Edge Functions.",
+  "author": {
+    "name": "HillStreet Information Technology Services"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Open Supabase Kit",
+    "shortDescription": "Operate Supabase data, Auth, and serverless services safely.",
+    "longDescription": "Supabase Postgres, Auth, Storage, Realtime, migrations, and Edge Functions. Uses provider-authorized read/write scopes with approval gates for production and destructive operations.",
+    "developerName": "HillStreet Information Technology Services",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Supabase",
+      "Read/write operations",
+      "Health verification",
+      "Rollback planning"
+    ],
+    "defaultPrompt": "Use Open Supabase Kit to inspect current state, make the smallest authorized change, and verify the result."
+  },
+  "mcpServers": "./.mcp.json"
+}

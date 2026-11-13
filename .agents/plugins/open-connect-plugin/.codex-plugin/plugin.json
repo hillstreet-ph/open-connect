@@ -1,0 +1,20 @@
+{
+  "name": "open-connect-plugin",
+  "version": "0.1.0",
+  "description": "Secure Open-Connect control plane for Codex and ChatGPT developer workflows.",
+  "author": {
+    "name": "HillStreet Information Technology Services"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Open Connect Plugin",
+    "shortDescription": "Operate projects through the Open-Connect MCP gateway.",
+    "longDescription": "Connect Codex and ChatGPT to Open-Connect for scoped project, agent, connection, knowledge, API-key, deployment, and audit workflows without exposing provider credentials.",
+    "developerName": "HillStreet Information Technology Services",
+    "category": "Developer Tools",
+    "capabilities": ["MCP", "Project orchestration", "Credential brokerage", "Autonomous audits"],
+    "defaultPrompt": "Use Open-Connect to inspect my workspace, choose the minimum required capabilities, and execute only approved actions with redacted evidence."
+  },
+  "mcpServers": "./.mcp.json",
+  "apps": "./.app.json"
+}

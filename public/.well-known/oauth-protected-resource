@@ -1,0 +1,25 @@
+{
+  "resource": "https://open-connect.site/mcp",
+  "authorization_servers": [
+    "https://open-connect.site"
+  ],
+  "bearer_methods_supported": [
+    "header"
+  ],
+  "scopes_supported": [
+    "openid",
+    "mcp:connect",
+    "resources:read",
+    "resources:write",
+    "memory:read",
+    "knowledge:read",
+    "connections:read",
+    "connections:invoke",
+    "models:read",
+    "models:invoke",
+    "tools:invoke",
+    "secrets:read",
+    "agents:invoke",
+    "control:write"
+  ]
+}

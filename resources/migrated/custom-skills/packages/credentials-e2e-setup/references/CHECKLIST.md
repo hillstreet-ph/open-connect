@@ -1,0 +1,17 @@
+# Final Checklist
+- [ ] Providers/resources discovered
+- [ ] Credential inventory complete
+- [ ] Existing valid credentials reused
+- [ ] Missing credentials classified
+- [ ] Real provider credentials created only when authorized/supported
+- [ ] Application-owned secrets generated securely where required
+- [ ] Secret stores configured
+- [ ] Consumers configured
+- [ ] Least privilege reviewed
+- [ ] Environment separation verified
+- [ ] OAuth/webhooks verified where applicable
+- [ ] CI/runtime/DB auth verified
+- [ ] Source/build/container/frontend/log exposure scan completed
+- [ ] No unnecessary revocation occurred
+- [ ] All required integrations tested
+- [ ] Blockers accurately reported

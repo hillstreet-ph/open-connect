@@ -1,0 +1,7 @@
+{
+  // Replace only after application/Worker discovery.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "replace-me",
+  "main": "src/index.ts",
+  "compatibility_date": "YYYY-MM-DD"
+}

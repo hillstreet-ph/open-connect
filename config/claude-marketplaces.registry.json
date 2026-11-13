@@ -1,0 +1,56 @@
+{
+  "schema_version": "1.0.0",
+  "registry_id": "open-connect-claude-marketplaces",
+  "policy": {
+    "mode": "metadata_only",
+    "executable": false,
+    "vendored_content": false,
+    "auto_install": false,
+    "public_rows_verified": false,
+    "require_security_review": true
+  },
+  "marketplaces": [
+    {
+      "name": "claude-plugins-official",
+      "repository": "anthropics/claude-plugins-official",
+      "license": "Apache-2.0",
+      "default_category": "developer"
+    },
+    {
+      "name": "knowledge-work-plugins",
+      "repository": "anthropics/knowledge-work-plugins",
+      "license": "Apache-2.0",
+      "default_category": "productivity"
+    },
+    {
+      "name": "claude-tag-plugins",
+      "repository": "anthropics/claude-tag-plugins",
+      "license": "Apache-2.0",
+      "default_category": "connections"
+    },
+    {
+      "name": "life-sciences",
+      "repository": "anthropics/life-sciences",
+      "license": null,
+      "default_category": "knowledge"
+    },
+    {
+      "name": "claude-for-financial-services",
+      "repository": "anthropics/financial-services",
+      "license": "Apache-2.0",
+      "default_category": "business"
+    },
+    {
+      "name": "healthcare",
+      "repository": "anthropics/healthcare",
+      "license": null,
+      "default_category": "knowledge"
+    },
+    {
+      "name": "claude-for-legal",
+      "repository": "anthropics/claude-for-legal",
+      "license": "Apache-2.0",
+      "default_category": "business"
+    }
+  ]
+}

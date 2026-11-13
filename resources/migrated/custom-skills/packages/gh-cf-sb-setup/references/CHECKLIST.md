@@ -1,0 +1,23 @@
+# Final Checklist
+
+- [ ] Profile compatibility verified
+- [ ] GitHub discovered/audited
+- [ ] Supabase discovered/audited
+- [ ] Cloudflare discovered/audited
+- [ ] Production preserved
+- [ ] Recovery verified before risky work
+- [ ] Fork/upstream governance verified if applicable
+- [ ] CI/security verified
+- [ ] DB/migrations verified
+- [ ] Auth/OAuth verified
+- [ ] RLS isolation verified
+- [ ] Storage verified
+- [ ] Pages/Workers architecture verified
+- [ ] DNS/TLS/edge verified
+- [ ] Staging E2E verified
+- [ ] Production E2E verified
+- [ ] Monitoring defined
+- [ ] DB and Storage recovery defined
+- [ ] Rollback ready
+- [ ] No duplicate resources
+- [ ] Docker Hub/Railway/Zeabur remain NOT_REQUIRED

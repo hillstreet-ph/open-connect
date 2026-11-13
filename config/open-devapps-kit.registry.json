@@ -1,0 +1,48 @@
+{
+  "schema_version": "1.0.0",
+  "registry_id": "open-devapps-kit",
+  "primary_kits": {
+    "github": "open-github-kit",
+    "dockerhub": "open-dockerhub-kit",
+    "cloudflare": "open-cloudflare-kit",
+    "supabase": "open-supabase-kit",
+    "sentry": "open-sentry-kit",
+    "zeabur": "open-zeabur-kit",
+    "databricks": "open-databricks-kit",
+    "codex": "open-codex-kit"
+  },
+  "execution_policy": {
+    "credential_transport": "opaque_reference_only",
+    "default_access": "provider_authorized_read_write",
+    "production_approval_required": true,
+    "destructive_approval_required": true,
+    "security_approval_required": true,
+    "deduplicate_same_purpose_connections": true,
+    "preserve_distinct_environment_connections": true
+  },
+  "delivery_order": [
+    "github",
+    "dockerhub",
+    "cloudflare",
+    "supabase",
+    "zeabur",
+    "sentry",
+    "databricks"
+  ],
+  "verification": [
+    "connection",
+    "configuration",
+    "deployment",
+    "health",
+    "security",
+    "monitoring",
+    "rollback",
+    "evidence"
+  ],
+  "completion_states": [
+    "VERIFIED",
+    "PARTIALLY_VERIFIED",
+    "BLOCKED",
+    "NOT_APPLICABLE"
+  ]
+}

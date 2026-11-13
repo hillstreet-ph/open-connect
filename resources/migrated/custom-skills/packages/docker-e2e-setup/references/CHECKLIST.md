@@ -1,0 +1,22 @@
+# Docker E2E Checklist
+
+- [ ] Docker mode classified
+- [ ] Existing configuration audited
+- [ ] Dockerfile valid
+- [ ] `.dockerignore` valid
+- [ ] Secrets excluded from image/source
+- [ ] Port/bind correct
+- [ ] Health strategy verified
+- [ ] Persistence paths classified
+- [ ] Build succeeds
+- [ ] Container starts and passes smoke/health test
+- [ ] BuildKit/Buildx configured where applicable
+- [ ] Architectures validated
+- [ ] Security scan complete
+- [ ] Docker Hub repository reused/created if applicable
+- [ ] Immutable digest recorded
+- [ ] GitHub Actions integrated
+- [ ] Staging verified if deployed
+- [ ] Production verified if deployed
+- [ ] Rollback digest known
+- [ ] Data backup/recovery responsibility documented

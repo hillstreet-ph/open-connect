@@ -1,0 +1,24 @@
+{
+  "name": "open-github-kit",
+  "version": "1.0.0",
+  "description": "GitHub repositories, pull requests, Actions, releases, packages, and deployments.",
+  "author": {
+    "name": "HillStreet Information Technology Services"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Open GitHub Kit",
+    "shortDescription": "Operate GitHub repositories and delivery workflows safely.",
+    "longDescription": "GitHub repositories, pull requests, Actions, releases, packages, and deployments. Uses provider-authorized read/write scopes with approval gates for production and destructive operations.",
+    "developerName": "HillStreet Information Technology Services",
+    "category": "Developer Tools",
+    "capabilities": [
+      "GitHub",
+      "Read/write operations",
+      "Health verification",
+      "Rollback planning"
+    ],
+    "defaultPrompt": "Use Open GitHub Kit to inspect current state, make the smallest authorized change, and verify the result."
+  },
+  "mcpServers": "./.mcp.json"
+}

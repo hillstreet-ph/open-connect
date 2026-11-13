@@ -1,0 +1,44 @@
+version: 2
+updates:
+  - package-ecosystem: "bun"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    # Keep compiler/linter API compatibility and the configured Node 22 runtime.
+    # Revisit these bounds in an explicit, validated toolchain migration.
+    ignore:
+      - dependency-name: "typescript"
+        versions: [">=6.1.0"]
+      - dependency-name: "@types/node"
+        versions: [">=23.0.0"]
+    labels:
+      - "dependencies"
+      - "frontend"
+
+  - package-ecosystem: "pip"
+    directory: "/control-plane"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "control-plane"
+
+  - package-ecosystem: "docker"
+    directory: "/control-plane"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "docker"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "ci"

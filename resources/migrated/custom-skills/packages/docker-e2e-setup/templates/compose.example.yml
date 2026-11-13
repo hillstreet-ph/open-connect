@@ -1,0 +1,8 @@
+services:
+  app:
+    # Replace with the verified application image/build configuration.
+    build: .
+    env_file:
+      - .env
+    restart: unless-stopped
+# Add ports, healthcheck, volumes, workers, DB/cache only after stack discovery.

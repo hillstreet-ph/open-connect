@@ -1,0 +1,220 @@
+export type AgentHelperToolName =
+  | "search_saved_context"
+  | "inspect_helper_capabilities"
+  | "list_connectors"
+  | "draft_connector_plugin"
+  | "search_marketplace"
+  | "list_projects"
+  | "list_tasks"
+  | "update_task_status"
+  | "list_schedules"
+  | "list_automations"
+  | "install_resource_to_library"
+  | "create_task"
+  | "create_schedule"
+  | "create_manual_ai_automation"
+  | "list_knowledge"
+  | "list_library_resources"
+  | "list_workforce_agents"
+  | "list_gateway_models"
+  | "update_task"
+  | "delete_task"
+  | "toggle_automation"
+  | "set_schedule_status"
+  | "remove_library_item";
+
+export const AGENT_HELPER_WRITE_TOOLS = new Set<AgentHelperToolName>([
+  "draft_connector_plugin",
+  "update_task_status",
+  "install_resource_to_library",
+  "create_task",
+  "create_schedule",
+  "create_manual_ai_automation",
+  "update_task",
+  "delete_task",
+  "toggle_automation",
+  "set_schedule_status",
+  "remove_library_item",
+]);
+
+export function helperActionQueryKeys(name: AgentHelperToolName): string[] {
+  switch (name) {
+    case "create_task":
+    case "update_task":
+    case "update_task_status":
+    case "delete_task":
+      return ["tasks"];
+    case "create_schedule":
+    case "set_schedule_status":
+      return ["schedules"];
+    case "create_manual_ai_automation":
+    case "toggle_automation":
+      return ["automations"];
+    case "install_resource_to_library":
+    case "remove_library_item":
+      return ["resource-library", "my-resources", "toolkits", "toolkit-items"];
+    case "draft_connector_plugin":
+      return ["my-resources", "resource-library", "resources-review-queue"];
+    default:
+      return [];
+  }
+}
+
+export type AgentHelperToolCall = {
+  id: string;
+  type: "function";
+  function: { name: string; arguments: string };
+};
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[0-9a-f]{12}$/i;
+const CRON_FIELD = "(?:\\*|[0-9]+)(?:[-/,](?:\\*|[0-9]+))*";
+const CRON = new RegExp(`^${CRON_FIELD} ${CRON_FIELD} ${CRON_FIELD} ${CRON_FIELD} ${CRON_FIELD}$`);
+
+export function parseAgentHelperArguments(value: string): Record<string, unknown> {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    throw new Error("The requested action had invalid arguments. No change was made.");
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("The requested action had invalid arguments. No change was made.");
+  }
+  return parsed as Record<string, unknown>;
+}
+
+export function helperText(value: unknown, label: string, maxLength: number): string {
+  if (typeof value !== "string") throw new Error(`${label} is required.`);
+  const normalized = value.trim();
+  if (!normalized) throw new Error(`${label} is required.`);
+  if (normalized.length > maxLength) throw new Error(`${label} is too long.`);
+  return normalized;
+}
+
+export function optionalHelperText(
+  value: unknown,
+  label: string,
+  maxLength: number,
+): string | null {
+  if (value == null || value === "") return null;
+  return helperText(value, label, maxLength);
+}
+
+export function helperProjectId(value: unknown): string | null {
+  if (value == null || value === "") return null;
+  if (typeof value !== "string" || !UUID.test(value)) {
+    throw new Error("Choose a project available to your account.");
+  }
+  return value;
+}
+
+export function helperScheduleTiming(args: Record<string, unknown>) {
+  const cronExpr = optionalHelperText(args["cronExpr"], "Cron expression", 100);
+  const runAtRaw = optionalHelperText(args["runAt"], "Run time", 80);
+  if (!cronExpr && !runAtRaw) throw new Error("Give the schedule a run time or cron expression.");
+  if (cronExpr && !CRON.test(cronExpr)) {
+    throw new Error("Use a five-field cron expression (minute hour day month weekday).");
+  }
+
+  let runAt: string | null = null;
+  if (runAtRaw) {
+    const parsed = new Date(runAtRaw);
+    if (!Number.isFinite(parsed.getTime()))
+      throw new Error("Run time must be a valid date and time.");
+    runAt = parsed.toISOString();
+  }
+  const timezone = optionalHelperText(args["timezone"], "Timezone", 80) ?? "UTC";
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: timezone });
+  } catch {
+    throw new Error("Choose a valid IANA timezone, such as Asia/Manila.");
+  }
+  return { cronExpr, runAt, timezone };
+}
+
+export function helperPriority(value: unknown): "low" | "medium" | "high" | "urgent" {
+  const priority = value ?? "medium";
+  if (priority === "low" || priority === "medium" || priority === "high" || priority === "urgent") {
+    return priority;
+  }
+  throw new Error("Choose low, medium, high, or urgent priority.");
+}
+
+export function describeAgentHelperToolResult(
+  name: AgentHelperToolName,
+  result: Record<string, unknown>,
+): string {
+  if (typeof result["error"] === "string") {
+    return `I couldn't complete that action. ${result["error"]} Check the current state before retrying.`;
+  }
+  if (name === "inspect_helper_capabilities")
+    return "Workspace actions, saved context retrieval, and Browser task mode are available. External service execution requires a supported authenticated executor; catalog listings alone cannot execute actions.";
+  if (name === "search_saved_context") {
+    const records = Array.isArray(result["records"]) ? result["records"] : [];
+    return `Found ${records.length} saved context matches in the selected scope. Saved context is reference data, not authorization.`;
+  }
+  if (name === "list_connectors")
+    return `Loaded ${Array.isArray(result["connectors"]) ? result["connectors"].length : 0} owned connectors. Credentials remain private.`;
+  if (name === "draft_connector_plugin")
+    return "Created or opened your private connector plugin draft in Studio. Source, license, permissions and security review are required before publication.";
+  if (name === "search_marketplace") {
+    const results = Array.isArray(result["results"]) ? result["results"] : [];
+    return results.length
+      ? `I found ${results.length} matching Marketplace resource${results.length === 1 ? "" : "s"}. Ask me to add one to your Library by its exact name.`
+      : "I couldn't find a published Marketplace resource matching that search.";
+  }
+  if (name === "list_projects") {
+    const projects = Array.isArray(result["projects"]) ? result["projects"] : [];
+    return projects.length
+      ? `I found ${projects.length} project${projects.length === 1 ? "" : "s"} available to your account.`
+      : "No projects are currently available to your account.";
+  }
+  if (name === "list_tasks") {
+    const tasks = Array.isArray(result["tasks"]) ? result["tasks"] : [];
+    return `Loaded ${tasks.length} recent task${tasks.length === 1 ? "" : "s"} available to your account.`;
+  }
+  if (name === "update_task_status") {
+    const task = result["task"] as { title?: unknown; status?: unknown } | undefined;
+    return `Updated “${String(task?.title ?? "the task")}” to ${String(task?.status ?? "the selected status")}.`;
+  }
+  if (name === "list_schedules") {
+    const schedules = Array.isArray(result["schedules"]) ? result["schedules"] : [];
+    return `Loaded ${schedules.length} schedule${schedules.length === 1 ? "" : "s"}. Linked AI response schedules run through the background runner.`;
+  }
+  if (name === "list_automations") {
+    const automations = Array.isArray(result["automations"]) ? result["automations"] : [];
+    return `Loaded ${automations.length} automation${automations.length === 1 ? "" : "s"} available to your account.`;
+  }
+  if (name === "install_resource_to_library") {
+    return `Added ${String(result["name"] ?? "the resource")} to your personal Library. This adds the resource only; it does not execute or connect it.`;
+  }
+  if (name === "remove_library_item") {
+    return `Removed ${String(result["name"] ?? "the resource")} from your personal Library.`;
+  }
+  if (name === "create_task") {
+    const task = result["task"] as { title?: unknown } | undefined;
+    return `Created the task “${String(task?.title ?? "New task")}”.`;
+  }
+  if (name === "update_task") {
+    const task = result["task"] as { title?: unknown } | undefined;
+    return `Updated the task “${String(task?.title ?? "the task")}”.`;
+  }
+  if (name === "delete_task") {
+    return `Deleted the task “${String(result["title"] ?? "the task")}”.`;
+  }
+  if (name === "toggle_automation") {
+    const automation = result["automation"] as { name?: unknown; enabled?: unknown } | undefined;
+    return `Set the automation “${String(automation?.name ?? "the automation")}” to ${automation?.enabled ? "enabled" : "disabled"}.`;
+  }
+  if (name === "set_schedule_status") {
+    const schedule = result["schedule"] as { name?: unknown; status?: unknown } | undefined;
+    return `Set the schedule “${String(schedule?.name ?? "the schedule")}” to ${String(schedule?.status ?? "the selected status")}.`;
+  }
+  if (name === "create_schedule") {
+    return `Scheduled “${String((result["schedule"] as { name?: unknown } | undefined)?.name ?? "the AI response")}”. The background runner checks every five minutes and uses connected free models.`;
+  }
+  if (name === "create_manual_ai_automation") {
+    return `Created the manual AI automation “${String((result["automation"] as { name?: unknown } | undefined)?.name ?? "New automation")}”. It will run only after a user selects Run in Automations.`;
+  }
+  return "The requested workspace action completed. Check the returned record for the authoritative result.";
+}

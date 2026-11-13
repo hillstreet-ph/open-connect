@@ -1,0 +1,84 @@
+{
+  "schema_version": "1.0.0",
+  "registry_id": "open-connect-agent-collaboration",
+  "commander": "open-connect",
+  "skill": "open-connect-agent",
+  "toolkit": "open-connect-agentkit",
+  "executor": "open-system",
+  "providers": [
+    {
+      "id": "chatgpt",
+      "adapter": "api",
+      "credential_ref": "credential://models/chatgpt",
+      "roles": ["planner", "developer", "reviewer"]
+    },
+    {
+      "id": "claude",
+      "adapter": "api",
+      "credential_ref": "credential://models/claude",
+      "roles": ["developer", "reviewer"]
+    },
+    {
+      "id": "grok",
+      "adapter": "api",
+      "credential_ref": "credential://models/grok",
+      "roles": ["researcher", "reviewer"]
+    },
+    {
+      "id": "mistral",
+      "adapter": "openai-compatible",
+      "credential_ref": "credential://models/mistral",
+      "roles": ["developer", "economy-worker"]
+    },
+    {
+      "id": "kimi",
+      "adapter": "openai-compatible",
+      "credential_ref": "credential://models/kimi",
+      "roles": ["long-context", "researcher"]
+    },
+    {
+      "id": "manus",
+      "adapter": "api-or-mcp",
+      "credential_ref": "credential://agents/manus",
+      "roles": ["browser-operator", "workflow-worker"]
+    },
+    {
+      "id": "hermes",
+      "adapter": "open-system",
+      "credential_ref": "credential://agents/hermes",
+      "roles": ["supervisor", "router", "worker-manager", "reviewer"]
+    }
+  ],
+  "shared_context": {
+    "system_of_record": "supabase",
+    "semantic_memory": "pgvector",
+    "artifact_plane": "open-box",
+    "credential_plane": "open-secret",
+    "required_scopes": ["organization", "workspace", "project", "task", "run"]
+  },
+  "workflow": [
+    "intake",
+    "retrieve_context",
+    "plan",
+    "route",
+    "execute_isolated",
+    "peer_review",
+    "test",
+    "approval_gate",
+    "merge_or_deploy",
+    "record_memory_and_audit"
+  ],
+  "routing": {
+    "strategy": "policy-cost-latency-health-quota",
+    "fallback": ["chatgpt", "claude", "mistral", "kimi"],
+    "max_parallel_agents": 4,
+    "max_repair_attempts": 3
+  },
+  "safety": {
+    "credential_transport": "opaque-reference-only",
+    "production_requires_approval": true,
+    "destructive_requires_approval": true,
+    "account_security_requires_human": true,
+    "audit_every_action": true
+  }
+}

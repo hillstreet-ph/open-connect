@@ -1,0 +1,227 @@
+name: Marketplace skill publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Preview only. When true, no publish mutation is performed.
+        required: false
+        type: boolean
+        default: true
+      owner:
+        description: ClawHub owner/publisher handle for org publishing.
+        required: false
+        type: string
+        default: hillstreet-ph
+      categories:
+        description: Comma-separated ClawHub category slugs applied to every skill published by this run.
+        required: false
+        type: string
+        default: integrations,automation,operations
+      topics:
+        description: Comma-separated ClawHub topics applied to every skill published by this run.
+        required: false
+        type: string
+        default: open-connect,workspace,agentic
+      skill_path:
+        description: Optional path to one skill folder. When set, only this skill is processed.
+        required: false
+        type: string
+        default: ''
+      include_openhands:
+        description: Also publish skills/vendor/openhands-extensions. Off by default because the vendored uv skill is rejected by ClawHub in its current form.
+        required: false
+        type: boolean
+        default: false
+      clawhub_token:
+        description: Optional ClawHub API token for this run. Falls back to the CLAWHUB_TOKEN repository secret when empty.
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  validate:
+    name: Validate marketplace skill metadata
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate SKILL.md frontmatter and skills.sh.json
+        run: |
+          python3 - <<'PY'
+          import json
+          import re
+          import sys
+          from pathlib import Path
+
+          roots = [
+              Path("skills"),
+              Path("skills/vendor"),
+              Path("skills/vendor/openclaw/skills"),
+              Path("skills/vendor/openclaw/agents"),
+              Path("skills/vendor/openhands-extensions"),
+          ]
+          errors = []
+          skills = []
+          seen = set()
+          for root in roots:
+              if not root.is_dir():
+                  errors.append(f"publish root missing from repository: {root}")
+                  continue
+              for child in sorted(root.iterdir()):
+                  skill_md = child / "SKILL.md"
+                  if not (child.is_dir() and skill_md.is_file()):
+                      continue
+                  resolved = skill_md.resolve()
+                  if resolved in seen:
+                      continue
+                  seen.add(resolved)
+                  text = skill_md.read_text(encoding="utf-8-sig")
+                  match = re.match(r"^---\r?\n([\s\S]*?)\r?\n---", text)
+                  if not match:
+                      errors.append(f"{skill_md}: missing YAML frontmatter")
+                      continue
+                  frontmatter = match.group(1)
+                  found = re.search(r"^name:\s*(.+)$", frontmatter, re.M)
+                  name = found.group(1).strip().strip(chr(34) + chr(39)) if found else ""
+                  found = re.search(r"^description:\s*(.+)$", frontmatter, re.M)
+                  description = found.group(1).strip().strip(chr(34) + chr(39)) if found else ""
+                  if not name:
+                      errors.append(f"{skill_md}: missing name")
+                  elif not re.match(r"^[a-z0-9][a-z0-9_-]*$", name):
+                      errors.append(f"{skill_md}: invalid skill name: {name}")
+                  if not description:
+                      errors.append(f"{skill_md}: missing description")
+                  skills.append(child.name)
+
+          sidecar = Path("skills.sh.json")
+          if sidecar.is_file():
+              data = json.loads(sidecar.read_text(encoding="utf-8"))
+              for group in data.get("groupings", []):
+                  for member in group.get("skills", []):
+                      if member not in skills:
+                          errors.append(f"skills.sh.json references unknown skill: {member}")
+
+          print(f"Validated {len(skills)} publishable skills: {', '.join(skills)}")
+          if errors:
+              for error in errors:
+                  print(f"::error::{error}")
+              sys.exit(1)
+          PY
+
+  publish-first-party:
+    needs: validate
+    permissions:
+      contents: read
+      id-token: write
+    uses: openclaw/clawhub/.github/workflows/skill-publish.yml@main
+    with:
+      root: skills
+      dry_run: ${{ inputs.dry_run }}
+      owner: ${{ inputs.owner }}
+      categories: ${{ inputs.categories }}
+      topics: ${{ inputs.topics }}
+      skill_path: ${{ inputs.skill_path }}
+    secrets:
+      clawhub_token: ${{ inputs.clawhub_token || secrets.CLAWHUB_TOKEN }}
+
+  publish-vendor-root:
+    needs: validate
+    if: ${{ inputs.skill_path == '' }}
+    permissions:
+      contents: read
+      id-token: write
+    uses: openclaw/clawhub/.github/workflows/skill-publish.yml@main
+    with:
+      root: skills/vendor
+      dry_run: ${{ inputs.dry_run }}
+      owner: ${{ inputs.owner }}
+      categories: ${{ inputs.categories }}
+      topics: ${{ inputs.topics }}
+    secrets:
+      clawhub_token: ${{ inputs.clawhub_token || secrets.CLAWHUB_TOKEN }}
+
+  publish-vendor-openclaw:
+    name: Publish vendored OpenClaw skills and agents
+    needs: validate
+    if: ${{ inputs.skill_path == '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install ClawHub CLI
+        run: npm install -g clawhub
+      - name: Authenticate ClawHub
+        run: clawhub login --token "$CLAWHUB_TOKEN"
+        env:
+          CLAWHUB_TOKEN: ${{ inputs.clawhub_token || secrets.CLAWHUB_TOKEN }}
+      - name: Publish vendored OpenClaw skills and agents
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+          OWNER: ${{ inputs.owner }}
+          CATEGORIES: ${{ inputs.categories }}
+          TOPICS: ${{ inputs.topics }}
+        run: |
+          set -uo pipefail
+          fail=0
+          slug_for() {
+            case "$1" in
+              openclaw-*) printf 'oc-%s' "${1#openclaw-}" ;;
+              clawhub) printf 'oc-clawhub-publisher' ;;
+              discord-clawd) printf 'discord-clawd-agent' ;;
+              *) printf '%s' "$1" ;;
+            esac
+          }
+          publish() {
+            local dir="$1" root="$2" slug
+            local base
+            base="$(basename "$dir")"
+            if [ "$root" = "skills/vendor/openclaw/skills" ]; then
+              if [ "$base" = "clawhub" ]; then
+                slug="oc-clawhub-publisher"
+              else
+                slug="oc-$base"
+              fi
+            else
+              slug="$(slug_for "$base")"
+            fi
+            local args=(--slug "$slug" --owner "$OWNER" --categories "$CATEGORIES" --topics "$TOPICS" --json --source-repo hillstreet-ph/open-connect --source-commit "$GITHUB_SHA" --source-path "$dir")
+            if [ "$DRY_RUN" = "true" ]; then
+              args+=(--dry-run)
+            fi
+            echo "Publishing $dir as $slug"
+            if ! clawhub skill publish "$dir" "${args[@]}"; then
+              echo "::error::ClawHub publish failed for $dir (slug $slug)"
+              fail=1
+            fi
+          }
+          for root in skills/vendor/openclaw/skills skills/vendor/openclaw/agents; do
+            for dir in "$root"/*/; do
+              [ -f "${dir}SKILL.md" ] || continue
+              publish "${dir%/}" "$root"
+            done
+          done
+          exit "$fail"
+
+  publish-vendor-openhands:
+    needs: validate
+    if: ${{ inputs.skill_path == '' && inputs.include_openhands }}
+    permissions:
+      contents: read
+      id-token: write
+    uses: openclaw/clawhub/.github/workflows/skill-publish.yml@main
+    with:
+      root: skills/vendor/openhands-extensions
+      dry_run: ${{ inputs.dry_run }}
+      owner: ${{ inputs.owner }}
+      categories: ${{ inputs.categories }}
+      topics: ${{ inputs.topics }}
+    secrets:
+      clawhub_token: ${{ inputs.clawhub_token || secrets.CLAWHUB_TOKEN }}

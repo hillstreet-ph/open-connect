@@ -1,0 +1,143 @@
+# Railway deploy — Open-Connect control plane
+#
+# Builds the control-plane image ONCE and promotes it to Railway (staging ->
+# production), applying the fail-closed OC_ALLOW_PRODUCTION gate only in
+# production. The Docker image is a self-contained artifact:
+#   control-plane/Dockerfile  (context ./control-plane)
+# See .railway/railway.ts for the Railway IaC config (DTABASE_SERVICE / envs /
+# variables / custom domain).
+#
+# Required repository secrets:
+#   RAILWAY_TOKEN            Railway CLI authentication (generated at Railway)
+#   DOCKERHUB_USERNAME       (companion to control-plane-docker.yml publish)
+#   DOCKERHUB_TOKEN          (companion to control-plane-docker.yml publish)
+#
+# Note: OC_* values and any real secrets are NEVER committed here or in the
+# image. Seal them in Railway via `railway variables set --secret`.
+
+name: Railway Deploy
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target Railway environment"
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - staging
+          - production
+
+permissions:
+  contents: read
+
+env:
+  IMAGE_NAME: hillstreet/open-connect
+  RAILWAY_PROJECT: open-connect
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: |
+          npm install --no-audit --no-fund @railway/cli
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Log in to Railway
+        run: railway login --token "${{ secrets.RAILWAY_TOKEN }}"
+
+      - name: Determine target environment
+        id: env
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "target=production" >> "$GITHUB_OUTPUT"
+          else
+            echo "target=${{ github.event.inputs.environment }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Push the validated image so Railway and anyone else can pull it.
+      - name: Build and publish control-plane Docker image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
+        with:
+          context: ./control-plane
+          file: ./control-plane/Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          cache-from: type=gha,scope=oc-railway
+          cache-to: type=gha,mode=max,scope=oc-railway
+
+      # Smoke-test the image before any deployment: /healthz must answer.
+      - name: Smoke test the image
+        run: |
+          docker pull ${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
+          docker run -d --name oc-smoke -p 8080:8080 \
+            -e OC_PUBLIC_BASE_URL=https://api.open-connect.site \
+            ${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
+          for i in $(seq 1 40); do
+            if curl -sf http://localhost:8080/healthz >/dev/null 2>&1; then break; fi
+            sleep 2
+          done
+          curl -sf http://localhost:8080/healthz
+          docker stop oc-smoke >/dev/null 2>&1 || true
+          docker rm oc-smoke >/dev/null 2>&1 || true
+
+      # ── Staging (pre-production) ──────────────────────────────────
+      - name: Deploy to Railway staging (same validated image)
+        if: steps.env.outputs.target == 'staging'
+        run: |
+          railway up --project "$RAILWAY_PROJECT" --service control_plane --environment staging
+        shell: bash
+
+      - name: Verify staging /healthz
+        if: steps.env.outputs.target == 'staging'
+        run: |
+          # Railway supplies a generated domain; poll it until /healthz answers.
+          for i in $(seq 1 30); do
+            DOMAIN=$(railway domain list --service control_plane --environment staging \
+              --json 2>/dev/null | grep -o 'https://[^"]*up.railway.app' | head -1)
+            if [ -n "$DOMAIN" ]; then
+              curl -fsS "$DOMAIN/healthz" && exit 0
+            fi
+            sleep 5
+          done
+          echo "staging /healthz NOT reached"
+          exit 1
+        shell: bash
+
+      # ── Production (fail-closed gate) ─────────────────────────────
+      - name: Set production lane + fail-closed gate
+        if: steps.env.outputs.target == 'production'
+        run: |
+          railway variables set --service control_plane \
+            --environment production "OC_ENVIRONMENT=production"
+          railway variables set --service control_plane \
+            --environment production "OC_ALLOW_PRODUCTION=true"
+        shell: bash
+
+      - name: Deploy production (same validated image)
+        if: steps.env.outputs.target == 'production'
+        run: |
+          railway up --project "$RAILWAY_PROJECT" \
+            --service control_plane --environment production
+        shell: bash
+
+      - name: Verify production /healthz
+        if: steps.env.outputs.target == 'production'
+        run: |
+          for i in $(seq 1 40); do
+            if curl -fsS https://api.open-connect.site/healthz >/dev/null 2>&1; then
+              echo "production /healthz OK" && exit 0
+            fi
+            sleep 5
+          done
+          echo "production /healthz NOT reached"
+          exit 1
+        shell: bash

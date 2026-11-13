@@ -1,0 +1,27 @@
+{
+  "name": "complete-e2e-prompt",
+  "version": "1.0.0",
+  "entrypoint": "SKILL.md",
+  "type": "orchestrator",
+  "startup_modes": [
+    "NEW",
+    "SOURCE_IMPORT",
+    "CLONE",
+    "FORK",
+    "EXISTING_REPOSITORY",
+    "EXISTING_PRODUCTION",
+    "MIGRATION",
+    "RECOVERY"
+  ],
+  "skills": [
+    "github-e2e-setup",
+    "docker-e2e-setup",
+    "supabase-e2e-setup",
+    "cloudflare-e2e-setup",
+    "railway-e2e-setup",
+    "zeabur-e2e-setup"
+  ],
+  "runtime_policy": "RAILWAY_XOR_ZEABUR_BY_DEFAULT",
+  "completion_state": "PRODUCTION_VERIFIED",
+  "repair_limit_per_failure": 3
+}

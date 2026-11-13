@@ -1,0 +1,20 @@
+# Final Checklist
+- [ ] Existing resources discovered
+- [ ] Production/data preserved
+- [ ] Provider ownership mapped
+- [ ] GitHub CI/security verified
+- [ ] Candidate image built/scanned/published
+- [ ] Git SHA ↔ Docker digest verified
+- [ ] Supabase DB/migrations/Auth/OAuth/RLS/Storage verified
+- [ ] Zeabur staging exact digest verified
+- [ ] Workers/jobs/persistence verified where required
+- [ ] Cloudflare staging verified
+- [ ] Backup/rollback ready
+- [ ] Production uses SAME staging-verified digest
+- [ ] Production digest identity verified
+- [ ] DNS/TLS/proxy verified
+- [ ] Production E2E verified
+- [ ] Monitoring defined
+- [ ] DB/Storage/volume recovery verified
+- [ ] Duplicate-resource audit passed
+- [ ] Railway remains NOT_REQUIRED

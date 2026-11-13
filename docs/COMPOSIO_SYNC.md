@@ -1,0 +1,53 @@
+# Composio Sync — Status as of 2026-10-24 (evening update)
+
+## Verified working (live tool calls executed 2026-10-24)
+| Custom MCP app | Composio toolkit | Account | Verified |
+|---|---|---|---|
+| open-connect.site hub | custom_open_connect | custom_open_connect_sycock-nomial | Yes — 117 connections, 867 published resources |
+| open-tgate.site | custom_open_tgate | custom_open_tgate_bud-sinner | Yes — live account data |
+| mcp.gitbook.com/mcp | custom_gitbook | custom_gitbook_batch-teeny / custom_gitbook_rename-crow | Yes |
+| connect.composio.dev/mcp | custom_composio_mcp | custom_composio_mcp_cloy-bedown | Yes — full meta toolset |
+
+## In progress
+| App | Composio entry | Endpoint verified | Remaining fix |
+|---|---|---|---|
+| Zeabur MCP Bridge | custom_zeabur_bridge (registered, 0 tools, sync returns Bad request) | Yes — https://open-connect-mcp.zeabur.app/mcp responds and is bearer-protected; bare domain and /sse return not found | Edit the entry: MCP server URL must be exactly https://open-connect-mcp.zeabur.app/mcp (including /mcp); Bearer token must equal the bridge service auth env (MCP_PROXY_AUTH_TOKEN / MCP_BRIDGE_TOKEN). Then Retry sync. Delete the old broken connection custom_zeabur_mcp_bridge_oord-anacid (HTTP 500) |
+| open-teleset.site | open-teleset custom toolkit (registered, 0 tools, sync returns Authentication failed) | Yes — https://open-teleset.site/mcp responds "Administrator authentication required" without auth | Edit the entry: replace the expired superuser token with the new token issued 2026-10-24 (never commit tokens to this repository), then Retry sync |
+
+## Deferred by owner decision (2026-10-24)
+- open-system.space (https://open-system.space/mcp, Bearer API key, 29 tools expected) — pending.
+- open-box.space (https://open-box.space/mcp, Bearer API key, 25 tools expected) — pending.
+
+Dashboard registration URL: https://dashboard.composio.dev/~/org/connect/apps?add-custom-mcp=true
+Custom MCP registration in Composio is dashboard-only; no API or meta tool exists for it.
+
+## Skills inventory
+- sk_LopabQmiOR-3 Open-Connect (46 tools)
+- sk_kkAXhr8dBz6T Zeabur Bridge (29)
+- sk_byGCCA0_jxc4 Open-Teleset (28)
+- sk_FCb2rDUAI8k0 Open-System (29)
+- sk_ythuca39Pjbd Open-Box (25)
+- sk_R4TRsLJkXXET Open-TGate (19)
+- sk_pcxU-BxA5k6i open-connect.site hub
+
+## Known issues
+See docs/KNOWN_ISSUES.md — hub-internal open-tgate-mcp connection returns 500 (server-side defect in open-connect.site); the direct custom_open_tgate registration is unaffected.
+
+
+## Resolution update 2026-10-25
+- Zeabur MCP is now fully working end to end through the hub. A self-hosted MCP bridge (Cloudflare Worker zeabur-mcp-bridge, https://zeabur-mcp-bridge.tanauancharles1.workers.dev/mcp) exposes three tools (zeabur_graphql, zeabur_me, zeabur_projects) backed by the Zeabur public GraphQL API. The hub connections Zeabur MCP (custom_zeabur_mcp), zeabur (custom_zeabur) and Zeabur Bridge (custom_zeabur_bridge) were re-pointed at this endpoint with vault-backed bearer credentials; live tool calls verified (zeabur_me returned the authenticated account, and a redeploy of the open-connect service was triggered through the bridge).
+- open-teleset is now fully working end to end through the hub. The canonical remote MCP endpoint is https://app.open-teleset.site/mcp (Bearer, ott_ API key). The hub connection open-teleset (custom_open_teleset) uses it; live tool call verified (authenticated_identity returned the administrator identity).
+- The remaining Composio custom-toolkit sync failures are dashboard-only edits: update each custom toolkit entry URL to the bridge endpoint above (including /mcp) with the matching bearer token, then retry tool sync. Custom MCP registration has no public API.
+
+
+## Automatic broker sync (2026-11-07)
+
+Composio is the manager of hosted connectors, and synchronization is now automatic. When a signed-in user opens the connections view, Open-Connect performs a best-effort, user-scoped import of that user's new ACTIVE Composio connected accounts (see src/lib/composio-auto-sync.server.ts and the listAppConnections handler in src/lib/connections.functions.ts):
+
+- One automatic pass per user per 5-minute interval, so normal navigation cannot amplify broker usage.
+- Only accounts the broker confirms as owned and ACTIVE are imported, using the same record shape as the manual sync (broker: composio, mode: managed_oauth, credentials kept inside the broker).
+- Inserts are idempotent: accounts already present are skipped, and a concurrent import (unique-violation 23505) is tolerated rather than retried.
+- Failures are non-fatal: the listing still renders, and the explicit admin sync (syncComposioConnections) remains available for organization-wide reconciliation.
+- The automatic pass is skipped entirely when COMPOSIO_API_KEY is not configured, so environments without the broker keep today's behavior.
+
+The natural sign-in flow is unchanged and now completes without manual steps: Sign in with <App> starts the Composio-hosted OAuth authorization, the user approves the provider permissions, and returning to /connections verifies the pending account automatically.

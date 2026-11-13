@@ -1,0 +1,26 @@
+# Inspection Checklist
+- [ ] Objective understood
+- [ ] Project root/repositories identified
+- [ ] Instructions/docs/ADRs/handoffs inspected
+- [ ] Git status/branches/PRs/recent commits inspected
+- [ ] Tree/frameworks/entrypoints/dependencies/tests mapped
+- [ ] Configuration/secret names inventoried
+- [ ] Providers/resources discovered
+- [ ] DB/migrations/Auth/RLS/Storage inspected
+- [ ] Runtime/container/edge/workers/jobs inspected
+- [ ] Monitoring/backups inspected
+- [ ] Fork customizations inspected
+- [ ] Active agent work checked
+- [ ] Provider ownership mapped
+- [ ] Requested implementation searched
+- [ ] Semantic duplicate check complete
+- [ ] Conflict/drift checks complete
+- [ ] Requirement matrix complete
+- [ ] Impact/risk/blast radius classified
+- [ ] Minimal delta planned
+- [ ] Agent ownership assigned where needed
+- [ ] Tests/rollback defined
+- [ ] Execution gate passed
+- [ ] Changes verified
+- [ ] Regression checked
+- [ ] Knowledge/handoff updated

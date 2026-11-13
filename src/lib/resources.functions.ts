@@ -1,0 +1,336 @@
+import { canDownloadResource } from "@/lib/resource-approval";
+import AUTO_SKILL_MARKDOWN from "../../skills/auto/SKILL.md?raw";
+import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { normalizeResourceLicense } from "@/lib/resource-license";
+
+const BUCKET = "resource-packages";
+
+function skillManifest(resource: {
+  name: string;
+  slug: string;
+  description: string | null;
+  resource_type: string;
+  version: string | null;
+  author?: string | null;
+  installation_config?: unknown;
+  verified?: boolean;
+  source?: string | null;
+}) {
+  if (resource.slug === "auto" && resource.verified && resource.source === "open-connect")
+    return AUTO_SKILL_MARKDOWN;
+  const inline = resource.installation_config as { draft_markdown?: unknown } | null;
+  if (
+    ["data-controls", "connector-draft", "url-import"].includes(resource.source ?? "") &&
+    typeof inline?.draft_markdown === "string"
+  )
+    return inline.draft_markdown;
+  const config =
+    resource.installation_config && typeof resource.installation_config === "object"
+      ? JSON.stringify(resource.installation_config, null, 2)
+      : "";
+  return `# ${resource.name}
+
+**Slug:** \`${resource.slug}\`  
+**Type:** ${resource.resource_type}  
+**Version:** ${resource.version ?? "1.0.0"}  
+**Author:** ${resource.author ?? "open-connect"}
+
+## Description
+
+${resource.description ?? "Open-Connect marketplace package."}
+
+## Platform
+
+- Domain: https://open-connect.site
+- MCP: https://open-connect.site/mcp
+- Models: https://open-connect.site/v1
+- Stack: GitHub + Cloudflare + Supabase only (no Vercel)
+
+## Install
+
+1. Sign in at https://open-connect.site/auth
+2. Download from Marketplace (login required)
+3. Or use MCP tools/list with an \`oc_live_\` API key
+
+${config ? `## Installation config\n\n\`\`\`json\n${config}\n\`\`\`\n` : ""}
+`;
+}
+
+export const listMyResources = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("resources")
+      .select(
+        "id, slug, name, description, resource_type, version, published, verified, package_path, package_filename, package_size, package_mime, installation_config, created_at, updated_at",
+      )
+      .eq("owner_id", context.userId)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+export const registerResourcePackage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator(
+    (input: {
+      name: string;
+      slug: string;
+      description?: string;
+      resource_type: string;
+      package_path: string;
+      package_filename: string;
+      package_size?: number;
+      package_mime?: string;
+      published?: boolean;
+      version?: string;
+      license?: string;
+    }) => ({
+      name: (input?.name ?? "").trim() || "Untitled",
+      slug: (input?.slug ?? "")
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9-]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 80),
+      description: (input?.description ?? "").trim() || null,
+      resource_type: input?.resource_type ?? "skill",
+      package_path: input?.package_path ?? "",
+      package_filename: input?.package_filename ?? "",
+      package_size: input?.package_size ?? null,
+      package_mime: input?.package_mime ?? null,
+      published: input?.published === true,
+      version: (input?.version ?? "1.0.0").trim() || "1.0.0",
+      license: normalizeResourceLicense(input?.license),
+    }),
+  )
+  .handler(async ({ data, context }) => {
+    if (!data.slug) throw new Error("Invalid slug");
+    if (!data.package_path) throw new Error("package_path required");
+    if (
+      !data.package_path.startsWith(`${context.userId}/`) ||
+      data.package_path.split("/").includes("..")
+    )
+      throw new Error("Package must be in your private upload folder");
+    if (data.published)
+      throw new Error("Upload a private draft, then complete review before publication");
+    const { data: packageBlob, error: packageError } = await context.supabase.storage
+      .from(BUCKET)
+      .download(data.package_path);
+    if (packageError || !packageBlob)
+      throw new Error("Uploaded package is missing or not accessible");
+    if (packageBlob.size > 50 * 1024 * 1024) throw new Error("Package exceeds 50 MB");
+    const { scanResourceBytes } = await import("./resource-safety.server");
+    const scan = scanResourceBytes(
+      data.package_filename || "package",
+      new Uint8Array(await packageBlob.arrayBuffer()),
+    );
+    if (scan.state === "blocked") throw new Error(`Package blocked: ${scan.findings.join("; ")}`);
+    const duplicate = await context.supabase
+      .from("resources")
+      .select(
+        "id,slug,name,description,resource_type,version,published,package_path,package_filename,package_size",
+      )
+      .eq("owner_id", context.userId)
+      .eq("resource_type", data.resource_type as "skill")
+      .eq("installation_config->>content_sha256", scan.sha256)
+      .maybeSingle();
+    if (duplicate.error) throw new Error("Could not check package duplicates");
+
+    const row = {
+      name: data.name,
+      slug: data.slug,
+      description: data.description,
+      resource_type: data.resource_type as
+        | "skill"
+        | "mcp"
+        | "tool"
+        | "plugin"
+        | "agent"
+        | "prompt"
+        | "guide"
+        | "app"
+        | "model"
+        | "toolkit"
+        | "memory"
+        | "knowledge",
+      owner_id: context.userId,
+      package_path: data.package_path,
+      package_filename: data.package_filename,
+      package_size: data.package_size,
+      package_mime: data.package_mime,
+      published: data.published,
+      version: data.version,
+      installation_type: "package",
+      installation_config: {
+        content_sha256: scan.sha256,
+        scan_report: scan,
+        review_state: "pending_security_review",
+        labels: [data.resource_type, "uploaded", "review-required"],
+        storage_bucket: BUCKET,
+        path: data.package_path,
+        filename: data.package_filename,
+      },
+      source: "user-upload",
+      author: context.userId.slice(0, 8),
+      license: data.license,
+      verified: false,
+      featured: false,
+      supported_clients: ["chatgpt", "claude", "hermes", "custom"],
+    };
+
+    const { data: inserted, error } = duplicate.data
+      ? { data: duplicate.data, error: null }
+      : await context.supabase
+          .from("resources")
+          .insert(row)
+          .select(
+            "id, slug, name, description, resource_type, version, published, package_path, package_filename, package_size",
+          )
+          .single();
+
+    if (error) throw new Error(error.message);
+    const librarySlug = "open-connect-personal-library";
+    const { data: existingLibrary, error: libraryReadError } = await context.supabase
+      .from("toolkits")
+      .select("id")
+      .eq("user_id", context.userId)
+      .eq("slug", librarySlug)
+      .maybeSingle();
+    if (libraryReadError) throw new Error(libraryReadError.message);
+    let library = existingLibrary;
+    if (!library) {
+      const created = await context.supabase
+        .from("toolkits")
+        .insert({
+          user_id: context.userId,
+          slug: librarySlug,
+          name: "Personal Library",
+          description: "Resources added from Studio and Marketplace.",
+          published: false,
+        })
+        .select("id")
+        .single();
+      if (created.error) throw new Error(created.error.message);
+      library = created.data;
+    }
+    const { error: libraryError } = await context.supabase
+      .from("toolkit_items")
+      .upsert(
+        { toolkit_id: library.id, resource_id: inserted.id, position: 0 },
+        { onConflict: "toolkit_id,resource_id" },
+      );
+    if (libraryError) throw new Error(libraryError.message);
+    if (duplicate.data && duplicate.data.package_path !== data.package_path)
+      await context.supabase.storage.from(BUCKET).remove([data.package_path]);
+    return inserted;
+  });
+
+/** Storage package URL when present; otherwise skill/catalog markdown for logged-in clients. */
+export const getResourceDownloadUrl = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { id: string }) => ({ id: input?.id ?? "" }))
+  .handler(async ({ data, context }) => {
+    if (!data.id) throw new Error("id required");
+
+    const { data: resource, error } = await context.supabase
+      .from("resources")
+      .select(
+        "id, name, slug, description, resource_type, version, author, package_path, package_filename, owner_id, published, installation_config, verified, source, source_url",
+      )
+      .eq("id", data.id)
+      .maybeSingle();
+
+    if (error) throw new Error(error.message);
+    if (!resource) throw new Error("Not found");
+    if (!resource.published && resource.owner_id !== context.userId) {
+      throw new Error("Not allowed");
+    }
+
+    const { migratedResourceDownload } = await import("@/lib/migrated-resource-download");
+    const { default: migratedPackages } =
+      await import("../../config/resource-migration.downloads.json");
+    const migrated = migratedResourceDownload(resource, migratedPackages);
+    if (
+      !canDownloadResource(resource, context.userId, !resource.package_path && Boolean(migrated))
+    ) {
+      throw new Error("Resource requires an approved security review before download");
+    }
+
+    if (resource.package_path) {
+      const { data: signed, error: signError } = await context.supabase.storage
+        .from(BUCKET)
+        .createSignedUrl(resource.package_path, 3600);
+
+      if (signError || !signed?.signedUrl) {
+        throw new Error(signError?.message ?? "Could not sign download URL");
+      }
+
+      return {
+        kind: "url" as const,
+        url: signed.signedUrl,
+        filename: resource.package_filename ?? `${resource.slug}.zip`,
+        expires_in: 3600,
+      };
+    }
+
+    if (migrated) return migrated;
+
+    const markdown = skillManifest(resource);
+    const filename = `${resource.slug || resource.name}.md`;
+    return {
+      kind: "markdown" as const,
+      content: markdown,
+      filename,
+      mime: "text/markdown;charset=utf-8",
+    };
+  });
+
+/** View package metadata / manifest (login required). */
+export const getResourceView = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { id: string }) => ({ id: input?.id ?? "" }))
+  .handler(async ({ data, context }) => {
+    if (!data.id) throw new Error("id required");
+    const { data: resource, error } = await context.supabase
+      .from("resources")
+      .select(
+        "id, slug, name, description, resource_type, version, author, license, verified, featured, supported_clients, package_path, package_filename, package_size, installation_config, published, owner_id, source",
+      )
+      .eq("id", data.id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!resource) throw new Error("Not found");
+    if (!resource.published && resource.owner_id !== context.userId) {
+      throw new Error("Not allowed");
+    }
+    return {
+      ...resource,
+      manifest: skillManifest(resource),
+    };
+  });
+
+export const deleteMyResource = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((input: { id: string }) => ({ id: input?.id ?? "" }))
+  .handler(async ({ data, context }) => {
+    const { data: resource, error } = await context.supabase
+      .from("resources")
+      .select("id, package_path, owner_id")
+      .eq("id", data.id)
+      .eq("owner_id", context.userId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!resource) throw new Error("Not found");
+
+    if (resource.package_path) {
+      await context.supabase.storage.from(BUCKET).remove([resource.package_path]);
+    }
+    const { error: delError } = await context.supabase
+      .from("resources")
+      .delete()
+      .eq("id", resource.id);
+    if (delError) throw new Error(delError.message);
+    return { ok: true };
+  });

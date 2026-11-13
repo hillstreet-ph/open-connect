@@ -1,0 +1,24 @@
+{
+  "name": "open-zeabur-kit",
+  "version": "1.0.0",
+  "description": "Zeabur projects, services, domains, variables, health, logs, and rollbacks.",
+  "author": {
+    "name": "HillStreet Information Technology Services"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Open Zeabur Kit",
+    "shortDescription": "Deploy and operate Zeabur services safely.",
+    "longDescription": "Zeabur projects, services, domains, variables, health, logs, and rollbacks. Uses provider-authorized read/write scopes with approval gates for production and destructive operations.",
+    "developerName": "HillStreet Information Technology Services",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Zeabur",
+      "Read/write operations",
+      "Health verification",
+      "Rollback planning"
+    ],
+    "defaultPrompt": "Use Open Zeabur Kit to inspect current state, make the smallest authorized change, and verify the result."
+  },
+  "mcpServers": "./.mcp.json"
+}

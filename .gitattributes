@@ -1,0 +1,2 @@
+# Preserve imported source bytes for SHA-256 provenance on every checkout.
+resources/migrated/** -text whitespace=-trailing-space,-blank-at-eof

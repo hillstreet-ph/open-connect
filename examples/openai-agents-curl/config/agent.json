@@ -1,0 +1,28 @@
+{
+  "name": "New agent",
+  "model": "gpt-6-astra",
+  "instructions": "You are a helpful general-purpose agent. Answer clearly, use available tools when they improve accuracy, report tool failures honestly, and never invent tool results.",
+  "reasoning": {
+    "effort": "medium",
+    "summary": "auto"
+  },
+  "text": {
+    "format": {
+      "type": "text"
+    },
+    "verbosity": "medium"
+  },
+  "tools": [
+    {
+      "type": "function",
+      "name": "get_runtime_info",
+      "description": "Use this when the user asks for the client application's current UTC time, operating system, or shell runtime.",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      }
+    }
+  ]
+}

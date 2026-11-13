@@ -1,0 +1,64 @@
+# Marketplace automation
+
+Open-Connect discovers public AI engineering, data engineering, MCP, agent, and developer-tool
+projects as metadata-only candidates. Discovery never downloads or executes marketplace packages.
+
+## Release flow
+
+1. `Marketplace catalog sync` runs daily or by manual dispatch.
+2. The collector queries the allowlisted source registry, normalizes URLs, deduplicates records, and
+   classifies candidates.
+3. The validator rejects unknown sources, duplicate or non-HTTPS URLs, invalid review states, and
+   catalogs below the minimum completeness threshold.
+4. GitHub opens or updates `automation/marketplace-catalog-sync` as a review pull request.
+5. Merging that pull request triggers `Publish approved marketplace catalog`, which adds the exact
+   reviewed snapshot to the Supabase review queue.
+6. Only separately approved, verified resources may become installable or public marketplace tools.
+
+Discovery never publishes to Supabase. Manual publication is restricted to `main` and the protected
+`production` environment. Catalog branch updates merge existing history and use a normal push;
+conflicts stop the run for review. The collector explicitly dispatches the existing required CI
+workflow because pushes made with `GITHUB_TOKEN` do not trigger pull-request workflows. Independent
+review is still required; the collector never approves or merges its pull request.
+
+## Review states
+
+| State                     | Meaning                                                       |
+| ------------------------- | ------------------------------------------------------------- |
+| `pending_license_review`  | No usable SPDX license was reported.                          |
+| `pending_security_review` | License metadata exists; security review is still required.   |
+| `quarantined_metadata`    | Metadata matched a secret-like or executable-command pattern. |
+
+## Operations
+
+Run discovery and validation locally:
+
+```bash
+npm run marketplace:collect -- --write-catalog
+npm run marketplace:validate
+```
+
+Required production secret: `SUPABASE_SERVICE_ROLE_KEY`, stored in the protected GitHub
+`production` environment. GitHub Actions also needs repository workflow permissions to create pull
+requests. Source changes belong in `config/marketplace-sources.registry.json`; every source must use
+an implemented adapter and an explicitly allowlisted host.
+
+## OpenClaw install requests
+
+Requested `openclaw plugins install` and `openclaw skills install` commands are cataloged
+as metadata-only, review-required entries in
+`config/openclaw-install-requests.registry.json`. See
+[OPENCLAW_INSTALL_REQUESTS.md](./OPENCLAW_INSTALL_REQUESTS.md).
+
+## Vendored upstream skills
+
+Four MIT-licensed upstream repositories are vendored as metadata-only skill sources rather than
+crawled: `OpenHands/extensions`, `OpenHands/OpenHands` (`.agents/skills`, also served by
+`OpenHands/openhands`), `master-kanor/manus-skills`, and `openclaw/openclaw`. The catalog, static
+download packages, and Supabase migration are generated from `config/vendored-skills.manifest.json`.
+See [VENDORED_SKILLS.md](./VENDORED_SKILLS.md).
+
+```bash
+npm run skills:generate   # rebuild catalog, downloads, and migration from the manifest
+npm run skills:validate   # fail if any vendored package is unsafe or inconsistent
+```

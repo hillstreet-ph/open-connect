@@ -1,0 +1,168 @@
+# Cloud browser acceptance status
+
+Checked 2026-10-25 (Asia/Manila). This records observed results, not a guarantee that every website works.
+
+## Verified live
+
+- Composio `tinyfish` account and Open-Connect native browser both list two Browser Context Profiles.
+- The native public-site test completed with the requested page titles/headings and navigation to IANA.
+  [Run evidence](https://open-connect.site/cloud-browser?run=b25e1639-5baa-46dc-b8d5-d688e9c0d158)
+- The public-site run returned a live streaming URL while running. Interactive preview playback was not manually verified.
+- A native direct Browser API session was created, returned a CDP connection, and was explicitly closed.
+  CDP navigation, screenshots and inspector interaction were not tested in this check.
+- Wallet and current rate metadata were accessible through Composio. No top-up or auto-reload was enabled.
+
+## Acceptance matrix for the supplied implementation brief
+
+| Check                               | Status and evidence                                                                                                              |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Public website task and outcome     | Passed; linked native run completed, read Example Domain, followed its link, and reported IANA's final URL/heading               |
+| Read-only live preview              | URL delivery verified; iframe playback unverified; never label it manual takeover                                                |
+| Profile setup and saved state       | API and mock regression coverage exist; no account sign-in or saved state was modified in this test                              |
+| Saved login reuse                   | Live GitHub check reached /login with authenticated=false; profile attachment worked but its GitHub login state requires renewal |
+| Separate-account isolation          | Personal key boundary regression tests exist; live multi-account isolation unverified                                            |
+| Expired-login repair                | Unverified; native per-run Vault selection is not implemented                                                                    |
+| Unsupported MFA handoff             | Not tested; no MFA or CAPTCHA automation attempted                                                                               |
+| Disconnect and duplicate submission | Poll recovery regression tests exist; durable submission reconciliation still required                                           |
+| Async cancellation                  | Startup cancellation verified in the prompt-execution follow-up below; mid-action cancellation remains unverified                                                                     |
+| Webhook retries and deduplication   | No native webhook ingestion/verification/deduplication acceptance completed                                                      |
+| Evidence retrieval                  | Final text result verified; screenshot/HTML/recording retrieval unverified                                                       |
+| Proxy schema validation             | Country-code normalization tested; live proxy behavior unverified                                                                |
+| Provider/account errors             | Existing error handling and mock coverage; insufficient funds/rate-limit scenarios unverified live                               |
+| Profile/domain deletion             | Not implemented in the native profile UI; no saved state was deleted                                                             |
+| Completion claims                   | Report only the above observed outcomes; a provider COMPLETED status alone does not establish business success                   |
+
+## Startup timeout correction
+
+Direct browser creation can take 10–30 seconds. TinyFish requires at least a 60-second client timeout:
+https://docs.tinyfish.ai/browser-api/reference
+
+Use a 60-second request deadline for direct browser and profile setup creation. Keep ordinary API
+reads bounded to 25 seconds. The browser's inactivity lifetime is separate from this HTTP deadline.
+An uncertain creation response must not be interpreted as proof that a provider session was never created.
+
+## Remaining integration work
+
+The supplied brief also requires native Agent request controls for explicit Vault-item selection,
+structured output, step/capture budgets; durable job/run recovery; authenticated
+completion callbacks; account mapping; browser-job schedules; retention/export/deletion; and distinct
+Search/Fetch/Research/Monitor integration. These must remain unverified until implemented and tested.
+No upstream SDK was installed, no credentials were exported, and no visibility was widened.
+
+## Saved-login check
+
+[GitHub profile run](https://open-connect.site/cloud-browser?run=3efa4d25-ed76-4c7c-9a2f-8d87301aba08)
+attached the selected saved profile, completed in three steps, and returned `authenticated: false`,
+`https://github.com/login`, and `Sign in to GitHub`. This is a completed diagnostic with a failed
+login-reuse outcome, not proof of a valid saved login. Renew GitHub sign-in in profile setup and save
+before rechecking. No credential injection, login attempt or account settings change was made.
+
+## Direct-control follow-up
+
+A direct-control UI now connects the signed-in user's browser to the provider's private CDP session.
+It supports live frames, clicks, wheel scrolling, address navigation, remote keyboard input, mobile
+masked text entry, reconnecting the same session, explicit closure, and profile setup save/discard.
+The Agent iframe remains observation only. The screenshot's `authenticated: false` diagnostic is
+shown as sign-in required rather than authenticated success. A finished run's closed preview is
+explained beside the result. Profile save failures are reported by domain; closure is explicit.
+
+Live protocol acceptance from a Chrome page at the Open-Connect origin received 18 frames, inserted
+and deleted fixture text, clicked a temporary test control, and followed Example Domain's link to
+`https://www.iana.org/help/example-domains`. All temporary sessions were closed. This exercised
+browser-origin WebSocket access and the same CDP controller used by the UI. A real account login,
+profile save/reuse after login, and interactive checks on every website remain unverified.
+
+Typed values, live frames and CDP URLs stay in ephemeral frontend state and are not written to
+local storage or run history. Leaving the page disconnects the controller and attempts cleanup;
+network interruption can leave a session running until provider expiry, so explicit Close remains
+necessary. Direct sessions have a five-minute inactivity timeout; profile setup expires after
+15 minutes. These are separate from the 60-second startup request deadline.
+
+The pending approvals page and dependency/workflow PRs were integrated for combined validation.
+TanStack Start was aligned to 1.169.3 to match the router 1.170.45 upgrade; the prior pair installed
+two router copies and failed server-route type checks. Duplicate approval-route registration was
+removed and the existing expiry clock retained. Dependency audit, full tests, strict typecheck,
+build, SSR, consolidated-resource integrity and production-health contract tests are required.
+
+## Browser integrations and duplicate-setup follow-up (2026-10-25)
+
+Direct control now lists and switches page targets, including sign-in popups. Refresh tabs after
+opening a new window. Live TinyFish CDP acceptance created a second page, selected it with the
+production controller, navigated that selected target and verified its URL. Two tabs were listed;
+the test session was explicitly closed. This protocol check does not establish successful OAuth,
+MFA completion or profile reuse. Ctrl/Cmd+V now reaches the local paste handler instead of being
+intercepted as a remote shortcut.
+
+The browser page provides official-source setup choices for Playwright MCP, Browser Use,
+Stagehand and Chrome DevTools MCP. These are integration guides, not installed worker claims.
+Playwright navigation, snapshot and tab-list tool shortcuts appear only when actually discovered
+from the selected MCP connection. Remote Open-Connect connections require authenticated HTTPS;
+a localhost stdio process is not reachable from the deployed gateway.
+
+Live Composio Browser Use session listing succeeded (zero active sessions), and TinyFish profile
+listing succeeded (two profiles). Open-Connect's Composio synchronization preview returned 92
+accounts already mapped and no missing candidates. These checks do not exercise every connected
+app's functionality. Multiple connections with the same display name were not deleted because
+redacted metadata does not establish that they share the same underlying identity or grants.
+
+Native connection setup now rejects repeated creation for the same provider, endpoint, account
+label and auth method before creating a vault secret. Reconnect targets an explicit owned
+connection. Implicit reuse also matches the endpoint and auth method, avoiding accidental
+replacement of a different server that happens to have the same account label. This is an
+application guard, not a database uniqueness constraint against concurrent creation.
+
+Sources: https://github.com/microsoft/playwright-mcp,
+https://github.com/browser-use/browser-use, https://github.com/browserbase/stagehand,
+https://github.com/ChromeDevTools/chrome-devtools-mcp.
+Open-source licensing does not include free cloud hosting or model inference. MultiOn is still
+reference-only; its current working API and account have not been verified. Remaining acceptance
+items above are unchanged unless explicitly marked passed in this follow-up.
+
+## Prompt execution from Agent-Helper and AI Agents (2026-10-25)
+
+Agent-Helper has a Browser task tab and `/agents` has an execution panel. These share one
+component and the existing authenticated native TinyFish server functions, rather than another
+browser backend or a workspace model pretending to perform web actions. Workspace mode retains
+its internal-only tool policy and directs web requests to Browser task mode. Browser execution
+uses the user's own connection and does not depend on a separate free model being available.
+
+Choose a starting website, enter the task, optionally select a saved profile, and choose a time
+limit. Fresh browser is the default. One submission returns an authoritative provider run ID;
+status polls until terminal, results render as text, and Stop requests provider cancellation.
+Failures distinguish an uncertain submission or status read from a confirmed completed task.
+The form prevents a second local submission while its request or returned run is active, and
+mutations do not retry automatically. This is not durable idempotency across multiple clients.
+The chat panel stays mounted when closed or switched to Workspace, preserving its in-flight
+request/run state. Closing the panel does not cancel the provider job. Runs are also in Cloud
+Browser history. `/agents?run=...` can reopen a known run; no cookie values or CDP URLs are needed.
+
+Live acceptance through the production Open-Connect MCP entry point:
+https://open-connect.site/cloud-browser?run=c1c329a0-f53b-4dee-9402-e733fb0252b3
+The fresh-profile read-only prompt completed in three steps and returned:
+
+- `page_title`: `Example Domains - IANA`
+- `visible_main_heading`: `Example Domains`
+- `final_url`: `https://www.iana.org/help/example-domains`
+
+A separate interactive remote-Chrome test used the actual React component with controlled server
+responses. It verified duplicate-click suppression (one request), exact profile selection,
+confirmed cancellation, a subsequent new task (one request), and completed-result rendering.
+This is component lifecycle evidence, not a real signed-in app-session test. Its disposable
+browser was explicitly closed.
+
+The existing `open-connect` service in the authorized `open-connect-project` Zeabur project was
+queried and reported `RUNNING`. The hosted TinyFish agent already supplies the browser worker;
+this integration does not need a new shared browser daemon or an exposed CDP port. Standard main
+branch deployment updates the existing service and Cloudflare app. No additional paid service,
+model key, credential export, or project-wide permission was introduced.
+
+Real account login renewal, saved sign-in reuse after renewal, multi-account live isolation,
+self-hosted Playwright/Stagehand workers, MultiOn integration, secure Vault injection, durable job
+reconciliation, authenticated callbacks, and the other explicitly unverified items above remain
+outside this acceptance result. Do not advertise every website or workflow as guaranteed to work.
+
+Startup cancellation was also tested through the production MCP adapter:
+https://open-connect.site/cloud-browser?run=d35346b5-2102-4e84-9e46-a7d8de68dd1f
+The cancel response initially remained PENDING. A subsequent authoritative status read confirmed
+CANCELLED, a finished timestamp and zero browser steps. An accepted stop request alone is not
+shown as a confirmed cancelled outcome. Mid-action cancellation timing remains unverified.

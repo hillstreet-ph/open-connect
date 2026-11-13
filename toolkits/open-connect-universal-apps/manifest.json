@@ -1,0 +1,13 @@
+{
+  "name": "open-connect-universal-app-toolkits",
+  "version": "1.0.0",
+  "agent": "app_ops_ai",
+  "registry": "config/app-toolkits.registry.json",
+  "prompt": "prompts/app-ops-agent.md",
+  "docs": "docs/APP_TOOLKITS.md",
+  "supported_apps": ["github","notion","supabase","cloudflare","sentry","dockerhub","hetzner"],
+  "clients": ["chatgpt","claude","grok","open-system","custom-mcp"],
+  "entrypoint": "https://open-connect.site/mcp",
+  "credential_policy": "opaque-reference-only",
+  "production_policy": "human-approval-required"
+}

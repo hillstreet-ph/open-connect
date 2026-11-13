@@ -1,0 +1,27 @@
+{
+  "name": "inspect-analyze-e2e",
+  "version": "1.0.0",
+  "entrypoint": "SKILL.md",
+  "type": "pre-change-intelligence-and-coordination",
+  "capabilities": [
+    "project_discovery",
+    "knowledge_reconstruction",
+    "repository_analysis",
+    "architecture_mapping",
+    "provider_inventory",
+    "database_analysis",
+    "duplicate_detection",
+    "conflict_detection",
+    "drift_detection",
+    "gap_analysis",
+    "impact_analysis",
+    "agent_collaboration",
+    "change_planning",
+    "verification",
+    "handoff"
+  ],
+  "default_mode": "INSPECT_MODE",
+  "create_policy": "only_when_verified_missing",
+  "repair_limit_per_failure": 3,
+  "completion_state": "VERIFIED"
+}

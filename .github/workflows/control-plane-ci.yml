@@ -1,0 +1,114 @@
+name: Control Plane CI
+on:
+  pull_request:
+    paths:
+      [
+        "control-plane/**",
+        "supabase/migrations/**",
+        "supabase/tests/**",
+        ".github/workflows/control-plane-ci.yml",
+      ]
+  push:
+    branches: [main]
+    paths:
+      [
+        "control-plane/**",
+        "supabase/migrations/**",
+        "supabase/tests/**",
+        ".github/workflows/control-plane-ci.yml",
+      ]
+permissions:
+  contents: read
+jobs:
+  key-access:
+    name: Owned key access boundary
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: disposable-ci-only
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Exercise grants, audit, idempotency and negative authorization
+        env:
+          PGPASSWORD: disposable-ci-only
+        run: |
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 \
+            -f supabase/tests/key_access_fixture.sql \
+            -f supabase/migrations/20261010030000_owned_key_access.sql \
+            -f supabase/tests/owned_key_access.sql
+      - name: Exercise model key verification, expiry and scope boundaries
+        env:
+          PGPASSWORD: disposable-ci-only
+        run: |
+          createdb -h localhost -U postgres model_key_boundary
+          psql -h localhost -U postgres -d model_key_boundary -v ON_ERROR_STOP=1 \
+            -f supabase/tests/key_access_fixture.sql \
+            -f supabase/tests/admin_oauth_fixture.sql \
+            -c 'ALTER TABLE public.api_keys ADD COLUMN last_used_at timestamptz' \
+            -f supabase/migrations/20261010030000_owned_key_access.sql \
+            -f supabase/migrations/20261025050811_model_gateway_sk_keys.sql \
+            -f supabase/tests/model_gateway_keys.sql \
+            -f supabase/migrations/20261025050841_delete_revoked_api_keys.sql \
+            -f supabase/tests/delete_revoked_api_keys.sql
+      - name: Exercise duplicate credential values and owner boundaries
+        env:
+          PGPASSWORD: disposable-ci-only
+        run: |
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 \
+            -f supabase/tests/credential_value_fixture.sql \
+            -f supabase/migrations/20260923090000_credential_totp.sql \
+            -f supabase/migrations/20260924010000_password_manager_credentials.sql \
+            -f supabase/migrations/20261010050000_reusable_credential_values.sql \
+            -f supabase/tests/reusable_credential_values.sql
+      - name: Exercise organization policy helper grants and membership boundaries
+        env:
+          PGPASSWORD: disposable-ci-only
+        run: |
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 \
+            -f supabase/tests/organization_policy_fixture.sql \
+            -f supabase/migrations/20261010094318_restore_organization_policy_grants.sql \
+            -f supabase/tests/organization_policy_grants.sql \
+            -f supabase/migrations/20261010094318_restore_organization_policy_grants.sql \
+            -f supabase/tests/organization_policy_grants.sql
+      - name: Exercise explicit admin OAuth consent and PKCE boundaries
+        env:
+          PGPASSWORD: disposable-ci-only
+        run: |
+          createdb -h localhost -U postgres oauth_boundary
+          psql -h localhost -U postgres -d oauth_boundary -v ON_ERROR_STOP=1 \
+            -f supabase/tests/key_access_fixture.sql \
+            -f supabase/tests/admin_oauth_fixture.sql \
+            -f supabase/migrations/20261014121000_admin_oauth_consent.sql \
+            -c 'GRANT EXECUTE ON FUNCTION public.oc_authorize_oauth_client(text,text,text,text[]) TO anon' \
+            -f supabase/migrations/20261024113601_restrict_oauth_consent_to_authenticated.sql \
+            -f supabase/tests/admin_oauth_consent.sql
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: control-plane
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install ".[test]"
+      - run: pytest -q
+      - run: python -m compileall app
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
+      - uses: docker/build-push-action@v7
+        with:
+          context: control-plane
+          push: false
+          tags: open-connect-control:ci

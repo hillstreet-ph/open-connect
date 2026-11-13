@@ -1,0 +1,26 @@
+# Open-Connect — Cloudflare Pages
+# Project: open-connect-app
+# Production branch: main → https://open-connect.site
+#
+# Build (Dashboard → Settings → Builds):
+#   Build command:    bun install --frozen-lockfile && bun run build
+#   Build output dir: .output/public
+#   Production branch: main
+
+name = "open-connect-app"
+pages_build_output_dir = ".output/public"
+compatibility_date = "2026-08-01"
+compatibility_flags = [ "nodejs_compat" ]
+
+[vars]
+OAUTH_MTLS_MODE = "optional"
+PLAYWRIGHT_WORKER_URL = "https://open-connect-playwright.zeabur.app"
+
+# Workers KV — edge cache / OAuth one-time codes / rate limits
+[[kv_namespaces]]
+binding = "OC_KV"
+id = "f4224065e31949268604c2c2b70b9aa1"
+
+# Workers AI — credential-free free-tier inference for the Open-Auto platform fallback
+[ai]
+binding = "OC_AI"

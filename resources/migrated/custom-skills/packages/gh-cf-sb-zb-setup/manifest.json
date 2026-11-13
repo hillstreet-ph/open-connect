@@ -1,0 +1,32 @@
+{
+  "name": "gh-cf-sb-zb-setup",
+  "version": "1.0.0",
+  "entrypoint": "SKILL.md",
+  "type": "e2e-profile",
+  "required_skills": [
+    "github-e2e-setup",
+    "supabase-e2e-setup",
+    "zeabur-e2e-setup",
+    "cloudflare-e2e-setup"
+  ],
+  "providers": {
+    "github": "required",
+    "supabase": "required",
+    "zeabur": "required",
+    "cloudflare": "required",
+    "dockerhub": "not_required",
+    "railway": "not_required"
+  },
+  "startup_modes": [
+    "NEW",
+    "SOURCE_IMPORT",
+    "CLONE",
+    "FORK",
+    "EXISTING_REPOSITORY",
+    "EXISTING_PRODUCTION",
+    "MIGRATION",
+    "RECOVERY"
+  ],
+  "repair_limit_per_failure": 3,
+  "completion_state": "PRODUCTION_VERIFIED"
+}
