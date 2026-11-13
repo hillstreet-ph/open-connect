@@ -98,8 +98,64 @@ def portable_entry(p):
     return entry
 
 
+RISK_ORDER = {"low": 0, "medium": 1, "high": 2, "critical": 3}
+
+
+def risk_rank(value):
+    """Rank a risk label; an unknown label sorts below every known one."""
+    return RISK_ORDER.get((value or "").strip().lower(), -1)
+
+
+def merge_packages(registries):
+    """Merge every registry's packages into one catalog, one entry per slug.
+
+    The primary registry is authoritative for identity fields (kind, install
+    command, canonical URL, source ref). A later registry that repeats a slug
+    is the same resource cataloged twice, so it is folded in rather than
+    appended: the entry keeps the primary's fields and escalates ``risk`` to
+    the more severe of the two.
+
+    Escalating -- never downgrading -- is the fail-safe direction. A resource
+    one catalog calls high risk must not be published as medium merely because
+    another catalog was less careful, and the operator reads this export to
+    decide what to isolate before installing.
+
+    Returns (packages, deduplicated), where ``deduplicated`` lists the slugs
+    that were folded, for the run log.
+    """
+    merged = []
+    by_slug = {}
+    deduplicated = []
+    for registry in registries:
+        for package in registry.get("packages") or []:
+            slug = package.get("slug")
+            existing = by_slug.get(slug)
+            if existing is None:
+                entry = dict(package)
+                by_slug[slug] = entry
+                merged.append(entry)
+                continue
+            deduplicated.append(slug)
+            if risk_rank(package.get("risk")) > risk_rank(existing.get("risk")):
+                existing["risk"] = package.get("risk")
+    return merged, deduplicated
+
+
 def validate(registries, packages):
     errors = []
+    # A slug repeated *inside* one registry is a data error: the merge only
+    # folds duplicates across registries, so anything caught here is real and
+    # must still fail the build.
+    for registry in registries:
+        seen = set()
+        for p in registry.get("packages") or []:
+            slug = p.get("slug") or ""
+            if slug in seen:
+                errors.append(
+                    "duplicate slug within %s: %s"
+                    % (registry.get("registry_id") or "unnamed registry", slug)
+                )
+            seen.add(slug)
     slugs = set()
     for p in packages:
         slug = p.get("slug") or ""
@@ -240,10 +296,9 @@ def main():
 
     registries = load_registries()
     primary = registries[0]
-    packages = []
+    packages, deduplicated = merge_packages(registries)
     publishers = []
     for registry in registries:
-        packages.extend(registry.get("packages") or [])
         publishers.extend(registry.get("publisher_requests") or [])
     catalog = [portable_entry(p) for p in packages]
     source_registry_ids = [r.get("registry_id") for r in registries]
@@ -299,6 +354,11 @@ def main():
         if bad:
             sys.exit(1)
 
+    if deduplicated:
+        print(
+            "[openclaw-exports] folded %d cross-registry duplicate slug(s): %s"
+            % (len(deduplicated), ", ".join(sorted(set(deduplicated))))
+        )
     print(
         "[openclaw-exports] %d resources x %d export files written to public/openclaw/exports"
         % (len(catalog), len(files))
