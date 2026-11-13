@@ -108,8 +108,22 @@ function sleep(ms) {
   return new Promise((resolveSleep) => setTimeout(resolveSleep, ms));
 }
 
+// Firecrawl rate-limits per plan (HTTP 429). Retry with the server's Retry-After hint,
+// bounded so one throttled source cannot stall the whole hourly run.
+const FIRECRAWL_MAX_RETRIES = 5;
+
+function retryAfterMs(response, attempt) {
+  const header = Number(response.headers.get("retry-after"));
+  if (Number.isFinite(header) && header > 0) return Math.min(header * 1_000, 60_000);
+  return Math.min(5_000 * 2 ** attempt, 60_000);
+}
+
 async function firecrawlJson(url, options) {
-  const response = await fetch(url, options);
+  let response = await fetch(url, options);
+  for (let attempt = 0; response.status === 429 && attempt < FIRECRAWL_MAX_RETRIES; attempt++) {
+    await sleep(retryAfterMs(response, attempt));
+    response = await fetch(url, { ...options, signal: AbortSignal.timeout(20_000) });
+  }
   if (!response.ok) {
     const error = new Error(`Firecrawl returned HTTP ${response.status}`);
     error.code =
@@ -182,7 +196,7 @@ async function collectFirecrawlSource(source) {
   const deadline = Date.now() + 180_000;
   let completed;
   while (Date.now() < deadline) {
-    await sleep(2_000);
+    await sleep(5_000);
     const status = await firecrawlJson(
       `https://api.firecrawl.dev/v2/crawl/${encodeURIComponent(started.id)}?limit=100`,
       {
