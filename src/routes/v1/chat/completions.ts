@@ -20,6 +20,22 @@ import {
 /** Open-Auto pyramid routing: free-first tiered selection across upstreams. */
 const OPEN_AUTO_MODEL_KEYS = new Set(["open-auto", "open-connect/open-auto"]);
 
+/**
+ * Capability aliases (fast, balanced, coding, ...) name a quality tier, not a vendor model. When
+ * every paid route is out of credit or rate limited, they fall back to the connected free routes
+ * instead of failing. Explicit vendor model ids are never swapped.
+ */
+const CAPABILITY_ALIASES = new Set(
+  ["high", "deep", "wide", "fast", "cheap", "balanced", "reasoning", "coding", "vision"].flatMap(
+    (name) => [name, `open-connect/${name}`],
+  ),
+);
+
+/** Billing, rate-limit, and upstream availability failures move on to the next route. */
+function shouldTryNextRoute(status: number): boolean {
+  return status === 402 || status === 429 || status === 404 || status >= 500;
+}
+
 /** Errors that already carry a numeric upstream-style status are rethrown untouched. */
 function carriesStatus(error: unknown): error is { status: number } {
   return typeof (error as { status?: unknown })?.status === "number";
@@ -179,12 +195,22 @@ export const Route = createFileRoute("/v1/chat/completions")({
         const routableUpstreams = autoFree
           ? upstreams
           : upstreams.filter((upstream) => upstream.name !== CLOUDFLARE_AI_UPSTREAM_NAME);
+        const capabilityFallback =
+          !autoFree && !streaming && CAPABILITY_ALIASES.has(requestedModel.toLowerCase());
         const routes = autoFree
           ? await resolveAutoFreeRoutes(upstreams)
-          : routableUpstreams.map((upstream) => ({
-              upstream,
-              model: modelForUpstream(resolveModelId(requestedModel), upstream.name),
-            }));
+          : [
+              ...routableUpstreams.map((upstream) => ({
+                upstream,
+                model: modelForUpstream(resolveModelId(requestedModel), upstream.name),
+              })),
+              ...(capabilityFallback
+                ? (await resolveAutoFreeRoutes(upstreams)).map((route) => ({
+                    ...route,
+                    freeFallback: true,
+                  }))
+                : []),
+            ];
         if (routes.length === 0) {
           return gatewayError(
             "No connected OpenRouter free router or zero-cost LiteLLM model is available.",
@@ -195,9 +221,17 @@ export const Route = createFileRoute("/v1/chat/completions")({
 
         let lastError: { status: number; body: unknown } | null = null;
 
-        const deadline = Date.now() + 35_000;
+        let deadline = Date.now() + 35_000;
+        let fallbackStarted = false;
         for (const route of routes) {
-          if (autoFree && !streaming && Date.now() >= deadline) break;
+          // Free routes (Auto, or a capability alias's fallback) share one bounded time budget.
+          const freeFallback = "freeFallback" in route && route.freeFallback === true;
+          if (freeFallback && !fallbackStarted) {
+            fallbackStarted = true;
+            deadline = Date.now() + 35_000;
+          }
+          const freeRoute = autoFree || freeFallback;
+          if (freeRoute && !streaming && Date.now() >= deadline) break;
           const { upstream, model } = route;
           try {
             if (upstream.name === CLOUDFLARE_AI_UPSTREAM_NAME) {
@@ -229,7 +263,7 @@ export const Route = createFileRoute("/v1/chat/completions")({
               redirect: "manual",
               body: JSON.stringify({ ...body, model }),
               signal: AbortSignal.timeout(
-                autoFree && !streaming
+                freeRoute && !streaming
                   ? Math.max(1, Math.min(12_000, deadline - Date.now()))
                   : 120_000,
               ),
@@ -268,8 +302,8 @@ export const Route = createFileRoute("/v1/chat/completions")({
 
             if (!response.ok) {
               lastError = { status: response.status, body: result };
-              // try next upstream on 5xx / 404 model
-              if (autoFree || response.status >= 500 || response.status === 404) continue;
+              // try the next route on billing, rate-limit, 5xx, or unknown-model failures
+              if (autoFree || shouldTryNextRoute(response.status)) continue;
               await logGatewayRequest({
                 key,
                 endpoint: "/v1/chat/completions",
