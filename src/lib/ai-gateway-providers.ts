@@ -107,6 +107,36 @@ export const AI_GATEWAY_PROVIDERS = [
     official: true,
   },
   {
+    id: "tokenhub",
+    name: "Tencent TokenHub",
+    baseUrl: "https://tokenhub-intl.tencentcloudmaas.com/v1",
+    official: true,
+  },
+  {
+    id: "zai",
+    name: "Z.ai (GLM)",
+    baseUrl: "https://api.z.ai/api/paas/v4",
+    official: true,
+  },
+  {
+    id: "therouter",
+    name: "TheRouter",
+    baseUrl: "https://api.therouter.ai/v1",
+    official: false,
+  },
+  {
+    id: "teamorouter",
+    name: "TeamoRouter",
+    baseUrl: "https://api.teamorouter.com/v1",
+    official: false,
+  },
+  {
+    id: "subrouter",
+    name: "SubRouter",
+    baseUrl: "https://asiasouth.up.railway.app/v1",
+    official: false,
+  },
+  {
     id: "litellm",
     name: "Custom (OpenAI-compatible)",
     baseUrl: "",
