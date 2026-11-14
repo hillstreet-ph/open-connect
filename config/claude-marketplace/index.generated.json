@@ -11,10 +11,10 @@
   },
   "source": "claude-marketplaces+claude-account",
   "counts": {
-    "total": 494,
-    "plugins": 388,
+    "total": 495,
+    "plugins": 389,
     "account_skills": 106,
-    "upstream_listings": 503,
+    "upstream_listings": 504,
     "already_in_library": 16,
     "skipped": 0
   },
