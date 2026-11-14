@@ -131,8 +131,20 @@ export const AI_GATEWAY_PROVIDERS = [
     official: false,
   },
   {
+    id: "claw_router",
+    name: "Claw Router",
+    baseUrl: "https://api.clawrouter.ai/v1",
+    official: false,
+  },
+  {
     id: "subrouter",
     name: "SubRouter",
+    baseUrl: "https://api.subrouter.ai/v1",
+    official: false,
+  },
+  {
+    id: "asiasouth",
+    name: "AsiaSouth Relay",
     baseUrl: "https://asiasouth.up.railway.app/v1",
     official: false,
   },
