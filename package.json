@@ -103,7 +103,7 @@
     "embla-carousel-react": "^8.6.0",
     "input-otp": "^1.5.0",
     "lucide-react": "^1.50.0",
-    "parse5": "8.0.1",
+    "parse5": "8.1.1",
     "react": "^19.3.1",
     "react-day-picker": "^10.0.2",
     "react-dom": "^19.3.1",
