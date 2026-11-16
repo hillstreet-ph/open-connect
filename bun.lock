@@ -7,7 +7,7 @@
       "dependencies": {
         "@browserbasehq/sdk": "2.24.0",
         "@cfworker/json-schema": "^4.1.4",
-        "@data-client/react": "0.18.1",
+        "@data-client/react": "0.18.2",
         "@data-client/rest": "0.18.2",
         "@hookform/resolvers": "^7.0.3",
         "@lovable.dev/cloud-auth-js": "^1.2.3",
@@ -145,13 +145,13 @@
 
     "@cfworker/json-schema": ["@cfworker/json-schema@4.1.4", "", {}, "sha512-20rPE8EX0dSg6JGOVe31HpqsLYZTDSlcFJZA5mpZqQxcZ71vh/SXCMX+UuHO1mMcZBDKeb752z+3L8IWa+0Svg=="],
 
-    "@data-client/core": ["@data-client/core@0.18.1", "", { "dependencies": { "@babel/runtime": "^7.20.0", "@data-client/normalizr": "^0.18.1", "flux-standard-action": "^2.1.1" } }, "sha512-PKDPMTQkxTg669ZXAKdIIlJuPazqk+vVo5Ljya3qDivbw9DDVv+C5kwqsxzs52mMFGsJDQ6Un8siar4IeweMXw=="],
+    "@data-client/core": ["@data-client/core@0.18.2", "", { "dependencies": { "@babel/runtime": "^7.20.0", "@data-client/normalizr": "^0.18.2", "flux-standard-action": "^2.1.1" } }, "sha512-S1g9rhSUWkq71VSY613DLB9F0YI7Ff81/HvAB3WKvF4IESLiv7PuyLPSRpaVAV4zXwFRCr8a1AzkR+GKmnIu5w=="],
 
     "@data-client/endpoint": ["@data-client/endpoint@0.18.2", "", { "dependencies": { "@babel/runtime": "^7.20.0" } }, "sha512-51//i8IiU7+5y+o3xc3/Ve4UCdr6a10k6ITDgGg/nHgLxYdy687NKao57e4eFxWZ3DHqwmMOOFDj+CWxR3PfQA=="],
 
-    "@data-client/normalizr": ["@data-client/normalizr@0.18.1", "", { "dependencies": { "@babel/runtime": "^7.20.0" } }, "sha512-2tt9iQgMBXOPZdwy5h2E77xNQMdVuKyIgK//8edN/3Ys24Um/0WFxjDt8ShdQf8gYJbGNkEEG4vmGDFFyTL4sg=="],
+    "@data-client/normalizr": ["@data-client/normalizr@0.18.2", "", { "dependencies": { "@babel/runtime": "^7.20.0" } }, "sha512-1SpEQzgvyYcJnhnfLUF4TGRiqMeT+PYIUoOwfaWP2/Cyy0CCtd/Ft6IG/tnPGzFduiNUPTIcpgJ0U3Y+1pFDUw=="],
 
-    "@data-client/react": ["@data-client/react@0.18.1", "", { "dependencies": { "@babel/runtime": "^7.20.0", "@data-client/core": "^0.18.1", "@data-client/use-enhanced-reducer": "^0.1.14" }, "peerDependencies": { "@react-navigation/native": "^6.0.0 || ^7.0.0", "@types/react": "^16.14.0 || ^17.0.0 || ^18.0.0 || ^19.0.0-0 || ^19.0.0", "react": "^16.14.0 || ^17.0.0 || ^18.0.0 || ^19.0.0-0 || ^19.0.0" }, "optionalPeers": ["@react-navigation/native", "@types/react"] }, "sha512-dpF/Pd1mROpf+K0GqXgHXOHvB7WWBbf+QzIzg0jj8o8l1xpzu/zwXK3ocBcV4Ima6cCGr8OixfMQ0HUbCXNtKA=="],
+    "@data-client/react": ["@data-client/react@0.18.2", "", { "dependencies": { "@babel/runtime": "^7.20.0", "@data-client/core": "^0.18.2", "@data-client/use-enhanced-reducer": "^0.1.14" }, "peerDependencies": { "@react-navigation/native": "^6.0.0 || ^7.0.0", "@types/react": "^16.14.0 || ^17.0.0 || ^18.0.0 || ^19.0.0-0 || ^19.0.0", "react": "^16.14.0 || ^17.0.0 || ^18.0.0 || ^19.0.0-0 || ^19.0.0" }, "optionalPeers": ["@react-navigation/native", "@types/react"] }, "sha512-k7pJb4j6NHQ5LTtb47+BBnakNvy3x7rlMqswDyP7EzuN0uZ5HPlcHGc4eoCWNqNn8hlsnULsxsOYTpxsby5zyQ=="],
 
     "@data-client/rest": ["@data-client/rest@0.18.2", "", { "dependencies": { "@babel/runtime": "^7.20.0", "@data-client/endpoint": "^0.18.2", "path-to-regexp": "^8.1.0" } }, "sha512-OQVZYkB/4WmnQgx+WV0n3yBCBdr1uR9d9i80Uie7aM1eks4VRUGz/ksV6alDAlCmD/uK+qPnRrbp1UZ+AThETQ=="],
 

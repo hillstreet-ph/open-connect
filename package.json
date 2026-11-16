@@ -58,7 +58,7 @@
   "dependencies": {
     "@browserbasehq/sdk": "2.24.0",
     "@cfworker/json-schema": "^4.1.4",
-    "@data-client/react": "0.18.1",
+    "@data-client/react": "0.18.2",
     "@data-client/rest": "0.18.2",
     "@hookform/resolvers": "^7.0.3",
     "@lovable.dev/cloud-auth-js": "^1.2.3",
