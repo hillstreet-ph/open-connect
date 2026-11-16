@@ -69,7 +69,7 @@
         "zod": "4.6.7",
       },
       "devDependencies": {
-        "@data-client/test": "0.18.0",
+        "@data-client/test": "0.18.2",
         "@eslint/js": "10.0.1",
         "@lovable.dev/vite-tanstack-config": "2.26.7",
         "@types/bun": "^1.4.2",
@@ -155,7 +155,7 @@
 
     "@data-client/rest": ["@data-client/rest@0.18.2", "", { "dependencies": { "@babel/runtime": "^7.20.0", "@data-client/endpoint": "^0.18.2", "path-to-regexp": "^8.1.0" } }, "sha512-OQVZYkB/4WmnQgx+WV0n3yBCBdr1uR9d9i80Uie7aM1eks4VRUGz/ksV6alDAlCmD/uK+qPnRrbp1UZ+AThETQ=="],
 
-    "@data-client/test": ["@data-client/test@0.18.0", "", { "dependencies": { "@babel/runtime": "^7.20.0", "@testing-library/dom": "^10.1.0", "@testing-library/react": "^16.0.0" }, "peerDependencies": { "@data-client/react": "^0.12.15 || ^0.13.0 || ^0.14.0 || ^0.15.0 || ^0.16.0 || ^0.17.0 || ^0.18.0", "@testing-library/react-hooks": "^8.0.0", "@testing-library/react-native": "^13.0.0", "@types/react": "^16.14.0 || ^17.0.0 || ^18.0.0 || ^19.0.0-0 || ^19.0.0", "@types/react-dom": "*", "jest": "*", "react": "^16.14.0 || ^17.0.0 || ^18.0.0 || ^19.0.0-0 || ^19.0.0", "react-dom": "*", "react-native": "*", "react-test-renderer": "*" }, "optionalPeers": ["@testing-library/react-hooks", "@testing-library/react-native", "@types/react", "@types/react-dom", "jest", "react-dom", "react-native", "react-test-renderer"] }, "sha512-qog61paoyQOkeJinOsd8azT29obN/2Zyn98EolRNOhCxDNH8b7jsTQ0yZ6V7sNMbPSV0Pbm2lV0PzHLEmUhxtw=="],
+    "@data-client/test": ["@data-client/test@0.18.2", "", { "dependencies": { "@babel/runtime": "^7.20.0", "@testing-library/dom": "^10.1.0", "@testing-library/react": "^16.0.0" }, "peerDependencies": { "@data-client/react": "^0.12.15 || ^0.13.0 || ^0.14.0 || ^0.15.0 || ^0.16.0 || ^0.17.0 || ^0.18.0", "@testing-library/react-hooks": "^8.0.0", "@testing-library/react-native": "^13.0.0", "@types/react": "^16.14.0 || ^17.0.0 || ^18.0.0 || ^19.0.0-0 || ^19.0.0", "@types/react-dom": "*", "jest": "*", "react": "^16.14.0 || ^17.0.0 || ^18.0.0 || ^19.0.0-0 || ^19.0.0", "react-dom": "*", "react-native": "*", "react-test-renderer": "*" }, "optionalPeers": ["@testing-library/react-hooks", "@testing-library/react-native", "@types/react", "@types/react-dom", "jest", "react-dom", "react-native", "react-test-renderer"] }, "sha512-24uuYndXMUCB12Fr9UwLV++64yo8Y5mjMTkyT7ML+lw9G78V1lIqDHtg2+EpXzQSneIlmj6Ixgpa6uDbRBZX3g=="],
 
     "@data-client/use-enhanced-reducer": ["@data-client/use-enhanced-reducer@0.1.14", "", { "dependencies": { "@babel/runtime": "^7.20.0" }, "peerDependencies": { "@types/react": "^16.14.0 || ^17.0.0 || ^18.0.0-0 || ^18.0.0 || ^19.0.0-0 || ^19.0.0", "react": "^16.14.0 || ^17.0.0 || ^18.0.0-0 || ^18.0.0 || ^19.0.0-0 || ^19.0.0" }, "optionalPeers": ["@types/react"] }, "sha512-/VrbDmaygmJSjja5cOxkkiCOnMpvMUdmZ6uDjTZgjCxTyDUI8ZbEJuCmiLntb2ak9a0wq2CC64R3b19huDiT6g=="],
 

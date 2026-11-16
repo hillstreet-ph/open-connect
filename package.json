@@ -120,7 +120,7 @@
     "zod": "4.6.7"
   },
   "devDependencies": {
-    "@data-client/test": "0.18.0",
+    "@data-client/test": "0.18.2",
     "@eslint/js": "10.0.1",
     "@lovable.dev/vite-tanstack-config": "2.26.7",
     "@types/bun": "^1.4.2",
