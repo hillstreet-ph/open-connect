@@ -9,7 +9,7 @@ Railway. The public web application remains on Cloudflare Pages at
 | Field | Value | Status |
 |-------|-------|--------|
 | release | open-connect control-plane migrated Zeabur → Railway | DONE |
-| git_sha | 0f91fa4ea456e252caa8c37ac7502316ce1210db (config commit: see git log) | DONE |
+| git_sha | 7252175089527aba2e6d91f9f71e917bcd4aaccc (cutover commit; this record follows it) | DONE |
 | artifact_image | Built by Railway from root `Dockerfile` (mirrors `Zeabur.Dockerfile`) | DONE |
 | artifact_digest | Railway image digest (see deployment meta) | DONE |
 | railway_workspace | Kobeplay Workspace | DONE |
