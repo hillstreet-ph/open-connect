@@ -54,9 +54,10 @@ export default defineConfig({
   },
 
   services: {
-    control_plane: {
-      // Build context = repo root; Dockerfile lives in control-plane/.
-      dockerfilePath: "../control-plane/Dockerfile",
+    "open-connect": {
+      // Build context = repo root; the root Dockerfile mirrors Zeabur.Dockerfile
+      // and builds the control-plane (COPY control-plane/pyproject.toml + app).
+      dockerfilePath: "Dockerfile",
       buildContext: "..",
 
       // Do not override CMD — the control-plane Dockerfile already binds
@@ -107,6 +108,31 @@ export default defineConfig({
       // Railway provisions a default <project>-<env>.up.railway.app domain
       // automatically; we pin the custom domain that fronts the control plane.
       domains: ["api.open-connect.site"],
+    },
+
+    "open-connect-staging": {
+      // Separate service instance in the staging environment (production and
+      // staging are provisioned as distinct services in this project).
+      dockerfilePath: "Dockerfile",
+      buildContext: "..",
+      env: {
+        OC_ENVIRONMENT: { value: "staging", type: "PLAIN_TEXT" },
+        OC_ALLOW_PRODUCTION: { value: "false", type: "SECRET" },
+        OC_PUBLIC_BASE_URL: {
+          value: "https://control-staging.open-connect.site",
+          type: "PLAIN_TEXT",
+        },
+        OC_OIDC_ISSUER: {
+          value: "https://huadtiuuoiriqrjpjxhr.supabase.co/auth/v1",
+          type: "PLAIN_TEXT",
+        },
+        OC_OIDC_AUDIENCE: { value: "authenticated", type: "PLAIN_TEXT" },
+        OC_ALLOWED_ORIGINS: {
+          value: "https://staging.open-connect.site",
+          type: "PLAIN_TEXT",
+        },
+      },
+      domains: ["control-staging.open-connect.site"],
     },
   },
 });
