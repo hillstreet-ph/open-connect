@@ -5,7 +5,7 @@ name: PR Automation - auto-fix, auto-update, auto-merge, auto-deploy
 #   2. auto-update: keeps open PR branches up to date with main
 #   3. auto-merge: enables GitHub auto-merge so PRs merge as soon as required checks pass
 #   4. auto-deploy: deployment to production happens automatically on merge to main
-#      (Cloudflare Pages and Zeabur are already bound to the main branch).
+#      (Cloudflare Pages for the web app; Railway for the control-plane API).
 #
 # SCOPE CONTRACT (do not narrow this again):
 #   The required "Build & validate" check runs `bun run lint`, which is `eslint .`
