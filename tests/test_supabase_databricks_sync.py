@@ -618,3 +618,31 @@ def test_fetch_all_probe_finding_more_rows_is_truncated():
                                 batch_size=2, max_pages=2, primary_key="id")
     assert result.truncated is True
 
+# --- rate-limit backoff --------------------------------------------------
+def test_query_retries_http_429_with_backoff():
+    calls, sleeps = [], []
+
+    def flaky(url, *, method="GET", headers=None, body=None, timeout=60):
+        calls.append(url)
+        if len(calls) < 3:
+            raise mod.SyncError("HTTP 429 for %s: Too Many Requests" % url)
+        return [{"ok": True}]
+
+    supabase = mod.SupabaseClient("fake-pat", http=flaky,
+                                  sleep_fn=lambda seconds: sleeps.append(seconds))
+    assert supabase.query(REF, "SELECT 1") == [{"ok": True}]
+    assert len(calls) == 3 and sleeps == [5, 10]
+
+
+def test_query_does_not_retry_other_http_errors():
+    calls = []
+
+    def failing(url, **kwargs):
+        calls.append(url)
+        raise mod.SyncError("HTTP 500 for %s" % url)
+
+    supabase = mod.SupabaseClient("fake-pat", http=failing, sleep_fn=lambda _: None)
+    with pytest.raises(mod.SyncError):
+        supabase.query(REF, "SELECT 1")
+    assert len(calls) == 1
+

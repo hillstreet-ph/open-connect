@@ -299,23 +299,37 @@ def save_state(path, state):
 class SupabaseClient:
     """Read-only Management API SQL client."""
 
-    def __init__(self, pat, timeout=120, http=http_json):
+    def __init__(self, pat, timeout=120, http=http_json, sleep_fn=time.sleep,
+                 rate_limit_retries=6):
         if not pat:
             raise SyncError("SUPABASE_PAT is not set")
         self.pat = pat
         self.timeout = timeout
         self.http = http
+        self.sleep_fn = sleep_fn
+        self.rate_limit_retries = int(rate_limit_retries)
 
     def query(self, ref, sql):
         url = "https://api.supabase.com/v1/projects/%s/database/query/read-only" % ref
-        result = self.http(
-            url,
-            method="POST",
-            headers={"Authorization": "Bearer " + self.pat,
-                     "User-Agent": "supabase-databricks-sync"},
-            body={"query": sql},
-            timeout=self.timeout,
-        )
+        result = None
+        for attempt in range(self.rate_limit_retries + 1):
+            try:
+                result = self.http(
+                    url,
+                    method="POST",
+                    headers={"Authorization": "Bearer " + self.pat,
+                             "User-Agent": "supabase-databricks-sync"},
+                    body={"query": sql},
+                    timeout=self.timeout,
+                )
+                break
+            except SyncError as exc:
+                throttled = "HTTP 429" in str(exc)
+                if not throttled or attempt >= self.rate_limit_retries:
+                    raise
+                # Bounded exponential backoff; the Management API throttles
+                # large multi-page reads.  Never loop forever.
+                self.sleep_fn(min(60, 5 * (2 ** attempt)))
         if isinstance(result, dict):
             # Some Management API responses wrap rows; accept common shapes.
             for key in ("rows", "data", "result"):
