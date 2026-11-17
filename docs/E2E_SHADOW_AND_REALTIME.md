@@ -254,3 +254,17 @@ retry with bounded exponential backoff. Both large tables were then rerun; the
 tg_messages rerun succeeded, and the backup-parts rerun was retried after the
 backoff fix. No data was skipped or deleted.
 
+### Final resolution of the two large tables
+
+- `public.open_system_backup_verified_parts` (82,791 rows) and
+  `public.open_tgate_tg_messages` (31,451 rows) both exceeded the previous
+  25k-row page budget; the safe truncation guard refused to advance their
+  watermarks rather than dropping rows.
+- Page budget raised to 400 pages (200k rows); HTTP 429 reads now retry with
+  bounded exponential backoff; writes are chunked to 2,000 rows per statement
+  so the inline SQL stays below Databricks' 16 MB statement limit.
+- Both tables were rerun successfully (`EXIT 0`) and their shadow snapshots
+  refreshed with 0 mismatches.
+- Fresh full-run outcome: 133 ok, 5 complex-schema skips, 2 capped tables,
+  both subsequently rerun to success — no rows skipped or deleted.
+
