@@ -1,0 +1,63 @@
+name: Supabase backup retention janitor
+
+# Scheduled runs always apply retention (delete expired backup sets). Manual
+# runs default to dry-run; pass apply=true to actually delete. Deletions are
+# gated by the script on a verified R2 DB-export manifest.
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Actually delete expired backup sets (default: dry-run)"
+        type: boolean
+        required: false
+        default: false
+
+concurrency:
+  group: supabase-backup-janitor
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  janitor:
+    name: Prune expired backup sets
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Determine run mode
+        id: mode
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          DISPATCH_APPLY: ${{ inputs.apply }}
+        run: |
+          if [ "$EVENT_NAME" = "schedule" ] || [ "$DISPATCH_APPLY" = "true" ]; then
+            echo "flags=--apply" >> "$GITHUB_OUTPUT"
+            echo "mode=apply" >> "$GITHUB_OUTPUT"
+          else
+            echo "flags=" >> "$GITHUB_OUTPUT"
+            echo "mode=dry-run" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run retention janitor (${{ steps.mode.outputs.mode }})
+        env:
+          SUPABASE_PAT: ${{ secrets.SUPABASE_PAT }}
+          SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF || 'huadtiuuoiriqrjpjxhr' }}
+          BACKUP_BUCKET: ${{ vars.BACKUP_BUCKET || 'open-system-backups' }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_S3_ENDPOINT: ${{ secrets.R2_S3_ENDPOINT }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          APPLY_FLAGS: ${{ steps.mode.outputs.flags }}
+        run: python3 scripts/supabase_backup_janitor.py $APPLY_FLAGS

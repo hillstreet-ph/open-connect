@@ -1,0 +1,40 @@
+name: Supabase watcher health
+
+# Lightweight health check for the Supabase realtime watcher, every 5
+# minutes. A non-zero exit from --once fails the job so alerting fires.
+# Secrets are supplied via env and are never echoed by this workflow.
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: supabase-watcher-health
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  health:
+    name: Check realtime watcher health
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # No continue-on-error: a failing --once must fail the job so that
+      # scheduled-run alerts notify the on-call owner.
+      - name: Run watcher health check
+        env:
+          SUPABASE_PAT: ${{ secrets.SUPABASE_PAT }}
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+        run: python3 scripts/supabase_realtime_watcher.py --once
