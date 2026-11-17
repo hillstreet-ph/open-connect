@@ -1,0 +1,45 @@
+name: Databricks shadow mirror
+
+# Keeps a shadow (staging) mirror of the governed Supabase tables in
+# Databricks fresh, then verifies the mirror, every 30 minutes. The
+# concurrency group prevents overlapping runs when a mirror takes longer
+# than the schedule interval. Secrets are supplied via env and are never
+# echoed by this workflow.
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: databricks-shadow-mirror
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  mirror:
+    name: Mirror and verify shadow tables
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run shadow mirror
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+        run: python3 scripts/databricks_shadow_mirror.py --once --registry config/supabase/table_registry.json
+
+      - name: Verify shadow mirror
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+        run: python3 scripts/databricks_shadow_mirror.py --verify --registry config/supabase/table_registry.json
