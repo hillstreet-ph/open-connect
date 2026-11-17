@@ -1,0 +1,552 @@
+{
+  "defaults": {
+    "lookback_seconds": 300,
+    "batch_size": 500
+  },
+  "tables": {
+    "huadtiuuoiriqrjpjxhr": {
+      "auth.audit_log_entries": {
+        "databricks": "open_connect.open_platform.auth__audit_log_entries",
+        "primary_key": "id"
+      },
+      "auth.flow_state": {
+        "databricks": "open_connect.open_platform.auth__flow_state",
+        "primary_key": "id"
+      },
+      "auth.identities": {
+        "databricks": "open_connect.open_platform.auth__identities",
+        "primary_key": "id"
+      },
+      "auth.mfa_amr_claims": {
+        "databricks": "open_connect.open_platform.auth__mfa_amr_claims",
+        "primary_key": "id"
+      },
+      "auth.one_time_tokens": {
+        "databricks": "open_connect.open_platform.auth__one_time_tokens",
+        "primary_key": "id"
+      },
+      "auth.refresh_tokens": {
+        "databricks": "open_connect.open_platform.auth__refresh_tokens",
+        "primary_key": "id"
+      },
+      "auth.schema_migrations": {
+        "databricks": "open_connect.open_platform.auth__schema_migrations",
+        "primary_key": null
+      },
+      "auth.sessions": {
+        "databricks": "open_connect.open_platform.auth__sessions",
+        "primary_key": "id"
+      },
+      "auth.users": {
+        "databricks": "open_connect.open_platform.auth__users",
+        "primary_key": "id"
+      },
+      "cron.job": {
+        "databricks": "open_connect.open_platform.cron__job",
+        "primary_key": null
+      },
+      "net._http_response": {
+        "databricks": "open_connect.open_platform.net___http_response",
+        "primary_key": "id"
+      },
+      "open_box.memberships": {
+        "databricks": "open_connect.open_platform.open_box__memberships",
+        "primary_key": null
+      },
+      "platform.memberships": {
+        "databricks": "open_connect.open_platform.platform__memberships",
+        "primary_key": "id"
+      },
+      "platform.organizations": {
+        "databricks": "open_connect.open_platform.platform__organizations",
+        "primary_key": "id"
+      },
+      "platform.service_accounts": {
+        "databricks": "open_connect.open_platform.platform__service_accounts",
+        "primary_key": "id"
+      },
+      "platform.service_identities": {
+        "databricks": "open_connect.open_platform.platform__service_identities",
+        "primary_key": "id"
+      },
+      "platform.workspaces": {
+        "databricks": "open_connect.open_platform.platform__workspaces",
+        "primary_key": "id"
+      },
+      "platform_shared.account_roles": {
+        "databricks": "open_connect.open_platform.platform_shared__account_roles",
+        "primary_key": null
+      },
+      "platform_shared.project_access": {
+        "databricks": "open_connect.open_platform.platform_shared__project_access",
+        "primary_key": null
+      },
+      "platform_shared.project_registry": {
+        "databricks": "open_connect.open_platform.platform_shared__project_registry",
+        "primary_key": "id"
+      },
+      "public.agent_chats": {
+        "databricks": "open_connect.open_platform.public__agent_chats",
+        "primary_key": "id"
+      },
+      "public.agent_definitions": {
+        "databricks": "open_connect.open_platform.public__agent_definitions",
+        "primary_key": "id"
+      },
+      "public.agent_delegations": {
+        "databricks": "open_connect.open_platform.public__agent_delegations",
+        "primary_key": null
+      },
+      "public.ai_agency_teams": {
+        "databricks": "open_connect.open_platform.public__ai_agency_teams",
+        "primary_key": "id"
+      },
+      "public.api_keys": {
+        "databricks": "open_connect.open_platform.public__api_keys",
+        "primary_key": "id"
+      },
+      "public.app_connections": {
+        "databricks": "open_connect.open_platform.public__app_connections",
+        "primary_key": "id"
+      },
+      "public.auto_preferences": {
+        "databricks": "open_connect.open_platform.public__auto_preferences",
+        "primary_key": null
+      },
+      "public.automations": {
+        "databricks": "open_connect.open_platform.public__automations",
+        "primary_key": "id"
+      },
+      "public.autonomous_run_events": {
+        "databricks": "open_connect.open_platform.public__autonomous_run_events",
+        "primary_key": "id"
+      },
+      "public.autonomous_runs": {
+        "databricks": "open_connect.open_platform.public__autonomous_runs",
+        "primary_key": "id"
+      },
+      "public.browser_automation_preferences": {
+        "databricks": "open_connect.open_platform.public__browser_automation_preferences",
+        "primary_key": null
+      },
+      "public.capability_requests": {
+        "databricks": "open_connect.open_platform.public__capability_requests",
+        "primary_key": "id"
+      },
+      "public.categories": {
+        "databricks": "open_connect.open_platform.public__categories",
+        "primary_key": "id"
+      },
+      "public.control_approvals": {
+        "databricks": "open_connect.open_platform.public__control_approvals",
+        "primary_key": "id"
+      },
+      "public.control_audit_events": {
+        "databricks": "open_connect.open_platform.public__control_audit_events",
+        "primary_key": "id"
+      },
+      "public.credential_folder_items": {
+        "databricks": "open_connect.open_platform.public__credential_folder_items",
+        "primary_key": null
+      },
+      "public.credential_folders": {
+        "databricks": "open_connect.open_platform.public__credential_folders",
+        "primary_key": "id"
+      },
+      "public.credential_secrets": {
+        "databricks": "open_connect.open_platform.public__credential_secrets",
+        "primary_key": "id"
+      },
+      "public.data_control_activity": {
+        "databricks": "open_connect.open_platform.public__data_control_activity",
+        "primary_key": "id"
+      },
+      "public.data_control_settings": {
+        "databricks": "open_connect.open_platform.public__data_control_settings",
+        "primary_key": null
+      },
+      "public.data_reuse_drafts": {
+        "databricks": "open_connect.open_platform.public__data_reuse_drafts",
+        "primary_key": "id"
+      },
+      "public.e2e_autonomous_verification": {
+        "databricks": "open_connect.open_platform.public__e2e_autonomous_verification",
+        "primary_key": "id"
+      },
+      "public.environments": {
+        "databricks": "open_connect.open_platform.public__environments",
+        "primary_key": "id"
+      },
+      "public.gateway_requests": {
+        "databricks": "open_connect.open_platform.public__gateway_requests",
+        "primary_key": "id"
+      },
+      "public.hillstreet_otp_calls": {
+        "databricks": "open_connect.open_platform.public__hillstreet_otp_calls",
+        "primary_key": null
+      },
+      "public.hillstreet_otp_jobs": {
+        "databricks": "open_connect.open_platform.public__hillstreet_otp_jobs",
+        "primary_key": "id"
+      },
+      "public.hillstreet_otp_number_inventory": {
+        "databricks": "open_connect.open_platform.public__hillstreet_otp_number_inventory",
+        "primary_key": null
+      },
+      "public.hillstreet_otp_runtime": {
+        "databricks": "open_connect.open_platform.public__hillstreet_otp_runtime",
+        "primary_key": null
+      },
+      "public.hillstreet_sms_deliveries": {
+        "databricks": "open_connect.open_platform.public__hillstreet_sms_deliveries",
+        "primary_key": null
+      },
+      "public.hillstreet_sms_forwarding": {
+        "databricks": "open_connect.open_platform.public__hillstreet_sms_forwarding",
+        "primary_key": null
+      },
+      "public.hillstreet_website_inquiries": {
+        "databricks": "open_connect.open_platform.public__hillstreet_website_inquiries",
+        "primary_key": "id"
+      },
+      "public.knowledge_items": {
+        "databricks": "open_connect.open_platform.public__knowledge_items",
+        "primary_key": "id"
+      },
+      "public.memory_records": {
+        "databricks": "open_connect.open_platform.public__memory_records",
+        "primary_key": "id"
+      },
+      "public.oauth_clients": {
+        "databricks": "open_connect.open_platform.public__oauth_clients",
+        "primary_key": null
+      },
+      "public.open_system_agents": {
+        "databricks": "open_connect.open_platform.public__open_system_agents",
+        "primary_key": "id"
+      },
+      "public.open_system_backup_catalog": {
+        "databricks": "open_connect.open_platform.public__open_system_backup_catalog",
+        "primary_key": "id"
+      },
+      "public.open_system_backup_lifecycle": {
+        "databricks": "open_connect.open_platform.public__open_system_backup_lifecycle",
+        "primary_key": null
+      },
+      "public.open_system_backup_verified_parts": {
+        "databricks": "open_connect.open_platform.public__open_system_backup_verified_parts",
+        "primary_key": null
+      },
+      "public.open_system_deployments": {
+        "databricks": "open_connect.open_platform.public__open_system_deployments",
+        "primary_key": "id"
+      },
+      "public.open_system_sync_events": {
+        "databricks": "open_connect.open_platform.public__open_system_sync_events",
+        "primary_key": "id"
+      },
+      "public.organization_group_members": {
+        "databricks": "open_connect.open_platform.public__organization_group_members",
+        "primary_key": null
+      },
+      "public.organization_groups": {
+        "databricks": "open_connect.open_platform.public__organization_groups",
+        "primary_key": "id"
+      },
+      "public.organization_invitations": {
+        "databricks": "open_connect.open_platform.public__organization_invitations",
+        "primary_key": "id"
+      },
+      "public.organization_members": {
+        "databricks": "open_connect.open_platform.public__organization_members",
+        "primary_key": "id"
+      },
+      "public.organizations": {
+        "databricks": "open_connect.open_platform.public__organizations",
+        "primary_key": "id"
+      },
+      "public.profiles": {
+        "databricks": "open_connect.open_platform.public__profiles",
+        "primary_key": "id"
+      },
+      "public.project_connection_audit": {
+        "databricks": "open_connect.open_platform.public__project_connection_audit",
+        "primary_key": "id"
+      },
+      "public.project_connections": {
+        "databricks": "open_connect.open_platform.public__project_connections",
+        "primary_key": "id"
+      },
+      "public.project_credentials": {
+        "databricks": "open_connect.open_platform.public__project_credentials",
+        "primary_key": "id"
+      },
+      "public.project_members": {
+        "databricks": "open_connect.open_platform.public__project_members",
+        "primary_key": "id"
+      },
+      "public.project_resources": {
+        "databricks": "open_connect.open_platform.public__project_resources",
+        "primary_key": "id"
+      },
+      "public.projects": {
+        "databricks": "open_connect.open_platform.public__projects",
+        "primary_key": "id"
+      },
+      "public.registry_sources": {
+        "databricks": "open_connect.open_platform.public__registry_sources",
+        "primary_key": "id"
+      },
+      "public.resource_source_records": {
+        "databricks": "open_connect.open_platform.public__resource_source_records",
+        "primary_key": "id"
+      },
+      "public.resources": {
+        "databricks": "open_connect.open_platform.public__resources",
+        "primary_key": "id"
+      },
+      "public.schedules": {
+        "databricks": "open_connect.open_platform.public__schedules",
+        "primary_key": "id"
+      },
+      "public.service_credentials": {
+        "databricks": "open_connect.open_platform.public__service_credentials",
+        "primary_key": null
+      },
+      "public.tasks": {
+        "databricks": "open_connect.open_platform.public__tasks",
+        "primary_key": "id"
+      },
+      "public.toolkit_items": {
+        "databricks": "open_connect.open_platform.public__toolkit_items",
+        "primary_key": "id"
+      },
+      "public.toolkits": {
+        "databricks": "open_connect.open_platform.public__toolkits",
+        "primary_key": "id"
+      },
+      "public.user_roles": {
+        "databricks": "open_connect.open_platform.public__user_roles",
+        "primary_key": "id"
+      },
+      "public.workforce_agent_versions": {
+        "databricks": "open_connect.open_platform.public__workforce_agent_versions",
+        "primary_key": "id"
+      },
+      "public.workforce_agents": {
+        "databricks": "open_connect.open_platform.public__workforce_agents",
+        "primary_key": "id"
+      },
+      "public.workforce_events": {
+        "databricks": "open_connect.open_platform.public__workforce_events",
+        "primary_key": "id"
+      },
+      "public.workspaces": {
+        "databricks": "open_connect.open_platform.public__workspaces",
+        "primary_key": "id"
+      },
+      "public.x_search_nodes": {
+        "databricks": "open_connect.open_platform.public__x_search_nodes",
+        "primary_key": null
+      },
+      "public.x_setting_items": {
+        "databricks": "open_connect.open_platform.public__x_setting_items",
+        "primary_key": null
+      },
+      "public.x_storages": {
+        "databricks": "open_connect.open_platform.public__x_storages",
+        "primary_key": "id"
+      },
+      "public.x_task_items": {
+        "databricks": "open_connect.open_platform.public__x_task_items",
+        "primary_key": null
+      },
+      "public.x_users": {
+        "databricks": "open_connect.open_platform.public__x_users",
+        "primary_key": "id"
+      },
+      "realtime.schema_migrations": {
+        "databricks": "open_connect.open_platform.realtime__schema_migrations",
+        "primary_key": null
+      },
+      "storage.buckets": {
+        "databricks": "open_connect.open_platform.storage__buckets",
+        "primary_key": "id"
+      },
+      "storage.migrations": {
+        "databricks": "open_connect.open_platform.storage__migrations",
+        "primary_key": "id"
+      },
+      "storage.objects": {
+        "databricks": "open_connect.open_platform.storage__objects",
+        "primary_key": "id"
+      },
+      "supabase_migrations.schema_migrations": {
+        "databricks": "open_connect.open_platform.supabase_migrations__schema_migrations",
+        "primary_key": null
+      },
+      "vault.secrets": {
+        "databricks": "open_connect.open_platform.vault__secrets",
+        "primary_key": "id"
+      }
+    },
+    "hoseohvgoiarxluxqwqv": {
+      "auth.audit_log_entries": {
+        "databricks": "open_connect.open_operations.auth__audit_log_entries",
+        "primary_key": "id"
+      },
+      "auth.identities": {
+        "databricks": "open_connect.open_operations.auth__identities",
+        "primary_key": "id"
+      },
+      "auth.mfa_amr_claims": {
+        "databricks": "open_connect.open_operations.auth__mfa_amr_claims",
+        "primary_key": "id"
+      },
+      "auth.mfa_factors": {
+        "databricks": "open_connect.open_operations.auth__mfa_factors",
+        "primary_key": "id"
+      },
+      "auth.refresh_tokens": {
+        "databricks": "open_connect.open_operations.auth__refresh_tokens",
+        "primary_key": "id"
+      },
+      "auth.schema_migrations": {
+        "databricks": "open_connect.open_operations.auth__schema_migrations",
+        "primary_key": null
+      },
+      "auth.sessions": {
+        "databricks": "open_connect.open_operations.auth__sessions",
+        "primary_key": "id"
+      },
+      "auth.users": {
+        "databricks": "open_connect.open_operations.auth__users",
+        "primary_key": "id"
+      },
+      "cron.job": {
+        "databricks": "open_connect.open_operations.cron__job",
+        "primary_key": null
+      },
+      "operations_shared.account_roles": {
+        "databricks": "open_connect.open_operations.operations_shared__account_roles",
+        "primary_key": null
+      },
+      "operations_shared.api_keys": {
+        "databricks": "open_connect.open_operations.operations_shared__api_keys",
+        "primary_key": "id"
+      },
+      "operations_shared.app_settings": {
+        "databricks": "open_connect.open_operations.operations_shared__app_settings",
+        "primary_key": null
+      },
+      "operations_shared.project_access": {
+        "databricks": "open_connect.open_operations.operations_shared__project_access",
+        "primary_key": null
+      },
+      "operations_shared.project_registry": {
+        "databricks": "open_connect.open_operations.operations_shared__project_registry",
+        "primary_key": "id"
+      },
+      "platform.organizations": {
+        "databricks": "open_connect.open_operations.platform__organizations",
+        "primary_key": "id"
+      },
+      "platform.service_identities": {
+        "databricks": "open_connect.open_operations.platform__service_identities",
+        "primary_key": "id"
+      },
+      "platform.workspaces": {
+        "databricks": "open_connect.open_operations.platform__workspaces",
+        "primary_key": "id"
+      },
+      "private.storage_usage_snapshots": {
+        "databricks": "open_connect.open_operations.private__storage_usage_snapshots",
+        "primary_key": null
+      },
+      "public.categories": {
+        "databricks": "open_connect.open_operations.public__categories",
+        "primary_key": "id"
+      },
+      "public.open_tgate_api_keys": {
+        "databricks": "open_connect.open_operations.public__open_tgate_api_keys",
+        "primary_key": "id"
+      },
+      "public.open_tgate_audit_events": {
+        "databricks": "open_connect.open_operations.public__open_tgate_audit_events",
+        "primary_key": "id"
+      },
+      "public.open_tgate_knowledge_sources": {
+        "databricks": "open_connect.open_operations.public__open_tgate_knowledge_sources",
+        "primary_key": "id"
+      },
+      "public.open_tgate_login_commands": {
+        "databricks": "open_connect.open_operations.public__open_tgate_login_commands",
+        "primary_key": "id"
+      },
+      "public.open_tgate_oauth_clients": {
+        "databricks": "open_connect.open_operations.public__open_tgate_oauth_clients",
+        "primary_key": null
+      },
+      "public.open_tgate_oauth_refresh": {
+        "databricks": "open_connect.open_operations.public__open_tgate_oauth_refresh",
+        "primary_key": null
+      },
+      "public.open_tgate_operators": {
+        "databricks": "open_connect.open_operations.public__open_tgate_operators",
+        "primary_key": "id"
+      },
+      "public.open_tgate_tg_accounts": {
+        "databricks": "open_connect.open_operations.public__open_tgate_tg_accounts",
+        "primary_key": "id"
+      },
+      "public.open_tgate_tg_chats": {
+        "databricks": "open_connect.open_operations.public__open_tgate_tg_chats",
+        "primary_key": null
+      },
+      "public.open_tgate_tg_entities": {
+        "databricks": "open_connect.open_operations.public__open_tgate_tg_entities",
+        "primary_key": null
+      },
+      "public.open_tgate_tg_messages": {
+        "databricks": "open_connect.open_operations.public__open_tgate_tg_messages",
+        "primary_key": null
+      },
+      "public.open_tgate_worker_heartbeats": {
+        "databricks": "open_connect.open_operations.public__open_tgate_worker_heartbeats",
+        "primary_key": null
+      },
+      "public.open_tgate_workspace_audit_events": {
+        "databricks": "open_connect.open_operations.public__open_tgate_workspace_audit_events",
+        "primary_key": "id"
+      },
+      "public.profiles": {
+        "databricks": "open_connect.open_operations.public__profiles",
+        "primary_key": "id"
+      },
+      "public.resources": {
+        "databricks": "open_connect.open_operations.public__resources",
+        "primary_key": "id"
+      },
+      "public.user_roles": {
+        "databricks": "open_connect.open_operations.public__user_roles",
+        "primary_key": "id"
+      },
+      "realtime.schema_migrations": {
+        "databricks": "open_connect.open_operations.realtime__schema_migrations",
+        "primary_key": null
+      },
+      "storage.buckets": {
+        "databricks": "open_connect.open_operations.storage__buckets",
+        "primary_key": "id"
+      },
+      "storage.migrations": {
+        "databricks": "open_connect.open_operations.storage__migrations",
+        "primary_key": "id"
+      },
+      "supabase_migrations.schema_migrations": {
+        "databricks": "open_connect.open_operations.supabase_migrations__schema_migrations",
+        "primary_key": null
+      }
+    }
+  }
+}

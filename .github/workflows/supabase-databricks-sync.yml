@@ -1,0 +1,51 @@
+name: Supabase — Databricks sync
+
+# One-shot sync of governed Supabase data into Databricks, every 15 minutes.
+# The concurrency group prevents overlapping runs when a sync takes longer
+# than the schedule interval.
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: supabase-databricks-sync
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    name: Sync Supabase data to Databricks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Restore sync watermark state
+        uses: actions/cache@v4
+        with:
+          path: .sync_state
+          key: supabase-sync-state-${{ github.run_id }}
+          restore-keys: supabase-sync-state-
+
+      - name: Run one-shot sync
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+          SUPABASE_PAT: ${{ secrets.SUPABASE_PAT }}
+        run: python3 scripts/supabase_databricks_sync.py --once --registry config/supabase/table_registry.json --state .sync_state/sync_state.json --max-pages 400
+
+      - name: Write sync audit back to Supabase
+        env:
+          SUPABASE_PAT: ${{ secrets.SUPABASE_PAT }}
+        run: python3 scripts/supabase_writeback.py --mode audit --state .sync_state/sync_state.json --env-file /dev/null
+
