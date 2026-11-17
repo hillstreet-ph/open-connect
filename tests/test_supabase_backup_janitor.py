@@ -3,9 +3,12 @@
 Every HTTP call is intercepted by FakeHTTP; no live Supabase or R2 request is
 ever made. No credential values appear in this file.
 """
+import datetime as dt
+import hashlib
 import importlib.util
 import json
 import sys
+from email.utils import format_datetime
 from pathlib import Path
 
 import pytest
@@ -16,13 +19,38 @@ _spec = importlib.util.spec_from_file_location("supabase_backup_janitor", MODULE
 mod = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(mod)
 
+NOW = dt.datetime(2026, 11, 17, 12, 0, 0, tzinfo=dt.timezone.utc)
+
+
+def http_date(moment):
+    return format_datetime(moment, usegmt=True)
+
+
+def make_dataset(n=100, project="testref"):
+    """Build a manifest shaped like the real export plus its object bytes."""
+    manifest, objects = [], {}
+    for i in range(n):
+        table = f"public.t{i:04d}"
+        path = f"/db-export/{project}/{table}.jsonl"
+        content = f"row {i}\n".encode()
+        manifest.append({
+            "project": project,
+            "table": table,
+            "rows": 1,
+            "bytes": len(content),
+            "sha256": hashlib.sha256(content).hexdigest(),
+        })
+        objects[path] = content
+    return manifest, objects
+
 
 class FakeResponse:
     """Minimal context-manager response returned by the fake urlopen."""
 
-    def __init__(self, payload=None, status=200):
+    def __init__(self, payload=None, status=200, headers=None):
         self._payload = payload
         self.status = status
+        self.headers = headers or {}
 
     def __enter__(self):
         return self
@@ -37,29 +65,67 @@ class FakeResponse:
 
 
 class FakeHTTP:
-    """Drop-in replacement for urllib.request.urlopen, fully in-process."""
+    """Drop-in HTTP transport for migration_gate; fully in-process."""
 
-    def __init__(self, gate_ok=True, sql_router=None):
+    def __init__(self, gate_ok=True, sql_router=None, manifest=None, objects=None,
+                 missing=(), corrupt=(), last_modified=None, manifest_status=200):
         self.calls = []
         self.gate_ok = gate_ok
         self.sql_router = sql_router or (lambda q: [])
+        if manifest is None and objects is None:
+            manifest, objects = make_dataset(100)
+        self.manifest = manifest
+        self.objects = dict(objects or {})
+        self.missing = set(missing)
+        self.corrupt = set(corrupt)
+        self.last_modified = http_date(dt.datetime.now(dt.timezone.utc)) if last_modified is None else last_modified
+        self.manifest_status = manifest_status
+
+    def _path_of(self, url):
+        bucket = getattr(mod, "R2BUCKET", "supabase-backups")
+        return url.split(bucket, 1)[-1] if bucket in url else url
 
     def urlopen(self, req, timeout=None):
         method = req.get_method()
         url = req.full_url
-        if method == "HEAD":
-            self.calls.append({"method": "HEAD", "url": url})
+        path = self._path_of(url)
+
+        if method == "GET" and path == mod.MANIFEST_PATH:
+            self.calls.append({"method": "GET", "url": url, "path": path})
             if not self.gate_ok:
                 raise RuntimeError("simulated missing R2 manifest")
-            return FakeResponse(status=200)
+            return FakeResponse(payload=self.manifest, status=self.manifest_status,
+                                headers={"Last-Modified": self.last_modified})
+
+        if method == "HEAD":
+            self.calls.append({"method": "HEAD", "url": url, "path": path})
+            content = self.objects.get(path)
+            if path in self.missing or content is None:
+                return FakeResponse(status=404)
+            return FakeResponse(status=200, headers={"Content-Length": str(len(content))})
+
+        if method == "GET":
+            self.calls.append({"method": "GET", "url": url, "path": path})
+            if path in self.missing:
+                return FakeResponse(status=404)
+            content = self.objects.get(path, b"")
+            if path in self.corrupt and content:
+                # Same byte length, different bytes -> hash mismatch, size OK.
+                content = b"X" + content[1:]
+            return FakeResponse(payload=content)
+
         if method == "POST":
             query = json.loads(req.data.decode("utf-8"))["query"]
             self.calls.append({"method": "POST", "url": url, "query": query})
             return FakeResponse(payload=self.sql_router(query))
+
         raise AssertionError("unexpected HTTP method %s" % method)
 
     def sql_queries(self):
         return [c["query"] for c in self.calls if c["method"] == "POST"]
+
+    def head_paths(self):
+        return [c["path"] for c in self.calls if c["method"] == "HEAD"]
 
 
 def old_rows(*set_ids):
@@ -105,6 +171,11 @@ def run_main(monkeypatch, *args):
     """main() parses sys.argv directly; supply argv through monkeypatch."""
     monkeypatch.setattr(sys, "argv", ["supabase_backup_janitor", *args])
     return mod.main()
+
+
+def gate(fake, now=NOW):
+    """Call the gate through the injected http object (no global patching)."""
+    return mod.migration_gate(http=fake, now=now)
 
 
 # --------------------------------------------------------------------------- #
@@ -251,3 +322,91 @@ def test_missing_credentials_exits_before_any_http(monkeypatch, creds, capsys):
     assert rc == 2
     assert fake.calls == []
     assert "missing credentials" in capsys.readouterr().err
+
+
+# --------------------------------------------------------------------------- #
+# Strengthened migration gate (freshness / completeness / content hash).
+# --------------------------------------------------------------------------- #
+def test_gate_missing_manifest(creds):
+    ok, why = gate(FakeHTTP(gate_ok=False))
+    assert ok is False
+    assert "manifest" in why.lower()
+
+
+def test_gate_stale_manifest(creds):
+    fake = FakeHTTP(last_modified=http_date(NOW - dt.timedelta(days=8)))
+    ok, why = gate(fake)
+    assert ok is False
+    assert "stale" in why.lower()
+    assert "7 days" in why
+
+
+def test_gate_too_few_entries(creds):
+    manifest, objects = make_dataset(5)
+    ok, why = gate(FakeHTTP(manifest=manifest, objects=objects, last_modified=http_date(NOW)))
+    assert ok is False
+    assert "< 100" in why
+
+
+def test_gate_missing_object(creds):
+    manifest, objects = make_dataset(100)
+    victim = mod._normalize_manifest(manifest)[0]["path"]
+    ok, why = gate(FakeHTTP(manifest=manifest, objects=objects, missing=[victim], last_modified=http_date(NOW)))
+    assert ok is False
+    assert "404" in why and victim in why
+
+
+def test_gate_hash_mismatch(creds):
+    manifest, objects = make_dataset(100)
+    sample = mod._pick_sample(mod._normalize_manifest(manifest))["path"]
+    ok, why = gate(FakeHTTP(manifest=manifest, objects=objects, corrupt=[sample], last_modified=http_date(NOW)))
+    assert ok is False
+    assert "SHA-256 mismatch" in why and sample in why
+
+
+def test_gate_happy_path(creds):
+    manifest, objects = make_dataset(100)
+    fake = FakeHTTP(manifest=manifest, objects=objects, last_modified=http_date(NOW))
+    ok, why = gate(fake)
+    assert ok is True, why
+    assert "hash verified" in why
+    # Completeness: HEAD was issued for every referenced object.
+    assert len(fake.head_paths()) == 100
+    # Content integrity: exactly one object was GET for hashing.
+    gets = [c for c in fake.calls if c["method"] == "GET" and c["path"] != mod.MANIFEST_PATH]
+    assert len(gets) == 1
+
+
+def test_gate_object_cap_enforced(creds):
+    manifest, objects = make_dataset(201)
+    ok, why = gate(FakeHTTP(manifest=manifest, objects=objects, last_modified=http_date(NOW)))
+    assert ok is False
+    assert "cap" in why and "200" in why
+
+
+def test_gate_size_mismatch_at_head(creds):
+    manifest, objects = make_dataset(100)
+    victim = mod._normalize_manifest(manifest)[0]["path"]
+    objects[victim] = b"much larger than the manifest says"
+    ok, why = gate(FakeHTTP(manifest=manifest, objects=objects, last_modified=http_date(NOW)))
+    assert ok is False
+    assert "size mismatch" in why and victim in why
+
+
+def test_gate_dict_manifest_with_timestamp_field(creds):
+    """Tolerate a dict keyed by object path with a top-level timestamp."""
+    _, objects = make_dataset(100)
+    manifest = {"generated_at": "2026-11-17T11:00:00Z"}
+    for path, content in objects.items():
+        manifest[path] = {"bytes": len(content), "sha256": hashlib.sha256(content).hexdigest()}
+    ok, why = gate(FakeHTTP(manifest=manifest, objects=objects, last_modified=""))
+    assert ok is True, why
+    assert "generated_at" not in why  # timestamp came from the manifest field
+
+
+def test_gate_no_timestamp_is_stale(creds):
+    """With no manifest field and no Last-Modified header, freshness fails."""
+    manifest, objects = make_dataset(100)
+    ok, why = gate(FakeHTTP(manifest=manifest, objects=objects, last_modified=""))
+    assert ok is False
+    assert "missing" in why.lower() or "stale" in why.lower()
