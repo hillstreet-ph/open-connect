@@ -58,3 +58,25 @@ Catalog `open_connect`, SQL warehouse `dae787fe16c17482`.
 - Five tables are intentionally skipped by the incremental job because DESCRIBE
   truncates very large nested struct types; their full data remains in the initial
   Databricks migration and the R2 export.
+
+
+## Shadow mirror, near-realtime watcher, and orchestration
+
+The sync described above now runs as one layer of a four-layer schedule, with a
+Databricks-side shadow mirror and a local near-realtime watcher added around it.
+See `docs/E2E_SHADOW_AND_REALTIME.md` for the full operator runbook (why the
+mirror exists, why true Supabase WebSocket Realtime is unavailable under the
+HTTP 402 restriction, manual commands, health/state file locations, failure
+recovery, and the five intentionally skipped complex-schema tables).
+
+New/updated schedules (all UTC, with manual dispatch on each workflow):
+
+| Schedule | Workflow | Layer |
+| --- | --- | --- |
+| every ~60 s (local) + health every 5 min | `.github/workflows/supabase-watcher-health.yml` | near-realtime change detection (`scripts/supabase_realtime_watcher.py`) |
+| every 15 min | `.github/workflows/supabase-databricks-sync.yml` | incremental MERGE/append sync (existing) |
+| every 30 min | `.github/workflows/databricks-shadow-mirror.yml` | shadow mirror refresh + verify (`scripts/databricks_shadow_mirror.py`, `scripts/verify_e2e_sync.py`) |
+| daily 03:00 | `.github/workflows/supabase-backup-janitor.yml` | backup retention janitor (existing) |
+
+Credential key names only — never values — per `docs/E2E_CREDENTIALS.md`. No
+payment has been made and the Supabase 402 restriction has not been lifted.
