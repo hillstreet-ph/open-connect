@@ -49,6 +49,21 @@ class SyncError(RuntimeError):
     """A recoverable, per-table sync failure (never carries credentials)."""
 
 
+class FetchResult(tuple):
+    """``(rows, pages)`` result that also reports pagination truncation.
+
+    Subclassing tuple keeps ``rows, pages = fetch_all(...)`` working for every
+    existing caller while exposing ``.truncated`` for the sync engine.
+    """
+
+    def __new__(cls, rows, pages, truncated):
+        obj = super().__new__(cls, (rows, pages))
+        obj.rows = rows
+        obj.pages = pages
+        obj.truncated = bool(truncated)
+        return obj
+
+
 # --------------------------------------------------------------------------- #
 # generic helpers
 # --------------------------------------------------------------------------- #
@@ -327,33 +342,53 @@ class SupabaseClient:
         return rows[0].get("column_name") if rows else None
 
     def fetch_page(self, ref, source_table, watermark_column, watermark,
-                   limit, offset, full_refresh=False):
+                   limit, offset, full_refresh=False, primary_key=None):
         sql_parts = ["SELECT * FROM " + qid(source_table)]
         if watermark_column and watermark is not None and not full_refresh:
             sql_parts.append("WHERE %s > %s" % (qid(watermark_column), sql_literal(watermark)))
+        # A stable total order is mandatory: OFFSET pagination with ties in the
+        # ORDER BY silently duplicates/skips rows between pages.  The primary
+        # key breaks watermark ties; without a watermark it is the sole key.
         order = []
         if watermark_column:
             order.append(qid(watermark_column))
-        if order:
-            sql_parts.append("ORDER BY " + ", ".join(c + " ASC" for c in order))
+        if primary_key:
+            pk = qid(primary_key)
+            if pk not in order:
+                order.append(pk)
+        if not order:
+            # ctid is a physical row identifier present on every Postgres
+            # table and gives a deterministic fallback when no logical key is
+            # configured at all.
+            order.append("ctid")
+        sql_parts.append("ORDER BY " + ", ".join(c + " ASC" for c in order))
         sql_parts.append("LIMIT %d OFFSET %d" % (int(limit), int(offset)))
         return self.query(ref, " ".join(sql_parts))
 
     def fetch_all(self, ref, source_table, watermark_column, watermark,
                   batch_size=DEFAULT_BATCH_SIZE, max_pages=DEFAULT_MAX_PAGES,
-                  full_refresh=False):
-        """Page through all rows newer than the watermark."""
-        rows, pages = [], 0
+                  full_refresh=False, primary_key=None):
+        """Page through all rows newer than the watermark.
+
+        Returns a FetchResult (a 2-tuple of ``(rows, pages)``) with an extra
+        ``.truncated`` flag: True when the page cap was hit while the last
+        page was still full, i.e. more rows almost certainly exist.
+        """
+        rows, pages, truncated = [], 0, False
         while pages < max_pages:
             page = self.fetch_page(ref, source_table, watermark_column, watermark,
-                                   batch_size, len(rows), full_refresh)
+                                   batch_size, len(rows), full_refresh,
+                                   primary_key=primary_key)
             if not page:
                 break
             pages += 1
             rows.extend(page)
             if len(page) < batch_size:
                 break
-        return rows, pages
+        else:
+            # The loop ran out of pages rather than ending on a short page.
+            truncated = bool(rows) and len(rows) >= batch_size * max_pages
+        return FetchResult(rows, pages, truncated)
 
 
 class DatabricksClient:
@@ -539,11 +574,30 @@ def sync_table(spec, supabase, databricks, state, opts):
         column = supabase.detect_watermark_column(spec.ref, spec.source_table)
     effective_watermark = apply_lookback(stored_watermark, spec.lookback_seconds)
 
-    rows, pages = supabase.fetch_all(
-        spec.ref, spec.source_table, column, effective_watermark,
+    fetch_kwargs = dict(
         batch_size=opts["batch_size"], max_pages=opts["max_pages"],
-        full_refresh=opts["full_refresh"],
-    )
+        full_refresh=opts["full_refresh"], primary_key=spec.primary_key)
+    try:
+        fetched = supabase.fetch_all(
+            spec.ref, spec.source_table, column, effective_watermark, **fetch_kwargs)
+    except TypeError as exc:
+        # Older/fake clients may not accept the new keyword; keep them working.
+        if "primary_key" not in str(exc):
+            raise
+        fetch_kwargs.pop("primary_key")
+        fetched = supabase.fetch_all(
+            spec.ref, spec.source_table, column, effective_watermark, **fetch_kwargs)
+    rows, pages = fetched
+    if getattr(fetched, "truncated", False):
+        # Never advance the watermark from a partial read: doing so would
+        # permanently skip the rows that did not fit in max_pages.  A dry run
+        # writes no state and executes nothing, so warn instead of failing.
+        message = ("max_pages reached at %d rows; increase --max-pages or batch size"
+                   % len(rows))
+        if opts["dry_run"]:
+            log("truncation_warning", table=spec.key, detail=message)
+        else:
+            raise SyncError(message)
     result = {
         "table": spec.key,
         "target": spec.target_table,
@@ -595,6 +649,25 @@ def sync_table(spec, supabase, databricks, state, opts):
         outcome = databricks.submit(sql)
         executed.append({"kind": kind, "state": outcome["state"],
                          "statement_id": outcome["statement_id"]})
+        if kind != "create":
+            continue
+        # A brand-new table built by CTAS from inline VALUES infers all-NULL
+        # columns as VOID, which cannot be read/cast downstream.  Normalise
+        # those columns to STRING.  This runs only for a table we just created
+        # -- never for an existing one, whose schema belongs to its owner.
+        try:
+            created_types = databricks.column_types(spec.target_table) or {}
+        except Exception as exc:
+            log("void_cast_inspect_failed", table=spec.key, error=str(exc))
+            created_types = {}
+        for col, dtype in created_types.items():
+            if str(dtype).strip().lower() != "void":
+                continue
+            alter_sql = "ALTER TABLE %s ALTER COLUMN %s TYPE STRING" % (
+                dqid(spec.target_table), dqid(col))
+            alter_outcome = databricks.submit(alter_sql)
+            executed.append({"kind": "cast_void", "state": alter_outcome["state"],
+                             "statement_id": alter_outcome["statement_id"]})
     result["executed"] = executed
 
     # Advance only after every statement succeeded.

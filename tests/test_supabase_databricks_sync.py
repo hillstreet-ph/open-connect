@@ -441,3 +441,135 @@ def test_no_credentials_hardcoded_in_source():
     import re
     assert not re.search(r"Bearer\s+[A-Za-z0-9_-]{20,}", source)
     assert "dae787fe16c17482" in source  # warehouse id is not a secret
+
+
+# --------------------------------------------------------------------------- #
+# data integrity: stable ordering, truncation detection, CTAS void casts
+# --------------------------------------------------------------------------- #
+def test_fetch_page_uses_primary_key_as_tiebreaker():
+    fake = FakeHTTP().add(lambda c: True, [])
+    supabase, _ = clients(fake)
+    supabase.fetch_page(REF, SOURCE, "updated_at", "2026-11-01T00:00:00+00:00",
+                        2, 0, primary_key="id")
+    sql = fake.queries()[0]
+    assert 'ORDER BY "updated_at" ASC, "id" ASC' in sql
+
+
+def test_fetch_page_orders_by_primary_key_without_watermark():
+    fake = FakeHTTP().add(lambda c: True, [])
+    supabase, _ = clients(fake)
+    supabase.fetch_page(REF, SOURCE, None, None, 2, 0, primary_key="id")
+    sql = fake.queries()[0]
+    assert 'ORDER BY "id" ASC' in sql
+    assert "WHERE" not in sql
+
+
+def test_fetch_page_has_deterministic_ctid_fallback():
+    fake = FakeHTTP().add(lambda c: True, [])
+    supabase, _ = clients(fake)
+    supabase.fetch_page(REF, SOURCE, None, None, 2, 0)
+    sql = fake.queries()[0]
+    assert "ORDER BY ctid ASC" in sql
+
+
+def test_fetch_all_marks_full_final_page_as_truncated():
+    fake = FakeHTTP().add(lambda c: True, ROWS)
+    supabase, _ = clients(fake)
+    result = supabase.fetch_all(REF, SOURCE, None, None, batch_size=2,
+                                max_pages=2, primary_key="id")
+    rows, pages = result  # backwards-compatible 2-tuple unpacking
+    assert len(rows) == 4 and pages == 2
+    assert result.truncated is True
+
+
+VOID_ROWS = [
+    {"id": 1, "name": "alpha", "updated_at": "2026-11-17T10:00:00+00:00", "payload": None},
+    {"id": 2, "name": "beta", "updated_at": "2026-11-18T10:00:00+00:00", "payload": None},
+]
+
+
+def full_page_fake(rows=ROWS):
+    """Every data query returns a full batch, so max_pages truncates."""
+    fake = FakeHTTP()
+    fake.add(is_info, [{"column_name": "updated_at"}])
+    fake.add(is_data, rows)
+    fake.add(is_db_post, ok_statement)
+    fake.add(is_db_get, done_statement)
+    fake.add(is_catalog, {})
+    return fake
+
+
+def test_full_final_page_reports_table_failed(tmp_path):
+    reg = registry(tmp_path / "registry.json")
+    state_path = tmp_path / "state.json"
+    spec = mod.load_registry(reg)[0]
+    spec.lookback_seconds = 0
+    supabase, db = clients(full_page_fake())
+    summary = mod.run_once([spec], supabase, db, mod.load_state(str(state_path)),
+                           opts(), str(state_path))
+    assert not summary["ok"] and summary["tables_failed"] == 1
+    assert "max_pages reached" in summary["results"][0]["error"]
+
+
+def test_truncation_does_not_advance_state(tmp_path):
+    reg = registry(tmp_path / "registry.json")
+    state_path = tmp_path / "state.json"
+    original = {"version": 1, "tables": {
+        REF + ":" + SOURCE: {"watermark": "2026-11-01T00:00:00+00:00",
+                             "column": "updated_at"}}}
+    state_path.write_text(json.dumps(original, sort_keys=True), encoding="utf-8")
+    before = state_path.read_text()
+    spec = mod.load_registry(reg)[0]
+    spec.lookback_seconds = 0
+    supabase, db = clients(full_page_fake())
+    mod.run_once([spec], supabase, db, mod.load_state(str(state_path)),
+                 opts(), str(state_path))
+    assert state_path.read_text() == before
+
+
+def test_new_table_casts_void_columns_to_string(tmp_path, monkeypatch):
+    reg = registry(tmp_path / "registry.json")
+    state_path = tmp_path / "state.json"
+    spec = mod.load_registry(reg)[0]
+    spec.lookback_seconds = 0
+    fake = standard_fake(rows=VOID_ROWS)
+    fake.handlers.insert(0, (is_catalog,
+                             mod.SyncError("HTTP 404 for GET catalog table")))
+    supabase, db = clients(fake)
+
+    inspections = []
+
+    def column_types(name):
+        inspections.append(name)
+        if len(inspections) >= 2:  # post-CREATE DESCRIBE sees an all-NULL column
+            return {"id": "bigint", "name": "string",
+                    "updated_at": "timestamp", "payload": "void"}
+        return {}
+
+    monkeypatch.setattr(db, "column_types", column_types)
+    summary = mod.run_once([spec], supabase, db, mod.load_state(str(state_path)),
+                           opts(), str(state_path))
+    assert summary["ok"] and len(inspections) >= 2
+    alters = [s for s in fake.statements() if s.startswith("ALTER TABLE")]
+    assert len(alters) == 1
+    assert "ALTER COLUMN `payload` TYPE STRING" in alters[0]
+    assert alters[0].startswith("ALTER TABLE `catalog`.`schema`.`projects` ")
+
+
+def test_existing_table_never_gets_void_cast(tmp_path, monkeypatch):
+    reg = registry(tmp_path / "registry.json")
+    state_path = tmp_path / "state.json"
+    spec = mod.load_registry(reg)[0]
+    spec.lookback_seconds = 0
+    fake = standard_fake(rows=VOID_ROWS)  # catalog returns {} -> table exists
+    supabase, db = clients(fake)
+    monkeypatch.setattr(db, "column_types", lambda name: {
+        "id": "bigint", "name": "string", "updated_at": "timestamp",
+        "payload": "void"})
+    summary = mod.run_once([spec], supabase, db, mod.load_state(str(state_path)),
+                           opts(), str(state_path))
+    assert summary["ok"]
+    statements = fake.statements()
+    assert not any(s.startswith("ALTER TABLE") for s in statements)
+    assert not any(s.startswith("CREATE TABLE") for s in statements)
+    assert any(s.startswith("MERGE INTO") for s in statements)
