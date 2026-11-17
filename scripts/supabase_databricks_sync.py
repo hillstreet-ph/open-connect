@@ -126,7 +126,10 @@ def sql_literal(value):
         return str(value)
     if isinstance(value, float):
         return repr(value)
-    return "'" + str(value).replace("'", "''") + "'"
+    escaped = (str(value).replace("\\", "\\\\")
+               .replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+               .replace("'", "''"))
+    return "'" + escaped + "'"
 
 
 def sql_typed_literal(value, dtype=None):
@@ -141,7 +144,7 @@ def sql_typed_literal(value, dtype=None):
         text = json.dumps(payload, default=str) if isinstance(payload, (dict, list)) else str(payload)
         # Struct field names from DESCRIBE can contain hyphens (e.g. HTTP
         # headers); backquote every field name so the type expression parses.
-        safe_type = re.sub(r"([A-Za-z_][A-Za-z0-9_-]*)(?=\s*:)",
+        safe_type = re.sub(r"([A-Za-z0-9_][A-Za-z0-9_-]*)(?=\s*:)",
                            lambda m: "`%s`" % m.group(1), str(dtype))
         return "from_json(%s, '%s')" % (sql_literal(text), safe_type.replace("'", "''"))
     return sql_literal(value)
