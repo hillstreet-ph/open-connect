@@ -103,7 +103,7 @@ def registry(path, extra=None):
 
 def opts(**overrides):
     values = dict(batch_size=2, max_pages=5, full_refresh=False,
-                  dry_run=False, once=True, tables=[])
+                  dry_run=False, once=True, tables=[], write_batch_rows=2000)
     values.update(overrides)
     return values
 
@@ -645,4 +645,23 @@ def test_query_does_not_retry_other_http_errors():
     with pytest.raises(mod.SyncError):
         supabase.query(REF, "SELECT 1")
     assert len(calls) == 1
+
+# --- bounded write batches ----------------------------------------------
+def test_large_sync_is_split_into_bounded_write_statements(tmp_path):
+    reg = registry(tmp_path / "registry.json")
+    state_path = tmp_path / "state.json"
+    spec = mod.load_registry(reg)[0]
+    spec.lookback_seconds = 0
+    fake = standard_fake(rows=[
+        {"id": i, "name": "n%d" % i, "updated_at": "2026-11-17T10:00:0%d+00:00" % (i % 10)}
+        for i in range(5)
+    ])
+    fake.handlers.insert(0, (is_catalog, mod.SyncError("HTTP 404")))
+    supabase, db = clients(fake)
+    summary = mod.run_once([spec], supabase, db, mod.load_state(str(state_path)),
+                           opts(write_batch_rows=2), str(state_path))
+    assert summary["ok"] and summary["rows_synced"] == 5
+    writes = [q for q in fake.statements()
+              if q.startswith(("MERGE INTO", "INSERT INTO"))]
+    assert len(writes) == 3  # 5 rows in batches of 2
 

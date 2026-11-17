@@ -34,6 +34,7 @@ DEFAULT_STATE = "/data/home/workspace/supabase-export/sync_state.json"
 DEFAULT_ENV_FILE = "/data/home/workspace/.env"
 DEFAULT_WAREHOUSE_ID = "dae787fe16c17482"
 DEFAULT_BATCH_SIZE = 500
+DEFAULT_WRITE_BATCH_ROWS = 2000  # cap inline SQL size (Databricks 16 MB statement limit)
 DEFAULT_MAX_PAGES = 400  # 200k rows at the default 500-row batch; truncation still detected
 DEFAULT_LOOKBACK_SECONDS = 60
 DEFAULT_POLL_INTERVAL = 2.0
@@ -653,14 +654,17 @@ def sync_table(spec, supabase, databricks, state, opts):
         result["skipped_columns"] = truncated
         log("table_sync", **result)
         return result
-    stage_sql = build_stage_sql(rows, columns, type_map)
+    write_batch = max(1, int(opts.get("write_batch_rows", DEFAULT_WRITE_BATCH_ROWS)))
+    chunks = [rows[i:i + write_batch] for i in range(0, len(rows), write_batch)]
     statements = []
-    if not databricks.table_exists(spec.target_table):
-        statements.append(("create", build_create_sql(spec, stage_sql)))
-    if spec.primary_key and spec.primary_key in columns and (opts["dry_run"] or spec.primary_key in type_map):
-        statements.append(("merge", build_merge_sql(spec, columns, stage_sql)))
-    else:
-        statements.append(("append", build_append_sql(spec, columns, stage_sql)))
+    for index, chunk in enumerate(chunks):
+        stage_sql = build_stage_sql(chunk, columns, type_map)
+        if index == 0 and not databricks.table_exists(spec.target_table):
+            statements.append(("create", build_create_sql(spec, stage_sql)))
+        if spec.primary_key and spec.primary_key in columns and (opts["dry_run"] or spec.primary_key in type_map):
+            statements.append(("merge", build_merge_sql(spec, columns, stage_sql)))
+        else:
+            statements.append(("append", build_append_sql(spec, columns, stage_sql)))
 
     result["columns"] = columns
     result["statements"] = [{"kind": kind, "sql": sql} for kind, sql in statements] \
@@ -763,6 +767,8 @@ def build_parser():
                         help="dotenv file to load credentials from (existing env wins)")
     parser.add_argument("--warehouse-id", default=DEFAULT_WAREHOUSE_ID)
     parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE)
+    parser.add_argument("--write-batch-rows", type=int, default=DEFAULT_WRITE_BATCH_ROWS,
+                        help="maximum rows per write statement (bounds inline SQL size)")
     parser.add_argument("--max-pages", type=int, default=DEFAULT_MAX_PAGES)
     parser.add_argument("--poll-interval", type=float, default=DEFAULT_POLL_INTERVAL)
     parser.add_argument("--max-poll", type=int, default=DEFAULT_MAX_POLL)
@@ -798,6 +804,7 @@ def main(argv=None):
 
     opts = {
         "batch_size": args.batch_size,
+        "write_batch_rows": args.write_batch_rows,
         "max_pages": args.max_pages,
         "full_refresh": args.full_refresh,
         "dry_run": args.dry_run,
