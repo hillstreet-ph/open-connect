@@ -9,6 +9,8 @@
 | Supabase backup janitor | R2 + Supabase storage | `0 3 * * *` | R2 manifest gate, lifecycle-only deletion |
 | Supabase watcher health | Health check | `*/5 * * * *` | live `--once` verified |
 | GitHub `hillstreet-ph` org (26 repos) | Databricks governed project registry (`schema_name='github_org'`) | `*/15 * * * *` | 26 rows upserted, 0 new tables (metastore at 521/500 quota) |
+| Linear projects (3) | Databricks governed registry (`schema_name='linear'`) | `*/15 * * * *` | 3 rows upserted, verified |
+| GitHub inventory + sync watermarks | Supabase `public.github_projects`, `public.databricks_sync_audit` | with the two syncs above | 26 rows read back from each project |
 
 GitHub inventory rows are merged on a deterministic UUID (`id`) with
 `schema_name='github_org'`, so rescheduling is idempotent and the 6

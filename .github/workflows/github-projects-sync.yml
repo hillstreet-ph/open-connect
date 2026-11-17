@@ -26,3 +26,9 @@ jobs:
         run: |
           python3 -m pip install --quiet --disable-pip-version-check requests
           PYTHONPATH=scripts python3 scripts/github_projects_sync.py --env-file /dev/null
+      - name: Upsert inventory into Supabase (write-back)
+        env:
+          SUPABASE_PAT: ${{ secrets.SUPABASE_PAT }}
+          GITHUB_PERSONAL_ACCESS_TOKEN: ${{ secrets.GH_PAT }}
+        run: python3 scripts/supabase_writeback.py --mode github --env-file /dev/null
+

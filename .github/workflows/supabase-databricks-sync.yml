@@ -43,3 +43,9 @@ jobs:
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
           SUPABASE_PAT: ${{ secrets.SUPABASE_PAT }}
         run: python3 scripts/supabase_databricks_sync.py --once --registry config/supabase/table_registry.json --state .sync_state/sync_state.json --max-pages 400
+
+      - name: Write sync audit back to Supabase
+        env:
+          SUPABASE_PAT: ${{ secrets.SUPABASE_PAT }}
+        run: python3 scripts/supabase_writeback.py --mode audit --state .sync_state/sync_state.json --env-file /dev/null
+
