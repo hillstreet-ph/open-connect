@@ -217,3 +217,165 @@ def test_default_engine_adapter_delegates_to_run_once(tmp_path):
     assert specs == ["spec-a"]
     assert opts["tables"] == watch.DEFAULT_TABLES
     assert state_path == cfg.state_path
+
+
+# --------------------------------------------------------------------------- #
+# regression tests for quality-review bugs
+# --------------------------------------------------------------------------- #
+class SummaryFailureEngine:
+    """Returns failed summaries (no exception raised), then later summaries."""
+
+    def __init__(self, summaries):
+        self.summaries = list(summaries)
+        self.calls = []
+
+    def run_cycle(self):
+        n = len(self.calls) + 1
+        self.calls.append(n)
+        idx = min(n - 1, len(self.summaries) - 1)
+        return self.summaries[idx]
+
+    def watermarks(self):
+        return {}
+
+
+def _failed_summary(error, table="huadtiuuoiriqrjpjxhr:public.projects"):
+    return {
+        "ok": False,
+        "tables_total": 1,
+        "tables_ok": 0,
+        "tables_failed": 1,
+        "results": [{"table": table, "status": "failed", "error": error}],
+    }
+
+
+def test_failed_summary_without_exception_records_redacted_error(tmp_path, monkeypatch):
+    # BUG 1: a summary with ok=False must surface its failure detail in health.
+    cfg = config_for(tmp_path, once=True)
+    secret = "leaky-summary-token-123"
+    monkeypatch.setenv("SUPABASE_PAT", secret)
+    engine = SummaryFailureEngine([
+        _failed_summary("RuntimeError: cannot reach " + secret)
+    ])
+
+    code = watch.run(cfg, engine_factory=lambda c: engine, sleep_fn=noop_sleep)
+
+    assert engine.calls == [1]
+    assert code == 1
+    health = json.loads(Path(cfg.health_path).read_text(encoding="utf-8"))
+    assert health["failures"] == 1
+    assert health["last_success_ts"] is None
+    assert health["last_error"] is not None
+    assert "tables_failed=1" in health["last_error"]
+    assert "RuntimeError" in health["last_error"]
+    assert secret not in health["last_error"]
+    assert "***" in health["last_error"]
+
+
+def test_last_error_preserved_after_later_success(tmp_path):
+    # BUG 1: recovery must not erase the last real error.
+    cfg = config_for(tmp_path, once=False, max_cycles=2)
+    ok_summary = {"ok": True, "tables_total": 1, "tables_ok": 1,
+                  "tables_failed": 0, "results": []}
+    engine = SummaryFailureEngine([
+        _failed_summary("ValueError: first cycle failed"), ok_summary
+    ])
+
+    code = watch.run(cfg, engine_factory=lambda c: engine, sleep_fn=noop_sleep)
+
+    assert engine.calls == [1, 2]
+    assert code == 0
+    health = json.loads(Path(cfg.health_path).read_text(encoding="utf-8"))
+    assert health["failures"] == 1
+    assert health["cycles"] == 2
+    assert isinstance(health["last_success_ts"], str)
+    assert health["last_error"] and "first cycle failed" in health["last_error"]
+
+
+def test_max_cycles_counts_only_current_run(tmp_path):
+    # BUG 2: max_cycles must be bounded by this run, not cumulative health.
+    cfg = config_for(tmp_path, once=False, max_cycles=3)
+    Path(cfg.health_path).write_text(json.dumps({
+        "version": 1, "cycles": 97, "failures": 0, "last_error": None,
+        "last_success_ts": None, "watermarks": {}, "updated_ts": None,
+    }), encoding="utf-8")
+    engine = FakeEngine()
+
+    code = watch.run(cfg, engine_factory=lambda c: engine, sleep_fn=noop_sleep)
+
+    assert engine.calls == [1, 2, 3]
+    health = json.loads(Path(cfg.health_path).read_text(encoding="utf-8"))
+    assert health["cycles"] == 100
+    assert code == 0
+
+
+def test_interval_anchored_to_cycle_start(tmp_path, monkeypatch):
+    # BUG 3: sleep duration shrinks by the time the cycle itself consumed.
+    cfg = config_for(tmp_path, once=False, max_cycles=2, interval=10)
+    clock = {"now": 1000.0}
+    sleeps = []
+    monkeypatch.setattr(watch.time, "monotonic", lambda: clock["now"])
+
+    def fake_sleep(seconds):
+        sleeps.append(seconds)
+        clock["now"] += seconds
+
+    engine = FakeEngine(on_cycle=lambda n: clock.update(now=clock["now"] + 4))
+
+    watch.run(cfg, engine_factory=lambda c: engine, sleep_fn=fake_sleep)
+
+    assert engine.calls == [1, 2]
+    assert sum(sleeps) == pytest.approx(6.0)
+
+
+def test_corrupt_health_counters_do_not_kill_loop(tmp_path):
+    # BUG 4: corrupt numeric health values must not abort the loop.
+    cfg = config_for(tmp_path, once=False, max_cycles=2)
+    Path(cfg.health_path).write_text(json.dumps({
+        "version": 1, "cycles": "not-an-int", "failures": "bad",
+        "last_error": None, "last_success_ts": None,
+        "watermarks": {}, "updated_ts": None,
+    }), encoding="utf-8")
+    engine = FakeEngine()
+
+    code = watch.run(cfg, engine_factory=lambda c: engine, sleep_fn=noop_sleep)
+
+    assert engine.calls == [1, 2]
+    health = json.loads(Path(cfg.health_path).read_text(encoding="utf-8"))
+    assert health["cycles"] == 2
+    assert health["failures"] == 0
+    assert code == 0
+
+
+def test_health_write_failure_does_not_kill_loop(tmp_path, monkeypatch):
+    # BUG 4: a health write error must be contained, not fatal.
+    cfg = config_for(tmp_path, once=False, max_cycles=2)
+    engine = FakeEngine()
+
+    def explode(*a, **k):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(watch, "write_health", explode)
+    code = watch.run(cfg, engine_factory=lambda c: engine, sleep_fn=noop_sleep)
+
+    assert engine.calls == [1, 2]
+    assert code == 0
+
+
+def test_write_health_uses_unique_temp_name(tmp_path, monkeypatch):
+    # BUG 5: concurrent writers must not collide on a fixed .tmp path.
+    path = str(tmp_path / "health.json")
+    replaced = []
+    real_replace = watch.os.replace
+
+    def capture(src, dst):
+        replaced.append(src)
+        return real_replace(src, dst)
+
+    monkeypatch.setattr(watch.os, "replace", capture)
+    watch.write_health(path, watch._fresh_health())
+
+    assert replaced
+    assert replaced[0] != path + ".tmp"
+    assert str(os.getpid()) in replaced[0]
+    assert not os.path.exists(path + ".tmp")

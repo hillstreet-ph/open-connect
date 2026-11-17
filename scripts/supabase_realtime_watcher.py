@@ -24,6 +24,7 @@ import signal
 import sys
 import threading
 import time
+import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -164,7 +165,7 @@ def write_health(path, health):
     """Persist health JSON atomically (temp file + os.replace)."""
     directory = os.path.dirname(os.path.abspath(path))
     os.makedirs(directory, exist_ok=True)
-    tmp = path + ".tmp"
+    tmp = "%s.%d.%s.tmp" % (path, os.getpid(), uuid.uuid4().hex)
     with open(tmp, "w", encoding="utf-8") as handle:
         json.dump(health, handle, indent=2, sort_keys=True, default=str)
         handle.write("\n")
@@ -186,11 +187,12 @@ def install_signal_handlers(stop_event):
         signal.signal(signum, handler)
 
 
-def interruptible_sleep(interval, stop_event, sleep_fn, tick=0.5):
-    """Sleep up to ``interval`` seconds, waking promptly on ``stop_event``."""
+def interruptible_sleep(interval, stop_event, sleep_fn, tick=0.5, deadline=None):
+    """Sleep until ``deadline`` (else ``interval`` from now), waking on ``stop_event``."""
     if interval <= 0:
         return stop_event.is_set()
-    deadline = time.monotonic() + interval
+    if deadline is None:
+        deadline = time.monotonic() + interval
     while not stop_event.is_set():
         remaining = deadline - time.monotonic()
         if remaining <= 0:
@@ -211,6 +213,36 @@ def _collect_watermarks(engine, summary):
         if isinstance(result, dict) and result.get("table") and "watermark_after" in result:
             watermarks[result["table"]] = result.get("watermark_after")
     return watermarks
+
+
+def _safe_int(value, default=0):
+    """Coerce a health counter to int, tolerating corrupt values."""
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _summary_error(summary):
+    """Build a redacted error string from a failed sync summary."""
+    if not isinstance(summary, dict):
+        return None
+    parts = []
+    failed = summary.get("tables_failed")
+    if failed:
+        parts.append("tables_failed=%s" % failed)
+    for result in summary.get("results") or []:
+        if not isinstance(result, dict):
+            continue
+        err = result.get("error")
+        if err:
+            parts.append("%s: %s" % (result.get("table", "?"), err))
+        elif result.get("status") in ("failed", "error"):
+            parts.append("%s: status=%s" % (
+                result.get("table", "?"), result.get("status")))
+    if not parts:
+        parts.append("sync summary reported ok=False")
+    return redact_secrets("; ".join(parts))
 
 
 def run(config, *, engine_factory=default_engine_factory, sleep_fn=time.sleep,
@@ -235,8 +267,10 @@ def run(config, *, engine_factory=default_engine_factory, sleep_fn=time.sleep,
     engine = engine_factory(config)
     health = load_health(config.health_path)
     last_ok = False
+    run_cycles = 0
 
     while not stop_event.is_set():
+        cycle_start = time.monotonic()
         summary = None
         error = None
         try:
@@ -245,38 +279,51 @@ def run(config, *, engine_factory=default_engine_factory, sleep_fn=time.sleep,
         except Exception as exc:  # never die on one bad cycle
             last_ok = False
             error = redact_secrets("%s: %s" % (type(exc).__name__, exc))
+        if not last_ok and error is None:
+            error = _summary_error(summary) or "sync cycle reported failure"
 
         watermarks = _collect_watermarks(engine, summary)
-        health["cycles"] = int(health.get("cycles", 0)) + 1
-        if last_ok:
-            health["last_success_ts"] = now_fn().isoformat()
-            # Keep the last error visible even after recovery; operators can
-            # use last_success_ts to judge current health.
-        else:
-            health["failures"] = int(health.get("failures", 0)) + 1
-            health["last_error"] = error
-        if watermarks:
-            health.setdefault("watermarks", {}).update(watermarks)
-        health["updated_ts"] = now_fn().isoformat()
-        write_health(config.health_path, health)
+        try:
+            health["cycles"] = _safe_int(health.get("cycles")) + 1
+            health["failures"] = _safe_int(health.get("failures"))
+            if last_ok:
+                health["last_success_ts"] = now_fn().isoformat()
+                # Keep the last error visible even after recovery; operators
+                # can use last_success_ts to judge current health.
+            else:
+                health["failures"] += 1
+                health["last_error"] = error
+            if watermarks:
+                health.setdefault("watermarks", {}).update(watermarks)
+            health["updated_ts"] = now_fn().isoformat()
+        except Exception:
+            # Corrupt health values must never abort the supervision loop.
+            pass
+        try:
+            write_health(config.health_path, health)
+        except Exception as exc:
+            sync.log("watcher_health_write_error",
+                     error=redact_secrets("%s: %s" % (type(exc).__name__, exc)))
 
+        run_cycles += 1
         sync.log(
             "watcher_cycle",
-            cycle=health["cycles"],
+            cycle=health.get("cycles", run_cycles),
             ok=last_ok,
             tables=list(config.tables),
-            failures=health["failures"],
+            failures=health.get("failures", 0),
             watermarks=health.get("watermarks", {}),
             error=health.get("last_error"),
         )
 
         if config.once:
             break
-        if config.max_cycles and health["cycles"] >= config.max_cycles:
+        if config.max_cycles and run_cycles >= config.max_cycles:
             break
         if stop_event.is_set():
             break
-        if interruptible_sleep(config.interval, stop_event, sleep_fn):
+        if interruptible_sleep(config.interval, stop_event, sleep_fn,
+                               deadline=cycle_start + config.interval):
             break
 
     return 0 if last_ok else 1
