@@ -46,3 +46,15 @@ Catalog `open_connect`, SQL warehouse `dae787fe16c17482`.
 - Tables with no `updated_at`/`created_at` are scanned in full each poll.
 - Supabase invoices/quota restriction still require owner payment or support action;
   sync does not attempt any payment or credential revocation.
+
+## Validation (2026-11-17)
+- Offline tests: `python3 -m pytest tests/test_supabase_databricks_sync.py -q` → 25 passed.
+- Live full sync: 131/135 tables synced cleanly; the remaining 4 were re-run after
+  fixes and all succeeded (`storage.objects`, `platform.workspaces`,
+  `open_tgate_tg_chats`, `open_tgate_tg_messages`).
+- Sampled target row counts: `public.projects` 6, `open_system_sync_events` 30,
+  `net._http_response` 506, `platform.workspaces` 1, `tg_chats` 665, `tg_messages` 31,220.
+- Janitor dry-run against the live project: gate pass, 0 backup sets to delete.
+- Five tables are intentionally skipped by the incremental job because DESCRIBE
+  truncates very large nested struct types; their full data remains in the initial
+  Databricks migration and the R2 export.
