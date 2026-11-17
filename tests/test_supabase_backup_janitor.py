@@ -130,8 +130,8 @@ class FakeHTTP:
 
 def old_rows(*set_ids):
     return [
-        {"set_id": s, "parts": 2, "newest": "2000-01-01T00:00:00+00:00", "bytes": "5"}
-        for s in set_ids
+        {"set_id": s, "parts": 2, "newest": ("2026-11-16T00:00:00+00:00" if i == 0 else "2026-11-01T00:00:00+00:00"), "bytes": "5"}
+        for i, s in enumerate(set_ids)
     ]
 
 
@@ -274,7 +274,7 @@ def test_delete_set_archives_then_calls_lifecycle_delete(monkeypatch, creds):
 # main(): gate enforcement, dry-run vs. apply.
 # --------------------------------------------------------------------------- #
 def test_dry_run_performs_no_deletes(monkeypatch, creds, capsys):
-    fake = patch_urlopen(monkeypatch, FakeHTTP(gate_ok=True, sql_router=router(old_rows("2026-01-01"))))
+    fake = patch_urlopen(monkeypatch, FakeHTTP(gate_ok=True, sql_router=router(old_rows("2026-11-16", "2026-01-01"))))
     rc = run_main(monkeypatch, "--retention-days", "7")
     out = capsys.readouterr().out
     assert rc == 0
@@ -300,7 +300,7 @@ def test_apply_blocked_without_manifest_gate(monkeypatch, creds, capsys):
 
 
 def test_apply_deletes_only_after_archiving(monkeypatch, creds, capsys):
-    fake = patch_urlopen(monkeypatch, FakeHTTP(gate_ok=True, sql_router=router(old_rows("2026-01-01"))))
+    fake = patch_urlopen(monkeypatch, FakeHTTP(gate_ok=True, sql_router=router(old_rows("2026-11-16", "2026-01-01"))))
     rc = run_main(monkeypatch, "--apply", "--retention-days", "7")
     out = capsys.readouterr().out
     assert rc == 0
@@ -410,3 +410,25 @@ def test_gate_no_timestamp_is_stale(creds):
     ok, why = gate(FakeHTTP(manifest=manifest, objects=objects, last_modified=""))
     assert ok is False
     assert "missing" in why.lower() or "stale" in why.lower()
+
+
+def test_flat_sets_group_by_timestamp_and_keep_newest(monkeypatch, creds):
+    rows = [
+        {"set_id": "20261101T110457Z", "parts": 2,
+         "newest": "2026-11-01T00:00:00+00:00", "bytes": "5"},
+        {"set_id": "20261116T090000Z", "parts": 1,
+         "newest": "2026-11-16T00:00:00+00:00", "bytes": "3"},
+    ]
+    seen = []
+    monkeypatch.setattr(mod, "supabase_sql", lambda q, write=False: seen.append(q) or rows)
+    targets, allsets = mod.old_sets(0, keep_newest=1, flat=True)
+    assert [t["set_id"] for t in targets] == ["20261101T110457Z"]
+    assert len(allsets) == 2
+    assert any("regexp_replace" in q for q in seen)
+
+
+def test_flat_delete_requires_timestamp_set_id(monkeypatch, creds):
+    called = []
+    monkeypatch.setattr(mod, "supabase_sql", lambda q, write=False: called.append(q) or [])
+    assert mod.delete_set("20261101T110457Z", flat=True) == 0
+    assert any("position('20261101T110457Z' in name)" in q for q in called)
