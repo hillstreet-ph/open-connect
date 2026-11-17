@@ -219,3 +219,28 @@ invalid column definitions, so the sync records these tables with status
 
 - `docs/SUPABASE_DATABRICKS_E2E.md` — core setup, layout, safety properties, validation.
 - `docs/E2E_CREDENTIALS.md` — credential key names and storage convention (no values).
+
+## Final review closure (2026-11-17)
+
+All findings from the final integration review were closed and re-verified:
+
+- Shadow-mirror CI now injects `DATABRICKS_HOST`/`DATABRICKS_TOKEN` via env,
+  `load_credentials()` falls back to `os.environ`, and both steps pass an
+  explicit repo-relative `--registry`. A CI-simulated run with an empty dotenv
+  and env-only credentials returned `exit 0` for both `--once` and `--verify`.
+- `scripts/verify_e2e_sync.py` now checks the CI wiring and repo-relative
+  paths; offline result: **22 PASS, 0 FAIL**.
+- Exact-page-boundary reads no longer false-truncate: `fetch_all()` probes for
+  one extra row before flagging truncation, so the watermark always advances
+  when all rows were fetched.
+- Watermarked tables with no primary key now use `ctid` as an ORDER BY
+  tiebreaker; OFFSET pages are deterministic.
+- Documentation now describes the shadow as a Databricks-side snapshot of the
+  target tables (not an independent Supabase re-read); source completeness is
+  evidenced by the SHA-256-verified R2 export.
+- `config/supabase/project_map.json` is committed, so a clean checkout passes
+  the verifier.
+
+Live full-scale results: 135/135 shadow tables mirrored with 0 errors, then
+135/135 verified with 0 mismatches and 0 exceptions.
+
