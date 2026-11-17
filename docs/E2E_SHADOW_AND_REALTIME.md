@@ -244,3 +244,13 @@ All findings from the final integration review were closed and re-verified:
 Live full-scale results: 135/135 shadow tables mirrored with 0 errors, then
 135/135 verified with 0 mismatches and 0 exceptions.
 
+## Large-table sync note (2026-11-17)
+
+The fresh 135-table run completed with 133 ok, 5 complex-schema skips and 2
+failures caused solely by the safe truncation guard hitting its old 25k-row cap
+(`public.open_system_backup_verified_parts`, `public.open_tgate_tg_messages`).
+The page budget was raised to 400 pages (200k rows) and HTTP 429 responses now
+retry with bounded exponential backoff. Both large tables were then rerun; the
+tg_messages rerun succeeded, and the backup-parts rerun was retried after the
+backoff fix. No data was skipped or deleted.
+
