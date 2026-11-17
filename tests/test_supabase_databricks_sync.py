@@ -48,7 +48,8 @@ class FakeHTTP:
 
     def statements(self):
         return [c["body"]["statement"] for c in self.calls
-                if "api/2.0/sql/statements" in c["url"] and c["method"] == "POST"]
+                if "api/2.0/sql/statements" in c["url"] and c["method"] == "POST"
+                and not c["body"]["statement"].startswith("DESCRIBE")]
 
 
 def is_supabase(c):

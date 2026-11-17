@@ -128,6 +128,20 @@ def sql_literal(value):
     return "'" + str(value).replace("'", "''") + "'"
 
 
+def sql_typed_literal(value, dtype=None):
+    """Render a value for a Databricks target column of a known type.
+
+    The Management API serialises JSON object/array columns as text, while the
+    Delta tables were created from JSONL with inferred STRUCT/ARRAY/MAP types.
+    Cast those text values back with from_json so MERGE does not fail.
+    """
+    if dtype and str(dtype).upper().startswith(("STRUCT", "ARRAY", "MAP")) and value is not None:
+        payload = value if isinstance(value, (dict, list)) else str(value)
+        text = json.dumps(payload, default=str) if isinstance(payload, (dict, list)) else str(payload)
+        return "from_json(%s, '%s')" % (sql_literal(text), str(dtype).replace("'", "''"))
+    return sql_literal(value)
+
+
 def parse_timestamp(value):
     """Best-effort ISO-8601 parse; returns None when not parseable."""
     try:
@@ -376,6 +390,29 @@ class DatabricksClient:
         except Exception:
             return True
 
+    def column_types(self, full_name):
+        """Return {column: data_type} for an existing Delta table."""
+        body = {"statement": "DESCRIBE TABLE " + dqid(full_name),
+                "warehouse_id": self.warehouse_id,
+                "wait_timeout": "30s", "on_wait_timeout": "CONTINUE"}
+        try:
+            resp = self.http(self.statements_url, method="POST", headers=self.headers,
+                             body=body, timeout=self.timeout)
+            sid = resp.get("statement_id")
+            for _ in range(self.max_poll + 1):
+                state = (resp.get("status") or {}).get("state")
+                if state in SUCCESS_STATES:
+                    break
+                if state in FAILURE_STATES:
+                    return {}
+                self.sleep_fn(self.poll_interval)
+                resp = self.http("%s/%s" % (self.statements_url, sid), method="GET",
+                                 headers=self.headers, timeout=self.timeout)
+            rows = (resp.get("result") or {}).get("data_array") or []
+            return {r[0]: r[1] for r in rows if len(r) >= 2 and r[0]}
+        except Exception:
+            return {}
+
     def submit(self, statement):
         body = {
             "statement": statement,
@@ -427,9 +464,11 @@ def ordered_columns(rows, primary_key=None):
     return result
 
 
-def build_stage_sql(rows, columns):
+def build_stage_sql(rows, columns, type_map=None):
     """Inline VALUES source, e.g. SELECT * FROM VALUES (...) AS t(`id`, ...)."""
-    tuples = ["(" + ", ".join(sql_literal(row.get(c)) for c in columns) + ")" for row in rows]
+    type_map = type_map or {}
+    tuples = ["(" + ", ".join(sql_typed_literal(row.get(c), type_map.get(c)) for c in columns) + ")"
+              for row in rows]
     return "SELECT * FROM VALUES\n  " + ",\n  ".join(tuples) + \
         "\n  AS %s(%s)" % (STAGE_ALIAS, ", ".join(dqid(c) for c in columns))
 
@@ -460,9 +499,10 @@ def build_merge_sql(spec, columns, stage_sql):
 def build_append_sql(spec, columns, stage_sql):
     """Dedup fallback when no primary key is available: INSERT only new rows."""
     conditions = " AND ".join("tgt.%s <=> src.%s" % (dqid(c), dqid(c)) for c in columns)
-    return ("INSERT INTO %s\nSELECT DISTINCT src.* FROM (%s) AS src\n"
+    return ("INSERT INTO %s (%s)\nSELECT DISTINCT src.* FROM (%s) AS src\n"
             "LEFT ANTI JOIN %s AS tgt ON %s" % (
-                dqid(spec.target_table), stage_sql, dqid(spec.target_table), conditions))
+                dqid(spec.target_table), ", ".join(dqid(c) for c in columns),
+                stage_sql, dqid(spec.target_table), conditions))
 
 
 # --------------------------------------------------------------------------- #
@@ -498,7 +538,8 @@ def sync_table(spec, supabase, databricks, state, opts):
         return result
 
     columns = ordered_columns(rows, spec.primary_key)
-    stage_sql = build_stage_sql(rows, columns)
+    type_map = {} if opts["dry_run"] else databricks.column_types(spec.target_table)
+    stage_sql = build_stage_sql(rows, columns, type_map)
     statements = []
     if not databricks.table_exists(spec.target_table):
         statements.append(("create", build_create_sql(spec, stage_sql)))
