@@ -43,7 +43,7 @@ def test_fetch_repos_rejects_unpaged_large_orgs():
 def test_merge_sql_covers_every_column_without_self_reference():
     stage = mod.stage_sql([mod.normalise({"full_name": "o/r"}, "t")])
     sql = mod.merge_sql(mod.DEFAULT_TARGET, stage)
-    assert "ON tgt.`repository` = src.`repository`" in sql
+    assert "ON tgt.`id` = src.`id`" in sql
     for col in mod.COLUMNS:
         assert "`" + col + "`" in sql
     assert "UPDATE SET" in sql and "WHEN NOT MATCHED" in sql

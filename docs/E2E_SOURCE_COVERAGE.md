@@ -10,8 +10,9 @@
 | Supabase watcher health | Health check | `*/5 * * * *` | live `--once` verified |
 | GitHub `hillstreet-ph` org (26 repos) | Databricks governed project registry (`schema_name='github_org'`) | `*/15 * * * *` | 26 rows upserted, 0 new tables (metastore at 521/500 quota) |
 
-GitHub inventory rows are merged on `repository` with deterministic UUIDs, so
-rescheduling is idempotent. The 6 Supabase-origin registry rows are preserved.
+GitHub inventory rows are merged on a deterministic UUID (`id`) with
+`schema_name='github_org'`, so rescheduling is idempotent and the 6
+Supabase-origin registry rows remain untouched (32 rows total, 26 GitHub).
 
 ## Connected but not yet ingested into Databricks
 

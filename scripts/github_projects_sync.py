@@ -73,7 +73,7 @@ def merge_sql(target, stage):
     cols = ", ".join(dqid(c) for c in COLUMNS)
     vals = ", ".join("src.%s" % dqid(c) for c in COLUMNS)
     return ("MERGE INTO %s AS tgt USING (%s) AS src "
-            "ON tgt.`repository` = src.`repository` "
+            "ON tgt.`id` = src.`id` "
             "WHEN MATCHED THEN UPDATE SET %s "
             "WHEN NOT MATCHED THEN INSERT (%s) VALUES (%s)"
             % (dqid(target), stage, updates, cols, vals))
