@@ -23,16 +23,22 @@ to the Databricks target tables using per-table watermarks, which are optimized
 for catching up rather than for answering "does the target exactly match the
 source right now?".
 
-The **shadow mirror** is a second, Databricks-side copy of the Supabase source,
-refreshed from the same read-only Management API SQL path but independent of the
-incremental watermarks. It exists to:
+The **shadow mirror** is a second, Databricks-side copy of the *current target
+tables* (`open_connect.open_platform` / `open_connect.open_operations`), rebuilt
+with `CREATE OR REPLACE TABLE ... AS SELECT` under `open_connect.shadow`. It is
+NOT an independent re-read of the Supabase source: it detects drift introduced
+between two Databricks snapshots, not source-to-target drift. It exists to:
 
-- give operators an independently rebuilt reference copy to compare against the
-  incremental target tables, so watermark or MERGE drift is detectable;
-- keep a queryable Databricks-side picture of the source even when the
-  incremental job skips a table (see the complex-schema tables below);
+- give operators a point-in-time Databricks-side reference to compare against
+  later target-table changes;
+- keep a queryable Databricks-side copy of tables the incremental job skips
+  (see the complex-schema tables below);
 - separate *refresh* (materialize the mirror) from *verify* (compare mirror vs.
-  target) so drift checks can run on their own cadence.
+  target) so snapshot drift can be checked on its own cadence.
+
+Source-to-target completeness is established separately by the read-only SQL
+export in R2 (`supabase-backups/db-export/`, SHA-256 + size verified, 135
+tables) and by `scripts/verify_e2e_sync.py --live`.
 
 The mirror is read-oriented: like the core sync, it performs no destructive
 DDL. Any discrepancy it reports is a signal to re-run the incremental sync, not
@@ -60,7 +66,7 @@ attempts a payment or changes credentials.
 | --- | --- | --- | --- |
 | 1 — Local near-realtime watcher | every ~60 s (local); health check every 5 min in CI | `scripts/supabase_realtime_watcher.py` (`--interval 60`); `.github/workflows/supabase-watcher-health.yml` (`*/5 * * * *`) | Polls the source for recent changes and writes a heartbeat/health file so a stalled watcher is visible. |
 | 2 — Incremental CI sync | every 15 min | `.github/workflows/supabase-databricks-sync.yml` (`*/15 * * * *`) | Watermark-based MERGE/append into the Databricks target tables using `config/supabase/table_registry.json`. Authoritative data movement. |
-| 3 — Shadow refresh + verify | every 30 min | `.github/workflows/databricks-shadow-mirror.yml` (`*/30 * * * *`), `scripts/databricks_shadow_mirror.py` | Rebuilds the Databricks-side mirror from the source, then verifies mirror vs. target and reports drift. |
+| 3 — Shadow refresh + verify | every 30 min | `.github/workflows/databricks-shadow-mirror.yml` (`*/30 * * * *`), `scripts/databricks_shadow_mirror.py` | Rebuilds the Databricks-side shadow from the current target tables, then verifies mirror vs. target and reports snapshot drift. |
 | 4 — Backup retention janitor | daily 03:00 UTC | `.github/workflows/supabase-backup-janitor.yml` (`0 3 * * *`) | Prunes expired backup sets, gated on a verified R2 DB-export manifest. Housekeeping only; never touches sync targets. |
 
 Rationale: layer 1 notices changes quickly but is only a local detector; layer 2

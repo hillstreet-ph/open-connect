@@ -356,10 +356,11 @@ class SupabaseClient:
             pk = qid(primary_key)
             if pk not in order:
                 order.append(pk)
-        if not order:
+        else:
             # ctid is a physical row identifier present on every Postgres
-            # table and gives a deterministic fallback when no logical key is
-            # configured at all.
+            # table.  Use it whenever there is no logical key -- including
+            # when a watermark exists, which otherwise leaves tied rows in
+            # an unstable order and can skip them across OFFSET pages.
             order.append("ctid")
         sql_parts.append("ORDER BY " + ", ".join(c + " ASC" for c in order))
         sql_parts.append("LIMIT %d OFFSET %d" % (int(limit), int(offset)))
@@ -386,8 +387,20 @@ class SupabaseClient:
             if len(page) < batch_size:
                 break
         else:
-            # The loop ran out of pages rather than ending on a short page.
+            # The page budget was consumed by full pages.  That does NOT prove
+            # more rows exist (the source may have exactly N pages), so probe
+            # for a single additional row instead of assuming truncation.
             truncated = bool(rows) and len(rows) >= batch_size * max_pages
+            if truncated:
+                try:
+                    probe = self.fetch_page(
+                        ref, source_table, watermark_column, watermark, 1,
+                        len(rows), full_refresh, primary_key=primary_key)
+                    truncated = bool(probe)
+                except Exception:
+                    # A failed probe is treated as truncation: never let a
+                    # partial read advance the watermark.
+                    truncated = True
         return FetchResult(rows, pages, truncated)
 
 

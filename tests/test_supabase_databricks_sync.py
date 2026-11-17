@@ -573,3 +573,48 @@ def test_existing_table_never_gets_void_cast(tmp_path, monkeypatch):
     assert not any(s.startswith("ALTER TABLE") for s in statements)
     assert not any(s.startswith("CREATE TABLE") for s in statements)
     assert any(s.startswith("MERGE INTO") for s in statements)
+
+# --- final review fixes -------------------------------------------------
+def test_fetch_page_uses_ctid_tiebreaker_with_watermark_and_no_pk():
+    fake = FakeHTTP().add(lambda c: True, [])
+    supabase, _ = clients(fake)
+    supabase.fetch_page(REF, SOURCE, "updated_at", "2026-01-01T00:00:00Z",
+                        2, 0, primary_key=None)
+    sql = fake.queries()[0]
+    assert 'ORDER BY "updated_at" ASC, ctid ASC' in sql
+
+
+class _SequenceHTTP(FakeHTTP):
+    """Returns scripted batches for data queries, empty for any extra probe."""
+
+    def __init__(self, batches):
+        super().__init__()
+        self.batches = list(batches)
+        self.add(is_info, [{"column_name": "updated_at"}])
+
+        def responder(call):
+            if self.batches:
+                return self.batches.pop(0)
+            return []
+        self.add(is_data, responder)
+
+
+def test_fetch_all_exact_page_boundary_is_not_truncated():
+    rows1 = [dict(r, updated_at="2026-01-01T00:00:00Z") for r in ROWS]
+    rows2 = [dict(r, updated_at="2026-01-02T00:00:00Z") for r in ROWS]
+    fake = _SequenceHTTP([rows1, rows2])
+    supabase, _ = clients(fake)
+    result = supabase.fetch_all(REF, SOURCE, "updated_at", None,
+                                batch_size=2, max_pages=2, primary_key="id")
+    assert len(result[0]) == 4 and result.truncated is False
+
+
+def test_fetch_all_probe_finding_more_rows_is_truncated():
+    rows1 = [dict(r, updated_at="2026-01-01T00:00:00Z") for r in ROWS]
+    rows2 = [dict(r, updated_at="2026-01-02T00:00:00Z") for r in ROWS]
+    fake = _SequenceHTTP([rows1, rows2, [dict(r, updated_at="2026-01-03T00:00:00Z") for r in ROWS[:1]]])
+    supabase, _ = clients(fake)
+    result = supabase.fetch_all(REF, SOURCE, "updated_at", None,
+                                batch_size=2, max_pages=2, primary_key="id")
+    assert result.truncated is True
+

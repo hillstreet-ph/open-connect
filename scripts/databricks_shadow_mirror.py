@@ -21,12 +21,14 @@ Safety properties:
 """
 import argparse
 import json
+import os
 import sys
 import time
 import urllib.error
 import urllib.request
+from pathlib import Path
 
-DEFAULT_REGISTRY = "/data/home/workspace/supabase-export/project_map.json"
+DEFAULT_REGISTRY = str(Path(__file__).resolve().parents[1] / "config" / "supabase" / "table_registry.json")
 DEFAULT_ENV_FILE = "/data/home/workspace/.env"
 DEFAULT_WAREHOUSE_ID = "dae787fe16c17482"
 SHADOW_SCHEMA = "open_connect.shadow"
@@ -91,8 +93,16 @@ def credentials_from_env(env, env_file=DEFAULT_ENV_FILE):
     return {"host": host, "token": token}
 
 
-def load_credentials(env_file=DEFAULT_ENV_FILE):
-    return credentials_from_env(read_env_file(env_file), env_file=env_file)
+def load_credentials(env_file=DEFAULT_ENV_FILE, environ=None):
+    """Read credentials from the dotenv file and the process environment.
+
+    GitHub Actions injects secrets as environment variables and has no
+    dotenv file, so process environment values take precedence here.
+    """
+    source = read_env_file(env_file)
+    source.update({k: v for k, v in (environ if environ is not None else os.environ).items()
+                   if k in ("DATABRICKS_HOST", "DATABRICKS_TOKEN") and v})
+    return credentials_from_env(source, env_file=env_file)
 
 
 def dqid(name):

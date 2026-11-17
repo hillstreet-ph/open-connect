@@ -308,3 +308,25 @@ def test_validate_shadow_target_rejects_dotted_flat_name():
 def test_validate_shadow_target_rejects_backticks():
     with pytest.raises(mod.MirrorError, match="open_connect.shadow"):
         mod.validate_shadow_target("open_connect.shadow.a`b")
+
+# --- final review fixes -------------------------------------------------
+def test_default_registry_is_repo_relative():
+    assert mod.DEFAULT_REGISTRY.endswith("config/supabase/table_registry.json")
+    assert str(ROOT / "config" / "supabase") in mod.DEFAULT_REGISTRY
+    assert Path(mod.DEFAULT_REGISTRY).is_file()
+
+
+def test_credentials_fall_back_to_process_environment(tmp_path):
+    empty = tmp_path / "empty.env"
+    empty.write_text("", encoding="utf-8")
+    creds = mod.load_credentials(str(empty), environ={
+        "DATABRICKS_HOST": "https://dbx.example", "DATABRICKS_TOKEN": "fake-token"})
+    assert creds["host"] == "https://dbx.example"
+    assert creds["token"] == "fake-token"
+
+
+def test_workflow_injects_credentials_and_registry():
+    wf = (ROOT / ".github" / "workflows" / "databricks-shadow-mirror.yml").read_text()
+    assert "DATABRICKS_HOST:" in wf and "DATABRICKS_TOKEN:" in wf
+    assert wf.count("--registry config/supabase/table_registry.json") == 2
+

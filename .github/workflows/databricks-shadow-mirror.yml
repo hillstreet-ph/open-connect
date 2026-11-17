@@ -36,10 +36,10 @@ jobs:
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
-        run: python3 scripts/databricks_shadow_mirror.py --once
+        run: python3 scripts/databricks_shadow_mirror.py --once --registry config/supabase/table_registry.json
 
       - name: Verify shadow mirror
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
-        run: python3 scripts/databricks_shadow_mirror.py --verify
+        run: python3 scripts/databricks_shadow_mirror.py --verify --registry config/supabase/table_registry.json

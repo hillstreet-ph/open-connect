@@ -26,7 +26,7 @@ from typing import Iterable
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 REGISTRY_PATH = REPO_ROOT / "config" / "supabase" / "table_registry.json"
-PROJECT_MAP_PATH = Path("/data/home/workspace/supabase-export/project_map.json")
+PROJECT_MAP_PATH = REPO_ROOT / "config" / "supabase" / "project_map.json"
 
 EXPECTED_REFS = {"huadtiuuoiriqrjpjxhr", "hoseohvgoiarxluxqwqv"}
 EXPECTED_TOTAL = 135
@@ -220,7 +220,10 @@ def check_tests(results: Results) -> None:
 
 
 def check_git_tracked(results: Results) -> None:
-    expected = set(SCRIPTS + WORKFLOWS + [str(REGISTRY_PATH.relative_to(REPO_ROOT)), "scripts/verify_e2e_sync.py"])
+    expected = set(SCRIPTS + WORKFLOWS + [
+        str(REGISTRY_PATH.relative_to(REPO_ROOT)),
+        str(PROJECT_MAP_PATH.relative_to(REPO_ROOT)),
+        "scripts/verify_e2e_sync.py"])
     try:
         out = subprocess.check_output(
             ["git", "-C", str(REPO_ROOT), "ls-files"],
@@ -235,6 +238,40 @@ def check_git_tracked(results: Results) -> None:
     ok = not missing
     detail = "all tracked" if ok else "untracked: " + ", ".join(missing)
     results.add("git tracked files", ok, detail)
+
+
+def check_ci_wiring(results: Results) -> None:
+    """Catch wiring defects an offline file/substring check alone would miss."""
+    mirror_wf = REPO_ROOT / ".github" / "workflows" / "databricks-shadow-mirror.yml"
+    if mirror_wf.is_file():
+        text = mirror_wf.read_text(encoding="utf-8")
+        env_ok = "DATABRICKS_HOST:" in text and "DATABRICKS_TOKEN:" in text
+        results.add("ci: mirror credentials injected", env_ok,
+                    "env secrets present" if env_ok else "no DATABRICKS_* env")
+        reg_ok = text.count("--registry config/supabase/table_registry.json") == 2
+        results.add("ci: mirror registry passed explicitly", reg_ok,
+                    "both steps" if reg_ok else "missing --registry in a step")
+    else:
+        results.add("ci: mirror credentials injected", False, "workflow missing")
+        results.add("ci: mirror registry passed explicitly", False, "workflow missing")
+
+    mirror_script = REPO_ROOT / "scripts" / "databricks_shadow_mirror.py"
+    src = mirror_script.read_text(encoding="utf-8") if mirror_script.is_file() else ""
+    env_fallback = "environ=None" in src and "os.environ" in src
+    results.add("ci: mirror reads process env", env_fallback,
+                "fallback present" if env_fallback else "dotenv only")
+    repo_registry = "Path(__file__).resolve().parents[1]" in src
+    results.add("ci: mirror default registry repo-relative", repo_registry,
+                "derived from __file__" if repo_registry else "hardcoded path")
+
+    workflow_dir = REPO_ROOT / ".github" / "workflows"
+    masking = []
+    for rel in NEW_WORKFLOWS + ["supabase-databricks-sync.yml", "supabase-backup-janitor.yml"]:
+        path = workflow_dir / rel
+        if path.is_file() and "continue-on-error" in path.read_text(encoding="utf-8"):
+            masking.append(rel)
+    results.add("ci: no continue-on-error masking", not masking,
+                "clean" if not masking else "masked: " + ", ".join(masking))
 
 
 def check_live(results: Results) -> None:
@@ -300,6 +337,7 @@ def main() -> int:
     results = Results()
     check_files_exist(results)
     check_workflow_yaml(results)
+    check_ci_wiring(results)
     check_registry(results)
     check_project_map(results)
     check_tests(results)
