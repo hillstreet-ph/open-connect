@@ -63,6 +63,10 @@ def is_data(c):
     return is_supabase(c) and "information_schema" not in c["body"]["query"]
 
 
+def is_catalog(c):
+    return "/api/2.1/unity-catalog/tables/" in c["url"] and c["method"] == "GET"
+
+
 def is_db_post(c):
     return "api/2.0/sql/statements" in c["url"] and c["method"] == "POST"
 
@@ -117,6 +121,7 @@ def standard_fake(rows=ROWS, db_response=done_statement):
     fake.add(is_data, rows)
     fake.add(is_db_post, ok_statement)
     fake.add(is_db_get, db_response)
+    fake.add(is_catalog, {})
     return fake
 
 
@@ -305,7 +310,7 @@ def test_merge_sql_contains_upsert_and_no_delete():
     create = mod.build_create_sql(spec, stage)
     assert "MERGE INTO" in merge and "WHEN MATCHED THEN UPDATE SET" in merge
     assert "WHEN NOT MATCHED THEN INSERT" in merge
-    assert "CREATE TABLE IF NOT EXISTS" in create
+    assert "CREATE TABLE " in create and "WHERE 1 = 0" not in create
     assert "DELETE" not in merge.upper().replace("UPDATED_AT", "")
     assert "id" in columns and columns[0] == "id"
     assert "alpha" in stage and "'alpha'" in stage
@@ -328,6 +333,7 @@ def test_watermark_advances_only_after_success(tmp_path):
     spec = mod.load_registry(reg)[0]
     spec.lookback_seconds = 0
     fake = standard_fake()
+    fake.handlers.insert(0, (is_catalog, mod.SyncError("HTTP 404 for GET catalog table")))
     supabase, db = clients(fake)
 
     summary = mod.run_once([spec], supabase, db, mod.load_state(str(state_path)),

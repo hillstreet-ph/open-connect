@@ -25,6 +25,7 @@ import os
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
 DEFAULT_REGISTRY = "/data/home/workspace/supabase-export/table_registry.json"
@@ -105,8 +106,13 @@ def http_json(url, *, method="GET", headers=None, body=None, timeout=60):
 
 
 def qid(name):
-    """Quote a (possibly dotted) SQL identifier."""
+    """Quote a Postgres identifier (double quotes, for Supabase SQL)."""
     return ".".join('"%s"' % str(part).replace('"', '""') for part in str(name).split("."))
+
+
+def dqid(name):
+    """Quote a Databricks SQL identifier (backticks)."""
+    return ".".join("`%s`" % str(part).replace("`", "``") for part in str(name).split("."))
 
 
 def sql_literal(value):
@@ -286,7 +292,7 @@ class SupabaseClient:
     def detect_watermark_column(self, ref, source_table, preferred=("updated_at", "created_at")):
         schema, _, table = str(source_table).partition(".")
         names = ", ".join("'%s'" % str(c).lower() for c in preferred)
-        order = ", ".join("WHEN lower(column_name) = '%s' THEN %d" % (str(c).lower(), i)
+        order = " ".join("WHEN lower(column_name) = '%s' THEN %d" % (str(c).lower(), i)
                           for i, c in enumerate(preferred))
         sql = (
             "SELECT column_name FROM information_schema.columns "
@@ -352,6 +358,24 @@ class DatabricksClient:
     def statements_url(self):
         return self.host + "/api/2.0/sql/statements"
 
+    def table_exists(self, full_name):
+        """Return True when a Unity Catalog table already exists.
+
+        A 404 means absent; unexpected API errors are treated as "exists" so a
+        transient catalogue failure can never cause a destructive CTAS.
+        """
+        url = "%s/api/2.1/unity-catalog/tables/%s" % (
+            self.host, urllib.parse.quote(str(full_name), safe="."))
+        try:
+            self.http(url, method="GET", headers=self.headers, timeout=self.timeout)
+            return True
+        except SyncError as exc:
+            if str(exc).startswith("HTTP 404 "):
+                return False
+            return True
+        except Exception:
+            return True
+
     def submit(self, statement):
         body = {
             "statement": statement,
@@ -407,21 +431,26 @@ def build_stage_sql(rows, columns):
     """Inline VALUES source, e.g. SELECT * FROM VALUES (...) AS t(`id`, ...)."""
     tuples = ["(" + ", ".join(sql_literal(row.get(c)) for c in columns) + ")" for row in rows]
     return "SELECT * FROM VALUES\n  " + ",\n  ".join(tuples) + \
-        "\n  AS %s(%s)" % (STAGE_ALIAS, ", ".join(qid(c) for c in columns))
+        "\n  AS %s(%s)" % (STAGE_ALIAS, ", ".join(dqid(c) for c in columns))
 
 
 def build_create_sql(spec, stage_sql):
-    """Create an empty Delta target if needed (never drops an existing one)."""
-    return "CREATE TABLE IF NOT EXISTS %s AS %s WHERE 1 = 0" % (qid(spec.target_table), stage_sql)
+    """Create the Delta target from its first batch (never drops an existing one).
+
+    Databricks SQL does not support ``CREATE TABLE IF NOT EXISTS ... AS SELECT``,
+    so callers must check catalogue existence first and only emit this when the
+    target is genuinely absent.
+    """
+    return "CREATE TABLE %s AS %s" % (dqid(spec.target_table), stage_sql)
 
 
 def build_merge_sql(spec, columns, stage_sql):
     pk = spec.primary_key or "id"
-    updates = [("%s = src.%s" % (qid(c), qid(c))) for c in columns if c != pk]
-    insert_cols = ", ".join(qid(c) for c in columns)
-    insert_vals = ", ".join("src.%s" % qid(c) for c in columns)
+    updates = [("%s = src.%s" % (dqid(c), dqid(c))) for c in columns if c != pk]
+    insert_cols = ", ".join(dqid(c) for c in columns)
+    insert_vals = ", ".join("src.%s" % dqid(c) for c in columns)
     sql = "MERGE INTO %s AS tgt USING (%s) AS src ON tgt.%s = src.%s" % (
-        qid(spec.target_table), stage_sql, qid(pk), qid(pk))
+        dqid(spec.target_table), stage_sql, dqid(pk), dqid(pk))
     if updates:
         sql += "\nWHEN MATCHED THEN UPDATE SET " + ", ".join(updates)
     sql += "\nWHEN NOT MATCHED THEN INSERT (%s) VALUES (%s)" % (insert_cols, insert_vals)
@@ -430,10 +459,10 @@ def build_merge_sql(spec, columns, stage_sql):
 
 def build_append_sql(spec, columns, stage_sql):
     """Dedup fallback when no primary key is available: INSERT only new rows."""
-    conditions = " AND ".join("tgt.%s <=> src.%s" % (qid(c), qid(c)) for c in columns)
+    conditions = " AND ".join("tgt.%s <=> src.%s" % (dqid(c), dqid(c)) for c in columns)
     return ("INSERT INTO %s\nSELECT DISTINCT src.* FROM (%s) AS src\n"
             "LEFT ANTI JOIN %s AS tgt ON %s" % (
-                qid(spec.target_table), stage_sql, qid(spec.target_table), conditions))
+                dqid(spec.target_table), stage_sql, dqid(spec.target_table), conditions))
 
 
 # --------------------------------------------------------------------------- #
@@ -470,7 +499,9 @@ def sync_table(spec, supabase, databricks, state, opts):
 
     columns = ordered_columns(rows, spec.primary_key)
     stage_sql = build_stage_sql(rows, columns)
-    statements = [("create", build_create_sql(spec, stage_sql))]
+    statements = []
+    if not databricks.table_exists(spec.target_table):
+        statements.append(("create", build_create_sql(spec, stage_sql)))
     if spec.primary_key:
         statements.append(("merge", build_merge_sql(spec, columns, stage_sql)))
     else:
