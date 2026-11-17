@@ -391,27 +391,40 @@ class DatabricksClient:
             return True
 
     def column_types(self, full_name):
-        """Return {column: data_type} for an existing Delta table."""
+        """Return {column: data_type} for an existing Delta table.
+
+        Retries transient statement failures: an empty type map makes complex
+        columns fail with a STRING->STRUCT cast error, so it is worth retrying.
+        """
         body = {"statement": "DESCRIBE TABLE " + dqid(full_name),
                 "warehouse_id": self.warehouse_id,
                 "wait_timeout": "30s", "on_wait_timeout": "CONTINUE"}
-        try:
-            resp = self.http(self.statements_url, method="POST", headers=self.headers,
-                             body=body, timeout=self.timeout)
-            sid = resp.get("statement_id")
-            for _ in range(self.max_poll + 1):
-                state = (resp.get("status") or {}).get("state")
-                if state in SUCCESS_STATES:
-                    break
-                if state in FAILURE_STATES:
-                    return {}
+        last_error = None
+        for attempt in range(3):
+            try:
+                resp = self.http(self.statements_url, method="POST", headers=self.headers,
+                                 body=body, timeout=self.timeout)
+                sid = resp.get("statement_id")
+                for _ in range(self.max_poll + 1):
+                    state = (resp.get("status") or {}).get("state")
+                    if state in SUCCESS_STATES:
+                        break
+                    if state in FAILURE_STATES:
+                        last_error = "describe failed: %s" % state
+                        break
+                    self.sleep_fn(self.poll_interval)
+                    resp = self.http("%s/%s" % (self.statements_url, sid), method="GET",
+                                     headers=self.headers, timeout=self.timeout)
+                rows = (resp.get("result") or {}).get("data_array") or []
+                types = {r[0]: r[1] for r in rows if len(r) >= 2 and r[0] and not str(r[0]).startswith("#")}
+                if types:
+                    return types
+                last_error = "describe returned no columns"
+            except Exception as exc:
+                last_error = str(exc)
+            if attempt < 2:
                 self.sleep_fn(self.poll_interval)
-                resp = self.http("%s/%s" % (self.statements_url, sid), method="GET",
-                                 headers=self.headers, timeout=self.timeout)
-            rows = (resp.get("result") or {}).get("data_array") or []
-            return {r[0]: r[1] for r in rows if len(r) >= 2 and r[0]}
-        except Exception:
-            return {}
+        return {}
 
     def submit(self, statement):
         body = {
@@ -543,7 +556,7 @@ def sync_table(spec, supabase, databricks, state, opts):
     statements = []
     if not databricks.table_exists(spec.target_table):
         statements.append(("create", build_create_sql(spec, stage_sql)))
-    if spec.primary_key:
+    if spec.primary_key and spec.primary_key in columns:
         statements.append(("merge", build_merge_sql(spec, columns, stage_sql)))
     else:
         statements.append(("append", build_append_sql(spec, columns, stage_sql)))
