@@ -11,9 +11,9 @@ Credential handling follows the key-names-only convention in
 only**, never by value. No payment has been made and the Supabase restriction
 described below has **not** been lifted.
 
-> The scripts and workflows named here are the agreed CLI contracts. They are
-> being implemented in parallel with this document; once they land, confirm the
-> paths and flags in the workflow YAML match this runbook.
+> All scripts and workflows named here have landed and were verified together
+> in commits e7b80b6, 3857076, and 0455371; the paths and flags in the workflow
+> YAML match this runbook.
 
 ## Why a shadow mirror exists
 
@@ -60,7 +60,7 @@ attempts a payment or changes credentials.
 | --- | --- | --- | --- |
 | 1 — Local near-realtime watcher | every ~60 s (local); health check every 5 min in CI | `scripts/supabase_realtime_watcher.py` (`--interval 60`); `.github/workflows/supabase-watcher-health.yml` (`*/5 * * * *`) | Polls the source for recent changes and writes a heartbeat/health file so a stalled watcher is visible. |
 | 2 — Incremental CI sync | every 15 min | `.github/workflows/supabase-databricks-sync.yml` (`*/15 * * * *`) | Watermark-based MERGE/append into the Databricks target tables using `config/supabase/table_registry.json`. Authoritative data movement. |
-| 3 — Shadow refresh + verify | every 30 min | `.github/workflows/databricks-shadow-mirror.yml` (`*/30 * * * *`), `scripts/databricks_shadow_mirror.py`, `scripts/verify_e2e_sync.py` | Rebuilds the Databricks-side mirror from the source, then verifies mirror vs. target and reports drift. |
+| 3 — Shadow refresh + verify | every 30 min | `.github/workflows/databricks-shadow-mirror.yml` (`*/30 * * * *`), `scripts/databricks_shadow_mirror.py` | Rebuilds the Databricks-side mirror from the source, then verifies mirror vs. target and reports drift. |
 | 4 — Backup retention janitor | daily 03:00 UTC | `.github/workflows/supabase-backup-janitor.yml` (`0 3 * * *`) | Prunes expired backup sets, gated on a verified R2 DB-export manifest. Housekeeping only; never touches sync targets. |
 
 Rationale: layer 1 notices changes quickly but is only a local detector; layer 2

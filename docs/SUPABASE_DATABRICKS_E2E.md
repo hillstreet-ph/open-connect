@@ -75,7 +75,7 @@ New/updated schedules (all UTC, with manual dispatch on each workflow):
 | --- | --- | --- |
 | every ~60 s (local) + health every 5 min | `.github/workflows/supabase-watcher-health.yml` | near-realtime change detection (`scripts/supabase_realtime_watcher.py`) |
 | every 15 min | `.github/workflows/supabase-databricks-sync.yml` | incremental MERGE/append sync (existing) |
-| every 30 min | `.github/workflows/databricks-shadow-mirror.yml` | shadow mirror refresh + verify (`scripts/databricks_shadow_mirror.py`, `scripts/verify_e2e_sync.py`) |
+| every 30 min | `.github/workflows/databricks-shadow-mirror.yml` | shadow mirror refresh + verify (`scripts/databricks_shadow_mirror.py`) |
 | daily 03:00 | `.github/workflows/supabase-backup-janitor.yml` | backup retention janitor (existing) |
 
 Credential key names only — never values — per `docs/E2E_CREDENTIALS.md`. No
