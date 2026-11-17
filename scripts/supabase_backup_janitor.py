@@ -8,7 +8,8 @@ Safety rules:
   - deletes metadata rows only through Supabase's supported lifecycle path
   - never touches credentials, invoices, or non-backup buckets
 """
-import argparse, datetime as dt, hashlib, hmac, json, os, re, sys, urllib.error, urllib.request
+import argparse, datetime as dt, hashlib, hmac, json, os, re, sys, urllib.error, urllib.request, urllib.parse
+import xml.etree.ElementTree as ET
 
 PAT = os.environ.get("SUPABASE_PAT", "")
 REF = os.environ.get("SUPABASE_PROJECT_REF", "huadtiuuoiriqrjpjxhr")
@@ -261,32 +262,36 @@ class _ResponseHeaders:
         self.headers = headers
 
 
-def migration_gate(http=None, now=None):
+def migration_gate(http=None, now=None, min_entries=None, manifest_path=None, object_cap=None):
     """Require a verified, fresh, complete off-platform DB export before deletion.
 
     All I/O goes through ``http.urlopen(req, timeout=...)`` (injectable). The
     optional ``now`` argument makes freshness checks deterministic in tests.
+    Per-run overrides let one janitor serve several backup buckets.
     """
     http = http or _DEFAULT_HTTP
     now = now or dt.datetime.now(dt.timezone.utc)
+    min_entries = MIN_MANIFEST_ENTRIES if min_entries is None else min_entries
+    manifest_path = MANIFEST_PATH if manifest_path is None else manifest_path
+    object_cap = GATE_OBJECT_CAP if object_cap is None else object_cap
 
     def url(path):
         return EP + "/" + R2BUCKET + path
 
     # (a) GET + parse the manifest (a plain HEAD is not enough).
     try:
-        req = urllib.request.Request(url(MANIFEST_PATH), method="GET", headers=s3_headers("GET", MANIFEST_PATH))
+        req = urllib.request.Request(url(manifest_path), method="GET", headers=s3_headers("GET", manifest_path))
         with http.urlopen(req, timeout=30) as r:
             if getattr(r, "status", 200) != 200:
-                return False, f"{MANIFEST_PATH} returned {r.status}"
+                return False, f"{manifest_path} returned {r.status}"
             manifest = json.loads(r.read())
             resp_headers = getattr(r, "headers", None)
     except Exception as e:
-        return False, f"{MANIFEST_PATH}: {type(e).__name__}: {e}"
+        return False, f"{manifest_path}: {type(e).__name__}: {e}"
 
     entries = _normalize_manifest(manifest)
-    if len(entries) < MIN_MANIFEST_ENTRIES:
-        return False, f"manifest lists {len(entries)} table entries (< {MIN_MANIFEST_ENTRIES})"
+    if len(entries) < min_entries:
+        return False, f"manifest lists {len(entries)} table entries (< {min_entries})"
 
     # (b) freshness: manifest field or R2 Last-Modified must be within 7 days.
     ts, ts_source = _manifest_timestamp(manifest, _ResponseHeaders(resp_headers))
@@ -295,8 +300,8 @@ def migration_gate(http=None, now=None):
         return False, f"manifest is stale (timestamp {when} from {ts_source}; max age {FRESHNESS_DAYS} days)"
 
     # (c) completeness: HEAD every referenced object, bounded by the cap.
-    if len(entries) > GATE_OBJECT_CAP:
-        return False, f"manifest lists {len(entries)} objects (> cap {GATE_OBJECT_CAP}); cannot verify completeness"
+    if len(entries) > object_cap:
+        return False, f"manifest lists {len(entries)} objects (> cap {object_cap}); cannot verify completeness"
     for e in entries:
         path = e["path"]
         try:
@@ -336,56 +341,142 @@ def migration_gate(http=None, now=None):
     return True, (f"manifest fresh, {len(entries)} objects present, content hash verified for {path}")
 
 
-def old_sets(retention_days):
+def discover_manifest(prefix):
+    """Find the newest manifest.json under an R2 prefix (auto-refreshing gate)."""
+    path = "/"
+    query = urllib.parse.urlencode(sorted({"list-type": "2", "prefix": prefix.lstrip("/"), "max-keys": "1000"}.items()))
+    now = dt.datetime.now(dt.timezone.utc)
+    amz, ts = now.strftime("%Y%m%d"), now.strftime("%Y%m%dT%H%M%SZ")
+    scope = f"{amz}/auto/s3/aws4_request"
+    h = hashlib.sha256(b"").hexdigest()
+    host = EP.replace("https://", "")
+    canon = f"GET\n/{R2BUCKET}{path}\n{query}\nhost:{host}\nx-amz-content-sha256:{h}\nx-amz-date:{ts}\n\nhost;x-amz-content-sha256;x-amz-date\n{h}"
+    s2 = f"AWS4-HMAC-SHA256\n{ts}\n{scope}\n{hashlib.sha256(canon.encode()).hexdigest()}"
+    def hm(k, m):
+        return hmac.new(k, m.encode() if isinstance(m, str) else m, hashlib.sha256).digest()
+    k = hm(("AWS4" + SK).encode(), amz)
+    for part in ("auto", "s3", "aws4_request"):
+        k = hm(k, part)
+    headers = {"Authorization": f"AWS4-HMAC-SHA256 Credential={AK}/{scope}, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature={hm(k, s2).hex()}",
+               "x-amz-date": ts, "x-amz-content-sha256": h}
+    req = urllib.request.Request(EP + "/" + R2BUCKET + path + "?" + query, headers=headers, method="GET")
+    with urllib.request.urlopen(req, timeout=60) as r:
+        root = ET.fromstring(r.read())
+    ns = {"s": "http://s3.amazonaws.com/doc/2006-03-01/"}
+    keys = [x.find("s:Key", ns).text for x in root.findall("s:Contents", ns)]
+    manifests = [k for k in keys if k and k.endswith("/manifest.json")]
+    if not manifests:
+        raise ValueError(f"no manifest.json found under R2 prefix {prefix}")
+    return "/" + max(manifests).lstrip("/")
+
+
+def capacity_report():
+    """Current size of the managed backup bucket (used for storage-full alerts)."""
+    _require_backup_bucket()
+    bucket = str(BUCKET).replace("'", "''")
+    rows = supabase_sql(
+        "SELECT count(*)::int AS objects, "
+        "coalesce(sum((metadata->>'size')::bigint),0)::text AS bytes "
+        f"FROM storage.objects WHERE bucket_id='{bucket}'"
+    )
+    return rows[0] if rows else {"objects": 0, "bytes": "0"}
+
+
+def old_sets(retention_days, keep_newest=1, flat=False):
     _require_backup_bucket()
     cutoff = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=retention_days)).isoformat()
     bucket = str(BUCKET).replace("'", "''")
-    rows = supabase_sql(
-        "SELECT split_part(name,'/',2) AS set_id, count(*)::int AS parts, "
-        "max(created_at) AS newest, sum((metadata->>'size')::bigint)::text AS bytes "
-        f"FROM storage.objects WHERE bucket_id='{bucket}' AND position('/' in name) > 0 "
-        "AND split_part(name,'/',2) <> '' GROUP BY 1 ORDER BY 1"
-    )
-    return [r for r in rows if r["newest"] < cutoff], rows
+    if flat:
+        # Legacy buckets store flat names like openbox-db-20261101T110457Z.sql.gz
+        rows = supabase_sql(
+            "SELECT regexp_replace(name, '^.*?([0-9]{8}T[0-9]{6}Z).*$', '\\1') AS set_id, "
+            "count(*)::int AS parts, max(created_at) AS newest, "
+            "sum((metadata->>'size')::bigint)::text AS bytes "
+            f"FROM storage.objects WHERE bucket_id='{bucket}' "
+            "AND name ~ '[0-9]{8}T[0-9]{6}Z' GROUP BY 1 ORDER BY 1"
+        )
+    else:
+        rows = supabase_sql(
+            "SELECT split_part(name,'/',2) AS set_id, count(*)::int AS parts, "
+            "max(created_at) AS newest, sum((metadata->>'size')::bigint)::text AS bytes "
+            f"FROM storage.objects WHERE bucket_id='{bucket}' AND position('/' in name) > 0 "
+            "AND split_part(name,'/',2) <> '' GROUP BY 1 ORDER BY 1"
+        )
+    # Safety: always retain the newest N sets, even with retention_days=0.
+    protected = {r["set_id"] for r in sorted(rows, key=lambda r: str(r["newest"]), reverse=True)[:max(1, keep_newest)]}
+    return ([r for r in rows if r["newest"] < cutoff and r["set_id"] not in protected], rows)
 
 
-def delete_set(set_id):
+def delete_set(set_id, flat=False):
     _require_backup_bucket()
     if not set_id or "/" in str(set_id) or not str(set_id).strip():
+        raise ValueError("refusing to delete with an empty or malformed backup set id")
+    if flat and not re.fullmatch(r"[0-9]{8}T[0-9]{6}Z", str(set_id)):
         raise ValueError("refusing to delete with an empty or malformed backup set id")
 
     def esc(v):
         return str(v).replace("'", "''")
 
-    cond = f"bucket_id='{esc(BUCKET)}' AND split_part(name,'/',2)='{esc(set_id)}'"
+    if flat:
+        cond = f"bucket_id='{esc(BUCKET)}' AND position('{esc(set_id)}' in name) > 0"
+    else:
+        cond = f"bucket_id='{esc(BUCKET)}' AND split_part(name,'/',2)='{esc(set_id)}'"
     supabase_sql(f"UPDATE storage.objects SET archived_at=now() WHERE {cond} AND archived_at IS NULL", write=True)
     return len(supabase_sql(f"SELECT id FROM storage.delete_lifecycle_objects(ARRAY(SELECT id FROM storage.objects WHERE {cond}))", write=True))
 
 
 def main():
+    global BUCKET, MANIFEST_PATH, MIN_MANIFEST_ENTRIES
     ap = argparse.ArgumentParser()
     ap.add_argument("--apply", action="store_true", help="actually delete (default: dry run)")
     ap.add_argument("--retention-days", type=int, default=7)
     ap.add_argument("--max-sets", type=int, default=500)
+    ap.add_argument("--bucket", default=BUCKET, help="backup bucket to maintain")
+    ap.add_argument("--flat-sets", action="store_true", help="legacy buckets with timestamped flat filenames")
+    ap.add_argument("--keep-newest", type=int, default=1, help="always keep this many newest sets (minimum 1)")
+    ap.add_argument("--manifest-path", default=MANIFEST_PATH)
+    ap.add_argument("--min-entries", type=int, default=MIN_MANIFEST_ENTRIES)
+    ap.add_argument("--capacity-threshold-mb", type=int, default=0,
+                    help="log a warning when the bucket exceeds this many MB")
+    ap.add_argument("--discover-manifest", action="store_true",
+                    help="use the newest manifest.json under --manifest-prefix")
+    ap.add_argument("--manifest-prefix", default="/open-box-db-export/")
     args = ap.parse_args()
+    BUCKET = args.bucket
+    MANIFEST_PATH = args.manifest_path
+    MIN_MANIFEST_ENTRIES = args.min_entries
     if not PAT or not AK or not SK or not EP:
         print("missing credentials in environment", file=sys.stderr)
         return 2
-    ok, why = migration_gate()
+    manifest_path = args.manifest_path
+    if args.discover_manifest:
+        try:
+            manifest_path = discover_manifest(args.manifest_prefix)
+            print(json.dumps({"discovered_manifest": manifest_path}))
+        except Exception as exc:
+            print(json.dumps({"gate": "fail", "detail": f"manifest discovery: {type(exc).__name__}: {exc}"}))
+            return 3
+    ok, why = migration_gate(min_entries=args.min_entries, manifest_path=manifest_path)
     print(json.dumps({"gate": "pass" if ok else "fail", "detail": why}))
     if not ok:
         return 3
-    targets, allsets = old_sets(args.retention_days)
+    targets, allsets = old_sets(args.retention_days, keep_newest=max(1, args.keep_newest), flat=args.flat_sets)
+    cap = capacity_report()
+    cap_mb = int(cap["bytes"]) / (1024 * 1024)
+    print(json.dumps({"capacity": cap, "mb": round(cap_mb, 2)}))
+    if args.capacity_threshold_mb and cap_mb > args.capacity_threshold_mb:
+        print(json.dumps({"warning": "bucket exceeds capacity threshold; prune after verified R2 backup"}))
     print(json.dumps({"backup_sets_total": len(allsets), "older_than_retention": len(targets), "mode": "apply" if args.apply else "dry-run"}))
     deleted = 0
     for t in targets[: args.max_sets]:
         if args.apply:
-            n = delete_set(t["set_id"])
+            n = delete_set(t["set_id"], flat=args.flat_sets)
             deleted += n
             print(json.dumps({"deleted": t["set_id"], "rows": n}))
         else:
             print(json.dumps({"would_delete": t["set_id"], "rows": t["parts"]}))
-    print(json.dumps({"summary": {"deleted_rows": deleted, "sets": min(len(targets), args.max_sets), "applied": args.apply}}))
+    print(json.dumps({"summary": {"deleted_rows": deleted, "sets": min(len(targets), args.max_sets), "applied": args.apply,
+                                  "bucket": BUCKET, "kept_newest": max(1, args.keep_newest)}}))
     return 0
 
 
