@@ -17,6 +17,7 @@ mod = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(mod)
 
 REF = "huadtiuuoiriqrjpjxhr"
+SUPABASE_API_URL = "https://api.supabase.com/v1/projects/"
 TARGET = "catalog.schema.projects"
 SOURCE = "public.projects"
 
@@ -44,7 +45,7 @@ class FakeHTTP:
 
     def queries(self):
         return [c["body"]["query"] for c in self.calls
-                if "api.supabase.com" in c["url"]]
+                if c["url"].startswith(SUPABASE_API_URL)]
 
     def statements(self):
         return [c["body"]["statement"] for c in self.calls
@@ -53,7 +54,7 @@ class FakeHTTP:
 
 
 def is_supabase(c):
-    return "api.supabase.com" in c["url"]
+    return c["url"].startswith(SUPABASE_API_URL)
 
 
 def is_info(c):
