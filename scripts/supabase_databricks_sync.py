@@ -560,6 +560,8 @@ def sync_table(spec, supabase, databricks, state, opts):
     # DESCRIBE truncates extremely large nested structs ("... N more fields").
     # from_json cannot parse those partial type strings, so leave such tables to
     # the full-export path rather than emitting invalid SQL.
+    if type_map:
+        columns = [c for c in columns if c in type_map]
     truncated = [c for c, t in type_map.items()
                  if "..." in str(t) and str(t).upper().startswith(("STRUCT", "ARRAY", "MAP"))]
     if truncated:
