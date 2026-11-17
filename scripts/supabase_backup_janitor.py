@@ -68,15 +68,20 @@ def migration_gate():
 
 def old_sets(retention_days):
     cutoff = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=retention_days)).isoformat()
+    bucket = str(BUCKET).replace("'", "''")
     rows = supabase_sql(
         "SELECT split_part(name,'/',2) AS set_id, count(*)::int AS parts, "
         "max(created_at) AS newest, sum((metadata->>'size')::bigint)::text AS bytes "
-        f"FROM storage.objects WHERE bucket_id='{BUCKET}' GROUP BY 1 ORDER BY 1"
+        f"FROM storage.objects WHERE bucket_id='{bucket}' AND position('/' in name) > 0 "
+        "AND split_part(name,'/',2) <> '' GROUP BY 1 ORDER BY 1"
     )
     return [r for r in rows if r["newest"] < cutoff], rows
 
 
 def delete_set(set_id):
+    if not set_id or "/" in str(set_id) or not str(set_id).strip():
+        raise ValueError("refusing to delete with an empty or malformed backup set id")
+
     def esc(v):
         return str(v).replace("'", "''")
 

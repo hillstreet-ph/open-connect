@@ -30,9 +30,16 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Restore sync watermark state
+        uses: actions/cache@v4
+        with:
+          path: .sync_state
+          key: supabase-sync-state-${{ github.run_id }}
+          restore-keys: supabase-sync-state-
+
       - name: Run one-shot sync
         env:
           DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
           SUPABASE_PAT: ${{ secrets.SUPABASE_PAT }}
-        run: python3 scripts/supabase_databricks_sync.py --once
+        run: python3 scripts/supabase_databricks_sync.py --once --registry config/supabase/table_registry.json --state .sync_state/sync_state.json

@@ -552,11 +552,21 @@ def sync_table(spec, supabase, databricks, state, opts):
 
     columns = ordered_columns(rows, spec.primary_key)
     type_map = {} if opts["dry_run"] else databricks.column_types(spec.target_table)
+    # DESCRIBE truncates extremely large nested structs ("... N more fields").
+    # from_json cannot parse those partial type strings, so leave such tables to
+    # the full-export path rather than emitting invalid SQL.
+    truncated = [c for c, t in type_map.items()
+                 if "..." in str(t) and str(t).upper().startswith(("STRUCT", "ARRAY", "MAP"))]
+    if truncated:
+        result["status"] = "skipped_complex_schema"
+        result["skipped_columns"] = truncated
+        log("table_sync", **result)
+        return result
     stage_sql = build_stage_sql(rows, columns, type_map)
     statements = []
     if not databricks.table_exists(spec.target_table):
         statements.append(("create", build_create_sql(spec, stage_sql)))
-    if spec.primary_key and spec.primary_key in columns:
+    if spec.primary_key and spec.primary_key in columns and (opts["dry_run"] or spec.primary_key in type_map):
         statements.append(("merge", build_merge_sql(spec, columns, stage_sql)))
     else:
         statements.append(("append", build_append_sql(spec, columns, stage_sql)))
@@ -617,7 +627,7 @@ def run_once(specs, supabase, databricks, state, opts, state_path):
                        "error": "%s: %s" % (type(exc).__name__, exc)}
             log("table_sync_error", **failure)
             results.append(failure)
-    ok = sum(1 for r in results if r["status"] in ("ok", "no_rows", "dry_run"))
+    ok = sum(1 for r in results if r["status"] in ("ok", "no_rows", "dry_run", "skipped_complex_schema"))
     summary = {
         "event": "sync_summary",
         "mode": "full_refresh" if opts["full_refresh"] else "incremental",
