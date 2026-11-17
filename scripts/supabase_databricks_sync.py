@@ -22,6 +22,7 @@ import argparse
 import datetime as dt
 import json
 import os
+import re
 import sys
 import time
 import urllib.error
@@ -138,7 +139,11 @@ def sql_typed_literal(value, dtype=None):
     if dtype and str(dtype).upper().startswith(("STRUCT", "ARRAY", "MAP")) and value is not None:
         payload = value if isinstance(value, (dict, list)) else str(value)
         text = json.dumps(payload, default=str) if isinstance(payload, (dict, list)) else str(payload)
-        return "from_json(%s, '%s')" % (sql_literal(text), str(dtype).replace("'", "''"))
+        # Struct field names from DESCRIBE can contain hyphens (e.g. HTTP
+        # headers); backquote every field name so the type expression parses.
+        safe_type = re.sub(r"([A-Za-z_][A-Za-z0-9_-]*)(?=\s*:)",
+                           lambda m: "`%s`" % m.group(1), str(dtype))
+        return "from_json(%s, '%s')" % (sql_literal(text), safe_type.replace("'", "''"))
     return sql_literal(value)
 
 
