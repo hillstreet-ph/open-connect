@@ -17,6 +17,16 @@ SK = os.environ.get("R2_SECRET_ACCESS_KEY", "")
 EP = os.environ.get("R2_S3_ENDPOINT", "").rstrip("/")
 R2BUCKET = os.environ.get("R2_BUCKET", "supabase-backups")
 
+# Safety: only an explicitly named backup bucket may ever be read or deleted in.
+SENSITIVE_BUCKETS = ("credential", "invoice")
+
+
+def _require_backup_bucket():
+    """Refuse any bucket that is not clearly a backup bucket."""
+    bucket = str(BUCKET).lower()
+    if "backup" not in bucket or any(s in bucket for s in SENSITIVE_BUCKETS):
+        raise ValueError("refusing to operate on a non-backup bucket")
+
 
 def supabase_sql(query, write=False):
     ep = "query" if write else "query/read-only"
@@ -67,6 +77,7 @@ def migration_gate():
 
 
 def old_sets(retention_days):
+    _require_backup_bucket()
     cutoff = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=retention_days)).isoformat()
     bucket = str(BUCKET).replace("'", "''")
     rows = supabase_sql(
@@ -79,6 +90,7 @@ def old_sets(retention_days):
 
 
 def delete_set(set_id):
+    _require_backup_bucket()
     if not set_id or "/" in str(set_id) or not str(set_id).strip():
         raise ValueError("refusing to delete with an empty or malformed backup set id")
 
