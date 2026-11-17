@@ -1,0 +1,92 @@
+name: Supabase backup retention janitor
+
+# Scheduled runs apply retention after every bucket's R2 migration gate passes.
+# Manual runs default to dry-run; pass apply=true to actually delete. The newest
+# backup set is always retained, so a bucket can never be emptied by the janitor.
+
+on:
+  schedule:
+    - cron: "3 * * * *"
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Actually delete expired backup sets (default: dry-run)"
+        type: boolean
+        required: false
+        default: false
+
+concurrency:
+  group: supabase-backup-janitor
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  janitor:
+    name: Prune ${{ matrix.bucket }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - bucket: open-system-backups
+            r2_bucket: supabase-backups
+            flat: ""
+            discover: ""
+            min_entries: 100
+            manifest: /db-export/manifest.json
+            threshold: 1024
+          - bucket: open-box-backups
+            r2_bucket: open-box-backups
+            flat: --flat-sets
+            discover: --discover-manifest
+            min_entries: 10
+            manifest: ""
+            threshold: 100
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Determine run mode
+        id: mode
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          DISPATCH_APPLY: ${{ inputs.apply }}
+        run: |
+          if [ "$EVENT_NAME" = "schedule" ] || [ "$DISPATCH_APPLY" = "true" ]; then
+            echo "flags=--apply" >> "$GITHUB_OUTPUT"
+            echo "mode=apply" >> "$GITHUB_OUTPUT"
+          else
+            echo "flags=" >> "$GITHUB_OUTPUT"
+            echo "mode=dry-run" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run retention janitor (${{ steps.mode.outputs.mode }})
+        env:
+          SUPABASE_PAT: ${{ secrets.SUPABASE_PAT }}
+          SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF || 'huadtiuuoiriqrjpjxhr' }}
+          BACKUP_BUCKET: ${{ matrix.bucket }}
+          R2_BUCKET: ${{ matrix.r2_bucket }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_S3_ENDPOINT: ${{ secrets.R2_S3_ENDPOINT }}
+          APPLY_FLAGS: ${{ steps.mode.outputs.flags }}
+          FLAT_FLAG: ${{ matrix.flat }}
+          DISCOVER_FLAG: ${{ matrix.discover }}
+          MANIFEST_PATH: ${{ matrix.manifest }}
+          MIN_ENTRIES: ${{ matrix.min_entries }}
+          THRESHOLD_MB: ${{ matrix.threshold }}
+        run: |
+          python3 scripts/supabase_backup_janitor.py $APPLY_FLAGS $FLAT_FLAG $DISCOVER_FLAG \
+            --retention-days 0 --keep-newest 1 \
+            --capacity-threshold-mb "$THRESHOLD_MB" \
+            --min-entries "$MIN_ENTRIES" \
+            --manifest-path "$MANIFEST_PATH" \
+            --manifest-prefix /open-box-db-export/
