@@ -250,3 +250,61 @@ def test_main_reports_missing_env_key_cleanly(tmp_path, capsys):
     out = capsys.readouterr().out
     assert "DATABRICKS_TOKEN" in out
     assert "https://dbx.example" not in out
+
+
+# --------------------------------------------------------------------------- #
+# quality-review regressions
+# --------------------------------------------------------------------------- #
+def test_execute_evaluates_final_poll_success():
+    """A statement succeeding on the very last GET must not report a timeout."""
+    fake = FakeHTTP()
+    gets = []
+
+    def get(call):
+        gets.append(1)
+        if len(gets) == 4:  # last of max_poll + 1 = 4 polls
+            return {"statement_id": "s1", "status": {"state": "SUCCEEDED"},
+                    "result": {"data_array": [["42"]]}}
+        return {"statement_id": "s1", "status": {"state": "PENDING"}}
+
+    fake.add(is_post, lambda c: {"statement_id": "s1", "status": {"state": "PENDING"}})
+    fake.add(lambda c: c["method"] == "GET", get)
+    client = mod.DatabricksClient("https://dbx.example", "fake-token",
+                                  http=fake.http, sleep_fn=lambda _: None, max_poll=3)
+    resp = client.execute("SELECT 1")
+    assert resp["status"]["state"] == "SUCCEEDED"
+    assert resp["result"]["data_array"] == [["42"]]
+
+
+def test_execute_handles_status_error_none():
+    """status.error == None must yield a clean MirrorError, not AttributeError."""
+    fake = FakeHTTP()
+    fake.add(is_post, lambda c: {"statement_id": "s1",
+                                 "status": {"state": "FAILED", "error": None}})
+    client = mod.DatabricksClient("https://dbx.example", "fake-token",
+                                  http=fake.http, sleep_fn=lambda _: None, max_poll=3)
+    with pytest.raises(mod.MirrorError) as excinfo:
+        client.execute("SELECT 1")
+    message = str(excinfo.value)
+    assert "s1" in message and "FAILED" in message
+    assert "AttributeError" not in message
+
+
+def test_credentials_error_names_custom_env_file(tmp_path):
+    env_file = tmp_path / "custom.env"
+    env_file.write_text('DATABRICKS_HOST="https://dbx.example"\n', encoding="utf-8")
+    with pytest.raises(mod.MirrorError) as excinfo:
+        mod.load_credentials(str(env_file))
+    message = str(excinfo.value)
+    assert str(env_file) in message
+    assert mod.DEFAULT_ENV_FILE not in message
+
+
+def test_validate_shadow_target_rejects_dotted_flat_name():
+    with pytest.raises(mod.MirrorError, match="open_connect.shadow"):
+        mod.validate_shadow_target("open_connect.shadow.a.b")
+
+
+def test_validate_shadow_target_rejects_backticks():
+    with pytest.raises(mod.MirrorError, match="open_connect.shadow"):
+        mod.validate_shadow_target("open_connect.shadow.a`b")

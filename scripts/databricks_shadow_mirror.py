@@ -36,6 +36,12 @@ SUCCESS_STATES = {"SUCCEEDED"}
 FAILURE_STATES = {"FAILED", "CANCELED", "CANCELLED", "CLOSED", "TIMEDOUT"}
 
 
+def _statement_error_message(resp):
+    """Extract an error message without assuming status.error is a dict."""
+    error = (resp.get("status") or {}).get("error") or {}
+    return error.get("message") or ""
+
+
 class MirrorError(RuntimeError):
     """A clean, credential-free error."""
 
@@ -74,19 +80,19 @@ def read_env_file(path=DEFAULT_ENV_FILE):
     return env
 
 
-def credentials_from_env(env):
+def credentials_from_env(env, env_file=DEFAULT_ENV_FILE):
     host = env.get("DATABRICKS_HOST")
     token = env.get("DATABRICKS_TOKEN")
     missing = [k for k, value in (("DATABRICKS_HOST", host),
                                   ("DATABRICKS_TOKEN", token)) if not value]
     if missing:
         raise MirrorError("missing required env key(s): %s (from %s)"
-                          % (", ".join(missing), DEFAULT_ENV_FILE))
+                          % (", ".join(missing), env_file))
     return {"host": host, "token": token}
 
 
 def load_credentials(env_file=DEFAULT_ENV_FILE):
-    return credentials_from_env(read_env_file(env_file))
+    return credentials_from_env(read_env_file(env_file), env_file=env_file)
 
 
 def dqid(name):
@@ -107,9 +113,11 @@ def shadow_name_from_primary(primary_fqn):
 
 
 def validate_shadow_target(fqn):
-    parts = str(fqn).split(".")
-    if (len(parts) < 3 or parts[0].lower() != CATALOG
-            or parts[1].lower() != "shadow" or not parts[2]):
+    text = str(fqn)
+    parts = text.split(".")
+    if (len(parts) != 3 or parts[0].lower() != CATALOG
+            or parts[1].lower() != "shadow" or not parts[2]
+            or "`" in text):
         raise MirrorError("mirror target must be under %s: %s" % (SHADOW_SCHEMA, fqn))
     return fqn
 
@@ -253,12 +261,19 @@ class DatabricksClient:
             if state in SUCCESS_STATES:
                 return resp
             if state in FAILURE_STATES:
-                message = (resp.get("status") or {}).get("error", {}).get("message", "")
-                raise MirrorError("statement %s %s: %s" % (statement_id, state, message))
+                raise MirrorError("statement %s %s: %s"
+                                  % (statement_id, state, _statement_error_message(resp)))
             self.sleep_fn(self.poll_interval)
             resp = self.http("%s/%s" % (self.statements_url, statement_id),
                              method="GET", headers=self.headers, timeout=self.timeout)
             state = (resp.get("status") or {}).get("state")
+        # The last GET's state must be evaluated too: a statement that succeeds
+        # (or fails) on the final poll must not be reported as a timeout.
+        if state in SUCCESS_STATES:
+            return resp
+        if state in FAILURE_STATES:
+            raise MirrorError("statement %s %s: %s"
+                              % (statement_id, state, _statement_error_message(resp)))
         raise MirrorError("statement %s timed out after %d polls (last state %s)"
                           % (statement_id, self.max_poll, state))
 
