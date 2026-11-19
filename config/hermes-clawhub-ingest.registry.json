@@ -1086,11 +1086,11 @@
     ]
   },
   "last_sync": {
-    "synced_at": "2026-11-19T07:29:54+00:00",
+    "synced_at": "2026-11-19T20:41:14+00:00",
     "mode": "metadata_only",
     "hermes_candidates_seen": 6,
     "clawhub_candidates_seen": 26,
-    "packages_added": 1,
+    "packages_added": 0,
     "packages_total": 67,
     "notes": []
   }
