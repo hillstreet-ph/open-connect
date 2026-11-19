@@ -987,6 +987,20 @@
       "risk": "medium",
       "state": "review_required",
       "review_reason": "Automated catalog ingestion; license verification and a security review are required before this entry can become approved."
+    },
+    {
+      "slug": "open-oc-plugin-agentmail-agentmail",
+      "kind": "plugin",
+      "runtime": "openclaw",
+      "install_command": "openclaw plugins install agentmail/agentmail",
+      "source_ref": "agentmail/agentmail",
+      "source_type": "clawhub_registry",
+      "publisher": "agentmail",
+      "canonical_url": "https://clawhub.ai/agentmail/plugins/agentmail",
+      "license": null,
+      "risk": "medium",
+      "state": "review_required",
+      "review_reason": "Automated catalog ingestion; license verification and a security review are required before this entry can become approved."
     }
   ],
   "operator_install_batches": {
@@ -1048,7 +1062,8 @@
       "openclaw plugins install openclaw/tavily-plugin",
       "openclaw plugins install openclaw/tokenjuice",
       "openclaw plugins install openviking/openclaw-plugin",
-      "openclaw plugins install sider/chrome-openclaw-sider"
+      "openclaw plugins install sider/chrome-openclaw-sider",
+      "openclaw plugins install agentmail/agentmail"
     ],
     "hold_for_deep_review": [
       "hermes plugins install claude-subscription-directsdk",
@@ -1071,12 +1086,12 @@
     ]
   },
   "last_sync": {
-    "synced_at": "2026-11-15T18:53:40+00:00",
+    "synced_at": "2026-11-19T07:29:54+00:00",
     "mode": "metadata_only",
     "hermes_candidates_seen": 6,
     "clawhub_candidates_seen": 26,
-    "packages_added": 0,
-    "packages_total": 66,
+    "packages_added": 1,
+    "packages_total": 67,
     "notes": []
   }
 }
