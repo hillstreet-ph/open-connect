@@ -5,6 +5,7 @@ import {
   ensureOpenConnectLakehouse,
   upsertDatabricksRows,
 } from "@/lib/databricks.server";
+import { fetchSupabaseReadonlyRows } from "@/lib/supabase.readonly.server";
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -29,34 +30,87 @@ export const Route = createFileRoute("/api/v1/databricks")({
         if (!authorized(request)) return json({ error: "Unauthorized" }, 401);
         if (!databricksConfig().configured)
           return json({ error: "Databricks is not configured" }, 503);
-        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         await ensureOpenConnectLakehouse();
 
-        const [memory, knowledge, resources] = await Promise.all([
-          supabaseAdmin
-            .from("memory_records")
-            .select(
-              "id,user_id,project_id,title,content,memory_type,importance,pinned,tags,expires_at,created_at,updated_at",
-            )
-            .order("updated_at", { ascending: false })
-            .limit(1000),
-          supabaseAdmin
-            .from("knowledge_items")
-            .select(
-              "id,user_id,project_id,title,content,source_type,source_url,mime_type,status,tags,created_at,updated_at",
-            )
-            .order("updated_at", { ascending: false })
-            .limit(1000),
-          supabaseAdmin
-            .from("resources")
-            .select(
-              "id,slug,name,description,resource_type,category_slug,license,verified,published,source,updated_at",
-            )
-            .order("updated_at", { ascending: false })
-            .limit(1000),
+        const [memoryData, knowledgeData, resourcesData] = await Promise.all([
+          fetchSupabaseReadonlyRows("memory_records"),
+          fetchSupabaseReadonlyRows("knowledge_items"),
+          fetchSupabaseReadonlyRows("resources"),
         ]);
-        const error = memory.error || knowledge.error || resources.error;
-        if (error) return json({ error: "Supabase export failed" }, 502);
+        const failed = [
+          memoryData,
+          knowledgeData,
+          resourcesData,
+        ]
+          .map((row) => row.error)
+          .filter((message): message is string => Boolean(message));
+        if (failed.length > 0) {
+          return json({ error: `Supabase export failed: ${failed.join("; ")}` }, 502);
+        }
+
+        const [memoryRecords, knowledgeItems, resourceRecords] = await Promise.all([
+          upsertDatabricksRows(
+            {
+              table: "memory_records",
+              privateRows: true,
+              columns: [
+                "id",
+                "user_id",
+                "project_id",
+                "title",
+                "content",
+                "memory_type",
+                "importance",
+                "pinned",
+                "tags",
+                "expires_at",
+                "created_at",
+                "updated_at",
+              ],
+            },
+            (memoryData.rows ?? []) as Array<Record<string, unknown>>,
+          ),
+          upsertDatabricksRows(
+            {
+              table: "knowledge_items",
+              privateRows: true,
+              columns: [
+                "id",
+                "user_id",
+                "project_id",
+                "title",
+                "content",
+                "source_type",
+                "source_url",
+                "mime_type",
+                "status",
+                "tags",
+                "created_at",
+                "updated_at",
+              ],
+            },
+            (knowledgeData.rows ?? []) as Array<Record<string, unknown>>,
+          ),
+          upsertDatabricksRows(
+            {
+              table: "resources",
+              columns: [
+                "id",
+                "slug",
+                "name",
+                "description",
+                "resource_type",
+                "category_slug",
+                "license",
+                "verified",
+                "published",
+                "source",
+                "updated_at",
+              ],
+            },
+            (resourcesData.rows ?? []) as Array<Record<string, unknown>>,
+          ),
+        ]);
 
         const [memoryRecords, knowledgeItems, resourceRecords] = await Promise.all([
           upsertDatabricksRows(
