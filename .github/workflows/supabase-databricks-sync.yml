@@ -1,12 +1,13 @@
 name: Supabase — Databricks sync
 
-# One-shot sync of governed Supabase data into Databricks, every 15 minutes.
+# One-shot sync of governed Supabase data into Databricks, hourly. The full
+# 135-table pass takes about 35 minutes on a hosted runner.
 # The concurrency group prevents overlapping runs when a sync takes longer
 # than the schedule interval.
 
 on:
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "0 * * * *"
   workflow_dispatch:
 
 concurrency:
@@ -20,7 +21,7 @@ jobs:
   sync:
     name: Sync Supabase data to Databricks
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 70
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
