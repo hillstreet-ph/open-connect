@@ -58,17 +58,14 @@ export async function fetchSupabaseReadonlyRows(
   const query = `SELECT ${READONLY_COLUMNS} FROM public."${table}" LIMIT ${limit}`;
 
   try {
-    const response = await fetch(
-      `${MANAGEMENT_API}/${projectRef}/database/query/read-only`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ query }),
+    const response = await fetch(`${MANAGEMENT_API}/${projectRef}/database/query/read-only`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
       },
-    );
+      body: JSON.stringify({ query }),
+    });
 
     if (!response.ok) {
       const body = (await response.text()).slice(0, 300);
@@ -77,12 +74,9 @@ export async function fetchSupabaseReadonlyRows(
       };
     }
 
-    const payload = (await response.json()) as Array<Record<string, unknown>> | Record<string, unknown>;
-    const rows =
-      Array.isArray(payload) || payload.rows ??
-      payload.results ??
-      payload.data ??
-      [];
+    const payload = (await response.json()) as
+      Array<Record<string, unknown>> | Record<string, unknown>;
+    const rows = (Array.isArray(payload) || payload.rows) ?? payload.results ?? payload.data ?? [];
     return { rows };
   } catch (error) {
     return {

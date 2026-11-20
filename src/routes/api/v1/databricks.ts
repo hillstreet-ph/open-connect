@@ -37,11 +37,7 @@ export const Route = createFileRoute("/api/v1/databricks")({
           fetchSupabaseReadonlyRows("knowledge_items"),
           fetchSupabaseReadonlyRows("resources"),
         ]);
-        const failed = [
-          memoryData,
-          knowledgeData,
-          resourcesData,
-        ]
+        const failed = [memoryData, knowledgeData, resourcesData]
           .map((row) => row.error)
           .filter((message): message is string => Boolean(message));
         if (failed.length > 0) {
@@ -112,69 +108,6 @@ export const Route = createFileRoute("/api/v1/databricks")({
           ),
         ]);
 
-        const [memoryRecords, knowledgeItems, resourceRecords] = await Promise.all([
-          upsertDatabricksRows(
-            {
-              table: "memory_records",
-              privateRows: true,
-              columns: [
-                "id",
-                "user_id",
-                "project_id",
-                "title",
-                "content",
-                "memory_type",
-                "importance",
-                "pinned",
-                "tags",
-                "expires_at",
-                "created_at",
-                "updated_at",
-              ],
-            },
-            (memory.data ?? []) as Array<Record<string, unknown>>,
-          ),
-          upsertDatabricksRows(
-            {
-              table: "knowledge_items",
-              privateRows: true,
-              columns: [
-                "id",
-                "user_id",
-                "project_id",
-                "title",
-                "content",
-                "source_type",
-                "source_url",
-                "mime_type",
-                "status",
-                "tags",
-                "created_at",
-                "updated_at",
-              ],
-            },
-            (knowledge.data ?? []) as Array<Record<string, unknown>>,
-          ),
-          upsertDatabricksRows(
-            {
-              table: "resources",
-              columns: [
-                "id",
-                "slug",
-                "name",
-                "description",
-                "resource_type",
-                "category_slug",
-                "license",
-                "verified",
-                "published",
-                "source",
-                "updated_at",
-              ],
-            },
-            (resources.data ?? []) as Array<Record<string, unknown>>,
-          ),
-        ]);
         return json({ ok: true, memoryRecords, knowledgeItems, resources: resourceRecords });
       },
     },
