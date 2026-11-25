@@ -79,9 +79,9 @@ def test_all_broker_references_reject_malformed_values_without_disclosure(
     with pytest.raises(RuntimeError) as error:
         settings(**{field: reference}).assert_safe()
     message = str(error.value)
-    assert field in message
-    assert "vault:// reference" in message
-    assert reference not in message
+    assert message == (
+        f"{field} must contain a vault:// reference with a nonempty opaque path"
+    )
     assert "do-not-log" not in message
 
 
