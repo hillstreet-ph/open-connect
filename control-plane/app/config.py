@@ -1,4 +1,5 @@
 from functools import lru_cache
+import re
 from pydantic import AnyHttpUrl, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -29,16 +30,24 @@ class Settings(BaseSettings):
             raise RuntimeError(
                 "Production startup requires OC_ALLOW_PRODUCTION=true in the deployment secret store"
             )
-        refs = [
-            self.e2b_credential_ref,
-            self.openbrowser_credential_ref,
-            self.browser_worker_credential_ref,
-            self.browser_profile_store_ref,
-            self.guacamole_credential_ref,
-            self.model_gateway_credential_ref,
-        ]
-        if any(ref and not ref.startswith("vault://") for ref in refs):
-            raise RuntimeError("Credential settings must contain vault:// references only")
+        # These are opaque broker references, never credentials or URLs to fetch.
+        # Match the BrowserAction vault-reference character contract in models.py.
+        # Preserve empty/unset values for disabled, optional integrations.
+        reference_fields = (
+            "e2b_credential_ref",
+            "openbrowser_credential_ref",
+            "browser_worker_credential_ref",
+            "browser_profile_store_ref",
+            "guacamole_credential_ref",
+            "model_gateway_credential_ref",
+        )
+        for field in reference_fields:
+            reference = getattr(self, field)
+            if reference and re.fullmatch(r"vault://[a-zA-Z0-9._/-]+", reference) is None:
+                # Do not include the supplied value: it may be a pasted secret.
+                raise RuntimeError(
+                    f"{field} must contain a vault:// reference with a nonempty opaque path"
+                )
 
 
 @lru_cache
