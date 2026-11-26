@@ -1,3 +1,4 @@
+import { assertNotionProjectAccount, type NotionRoutingContext } from "./notion-account-routing.ts";
 import {
   managedAccountId,
   assertManagedAccount,
@@ -22,8 +23,14 @@ function key() {
   if (!value) throw new Error("Managed executor is not configured.");
   return value;
 }
-export async function listManagedMcpTools(userId: string, provider: string, reference: string) {
+export async function listManagedMcpTools(
+  userId: string,
+  provider: string,
+  reference: string,
+  routingContext?: NotionRoutingContext,
+) {
   try {
+    assertNotionProjectAccount(provider, reference, routingContext);
     await owned(userId, provider, reference);
     const tools: Array<ReturnType<typeof managedToolDescriptor>> = [];
     const cursors = new Set<string>();
@@ -60,8 +67,10 @@ export async function callManagedMcpTool(
   reference: string,
   name: string,
   args: Record<string, unknown>,
+  routingContext?: NotionRoutingContext,
 ) {
   try {
+    assertNotionProjectAccount(provider, reference, routingContext);
     const account = await owned(userId, provider, reference);
     const tool = await composioRequest<Record<string, unknown>>(
       `/tools/${encodeURIComponent(name)}?toolkit_versions=latest`,
