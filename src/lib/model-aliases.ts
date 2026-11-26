@@ -108,21 +108,19 @@ export const SPECIAL_ALIASES: Record<string, string> = {
 /** OpenRouter :free models — rotate for the free-rotate aliases. */
 export const FREE_MODEL_POOL: string[] = [
   "openrouter/free",
+  "nvidia/nemotron-3.5-super-vl:free",
+  "nvidia/nemotron-3.5-lightning:free",
+  "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
   "google/gemma-4-31b-it:free",
   "google/gemma-4-26b-a4b-it:free",
-  "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-  "nvidia/nemotron-3-super-120b-a12b:free",
-  "nvidia/nemotron-3.5-lightning:free",
-  "liquid/lfm-2.5-2.6b:free",
-  "thinkingmachines/inkling:free",
-  "thinkingmachines/inkling-small:free",
-  "poolside/laguna-s-2.1:free",
-  "poolside/laguna-xs-2.1:free",
-  "cohere/north-mini-code:free",
-  "nex-agi/nex-n2.5-mini:free",
-  "nex-agi/nex-n2.5-pro:free",
-  "inclusionai/ling-3.0-flash-sante:free",
-  "inclusionai/ling-3.0-flash-fin:free",
+  "inclusionai/ling-3.2-flash:free",
+  "baidu/ernie-5.5-flash-preview:free",
+  "liquid/lfm-3-1.7b:free",
+  "particle-ai/particle-1:free",
+  "recursive/flint-v1.0:free",
+  "scaledown/summarize",
+  "scaledown/extract",
 ];
 
 export const MANAGED_MODEL_IDS: string[] = Array.from(
