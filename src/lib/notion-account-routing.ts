@@ -1,6 +1,6 @@
 import { managedAccountId } from "./managed-mcp-policy.ts";
 
-export type NotionRoutingContext = { projectId?: string; connectionId?: string };
+export type NotionRoutingContext = { projectId?: string | undefined; connectionId?: string | undefined };
 type Binding = {
   project_id: string;
   connection_id: string;
