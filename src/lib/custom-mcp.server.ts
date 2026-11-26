@@ -1,3 +1,4 @@
+import { assertNotionProjectAccount } from "./notion-account-routing.ts";
 import { normalizeAuthHeader } from "./connection-auth-header.ts";
 import { fetchMcpTools, McpCatalogError, withMcpClient } from "./mcp-client.server.ts";
 import { callTwilioTool, twilioFailureResult, twilioTools } from "./twilio.server.ts";
@@ -247,6 +248,10 @@ async function getToolConnection(userId: string, connectionId: string, projectId
   ) {
     throw new Error("Native provider has an invalid credential reference.");
   }
+  assertNotionProjectAccount(data.provider, data.credential_reference ?? "", {
+    projectId,
+    connectionId: data.id,
+  });
   return data;
 }
 
@@ -323,10 +328,13 @@ export async function getCustomMcpConnection(
   return materializeCustomMcpConnection(await getToolConnection(userId, connectionId, projectId));
 }
 
-async function listToolsForConnection(saved: ToolConnection) {
+async function listToolsForConnection(saved: ToolConnection, projectId?: string) {
   if (saved.credential_reference?.startsWith("composio://connected-account/")) {
     const { listManagedMcpTools } = await import("./managed-mcp.server.ts");
-    return listManagedMcpTools(saved.user_id, saved.provider, saved.credential_reference);
+    return listManagedMcpTools(saved.user_id, saved.provider, saved.credential_reference, {
+      projectId,
+      connectionId: saved.id,
+    });
   }
   if (saved.provider === "custom_api") {
     const { openApiOperations } = await import("./openapi-connector.ts");
@@ -369,7 +377,7 @@ export async function listCustomMcpTools(userId: string, connectionId: string, p
   const saved = await getToolConnection(userId, connectionId, projectId);
   return {
     connection: { id: saved.id, name: saved.display_name, provider: saved.provider },
-    tools: (await listToolsForConnection(saved)).filter(
+    tools: (await listToolsForConnection(saved, projectId)).filter(
       (tool) =>
         !(
           (saved.metadata as Record<string, unknown>)["disabled_tools"] as string[] | undefined
@@ -395,7 +403,7 @@ export async function callCustomMcpTool(
   )
     throw new Error("This tool is disabled by the connection owner");
   if (authorizeTool) {
-    const tools = await listToolsForConnection(connection);
+    const tools = await listToolsForConnection(connection, projectId);
     authorizeToolForConnectionSnapshot(connection, tools, toolName, authorizeTool);
   }
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -426,6 +434,7 @@ export async function callCustomMcpTool(
         connection.credential_reference,
         toolName,
         args,
+        { projectId, connectionId: connection.id },
       );
     } else if (connection.provider === "custom_api") {
       const { callOpenApiTool } = await import("./openapi-connector.server");
