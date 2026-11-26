@@ -23,7 +23,12 @@ function key() {
   if (!value) throw new Error("Managed executor is not configured.");
   return value;
 }
-export async function listManagedMcpTools(userId: string, provider: string, reference: string, routingContext?: NotionRoutingContext) {
+export async function listManagedMcpTools(
+  userId: string,
+  provider: string,
+  reference: string,
+  routingContext?: NotionRoutingContext,
+) {
   try {
     assertNotionProjectAccount(provider, reference, routingContext);
     await owned(userId, provider, reference);
