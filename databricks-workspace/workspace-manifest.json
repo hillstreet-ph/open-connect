@@ -1,0 +1,119 @@
+{
+  "generated_at": "2026-11-26T03:08:11.338393+00:00",
+  "workspace_root": "/Users/kairocasino8@gmail.com",
+  "organized_by": "project (2026-11-26)",
+  "folders": {
+    "hillstreet": {
+      "assets": [
+        {
+          "type": "FILE",
+          "id": 1609317070367864,
+          "path": "hillstreet/AGENT_OPERATING_GUIDE.md",
+          "bytes": 13929
+        },
+        {
+          "type": "NOTEBOOK",
+          "id": 1609317070367880,
+          "path": "hillstreet/Auth0 Management API Ingestion",
+          "note": "moved from root 2026-11-26; cells/nuids/titles preserved"
+        },
+        {
+          "type": "JOB",
+          "id": 385427552695623,
+          "path": "Auth0 Management API Daily Ingestion.dbjob.json (root; job files cannot be moved programmatically)",
+          "note": "notebook_task repointed to hillstreet/Auth0 Management API Ingestion; PAUSED pending Auth0 M2M scope grant"
+        }
+      ]
+    },
+    "open-connect": {
+      "assets": [
+        {
+          "type": "FILE",
+          "id": 1609317070367883,
+          "path": "open-connect/hourly-marketplace-collector.fixed.yml",
+          "bytes": 2769,
+          "note": "collector workflow fix (bun setup) staged for repo"
+        },
+        {
+          "type": "FILE",
+          "id": 1609317070367882,
+          "path": "open-connect/marketplace_tools_catalog.tsv",
+          "bytes": 42415
+        }
+      ]
+    },
+    "supabase-migration": {
+      "assets": [
+        {
+          "type": "NOTEBOOK",
+          "id": 1609317070367884,
+          "path": "supabase-migration/Supabase Deletion Plan for Two Projects"
+        }
+      ]
+    },
+    "ai-gateway-ops": {
+      "assets": [
+        {
+          "type": "ALERT",
+          "id": 1609317070367881,
+          "path": "ai-gateway-ops/Gateway sweep: degraded gateways.dbalert.json"
+        }
+      ]
+    },
+    "Drafts": {
+      "assets": [
+        {
+          "type": "NOTEBOOK",
+          "path": "Drafts/New Query 2026-11-13 23:08:35",
+          "note": "old scratch SQL (open_connect catalog setup); converted from QUERY to notebook on move"
+        }
+      ]
+    }
+  },
+  "root_unmovable": [
+    {
+      "type": "JOB",
+      "id": 385427552695623,
+      "name": "Auth0 Management API Daily Ingestion"
+    },
+    {
+      "type": "DATA_ROOM",
+      "id": "01f1b2441ac71a21addb1e319ca2d1a2",
+      "name": "Bakehouse Sales Starter Space"
+    }
+  ],
+  "trash": "Originals of all moved items are in workspace Trash (restorable).",
+  "supabase_projects": {
+    "open-platform": {
+      "ref": "huadtiuuoiriqrjpjxhr",
+      "url": "https://huadtiuuoiriqrjpjxhr.supabase.co",
+      "note": "source of truth for open-connect open-platform domain; mirrored to open_connect.open_platform (174/174 tables)"
+    },
+    "open-operations": {
+      "ref": "hoseohvgoiarxluxqwqv",
+      "url": "https://hoseohvgoiarxluxqwqv.supabase.co",
+      "note": "open-operations domain; mirrored to open_connect.open_operations (113/122, 9 blocked by schema quota)"
+    },
+    "masterkanorcase-online": {
+      "url": "https://bftywnjdjyooyrbqahul.supabase.co",
+      "note": "separate project for masterkanorcase.online (not part of open-connect migration)"
+    }
+  },
+  "github_mirror": {
+    "generated": "2026-11-26",
+    "hillstreet-ph/hillstreet": {
+      "branch": "agent/databricks-workspace-mirror",
+      "paths": [
+        "databricks-workspace/hillstreet/"
+      ]
+    },
+    "hillstreet-ph/open-connect": {
+      "branch": "agent/databricks-workspace-mirror",
+      "paths": [
+        "databricks-workspace/open-connect/",
+        "databricks-workspace/supabase-migration/",
+        "databricks-workspace/ai-gateway-ops/"
+      ]
+    }
+  }
+}
