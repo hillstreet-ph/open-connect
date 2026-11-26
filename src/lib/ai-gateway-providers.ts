@@ -149,6 +149,36 @@ export const AI_GATEWAY_PROVIDERS = [
     official: false,
   },
   {
+    id: "edgeone",
+    name: "Tencent EdgeOne Makers",
+    baseUrl: "https://ai-gateway.edgeone.link/v1",
+    official: true,
+  },
+  {
+    id: "modelgo",
+    name: "Modelgo",
+    baseUrl: "https://api.modelgo.ai/v1",
+    official: false,
+  },
+  {
+    id: "requesty",
+    name: "Requesty",
+    baseUrl: "https://router.requesty.ai/v1",
+    official: false,
+  },
+  {
+    id: "minimax",
+    name: "MiniMax",
+    baseUrl: "https://api.minimax.io/v1",
+    official: true,
+  },
+  {
+    id: "unorouter",
+    name: "UnoRouter",
+    baseUrl: "https://api.unorouter.com/v1",
+    official: false,
+  },
+  {
     id: "litellm",
     name: "Custom (OpenAI-compatible)",
     baseUrl: "",
